@@ -60,8 +60,7 @@ func NewRunner(options Options, logger *zap.SugaredLogger) (*Runner, error) {
 	return &Runner{
 		options: options,
 		errors:  make(chan error),
-		// TODO: make a nicer, shorter ID for this
-		logger: logger,
+		logger:  logger,
 	}, nil
 }
 
@@ -77,6 +76,9 @@ func calcConcurrency(iterations uint32, scenario scenarios.Scenario) int {
 	return concurrency
 }
 
+// Run a scenario.
+// Spins up coroutines according to the scenario configuration.
+// Each coroutine runs the scenario Execute method in a loop until the scenario duration or max iterations is reached.
 func (r *Runner) Run(ctx context.Context, options RunOptions) error {
 	c, err := shared.Connect(r.options.ClientOptions, r.logger)
 	if err != nil {
@@ -127,6 +129,8 @@ func (r *Runner) Run(ctx context.Context, options RunOptions) error {
 	}
 }
 
+// runOne - where "one" is a single routine out of N concurrent defined for the scenario.
+// This method will loop until context is cancelled or the number of iterations for the scenario have exhuasted.
 func (r *Runner) runOne(ctx context.Context, logger *zap.SugaredLogger, c client.Client, options RunOptions) {
 	iterations := r.options.Scenario.Iterations
 loop:
@@ -206,6 +210,7 @@ func (r *Runner) Cleanup(ctx context.Context, options CleanupOptions) error {
 	if err != nil {
 		return err
 	}
+	// Loop and wait for the batch to complete
 	for {
 		response, err := c.WorkflowService().DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
 			Namespace: r.options.ClientOptions.Namespace,
@@ -257,6 +262,8 @@ type WorkerOptions struct {
 	TLSKeyPath  string
 }
 
+// StartWorker prepares (e.g. builds) and starts a worker for a given language.
+// The worker process will be killed with SIGTERM when the given context is cancelled.
 func (r *Runner) StartWorker(ctx context.Context, options WorkerOptions) error {
 	var args []string
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "omes-build-")
@@ -320,6 +327,7 @@ type AllInOneOptions struct {
 	StartWorkerOptions WorkerOptions
 }
 
+// AllInOne run an all-in-one scenario (StartWorker + Run)
 func (r *Runner) AllInOne(ctx context.Context, options AllInOneOptions) error {
 	ctx, cancel := context.WithCancel(ctx)
 	workerErrChan := make(chan error)

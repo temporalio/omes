@@ -19,7 +19,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/temporalio/omes/runner"
 	"github.com/temporalio/omes/shared"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -107,7 +106,7 @@ func Start(options Options) (*DevServer, error) {
 		Namespace: options.Namespace,
 		Logger:    shared.NewZapAdapter(options.Log.Desugar()),
 	}
-	err = runner.WaitServerReady(context.Background(), options.Log, clientOptions)
+	err = WaitServerReady(context.Background(), options.Log, clientOptions)
 	if err != nil {
 		return nil, err
 	}
