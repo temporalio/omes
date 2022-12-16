@@ -15,27 +15,38 @@ import (
 	"github.com/temporalio/omes/shared"
 )
 
+// options to pass from the command line to the runner
 type appOptions struct {
-	scenario         string
-	logLevel         string
-	logEncoding      string
-	duration         time.Duration
-	iterations       uint32
-	tlsCertPath      string
-	tlsKeyPath       string
+	// Name of the scenario to run
+	scenario    string
+	logLevel    string
+	logEncoding string
+	// Override for scnario duration
+	duration time.Duration
+	// Override for scnario iterations
+	iterations  uint32
+	tlsCertPath string
+	tlsKeyPath  string
+	// Whether or not to start a local server
 	startLocalServer bool
 }
 
 type App struct {
-	logger        *zap.SugaredLogger
-	runner        *runner.Runner
-	appOptions    appOptions
+	logger     *zap.SugaredLogger
+	runner     *runner.Runner
+	appOptions appOptions
+	// Options for configuring the client connection
 	clientOptions client.Options
+	// General runner options
 	runnerOptions runner.Options
-	runOptions    runner.RunOptions
-	cleanOptions  runner.CleanupOptions
+	// Options for runner.Run
+	runOptions runner.RunOptions
+	// Options for runner.Cleanup
+	cleanOptions runner.CleanupOptions
+	// Options for runner.StartWorker
 	workerOptions runner.WorkerOptions
-	devServer     *devserver.DevServer
+	// Dev server handle (see startLocalServer)
+	devServer *devserver.DevServer
 }
 
 // applyOverrides from CLI flags to a loaded scenario
@@ -56,6 +67,8 @@ func (a *App) applyOverrides(scenario *scenarios.Scenario) error {
 	return nil
 }
 
+// Setup the application and runner instance.
+// If a local server should be started, that will be done in this method.
 func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.logger = shared.SetupLogging(a.appOptions.logLevel, a.appOptions.logEncoding)
 
@@ -93,6 +106,7 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.runner = r
 }
 
+// Teardown stops the dev server in case one was started during Setup.
 func (a *App) Teardown(cmd *cobra.Command, args []string) {
 	if a.devServer != nil {
 		a.logger.Info("Stopping local dev server")
