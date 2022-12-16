@@ -41,19 +41,32 @@ $ go run ./cmd/omes.go start-worker --scenario WorkflowWithSingleNoopActivity --
 ### Cleanup after scenario run (requires ElasticSearch)
 
 ```console
-go run ./cmd/omes.go cleanup --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
+$ go run ./cmd/omes.go cleanup --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
 ```
 
 # All-in-one - Start a worker, an optional dev server, and run a scenario
 
 ```console
-go run ./cmd/omes.go all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --language go --start-local-server
+$ go run ./cmd/omes.go all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --language go --start-local-server
 ```
 
 Notes:
 
 - Cleanup is **not** automatically performed here
 - Accepts combined flags for `start-worker` and `run` commands
+
+## Design decisions
+
+### Kitchen Sink Workflow
+
+The idea here was to strike a balance between a generic workflow implementation that would work for 99% of scenarios
+while maintaining code simplicity and debuggability.
+
+### Scenario Failure
+
+A scenario can only fail if an `Execute` method returns an error, that means the control is fully in the scenario
+authors's hands. For enforcing a timeout for a scenario, use options like workflow execution timeouts or write a
+workflow that waits for a signal for a configurable amount of time.
 
 ## TODO
 

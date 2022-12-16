@@ -173,7 +173,7 @@ func (o *Options) loadExePath() (string, error) {
 	// atomic downloader would use a common temp file and check whether it exists
 	// and wait on it, but doing multiple downloads in racy situations is
 	// good/simple enough for now.
-	f, err := os.CreateTemp("", "cli-downloading-")
+	f, err := os.CreateTemp("", "temporal-cli-downloading-")
 	if err != nil {
 		return "", fmt.Errorf("failed creating temp file: %w", err)
 	}
