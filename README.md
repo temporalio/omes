@@ -2,7 +2,7 @@
 
 ## Why the weird name?
 
-Omes (עומס) is the Hebrew word for "load".
+Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 ## Prerequisites
 
