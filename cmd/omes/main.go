@@ -10,8 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/runner"
-	devserver "github.com/temporalio/omes/runner/dev_server"
-	"github.com/temporalio/omes/scenarios"
+	"github.com/temporalio/omes/runner/devserver"
+	"github.com/temporalio/omes/scenario"
+
+	// Register scenarios (side-effect)
+	_ "github.com/temporalio/omes/scenarios"
 	"github.com/temporalio/omes/shared"
 )
 
@@ -24,7 +27,7 @@ type appOptions struct {
 	// Override for scnario duration
 	duration time.Duration
 	// Override for scnario iterations
-	iterations  uint32
+	iterations  int
 	tlsCertPath string
 	tlsKeyPath  string
 	// Whether or not to start a local server
@@ -39,8 +42,6 @@ type App struct {
 	clientOptions client.Options
 	// General runner options
 	runnerOptions runner.Options
-	// Options for runner.Run
-	runOptions runner.RunOptions
 	// Options for runner.Cleanup
 	cleanOptions runner.CleanupOptions
 	// Options for runner.StartWorker
@@ -50,7 +51,7 @@ type App struct {
 }
 
 // applyOverrides from CLI flags to a loaded scenario
-func (a *App) applyOverrides(scenario *scenarios.Scenario) error {
+func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 	iterations := a.appOptions.iterations
 	duration := a.appOptions.duration
 
@@ -77,11 +78,11 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.runnerOptions.RunID = uuid.NewString()
 	}
 
-	scenario, err := scenarios.GetScenarioByName(a.appOptions.scenario)
-	if err != nil {
-		a.logger.Fatalf("failed to find scenario: %v", err)
+	scenario := scenario.Get(a.appOptions.scenario)
+	if scenario == nil {
+		a.logger.Fatalf("failed to find a registered scenario named %q", a.appOptions.scenario)
 	}
-	a.applyOverrides(&scenario)
+	a.applyOverrides(scenario)
 	if a.appOptions.startLocalServer {
 		// TODO: cli version / log level
 		server, err := devserver.Start(devserver.Options{Namespace: a.clientOptions.Namespace, Log: a.logger, LogLevel: "error"})
@@ -119,7 +120,7 @@ func (a *App) Teardown(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	if err := a.runner.Run(cmd.Context(), a.runOptions); err != nil {
+	if err := a.runner.Run(cmd.Context()); err != nil {
 		a.logger.Fatalf("Run failed: %v", err)
 	}
 }
@@ -131,13 +132,13 @@ func (a *App) Cleanup(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) StartWorker(cmd *cobra.Command, args []string) {
-	if err := a.runner.StartWorker(cmd.Context(), a.workerOptions); err != nil {
+	if err := a.runner.RunWorker(cmd.Context(), a.workerOptions); err != nil {
 		a.logger.Fatalf("Worker failed: %v", err)
 	}
 }
 
 func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
-	options := runner.AllInOneOptions{StartWorkerOptions: a.workerOptions, RunOptions: a.runOptions}
+	options := runner.AllInOneOptions{WorkerOptions: a.workerOptions}
 	if err := a.runner.AllInOne(cmd.Context(), options); err != nil {
 		a.logger.Fatalf("Run failed: %v", err)
 	}
@@ -145,12 +146,13 @@ func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
 
 func addRunFlags(cmd *cobra.Command, app *App) {
 	cmd.Flags().DurationVarP(&app.appOptions.duration, "duration", "d", 0, "Scenario duration - mutually exclusive with iterations")
-	cmd.Flags().Uint32VarP(&app.appOptions.iterations, "iterations", "i", 0, "Scenario iterations - mutually exclusive with duration")
-	cmd.Flags().BoolVarP(&app.runOptions.FailFast, "fail-fast", "f", false, "Fail run after first encountered error")
+	cmd.Flags().IntVarP(&app.appOptions.iterations, "iterations", "i", 0, "Scenario iterations - mutually exclusive with duration")
 }
 
 func addWorkerFlags(cmd *cobra.Command, app *App) {
 	cmd.Flags().StringVar(&app.workerOptions.Language, "language", "", "Language of worker that will be spawned (go typescript python java)")
+	cmd.Flags().BoolVar(&app.workerOptions.RetainBuildDir, "retain-build-dir", false, "If set, retain the directory used to build the worker")
+	cmd.Flags().DurationVar(&app.workerOptions.GracefulShutdownDuration, "graceful-shutdown-duration", 30*time.Second, "Time to wait for worker to respond to SIGTERM before SIGKILLing it")
 	cmd.MarkFlagRequired("language")
 }
 

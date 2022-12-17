@@ -9,11 +9,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// WaitServerReady repeatedly attempts to dial the server with given options until it is ready or it is time to give up.
-func WaitServerReady(ctx context.Context, logger *zap.SugaredLogger, options client.Options) error {
+// waitServerReady repeatedly attempts to dial the server with given options until it is ready or it is time to give up.
+func waitServerReady(ctx context.Context, logger *zap.SugaredLogger, options client.Options) error {
 	logger.Info("Waiting for server to be ready")
 
-	lastErr := RetryFor(600, 100*time.Millisecond, func() (bool, error) {
+	lastErr := retryFor(600, 100*time.Millisecond, func() (bool, error) {
 		myClient, err := client.Dial(options)
 		if err != nil {
 			return false, err
@@ -28,8 +28,8 @@ func WaitServerReady(ctx context.Context, logger *zap.SugaredLogger, options cli
 	return nil
 }
 
-// RetryFor retries some function until it passes or we run out of attempts. Wait interval between attempts.
-func RetryFor(maxAttempts int, interval time.Duration, cond func() (bool, error)) error {
+// retryFor retries some function until it passes or we run out of attempts. Wait interval between attempts.
+func retryFor(maxAttempts int, interval time.Duration, cond func() (bool, error)) error {
 	var lastErr error
 	for i := 0; i < maxAttempts; i++ {
 		if ok, curE := cond(); ok {

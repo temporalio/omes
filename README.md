@@ -70,6 +70,5 @@ workflow that waits for a signal for a configurable amount of time.
 
 ## TODO
 
-- Emit metrics from runner
 - Nicer output
 - Process resource monitoring for local worker

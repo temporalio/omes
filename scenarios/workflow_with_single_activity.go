@@ -3,17 +3,18 @@ package scenarios
 import (
 	"context"
 
+	"github.com/temporalio/omes/scenario"
 	"github.com/temporalio/omes/shared"
 )
 
-func Execute(ctx context.Context, run *Run) error {
-	return run.ExecuteVoidWorkflow(ctx, "kitchenSink", shared.KitchenSinkWorkflowParams{
+func Execute(ctx context.Context, run *scenario.Run) error {
+	return run.ExecuteKitchenSinkWorkflow(ctx, &shared.KitchenSinkWorkflowParams{
 		Actions: []*shared.KitchenSinkAction{{ExecuteActivity: &shared.ExecuteActivityAction{Name: "noop"}}},
 	})
 }
 
 func init() {
-	registerScenario(Scenario{
+	scenario.Register(&scenario.Scenario{
 		Name:        "WorkflowWithSingleNoopActivity",
 		Execute:     Execute,
 		Concurrency: 5,

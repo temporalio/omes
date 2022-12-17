@@ -106,7 +106,7 @@ func Start(options Options) (*DevServer, error) {
 		Namespace: options.Namespace,
 		Logger:    shared.NewZapAdapter(options.Log.Desugar()),
 	}
-	err = WaitServerReady(context.Background(), options.Log, clientOptions)
+	err = waitServerReady(context.Background(), options.Log, clientOptions)
 	if err != nil {
 		return nil, err
 	}
