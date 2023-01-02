@@ -21,7 +21,7 @@ Loadgen has the following capabilities:
 ### Run a test scenario
 
 ```console
-$ go run ./cmd/omes.go run --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
+$ go run ./cmd/omes run --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
 ```
 
 Notes:
@@ -35,19 +35,19 @@ Notes:
 ### Run a worker for a specific language SDK (currently only Go)
 
 ```console
-$ go run ./cmd/omes.go start-worker --scenario WorkflowWithSingleNoopActivity --language go --run-id local-test-run
+$ go run ./cmd/omes start-worker --scenario WorkflowWithSingleNoopActivity --language go --run-id local-test-run
 ```
 
 ### Cleanup after scenario run (requires ElasticSearch)
 
 ```console
-$ go run ./cmd/omes.go cleanup --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
+$ go run ./cmd/omes cleanup --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
 ```
 
 # All-in-one - Start a worker, an optional dev server, and run a scenario
 
 ```console
-$ go run ./cmd/omes.go all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --language go --start-local-server
+$ go run ./cmd/omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --language go --start-local-server
 ```
 
 Notes:
