@@ -15,9 +15,8 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/scenario"
-	"github.com/temporalio/omes/shared"
 	"go.opentelemetry.io/otel/attribute"
-	metrics "go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.temporal.io/api/batch/v1"
@@ -28,8 +27,6 @@ import (
 )
 
 const DEFAULT_CONCURRENCY = 10
-
-var Meter = metrics.Meter("omes")
 
 // Options for creating a Runner
 type Options struct {
@@ -54,7 +51,7 @@ type Runner struct {
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, logger *zap.SugaredLogger) (*Runner, error) {
+func NewRunner(options Options, meter metric.Meter, logger *zap.SugaredLogger) (*Runner, error) {
 	iterations := options.Scenario.Iterations
 	duration := options.Scenario.Duration
 	if iterations == 0 && duration == 0 {
@@ -64,7 +61,7 @@ func NewRunner(options Options, logger *zap.SugaredLogger) (*Runner, error) {
 		return nil, errors.New("invalid scenario: iterations and duration are mutually exclusive")
 	}
 
-	executeHistogram, err := Meter.SyncInt64().Histogram(
+	executeHistogram, err := meter.SyncInt64().Histogram(
 		"execute.histogram",
 		instrument.WithUnit("microseconds"),
 		instrument.WithDescription("Excute method histogram"),
@@ -100,13 +97,7 @@ func calcConcurrency(iterations int, scenario *scenario.Scenario) int {
 // Run a scenario.
 // Spins up coroutines according to the scenario configuration.
 // Each coroutine runs the scenario Execute method in a loop until the scenario duration or max iterations is reached.
-func (r *Runner) Run(ctx context.Context) error {
-	c, err := shared.Connect(r.options.ClientOptions, r.logger)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
+func (r *Runner) Run(ctx context.Context, client client.Client) error {
 	iterations := r.options.Scenario.Iterations
 	duration := r.options.Scenario.Duration
 	concurrency := calcConcurrency(iterations, r.options.Scenario)
@@ -128,7 +119,7 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	for i := 0; i < concurrency; i++ {
 		logger := r.logger.With("coroID", i)
-		go r.runOne(ctx, logger, c)
+		go r.runOne(ctx, logger, client)
 	}
 
 	var accumulatedErrors []string
@@ -204,19 +195,14 @@ func getIdentity() string {
 // Cleanup cleans up all workflows associated with the task.
 // Requires ElasticSearch.
 // TODO(bergundy): This fails on Cloud, not sure why
-func (r *Runner) Cleanup(ctx context.Context, options CleanupOptions) error {
-	c, err := shared.Connect(r.options.ClientOptions, r.logger)
-	if err != nil {
-		return err
-	}
-	defer c.Close()
+// TODO(bergundy): Add support for cleaning the entire namespace if we decide to add multi-queue scenarios
+func (r *Runner) Cleanup(ctx context.Context, client client.Client, options CleanupOptions) error {
 	taskQueue := r.options.Scenario.TaskQueueForRunID(r.options.RunID)
 	jobId := taskQueue
 	// Clean based on task queue to avoid relying on search attributes and reducing the requirements of this framework.
-	// Not escaping the value here and living with the consequences.
-	query := fmt.Sprintf("TaskQueue = '%s'", taskQueue)
+	query := fmt.Sprintf("TaskQueue = %q", taskQueue)
 
-	_, err = c.WorkflowService().StartBatchOperation(ctx, &workflowservice.StartBatchOperationRequest{
+	_, err := client.WorkflowService().StartBatchOperation(ctx, &workflowservice.StartBatchOperationRequest{
 		Namespace:       r.options.ClientOptions.Namespace,
 		JobId:           jobId,
 		Reason:          "omes cleanup",
@@ -230,7 +216,7 @@ func (r *Runner) Cleanup(ctx context.Context, options CleanupOptions) error {
 	}
 	// Loop and wait for the batch to complete
 	for {
-		response, err := c.WorkflowService().DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
+		response, err := client.WorkflowService().DescribeBatchOperation(ctx, &workflowservice.DescribeBatchOperationRequest{
 			Namespace: r.options.ClientOptions.Namespace,
 			JobId:     jobId,
 		})
@@ -374,7 +360,7 @@ type AllInOneOptions struct {
 }
 
 // AllInOne run an all-in-one scenario (StartWorker + Run)
-func (r *Runner) AllInOne(ctx context.Context, options AllInOneOptions) error {
+func (r *Runner) AllInOne(ctx context.Context, client client.Client, options AllInOneOptions) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	workerErrChan := make(chan error, 1)
@@ -384,7 +370,7 @@ func (r *Runner) AllInOne(ctx context.Context, options AllInOneOptions) error {
 		workerErrChan <- r.RunWorker(ctx, options.WorkerOptions)
 	}()
 	go func() {
-		runnerErrChan <- r.Run(ctx)
+		runnerErrChan <- r.Run(ctx, client)
 	}()
 
 	var workerErr error
@@ -392,7 +378,7 @@ func (r *Runner) AllInOne(ctx context.Context, options AllInOneOptions) error {
 
 	select {
 	case workerErr = <-workerErrChan:
-		return fmt.Errorf("Worker exited prematurely: %w", workerErr)
+		return fmt.Errorf("worker exited prematurely: %w", workerErr)
 	case runErr = <-runnerErrChan:
 		if runErr != nil {
 			r.logger.Errorf("Run completed with: %e", runErr)

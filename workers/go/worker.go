@@ -6,7 +6,8 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/shared"
+	"github.com/temporalio/omes/app"
+	"github.com/temporalio/omes/logging"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
@@ -17,30 +18,31 @@ import (
 )
 
 type App struct {
-	logger        *zap.SugaredLogger
-	serverAddress string
-	taskQueue     string
-	namespace     string
-	tlsCertPath   string
-	tlsKeyPath    string
-	logLevel      string
-	logEncoding   string
+	logger            *zap.SugaredLogger
+	serverAddress     string
+	taskQueue         string
+	namespace         string
+	tlsCertPath       string
+	tlsKeyPath        string
+	logLevel          string
+	logEncoding       string
+	prometheusOptions app.PrometheusOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	a.logger = shared.SetupLogging(a.logLevel, a.logEncoding)
+	a.logger = logging.MustSetupLogging(a.logLevel, a.logEncoding)
 
 	clientOpts := client.Options{
 		HostPort:  a.serverAddress,
 		Namespace: a.namespace,
 	}
-	shared.LoadCertsIntoOptions(&clientOpts, a.tlsCertPath, a.tlsKeyPath)
-	c, err := shared.Connect(clientOpts, a.logger)
-	if err != nil {
-		a.logger.Fatalf("%v", err)
+	metrics := app.MustInitMetrics(&a.prometheusOptions, a.logger)
+	if err := app.LoadCertsIntoOptions(&clientOpts, a.tlsCertPath, a.tlsKeyPath); err != nil {
+		a.logger.Fatalf("Failed to load TLS certs: %v", err)
 	}
+	client := app.MustConnect(clientOpts, metrics, a.logger)
 	workerOpts := worker.Options{}
-	w := worker.New(c, a.taskQueue, workerOpts)
+	w := worker.New(client, a.taskQueue, workerOpts)
 	w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 	w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
 
@@ -52,8 +54,11 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		a.logger.Infof("Got signal %s, stopping...", sig)
 		close(stopChan)
 	}()
-	if err = w.Run(stopChan); err != nil {
+	if err := w.Run(stopChan); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
+	}
+	if err := metrics.Shutdown(cmd.Context()); err != nil {
+		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
 }
 
@@ -73,6 +78,8 @@ func main() {
 	cmd.Flags().StringVar(&app.tlsCertPath, "tls-cert-path", "", "Path to TLS certificate")
 	cmd.Flags().StringVar(&app.tlsKeyPath, "tls-key-path", "", "Path to private key")
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
+	cmd.Flags().StringVar(&app.prometheusOptions.ListenAddress, "prom-listen-address", "", "prometheus listen address")
+	cmd.Flags().StringVar(&app.prometheusOptions.HandlerPath, "prom-handler-path", "", "prometheus handler path")
 
 	defer func() {
 		if app.logger != nil {
@@ -84,7 +91,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			shared.BackupLogger.Fatal(err)
+			logging.BackupLogger.Fatal(err)
 		}
 	}
 }

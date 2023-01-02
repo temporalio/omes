@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/temporalio/omes/shared"
+	"github.com/temporalio/omes/kitchensink"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
 
-func KitchenSinkWorkflow(ctx workflow.Context, params *shared.KitchenSinkWorkflowParams) (interface{}, error) {
+func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowParams) (interface{}, error) {
 	b, _ := json.Marshal(params)
 	workflow.GetLogger(ctx).Info("Started kitchen sink workflow", "params", string(b))
 
@@ -25,7 +25,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *shared.KitchenSinkWorkflo
 	if params.ActionSignal != "" {
 		actionCh := workflow.GetSignalChannel(ctx, params.ActionSignal)
 		for {
-			var action shared.KitchenSinkAction
+			var action kitchensink.Action
 			actionCh.Receive(ctx, &action)
 			if shouldReturn, ret, err := handleAction(ctx, params, &action); shouldReturn {
 				return ret, err
@@ -38,8 +38,8 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *shared.KitchenSinkWorkflo
 
 func handleAction(
 	ctx workflow.Context,
-	params *shared.KitchenSinkWorkflowParams,
-	action *shared.KitchenSinkAction,
+	params *kitchensink.WorkflowParams,
+	action *kitchensink.Action,
 ) (bool, interface{}, error) {
 	info := workflow.GetInfo(ctx)
 	switch {

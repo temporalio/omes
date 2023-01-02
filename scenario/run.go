@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/temporalio/omes/shared"
+	"github.com/temporalio/omes/kitchensink"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -29,7 +29,7 @@ func (r *Run) WorkflowOptions() client.StartWorkflowOptions {
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its completion ignoring its result
-func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, params *shared.KitchenSinkWorkflowParams) error {
+func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, params *kitchensink.WorkflowParams) error {
 	// TODO: ctx deadline might be too short if scenario is run with the Duration option.
 	// Set different duration here.
 	opts := r.WorkflowOptions()

@@ -10,22 +10,25 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/omes/scenario"
+	metrics "go.opentelemetry.io/otel/metric/global"
 	"go.uber.org/zap"
 )
+
+var meter = metrics.Meter("test")
 
 func TestRunnerIterationsAndDuration(t *testing.T) {
 	var err error
 	// only iterations
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Iterations: 3}}, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Iterations: 3}}, meter, nil)
 	assert.NoError(t, err)
 	// only duration
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second}}, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second}}, meter, nil)
 	assert.NoError(t, err)
 	// empty
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{}}, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{}}, meter, nil)
 	assert.ErrorContains(t, err, "invalid scenario: either iterations or duration is required")
 	// both
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second, Iterations: 3}}, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second, Iterations: 3}}, meter, nil)
 	assert.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
 }
 
@@ -60,11 +63,11 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 func run(options Options) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
-	runner, err := NewRunner(options, logger.Sugar())
+	runner, err := NewRunner(options, meter, logger.Sugar())
 	if err != nil {
 		return err
 	}
-	return runner.Run(context.Background())
+	return runner.Run(context.Background(), nil)
 }
 
 func TestRunHappyPathIterations(t *testing.T) {

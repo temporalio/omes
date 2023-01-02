@@ -1,11 +1,11 @@
-package shared
+package kitchensink
 
-type KitchenSinkWorkflowParams struct {
-	Actions      []*KitchenSinkAction `json:"actions"`
-	ActionSignal string               `json:"action_signal"`
+type WorkflowParams struct {
+	Actions      []*Action `json:"actions"`
+	ActionSignal string    `json:"action_signal"`
 }
 
-type KitchenSinkAction struct {
+type Action struct {
 	Result          *ResultAction          `json:"result"`
 	Error           *ErrorAction           `json:"error"`
 	ContinueAsNew   *ContinueAsNewAction   `json:"continue_as_new"`

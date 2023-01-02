@@ -1,10 +1,11 @@
-package shared
+package app
 
 import (
 	"crypto/tls"
 	"errors"
 	"fmt"
 
+	"github.com/temporalio/omes/logging"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -36,15 +37,15 @@ func LoadCertsIntoOptions(options *client.Options, clientCertPath, clientKeyPath
 	return nil
 }
 
-// Connect to server, with logging and metrics
-func Connect(options client.Options, logger *zap.SugaredLogger) (client.Client, error) {
-	options.Logger = NewZapAdapter(logger.Desugar())
-	options.MetricsHandler = NewMetricsHandler()
+// MustConnect to server, with logging and metrics
+func MustConnect(options client.Options, metrics *Metrics, logger *zap.SugaredLogger) client.Client {
+	options.Logger = logging.NewZapAdapter(logger.Desugar())
+	options.MetricsHandler = metrics.Handler()
 
 	c, err := client.Dial(options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial %s: %v", options.HostPort, err)
+		logger.Fatalf("Failed to dial %s: %v", options.HostPort, err)
 	}
 	logger.Infof("Client connected to %s, namespace: %s", options.HostPort, options.Namespace)
-	return c, nil
+	return c
 }

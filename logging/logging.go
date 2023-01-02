@@ -1,4 +1,4 @@
-package shared
+package logging
 
 import (
 	"log"
@@ -11,8 +11,8 @@ import (
 // BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`)
 var BackupLogger = log.New(os.Stderr, "", 0)
 
-// SetupLogging sets up a zap logger - panics if provided invalid level or encoding
-func SetupLogging(logLevel, logEncoding string) *zap.SugaredLogger {
+// MustSetupLogging sets up a zap logger - panics if provided invalid level or encoding
+func MustSetupLogging(logLevel, logEncoding string) *zap.SugaredLogger {
 	level, err := zap.ParseAtomicLevel(logLevel)
 	if err != nil {
 		BackupLogger.Fatalf("Invalid log level: %v", err)
