@@ -14,11 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/temporalio/omes/scenario"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -37,8 +34,7 @@ type Options struct {
 }
 
 type RunnerMetrics struct {
-	executeHistogram  syncint64.Histogram
-	scenarioAttribute attribute.KeyValue
+	executeHistogram prometheus.Histogram
 }
 
 type Runner struct {
@@ -51,7 +47,7 @@ type Runner struct {
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, meter metric.Meter, logger *zap.SugaredLogger) (*Runner, error) {
+func NewRunner(options Options, registry *prometheus.Registry, logger *zap.SugaredLogger) (*Runner, error) {
 	iterations := options.Scenario.Iterations
 	duration := options.Scenario.Duration
 	if iterations == 0 && duration == 0 {
@@ -61,23 +57,17 @@ func NewRunner(options Options, meter metric.Meter, logger *zap.SugaredLogger) (
 		return nil, errors.New("invalid scenario: iterations and duration are mutually exclusive")
 	}
 
-	executeHistogram, err := meter.SyncInt64().Histogram(
-		"execute.histogram",
-		instrument.WithUnit("microseconds"),
-		instrument.WithDescription("Excute method histogram"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a histogram: %w", err)
+	executeHistogram := prometheus.NewHistogram(prometheus.HistogramOpts{Name: "omes_execute_histogram", ConstLabels: prometheus.Labels{"scenario": options.Scenario.Name}})
+	if err := registry.Register(executeHistogram); err != nil {
+		return nil, fmt.Errorf("failed to register histogram: %w", err)
 	}
-	scenarioAttribute := attribute.KeyValue{Key: "scenario", Value: attribute.StringValue(options.Scenario.Name)}
 
 	return &Runner{
 		options: options,
 		errors:  make(chan error),
 		logger:  logger,
 		metrics: &RunnerMetrics{
-			executeHistogram:  executeHistogram,
-			scenarioAttribute: scenarioAttribute,
+			executeHistogram: executeHistogram,
 		},
 	}, nil
 }
@@ -165,7 +155,7 @@ func (r *Runner) runOne(ctx context.Context, logger *zap.SugaredLogger, c client
 		startTime := time.Now()
 		if err := r.options.Scenario.Execute(ctx, &run); err != nil {
 			duration := time.Since(startTime)
-			r.metrics.executeHistogram.Record(ctx, duration.Microseconds(), r.metrics.scenarioAttribute)
+			r.metrics.executeHistogram.Observe(duration.Seconds())
 			err = fmt.Errorf("iteration %d failed: %w", iteration, err)
 			logger.Error(err)
 			r.errors <- err
@@ -274,8 +264,7 @@ type WorkerOptions struct {
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
 	// Default is 30 seconds.
 	GracefulShutdownDuration time.Duration
-	//
-	RetainBuildDir bool
+	RetainBuildDir           bool
 }
 
 // RunWorker prepares (e.g. builds) and run a worker for a given language.
@@ -288,7 +277,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
 	r.logger.Infof("Created worker build dir %s", tmpDir)
-	if options.RetainBuildDir {
+	if !options.RetainBuildDir {
 		defer os.RemoveAll(tmpDir)
 	}
 	gracefulShutdownDuration := options.GracefulShutdownDuration
@@ -302,6 +291,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: options.Language, Output: outputPath}); err != nil {
 			return err
 		}
+		// TODO: prom options (take all-in-one into consideration)
 		args = []string{
 			outputPath,
 			"--server-address", r.options.ClientOptions.HostPort,

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/temporalio/omes/scenario"
 	metrics "go.opentelemetry.io/otel/metric/global"
@@ -19,16 +20,16 @@ var meter = metrics.Meter("test")
 func TestRunnerIterationsAndDuration(t *testing.T) {
 	var err error
 	// only iterations
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Iterations: 3}}, meter, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Iterations: 3}}, prometheus.NewRegistry(), nil)
 	assert.NoError(t, err)
 	// only duration
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second}}, meter, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second}}, prometheus.NewRegistry(), nil)
 	assert.NoError(t, err)
 	// empty
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{}}, meter, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{}}, prometheus.NewRegistry(), nil)
 	assert.ErrorContains(t, err, "invalid scenario: either iterations or duration is required")
 	// both
-	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second, Iterations: 3}}, meter, nil)
+	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Duration: 3 * time.Second, Iterations: 3}}, prometheus.NewRegistry(), nil)
 	assert.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
 }
 
@@ -63,7 +64,7 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 func run(options Options) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
-	runner, err := NewRunner(options, meter, logger.Sugar())
+	runner, err := NewRunner(options, prometheus.NewRegistry(), logger.Sugar())
 	if err != nil {
 		return err
 	}
