@@ -52,6 +52,7 @@ func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
 }
 
 func (h *metricsHandler) Timer(name string) client.MetricsTimer {
+	// TODO: buckets
 	timer := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name, ConstLabels: prometheus.Labels(h.tags)})
 	h.mustRegisterIgnoreDuplicate(timer)
 	return metricsTimer{timer}
@@ -109,6 +110,14 @@ func MustInitMetrics(options *PrometheusOptions, logger *zap.SugaredLogger) *Met
 	}
 }
 
+func MetricsForTesting() *Metrics {
+	registry := prometheus.NewRegistry()
+
+	return &Metrics{
+		registry: registry,
+	}
+}
+
 func (m *Metrics) Handler() *metricsHandler {
 	return &metricsHandler{
 		registry: m.registry,
@@ -117,6 +126,10 @@ func (m *Metrics) Handler() *metricsHandler {
 }
 
 func (m *Metrics) Shutdown(ctx context.Context) error {
+	if m.server == nil {
+		// Created with MetricsForTesting
+		return nil
+	}
 	return m.server.Shutdown(ctx)
 }
 

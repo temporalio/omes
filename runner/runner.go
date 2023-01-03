@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/temporalio/omes/app"
 	"github.com/temporalio/omes/scenario"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
@@ -34,7 +34,7 @@ type Options struct {
 }
 
 type RunnerMetrics struct {
-	executeHistogram prometheus.Histogram
+	executeTimer client.MetricsTimer
 }
 
 type Runner struct {
@@ -47,7 +47,7 @@ type Runner struct {
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, registry *prometheus.Registry, logger *zap.SugaredLogger) (*Runner, error) {
+func NewRunner(options Options, metrics *app.Metrics, logger *zap.SugaredLogger) (*Runner, error) {
 	iterations := options.Scenario.Iterations
 	duration := options.Scenario.Duration
 	if iterations == 0 && duration == 0 {
@@ -57,17 +57,14 @@ func NewRunner(options Options, registry *prometheus.Registry, logger *zap.Sugar
 		return nil, errors.New("invalid scenario: iterations and duration are mutually exclusive")
 	}
 
-	executeHistogram := prometheus.NewHistogram(prometheus.HistogramOpts{Name: "omes_execute_histogram", ConstLabels: prometheus.Labels{"scenario": options.Scenario.Name}})
-	if err := registry.Register(executeHistogram); err != nil {
-		return nil, fmt.Errorf("failed to register histogram: %w", err)
-	}
+	executeTimer := metrics.Handler().WithTags(map[string]string{"scenario": options.Scenario.Name}).Timer("omes_execute_histogram")
 
 	return &Runner{
 		options: options,
 		errors:  make(chan error),
 		logger:  logger,
 		metrics: &RunnerMetrics{
-			executeHistogram: executeHistogram,
+			executeTimer: executeTimer,
 		},
 	}, nil
 }
@@ -155,7 +152,7 @@ func (r *Runner) runOne(ctx context.Context, logger *zap.SugaredLogger, c client
 		startTime := time.Now()
 		if err := r.options.Scenario.Execute(ctx, &run); err != nil {
 			duration := time.Since(startTime)
-			r.metrics.executeHistogram.Observe(duration.Seconds())
+			r.metrics.executeTimer.Record(duration)
 			err = fmt.Errorf("iteration %d failed: %w", iteration, err)
 			logger.Error(err)
 			r.errors <- err
