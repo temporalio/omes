@@ -16,12 +16,58 @@ There's no need to install anything to use this, it's a self-contained Go projec
 
 ## Usage
 
-Loadgen has the following capabilities:
+### Define a scenario
+
+Scenarios are defined using plain Go code. They are located in the [scenarios](./scenarios/) folder.
+
+A scenario must define an `Execute` function that is called concurrently to execute a single iteration.
+
+```go
+func Execute(ctx context.Context, run *scenario.Run) error {
+	return run.ExecuteKitchenSinkWorkflow(ctx, &kitchensink.WorkflowParams{
+		Actions: []*kitchensink.Action{{ExecuteActivity: &kitchensink.ExecuteActivityAction{Name: "noop"}}},
+	})
+}
+```
+
+Omes comes with pre-implemented workflows and activities that can be run using any SDK language (see the `run-worker`
+and `all-in-one` commands below).
+Scenarios are not tied to number of workers, cluster configuration, or the worker SDK language.
+
+Typically scenarios will use the Kitchen Sink workflow that runs [actions](./kitchensink/kitchensink.go) specified by
+the client.
+
+> NOTE: the Kitchen Sink workflow is the only workflow implemented at the moment, other workflows will be added as
+> needed.
+
+Scenarios must be explicitly registered to be runnable by omes:
+
+```go
+func init() {
+	scenario.Register(&scenario.Scenario{
+		Execute:     Execute,
+		Concurrency: 5, // How many instances of the "Execute" function to run concurrently.
+		Iterations:  10, // Total number of iterations of the "Execute" function to run.
+		// "Duration" may be specified instead of "Iterations".
+		// "Name" may be overridden here but defaults to the file name Register was called from.
+	})
+}
+```
+
+Some of the scenario configuration may be overridden at launch time using CLI flags such as `--iterations`,
+`--duration`, and `--concurrency`.
+
+#### Scenario Authoring Guidelines
+
+1. Use snake care for scenario file names.
+1. Avoid overriding scenario names (the file name will be used by default).
+1. Use methods of [Run](./scenario/run.go) in your `Execute` as much as possible.
+1. Add methods to `Run` as needed.
 
 ### Run a test scenario
 
 ```console
-$ go run ./cmd/omes run --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
+$ go run ./cmd/omes run --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -35,19 +81,19 @@ Notes:
 ### Run a worker for a specific language SDK (currently only Go)
 
 ```console
-$ go run ./cmd/omes run-worker --scenario WorkflowWithSingleNoopActivity --run-id local-test-run --language go
+$ go run ./cmd/omes run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
 ```
 
 ### Cleanup after scenario run (requires ElasticSearch)
 
 ```console
-$ go run ./cmd/omes cleanup --scenario WorkflowWithSingleNoopActivity --run-id local-test-run
+$ go run ./cmd/omes cleanup --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 # All-in-one - Start a worker, an optional dev server, and run a scenario
 
 ```console
-$ go run ./cmd/omes all-in-one --scenario WorkflowWithSingleNoopActivity --language go --start-local-server
+$ go run ./cmd/omes all-in-one --scenario workflow_with_single_noop_activity --language go --start-local-server
 ```
 
 Notes:

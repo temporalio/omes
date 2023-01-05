@@ -14,8 +14,7 @@ func Execute(ctx context.Context, run *scenario.Run) error {
 }
 
 func init() {
-	scenario.Register(&scenario.Scenario{
-		Name:        "WorkflowWithSingleNoopActivity",
+	scenario.MustRegister(&scenario.Scenario{
 		Execute:     Execute,
 		Concurrency: 5,
 		Iterations:  10,

@@ -8,6 +8,7 @@ import (
 
 type Scenario struct {
 	// A unique name within the registered set of scenarios.
+	// Upon registration, the name of the file will be used as name if this field is left empty.
 	Name string
 	// Number of instances of the Execute method to run concurrently.
 	Concurrency int
