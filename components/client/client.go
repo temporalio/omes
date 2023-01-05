@@ -6,16 +6,22 @@ import (
 	"fmt"
 
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/components"
 	"github.com/temporalio/omes/components/metrics"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
+// Options for creating a Temporal client.
 type Options struct {
-	Address        string
-	Namespace      string
-	ClientCertPath string
-	ClientKeyPath  string
+	// Address of Temporal server to connect to
+	Address string `flag:"server-address"`
+	// Temporal namespace
+	Namespace string `flag:"namespace"`
+	// TLS client cert
+	ClientCertPath string `flag:"tls-cert-path"`
+	// TLS client private key
+	ClientKeyPath string `flag:"tls-key-path"`
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -35,7 +41,7 @@ func loadTLSConfig(clientCertPath, clientKeyPath string) (*tls.Config, error) {
 	return nil, nil
 }
 
-// MustConnect to server, with logging and metrics
+// MustConnect connects to a Temporal server, with logging, metrics and loaded TLS certs.
 func MustConnect(options *Options, metrics *metrics.Metrics, logger *zap.SugaredLogger) client.Client {
 	tlsCfg, err := loadTLSConfig(options.ClientCertPath, options.ClientKeyPath)
 	if err != nil {
@@ -56,9 +62,10 @@ func MustConnect(options *Options, metrics *metrics.Metrics, logger *zap.Sugared
 	return c
 }
 
+// AddCLIFlags adds the relevant flags to populate the options struct.
 func AddCLIFlags(fs *pflag.FlagSet, options *Options) {
-	fs.StringVarP(&options.Address, "server-address", "a", "localhost:7233", "address of Temporal server")
-	fs.StringVarP(&options.Namespace, "namespace", "n", "default", "namespace to connect to")
-	fs.StringVar(&options.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
-	fs.StringVar(&options.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	fs.StringVarP(&options.Address, components.OptionToFlagName(options, "Address"), "a", "localhost:7233", "Address of Temporal server")
+	fs.StringVarP(&options.Namespace, components.OptionToFlagName(options, "Namespace"), "n", "default", "Namespace to connect to")
+	fs.StringVar(&options.ClientCertPath, components.OptionToFlagName(options, "ClientCertPath"), "", "Path to client TLS certificate")
+	fs.StringVar(&options.ClientKeyPath, components.OptionToFlagName(options, "ClientKeyPath"), "", "Path to client private key")
 }

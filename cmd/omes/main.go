@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,7 +19,7 @@ import (
 	_ "github.com/temporalio/omes/scenarios" // Register scenarios (side-effect)
 )
 
-// options to pass from the command line to the runner
+// options for bootstrapping a scenario
 type appOptions struct {
 	// Name of the scenario to run
 	scenario string
@@ -42,7 +44,7 @@ type App struct {
 	runnerOptions runner.Options
 	// Options for runner.Cleanup
 	cleanOptions runner.CleanupOptions
-	// Options for runner.StartWorker
+	// Options for runner.RunWorker
 	workerOptions  runner.WorkerOptions
 	metricsOptions metrics.Options
 	// Dev server handle (see startLocalServer)
@@ -67,15 +69,29 @@ func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 	return nil
 }
 
+func shortUUID() (string, error) {
+	uuid := uuid.New()
+	bytes, err := uuid.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+	// We don't care about losing some uniqueness
+	escaper := strings.NewReplacer("-", "0", "_", "0")
+	return escaper.Replace(base64.RawURLEncoding.EncodeToString(bytes)), nil
+}
+
 // Setup the application and runner instance.
-// If a local server should be started, that will be done in this method.
+// Starts a local server if requested.
 func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.logger = logging.MustSetup(&a.loggingOptions)
 	a.metrics = metrics.MustSetup(&a.metricsOptions, a.logger)
 
 	if a.runnerOptions.RunID == "" {
-		// TODO: make a nicer, shorter ID for this
-		a.runnerOptions.RunID = uuid.NewString()
+		runID, err := shortUUID()
+		if err != nil {
+			a.logger.Fatalf("Failed to generate a short UUID: %v", err)
+		}
+		a.runnerOptions.RunID = runID
 	}
 
 	scenario := scenario.Get(a.appOptions.scenario)
@@ -94,12 +110,10 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.clientOptions.ClientCertPath = ""
 		a.clientOptions.ClientKeyPath = ""
 		a.devServer = server
-	} else {
-		a.workerOptions.ClientCertPath = a.clientOptions.ClientCertPath
-		a.workerOptions.ClientKeyPath = a.clientOptions.ClientKeyPath
 	}
 	a.runnerOptions.Scenario = scenario
 	a.runnerOptions.ClientOptions = a.clientOptions
+	a.workerOptions.ClientOptions = a.clientOptions
 
 	r, err := runner.NewRunner(a.runnerOptions, a.metrics, a.logger)
 	if err != nil {
@@ -125,6 +139,7 @@ func (a *App) Teardown(cmd *cobra.Command, args []string) {
 	}
 }
 
+// Run starts a new scenario run.
 func (a *App) Run(cmd *cobra.Command, args []string) {
 	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
@@ -134,6 +149,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
+// Cleanup resources created by a previous run.
 func (a *App) Cleanup(cmd *cobra.Command, args []string) {
 	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
@@ -143,19 +159,21 @@ func (a *App) Cleanup(cmd *cobra.Command, args []string) {
 	}
 }
 
-func (a *App) StartWorker(cmd *cobra.Command, args []string) {
+// RunWorker builds and runs a worker for the language specified in options.
+func (a *App) RunWorker(cmd *cobra.Command, args []string) {
 	a.workerOptions.LoggingOptions = a.loggingOptions
 	if err := a.runner.RunWorker(cmd.Context(), a.workerOptions); err != nil {
 		a.logger.Fatalf("Worker failed: %v", err)
 	}
 }
 
+// RunAllInOne runs a worker, an optional local server, and a scenario.
 func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
 	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	options := runner.AllInOneOptions{WorkerOptions: a.workerOptions}
-	if err := a.runner.AllInOne(cmd.Context(), client, options); err != nil {
+	if err := a.runner.RunAllInOne(cmd.Context(), client, options); err != nil {
 		a.logger.Fatalf("Run failed: %v", err)
 	}
 }
@@ -195,9 +213,9 @@ func main() {
 	}
 
 	var startWorkerCmd = &cobra.Command{
-		Use:   "start-worker",
-		Short: "Start a local worker",
-		Run:   app.StartWorker,
+		Use:   "run-worker",
+		Short: "Build and run a local worker",
+		Run:   app.RunWorker,
 	}
 
 	var allInOneCmd = &cobra.Command{

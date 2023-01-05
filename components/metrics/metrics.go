@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/components"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -20,6 +21,8 @@ type metricsHandler struct {
 	registry *prometheus.Registry
 	tags     map[string]string
 }
+
+var _ client.MetricsHandler = (*metricsHandler)(nil)
 
 func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler {
 	// Make enough space for the handlers tags which are populated first
@@ -64,7 +67,7 @@ type metricsCounter struct {
 	prom prometheus.Counter
 }
 
-// Inc (increment) the counter value.
+// Inc increments the counter value.
 func (m metricsCounter) Inc(incr int64) {
 	m.prom.Add(float64(incr))
 }
@@ -73,7 +76,7 @@ type metricsGauge struct {
 	prom prometheus.Gauge
 }
 
-// Update the gauge with a new observation.
+// Update updates the gauge with a new observation.
 func (m metricsGauge) Update(x float64) {
 	m.prom.Set(x)
 }
@@ -82,26 +85,28 @@ type metricsTimer struct {
 	prom prometheus.Histogram
 }
 
-// Record a duration.
+// Record records a duration.
 func (m metricsTimer) Record(duration time.Duration) {
 	m.prom.Observe(duration.Seconds())
 }
 
+// Options for setting up Prometheus metrics.
 type Options struct {
 	// Address for the Prometheus HTTP listener.
-	// Default to listen on all interfaces and port 9090.
-	// TODO: should empty be treated as server disabled?
-	PrometheusListenAddress string
+	// If empty, the listener will not be started.
+	PrometheusListenAddress string `flag:"prom-listen-address"`
 	// HTTP path for serving metrics.
-	// Default /metrics
-	PrometheusHandlerPath string
+	// Default "/metrics".
+	PrometheusHandlerPath string `flag:"prom-handler-path"`
 }
 
+// Metrics is a component for insrumenting an application with Promethues metrics.
 type Metrics struct {
 	server   *http.Server
 	registry *prometheus.Registry
 }
 
+// MustSetup sets up Prometheus based metrics and starts an HTTP server for serving metrics
 func MustSetup(options *Options, logger *zap.SugaredLogger) *Metrics {
 	registry := prometheus.NewRegistry()
 	var server *http.Server
@@ -115,13 +120,15 @@ func MustSetup(options *Options, logger *zap.SugaredLogger) *Metrics {
 	}
 }
 
-func (m *Metrics) Handler() *metricsHandler {
+// Handler returns a new Temporal-client-compatible metrics handler.
+func (m *Metrics) Handler() client.MetricsHandler {
 	return &metricsHandler{
 		registry: m.registry,
 		tags:     make(map[string]string),
 	}
 }
 
+// Shutdown the Promethus HTTP server if one was set up.
 func (m *Metrics) Shutdown(ctx context.Context) error {
 	// server might be nil if no listen address was provided
 	if m.server == nil {
@@ -156,7 +163,8 @@ func mustInitPrometheusServer(options *Options, logger *zap.SugaredLogger, regis
 	return server
 }
 
+// AddCLIFlags adds the relevant flags to populate the options struct.
 func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
-	fs.StringVar(&options.PrometheusListenAddress, fmt.Sprintf("%sprom-listen-address", prefix), "", "Prometheus listen address")
-	fs.StringVar(&options.PrometheusHandlerPath, fmt.Sprintf("%sprom-handler-path", prefix), "", "Prometheus handler path")
+	fs.StringVar(&options.PrometheusListenAddress, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "PrometheusListenAddress")), "", "Prometheus listen address")
+	fs.StringVar(&options.PrometheusHandlerPath, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "PrometheusHandlerPath")), "/metrics", "Prometheus handler path")
 }

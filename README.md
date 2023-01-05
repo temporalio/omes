@@ -35,7 +35,7 @@ Notes:
 ### Run a worker for a specific language SDK (currently only Go)
 
 ```console
-$ go run ./cmd/omes start-worker --scenario WorkflowWithSingleNoopActivity --language go --run-id local-test-run
+$ go run ./cmd/omes run-worker --scenario WorkflowWithSingleNoopActivity --run-id local-test-run --language go
 ```
 
 ### Cleanup after scenario run (requires ElasticSearch)

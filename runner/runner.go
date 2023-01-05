@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/temporalio/omes/components"
 	clientComponent "github.com/temporalio/omes/components/client"
 	"github.com/temporalio/omes/components/logging"
 	"github.com/temporalio/omes/components/metrics"
@@ -27,15 +28,17 @@ import (
 
 const DEFAULT_CONCURRENCY = 10
 
-// Options for creating a Runner
+// Options for creating a Runner.
 type Options struct {
 	ClientOptions clientComponent.Options
-	// ID used for prefixing workflow IDs and determining the task queue
+	// ID used for prefixing workflow IDs and determining the task queue.
 	RunID    string
 	Scenario *scenario.Scenario
 }
 
-type RunnerMetrics struct {
+// Metrics used by the Runner
+type runnerMetrics struct {
+	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
 }
 
@@ -45,7 +48,7 @@ type Runner struct {
 	options          Options
 	errors           chan error
 	logger           *zap.SugaredLogger
-	metrics          *RunnerMetrics
+	metrics          *runnerMetrics
 }
 
 // NewRunner instantiates a Runner
@@ -65,7 +68,7 @@ func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLog
 		options: options,
 		errors:  make(chan error),
 		logger:  logger,
-		metrics: &RunnerMetrics{
+		metrics: &runnerMetrics{
 			executeTimer: executeTimer,
 		},
 	}, nil
@@ -183,8 +186,8 @@ func getIdentity() string {
 
 // Cleanup cleans up all workflows associated with the task.
 // Requires ElasticSearch.
-// TODO(bergundy): This fails on Cloud, not sure why
-// TODO(bergundy): Add support for cleaning the entire namespace if we decide to add multi-queue scenarios
+// TODO(bergundy): This fails on Cloud, not sure why.
+// TODO(bergundy): Add support for cleaning the entire namespace or by search attribute if we decide to add multi-queue scenarios.
 func (r *Runner) Cleanup(ctx context.Context, client client.Client, options CleanupOptions) error {
 	taskQueue := r.options.Scenario.TaskQueueForRunID(r.options.RunID)
 	jobId := taskQueue
@@ -255,22 +258,22 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 	}
 }
 
-// TODO: worker tuning options
 type WorkerOptions struct {
 	MetricsOptions metrics.Options
 	LoggingOptions logging.Options
-	Language       string
-	ClientCertPath string
-	ClientKeyPath  string
+	ClientOptions  clientComponent.Options
+	// Worker SDK language
+	Language string
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
 	// Default is 30 seconds.
 	GracefulShutdownDuration time.Duration
 	RetainBuildDir           bool
+	// TODO: worker tuning options
 }
 
 // RunWorker prepares (e.g. builds) and run a worker for a given language.
 // The worker process will be killed with SIGTERM when the given context is cancelled.
-// If the worker process does not exit after options.GracefulShutdownDuration, it will get a SIGKILL
+// If the worker process does not exit after options.GracefulShutdownDuration, it will get a SIGKILL.
 func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	var args []string
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "omes-build-")
@@ -292,28 +295,13 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: options.Language, Output: outputPath}); err != nil {
 			return err
 		}
-		// TODO(bergundy): Can use reflection and struct tags to build this
 		args = []string{
 			outputPath,
-			"--server-address", r.options.ClientOptions.Address,
-			"--namespace", r.options.ClientOptions.Namespace,
 			"--task-queue", r.options.Scenario.TaskQueueForRunID(r.options.RunID),
 		}
-		if options.ClientCertPath != "" && options.ClientKeyPath != "" {
-			args = append(args, "--tls-cert-path", options.ClientCertPath, "--tls-key-path", options.ClientKeyPath)
-		}
-		if options.MetricsOptions.PrometheusHandlerPath != "" {
-			args = append(args, "--prom-handler-path", options.MetricsOptions.PrometheusHandlerPath)
-		}
-		if options.MetricsOptions.PrometheusListenAddress != "" {
-			args = append(args, "--prom-listen-address", options.MetricsOptions.PrometheusListenAddress)
-		}
-		if options.LoggingOptions.LogLevel != "" {
-			args = append(args, "--log-level", options.LoggingOptions.LogLevel)
-		}
-		if options.LoggingOptions.LogEncoding != "" {
-			args = append(args, "--log-encoding", options.LoggingOptions.LogEncoding)
-		}
+		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
+		args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
+		args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)
 	}
@@ -362,8 +350,8 @@ type AllInOneOptions struct {
 	WorkerOptions WorkerOptions
 }
 
-// AllInOne run an all-in-one scenario (StartWorker + Run)
-func (r *Runner) AllInOne(ctx context.Context, client client.Client, options AllInOneOptions) error {
+// RunAllInOne runs an all-in-one scenario (RunWorker + Run).
+func (r *Runner) RunAllInOne(ctx context.Context, client client.Client, options AllInOneOptions) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	workerErrChan := make(chan error, 1)

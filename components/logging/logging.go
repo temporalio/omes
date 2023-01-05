@@ -6,19 +6,23 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/components"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
+// Options for setting up the logger component
 type Options struct {
-	LogLevel    string
-	LogEncoding string
+	// Log level
+	LogLevel string `flag:"log-level"`
+	// Log encoding (console json)
+	LogEncoding string `flag:"log-encoding"`
 }
 
-// BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`)
+// BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`).
 var BackupLogger = log.New(os.Stderr, "", 0)
 
-// MustSetupLogging sets up a zap logger - panics if provided invalid level or encoding
+// MustSetup sets up a zap logger - panics if provided invalid level or encoding.
 func MustSetup(options *Options) *zap.SugaredLogger {
 	level, err := zap.ParseAtomicLevel(options.LogLevel)
 	if err != nil {
@@ -38,7 +42,8 @@ func MustSetup(options *Options) *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
+// AddCLIFlags adds the relevant flags to populate the options struct.
 func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
-	fs.StringVar(&options.LogLevel, fmt.Sprintf("%slog-level", prefix), "info", "(debug info warn error dpanic panic fatal)")
-	fs.StringVar(&options.LogEncoding, fmt.Sprintf("%slog-encoding", prefix), "console", "(console json)")
+	fs.StringVar(&options.LogLevel, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "LogLevel")), "info", "(debug info warn error dpanic panic fatal)")
+	fs.StringVar(&options.LogEncoding, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "LogEncoding")), "console", "(console json)")
 }
