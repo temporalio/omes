@@ -144,6 +144,7 @@ func (a *App) Cleanup(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) StartWorker(cmd *cobra.Command, args []string) {
+	a.workerOptions.LoggingOptions = a.loggingOptions
 	if err := a.runner.RunWorker(cmd.Context(), a.workerOptions); err != nil {
 		a.logger.Fatalf("Worker failed: %v", err)
 	}
@@ -205,9 +206,9 @@ func main() {
 		Run:   app.RunAllInOne,
 	}
 
-	logging.AddCLIFlags(rootCmd.PersistentFlags(), &app.loggingOptions)
+	logging.AddCLIFlags(rootCmd.PersistentFlags(), &app.loggingOptions, "")
+	metrics.AddCLIFlags(rootCmd.PersistentFlags(), &app.metricsOptions, "")
 	client.AddCLIFlags(rootCmd.PersistentFlags(), &app.clientOptions)
-	metrics.AddCLIFlags(rootCmd.PersistentFlags(), &app.metricsOptions)
 	rootCmd.PersistentFlags().StringVarP(&app.appOptions.scenario, "scenario", "s", "", "Scenario to run (see scenarios/)")
 	rootCmd.MarkFlagRequired("scenario")
 	rootCmd.PersistentFlags().StringVar(&app.runnerOptions.RunID, "run-id", "", "Optional unique ID for a scenario run")
@@ -228,9 +229,9 @@ func main() {
 	rootCmd.AddCommand(allInOneCmd)
 	addWorkerFlags(allInOneCmd, &app)
 	addRunFlags(allInOneCmd, &app)
+	logging.AddCLIFlags(allInOneCmd.Flags(), &app.workerOptions.LoggingOptions, "worker-")
+	metrics.AddCLIFlags(allInOneCmd.Flags(), &app.workerOptions.MetricsOptions, "worker-")
 	allInOneCmd.Flags().BoolVar(&app.appOptions.startLocalServer, "start-local-server", false, "Start a local server (server-address and TLS options will be ignored)")
-	allInOneCmd.Flags().StringVar(&app.workerOptions.MetricsOptions.PrometheusListenAddress, "worker-prom-listen-address", "", "Worker prometheus listen address")
-	allInOneCmd.Flags().StringVar(&app.workerOptions.MetricsOptions.PrometheusHandlerPath, "worker-prom-handler-path", "", "Worker prometheus handler path")
 
 	defer func() {
 		if app.logger != nil {

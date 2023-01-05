@@ -15,6 +15,7 @@ import (
 	"time"
 
 	clientComponent "github.com/temporalio/omes/components/client"
+	"github.com/temporalio/omes/components/logging"
 	"github.com/temporalio/omes/components/metrics"
 	"github.com/temporalio/omes/scenario"
 	"go.temporal.io/api/batch/v1"
@@ -257,11 +258,10 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 // TODO: worker tuning options
 type WorkerOptions struct {
 	MetricsOptions metrics.Options
+	LoggingOptions logging.Options
 	Language       string
 	ClientCertPath string
 	ClientKeyPath  string
-	LogLevel       string
-	LogEncoding    string
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
 	// Default is 30 seconds.
 	GracefulShutdownDuration time.Duration
@@ -292,6 +292,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: options.Language, Output: outputPath}); err != nil {
 			return err
 		}
+		// TODO(bergundy): Can use reflection and struct tags to build this
 		args = []string{
 			outputPath,
 			"--server-address", r.options.ClientOptions.Address,
@@ -306,6 +307,12 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		}
 		if options.MetricsOptions.PrometheusListenAddress != "" {
 			args = append(args, "--prom-listen-address", options.MetricsOptions.PrometheusListenAddress)
+		}
+		if options.LoggingOptions.LogLevel != "" {
+			args = append(args, "--log-level", options.LoggingOptions.LogLevel)
+		}
+		if options.LoggingOptions.LogEncoding != "" {
+			args = append(args, "--log-encoding", options.LoggingOptions.LogEncoding)
 		}
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)

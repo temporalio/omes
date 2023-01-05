@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -155,7 +156,7 @@ func mustInitPrometheusServer(options *Options, logger *zap.SugaredLogger, regis
 	return server
 }
 
-func AddCLIFlags(fs *pflag.FlagSet, options *Options) {
-	fs.StringVar(&options.PrometheusListenAddress, "prom-listen-address", "", "Prometheus listen address")
-	fs.StringVar(&options.PrometheusHandlerPath, "prom-handler-path", "", "Prometheus handler path")
+func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
+	fs.StringVar(&options.PrometheusListenAddress, fmt.Sprintf("%sprom-listen-address", prefix), "", "Prometheus listen address")
+	fs.StringVar(&options.PrometheusHandlerPath, fmt.Sprintf("%sprom-handler-path", prefix), "", "Prometheus handler path")
 }

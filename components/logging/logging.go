@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -37,7 +38,7 @@ func MustSetup(options *Options) *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
-func AddCLIFlags(fs *pflag.FlagSet, options *Options) {
-	fs.StringVar(&options.LogLevel, "log-level", "info", "(debug info warn error dpanic panic fatal)")
-	fs.StringVar(&options.LogEncoding, "log-encoding", "console", "(console json)")
+func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
+	fs.StringVar(&options.LogLevel, fmt.Sprintf("%slog-level", prefix), "info", "(debug info warn error dpanic panic fatal)")
+	fs.StringVar(&options.LogEncoding, fmt.Sprintf("%slog-encoding", prefix), "console", "(console json)")
 }

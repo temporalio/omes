@@ -60,9 +60,9 @@ func main() {
 		Run:   app.Run,
 	}
 
-	logging.AddCLIFlags(cmd.Flags(), &app.loggingOptions)
+	logging.AddCLIFlags(cmd.Flags(), &app.loggingOptions, "")
 	client.AddCLIFlags(cmd.Flags(), &app.clientOptions)
-	metrics.AddCLIFlags(cmd.Flags(), &app.metricsOptions)
+	metrics.AddCLIFlags(cmd.Flags(), &app.metricsOptions, "")
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
 
 	defer func() {
