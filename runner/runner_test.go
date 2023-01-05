@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/temporalio/omes/app"
+	"github.com/temporalio/omes/components"
 	"github.com/temporalio/omes/scenario"
 	"go.uber.org/zap"
 )
 
-var metrics = app.MetricsForTesting()
+var metrics = components.MustInitMetrics(&components.PrometheusOptions{}, nil)
 
 func TestRunnerIterationsAndDuration(t *testing.T) {
 	var err error

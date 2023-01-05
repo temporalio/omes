@@ -6,8 +6,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/app"
-	"github.com/temporalio/omes/logging"
+	"github.com/temporalio/omes/components"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
@@ -26,21 +25,21 @@ type App struct {
 	tlsKeyPath        string
 	logLevel          string
 	logEncoding       string
-	prometheusOptions app.PrometheusOptions
+	prometheusOptions components.PrometheusOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	a.logger = logging.MustSetupLogging(a.logLevel, a.logEncoding)
+	a.logger = components.MustSetupLogging(a.logLevel, a.logEncoding)
 
 	clientOpts := client.Options{
 		HostPort:  a.serverAddress,
 		Namespace: a.namespace,
 	}
-	metrics := app.MustInitMetrics(&a.prometheusOptions, a.logger)
-	if err := app.LoadCertsIntoOptions(&clientOpts, a.tlsCertPath, a.tlsKeyPath); err != nil {
+	metrics := components.MustInitMetrics(&a.prometheusOptions, a.logger)
+	if err := components.LoadCertsIntoOptions(&clientOpts, a.tlsCertPath, a.tlsKeyPath); err != nil {
 		a.logger.Fatalf("Failed to load TLS certs: %v", err)
 	}
-	client := app.MustConnect(clientOpts, metrics, a.logger)
+	client := components.MustConnect(clientOpts, metrics, a.logger)
 	workerOpts := worker.Options{}
 	w := worker.New(client, a.taskQueue, workerOpts)
 	w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
@@ -91,7 +90,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			logging.BackupLogger.Fatal(err)
+			components.BackupLogger.Fatal(err)
 		}
 	}
 }

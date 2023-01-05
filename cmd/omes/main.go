@@ -9,8 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/app"
-	"github.com/temporalio/omes/logging"
+	"github.com/temporalio/omes/components"
 	"github.com/temporalio/omes/runner"
 	"github.com/temporalio/omes/runner/devserver"
 	"github.com/temporalio/omes/scenario"
@@ -35,7 +34,7 @@ type appOptions struct {
 
 type App struct {
 	logger     *zap.SugaredLogger
-	metrics    *app.Metrics
+	metrics    *components.Metrics
 	runner     *runner.Runner
 	appOptions appOptions
 	// Options for configuring the client connection
@@ -46,7 +45,7 @@ type App struct {
 	cleanOptions runner.CleanupOptions
 	// Options for runner.StartWorker
 	workerOptions     runner.WorkerOptions
-	prometheusOptions app.PrometheusOptions
+	prometheusOptions components.PrometheusOptions
 	// Dev server handle (see startLocalServer)
 	devServer *devserver.DevServer
 }
@@ -72,7 +71,7 @@ func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 // Setup the application and runner instance.
 // If a local server should be started, that will be done in this method.
 func (a *App) Setup(cmd *cobra.Command, args []string) {
-	a.logger = logging.MustSetupLogging(a.appOptions.logLevel, a.appOptions.logEncoding)
+	a.logger = components.MustSetupLogging(a.appOptions.logLevel, a.appOptions.logEncoding)
 
 	if a.runnerOptions.RunID == "" {
 		// TODO: make a nicer, shorter ID for this
@@ -95,7 +94,7 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.clientOptions.ConnectionOptions.TLS = nil
 		a.devServer = server
 	} else {
-		if err := app.LoadCertsIntoOptions(&a.clientOptions, a.appOptions.tlsCertPath, a.appOptions.tlsKeyPath); err != nil {
+		if err := components.LoadCertsIntoOptions(&a.clientOptions, a.appOptions.tlsCertPath, a.appOptions.tlsKeyPath); err != nil {
 			a.logger.Fatalf("Failed to load TLS certs: %v", err)
 		}
 		a.workerOptions.TLSCertPath = a.appOptions.tlsCertPath
@@ -104,10 +103,9 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.runnerOptions.Scenario = scenario
 	a.runnerOptions.ClientOptions = a.clientOptions
 
-	a.metrics = app.MustInitMetrics(&a.prometheusOptions, a.logger)
-	meter := a.metrics.MeterProvider.Meter("omes")
+	a.metrics = components.MustInitMetrics(&a.prometheusOptions, a.logger)
 
-	r, err := runner.NewRunner(a.runnerOptions, meter, a.logger)
+	r, err := runner.NewRunner(a.runnerOptions, a.metrics, a.logger)
 	if err != nil {
 		a.logger.Fatalf("failed to instantiate runner: %v", err)
 	}
@@ -132,7 +130,7 @@ func (a *App) Teardown(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	client := app.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Run(cmd.Context(), client); err != nil {
@@ -141,7 +139,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) Cleanup(cmd *cobra.Command, args []string) {
-	client := app.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Cleanup(cmd.Context(), client, a.cleanOptions); err != nil {
@@ -156,7 +154,7 @@ func (a *App) StartWorker(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
-	client := app.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	options := runner.AllInOneOptions{WorkerOptions: a.workerOptions}
@@ -220,8 +218,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&app.appOptions.tlsCertPath, "tls-cert-path", "", "Path to TLS certificate")
 	rootCmd.PersistentFlags().StringVar(&app.appOptions.tlsKeyPath, "tls-key-path", "", "Path to private key")
 	rootCmd.PersistentFlags().StringVarP(&app.clientOptions.Namespace, "namespace", "n", "default", "namespace to connect to")
-	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.ListenAddress, "prom-listen-address", "", "prometheus listen address")
-	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.HandlerPath, "prom-handler-path", "", "prometheus handler path")
+	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.ListenAddress, "prom-listen-address", "", "Prometheus listen address")
+	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.HandlerPath, "prom-handler-path", "", "Prometheus handler path")
 
 	// TODO: this should only apply to all-in-one
 	rootCmd.PersistentFlags().BoolVar(&app.appOptions.startLocalServer, "start-local-server", false, "Start a local server (server-address and TLS options will be ignored)")
@@ -242,6 +240,8 @@ func main() {
 	rootCmd.AddCommand(allInOneCmd)
 	addWorkerFlags(allInOneCmd, &app)
 	addRunFlags(allInOneCmd, &app)
+	allInOneCmd.Flags().StringVar(&app.workerOptions.PrometheusOptions.ListenAddress, "worker-prom-listen-address", "", "Worker prometheus listen address")
+	allInOneCmd.Flags().StringVar(&app.workerOptions.PrometheusOptions.HandlerPath, "worker-prom-handler-path", "", "Worker prometheus handler path")
 
 	defer func() {
 		if app.logger != nil {
@@ -252,7 +252,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			logging.BackupLogger.Fatal(err)
+			components.BackupLogger.Fatal(err)
 		}
 	}
 }

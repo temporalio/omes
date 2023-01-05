@@ -1,4 +1,4 @@
-package app
+package components
 
 import (
 	"context"
@@ -102,18 +102,13 @@ type Metrics struct {
 
 func MustInitMetrics(options *PrometheusOptions, logger *zap.SugaredLogger) *Metrics {
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	server := mustInitPrometheusServer(options, logger, registry)
+	var server *http.Server
+	if options.ListenAddress != "" {
+		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		server = mustInitPrometheusServer(options, logger, registry)
+	}
 	return &Metrics{
 		server:   server,
-		registry: registry,
-	}
-}
-
-func MetricsForTesting() *Metrics {
-	registry := prometheus.NewRegistry()
-
-	return &Metrics{
 		registry: registry,
 	}
 }
@@ -126,8 +121,8 @@ func (m *Metrics) Handler() *metricsHandler {
 }
 
 func (m *Metrics) Shutdown(ctx context.Context) error {
+	// server might be nil if no listen address was provided
 	if m.server == nil {
-		// Created with MetricsForTesting
 		return nil
 	}
 	return m.server.Shutdown(ctx)
@@ -135,9 +130,6 @@ func (m *Metrics) Shutdown(ctx context.Context) error {
 
 func mustInitPrometheusServer(options *PrometheusOptions, logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
 	address := options.ListenAddress
-	if address == "" {
-		address = ":9090"
-	}
 	handlerPath := options.HandlerPath
 	if handlerPath == "" {
 		handlerPath = "/metrics"

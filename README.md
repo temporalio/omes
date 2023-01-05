@@ -47,7 +47,7 @@ $ go run ./cmd/omes cleanup --scenario WorkflowWithSingleNoopActivity --run-id l
 # All-in-one - Start a worker, an optional dev server, and run a scenario
 
 ```console
-$ go run ./cmd/omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --language go --start-local-server
+$ go run ./cmd/omes all-in-one --scenario WorkflowWithSingleNoopActivity --language go --start-local-server
 ```
 
 Notes:
@@ -70,5 +70,4 @@ workflow that waits for a signal for a configurable amount of time.
 
 ## TODO
 
-- Nicer output
-- Process resource monitoring for local worker
+- Nicer output that includes resource utilization for the worker (when running all-in-one)

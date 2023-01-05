@@ -1,5 +1,5 @@
 // Copied from samples-go
-package logging
+package components
 
 import (
 	"fmt"
