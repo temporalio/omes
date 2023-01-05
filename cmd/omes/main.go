@@ -4,12 +4,13 @@ import (
 	"errors"
 	"time"
 
-	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/components"
+	"github.com/temporalio/omes/components/client"
+	"github.com/temporalio/omes/components/logging"
+	"github.com/temporalio/omes/components/metrics"
 	"github.com/temporalio/omes/runner"
 	"github.com/temporalio/omes/runner/devserver"
 	"github.com/temporalio/omes/scenario"
@@ -19,24 +20,22 @@ import (
 // options to pass from the command line to the runner
 type appOptions struct {
 	// Name of the scenario to run
-	scenario    string
-	logLevel    string
-	logEncoding string
+	scenario string
 	// Override for scnario duration
 	duration time.Duration
 	// Override for scnario iterations
-	iterations  int
-	tlsCertPath string
-	tlsKeyPath  string
+	iterations int
 	// Whether or not to start a local server
 	startLocalServer bool
 }
 
 type App struct {
 	logger     *zap.SugaredLogger
-	metrics    *components.Metrics
+	metrics    *metrics.Metrics
 	runner     *runner.Runner
 	appOptions appOptions
+	// Options for configuring logging
+	loggingOptions logging.Options
 	// Options for configuring the client connection
 	clientOptions client.Options
 	// General runner options
@@ -44,8 +43,8 @@ type App struct {
 	// Options for runner.Cleanup
 	cleanOptions runner.CleanupOptions
 	// Options for runner.StartWorker
-	workerOptions     runner.WorkerOptions
-	prometheusOptions components.PrometheusOptions
+	workerOptions  runner.WorkerOptions
+	metricsOptions metrics.Options
 	// Dev server handle (see startLocalServer)
 	devServer *devserver.DevServer
 }
@@ -71,7 +70,8 @@ func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 // Setup the application and runner instance.
 // If a local server should be started, that will be done in this method.
 func (a *App) Setup(cmd *cobra.Command, args []string) {
-	a.logger = components.MustSetupLogging(a.appOptions.logLevel, a.appOptions.logEncoding)
+	a.logger = logging.MustSetup(&a.loggingOptions)
+	a.metrics = metrics.MustSetup(&a.metricsOptions, a.logger)
 
 	if a.runnerOptions.RunID == "" {
 		// TODO: make a nicer, shorter ID for this
@@ -90,20 +90,16 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 			a.logger.Fatalf("Failed to start local dev server: %v", err)
 		}
 		a.logger.Infof("Started local dev server at: %s", server.FrontendHostPort)
-		a.clientOptions.HostPort = server.FrontendHostPort
-		a.clientOptions.ConnectionOptions.TLS = nil
+		a.clientOptions.Address = server.FrontendHostPort
+		a.clientOptions.ClientCertPath = ""
+		a.clientOptions.ClientKeyPath = ""
 		a.devServer = server
 	} else {
-		if err := components.LoadCertsIntoOptions(&a.clientOptions, a.appOptions.tlsCertPath, a.appOptions.tlsKeyPath); err != nil {
-			a.logger.Fatalf("Failed to load TLS certs: %v", err)
-		}
-		a.workerOptions.TLSCertPath = a.appOptions.tlsCertPath
-		a.workerOptions.TLSKeyPath = a.appOptions.tlsKeyPath
+		a.workerOptions.ClientCertPath = a.clientOptions.ClientCertPath
+		a.workerOptions.ClientKeyPath = a.clientOptions.ClientKeyPath
 	}
 	a.runnerOptions.Scenario = scenario
 	a.runnerOptions.ClientOptions = a.clientOptions
-
-	a.metrics = components.MustInitMetrics(&a.prometheusOptions, a.logger)
 
 	r, err := runner.NewRunner(a.runnerOptions, a.metrics, a.logger)
 	if err != nil {
@@ -130,7 +126,7 @@ func (a *App) Teardown(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Run(cmd.Context(), client); err != nil {
@@ -139,7 +135,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) Cleanup(cmd *cobra.Command, args []string) {
-	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Cleanup(cmd.Context(), client, a.cleanOptions); err != nil {
@@ -154,7 +150,7 @@ func (a *App) StartWorker(cmd *cobra.Command, args []string) {
 }
 
 func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
-	client := components.MustConnect(a.clientOptions, a.metrics, a.logger)
+	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
 	defer client.Close()
 
 	options := runner.AllInOneOptions{WorkerOptions: a.workerOptions}
@@ -209,20 +205,12 @@ func main() {
 		Run:   app.RunAllInOne,
 	}
 
-	rootCmd.PersistentFlags().StringVar(&app.appOptions.logLevel, "log-level", "info", "(debug info warn error dpanic panic fatal)")
-	rootCmd.PersistentFlags().StringVar(&app.appOptions.logEncoding, "log-encoding", "console", "(console json)")
+	logging.AddCLIFlags(rootCmd.PersistentFlags(), &app.loggingOptions)
+	client.AddCLIFlags(rootCmd.PersistentFlags(), &app.clientOptions)
+	metrics.AddCLIFlags(rootCmd.PersistentFlags(), &app.metricsOptions)
 	rootCmd.PersistentFlags().StringVarP(&app.appOptions.scenario, "scenario", "s", "", "Scenario to run (see scenarios/)")
 	rootCmd.MarkFlagRequired("scenario")
 	rootCmd.PersistentFlags().StringVar(&app.runnerOptions.RunID, "run-id", "", "Optional unique ID for a scenario run")
-	rootCmd.PersistentFlags().StringVarP(&app.clientOptions.HostPort, "server-address", "a", "localhost:7233", "address of Temporal server")
-	rootCmd.PersistentFlags().StringVar(&app.appOptions.tlsCertPath, "tls-cert-path", "", "Path to TLS certificate")
-	rootCmd.PersistentFlags().StringVar(&app.appOptions.tlsKeyPath, "tls-key-path", "", "Path to private key")
-	rootCmd.PersistentFlags().StringVarP(&app.clientOptions.Namespace, "namespace", "n", "default", "namespace to connect to")
-	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.ListenAddress, "prom-listen-address", "", "Prometheus listen address")
-	rootCmd.PersistentFlags().StringVar(&app.prometheusOptions.HandlerPath, "prom-handler-path", "", "Prometheus handler path")
-
-	// TODO: this should only apply to all-in-one
-	rootCmd.PersistentFlags().BoolVar(&app.appOptions.startLocalServer, "start-local-server", false, "Start a local server (server-address and TLS options will be ignored)")
 
 	// run command
 	rootCmd.AddCommand(runCmd)
@@ -240,8 +228,9 @@ func main() {
 	rootCmd.AddCommand(allInOneCmd)
 	addWorkerFlags(allInOneCmd, &app)
 	addRunFlags(allInOneCmd, &app)
-	allInOneCmd.Flags().StringVar(&app.workerOptions.PrometheusOptions.ListenAddress, "worker-prom-listen-address", "", "Worker prometheus listen address")
-	allInOneCmd.Flags().StringVar(&app.workerOptions.PrometheusOptions.HandlerPath, "worker-prom-handler-path", "", "Worker prometheus handler path")
+	allInOneCmd.Flags().BoolVar(&app.appOptions.startLocalServer, "start-local-server", false, "Start a local server (server-address and TLS options will be ignored)")
+	allInOneCmd.Flags().StringVar(&app.workerOptions.MetricsOptions.PrometheusListenAddress, "worker-prom-listen-address", "", "Worker prometheus listen address")
+	allInOneCmd.Flags().StringVar(&app.workerOptions.MetricsOptions.PrometheusHandlerPath, "worker-prom-handler-path", "", "Worker prometheus handler path")
 
 	defer func() {
 		if app.logger != nil {
@@ -252,7 +241,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			components.BackupLogger.Fatal(err)
+			logging.BackupLogger.Fatal(err)
 		}
 	}
 }

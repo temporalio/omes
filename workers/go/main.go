@@ -6,40 +6,30 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/components"
+	"github.com/temporalio/omes/components/client"
+	"github.com/temporalio/omes/components/logging"
+	"github.com/temporalio/omes/components/metrics"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
-	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
 )
 
 type App struct {
-	logger            *zap.SugaredLogger
-	serverAddress     string
-	taskQueue         string
-	namespace         string
-	tlsCertPath       string
-	tlsKeyPath        string
-	logLevel          string
-	logEncoding       string
-	prometheusOptions components.PrometheusOptions
+	logger         *zap.SugaredLogger
+	taskQueue      string
+	loggingOptions logging.Options
+	clientOptions  client.Options
+	metricsOptions metrics.Options
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	a.logger = components.MustSetupLogging(a.logLevel, a.logEncoding)
+	a.logger = logging.MustSetup(&a.loggingOptions)
+	metrics := metrics.MustSetup(&a.metricsOptions, a.logger)
+	client := client.MustConnect(&a.clientOptions, metrics, a.logger)
 
-	clientOpts := client.Options{
-		HostPort:  a.serverAddress,
-		Namespace: a.namespace,
-	}
-	metrics := components.MustInitMetrics(&a.prometheusOptions, a.logger)
-	if err := components.LoadCertsIntoOptions(&clientOpts, a.tlsCertPath, a.tlsKeyPath); err != nil {
-		a.logger.Fatalf("Failed to load TLS certs: %v", err)
-	}
-	client := components.MustConnect(clientOpts, metrics, a.logger)
 	workerOpts := worker.Options{}
 	w := worker.New(client, a.taskQueue, workerOpts)
 	w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
@@ -70,15 +60,10 @@ func main() {
 		Run:   app.Run,
 	}
 
-	cmd.Flags().StringVar(&app.logLevel, "log-level", "info", "(debug info warn error dpanic panic fatal)")
-	cmd.Flags().StringVar(&app.logEncoding, "log-encoding", "console", "(console json)")
-	cmd.Flags().StringVarP(&app.serverAddress, "server-address", "a", "localhost:7233", "address of Temporal server")
-	cmd.Flags().StringVarP(&app.namespace, "namespace", "n", "default", "namespace to connect to")
-	cmd.Flags().StringVar(&app.tlsCertPath, "tls-cert-path", "", "Path to TLS certificate")
-	cmd.Flags().StringVar(&app.tlsKeyPath, "tls-key-path", "", "Path to private key")
+	logging.AddCLIFlags(cmd.Flags(), &app.loggingOptions)
+	client.AddCLIFlags(cmd.Flags(), &app.clientOptions)
+	metrics.AddCLIFlags(cmd.Flags(), &app.metricsOptions)
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
-	cmd.Flags().StringVar(&app.prometheusOptions.ListenAddress, "prom-listen-address", "", "prometheus listen address")
-	cmd.Flags().StringVar(&app.prometheusOptions.HandlerPath, "prom-handler-path", "", "prometheus handler path")
 
 	defer func() {
 		if app.logger != nil {
@@ -90,7 +75,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			components.BackupLogger.Fatal(err)
+			logging.BackupLogger.Fatal(err)
 		}
 	}
 }

@@ -14,7 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/temporalio/omes/components"
+	clientComponent "github.com/temporalio/omes/components/client"
+	"github.com/temporalio/omes/components/metrics"
 	"github.com/temporalio/omes/scenario"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
@@ -27,7 +28,7 @@ const DEFAULT_CONCURRENCY = 10
 
 // Options for creating a Runner
 type Options struct {
-	ClientOptions client.Options
+	ClientOptions clientComponent.Options
 	// ID used for prefixing workflow IDs and determining the task queue
 	RunID    string
 	Scenario *scenario.Scenario
@@ -47,7 +48,7 @@ type Runner struct {
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, metrics *components.Metrics, logger *zap.SugaredLogger) (*Runner, error) {
+func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLogger) (*Runner, error) {
 	iterations := options.Scenario.Iterations
 	duration := options.Scenario.Duration
 	if iterations == 0 && duration == 0 {
@@ -255,10 +256,12 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 
 // TODO: worker tuning options
 type WorkerOptions struct {
-	PrometheusOptions components.PrometheusOptions
-	Language          string
-	TLSCertPath       string
-	TLSKeyPath        string
+	MetricsOptions metrics.Options
+	Language       string
+	ClientCertPath string
+	ClientKeyPath  string
+	LogLevel       string
+	LogEncoding    string
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
 	// Default is 30 seconds.
 	GracefulShutdownDuration time.Duration
@@ -291,18 +294,18 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		}
 		args = []string{
 			outputPath,
-			"--server-address", r.options.ClientOptions.HostPort,
+			"--server-address", r.options.ClientOptions.Address,
 			"--namespace", r.options.ClientOptions.Namespace,
 			"--task-queue", r.options.Scenario.TaskQueueForRunID(r.options.RunID),
 		}
-		if options.TLSCertPath != "" && options.TLSKeyPath != "" {
-			args = append(args, "--tls-cert-path", options.TLSCertPath, "--tls-key-path", options.TLSKeyPath)
+		if options.ClientCertPath != "" && options.ClientKeyPath != "" {
+			args = append(args, "--tls-cert-path", options.ClientCertPath, "--tls-key-path", options.ClientKeyPath)
 		}
-		if options.PrometheusOptions.HandlerPath != "" {
-			args = append(args, "--prom-handler-path", options.PrometheusOptions.HandlerPath)
+		if options.MetricsOptions.PrometheusHandlerPath != "" {
+			args = append(args, "--prom-handler-path", options.MetricsOptions.PrometheusHandlerPath)
 		}
-		if options.PrometheusOptions.ListenAddress != "" {
-			args = append(args, "--prom-listen-address", options.PrometheusOptions.ListenAddress)
+		if options.MetricsOptions.PrometheusListenAddress != "" {
+			args = append(args, "--prom-listen-address", options.MetricsOptions.PrometheusListenAddress)
 		}
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)

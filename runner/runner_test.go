@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/temporalio/omes/components"
+	metricsComponent "github.com/temporalio/omes/components/metrics"
 	"github.com/temporalio/omes/scenario"
 	"go.uber.org/zap"
 )
 
-var metrics = components.MustInitMetrics(&components.PrometheusOptions{}, nil)
-
 func TestRunnerIterationsAndDuration(t *testing.T) {
+	var metrics = metricsComponent.MustSetup(&metricsComponent.Options{}, nil)
+
 	var err error
 	// only iterations
 	_, err = NewRunner(Options{Scenario: &scenario.Scenario{Iterations: 3}}, metrics, nil)
@@ -61,6 +61,7 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 }
 
 func run(options Options) error {
+	var metrics = metricsComponent.MustSetup(&metricsComponent.Options{}, nil)
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
 	runner, err := NewRunner(options, metrics, logger.Sugar())

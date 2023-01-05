@@ -1,5 +1,5 @@
 // Copied from samples-go
-package components
+package client
 
 import (
 	"fmt"
