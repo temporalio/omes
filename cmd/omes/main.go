@@ -1,14 +1,14 @@
 package main
 
 import (
-	"encoding/base64"
+	"crypto/rand"
+	"encoding/base32"
 	"errors"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/components/client"
 	"github.com/temporalio/omes/components/logging"
@@ -69,15 +69,13 @@ func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 	return nil
 }
 
-func shortUUID() (string, error) {
-	uuid := uuid.New()
-	bytes, err := uuid.MarshalBinary()
+func shortRand() (string, error) {
+	b := make([]byte, 5)
+	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
 	}
-	// We don't care about losing some uniqueness
-	escaper := strings.NewReplacer("-", "0", "_", "0")
-	return escaper.Replace(base64.RawURLEncoding.EncodeToString(bytes)), nil
+	return strings.ToLower(base32.StdEncoding.EncodeToString(b)), nil
 }
 
 // Setup the application and runner instance.
@@ -87,9 +85,9 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.metrics = metrics.MustSetup(&a.metricsOptions, a.logger)
 
 	if a.runnerOptions.RunID == "" {
-		runID, err := shortUUID()
+		runID, err := shortRand()
 		if err != nil {
-			a.logger.Fatalf("Failed to generate a short UUID: %v", err)
+			a.logger.Fatalf("Failed to generate a short random ID: %v", err)
 		}
 		a.runnerOptions.RunID = runID
 	}
