@@ -1,0 +1,47 @@
+name: Continuous Integration
+
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Build cli and harnesses
+  build-go:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print build information
+        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}, os: ${{ matrix.os }}"
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.19"
+
+      - run: go build ./cmd/omes.go
+      - run: go test ./...
+      - name: Go all-in-one
+        run: ./omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --log-level debug --language go --start-local-server
+      - name: Download Cloud certs to temporary directory
+        run: |
+          mkdir /tmp/temporal-certs &&
+          echo "$TEMPORAL_CLIENT_CERT" > /tmp/temporal-certs/client.pem &&
+          echo "$TEMPORAL_CLIENT_KEY" > /tmp/temporal-certs/client.key &&
+          wc /tmp/temporal-certs/client.pem /tmp/temporal-certs/client.key
+        env:
+          TEMPORAL_CLIENT_CERT: ${{ secrets.TEMPORAL_CLIENT_CERT }}
+          TEMPORAL_CLIENT_KEY: ${{ secrets.TEMPORAL_CLIENT_KEY }}
+      - name: Go on Cloud namespace
+        run:
+          ./omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --log-level debug --language go \
+          --server-address $TEMPORAL_CLOUD_ADDRESS \
+          --namespace $TEMPORAL_CLOUD_NAMESPACE \
+          --tls-cert-path /tmp/temporal-certs/client.pem \
+          --tls-key-path /tmp/temporal-certs/client.key
+        env:
+          TEMPORAL_CLOUD_ADDRESS: sdk-ci.a2dd6.tmprl.cloud:7233
+          TEMPORAL_CLOUD_NAMESPACE: sdk-ci.a2dd6

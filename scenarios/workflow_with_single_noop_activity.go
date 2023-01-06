@@ -1,0 +1,22 @@
+package scenarios
+
+import (
+	"context"
+
+	"github.com/temporalio/omes/kitchensink"
+	"github.com/temporalio/omes/scenario"
+)
+
+func Execute(ctx context.Context, run *scenario.Run) error {
+	return run.ExecuteKitchenSinkWorkflow(ctx, &kitchensink.WorkflowParams{
+		Actions: []*kitchensink.Action{{ExecuteActivity: &kitchensink.ExecuteActivityAction{Name: "noop"}}},
+	})
+}
+
+func init() {
+	scenario.MustRegister(&scenario.Scenario{
+		Execute:     Execute,
+		Concurrency: 5,
+		Iterations:  10,
+	})
+}
