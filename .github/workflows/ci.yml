@@ -6,10 +6,6 @@ on: # rebuild any PRs and main branch changes
     branches:
       - main
 
-concurrency:
-  group: ${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
   # Build cli and harnesses
   build-go:
