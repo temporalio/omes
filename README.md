@@ -20,7 +20,8 @@ There's no need to install anything to use this, it's a self-contained Go projec
 
 Scenarios are defined using plain Go code. They are located in the [scenarios](./scenarios/) folder.
 
-A scenario must define an `Execute` function that is called concurrently to execute a single iteration.
+A scenario must select an `Executor` (currently only `SharedIterationsExecutor` is implemented).
+`SharedIterationsExecutor` accepts an `Execute` function that is called concurrently to execute each iteration.
 
 ```go
 func Execute(ctx context.Context, run *scenario.Run) error {
@@ -45,22 +46,21 @@ Scenarios must be explicitly registered to be runnable by omes:
 ```go
 func init() {
 	scenario.Register(&scenario.Scenario{
-		Execute:     Execute,
-		Concurrency: 5, // How many instances of the "Execute" function to run concurrently.
-		Iterations:  10, // Total number of iterations of the "Execute" function to run.
-		// "Duration" may be specified instead of "Iterations".
-		// "Name" may be overridden here but defaults to the file name Register was called from.
+		Executor: &executors.SharedIterationsExecutor{
+      Execute:     Execute,
+      Concurrency: 5, // How many instances of the "Execute" function to run concurrently.
+      Iterations:  10, // Total number of iterations of the "Execute" function to run.
+      // "Duration" may be specified instead of "Iterations".
+    }
 	})
 }
 ```
 
-Some of the scenario configuration may be overridden at launch time using CLI flags such as `--iterations`,
-`--duration`, and `--concurrency`.
+> NOTE: The file name where the `Register` function is called, will be used as the name of the scenario.
 
 #### Scenario Authoring Guidelines
 
 1. Use snake care for scenario file names.
-1. Avoid overriding scenario names (the file name will be used by default).
 1. Use methods of [Run](./scenario/run.go) in your `Execute` as much as possible.
 1. Add methods to `Run` as needed.
 
@@ -117,3 +117,4 @@ workflow that waits for a signal for a configurable amount of time.
 ## TODO
 
 - Nicer output that includes resource utilization for the worker (when running all-in-one)
+- More lang workers

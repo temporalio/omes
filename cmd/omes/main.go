@@ -13,6 +13,7 @@ import (
 	"github.com/temporalio/omes/components/client"
 	"github.com/temporalio/omes/components/logging"
 	"github.com/temporalio/omes/components/metrics"
+	"github.com/temporalio/omes/executors"
 	"github.com/temporalio/omes/runner"
 	"github.com/temporalio/omes/runner/devserver"
 	"github.com/temporalio/omes/scenario"
@@ -21,8 +22,6 @@ import (
 
 // options for bootstrapping a scenario
 type appOptions struct {
-	// Name of the scenario to run
-	scenario string
 	// Override for scnario duration
 	duration time.Duration
 	// Override for scnario iterations
@@ -53,6 +52,11 @@ type App struct {
 
 // applyOverrides from CLI flags to a loaded scenario
 func (a *App) applyOverrides(scenario *scenario.Scenario) error {
+	opts, ok := scenario.Executor.(*executors.SharedIterationsExecutor)
+	if !ok {
+		// Don't know how to override options here
+		return nil
+	}
 	iterations := a.appOptions.iterations
 	duration := a.appOptions.duration
 
@@ -60,11 +64,11 @@ func (a *App) applyOverrides(scenario *scenario.Scenario) error {
 		return errors.New("invalid options: iterations and duration are mutually exclusive")
 	}
 	if iterations > 0 {
-		scenario.Iterations = iterations
-		scenario.Duration = 0
+		opts.Iterations = iterations
+		opts.Duration = 0
 	} else if duration > 0 {
-		scenario.Duration = duration
-		scenario.Iterations = 0
+		opts.Duration = duration
+		opts.Iterations = 0
 	}
 	return nil
 }
@@ -92,9 +96,9 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.runnerOptions.RunID = runID
 	}
 
-	scenario := scenario.Get(a.appOptions.scenario)
+	scenario := scenario.Get(a.runnerOptions.ScenarioName)
 	if scenario == nil {
-		a.logger.Fatalf("failed to find a registered scenario named %q", a.appOptions.scenario)
+		a.logger.Fatalf("failed to find a registered scenario named %q", a.runnerOptions.ScenarioName)
 	}
 	a.applyOverrides(scenario)
 	if a.appOptions.startLocalServer {
@@ -112,12 +116,7 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 	a.runnerOptions.Scenario = scenario
 	a.runnerOptions.ClientOptions = a.clientOptions
 	a.workerOptions.ClientOptions = a.clientOptions
-
-	r, err := runner.NewRunner(a.runnerOptions, a.metrics, a.logger)
-	if err != nil {
-		a.logger.Fatalf("failed to instantiate runner: %v", err)
-	}
-	a.runner = r
+	a.runner = runner.NewRunner(a.runnerOptions, a.metrics, a.logger)
 }
 
 // Teardown stops the dev server in case one was started during Setup.
@@ -225,7 +224,7 @@ func main() {
 	logging.AddCLIFlags(rootCmd.PersistentFlags(), &app.loggingOptions, "")
 	metrics.AddCLIFlags(rootCmd.PersistentFlags(), &app.metricsOptions, "")
 	client.AddCLIFlags(rootCmd.PersistentFlags(), &app.clientOptions)
-	rootCmd.PersistentFlags().StringVarP(&app.appOptions.scenario, "scenario", "s", "", "Scenario to run (see scenarios/)")
+	rootCmd.PersistentFlags().StringVarP(&app.runnerOptions.ScenarioName, "scenario", "s", "", "Scenario to run (see scenarios/)")
 	rootCmd.MarkFlagRequired("scenario")
 	rootCmd.PersistentFlags().StringVar(&app.runnerOptions.RunID, "run-id", "", "Optional unique ID for a scenario run")
 

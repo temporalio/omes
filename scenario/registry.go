@@ -9,25 +9,23 @@ import (
 
 var registeredScenarios = make(map[string]*Scenario)
 
-// MustRegister resgister a scenario in the global static registry.
+// MustRegister registers a scenario in the global static registry.
 // Panics if registration fails.
-// If scenario name is empty, the filename of the caller will be used as the name.
+// The file name of the caller is be used as the scenario name.
 func MustRegister(scenario *Scenario) {
-	if scenario.Name == "" {
-		_, file, _, ok := runtime.Caller(1)
-		if !ok {
-			panic("Could not infer caller when registering a nameless scenario")
-		}
-		scenario.Name = strings.Replace(filepath.Base(file), ".go", "", 1)
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("Could not infer caller when registering a nameless scenario")
 	}
-	_, found := registeredScenarios[scenario.Name]
+	scenarioName := strings.Replace(filepath.Base(file), ".go", "", 1)
+	_, found := registeredScenarios[scenarioName]
 	if found {
-		panic(fmt.Errorf("duplicate scenario with name: %s", scenario.Name))
+		panic(fmt.Errorf("duplicate scenario with name: %s", scenarioName))
 	}
-	registeredScenarios[scenario.Name] = scenario
+	registeredScenarios[scenarioName] = scenario
 }
 
-// Get a scenario by name from the global static registry
+// Get a scenario by name from the global static registry.
 func Get(name string) *Scenario {
 	return registeredScenarios[name]
 }

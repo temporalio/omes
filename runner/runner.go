@@ -2,15 +2,11 @@ package runner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"strings"
-	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,139 +28,36 @@ const DEFAULT_CONCURRENCY = 10
 type Options struct {
 	ClientOptions clientComponent.Options
 	// ID used for prefixing workflow IDs and determining the task queue.
-	RunID    string
-	Scenario *scenario.Scenario
-}
-
-// Metrics used by the Runner
-type runnerMetrics struct {
-	// Timer capturing E2E execution of each scenario run iteration.
-	executeTimer client.MetricsTimer
+	RunID        string
+	ScenarioName string
+	Scenario     *scenario.Scenario
 }
 
 type Runner struct {
-	iterationCounter atomic.Uint64
-	done             sync.WaitGroup
-	options          Options
-	errors           chan error
-	logger           *zap.SugaredLogger
-	metrics          *runnerMetrics
+	options Options
+	metrics *metrics.Metrics
+	logger  *zap.SugaredLogger
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLogger) (*Runner, error) {
-	iterations := options.Scenario.Iterations
-	duration := options.Scenario.Duration
-	if iterations == 0 && duration == 0 {
-		return nil, errors.New("invalid scenario: either iterations or duration is required")
-	}
-	if iterations > 0 && duration > 0 {
-		return nil, errors.New("invalid scenario: iterations and duration are mutually exclusive")
-	}
-
-	executeTimer := metrics.Handler().WithTags(map[string]string{"scenario": options.Scenario.Name}).Timer("omes_execute_histogram")
-
+func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLogger) *Runner {
 	return &Runner{
 		options: options,
-		errors:  make(chan error),
 		logger:  logger,
-		metrics: &runnerMetrics{
-			executeTimer: executeTimer,
-		},
-	}, nil
-}
-
-func calcConcurrency(iterations int, scenario *scenario.Scenario) int {
-	concurrency := scenario.Concurrency
-	if concurrency == 0 {
-		concurrency = DEFAULT_CONCURRENCY
+		metrics: metrics,
 	}
-	if iterations > 0 && concurrency > iterations {
-		// Don't spin up more coroutines than the number of total iterations
-		concurrency = iterations
-	}
-	return concurrency
 }
 
 // Run a scenario.
-// Spins up coroutines according to the scenario configuration.
-// Each coroutine runs the scenario Execute method in a loop until the scenario duration or max iterations is reached.
+// The actual run logic is delegated to the scenario Executor.
 func (r *Runner) Run(ctx context.Context, client client.Client) error {
-	iterations := r.options.Scenario.Iterations
-	duration := r.options.Scenario.Duration
-	concurrency := calcConcurrency(iterations, r.options.Scenario)
-
-	ctx, cancel := context.WithCancel(ctx)
-	if duration > 0 {
-		ctx, cancel = context.WithTimeout(ctx, duration)
-	}
-	defer cancel()
-
-	r.done.Add(concurrency)
-
-	startTime := time.Now()
-	waitChan := make(chan struct{})
-	go func() {
-		r.done.Wait()
-		close(waitChan)
-	}()
-
-	for i := 0; i < concurrency; i++ {
-		logger := r.logger.With("coroID", i)
-		go r.runOne(ctx, logger, client)
-	}
-
-	var accumulatedErrors []string
-
-	for {
-		select {
-		case err := <-r.errors:
-			cancel()
-			accumulatedErrors = append(accumulatedErrors, err.Error())
-		case <-waitChan:
-			if len(accumulatedErrors) > 0 {
-				return fmt.Errorf("run finished with errors after %s, errors:\n%s", time.Since(startTime), strings.Join(accumulatedErrors, "\n"))
-			}
-			r.logger.Infof("Run complete in %v", time.Since(startTime))
-			return nil
-		}
-	}
-}
-
-// runOne - where "one" is a single routine out of N concurrent defined for the scenario.
-// This method will loop until context is cancelled or the number of iterations for the scenario have exhuasted.
-func (r *Runner) runOne(ctx context.Context, logger *zap.SugaredLogger, c client.Client) {
-	iterations := r.options.Scenario.Iterations
-	defer r.done.Done()
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-		iteration := int(r.iterationCounter.Add(1))
-		// If the scenario is limited in number of iterations, do not exceed that number
-		if iterations > 0 && iteration > iterations {
-			break
-		}
-		logger.Debugf("Running iteration %d", iteration)
-		run := scenario.Run{
-			Client:          c,
-			Scenario:        r.options.Scenario,
-			IterationInTest: iteration,
-			Logger:          logger.With("iteration", iteration),
-			ID:              r.options.RunID,
-		}
-
-		startTime := time.Now()
-		if err := r.options.Scenario.Execute(ctx, &run); err != nil {
-			duration := time.Since(startTime)
-			r.metrics.executeTimer.Record(duration)
-			err = fmt.Errorf("iteration %d failed: %w", iteration, err)
-			logger.Error(err)
-			r.errors <- err
-			// Even though context will be cancelled by the runner, we break here to avoid needlessly running another iteration
-			break
-		}
-	}
+	return r.options.Scenario.Executor.Run(ctx, &scenario.RunOptions{
+		ScenarioName: r.options.ScenarioName,
+		RunID:        r.options.RunID,
+		Logger:       r.logger,
+		Metrics:      r.metrics,
+		Client:       client,
+	})
 }
 
 type CleanupOptions struct {
@@ -189,7 +82,7 @@ func getIdentity() string {
 // TODO(bergundy): This fails on Cloud, not sure why.
 // TODO(bergundy): Add support for cleaning the entire namespace or by search attribute if we decide to add multi-queue scenarios.
 func (r *Runner) Cleanup(ctx context.Context, client client.Client, options CleanupOptions) error {
-	taskQueue := r.options.Scenario.TaskQueueForRunID(r.options.RunID)
+	taskQueue := scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID)
 	jobId := taskQueue
 	// Clean based on task queue to avoid relying on search attributes and reducing the requirements of this framework.
 	query := fmt.Sprintf("TaskQueue = %q", taskQueue)
@@ -297,7 +190,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		}
 		args = []string{
 			outputPath,
-			"--task-queue", r.options.Scenario.TaskQueueForRunID(r.options.RunID),
+			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
 		args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
