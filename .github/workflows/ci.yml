@@ -7,8 +7,7 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  # Build cli and harnesses
-  build-go:
+  build-lint-test:
     runs-on: ubuntu-latest
     steps:
       - name: Print build information
@@ -18,10 +17,10 @@ jobs:
         with:
           go-version: "^1.19"
 
-      - run: go build ./cmd/omes.go
+      - run: go build ./cmd/omes
       - run: go test ./...
       - name: Go all-in-one
-        run: ./omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --log-level debug --language go --start-local-server
+        run: ./omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language go --start-local-server
       - name: Download Cloud certs to temporary directory
         run: |
           mkdir /tmp/temporal-certs &&
@@ -32,12 +31,12 @@ jobs:
           TEMPORAL_CLIENT_CERT: ${{ secrets.TEMPORAL_CLIENT_CERT }}
           TEMPORAL_CLIENT_KEY: ${{ secrets.TEMPORAL_CLIENT_KEY }}
       - name: Go on Cloud namespace
-        run:
-          ./omes all-in-one --scenario WorkflowWithSingleNoopActivity --fail-fast --log-level debug --language go \
-          --server-address $TEMPORAL_CLOUD_ADDRESS \
-          --namespace $TEMPORAL_CLOUD_NAMESPACE \
-          --tls-cert-path /tmp/temporal-certs/client.pem \
-          --tls-key-path /tmp/temporal-certs/client.key
+        run: |
+          ./omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language go \
+            --server-address $TEMPORAL_CLOUD_ADDRESS \
+            --namespace $TEMPORAL_CLOUD_NAMESPACE \
+            --tls-cert-path /tmp/temporal-certs/client.pem \
+            --tls-key-path /tmp/temporal-certs/client.key
         env:
           TEMPORAL_CLOUD_ADDRESS: sdk-ci.a2dd6.tmprl.cloud:7233
           TEMPORAL_CLOUD_NAMESPACE: sdk-ci.a2dd6

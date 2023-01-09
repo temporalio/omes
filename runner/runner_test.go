@@ -95,6 +95,8 @@ func TestRunFailIterations(t *testing.T) {
 			Name: "test",
 			Execute: func(ctx context.Context, run *scenario.Run) error {
 				tracker.track(run.IterationInTest)
+				// Start this short timer to allow all concurrent routines to be spawned
+				<-time.After(time.Millisecond)
 				if run.IterationInTest == 2 {
 					return errors.New("deliberate fail from test")
 				}
