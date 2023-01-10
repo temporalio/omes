@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const DEFAULT_CONCURRENCY = 10
+const defaultConcurrency = 10
 
 // Metrics used by the Runner
 type runMetrics struct {
@@ -35,7 +35,7 @@ type SharedIterationsExecutor struct {
 
 func calcConcurrency(iterations int, concurrency int) int {
 	if concurrency == 0 {
-		concurrency = DEFAULT_CONCURRENCY
+		concurrency = defaultConcurrency
 	}
 	if iterations > 0 && concurrency > iterations {
 		// Don't spin up more coroutines than the number of total iterations

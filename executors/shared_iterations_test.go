@@ -48,7 +48,7 @@ func TestIterationsAndDuration(t *testing.T) {
 func TestCalcConcurrency(t *testing.T) {
 	assert.Equal(t, 3, calcConcurrency(3, 6))
 	assert.Equal(t, 6, calcConcurrency(0, 6))
-	assert.Equal(t, DEFAULT_CONCURRENCY, calcConcurrency(0, 0))
+	assert.Equal(t, defaultConcurrency, calcConcurrency(0, 0))
 	assert.Equal(t, 5, calcConcurrency(5, 0))
 }
 
@@ -130,7 +130,7 @@ func TestRunHappyPathDuration(t *testing.T) {
 		Duration: 100 * time.Millisecond,
 	})
 	assert.NoError(t, err)
-	tracker.assertSeen(t, DEFAULT_CONCURRENCY*2)
+	tracker.assertSeen(t, defaultConcurrency*2)
 }
 
 func TestRunFailDuration(t *testing.T) {
@@ -148,5 +148,5 @@ func TestRunFailDuration(t *testing.T) {
 		Duration: 200 * time.Millisecond,
 	})
 	assert.ErrorContains(t, err, "run finished with errors")
-	assert.LessOrEqual(t, numIterationSeen.Load(), uint32(DEFAULT_CONCURRENCY))
+	assert.LessOrEqual(t, numIterationSeen.Load(), uint32(defaultConcurrency))
 }
