@@ -13,8 +13,8 @@ import (
 type Run struct {
 	// Used for Workflow ID and task queue name generation.
 	ID string
-	// The scenario used for the run.
-	Scenario *Scenario
+	// The name of the scenario used for the run.
+	ScenarioName string
 	// Temporal client to use for executing workflows, etc.
 	Client client.Client
 	// Each call to the Execute method gets a distinct `IterationInTest`.
@@ -22,10 +22,20 @@ type Run struct {
 	Logger          *zap.SugaredLogger
 }
 
+// TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
+func TaskQueueForRun(scenarioName, runID string) string {
+	return fmt.Sprintf("%s:%s", scenarioName, runID)
+}
+
+// TaskQueue returns a default task queue name for this run based on the scenario name and the run ID.
+func (r *Run) TaskQueue() string {
+	return TaskQueueForRun(r.ScenarioName, r.ID)
+}
+
 // WorkflowOptions returns a default set of options that can be used in any scenario.
 func (r *Run) WorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                r.Scenario.TaskQueueForRunID(r.ID),
+		TaskQueue:                                r.TaskQueue(),
 		ID:                                       fmt.Sprintf("w-%s-%d", r.ID, r.IterationInTest),
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
@@ -33,8 +43,6 @@ func (r *Run) WorkflowOptions() client.StartWorkflowOptions {
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its completion ignoring its result.
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, params *kitchensink.WorkflowParams) error {
-	// TODO: ctx deadline might be too short if scenario is run with the Duration option.
-	// Set different duration here.
 	opts := r.WorkflowOptions()
 	r.Logger.Debugf("Executing workflow with options: %v", opts)
 	execution, err := r.Client.ExecuteWorkflow(ctx, opts, "kitchenSink", params)

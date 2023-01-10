@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 
+	"github.com/temporalio/omes/executors"
 	"github.com/temporalio/omes/kitchensink"
 	"github.com/temporalio/omes/scenario"
 )
@@ -15,8 +16,10 @@ func Execute(ctx context.Context, run *scenario.Run) error {
 
 func init() {
 	scenario.MustRegister(&scenario.Scenario{
-		Execute:     Execute,
-		Concurrency: 5,
-		Iterations:  10,
+		Executor: &executors.SharedIterationsExecutor{
+			Execute:     Execute,
+			Concurrency: 5,
+			Iterations:  10,
+		},
 	})
 }
