@@ -77,6 +77,21 @@ func getIdentity() string {
 	return fmt.Sprintf("%s@%s", username, hostname)
 }
 
+func normalizeLangName(lang string) (string, error) {
+	switch lang {
+	case "go", "java", "ts", "py":
+		// Allow the full typescript or python word, but we need to match the file
+		// extension for the rest of run
+	case "typescript":
+		lang = "ts"
+	case "python":
+		lang = "py"
+	default:
+		return "", fmt.Errorf("invalid language %q, must be one of: go or java or ts or py", lang)
+	}
+	return lang, nil
+}
+
 // Cleanup cleans up all workflows associated with the task.
 // Requires ElasticSearch.
 // TODO(bergundy): This fails on Cloud, not sure why.
@@ -146,6 +161,38 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 		r.logger.Infof("Building go worker with %v", args)
 		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 		return cmd.Run()
+	case "py":
+		os.Mkdir(options.Output, 0755)
+		pwd, _ := os.Getwd()
+		pyProjectTOML := `
+[tool.poetry]
+name = "omes-python-load-test-worker"
+version = "0.1.0"
+description = "Temporal Omes load testing framework worker"
+authors = ["Temporal Technologies Inc <sdk@temporal.io>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+omes = { path = "` + pwd + `" }
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"`
+		if err := os.WriteFile(filepath.Join(options.Output, "pyproject.toml"), []byte(pyProjectTOML), 0644); err != nil {
+			return fmt.Errorf("failed writing pyproject.toml: %w", err)
+		}
+		args := []string{
+			"poetry",
+			"install",
+			"--no-root",
+			"--no-dev",
+			"-v",
+		}
+		r.logger.Infof("Building python worker with %v %v", args, options.Output)
+		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+		cmd.Dir = options.Output
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		return cmd.Run()
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)
 	}
@@ -181,15 +228,35 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	if gracefulShutdownDuration == 0 {
 		gracefulShutdownDuration = 30 * time.Second
 	}
+	language, err := normalizeLangName(options.Language)
+	if err != nil {
+		return fmt.Errorf("could not parse this language: %w", err)
+	}
 
-	switch options.Language {
+	switch language {
 	case "go":
 		outputPath := filepath.Join(tmpDir, "worker")
-		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: options.Language, Output: outputPath}); err != nil {
+		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: language, Output: outputPath}); err != nil {
 			return err
 		}
 		args = []string{
 			outputPath,
+			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
+		}
+		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
+		args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
+		args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
+	case "py":
+		outputPath := filepath.Join(tmpDir, "worker")
+		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: language, Output: outputPath}); err != nil {
+			return err
+		}
+		args = []string{
+			"poetry",
+			"run",
+			"python",
+			"-m",
+			"workers.python.main",
 			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
@@ -202,6 +269,8 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	runErrorChan := make(chan error, 1)
 	// Inentionally not using CommandContext since we want to kill the worker gracefully (using SIGTERM).
 	cmd := exec.Command(args[0], args[1:]...)
+	outputPath := filepath.Join(tmpDir, "worker")
+	cmd.Dir = outputPath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r.logger.Infof("Starting worker with args: %v", args)
