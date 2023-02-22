@@ -164,7 +164,7 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 	case "py":
 		os.Mkdir(options.Output, 0755)
 		pwd, _ := os.Getwd()
-		pyProjectTOML := `
+		pyProjectTOML := fmt.Sprintf(`
 [tool.poetry]
 name = "omes-python-load-test-worker"
 version = "0.1.0"
@@ -173,11 +173,11 @@ authors = ["Temporal Technologies Inc <sdk@temporal.io>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-omes = { path = "` + pwd + `" }
+omes = { path = %q }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"`
+build-backend = "poetry.core.masonry.api"`, pwd)
 		if err := os.WriteFile(filepath.Join(options.Output, "pyproject.toml"), []byte(pyProjectTOML), 0644); err != nil {
 			return fmt.Errorf("failed writing pyproject.toml: %w", err)
 		}
@@ -243,9 +243,6 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 			outputPath,
 			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
-		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
-		args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
-		args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
 	case "py":
 		outputPath := filepath.Join(tmpDir, "worker")
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: language, Output: outputPath}); err != nil {
@@ -259,12 +256,13 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 			"workers.python.main",
 			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
-		args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
-		args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
-		args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)
 	}
+	// Add common args
+	args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
+	args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
+	args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
 
 	runErrorChan := make(chan error, 1)
 	// Inentionally not using CommandContext since we want to kill the worker gracefully (using SIGTERM).

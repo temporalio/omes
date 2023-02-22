@@ -7,13 +7,13 @@ from urllib.parse import urlparse
 from wsgiref.simple_server import make_server
 
 from prometheus_client import make_wsgi_app
+from pythonjsonlogger import jsonlogger
 from temporalio.client import Client, TLSConfig
 from temporalio.runtime import PrometheusConfig, Runtime, TelemetryConfig
 from temporalio.worker import Worker
 
 from .activities import noop_activity
 from .kitchen_sink import KitchenSinkWorkflow
-from .logger import json_record_factory
 
 nameToLevel = {
     "PANIC": logging.FATAL,
@@ -24,6 +24,8 @@ nameToLevel = {
     "DEBUG": logging.DEBUG,
     "NOTSET": logging.NOTSET,
 }
+
+interrupt_event = asyncio.Event()
 
 
 async def run():
@@ -70,23 +72,19 @@ async def run():
         raise ValueError("Client key specified, but not client cert!")
 
     # Configure logging
+    logger = logging.getLogger()
+    logHandler = logging.StreamHandler(stream=sys.stderr)
     if args.log_encoding == "json":
-        logging.setLogRecordFactory(json_record_factory)
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=nameToLevel[args.log_level.upper()],
-            format="%(json_formatted)s",
-        )
-    else:
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=nameToLevel[args.log_level.upper()],
-        )
+        format_str = "%(message)%(levelname)%(name)%(asctime)"
+        formatter = jsonlogger.JsonFormatter(format_str)
+        logHandler.setFormatter(formatter)
+    logger.addHandler(logHandler)
+    logger.setLevel(nameToLevel[args.log_level.upper()])
 
     # Configure metrics
     prometheus = None
     if args.prom_listen_address:
-        prom_addr = urlparse(args.prom_listen_handle)
+        prom_addr = urlparse(args.prom_listen_address)
         metrics_app = make_wsgi_app()
         handle_path = args.prom_handler_path
 
@@ -109,14 +107,20 @@ async def run():
     )
 
     # Run a worker for the workflow
-    worker = Worker(
+    async with Worker(
         client,
         task_queue=args.task_queue,
         workflows=[KitchenSinkWorkflow],
         activities=[noop_activity],
-    )
-    await worker.run()
+    ):
+        # Wait until interrupted
+        await interrupt_event.wait()
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(run())
+    except KeyboardInterrupt:
+        interrupt_event.set()
+        loop.run_until_complete(loop.shutdown_asyncgens())

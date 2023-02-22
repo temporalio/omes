@@ -75,6 +75,10 @@ class WorkflowParams:
     action_signal: str
 
 
+def workflow_query(arg: str) -> str:
+    return arg
+
+
 @workflow.defn(name="kitchenSink")
 class KitchenSinkWorkflow:
     def __init__(self) -> None:
@@ -82,21 +86,30 @@ class KitchenSinkWorkflow:
         self._pending_actions: asyncio.Queue[Action] = asyncio.Queue()
         self._signal_recieved: Dict[str, asyncio.Queue[Any]] = {}
 
+    @workflow.signal(dynamic=True)
+    async def handle_signal(self, signal_name: str, *varargs) -> None:
+        if signal_name == self._signal_name:
+            await self._pending_actions.put(varargs[0])
+        else:
+            await self._signal_recieved.setdefault(signal_name, asyncio.Queue()).put(
+                varargs[0]
+            )
+
     @workflow.run
     async def run(self, input: WorkflowParams) -> Any:
         self._signal_name = input.action_signal
         workflow.logger.info("Started kitchen sink workflow {}".format(input))
         for action in input.actions:
-            result = await self.handle_action(input, action)
-            if result[0]:
-                return result[1]
+            should_return, return_value = await self.handle_action(input, action)
+            if should_return:
+                return return_value
 
         if input.action_signal != "":
             while not self._pending_actions.empty():
                 action = await self._pending_actions.get()
-                result = await self.handle_action(input, action)
-                if result[0]:
-                    return result[1]
+                should_return, return_value = await self.handle_action(input, action)
+                if should_return:
+                    return return_value
                 self._pending_actions.task_done()
 
         return None
@@ -122,12 +135,14 @@ class KitchenSinkWorkflow:
                 action.continue_as_new.while_above_zero -= 1
                 workflow.continue_as_new(input)
         elif action.sleep:
-            await asyncio.sleep(action.sleep.millis / 1000.0)
+            await asyncio.sleep(action.sleep.millis / 1000)
         elif action.query_handler:
-            # TODO unclear how to handle this in languages other than go or what the value is
-            pass
+            workflow.set_query_handler(action.query_handler.name, workflow_query)
+            return (True, None)
         elif action.signal:
-            queue = self._signal_recieved[action.signal.name]
+            queue = self._signal_recieved.setdefault(
+                action.signal.name, asyncio.Queue()
+            )
             await queue.get()
             queue.task_done()
         elif action.execute_activity:
@@ -141,16 +156,6 @@ class KitchenSinkWorkflow:
             raise exceptions.ApplicationError("unrecognized action")
 
         return (False, None)
-
-    @workflow.signal(dynamic=True)
-    async def handle_signal(self, signal_name: str, *varargs) -> None:
-        if signal_name == self._signal_name:
-            await self._pending_actions.put(varargs[0])
-        await self._signal_recieved[signal_name].put(varargs[0])
-
-    @workflow.query(dynamic=True)
-    async def handle_query(self, query_name: str, *varargs) -> None:
-        pass
 
 
 def launch_activity(execute_activity: ExecuteActivity) -> Awaitable:
@@ -196,6 +201,6 @@ def launch_activity(execute_activity: ExecuteActivity) -> Awaitable:
     )
     if execute_activity.cancel_after_ms > 0:
         activity_task = asyncio.wait_for(
-            activity_task, execute_activity.cancel_after_ms / 1000.0
+            activity_task, execute_activity.cancel_after_ms / 1000
         )
     return activity_task
