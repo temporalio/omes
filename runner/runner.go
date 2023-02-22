@@ -233,6 +233,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		return fmt.Errorf("could not parse this language: %w", err)
 	}
 
+	workingDir := tmpDir
 	switch language {
 	case "go":
 		outputPath := filepath.Join(tmpDir, "worker")
@@ -248,6 +249,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: language, Output: outputPath}); err != nil {
 			return err
 		}
+		workingDir = filepath.Join(tmpDir, "worker")
 		args = []string{
 			"poetry",
 			"run",
@@ -267,8 +269,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	runErrorChan := make(chan error, 1)
 	// Inentionally not using CommandContext since we want to kill the worker gracefully (using SIGTERM).
 	cmd := exec.Command(args[0], args[1:]...)
-	outputPath := filepath.Join(tmpDir, "worker")
-	cmd.Dir = outputPath
+	cmd.Dir = workingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r.logger.Infof("Starting worker with args: %v", args)

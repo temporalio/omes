@@ -3,6 +3,7 @@ import asyncio
 import logging
 import sys
 import threading
+from signal import SIGINT, SIGTERM
 from urllib.parse import urlparse
 from wsgiref.simple_server import make_server
 
@@ -119,8 +120,9 @@ async def run():
 
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
+    for signal in [SIGINT, SIGTERM]:
+        loop.add_signal_handler(signal, interrupt_event.set)
     try:
         loop.run_until_complete(run())
-    except KeyboardInterrupt:
-        interrupt_event.set()
-        loop.run_until_complete(loop.shutdown_asyncgens())
+    finally:
+        loop.close()
