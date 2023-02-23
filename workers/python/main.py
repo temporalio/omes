@@ -64,12 +64,12 @@ async def run():
     if args.tls_cert_path:
         if not args.tls_key_path:
             raise ValueError("Client cert specified, but not client key!")
-        with open(args.client_cert_path, "rb") as f:
+        with open(args.tls_cert_path, "rb") as f:
             client_cert = f.read()
-        with open(args.client_key_path, "rb") as f:
+        with open(args.tls_key_path, "rb") as f:
             client_key = f.read()
         tls_config = TLSConfig(client_cert=client_cert, client_private_key=client_key)
-    elif args.tls_key_path and not args.client_cert_path:
+    elif args.tls_key_path and not args.tls_cert_path:
         raise ValueError("Client key specified, but not client cert!")
 
     # Configure logging
