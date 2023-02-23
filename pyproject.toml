@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "omes"
+version = "0.1.0"
+description = "Temporal load generator"
+license = "MIT"
+authors = ["Temporal Technologies Inc <sdk@temporal.io>"]
+packages = [
+  { include = "workers/python/**/*.py" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+temporalio = "^1.0.0"
+prometheus-client = "^0.16.0"
+python-json-logger = "^2.0.7"
+
+[tool.poetry.dev-dependencies]
+mypy = "^0.961"
+black = "^22.3.0"
+isort = "^5.10.1"
+
+[tool.poe.tasks]
+format = [{cmd = "black ."}, {cmd = "isort ."}]
+lint = [
+  {cmd = "black --check ."},
+  {cmd = "isort --check-only ."},
+  {ref = "lint-types"},
+]
+lint-types = "mypy --explicit-package-bases --namespace-packages ."
+
+[tool.isort]
+profile = "black"
+skip_gitignore = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

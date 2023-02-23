@@ -6,8 +6,10 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 ## Prerequisites
 
-- Go 1.19
-
+- [Go](https://golang.org/) 1.19+
+- [Node](https://nodejs.org) 16+
+- [Python](https://www.python.org/) 3.10+
+  - [Poetry](https://python-poetry.org/): `poetry install`
 (More TBD when we support workers in other languages)
 
 ## Installation

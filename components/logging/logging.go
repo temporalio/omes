@@ -44,6 +44,6 @@ func MustSetup(options *Options) *zap.SugaredLogger {
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
 func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
-	fs.StringVar(&options.LogLevel, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "LogLevel")), "info", "(debug info warn error dpanic panic fatal)")
+	fs.StringVar(&options.LogLevel, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "LogLevel")), "info", "(debug info warn error panic fatal)")
 	fs.StringVar(&options.LogEncoding, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "LogEncoding")), "console", "(console json)")
 }
