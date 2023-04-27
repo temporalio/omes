@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/temporalio/omes/kitchensink"
+	"github.com/temporalio/omes/omes/kitchensink"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )

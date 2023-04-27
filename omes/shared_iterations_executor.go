@@ -1,4 +1,4 @@
-package executors
+package omes
 
 import (
 	"context"
@@ -9,18 +9,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/temporalio/omes/scenario"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
-const defaultConcurrency = 10
-
-// Metrics used by the Runner
-type runMetrics struct {
-	// Timer capturing E2E execution of each scenario run iteration.
-	executeTimer client.MetricsTimer
-}
+const defaultSharedIterationsConcurrency = 10
 
 type SharedIterationsExecutor struct {
 	// Number of instances of the Execute method to run concurrently.
@@ -30,12 +23,12 @@ type SharedIterationsExecutor struct {
 	// Duration limit of this scenario (mutually exclusive with Iterations).
 	Duration time.Duration
 	// Function to execute a single iteration of this scenario.
-	Execute func(ctx context.Context, run *scenario.Run) error
+	Execute func(ctx context.Context, run *Run) error
 }
 
 func calcConcurrency(iterations int, concurrency int) int {
 	if concurrency == 0 {
-		concurrency = defaultConcurrency
+		concurrency = defaultSharedIterationsConcurrency
 	}
 	if iterations > 0 && concurrency > iterations {
 		// Don't spin up more coroutines than the number of total iterations
@@ -46,16 +39,17 @@ func calcConcurrency(iterations int, concurrency int) int {
 
 type run struct {
 	executor         *SharedIterationsExecutor
-	options          *scenario.RunOptions
+	options          *RunOptions
 	logger           *zap.SugaredLogger
 	errors           chan error
 	done             sync.WaitGroup
 	iterationCounter atomic.Uint64
-	metrics          *runMetrics
+	// Timer capturing E2E execution of each scenario run iteration.
+	executeTimer client.MetricsTimer
 }
 
 // Run a scenario.
-func (e *SharedIterationsExecutor) Run(ctx context.Context, options *scenario.RunOptions) error {
+func (e *SharedIterationsExecutor) Run(ctx context.Context, options *RunOptions) error {
 	r, err := e.newRun(options)
 	if err != nil {
 		return err
@@ -63,7 +57,7 @@ func (e *SharedIterationsExecutor) Run(ctx context.Context, options *scenario.Ru
 	return r.Run(ctx)
 }
 
-func (e *SharedIterationsExecutor) newRun(options *scenario.RunOptions) (*run, error) {
+func (e *SharedIterationsExecutor) newRun(options *RunOptions) (*run, error) {
 	iterations := e.Iterations
 	duration := e.Duration
 	if iterations == 0 && duration == 0 {
@@ -73,16 +67,14 @@ func (e *SharedIterationsExecutor) newRun(options *scenario.RunOptions) (*run, e
 		return nil, errors.New("invalid scenario: iterations and duration are mutually exclusive")
 	}
 
-	executeTimer := options.Metrics.Handler().WithTags(map[string]string{"scenario": options.ScenarioName}).Timer("omes_execute_histogram")
+	executeTimer := options.MetricsHandler.WithTags(map[string]string{"scenario": options.ScenarioName}).Timer("omes_execute_histogram")
 
 	return &run{
-		executor: e,
-		options:  options,
-		logger:   options.Logger,
-		errors:   make(chan error),
-		metrics: &runMetrics{
-			executeTimer: executeTimer,
-		},
+		executor:     e,
+		options:      options,
+		logger:       options.Logger,
+		errors:       make(chan error),
+		executeTimer: executeTimer,
 	}, nil
 }
 
@@ -146,7 +138,7 @@ func (r *run) runOne(ctx context.Context, logger *zap.SugaredLogger) {
 			break
 		}
 		logger.Debugf("Running iteration %d", iteration)
-		run := scenario.Run{
+		run := Run{
 			Client:          r.options.Client,
 			ScenarioName:    r.options.ScenarioName,
 			IterationInTest: iteration,
@@ -159,7 +151,7 @@ func (r *run) runOne(ctx context.Context, logger *zap.SugaredLogger) {
 		// Set different duration here.
 		if err := r.executor.Execute(ctx, &run); err != nil {
 			duration := time.Since(startTime)
-			r.metrics.executeTimer.Record(duration)
+			r.executeTimer.Record(duration)
 			err = fmt.Errorf("iteration %d failed: %w", iteration, err)
 			logger.Error(err)
 			r.errors <- err

@@ -6,9 +6,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/components/client"
-	"github.com/temporalio/omes/components/logging"
-	"github.com/temporalio/omes/components/metrics"
+	"github.com/temporalio/omes/omes"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
@@ -20,15 +18,15 @@ import (
 type App struct {
 	logger         *zap.SugaredLogger
 	taskQueue      string
-	loggingOptions logging.Options
-	clientOptions  client.Options
-	metricsOptions metrics.Options
+	loggingOptions omes.LoggingOptions
+	clientOptions  omes.ClientOptions
+	metricsOptions omes.MetricsOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	a.logger = logging.MustSetup(&a.loggingOptions)
-	metrics := metrics.MustSetup(&a.metricsOptions, a.logger)
-	client := client.MustConnect(&a.clientOptions, metrics, a.logger)
+	a.logger = a.loggingOptions.MustCreateLogger()
+	metrics := a.metricsOptions.MustCreateMetrics(a.logger)
+	client := a.clientOptions.MustDial(metrics, a.logger)
 
 	workerOpts := worker.Options{}
 	w := worker.New(client, a.taskQueue, workerOpts)
@@ -60,9 +58,9 @@ func main() {
 		Run:   app.Run,
 	}
 
-	logging.AddCLIFlags(cmd.Flags(), &app.loggingOptions, "")
-	client.AddCLIFlags(cmd.Flags(), &app.clientOptions)
-	metrics.AddCLIFlags(cmd.Flags(), &app.metricsOptions, "")
+	app.loggingOptions.AddCLIFlags(cmd.Flags(), "")
+	app.clientOptions.AddCLIFlags(cmd.Flags())
+	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
 
 	defer func() {
@@ -75,7 +73,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			logging.BackupLogger.Fatal(err)
+			omes.BackupLogger.Fatal(err)
 		}
 	}
 }

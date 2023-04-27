@@ -13,8 +13,8 @@ from temporalio.client import Client, TLSConfig
 from temporalio.runtime import PrometheusConfig, Runtime, TelemetryConfig
 from temporalio.worker import Worker
 
-from .activities import noop_activity
-from .kitchen_sink import KitchenSinkWorkflow
+from activities import noop_activity
+from kitchen_sink import KitchenSinkWorkflow
 
 nameToLevel = {
     "PANIC": logging.FATAL,
@@ -120,9 +120,8 @@ async def run():
 
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
-    for signal in [SIGINT, SIGTERM]:
-        loop.add_signal_handler(signal, interrupt_event.set)
     try:
         loop.run_until_complete(run())
-    finally:
-        loop.close()
+    except KeyboardInterrupt:
+        interrupt_event.set()
+        loop.run_until_complete(loop.shutdown_asyncgens())

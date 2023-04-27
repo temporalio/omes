@@ -5,7 +5,7 @@ description = "Temporal load generator"
 license = "MIT"
 authors = ["Temporal Technologies Inc <sdk@temporal.io>"]
 packages = [
-  { include = "workers/python/**/*.py" },
+  { include = "**/*.py" },
 ]
 
 [tool.poetry.dependencies]

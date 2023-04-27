@@ -1,5 +1,4 @@
-// Copied from samples-go
-package client
+package omes
 
 import (
 	"fmt"
