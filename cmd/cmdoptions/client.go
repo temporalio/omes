@@ -1,4 +1,4 @@
-package loadgen
+package cmdoptions
 
 import (
 	"crypto/tls"
@@ -13,13 +13,13 @@ import (
 // Options for creating a Temporal client.
 type ClientOptions struct {
 	// Address of Temporal server to connect to
-	Address string `flag:"server-address"`
+	Address string
 	// Temporal namespace
-	Namespace string `flag:"namespace"`
+	Namespace string
 	// TLS client cert
-	ClientCertPath string `flag:"tls-cert-path"`
+	ClientCertPath string
 	// TLS client private key
-	ClientKeyPath string `flag:"tls-key-path"`
+	ClientKeyPath string
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -62,8 +62,25 @@ func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) cl
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
 func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&c.Address, OptionToFlagName(c, "Address"), "a", "localhost:7233", "Address of Temporal server")
-	fs.StringVarP(&c.Namespace, OptionToFlagName(c, "Namespace"), "n", "default", "Namespace to connect to")
-	fs.StringVar(&c.ClientCertPath, OptionToFlagName(c, "ClientCertPath"), "", "Path to client TLS certificate")
-	fs.StringVar(&c.ClientKeyPath, OptionToFlagName(c, "ClientKeyPath"), "", "Path to client private key")
+	fs.StringVar(&c.Address, "server-address", "localhost:7233", "Address of Temporal server")
+	fs.StringVar(&c.Namespace, "namespace", "default", "Namespace to connect to")
+	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
+	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+}
+
+// ToFlags converts these options to string flags.
+func (c *ClientOptions) ToFlags() (flags []string) {
+	if c.Address != "" {
+		flags = append(flags, "--server-address", c.Address)
+	}
+	if c.Namespace != "" {
+		flags = append(flags, "--namespace", c.Namespace)
+	}
+	if c.ClientCertPath != "" {
+		flags = append(flags, "--tls-cert-path", c.ClientCertPath)
+	}
+	if c.ClientKeyPath != "" {
+		flags = append(flags, "--tls-key-path", c.ClientKeyPath)
+	}
+	return
 }

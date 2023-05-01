@@ -29,7 +29,7 @@ A scenario must select an `Executor` (currently only `SharedIterationsExecutor` 
 `SharedIterationsExecutor` accepts an `Execute` function that is called concurrently to execute each iteration.
 
 ```go
-func Execute(ctx context.Context, run *scenario.Run) error {
+func Execute(ctx context.Context, run *loadgen.Run) error {
 	return run.ExecuteKitchenSinkWorkflow(ctx, &kitchensink.WorkflowParams{
 		Actions: []*kitchensink.Action{{ExecuteActivity: &kitchensink.ExecuteActivityAction{Name: "noop"}}},
 	})
@@ -37,11 +37,11 @@ func Execute(ctx context.Context, run *scenario.Run) error {
 ```
 
 Omes comes with pre-implemented workflows and activities that can be run using any SDK language (see the `run-worker`
-and `all-in-one` commands below).
+and `run-scenario-with-worker` commands below).
 Scenarios are not tied to number of workers, cluster configuration, or the worker SDK language.
 
-Typically scenarios will use the Kitchen Sink workflow that runs [actions](./kitchensink/kitchensink.go) specified by
-the client.
+Typically scenarios will use the Kitchen Sink workflow that runs [actions](./loadgen/kitchensink/kitchensink.go)
+specified by the client.
 
 > NOTE: the Kitchen Sink workflow is the only workflow implemented at the moment, other workflows will be added as
 > needed.
@@ -50,8 +50,8 @@ Scenarios must be explicitly registered to be runnable by omes:
 
 ```go
 func init() {
-	scenario.Register(&scenario.Scenario{
-		Executor: &executors.SharedIterationsExecutor{
+	loadgen.Register(&loadgen.Scenario{
+		Executor: &loadgen.SharedIterationsExecutor{
       Execute:     Execute,
       Concurrency: 5, // How many instances of the "Execute" function to run concurrently.
       Iterations:  10, // Total number of iterations of the "Execute" function to run.
@@ -66,7 +66,7 @@ func init() {
 #### Scenario Authoring Guidelines
 
 1. Use snake care for scenario file names.
-1. Use methods of `*omes.Run` in your `Execute` as much as possible.
+1. Use methods of `*loadgen.Run` in your `Execute` as much as possible.
 1. Add methods to `Run` as needed.
 
 ### Run a worker for a specific language SDK
@@ -75,10 +75,14 @@ func init() {
 $ go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
 ```
 
+Notes:
+
+- `--embedded-server` can be passed here to start an embedded localhost server
+
 ### Run a test scenario
 
 ```console
-$ go run ./cmd run --scenario workflow_with_single_noop_activity --run-id local-test-run
+$ go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -92,19 +96,19 @@ Notes:
 ### Cleanup after scenario run
 
 ```console
-$ go run ./cmd cleanup --scenario workflow_with_single_noop_activity --run-id local-test-run
+$ go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
-# All-in-one - Start a worker, an optional dev server, and run a scenario
+# Run scenario with worker - Start a worker, an optional dev server, and run a scenario
 
 ```console
-$ go run ./cmd all-in-one --scenario workflow_with_single_noop_activity --language go --start-local-server
+$ go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
 ```
 
 Notes:
 
 - Cleanup is **not** automatically performed here
-- Accepts combined flags for `start-worker` and `run` commands
+- Accepts combined flags for `run-worker` and `run-scenario` commands
 
 ## Design decisions
 

@@ -1,9 +1,8 @@
-package loadgen
+package cmdoptions
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -93,10 +92,10 @@ func (m metricsTimer) Record(duration time.Duration) {
 type MetricsOptions struct {
 	// Address for the Prometheus HTTP listener.
 	// If empty, the listener will not be started.
-	PrometheusListenAddress string `flag:"prom-listen-address"`
+	PrometheusListenAddress string
 	// HTTP path for serving metrics.
 	// Default "/metrics".
-	PrometheusHandlerPath string `flag:"prom-handler-path"`
+	PrometheusHandlerPath string
 }
 
 // Metrics is a component for insrumenting an application with Promethues metrics.
@@ -165,8 +164,17 @@ func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, reg
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
 func (m *MetricsOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
-	fs.StringVar(&m.PrometheusListenAddress, fmt.Sprintf("%s%s", prefix,
-		OptionToFlagName(m, "PrometheusListenAddress")), "", "Prometheus listen address")
-	fs.StringVar(&m.PrometheusHandlerPath, fmt.Sprintf("%s%s", prefix,
-		OptionToFlagName(m, "PrometheusHandlerPath")), "/metrics", "Prometheus handler path")
+	fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
+	fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
+}
+
+// ToFlags converts these options to string flags.
+func (m *MetricsOptions) ToFlags() (flags []string) {
+	if m.PrometheusListenAddress != "" {
+		flags = append(flags, "--prom-listen-address", m.PrometheusListenAddress)
+	}
+	if m.PrometheusHandlerPath != "" {
+		flags = append(flags, "--prom-handler-path", m.PrometheusHandlerPath)
+	}
+	return
 }
