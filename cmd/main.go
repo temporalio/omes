@@ -1,23 +1,20 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base32"
 	"errors"
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/components/client"
-	"github.com/temporalio/omes/components/logging"
-	"github.com/temporalio/omes/components/metrics"
-	"github.com/temporalio/omes/executors"
-	"github.com/temporalio/omes/runner"
-	"github.com/temporalio/omes/runner/devserver"
-	"github.com/temporalio/omes/scenario"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/runner"
 	_ "github.com/temporalio/omes/scenarios" // Register scenarios (side-effect)
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/testsuite"
+	"go.uber.org/zap"
 )
 
 // options for bootstrapping a scenario
@@ -32,27 +29,26 @@ type appOptions struct {
 
 type App struct {
 	logger     *zap.SugaredLogger
-	metrics    *metrics.Metrics
+	metrics    *loadgen.Metrics
 	runner     *runner.Runner
 	appOptions appOptions
 	// Options for configuring logging
-	loggingOptions logging.Options
+	loggingOptions loadgen.LoggingOptions
 	// Options for configuring the client connection
-	clientOptions client.Options
+	clientOptions loadgen.ClientOptions
 	// General runner options
 	runnerOptions runner.Options
 	// Options for runner.Cleanup
 	cleanOptions runner.CleanupOptions
 	// Options for runner.RunWorker
 	workerOptions  runner.WorkerOptions
-	metricsOptions metrics.Options
-	// Dev server handle (see startLocalServer)
-	devServer *devserver.DevServer
+	metricsOptions loadgen.MetricsOptions
+	devServer      *testsuite.DevServer
 }
 
 // applyOverrides from CLI flags to a loaded scenario
-func (a *App) applyOverrides(scenario *scenario.Scenario) error {
-	opts, ok := scenario.Executor.(*executors.SharedIterationsExecutor)
+func (a *App) applyOverrides(scenario *loadgen.Scenario) error {
+	opts, ok := scenario.Executor.(*loadgen.SharedIterationsExecutor)
 	if !ok {
 		// Don't know how to override options here
 		return nil
@@ -85,8 +81,8 @@ func shortRand() (string, error) {
 // Setup the application and runner instance.
 // Starts a local server if requested.
 func (a *App) Setup(cmd *cobra.Command, args []string) {
-	a.logger = logging.MustSetup(&a.loggingOptions)
-	a.metrics = metrics.MustSetup(&a.metricsOptions, a.logger)
+	a.logger = a.loggingOptions.MustCreateLogger()
+	a.metrics = a.metricsOptions.MustCreateMetrics(a.logger)
 
 	if a.runnerOptions.RunID == "" {
 		runID, err := shortRand()
@@ -96,19 +92,24 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.runnerOptions.RunID = runID
 	}
 
-	scenario := scenario.Get(a.runnerOptions.ScenarioName)
+	scenario := loadgen.GetScenario(a.runnerOptions.ScenarioName)
 	if scenario == nil {
 		a.logger.Fatalf("failed to find a registered scenario named %q", a.runnerOptions.ScenarioName)
 	}
 	a.applyOverrides(scenario)
 	if a.appOptions.startLocalServer {
 		// TODO: cli version / log level
-		server, err := devserver.Start(devserver.Options{Namespace: a.clientOptions.Namespace, Log: a.logger, LogLevel: "error"})
+		server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
+			ClientOptions: &client.Options{
+				Namespace: a.clientOptions.Namespace,
+			},
+			LogLevel: "error",
+		})
 		if err != nil {
 			a.logger.Fatalf("Failed to start local dev server: %v", err)
 		}
-		a.logger.Infof("Started local dev server at: %s", server.FrontendHostPort)
-		a.clientOptions.Address = server.FrontendHostPort
+		a.logger.Infof("Started local dev server at: %s", server.FrontendHostPort())
+		a.clientOptions.Address = server.FrontendHostPort()
 		a.clientOptions.ClientCertPath = ""
 		a.clientOptions.ClientKeyPath = ""
 		a.devServer = server
@@ -138,7 +139,7 @@ func (a *App) Teardown(cmd *cobra.Command, args []string) {
 
 // Run starts a new scenario run.
 func (a *App) Run(cmd *cobra.Command, args []string) {
-	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
+	client := a.clientOptions.MustDial(a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Run(cmd.Context(), client); err != nil {
@@ -148,7 +149,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 // Cleanup resources created by a previous run.
 func (a *App) Cleanup(cmd *cobra.Command, args []string) {
-	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
+	client := a.clientOptions.MustDial(a.metrics, a.logger)
 	defer client.Close()
 
 	if err := a.runner.Cleanup(cmd.Context(), client, a.cleanOptions); err != nil {
@@ -166,7 +167,7 @@ func (a *App) RunWorker(cmd *cobra.Command, args []string) {
 
 // RunAllInOne runs a worker, an optional local server, and a scenario.
 func (a *App) RunAllInOne(cmd *cobra.Command, args []string) {
-	client := client.MustConnect(&a.clientOptions, a.metrics, a.logger)
+	client := a.clientOptions.MustDial(a.metrics, a.logger)
 	defer client.Close()
 
 	options := runner.AllInOneOptions{WorkerOptions: a.workerOptions}
@@ -221,9 +222,9 @@ func main() {
 		Run:   app.RunAllInOne,
 	}
 
-	logging.AddCLIFlags(rootCmd.PersistentFlags(), &app.loggingOptions, "")
-	metrics.AddCLIFlags(rootCmd.PersistentFlags(), &app.metricsOptions, "")
-	client.AddCLIFlags(rootCmd.PersistentFlags(), &app.clientOptions)
+	app.loggingOptions.AddCLIFlags(rootCmd.PersistentFlags(), "")
+	app.metricsOptions.AddCLIFlags(rootCmd.PersistentFlags(), "")
+	app.clientOptions.AddCLIFlags(rootCmd.PersistentFlags())
 	rootCmd.PersistentFlags().StringVarP(&app.runnerOptions.ScenarioName, "scenario", "s", "", "Scenario to run (see scenarios/)")
 	rootCmd.MarkFlagRequired("scenario")
 	rootCmd.PersistentFlags().StringVar(&app.runnerOptions.RunID, "run-id", "", "Optional unique ID for a scenario run")
@@ -244,8 +245,8 @@ func main() {
 	rootCmd.AddCommand(allInOneCmd)
 	addWorkerFlags(allInOneCmd, &app)
 	addRunFlags(allInOneCmd, &app)
-	logging.AddCLIFlags(allInOneCmd.Flags(), &app.workerOptions.LoggingOptions, "worker-")
-	metrics.AddCLIFlags(allInOneCmd.Flags(), &app.workerOptions.MetricsOptions, "worker-")
+	app.workerOptions.LoggingOptions.AddCLIFlags(allInOneCmd.Flags(), "worker-")
+	app.workerOptions.MetricsOptions.AddCLIFlags(allInOneCmd.Flags(), "worker-")
 	allInOneCmd.Flags().BoolVar(&app.appOptions.startLocalServer, "start-local-server", false, "Start a local server (server-address and TLS options will be ignored)")
 
 	defer func() {
@@ -257,7 +258,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			logging.BackupLogger.Fatal(err)
+			loadgen.BackupLogger.Fatal(err)
 		}
 	}
 }

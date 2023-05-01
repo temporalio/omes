@@ -1,4 +1,4 @@
-package executors
+package loadgen
 
 import (
 	"context"
@@ -9,14 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	metricsComponent "github.com/temporalio/omes/components/metrics"
-	"github.com/temporalio/omes/scenario"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
 func TestIterationsAndDuration(t *testing.T) {
-	metrics := metricsComponent.MustSetup(&metricsComponent.Options{}, nil)
-	options := scenario.RunOptions{Metrics: metrics}
+	options := RunOptions{MetricsHandler: client.MetricsNopHandler}
 
 	var err error
 	{
@@ -48,7 +46,7 @@ func TestIterationsAndDuration(t *testing.T) {
 func TestCalcConcurrency(t *testing.T) {
 	assert.Equal(t, 3, calcConcurrency(3, 6))
 	assert.Equal(t, 6, calcConcurrency(0, 6))
-	assert.Equal(t, defaultConcurrency, calcConcurrency(0, 0))
+	assert.Equal(t, defaultSharedIterationsConcurrency, calcConcurrency(0, 0))
 	assert.Equal(t, 5, calcConcurrency(5, 0))
 }
 
@@ -74,12 +72,11 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 }
 
 func execute(executor *SharedIterationsExecutor) error {
-	var metrics = metricsComponent.MustSetup(&metricsComponent.Options{}, nil)
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
-	options := &scenario.RunOptions{
-		Metrics: metrics,
-		Logger:  logger.Sugar(),
+	options := &RunOptions{
+		MetricsHandler: client.MetricsNopHandler,
+		Logger:         logger.Sugar(),
 	}
 	return executor.Run(context.Background(), options)
 }
@@ -87,7 +84,7 @@ func execute(executor *SharedIterationsExecutor) error {
 func TestRunHappyPathIterations(t *testing.T) {
 	tracker := newIterationTracker()
 	err := execute(&SharedIterationsExecutor{
-		Execute: func(ctx context.Context, run *scenario.Run) error {
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
 			return nil
 		},
@@ -101,7 +98,7 @@ func TestRunFailIterations(t *testing.T) {
 	tracker := newIterationTracker()
 	concurrency := 3
 	err := execute(&SharedIterationsExecutor{
-		Execute: func(ctx context.Context, run *scenario.Run) error {
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
 			// Start this short timer to allow all concurrent routines to be spawned
 			<-time.After(time.Millisecond)
@@ -122,7 +119,7 @@ func TestRunFailIterations(t *testing.T) {
 func TestRunHappyPathDuration(t *testing.T) {
 	tracker := newIterationTracker()
 	err := execute(&SharedIterationsExecutor{
-		Execute: func(ctx context.Context, run *scenario.Run) error {
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
 			time.Sleep(time.Millisecond * 50)
 			return nil
@@ -130,13 +127,13 @@ func TestRunHappyPathDuration(t *testing.T) {
 		Duration: 100 * time.Millisecond,
 	})
 	assert.NoError(t, err)
-	tracker.assertSeen(t, defaultConcurrency*2)
+	tracker.assertSeen(t, defaultSharedIterationsConcurrency*2)
 }
 
 func TestRunFailDuration(t *testing.T) {
 	var numIterationSeen atomic.Uint32
 	err := execute(&SharedIterationsExecutor{
-		Execute: func(ctx context.Context, run *scenario.Run) error {
+		Execute: func(ctx context.Context, run *Run) error {
 			numIterationSeen.Add(1)
 			if run.IterationInTest == 2 {
 				return errors.New("deliberate fail from test")
@@ -148,5 +145,5 @@ func TestRunFailDuration(t *testing.T) {
 		Duration: 200 * time.Millisecond,
 	})
 	assert.ErrorContains(t, err, "run finished with errors")
-	assert.LessOrEqual(t, numIterationSeen.Load(), uint32(defaultConcurrency))
+	assert.LessOrEqual(t, numIterationSeen.Load(), uint32(defaultSharedIterationsConcurrency))
 }

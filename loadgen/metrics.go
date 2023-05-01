@@ -1,4 +1,4 @@
-package metrics
+package loadgen
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/components"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -90,8 +89,8 @@ func (m metricsTimer) Record(duration time.Duration) {
 	m.prom.Observe(duration.Seconds())
 }
 
-// Options for setting up Prometheus metrics.
-type Options struct {
+// MetricsOptions for setting up Prometheus metrics.
+type MetricsOptions struct {
 	// Address for the Prometheus HTTP listener.
 	// If empty, the listener will not be started.
 	PrometheusListenAddress string `flag:"prom-listen-address"`
@@ -106,13 +105,14 @@ type Metrics struct {
 	registry *prometheus.Registry
 }
 
-// MustSetup sets up Prometheus based metrics and starts an HTTP server for serving metrics
-func MustSetup(options *Options, logger *zap.SugaredLogger) *Metrics {
+// MustCreateMetrics sets up Prometheus based metrics and starts an HTTP server
+// for serving metrics.
+func (m *MetricsOptions) MustCreateMetrics(logger *zap.SugaredLogger) *Metrics {
 	registry := prometheus.NewRegistry()
 	var server *http.Server
-	if options.PrometheusListenAddress != "" {
+	if m.PrometheusListenAddress != "" {
 		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-		server = mustInitPrometheusServer(options, logger, registry)
+		server = m.mustInitPrometheusServer(logger, registry)
 	}
 	return &Metrics{
 		server:   server,
@@ -121,7 +121,7 @@ func MustSetup(options *Options, logger *zap.SugaredLogger) *Metrics {
 }
 
 // Handler returns a new Temporal-client-compatible metrics handler.
-func (m *Metrics) Handler() client.MetricsHandler {
+func (m *Metrics) NewHandler() client.MetricsHandler {
 	return &metricsHandler{
 		registry: m.registry,
 		tags:     make(map[string]string),
@@ -137,9 +137,9 @@ func (m *Metrics) Shutdown(ctx context.Context) error {
 	return m.server.Shutdown(ctx)
 }
 
-func mustInitPrometheusServer(options *Options, logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
-	address := options.PrometheusListenAddress
-	handlerPath := options.PrometheusHandlerPath
+func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
+	address := m.PrometheusListenAddress
+	handlerPath := m.PrometheusHandlerPath
 	if handlerPath == "" {
 		handlerPath = "/metrics"
 	}
@@ -164,7 +164,9 @@ func mustInitPrometheusServer(options *Options, logger *zap.SugaredLogger, regis
 }
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
-func AddCLIFlags(fs *pflag.FlagSet, options *Options, prefix string) {
-	fs.StringVar(&options.PrometheusListenAddress, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "PrometheusListenAddress")), "", "Prometheus listen address")
-	fs.StringVar(&options.PrometheusHandlerPath, fmt.Sprintf("%s%s", prefix, components.OptionToFlagName(options, "PrometheusHandlerPath")), "/metrics", "Prometheus handler path")
+func (m *MetricsOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
+	fs.StringVar(&m.PrometheusListenAddress, fmt.Sprintf("%s%s", prefix,
+		OptionToFlagName(m, "PrometheusListenAddress")), "", "Prometheus listen address")
+	fs.StringVar(&m.PrometheusHandlerPath, fmt.Sprintf("%s%s", prefix,
+		OptionToFlagName(m, "PrometheusHandlerPath")), "/metrics", "Prometheus handler path")
 }

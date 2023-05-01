@@ -1,5 +1,8 @@
 # Omes - a load generator for Temporal
 
+This project is for testing load generation scenarios against Temporal. This is primarily used by the Temporal team to
+benchmark features and situations. Backwards compatibility may not be maintained.
+
 ## Why the weird name?
 
 Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
@@ -63,13 +66,19 @@ func init() {
 #### Scenario Authoring Guidelines
 
 1. Use snake care for scenario file names.
-1. Use methods of [Run](./scenario/run.go) in your `Execute` as much as possible.
+1. Use methods of `*omes.Run` in your `Execute` as much as possible.
 1. Add methods to `Run` as needed.
+
+### Run a worker for a specific language SDK
+
+```console
+$ go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
+```
 
 ### Run a test scenario
 
 ```console
-$ go run ./cmd/omes run --scenario workflow_with_single_noop_activity --run-id local-test-run
+$ go run ./cmd run --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -78,24 +87,18 @@ Notes:
   and by the cleanup script
 - By default the number of iterations or duration is specified in the scenario config, those can be overridden with CLI
   flags
-- See help output for avaialble flags
+- See help output for available flags
 
-### Run a worker for a specific language SDK (currently only Go)
-
-```console
-$ go run ./cmd/omes run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
-```
-
-### Cleanup after scenario run (requires ElasticSearch)
+### Cleanup after scenario run
 
 ```console
-$ go run ./cmd/omes cleanup --scenario workflow_with_single_noop_activity --run-id local-test-run
+$ go run ./cmd cleanup --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 # All-in-one - Start a worker, an optional dev server, and run a scenario
 
 ```console
-$ go run ./cmd/omes all-in-one --scenario workflow_with_single_noop_activity --language go --start-local-server
+$ go run ./cmd all-in-one --scenario workflow_with_single_noop_activity --language go --start-local-server
 ```
 
 Notes:

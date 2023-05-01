@@ -7,14 +7,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"syscall"
+	"runtime"
 	"time"
 
-	"github.com/temporalio/omes/components"
-	clientComponent "github.com/temporalio/omes/components/client"
-	"github.com/temporalio/omes/components/logging"
-	"github.com/temporalio/omes/components/metrics"
-	"github.com/temporalio/omes/scenario"
+	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -26,21 +22,21 @@ const DEFAULT_CONCURRENCY = 10
 
 // Options for creating a Runner.
 type Options struct {
-	ClientOptions clientComponent.Options
+	ClientOptions loadgen.ClientOptions
 	// ID used for prefixing workflow IDs and determining the task queue.
 	RunID        string
 	ScenarioName string
-	Scenario     *scenario.Scenario
+	Scenario     *loadgen.Scenario
 }
 
 type Runner struct {
 	options Options
-	metrics *metrics.Metrics
+	metrics *loadgen.Metrics
 	logger  *zap.SugaredLogger
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLogger) *Runner {
+func NewRunner(options Options, metrics *loadgen.Metrics, logger *zap.SugaredLogger) *Runner {
 	return &Runner{
 		options: options,
 		logger:  logger,
@@ -51,12 +47,12 @@ func NewRunner(options Options, metrics *metrics.Metrics, logger *zap.SugaredLog
 // Run a scenario.
 // The actual run logic is delegated to the scenario Executor.
 func (r *Runner) Run(ctx context.Context, client client.Client) error {
-	return r.options.Scenario.Executor.Run(ctx, &scenario.RunOptions{
-		ScenarioName: r.options.ScenarioName,
-		RunID:        r.options.RunID,
-		Logger:       r.logger,
-		Metrics:      r.metrics,
-		Client:       client,
+	return r.options.Scenario.Executor.Run(ctx, &loadgen.RunOptions{
+		ScenarioName:   r.options.ScenarioName,
+		RunID:          r.options.RunID,
+		Logger:         r.logger,
+		MetricsHandler: r.metrics.NewHandler(),
+		Client:         client,
 	})
 }
 
@@ -97,7 +93,7 @@ func normalizeLangName(lang string) (string, error) {
 // TODO(bergundy): This fails on Cloud, not sure why.
 // TODO(bergundy): Add support for cleaning the entire namespace or by search attribute if we decide to add multi-queue scenarios.
 func (r *Runner) Cleanup(ctx context.Context, client client.Client, options CleanupOptions) error {
-	taskQueue := scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID)
+	taskQueue := loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID)
 	jobId := taskQueue
 	// Clean based on task queue to avoid relying on search attributes and reducing the requirements of this framework.
 	query := fmt.Sprintf("TaskQueue = %q", taskQueue)
@@ -155,14 +151,17 @@ func (r *Runner) prepareWorker(ctx context.Context, options PrepareWorkerOptions
 			"go",
 			"build",
 			"-o", options.Output,
-			// TODO: use relative path
-			filepath.Join("workers", "go", "main.go"),
+			"main.go",
 		}
 		r.logger.Infof("Building go worker with %v", args)
 		cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+		// TODO: use relative path
+		cmd.Dir = "workers/go"
 		return cmd.Run()
 	case "py":
-		os.Mkdir(options.Output, 0755)
+		if err := os.MkdirAll(options.Output, 0755); err != nil {
+			return fmt.Errorf("failed making output dir: %w", err)
+		}
 		pwd, _ := os.Getwd()
 		pyProjectTOML := fmt.Sprintf(`
 [tool.poetry]
@@ -177,7 +176,7 @@ omes = { path = %q }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"`, pwd)
+build-backend = "poetry.core.masonry.api"`, filepath.Join(pwd, "workers/python"))
 		if err := os.WriteFile(filepath.Join(options.Output, "pyproject.toml"), []byte(pyProjectTOML), 0644); err != nil {
 			return fmt.Errorf("failed writing pyproject.toml: %w", err)
 		}
@@ -199,9 +198,9 @@ build-backend = "poetry.core.masonry.api"`, pwd)
 }
 
 type WorkerOptions struct {
-	MetricsOptions metrics.Options
-	LoggingOptions logging.Options
-	ClientOptions  clientComponent.Options
+	MetricsOptions loadgen.MetricsOptions
+	LoggingOptions loadgen.LoggingOptions
+	ClientOptions  loadgen.ClientOptions
 	// Worker SDK language
 	Language string
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
@@ -237,12 +236,15 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	switch language {
 	case "go":
 		outputPath := filepath.Join(tmpDir, "worker")
+		if runtime.GOOS == "windows" {
+			outputPath += ".exe"
+		}
 		if err := r.prepareWorker(ctx, PrepareWorkerOptions{Language: language, Output: outputPath}); err != nil {
 			return err
 		}
 		args = []string{
 			outputPath,
-			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
+			"--task-queue", loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 	case "py":
 		outputPath := filepath.Join(tmpDir, "worker")
@@ -255,16 +257,16 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 			"run",
 			"python",
 			"-m",
-			"workers.python.main",
-			"--task-queue", scenario.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
+			"main",
+			"--task-queue", loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)
 	}
 	// Add common args
-	args = append(args, components.OptionsToFlags(&options.ClientOptions)...)
-	args = append(args, components.OptionsToFlags(&options.MetricsOptions)...)
-	args = append(args, components.OptionsToFlags(&options.LoggingOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.ClientOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.MetricsOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.LoggingOptions)...)
 
 	runErrorChan := make(chan error, 1)
 	// Inentionally not using CommandContext since we want to kill the worker gracefully (using SIGTERM).
@@ -284,10 +286,10 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 	select {
 	case <-ctx.Done():
 		// Context cancelled before worker shutdown
-		r.logger.Infof("Sending SIGTERM to worker, PID: %d", cmd.Process.Pid)
-		err := cmd.Process.Signal(syscall.SIGTERM)
+		r.logger.Infof("Sending SIGINT to worker, PID: %d", cmd.Process.Pid)
+		err := sendInterrupt(cmd.Process)
 		if err != nil {
-			r.logger.Fatalf("failed to kill worker: %w", err)
+			r.logger.Fatalf("failed to kill worker: %v", err)
 		}
 		select {
 		case err := <-runErrorChan:
