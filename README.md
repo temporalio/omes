@@ -1,5 +1,8 @@
 # Omes - a load generator for Temporal
 
+This project is for testing load generation scenarios against Temporal. This is primarily used by the Temporal team to
+benchmark features and situations. Backwards compatibility may not be maintained.
+
 ## Why the weird name?
 
 Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
