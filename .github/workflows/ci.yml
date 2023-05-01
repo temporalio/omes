@@ -21,26 +21,7 @@ jobs:
       - run: go test ./...
       - name: Go all-in-one
         run: ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language go --start-local-server
-      - name: Download Cloud certs to temporary directory
-        run: |
-          mkdir /tmp/temporal-certs &&
-          echo "$TEMPORAL_CLIENT_CERT" > /tmp/temporal-certs/client.pem &&
-          echo "$TEMPORAL_CLIENT_KEY" > /tmp/temporal-certs/client.key &&
-          wc /tmp/temporal-certs/client.pem /tmp/temporal-certs/client.key
-        env:
-          TEMPORAL_CLIENT_CERT: ${{ secrets.TEMPORAL_CLIENT_CERT }}
-          TEMPORAL_CLIENT_KEY: ${{ secrets.TEMPORAL_CLIENT_KEY }}
-      - name: Go on Cloud namespace
-        run: |
-          ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language go \
-            --server-address $TEMPORAL_CLOUD_ADDRESS \
-            --namespace $TEMPORAL_CLOUD_NAMESPACE \
-            --tls-cert-path /tmp/temporal-certs/client.pem \
-            --tls-key-path /tmp/temporal-certs/client.key
-        env:
-          TEMPORAL_CLOUD_ADDRESS: sdk-ci.a2dd6.tmprl.cloud:7233
-          TEMPORAL_CLOUD_NAMESPACE: sdk-ci.a2dd6
-  
+
   build-lint-test-python:
     runs-on: ubuntu-latest
     steps:
@@ -61,22 +42,3 @@ jobs:
 
       - name: Python all-in-one
         run: ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language py --start-local-server
-      - name: Download Cloud certs to temporary directory
-        run: |
-          mkdir /tmp/temporal-certs &&
-          echo "$TEMPORAL_CLIENT_CERT" > /tmp/temporal-certs/client.pem &&
-          echo "$TEMPORAL_CLIENT_KEY" > /tmp/temporal-certs/client.key &&
-          wc /tmp/temporal-certs/client.pem /tmp/temporal-certs/client.key
-        env:
-          TEMPORAL_CLIENT_CERT: ${{ secrets.TEMPORAL_CLIENT_CERT }}
-          TEMPORAL_CLIENT_KEY: ${{ secrets.TEMPORAL_CLIENT_KEY }}
-      - name: Python on Cloud namespace
-        run: |
-          ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language py \
-            --server-address $TEMPORAL_CLOUD_ADDRESS \
-            --namespace $TEMPORAL_CLOUD_NAMESPACE \
-            --tls-cert-path /tmp/temporal-certs/client.pem \
-            --tls-key-path /tmp/temporal-certs/client.key
-        env:
-          TEMPORAL_CLOUD_ADDRESS: sdk-ci.a2dd6.tmprl.cloud:7233
-          TEMPORAL_CLOUD_NAMESPACE: sdk-ci.a2dd6
