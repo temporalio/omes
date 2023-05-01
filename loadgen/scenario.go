@@ -1,4 +1,4 @@
-package omes
+package loadgen
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/temporalio/omes/omes/kitchensink"
+	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )

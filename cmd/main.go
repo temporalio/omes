@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/omes"
-	"github.com/temporalio/omes/omes/runner"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/runner"
 	_ "github.com/temporalio/omes/scenarios" // Register scenarios (side-effect)
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
@@ -29,26 +29,26 @@ type appOptions struct {
 
 type App struct {
 	logger     *zap.SugaredLogger
-	metrics    *omes.Metrics
+	metrics    *loadgen.Metrics
 	runner     *runner.Runner
 	appOptions appOptions
 	// Options for configuring logging
-	loggingOptions omes.LoggingOptions
+	loggingOptions loadgen.LoggingOptions
 	// Options for configuring the client connection
-	clientOptions omes.ClientOptions
+	clientOptions loadgen.ClientOptions
 	// General runner options
 	runnerOptions runner.Options
 	// Options for runner.Cleanup
 	cleanOptions runner.CleanupOptions
 	// Options for runner.RunWorker
 	workerOptions  runner.WorkerOptions
-	metricsOptions omes.MetricsOptions
+	metricsOptions loadgen.MetricsOptions
 	devServer      *testsuite.DevServer
 }
 
 // applyOverrides from CLI flags to a loaded scenario
-func (a *App) applyOverrides(scenario *omes.Scenario) error {
-	opts, ok := scenario.Executor.(*omes.SharedIterationsExecutor)
+func (a *App) applyOverrides(scenario *loadgen.Scenario) error {
+	opts, ok := scenario.Executor.(*loadgen.SharedIterationsExecutor)
 	if !ok {
 		// Don't know how to override options here
 		return nil
@@ -92,7 +92,7 @@ func (a *App) Setup(cmd *cobra.Command, args []string) {
 		a.runnerOptions.RunID = runID
 	}
 
-	scenario := omes.GetScenario(a.runnerOptions.ScenarioName)
+	scenario := loadgen.GetScenario(a.runnerOptions.ScenarioName)
 	if scenario == nil {
 		a.logger.Fatalf("failed to find a registered scenario named %q", a.runnerOptions.ScenarioName)
 	}
@@ -258,7 +258,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			omes.BackupLogger.Fatal(err)
+			loadgen.BackupLogger.Fatal(err)
 		}
 	}
 }

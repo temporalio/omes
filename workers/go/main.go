@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/omes"
+	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
@@ -18,9 +18,9 @@ import (
 type App struct {
 	logger         *zap.SugaredLogger
 	taskQueue      string
-	loggingOptions omes.LoggingOptions
-	clientOptions  omes.ClientOptions
-	metricsOptions omes.MetricsOptions
+	loggingOptions loadgen.LoggingOptions
+	clientOptions  loadgen.ClientOptions
+	metricsOptions loadgen.MetricsOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
@@ -73,7 +73,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			omes.BackupLogger.Fatal(err)
+			loadgen.BackupLogger.Fatal(err)
 		}
 	}
 }

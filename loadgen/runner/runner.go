@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/temporalio/omes/omes"
+	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -22,21 +22,21 @@ const DEFAULT_CONCURRENCY = 10
 
 // Options for creating a Runner.
 type Options struct {
-	ClientOptions omes.ClientOptions
+	ClientOptions loadgen.ClientOptions
 	// ID used for prefixing workflow IDs and determining the task queue.
 	RunID        string
 	ScenarioName string
-	Scenario     *omes.Scenario
+	Scenario     *loadgen.Scenario
 }
 
 type Runner struct {
 	options Options
-	metrics *omes.Metrics
+	metrics *loadgen.Metrics
 	logger  *zap.SugaredLogger
 }
 
 // NewRunner instantiates a Runner
-func NewRunner(options Options, metrics *omes.Metrics, logger *zap.SugaredLogger) *Runner {
+func NewRunner(options Options, metrics *loadgen.Metrics, logger *zap.SugaredLogger) *Runner {
 	return &Runner{
 		options: options,
 		logger:  logger,
@@ -47,7 +47,7 @@ func NewRunner(options Options, metrics *omes.Metrics, logger *zap.SugaredLogger
 // Run a scenario.
 // The actual run logic is delegated to the scenario Executor.
 func (r *Runner) Run(ctx context.Context, client client.Client) error {
-	return r.options.Scenario.Executor.Run(ctx, &omes.RunOptions{
+	return r.options.Scenario.Executor.Run(ctx, &loadgen.RunOptions{
 		ScenarioName:   r.options.ScenarioName,
 		RunID:          r.options.RunID,
 		Logger:         r.logger,
@@ -93,7 +93,7 @@ func normalizeLangName(lang string) (string, error) {
 // TODO(bergundy): This fails on Cloud, not sure why.
 // TODO(bergundy): Add support for cleaning the entire namespace or by search attribute if we decide to add multi-queue scenarios.
 func (r *Runner) Cleanup(ctx context.Context, client client.Client, options CleanupOptions) error {
-	taskQueue := omes.TaskQueueForRun(r.options.ScenarioName, r.options.RunID)
+	taskQueue := loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID)
 	jobId := taskQueue
 	// Clean based on task queue to avoid relying on search attributes and reducing the requirements of this framework.
 	query := fmt.Sprintf("TaskQueue = %q", taskQueue)
@@ -198,9 +198,9 @@ build-backend = "poetry.core.masonry.api"`, filepath.Join(pwd, "workers/python")
 }
 
 type WorkerOptions struct {
-	MetricsOptions omes.MetricsOptions
-	LoggingOptions omes.LoggingOptions
-	ClientOptions  omes.ClientOptions
+	MetricsOptions loadgen.MetricsOptions
+	LoggingOptions loadgen.LoggingOptions
+	ClientOptions  loadgen.ClientOptions
 	// Worker SDK language
 	Language string
 	// Time to wait before killing the worker process after sending SIGTERM in case it doesn't gracefully shut down.
@@ -244,7 +244,7 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 		}
 		args = []string{
 			outputPath,
-			"--task-queue", omes.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
+			"--task-queue", loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 	case "py":
 		outputPath := filepath.Join(tmpDir, "worker")
@@ -258,15 +258,15 @@ func (r *Runner) RunWorker(ctx context.Context, options WorkerOptions) error {
 			"python",
 			"-m",
 			"main",
-			"--task-queue", omes.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
+			"--task-queue", loadgen.TaskQueueForRun(r.options.ScenarioName, r.options.RunID),
 		}
 	default:
 		return fmt.Errorf("language not supported: '%s'", options.Language)
 	}
 	// Add common args
-	args = append(args, omes.OptionsToFlags(&options.ClientOptions)...)
-	args = append(args, omes.OptionsToFlags(&options.MetricsOptions)...)
-	args = append(args, omes.OptionsToFlags(&options.LoggingOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.ClientOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.MetricsOptions)...)
+	args = append(args, loadgen.OptionsToFlags(&options.LoggingOptions)...)
 
 	runErrorChan := make(chan error, 1)
 	// Inentionally not using CommandContext since we want to kill the worker gracefully (using SIGTERM).

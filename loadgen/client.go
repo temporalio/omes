@@ -1,4 +1,4 @@
-package omes
+package loadgen
 
 import (
 	"crypto/tls"
