@@ -27,7 +27,7 @@ func prepareWorkerCmd() *cobra.Command {
 		},
 	}
 	b.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("dir")
+	cmd.MarkFlagRequired("dir-name")
 	cmd.MarkFlagRequired("language")
 	return cmd
 }

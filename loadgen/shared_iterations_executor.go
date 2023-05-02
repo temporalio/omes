@@ -24,7 +24,7 @@ type SharedIterationsExecutor struct {
 	Duration time.Duration
 	// Function to execute a single iteration of this scenario.
 	Execute func(ctx context.Context, run *Run) error
-	// If true, will also include errors even after context complete/
+	// If true, will also include errors even after context complete.
 	IncludeErrorsAfterContextComplete bool
 }
 
