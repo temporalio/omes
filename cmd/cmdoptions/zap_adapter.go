@@ -1,4 +1,4 @@
-package loadgen
+package cmdoptions
 
 import (
 	"fmt"

@@ -114,6 +114,7 @@ async def run():
         workflows=[KitchenSinkWorkflow],
         activities=[noop_activity],
     ):
+        logger.info("Python worker running for task queue %s" % args.task_queue)
         # Wait until interrupted
         await interrupt_event.wait()
 

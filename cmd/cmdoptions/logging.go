@@ -1,7 +1,6 @@
-package loadgen
+package cmdoptions
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -13,9 +12,9 @@ import (
 // LoggingOptions for setting up the logger component
 type LoggingOptions struct {
 	// Log level
-	LogLevel string `flag:"log-level"`
+	LogLevel string
 	// Log encoding (console json)
-	LogEncoding string `flag:"log-encoding"`
+	LogEncoding string
 }
 
 // BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`).
@@ -42,9 +41,18 @@ func (l *LoggingOptions) MustCreateLogger() *zap.SugaredLogger {
 }
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
-func (l *LoggingOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
-	fs.StringVar(&l.LogLevel, fmt.Sprintf("%s%s", prefix,
-		OptionToFlagName(l, "LogLevel")), "info", "(debug info warn error panic fatal)")
-	fs.StringVar(&l.LogEncoding, fmt.Sprintf("%s%s", prefix,
-		OptionToFlagName(l, "LogEncoding")), "console", "(console json)")
+func (l *LoggingOptions) AddCLIFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&l.LogLevel, "log-level", "info", "(debug info warn error panic fatal)")
+	fs.StringVar(&l.LogEncoding, "log-encoding", "console", "(console json)")
+}
+
+// ToFlags converts these options to string flags.
+func (l *LoggingOptions) ToFlags() (flags []string) {
+	if l.LogLevel != "" {
+		flags = append(flags, "--log-level", l.LogLevel)
+	}
+	if l.LogEncoding != "" {
+		flags = append(flags, "--log-encoding", l.LogEncoding)
+	}
+	return
 }

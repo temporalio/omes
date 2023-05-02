@@ -20,7 +20,7 @@ jobs:
       - run: go build -o temporal-omes ./cmd
       - run: go test ./...
       - name: Go all-in-one
-        run: ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language go --start-local-server
+        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server
 
   build-lint-test-python:
     runs-on: ubuntu-latest
@@ -41,4 +41,4 @@ jobs:
       - run: go build -o temporal-omes ./cmd
 
       - name: Python all-in-one
-        run: ./temporal-omes all-in-one --scenario workflow_with_single_noop_activity --log-level debug --language py --start-local-server
+        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language python --embedded-server

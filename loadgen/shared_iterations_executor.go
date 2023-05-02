@@ -24,6 +24,8 @@ type SharedIterationsExecutor struct {
 	Duration time.Duration
 	// Function to execute a single iteration of this scenario.
 	Execute func(ctx context.Context, run *Run) error
+	// If true, will also include errors even after context complete.
+	IncludeErrorsAfterContextComplete bool
 }
 
 func calcConcurrency(iterations int, concurrency int) int {
@@ -150,11 +152,14 @@ func (r *run) runOne(ctx context.Context, logger *zap.SugaredLogger) {
 		// TODO: ctx deadline might be too short if scenario is run with the Duration option.
 		// Set different duration here.
 		if err := r.executor.Execute(ctx, &run); err != nil {
-			duration := time.Since(startTime)
-			r.executeTimer.Record(duration)
-			err = fmt.Errorf("iteration %d failed: %w", iteration, err)
-			logger.Error(err)
-			r.errors <- err
+			// Only record the error if the context is not complete or we're including those
+			if ctx.Err() == nil || r.executor.IncludeErrorsAfterContextComplete {
+				duration := time.Since(startTime)
+				r.executeTimer.Record(duration)
+				err = fmt.Errorf("iteration %d failed: %w", iteration, err)
+				logger.Error(err)
+				r.errors <- err
+			}
 			// Even though context will be cancelled by the runner, we break here to avoid needlessly running another iteration
 			break
 		}

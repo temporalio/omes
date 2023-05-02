@@ -1,12 +1,8 @@
-package main
+package worker
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
@@ -18,9 +14,9 @@ import (
 type App struct {
 	logger         *zap.SugaredLogger
 	taskQueue      string
-	loggingOptions loadgen.LoggingOptions
-	clientOptions  loadgen.ClientOptions
-	metricsOptions loadgen.MetricsOptions
+	loggingOptions cmdoptions.LoggingOptions
+	clientOptions  cmdoptions.ClientOptions
+	metricsOptions cmdoptions.MetricsOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
@@ -33,15 +29,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 	w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
 
-	stopChan := make(chan interface{})
-	go func() {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
-		sig := <-sigs
-		a.logger.Infof("Got signal %s, stopping...", sig)
-		close(stopChan)
-	}()
-	if err := w.Run(stopChan); err != nil {
+	if err := w.Run(worker.InterruptCh()); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
 	if err := metrics.Shutdown(cmd.Context()); err != nil {
@@ -49,7 +37,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func main() {
+func Main() {
 	var app App
 
 	var cmd = &cobra.Command{
@@ -58,7 +46,7 @@ func main() {
 		Run:   app.Run,
 	}
 
-	app.loggingOptions.AddCLIFlags(cmd.Flags(), "")
+	app.loggingOptions.AddCLIFlags(cmd.Flags())
 	app.clientOptions.AddCLIFlags(cmd.Flags())
 	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
@@ -73,7 +61,7 @@ func main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			loadgen.BackupLogger.Fatal(err)
+			cmdoptions.BackupLogger.Fatal(err)
 		}
 	}
 }
