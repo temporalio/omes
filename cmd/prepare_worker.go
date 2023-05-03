@@ -44,7 +44,7 @@ type workerBuilder struct {
 func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&b.dirName, "dir-name", "", "Directory name for prepared worker")
 	fs.StringVar(&b.language, "language", "", "Language to prepare a worker for")
-	fs.StringVar(&b.version, "version", "", "Version to prepare a worker for")
+	fs.StringVar(&b.version, "version", "", "Version to prepare a worker for - treated as path if slash present")
 	b.loggingOptions.AddCLIFlags(fs)
 }
 

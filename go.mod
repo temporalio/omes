@@ -11,6 +11,7 @@ require (
 	go.temporal.io/features v1.0.0
 	go.temporal.io/sdk v1.22.1
 	go.uber.org/zap v1.24.0
+	golang.org/x/mod v0.8.0
 	golang.org/x/sys v0.6.0
 )
 

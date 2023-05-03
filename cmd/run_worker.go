@@ -47,6 +47,7 @@ type workerRunner struct {
 	retainTempDir            bool
 	gracefulShutdownDuration time.Duration
 	embeddedServer           bool
+	embeddedServerAddress    string
 	clientOptions            cmdoptions.ClientOptions
 	metricsOptions           cmdoptions.MetricsOptions
 	onWorkerStarted          func()
@@ -61,6 +62,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&r.gracefulShutdownDuration, "graceful-shutdown-duration", 30*time.Second,
 		"Time to wait for worker to respond to interrupt before killing it")
 	fs.BoolVar(&r.embeddedServer, "embedded-server", false, "Set to run in a local embedded server")
+	fs.StringVar(&r.embeddedServerAddress, "embedded-server-address", "", "Address to bind local embedded server to")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "worker-")
 }
@@ -81,14 +83,19 @@ func (r *workerRunner) run(ctx context.Context) error {
 	baseDir := filepath.Join(rootDir(), "workers", lang)
 
 	// Run an embedded server if requested
-	if r.embeddedServer {
+	if r.embeddedServer || r.embeddedServerAddress != "" {
 		// Intentionally don't use context, will stop on defer
 		if r.clientOptions.ClientCertPath != "" || r.clientOptions.ClientKeyPath != "" {
 			return fmt.Errorf("cannot give TLS certs with embedded server")
+		} else if r.clientOptions.Address != client.DefaultHostPort {
+			return fmt.Errorf("cannot supply non-default client address when using embedded server")
 		}
 		server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
-			ClientOptions: &client.Options{Namespace: r.clientOptions.Namespace},
-			LogLevel:      "error",
+			ClientOptions: &client.Options{
+				HostPort:  r.embeddedServerAddress,
+				Namespace: r.clientOptions.Namespace,
+			},
+			LogLevel: "error",
 		})
 		if err != nil {
 			return fmt.Errorf("failed starting embedded server: %w", err)

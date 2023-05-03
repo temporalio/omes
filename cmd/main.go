@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	_ "github.com/temporalio/omes/scenarios" // Register scenarios (side-effect)
 )
@@ -11,11 +14,15 @@ func main() {
 		Short: "A load generator for Temporal",
 	}
 
+	rootCmd.AddCommand(buildWorkerImageCmd())
 	rootCmd.AddCommand(cleanupScenarioCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
