@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -19,35 +18,22 @@ func TestIterationsAndDuration(t *testing.T) {
 	var err error
 	{
 		// only iterations
-		executor := &SharedIterationsExecutor{Iterations: 3}
-		_, err = executor.newRun(&options)
-		assert.NoError(t, err)
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Iterations: 3}}
+		_, err = executor.newRun(options)
+		require.NoError(t, err)
 	}
 	{
 		// only duration
-		executor := &SharedIterationsExecutor{Duration: time.Hour}
-		_, err = executor.newRun(&options)
-		assert.NoError(t, err)
-	}
-	{
-		// empty
-		executor := &SharedIterationsExecutor{}
-		_, err = executor.newRun(&options)
-		assert.ErrorContains(t, err, "invalid scenario: either iterations or duration is required")
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: time.Hour}}
+		_, err = executor.newRun(options)
+		require.NoError(t, err)
 	}
 	{
 		// both
-		executor := &SharedIterationsExecutor{Duration: 3 * time.Second, Iterations: 3}
-		_, err = executor.newRun(&options)
-		assert.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}}
+		_, err = executor.newRun(options)
+		require.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
 	}
-}
-
-func TestCalcConcurrency(t *testing.T) {
-	assert.Equal(t, 3, calcConcurrency(3, 6))
-	assert.Equal(t, 6, calcConcurrency(0, 6))
-	assert.Equal(t, defaultSharedIterationsConcurrency, calcConcurrency(0, 0))
-	assert.Equal(t, 5, calcConcurrency(5, 0))
 }
 
 type iterationTracker struct {
@@ -67,14 +53,14 @@ func (i *iterationTracker) track(iteration int) {
 
 func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 	for iter := 1; iter <= iterations; iter++ {
-		assert.Contains(t, i.seen, iter)
+		require.Contains(t, i.seen, iter)
 	}
 }
 
-func execute(executor *SharedIterationsExecutor) error {
+func execute(executor *GenericExecutor) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
-	options := &RunOptions{
+	options := RunOptions{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
 	}
@@ -83,21 +69,21 @@ func execute(executor *SharedIterationsExecutor) error {
 
 func TestRunHappyPathIterations(t *testing.T) {
 	tracker := newIterationTracker()
-	err := execute(&SharedIterationsExecutor{
+	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
 			return nil
 		},
-		Iterations: 5,
+		DefaultConfiguration: RunConfiguration{Iterations: 5},
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tracker.assertSeen(t, 5)
 }
 
 func TestRunFailIterations(t *testing.T) {
 	tracker := newIterationTracker()
 	concurrency := 3
-	err := execute(&SharedIterationsExecutor{
+	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
 			// Start this short timer to allow all concurrent routines to be spawned
@@ -105,45 +91,40 @@ func TestRunFailIterations(t *testing.T) {
 			if run.IterationInTest == 2 {
 				return errors.New("deliberate fail from test")
 			}
-			// Wait for cancellation
-			<-ctx.Done()
 			return nil
 		},
-		Concurrency: concurrency,
-		Iterations:  50,
+		DefaultConfiguration: RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
 	})
-	assert.ErrorContains(t, err, "run finished with errors")
-	tracker.assertSeen(t, concurrency)
+	require.ErrorContains(t, err, "run finished with error")
+	tracker.assertSeen(t, 2)
 }
 
 func TestRunHappyPathDuration(t *testing.T) {
 	tracker := newIterationTracker()
-	err := execute(&SharedIterationsExecutor{
+	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.IterationInTest)
-			time.Sleep(time.Millisecond * 50)
+			time.Sleep(time.Millisecond * 20)
 			return nil
 		},
-		Duration: 100 * time.Millisecond,
+		DefaultConfiguration: RunConfiguration{Duration: 100 * time.Millisecond},
 	})
-	assert.NoError(t, err)
-	tracker.assertSeen(t, defaultSharedIterationsConcurrency*2)
+	require.NoError(t, err)
+	tracker.assertSeen(t, DefaultMaxConcurrent*2)
 }
 
 func TestRunFailDuration(t *testing.T) {
-	var numIterationSeen atomic.Uint32
-	err := execute(&SharedIterationsExecutor{
+	tracker := newIterationTracker()
+	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			numIterationSeen.Add(1)
+			tracker.track(run.IterationInTest)
 			if run.IterationInTest == 2 {
 				return errors.New("deliberate fail from test")
 			}
-			// Wait for cancellation
-			<-ctx.Done()
 			return nil
 		},
-		Duration: 200 * time.Millisecond,
+		DefaultConfiguration: RunConfiguration{Duration: 200 * time.Millisecond},
 	})
-	assert.ErrorContains(t, err, "run finished with errors")
-	assert.LessOrEqual(t, numIterationSeen.Load(), uint32(defaultSharedIterationsConcurrency))
+	require.ErrorContains(t, err, "run finished with error")
+	tracker.assertSeen(t, 2)
 }

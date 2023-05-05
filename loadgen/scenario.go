@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
@@ -13,13 +15,20 @@ import (
 )
 
 type Scenario struct {
-	Executor Executor
+	Description string
+	Executor    Executor
 }
 
 // Executor for a scenario.
 type Executor interface {
 	// Run the scenario
-	Run(context.Context, *RunOptions) error
+	Run(context.Context, RunOptions) error
+}
+
+// HasDefaultConfiguration is an interface executors can implement to show their
+// default configuration.
+type HasDefaultConfiguration interface {
+	GetDefaultConfiguration() RunConfiguration
 }
 
 var registeredScenarios = make(map[string]*Scenario)
@@ -27,7 +36,7 @@ var registeredScenarios = make(map[string]*Scenario)
 // MustRegisterScenario registers a scenario in the global static registry.
 // Panics if registration fails.
 // The file name of the caller is be used as the scenario name.
-func MustRegisterScenario(scenario *Scenario) {
+func MustRegisterScenario(scenario Scenario) {
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {
 		panic("Could not infer caller when registering a nameless scenario")
@@ -37,7 +46,16 @@ func MustRegisterScenario(scenario *Scenario) {
 	if found {
 		panic(fmt.Errorf("duplicate scenario with name: %s", scenarioName))
 	}
-	registeredScenarios[scenarioName] = scenario
+	registeredScenarios[scenarioName] = &scenario
+}
+
+// GetScenarios gets a copy of registered scenarios
+func GetScenarios() map[string]*Scenario {
+	ret := make(map[string]*Scenario, len(registeredScenarios))
+	for k, v := range registeredScenarios {
+		ret[k] = v
+	}
+	return ret
 }
 
 // GetScenario gets a scenario by name from the global static registry.
@@ -56,6 +74,45 @@ type RunOptions struct {
 	Logger *zap.SugaredLogger
 	// A Temporal client.
 	Client client.Client
+	// Configuration options passed by user if any.
+	Configuration RunConfiguration
+	// ScenarioOptions are options passed from the command line. Do not mutate these.
+	ScenarioOptions map[string]string
+}
+
+func (r *RunOptions) ScenarioOptionInt(name string, defaultValue int) int {
+	v := r.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		panic(err)
+	}
+	return i
+}
+
+const DefaultIterations = 10
+const DefaultMaxConcurrent = 10
+
+type RunConfiguration struct {
+	// Number of iterations to run of this scenario (mutually exclusive with Duration).
+	Iterations int
+	// Duration limit of this scenario (mutually exclusive with Iterations). If
+	// neither iterations nor duration is set, default is DefaultIterations.
+	Duration time.Duration
+	// Maximum number of instances of the Execute method to run concurrently.
+	// Default is DefaultMaxConcurrent.
+	MaxConcurrent int
+}
+
+func (r *RunConfiguration) ApplyDefaults() {
+	if r.Iterations == 0 && r.Duration == 0 {
+		r.Iterations = DefaultIterations
+	}
+	if r.MaxConcurrent == 0 {
+		r.MaxConcurrent = DefaultMaxConcurrent
+	}
 }
 
 // Run represents a scenario run.
@@ -66,7 +123,8 @@ type Run struct {
 	ScenarioName string
 	// Temporal client to use for executing workflows, etc.
 	Client client.Client
-	// Each call to the Execute method gets a distinct `IterationInTest`.
+	// Each call to the Execute method gets a distinct `IterationInTest`. This
+	// will never be 0.
 	IterationInTest int
 	Logger          *zap.SugaredLogger
 }

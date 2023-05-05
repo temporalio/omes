@@ -33,6 +33,8 @@ COPY go.mod go.sum ./
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
+ARG SDK_VERSION
+
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo

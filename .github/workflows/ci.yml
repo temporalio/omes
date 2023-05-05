@@ -29,7 +29,7 @@ jobs:
       - name: Run worker image
         run: docker run --rm --detach -i -p 10233:10233 omes:go-1.22.1 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --wait-for-server 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-lint-test-python:
     runs-on: ubuntu-latest
@@ -61,4 +61,4 @@ jobs:
       - name: Run worker image
         run: docker run --rm --detach -i -p 10233:10233 omes:python-1.2.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --wait-for-server 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5

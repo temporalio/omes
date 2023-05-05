@@ -80,7 +80,7 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 		} else if !filepath.IsLocal(b.version) {
 			return fmt.Errorf("invalid path version: must be beneath this dir")
 		}
-		// We have to copy the entire
+		// Dockerfile copies entire version path to ./repo
 		buildArgs = append(buildArgs, "SDK_VERSION=./repo", "SDK_DIR="+b.version)
 	} else {
 		buildArgs = append(buildArgs, "SDK_VERSION="+b.version)
