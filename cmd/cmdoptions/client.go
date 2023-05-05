@@ -41,9 +41,18 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 
 // MustDial connects to a Temporal server, with logging, metrics and loaded TLS certs.
 func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) client.Client {
+	client, err := c.Dial(metrics, logger)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	return client
+}
+
+// Dial connects to a Temporal server, with logging, metrics and loaded TLS certs.
+func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (client.Client, error) {
 	tlsCfg, err := c.loadTLSConfig()
 	if err != nil {
-		logger.Fatalf("Failed to load TLS config %s: %v", c.Address, err)
+		return nil, fmt.Errorf("failed to load TLS config: %w", err)
 	}
 	var clientOptions client.Options
 	clientOptions.HostPort = c.Address
@@ -54,16 +63,16 @@ func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) cl
 
 	client, err := client.Dial(clientOptions)
 	if err != nil {
-		logger.Fatalf("Failed to dial %s: %v", c.Address, err)
+		return nil, fmt.Errorf("failed to dial: %w", err)
 	}
 	logger.Infof("Client connected to %s, namespace: %s", c.Address, c.Namespace)
-	return client
+	return client, nil
 }
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
 func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.Address, "server-address", "localhost:7233", "Address of Temporal server")
-	fs.StringVar(&c.Namespace, "namespace", "default", "Namespace to connect to")
+	fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
+	fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 }

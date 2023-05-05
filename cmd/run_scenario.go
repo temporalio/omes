@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +38,7 @@ type scenarioRunner struct {
 	runID          string
 	iterations     int
 	duration       time.Duration
+	waitForServer  time.Duration
 	clientOptions  cmdoptions.ClientOptions
 	metricsOptions cmdoptions.MetricsOptions
 	loggingOptions cmdoptions.LoggingOptions
@@ -47,6 +49,7 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
 	fs.IntVar(&r.iterations, "iterations", 0, "Iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Duration for the scenario (cannot be provided with iteration)")
+	fs.DurationVar(&r.waitForServer, "wait-for-server", 0, "Duration to try to connect to server before failing")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "")
 	r.loggingOptions.AddCLIFlags(fs)
@@ -76,7 +79,21 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 
 	metrics := r.metricsOptions.MustCreateMetrics(r.logger)
 	defer metrics.Shutdown(ctx)
-	client := r.clientOptions.MustDial(metrics, r.logger)
+	start := time.Now()
+	var client client.Client
+	var err error
+	for {
+		client, err = r.clientOptions.Dial(metrics, r.logger)
+		if err == nil {
+			break
+		}
+		// Only fail if past wait period
+		if time.Since(start) > r.waitForServer {
+			return fmt.Errorf("failed dialing: %w", err)
+		}
+		// Wait 300ms and try again
+		time.Sleep(300 * time.Millisecond)
+	}
 	defer client.Close()
 	return scenario.Executor.Run(ctx, &loadgen.RunOptions{
 		ScenarioName:   r.scenario,
