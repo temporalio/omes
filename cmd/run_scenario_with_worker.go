@@ -31,15 +31,19 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 
 type workerWithScenarioRunner struct {
 	workerRunner
-	iterations     int
-	duration       time.Duration
-	metricsOptions cmdoptions.MetricsOptions
+	iterations      int
+	duration        time.Duration
+	maxConcurrent   int
+	scenarioOptions []string
+	metricsOptions  cmdoptions.MetricsOptions
 }
 
 func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.workerRunner.addCLIFlags(fs)
-	fs.IntVar(&r.iterations, "iterations", 0, "Iterations for the scenario (cannot be provided with duration)")
-	fs.DurationVar(&r.duration, "duration", 0, "Duration for the scenario (cannot be provided with iteration)")
+	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
+	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)")
+	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
+	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
 	r.metricsOptions.AddCLIFlags(fs, "")
 }
 
@@ -59,14 +63,16 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 
 	// Run scenario
 	scenarioRunner := scenarioRunner{
-		logger:         r.logger,
-		scenario:       r.scenario,
-		runID:          r.runID,
-		iterations:     r.iterations,
-		duration:       r.duration,
-		clientOptions:  r.clientOptions,
-		metricsOptions: r.metricsOptions,
-		loggingOptions: r.loggingOptions,
+		logger:          r.logger,
+		scenario:        r.scenario,
+		runID:           r.runID,
+		iterations:      r.iterations,
+		duration:        r.duration,
+		maxConcurrent:   r.maxConcurrent,
+		scenarioOptions: r.scenarioOptions,
+		clientOptions:   r.clientOptions,
+		metricsOptions:  r.metricsOptions,
+		loggingOptions:  r.loggingOptions,
 	}
 	scenarioErr := scenarioRunner.run(ctx)
 	cancel()

@@ -9,7 +9,7 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 ## Prerequisites
 
-- [Go](https://golang.org/) 1.19+
+- [Go](https://golang.org/) 1.20+
 - [Node](https://nodejs.org) 16+
 - [Python](https://www.python.org/) 3.10+
   - [Poetry](https://python-poetry.org/): `poetry install`
@@ -23,51 +23,37 @@ There's no need to install anything to use this, it's a self-contained Go projec
 
 ### Define a scenario
 
-Scenarios are defined using plain Go code. They are located in the [scenarios](./scenarios/) folder.
+Scenarios are defined using plain Go code. They are located in the [scenarios](./scenarios/) folder. There are already
+multiple defined that can be used.
 
-A scenario must select an `Executor` (currently only `SharedIterationsExecutor` is implemented).
-`SharedIterationsExecutor` accepts an `Execute` function that is called concurrently to execute each iteration.
+A scenario must select an `Executor`. The most common is the `KitchenSinkExecutor` which is a wrapper on the
+`GenericExecutor` specific for executing the Kitchen Sink workflow. The Kitchen Sink workflow accepts
+[actions](./loadgen/kitchensink/kitchen_sink.go) and is implemented in every worker language.
 
-```go
-func Execute(ctx context.Context, run *loadgen.Run) error {
-	return run.ExecuteKitchenSinkWorkflow(ctx, &kitchensink.WorkflowParams{
-		Actions: []*kitchensink.Action{{ExecuteActivity: &kitchensink.ExecuteActivityAction{Name: "noop"}}},
-	})
-}
-```
-
-Omes comes with pre-implemented workflows and activities that can be run using any SDK language (see the `run-worker`
-and `run-scenario-with-worker` commands below).
-Scenarios are not tied to number of workers, cluster configuration, or the worker SDK language.
-
-Typically scenarios will use the Kitchen Sink workflow that runs [actions](./loadgen/kitchensink/kitchensink.go)
-specified by the client.
-
-> NOTE: the Kitchen Sink workflow is the only workflow implemented at the moment, other workflows will be added as
-> needed.
-
-Scenarios must be explicitly registered to be runnable by omes:
+For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios/workflow_with_single_noop_activity.go):
 
 ```go
 func init() {
-	loadgen.Register(&loadgen.Scenario{
-		Executor: &loadgen.SharedIterationsExecutor{
-      Execute:     Execute,
-      Concurrency: 5, // How many instances of the "Execute" function to run concurrently.
-      Iterations:  10, // Total number of iterations of the "Execute" function to run.
-      // "Duration" may be specified instead of "Iterations".
-    }
+	loadgen.MustRegisterScenario(loadgen.Scenario{
+		Description: "Each iteration executes a single workflow with a noop activity.",
+		Executor: loadgen.KitchenSinkExecutor{
+			WorkflowParams: kitchensink.NewWorkflowParams(kitchensink.NopActionExecuteActivity),
+		},
 	})
 }
 ```
 
 > NOTE: The file name where the `Register` function is called, will be used as the name of the scenario.
 
+The executor has other options such as altering the workflow parameters based on 
+
 #### Scenario Authoring Guidelines
 
 1. Use snake care for scenario file names.
-1. Use methods of `*loadgen.Run` in your `Execute` as much as possible.
-1. Add methods to `Run` as needed.
+1. Use `KitchenSinkExecutor` for most basic scenarios, adding common/generic actions as need, but for really unique
+   scenarios use `GenericExecutor`.
+1. When using `GenericExecutor`, use methods of `*loadgen.Run` in your `Execute` as much as possible.
+1. Liberally add helpers to the `loadgen` package that will be useful to other scenario authors.
 
 ### Run a worker for a specific language SDK
 

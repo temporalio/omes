@@ -1,24 +1,15 @@
 package scenarios
 
 import (
-	"context"
-
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
-func Execute(ctx context.Context, run *loadgen.Run) error {
-	return run.ExecuteKitchenSinkWorkflow(ctx, &kitchensink.WorkflowParams{
-		Actions: []*kitchensink.Action{{ExecuteActivity: &kitchensink.ExecuteActivityAction{Name: "noop"}}},
-	})
-}
-
 func init() {
-	loadgen.MustRegisterScenario(&loadgen.Scenario{
-		Executor: &loadgen.SharedIterationsExecutor{
-			Execute:     Execute,
-			Concurrency: 5,
-			Iterations:  10,
+	loadgen.MustRegisterScenario(loadgen.Scenario{
+		Description: "Each iteration executes a single workflow with a noop activity.",
+		Executor: loadgen.KitchenSinkExecutor{
+			WorkflowParams: kitchensink.NewWorkflowParams(kitchensink.NopActionExecuteActivity),
 		},
 	})
 }

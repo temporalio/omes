@@ -1,11 +1,38 @@
+from __future__ import annotations
+
 import asyncio
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Awaitable, Dict, Optional, Sequence, Tuple
+from typing import Any, Awaitable, Optional, Sequence, Tuple
 
 from temporalio import exceptions, workflow
 from temporalio.common import RetryPolicy
 from temporalio.workflow import ActivityCancellationType
+
+
+@dataclass
+class WorkflowParams:
+    action_set: Optional[ActionSet]
+    action_set_signal: str
+
+
+@dataclass
+class ActionSet:
+    actions: Sequence[Action]
+    concurrent: bool
+
+
+@dataclass
+class Action:
+    result: Optional[ResultAction]
+    error: Optional[ErrorAction]
+    continue_as_new: Optional[ContinueAsNewAction]
+    sleep: Optional[SleepAction]
+    query_handler: Optional[QueryHandlerAction]
+    signal: Optional[SignalAction]
+    execute_activity: Optional[ExecuteActivityAction]
+    execute_child_workflow: Optional[ExecuteChildWorkflowAction]
+    nested_action_set: Optional[ActionSet]
 
 
 @dataclass
@@ -42,7 +69,7 @@ class SignalAction:
 
 
 @dataclass
-class ExecuteActivity:
+class ExecuteActivityAction:
     name: str
     task_queue: str
     args: Optional[Sequence[Any]]
@@ -59,20 +86,11 @@ class ExecuteActivity:
 
 
 @dataclass
-class Action:
-    result: Optional[ResultAction]
-    error: Optional[ErrorAction]
-    continue_as_new: Optional[ContinueAsNewAction]
-    sleep: Optional[SleepAction]
-    query_handler: Optional[QueryHandlerAction]
-    signal: Optional[SignalAction]
-    execute_activity: Optional[ExecuteActivity]
-
-
-@dataclass
-class WorkflowParams:
-    actions: list[Action]
-    action_signal: str
+class ExecuteChildWorkflowAction:
+    name: Optional[str]
+    count: int
+    args: Optional[Sequence[Any]]
+    params: Optional[WorkflowParams]
 
 
 def workflow_query(arg: str) -> str:
@@ -81,38 +99,64 @@ def workflow_query(arg: str) -> str:
 
 @workflow.defn(name="kitchenSink")
 class KitchenSinkWorkflow:
-    def __init__(self) -> None:
-        self._signal_name: str = ""
-        self._pending_actions: asyncio.Queue[Action] = asyncio.Queue()
-        self._signal_recieved: Dict[str, asyncio.Queue[Any]] = {}
-
-    @workflow.signal(dynamic=True)
-    async def handle_signal(self, signal_name: str, *varargs) -> None:
-        if signal_name == self._signal_name:
-            await self._pending_actions.put(varargs[0])
-        else:
-            await self._signal_recieved.setdefault(signal_name, asyncio.Queue()).put(
-                varargs[0]
-            )
-
     @workflow.run
-    async def run(self, input: WorkflowParams) -> Any:
-        self._signal_name = input.action_signal
+    async def run(self, input: Optional[WorkflowParams]) -> Any:
         workflow.logger.info("Started kitchen sink workflow {}".format(input))
-        for action in input.actions:
-            should_return, return_value = await self.handle_action(input, action)
+        if not input:
+            return None
+        if input.action_set and input.action_set.actions:
+            should_return, return_value = await self.handle_action_set(
+                input, input.action_set
+            )
             if should_return:
                 return return_value
 
-        if input.action_signal != "":
-            while not self._pending_actions.empty():
-                action = await self._pending_actions.get()
-                should_return, return_value = await self.handle_action(input, action)
+        if input.action_set_signal:
+            action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
+
+            def enqueue(item: ActionSet) -> None:
+                action_set_queue.put_nowait(item)
+
+            workflow.set_signal_handler(input.action_set_signal, enqueue)
+            while True:
+                action_set = await action_set_queue.get()
+                should_return, return_value = await self.handle_action_set(
+                    input, action_set
+                )
                 if should_return:
                     return return_value
-                self._pending_actions.task_done()
 
-        return None
+        return return_value
+
+    async def handle_action_set(
+        self, input: WorkflowParams, action_set: ActionSet
+    ) -> Tuple[bool, Any]:
+        should_return = False
+        return_value = None
+        # If these are non-concurrent, just execute and return if requested
+        if not action_set.concurrent:
+            for action in action_set.actions:
+                should_return, return_value = await self.handle_action(input, action)
+                if should_return:
+                    return (should_return, return_value)
+            return (False, return_value)
+        # With a concurrent set, we'll create a task for each, only updating
+        # return values if we should return, then awaiting on that or completion
+        async def run_child(action: Action) -> None:
+            maybe_should_return, maybe_return_value = await self.handle_action(
+                input, action
+            )
+            if maybe_should_return:
+                nonlocal should_return, return_value
+                should_return = maybe_should_return
+                return_value = maybe_return_value
+
+        gather_fut = asyncio.gather(*[run_child(a) for a in action_set.actions])
+        should_return_task = asyncio.create_task(
+            workflow.wait_condition(lambda: should_return)
+        )
+        await asyncio.wait([gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED)  # type: ignore
+        return should_return, return_value
 
     async def handle_action(
         self, input: WorkflowParams, action: Action
@@ -140,25 +184,44 @@ class KitchenSinkWorkflow:
             workflow.set_query_handler(action.query_handler.name, workflow_query)
             return (True, None)
         elif action.signal:
-            queue = self._signal_recieved.setdefault(
-                action.signal.name, asyncio.Queue()
-            )
-            await queue.get()
-            queue.task_done()
+            signal_event = asyncio.Event()
+
+            def signal_handler(arg: Optional[Any] = None) -> None:
+                signal_event.set()
+
+            workflow.set_signal_handler(action.signal.name, signal_handler)
+            await signal_event.wait()
         elif action.execute_activity:
             execute_activity = action.execute_activity
             count = max(1, execute_activity.count)
             results = await asyncio.gather(
                 *[launch_activity(execute_activity) for x in range(count)]
             )
-            return (True, results[-1])
+            return (False, results[-1])
+        elif action.execute_child_workflow:
+            child = action.execute_child_workflow.name or "kitchenSink"
+            args = (
+                [action.execute_child_workflow.params]
+                if action.execute_child_workflow.params
+                else action.execute_child_workflow.args or [None]
+            )
+            count = action.execute_child_workflow.count or 1
+            await asyncio.gather(
+                *[
+                    workflow.execute_child_workflow(child, args=args)
+                    for _ in range(count)
+                ]
+            )
+            return (False, None)
+        elif action.nested_action_set:
+            return await self.handle_action_set(input, action.nested_action_set)
         else:
             raise exceptions.ApplicationError("unrecognized action")
 
         return (False, None)
 
 
-def launch_activity(execute_activity: ExecuteActivity) -> Awaitable:
+def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
     if (
         execute_activity.start_to_close_timeout_ms == 0
         and execute_activity.schedule_to_close_timeout_ms == 0
