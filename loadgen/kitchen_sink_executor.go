@@ -7,10 +7,17 @@ import (
 )
 
 type KitchenSinkExecutor struct {
-	WorkflowParams        kitchensink.WorkflowParams
+	WorkflowParams kitchensink.WorkflowParams
+
+	// Called once on start
 	PrepareWorkflowParams func(context.Context, RunOptions, *kitchensink.WorkflowParams) error
-	// Should not mutate any fields in or beneath params, but only replace
-	UpdateWorkflowParams func(context.Context, *Run, *kitchensink.WorkflowParams) error
+
+	// Called for each iteration. Developers must not mutate any fields in or
+	// beneath Params, but only replace those fields (it is only shallow copied
+	// between each execution). Therefore to add an action to an action set, an
+	// entirely new slice must be created, do not append.
+	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
+
 	DefaultConfiguration RunConfiguration
 }
 
@@ -26,11 +33,13 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error 
 	return GenericExecutor{
 		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
-			params := params
-			if k.UpdateWorkflowParams != nil {
-				k.UpdateWorkflowParams(ctx, run, &params)
+			options := run.DefaultKitchenSinkWorkflowOptions()
+			// Shallow copies params, users are expected not to mutate any slices
+			options.Params = params
+			if k.UpdateWorkflowOptions != nil {
+				k.UpdateWorkflowOptions(ctx, run, &options)
 			}
-			return run.ExecuteKitchenSinkWorkflow(ctx, &params)
+			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 		},
 	}.Run(ctx, options)
 }

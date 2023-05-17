@@ -4,6 +4,7 @@ import logging
 import sys
 import threading
 from signal import SIGINT, SIGTERM
+from typing import List
 from urllib.parse import urlparse
 from wsgiref.simple_server import make_server
 
@@ -32,7 +33,19 @@ interrupt_event = asyncio.Event()
 async def run():
     # Parse args
     parser = argparse.ArgumentParser()
-    parser.add_argument("-q", "--task-queue", default="omes", help="task queue to use")
+    parser.add_argument("-q", "--task-queue", default="omes", help="Task queue to use")
+    parser.add_argument(
+        "--task-queue-suffix-index-start",
+        default=0,
+        type=int,
+        help="Inclusive start for task queue suffix range",
+    )
+    parser.add_argument(
+        "--task-queue-suffix-index-end",
+        default=0,
+        type=int,
+        help="Inclusive end for task queue suffix range",
+    )
     # Log arguments
     parser.add_argument(
         "--log-level", default="info", help="(debug info warn error panic fatal)"
@@ -58,6 +71,9 @@ async def run():
         "--prom-handler-path", default="/metrics", help="Prometheus handler path"
     )
     args = parser.parse_args()
+
+    if args.task_queue_suffix_index_start > args.task_queue_suffix_index_end:
+        raise ValueError("Task queue suffix start after end")
 
     # Configure TLS
     tls_config = None
@@ -107,16 +123,44 @@ async def run():
         runtime=new_runtime,
     )
 
-    # Run a worker for the workflow
-    async with Worker(
-        client,
-        task_queue=args.task_queue,
-        workflows=[KitchenSinkWorkflow],
-        activities=[noop_activity],
-    ):
+    # Collect task queues to run workers for (if there is a suffix end, we run
+    # multiple)
+    task_queues: List[str]
+    if args.task_queue_suffix_index_end == 0:
+        task_queues = [args.task_queue]
         logger.info("Python worker running for task queue %s" % args.task_queue)
-        # Wait until interrupted
-        await interrupt_event.wait()
+    else:
+        task_queues = [
+            f"{args.task_queue}-{i}"
+            for i in range(
+                args.task_queue_suffix_index_start, args.task_queue_suffix_index_end + 1
+            )
+        ]
+        logger.info("Python worker running for %s task queue(s)" % len(task_queues))
+
+    # Start all workers, throwing on first exception
+    workers = [
+        Worker(
+            client,
+            task_queue=task_queue,
+            workflows=[KitchenSinkWorkflow],
+            activities=[noop_activity],
+        )
+        for task_queue in task_queues
+    ]
+    all_workers_task = asyncio.gather(*[worker.run() for worker in workers])
+
+    # Wait for worker fail or interrupt (this will not throw)
+    await asyncio.wait(
+        [all_workers_task, asyncio.create_task(interrupt_event.wait())],
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+
+    # Shut all workers down (shutdown waits for complete but does not throw)
+    await asyncio.gather(*[worker.shutdown() for worker in workers])
+
+    # Now await the original run task in case it threw
+    await all_workers_task
 
 
 if __name__ == "__main__":

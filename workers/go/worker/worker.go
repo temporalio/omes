@@ -1,40 +1,73 @@
 package worker
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
 )
 
 type App struct {
-	logger         *zap.SugaredLogger
-	taskQueue      string
+	logger                    *zap.SugaredLogger
+	taskQueue                 string
+	taskQueueIndexSuffixStart int
+	taskQueueIndexSuffixEnd   int
+
 	loggingOptions cmdoptions.LoggingOptions
 	clientOptions  cmdoptions.ClientOptions
 	metricsOptions cmdoptions.MetricsOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
+	if a.taskQueueIndexSuffixStart > a.taskQueueIndexSuffixEnd {
+		a.logger.Fatal("Task queue suffix start after end")
+	}
 	a.logger = a.loggingOptions.MustCreateLogger()
 	metrics := a.metricsOptions.MustCreateMetrics(a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
-	workerOpts := worker.Options{}
-	w := worker.New(client, a.taskQueue, workerOpts)
-	w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
-	w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
+	// If there is an end, we run multiple
+	var taskQueues []string
+	if a.taskQueueIndexSuffixEnd == 0 {
+		taskQueues = []string{a.taskQueue}
+	} else {
+		for i := a.taskQueueIndexSuffixStart; i <= a.taskQueueIndexSuffixEnd; i++ {
+			taskQueues = append(taskQueues, fmt.Sprintf("%v-%v", a.taskQueue, i))
+		}
+	}
 
-	if err := w.Run(worker.InterruptCh()); err != nil {
+	if err := runWorkers(client, taskQueues); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
 	if err := metrics.Shutdown(cmd.Context()); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
+}
+
+func runWorkers(client client.Client, taskQueues []string) error {
+	errCh := make(chan error, len(taskQueues))
+	for _, taskQueue := range taskQueues {
+		taskQueue := taskQueue
+		go func() {
+			w := worker.New(client, taskQueue, worker.Options{})
+			w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
+			w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
+			errCh <- w.Run(worker.InterruptCh())
+		}()
+	}
+	for range taskQueues {
+		if err := <-errCh; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func Main() {
@@ -49,7 +82,11 @@ func Main() {
 	app.loggingOptions.AddCLIFlags(cmd.Flags())
 	app.clientOptions.AddCLIFlags(cmd.Flags())
 	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
-	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "task queue to use")
+	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
+	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
+		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
+	cmd.Flags().IntVar(&app.taskQueueIndexSuffixEnd,
+		"task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
 
 	defer func() {
 		if app.logger != nil {
