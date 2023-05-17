@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,15 +43,17 @@ func runWorkerCmd() *cobra.Command {
 
 type workerRunner struct {
 	workerBuilder
-	scenario                 string
-	runID                    string
-	retainTempDir            bool
-	gracefulShutdownDuration time.Duration
-	embeddedServer           bool
-	embeddedServerAddress    string
-	clientOptions            cmdoptions.ClientOptions
-	metricsOptions           cmdoptions.MetricsOptions
-	onWorkerStarted          func()
+	scenario                  string
+	runID                     string
+	retainTempDir             bool
+	gracefulShutdownDuration  time.Duration
+	embeddedServer            bool
+	embeddedServerAddress     string
+	taskQueueIndexSuffixStart int
+	taskQueueIndexSuffixEnd   int
+	clientOptions             cmdoptions.ClientOptions
+	metricsOptions            cmdoptions.MetricsOptions
+	onWorkerStarted           func()
 }
 
 func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -63,6 +66,8 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 		"Time to wait for worker to respond to interrupt before killing it")
 	fs.BoolVar(&r.embeddedServer, "embedded-server", false, "Set to run in a local embedded server")
 	fs.StringVar(&r.embeddedServerAddress, "embedded-server-address", "", "Address to bind local embedded server to")
+	fs.IntVar(&r.taskQueueIndexSuffixStart, "task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
+	fs.IntVar(&r.taskQueueIndexSuffixEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "worker-")
 }
@@ -76,6 +81,9 @@ func (r *workerRunner) run(ctx context.Context) error {
 	scenario := loadgen.GetScenario(r.scenario)
 	if scenario == nil {
 		return fmt.Errorf("scenario %v not found", r.scenario)
+	}
+	if r.taskQueueIndexSuffixStart > r.taskQueueIndexSuffixEnd {
+		return fmt.Errorf("cannot have task queue suffix start past end")
 	}
 	if r.runID == "" {
 		r.runID = shortRand()
@@ -149,6 +157,10 @@ func (r *workerRunner) run(ctx context.Context) error {
 		args = append(args, "main")
 	}
 	args = append(args, "--task-queue", loadgen.TaskQueueForRun(r.scenario, r.runID))
+	if r.taskQueueIndexSuffixEnd > 0 {
+		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.taskQueueIndexSuffixStart))
+		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.taskQueueIndexSuffixEnd))
+	}
 	args = append(args, r.clientOptions.ToFlags()...)
 	args = append(args, r.metricsOptions.ToFlags()...)
 	args = append(args, r.loggingOptions.ToFlags()...)

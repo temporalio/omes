@@ -105,6 +105,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 			IterationInTest: i + 1,
 			Logger:          g.logger.With("iteration", i),
 			ID:              g.options.RunID,
+			RunOptions:      &g.options,
 		}
 		go func() {
 			startTime := time.Now()

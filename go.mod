@@ -6,6 +6,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.8.2
 	go.temporal.io/api v1.19.1-0.20230322213042-07fb271d475b
 	go.temporal.io/features v1.0.0
 	go.temporal.io/sdk v1.22.1
@@ -39,7 +40,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect

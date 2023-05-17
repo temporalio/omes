@@ -64,6 +64,9 @@ $ go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id
 Notes:
 
 - `--embedded-server` can be passed here to start an embedded localhost server
+- `--task-queue-suffix-index-start` and `--task-queue-suffix-index-end` represent an inclusive range for running the
+  worker on multiple task queues. The process will create a worker for every task queue from `<task-queue>-<start>`
+  through `<task-queue>-end`. This only applies to multi-task-queue scenarios.
 
 ### Run a test scenario
 

@@ -127,6 +127,8 @@ type Run struct {
 	// will never be 0.
 	IterationInTest int
 	Logger          *zap.SugaredLogger
+	// Do not mutate this
+	RunOptions *RunOptions
 }
 
 // TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
@@ -134,25 +136,25 @@ func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
 }
 
-// TaskQueue returns a default task queue name for this run based on the scenario name and the run ID.
-func (r *Run) TaskQueue() string {
-	return TaskQueueForRun(r.ScenarioName, r.ID)
-}
-
-// WorkflowOptions returns a default set of options that can be used in any scenario.
-func (r *Run) WorkflowOptions() client.StartWorkflowOptions {
-	return client.StartWorkflowOptions{
-		TaskQueue:                                r.TaskQueue(),
-		ID:                                       fmt.Sprintf("w-%s-%d", r.ID, r.IterationInTest),
-		WorkflowExecutionErrorWhenAlreadyStarted: true,
+func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
+	return KitchenSinkWorkflowOptions{
+		StartOptions: client.StartWorkflowOptions{
+			TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.ID),
+			ID:                                       fmt.Sprintf("w-%s-%d", r.ID, r.IterationInTest),
+			WorkflowExecutionErrorWhenAlreadyStarted: true,
+		},
 	}
 }
 
+type KitchenSinkWorkflowOptions struct {
+	Params       kitchensink.WorkflowParams
+	StartOptions client.StartWorkflowOptions
+}
+
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its completion ignoring its result.
-func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, params *kitchensink.WorkflowParams) error {
-	opts := r.WorkflowOptions()
-	r.Logger.Debugf("Executing workflow with options: %v", opts)
-	execution, err := r.Client.ExecuteWorkflow(ctx, opts, "kitchenSink", params)
+func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
+	r.Logger.Debugf("Executing workflow with options: %v", options.StartOptions)
+	execution, err := r.Client.ExecuteWorkflow(ctx, options.StartOptions, "kitchenSink", options.Params)
 	if err != nil {
 		return err
 	}
