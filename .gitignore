@@ -3,3 +3,4 @@
 .mypy_cache
 go.work
 go.work.sum
+.idea/
