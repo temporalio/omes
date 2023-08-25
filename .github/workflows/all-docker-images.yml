@@ -1,0 +1,49 @@
+name: Build all language docker images
+on:
+  workflow_call:
+    # TODO: Can eventually support repo refs too rather than just versions if/when we need that.
+    inputs:
+      go-ver:
+        description: Go SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      py-ver:
+        description: Python SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      do-push:
+        description: If set, push the built images to Docker Hub.
+        type: boolean
+        default: false
+  # To support manual triggering:
+  # AFAICT there is no way to avoid repeating all these inputs over and over w/o resorting to templating
+  workflow_dispatch:
+    inputs:
+      go-ver:
+        description: Go SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      py-ver:
+        description: Python SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      do-push:
+        description: If set, push the built images to Docker Hub.
+        type: boolean
+        default: false
+
+
+jobs:
+  build-go-docker-images:
+    if: inputs.go-ver
+    uses: ./.github/workflows/docker-images.yaml
+    secrets: inherit
+    with:
+      lang: go
+      sdk-version: ${{ inputs.go-ver }}
+      do-push: ${{ inputs.do-push }}
+
+  build-python-docker-images:
+    if: inputs.py-ver
+    uses: ./.github/workflows/docker-images.yaml
+    secrets: inherit
+    with:
+      lang: py
+      sdk-version: ${{ inputs.py-ver }}
+      do-push: ${{ inputs.do-push }}
