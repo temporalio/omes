@@ -2,8 +2,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 )
 
 const errFileCmdFmt = "failed to write to github file: %v"
@@ -33,4 +36,13 @@ func writeGitHubEnv(name string, value string) (retErr error) {
 		return
 	}
 	return
+}
+
+func getCurrentCommitSha(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--short", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed getting git ref: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
