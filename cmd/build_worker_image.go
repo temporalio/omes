@@ -137,8 +137,11 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform, "--build-arg", "PLATFORM="+b.platform)
 	}
+	var imageTagsForPublish []string
 	for _, tag := range b.tags {
-		args = append(args, "--tag", b.imageName+":"+tag)
+		tagVal := fmt.Sprintf("%s:%s", b.imageName, tag)
+		args = append(args, "--tag", tagVal)
+		imageTagsForPublish = append(imageTagsForPublish, tagVal)
 	}
 	for _, label := range b.labels {
 		args = append(args, "--label", label)
@@ -151,6 +154,14 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	if b.dryRun {
 		return nil
 	}
+
+	// Write all the produced image tags to an env var so that the GH workflow can later use it
+	// to publish them.
+	err = writeGitHubEnv("FEATURES_BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
+	if err != nil {
+		return fmt.Errorf("writing image tags to github env failed: %s", err)
+	}
+
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -57,4 +57,4 @@ jobs:
 
       - name: Push image to DockerHub
         if: inputs.do-push
-        run: go run . push-images
+        run: go run ./cmd push-images

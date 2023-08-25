@@ -21,6 +21,7 @@ func main() {
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
+	rootCmd.AddCommand(publishImageCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
