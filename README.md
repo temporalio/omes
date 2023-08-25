@@ -88,7 +88,7 @@ Notes:
 $ go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
-# Run scenario with worker - Start a worker, an optional dev server, and run a scenario
+### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
 
 ```console
 $ go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
@@ -98,6 +98,19 @@ Notes:
 
 - Cleanup is **not** automatically performed here
 - Accepts combined flags for `run-worker` and `run-scenario` commands
+
+### Building and publishing docker images
+
+For example, to build a go worker image using v1.24.0 of the Temporal Go SDK:
+
+```console
+$ go run ./cmd build-worker-image --language go --version v1.24.0
+```
+
+This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
+
+Publishing images is typically done via CI, using the `push-images` command. See the GHA workflows
+for more.
 
 ## Design decisions
 
