@@ -16,7 +16,9 @@ type GenericExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
-func (g GenericExecutor) GetDefaultConfiguration() RunConfiguration { return g.DefaultConfiguration }
+func (g *GenericExecutor) GetDefaultConfiguration() RunConfiguration {
+	return g.DefaultConfiguration
+}
 
 type genericRun struct {
 	executor *GenericExecutor
@@ -28,7 +30,7 @@ type genericRun struct {
 }
 
 // Run a scenario.
-func (g GenericExecutor) Run(ctx context.Context, options RunOptions) error {
+func (g *GenericExecutor) Run(ctx context.Context, options RunOptions) error {
 	r, err := g.newRun(options)
 	if err != nil {
 		return err
@@ -63,7 +65,8 @@ func (g *GenericExecutor) newRun(options RunOptions) (*genericRun, error) {
 
 // Run a scenario.
 // Spins up coroutines according to the scenario configuration.
-// Each coroutine runs the scenario Execute method in a loop until the scenario duration or max iterations is reached.
+// Each coroutine runs the scenario Execute method in a loop until the scenario duration or max
+// iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	if g.config.Duration > 0 {
@@ -87,7 +90,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit
-	for i := 0; runErr == nil && ctx.Err() == nil && (g.config.Iterations == 0 || i < g.config.Iterations); i++ {
+	for i := 0; runErr == nil && ctx.Err() == nil &&
+		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 		// If there are already more running than max concurrent, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
 			waitOne()

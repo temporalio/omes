@@ -73,7 +73,8 @@ type RunOptions struct {
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue
-	// and workflow ID prefix. This is a single value for the whole scenario.
+	// and workflow ID prefix. This is a single value for the whole scenario, and
+	// not a Workflow RunId.
 	RunID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
@@ -145,6 +146,10 @@ func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
 }
 
+func (r *Run) TaskQueue() string {
+	return TaskQueueForRun(r.ScenarioName, r.ID)
+}
+
 // DefaultStartWorkflowOptions gets default start workflow options.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
@@ -153,6 +158,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
 }
+
 
 // DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
@@ -164,15 +170,22 @@ type KitchenSinkWorkflowOptions struct {
 	StartOptions client.StartWorkflowOptions
 }
 
-// ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its completion ignoring its result.
+// ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
+// completion ignoring its result.
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	r.Logger.Debugf("Executing workflow with options: %v", options.StartOptions)
-	execution, err := r.Client.ExecuteWorkflow(ctx, options.StartOptions, "kitchenSink", options.Params)
+	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", options.Params)
+}
+
+// ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
+// returning an error if the execution fails.
+func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, args ...interface{}) error {
+	r.Logger.Debugf("Executing workflow %s with options: %v", workflow, options)
+	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		return err
 	}
 	if err := execution.Get(ctx, nil); err != nil {
-		return fmt.Errorf("error executing workflow (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
+		return fmt.Errorf("workflow execution failed (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
 	}
 	return nil
 }

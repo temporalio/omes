@@ -30,7 +30,7 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error 
 		}
 	}
 	// Create generic executor and run it
-	return GenericExecutor{
+	ge := &GenericExecutor{
 		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
@@ -41,7 +41,8 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error 
 			}
 			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 		},
-	}.Run(ctx, options)
+	}
+	return ge.Run(ctx, options)
 }
 
 func (k KitchenSinkExecutor) GetDefaultConfiguration() RunConfiguration {
