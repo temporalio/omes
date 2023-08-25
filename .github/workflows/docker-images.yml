@@ -45,8 +45,8 @@ jobs:
 
       - name: Build docker image
         run: |
-          go run . build-worker-image --language ${{ inputs.lang }} \
-          --version ${ inputs.sdk-version }}
+          go run ./cmd build-worker-image --language ${{ inputs.lang }} \
+          --version ${{ inputs.sdk-version }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -57,4 +57,4 @@ jobs:
 
       - name: Push image to DockerHub
         if: inputs.do-push
-        run: go run . push-images
+        run: go run ./cmd push-images

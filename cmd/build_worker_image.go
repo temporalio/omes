@@ -37,7 +37,7 @@ type workerImageBuilder struct {
 	logger         *zap.SugaredLogger
 	language       string
 	version        string
-	semverTags     string
+	tagAsLatest    bool
 	platform       string
 	imageName      string
 	dryRun         bool
@@ -50,8 +50,8 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&b.language, "language", "", "Language to build a worker image for")
 	fs.StringVar(&b.version, "version", "",
 		"SDK version to build a worker image for - treated as path if slash present, but must be beneath this dir and at least one tag required")
-	fs.StringVar(&b.semverTags, "semver-tags", "",
-		"Can be 'minor', 'major', or 'all' - affects additional tags, only used on non-path version")
+	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
+		"If set, tag the image as latest in addition to the omes commit sha tag")
 	fs.StringVar(&b.platform, "platform", "", "Platform for use in docker build --platform")
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
@@ -63,6 +63,11 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 func (b *workerImageBuilder) build(ctx context.Context) error {
 	b.logger = b.loggingOptions.MustCreateLogger()
 	lang, err := normalizeLangName(b.language)
+	if err != nil {
+		return err
+	}
+	// At some point we probably want to replace this with a meaningful version of omes itself
+	omesVersion, err := getCurrentCommitSha(ctx)
 	if err != nil {
 		return err
 	}
@@ -96,20 +101,10 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 		}
 		// Add tag for lang-fullsemver without leading "v". We are intentionally
 		// including semver build metadata.
-		b.tags = append(b.tags, lang+"-"+strings.TrimPrefix(b.version, "v"))
-		// Add lang-major.minor, lang-major, and/or lang tags if requested
-		switch b.semverTags {
-		case "":
-		case "minor":
-			b.tags = append(b.tags, lang+"-"+semver.MajorMinor(versionToCheck))
-			fallthrough
-		case "major":
-			b.tags = append(b.tags, lang+"-"+semver.Major(versionToCheck))
-			fallthrough
-		case "all":
-			b.tags = append(b.tags, lang)
-		default:
-			return fmt.Errorf("unrecognized semver-tags value")
+		langTagComponent := lang + "-" + strings.TrimPrefix(b.version, "v")
+		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
+		if b.tagAsLatest {
+			b.tags = append(b.tags, langTagComponent)
 		}
 	}
 
@@ -127,6 +122,7 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	b.addLabelIfNotPresent("org.opencontainers.image.title", "Load testing for "+lang)
 	b.addLabelIfNotPresent("org.opencontainers.image.documentation", "See README at https://github.com/temporalio/omes")
 	b.addLabelIfNotPresent("io.temporal.sdk.name", lang)
+	b.addLabelIfNotPresent("io.temporal.sdk.version", b.version)
 
 	// Prepare docker command args
 	args := []string{
@@ -137,8 +133,11 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform, "--build-arg", "PLATFORM="+b.platform)
 	}
+	var imageTagsForPublish []string
 	for _, tag := range b.tags {
-		args = append(args, "--tag", b.imageName+":"+tag)
+		tagVal := fmt.Sprintf("%s:%s", b.imageName, tag)
+		args = append(args, "--tag", tagVal)
+		imageTagsForPublish = append(imageTagsForPublish, tagVal)
 	}
 	for _, label := range b.labels {
 		args = append(args, "--label", label)
@@ -151,6 +150,14 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	if b.dryRun {
 		return nil
 	}
+
+	// Write all the produced image tags to an env var so that the GH workflow can later use it
+	// to publish them.
+	err = writeGitHubEnv("FEATURES_BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
+	if err != nil {
+		return fmt.Errorf("writing image tags to github env failed: %s", err)
+	}
+
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -32,7 +32,7 @@ on:
 jobs:
   build-go-docker-images:
     if: inputs.go-ver
-    uses: ./.github/workflows/docker-images.yaml
+    uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
       lang: go
@@ -41,7 +41,7 @@ jobs:
 
   build-python-docker-images:
     if: inputs.py-ver
-    uses: ./.github/workflows/docker-images.yaml
+    uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
       lang: py

@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/cmdoptions"
-	"go.temporal.io/features/sdkbuild"
 	"go.uber.org/zap"
 )
 
