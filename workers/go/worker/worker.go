@@ -7,7 +7,6 @@ import (
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/activities"
 	"github.com/temporalio/omes/workers/go/workflows"
-	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -53,13 +52,17 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string) error {
 	errCh := make(chan error, len(taskQueues))
+	activityS := activities.Activities{
+		Client: client,
+	}
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{})
 			w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterWorkflowWithOptions(workflows.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
-			w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
+			w.RegisterWorkflowWithOptions(workflows.ThroughputStressChild, workflow.RegisterOptions{Name: "throughputStressChild"})
+			w.RegisterActivity(&activityS)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
 	}
