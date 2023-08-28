@@ -2,11 +2,12 @@ package workflows
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/loadgen/througput_stress"
+	"time"
+
+	"github.com/temporalio/omes/loadgen/throughput_stress"
 	"github.com/temporalio/omes/workers/go/activities"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
-	"time"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 // ThroughputStressWorkflow is meant to mimic the throughputstress scenario from bench-go of days
 // past, but in a less-opaque way. We do not ask why it is the way it is, it is not our place to
 // question the inscrutable ways of the old code.
-func ThroughputStressWorkflow(ctx workflow.Context, params *througput_stress.WorkflowParams) (string, error) {
+func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.WorkflowParams) (string, error) {
 	// Establish handlers
 	err := workflow.SetQueryHandler(ctx, "myquery", func() (string, error) {
 		return "hi", nil
@@ -137,9 +138,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *througput_stress.Wor
 			return "", err
 		}
 		// Possibly continue as new
-		if workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventNumber {
+		if workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
 			if i == 0 {
-				return "", fmt.Errorf("trying to coninue as new on first iteration, workflow will never end")
+				return "", fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
 			}
 			params.InitialIteration = i
 			return "", workflow.NewContinueAsNewError(ctx, "throughputStress", params)

@@ -2,6 +2,7 @@ package workflows
 
 import (
 	"fmt"
+
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -13,7 +14,9 @@ func RunConcurrently(ctx workflow.Context, funcs ...func(workflow.Context) error
 	for _, f := range funcs {
 		f := f
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			innerErr = f(ctx)
+			if err := f(ctx); err != nil {
+				innerErr = err
+			}
 			completed++
 		})
 	}

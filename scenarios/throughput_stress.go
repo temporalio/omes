@@ -3,10 +3,11 @@ package scenarios
 import (
 	"context"
 	"fmt"
-	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/througput_stress"
-	"go.temporal.io/sdk/client"
 	"time"
+
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/throughput_stress"
+	"go.temporal.io/sdk/client"
 )
 
 func init() {
@@ -27,9 +28,9 @@ func init() {
 						WorkflowExecutionErrorWhenAlreadyStarted: true,
 					},
 					"throughputStress",
-					througput_stress.WorkflowParams{
-						Iterations:                    5,
-						ContinueAsNewAfterEventNumber: 100,
+					throughput_stress.WorkflowParams{
+						Iterations:                   5,
+						ContinueAsNewAfterEventCount: 100,
 					})
 			},
 		},

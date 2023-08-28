@@ -2,9 +2,11 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
+
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
-	"math/rand"
 )
 
 type Activities struct {
@@ -51,13 +53,12 @@ func (a *Activities) SelfQuery(ctx context.Context, queryType string) error {
 		},
 	)
 
-	if resp != nil && resp.QueryRejected != nil {
-		activity.GetLogger(ctx).Info("failed to query workflow", "queryRejected", *resp.QueryRejected)
+	if err != nil {
+		return err
 	}
 
-	if err != nil {
-		activity.GetLogger(ctx).Info("failed to query workflow", "Error", err)
-		return err
+	if resp.QueryRejected != nil {
+		return fmt.Errorf("query rejected: %s", resp.QueryRejected)
 	}
 
 	return nil
@@ -69,7 +70,6 @@ func (a *Activities) SelfDescribe(ctx context.Context) error {
 
 	_, err := a.Client.DescribeWorkflowExecution(ctx, wid, "")
 	if err != nil {
-		activity.GetLogger(ctx).Info("failed to describe workflow", "Error", err)
 		return err
 	}
 	return nil

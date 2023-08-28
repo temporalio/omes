@@ -52,7 +52,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string) error {
 	errCh := make(chan error, len(taskQueues))
-	activityS := activities.Activities{
+	activityInstance := activities.Activities{
 		Client: client,
 	}
 	for _, taskQueue := range taskQueues {
@@ -62,7 +62,7 @@ func runWorkers(client client.Client, taskQueues []string) error {
 			w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterWorkflowWithOptions(workflows.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflowWithOptions(workflows.ThroughputStressChild, workflow.RegisterOptions{Name: "throughputStressChild"})
-			w.RegisterActivity(&activityS)
+			w.RegisterActivity(&activityInstance)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
 	}
