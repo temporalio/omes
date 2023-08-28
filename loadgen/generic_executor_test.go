@@ -71,7 +71,7 @@ func TestRunHappyPathIterations(t *testing.T) {
 	tracker := newIterationTracker()
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.IterationInTest)
+			tracker.track(run.Iteration)
 			return nil
 		},
 		DefaultConfiguration: RunConfiguration{Iterations: 5},
@@ -85,10 +85,10 @@ func TestRunFailIterations(t *testing.T) {
 	concurrency := 3
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.IterationInTest)
+			tracker.track(run.Iteration)
 			// Start this short timer to allow all concurrent routines to be spawned
 			<-time.After(time.Millisecond)
-			if run.IterationInTest == 2 {
+			if run.Iteration == 2 {
 				return errors.New("deliberate fail from test")
 			}
 			return nil
@@ -103,7 +103,7 @@ func TestRunHappyPathDuration(t *testing.T) {
 	tracker := newIterationTracker()
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.IterationInTest)
+			tracker.track(run.Iteration)
 			time.Sleep(time.Millisecond * 20)
 			return nil
 		},
@@ -117,8 +117,8 @@ func TestRunFailDuration(t *testing.T) {
 	tracker := newIterationTracker()
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.IterationInTest)
-			if run.IterationInTest == 2 {
+			tracker.track(run.Iteration)
+			if run.Iteration == 2 {
 				return errors.New("deliberate fail from test")
 			}
 			return nil

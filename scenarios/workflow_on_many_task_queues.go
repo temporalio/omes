@@ -25,7 +25,7 @@ func init() {
 			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 				// Add suffix to the task queue based on modulus of iteration
 				options.StartOptions.TaskQueue +=
-					fmt.Sprintf("-%v", run.IterationInTest%run.RunOptions.ScenarioOptionInt("task-queue-count", 0))
+					fmt.Sprintf("-%v", run.Iteration%run.RunOptions.ScenarioOptionInt("task-queue-count", 0))
 				return nil
 			},
 		},
