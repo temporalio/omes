@@ -122,7 +122,7 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-// Run represents a scenario individual run (many may be in a scenario).
+// Run represents an individual scenario run (many may be in a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
 	*RunOptions
@@ -131,6 +131,7 @@ type Run struct {
 	Logger    *zap.SugaredLogger
 }
 
+// NewRun creates a new run.
 func (r *RunOptions) NewRun(iteration int) *Run {
 	return &Run{
 		RunOptions: r,
@@ -144,6 +145,7 @@ func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
 }
 
+// DefaultStartWorkflowOptions gets default start workflow options.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
 		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
@@ -152,6 +154,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	}
 }
 
+// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
 }
