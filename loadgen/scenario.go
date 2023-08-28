@@ -3,6 +3,7 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -21,8 +22,14 @@ type Scenario struct {
 
 // Executor for a scenario.
 type Executor interface {
+	// PreScenario is called once before the scenario begins execution. Use it for one-time setup,
+	// like adding a custom search attribute.
+	PreScenario(context.Context, ScenarioInfo) error
 	// Run the scenario
-	Run(context.Context, RunOptions) error
+	Run(context.Context, ScenarioInfo) error
+	// PostScenario is called after the scenario has finished running. Use it for things like
+	// verifying that visibility records are as expected, etc.
+	PostScenario(context.Context, ScenarioInfo) error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
@@ -69,7 +76,8 @@ func GetScenario(name string) *Scenario {
 	return registeredScenarios[name]
 }
 
-type RunOptions struct {
+// ScenarioInfo contains information about the scenario under execution.
+type ScenarioInfo struct {
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue
@@ -86,10 +94,15 @@ type RunOptions struct {
 	Configuration RunConfiguration
 	// ScenarioOptions are options passed from the command line. Do not mutate these.
 	ScenarioOptions map[string]string
+	// The namespace that was used when connecting the client.
+	Namespace string
+	// Unique salt for this scenario run. Use to provide values that are unique but stable for
+	// the duration of the scenario run.
+	Salt uuid.UUID
 }
 
-func (r *RunOptions) ScenarioOptionInt(name string, defaultValue int) int {
-	v := r.ScenarioOptions[name]
+func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
+	v := s.ScenarioOptions[name]
 	if v == "" {
 		return defaultValue
 	}
@@ -98,6 +111,12 @@ func (r *RunOptions) ScenarioOptionInt(name string, defaultValue int) int {
 		panic(err)
 	}
 	return i
+}
+
+// UniqueRunID returns a unique RunID for this scenario run. Since RunID is user-specified and may
+// be non-unique, you can use this for a stable (for the run) and guaranteed unique ID.
+func (s *ScenarioInfo) UniqueRunID() string {
+	return fmt.Sprintf("%s-%s", s.RunID, s.Salt.String())
 }
 
 const DefaultIterations = 10
@@ -123,7 +142,7 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-// Run represents an individual scenario run (many may be in a scenario).
+// Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
 	*RunOptions
@@ -178,13 +197,13 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
 // returning an error if the execution fails.
-func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, args ...interface{}) error {
+func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, valuePtr interface{}, args ...interface{}) error {
 	r.Logger.Debugf("Executing workflow %s with options: %v", workflow, options)
 	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		return err
 	}
-	if err := execution.Get(ctx, nil); err != nil {
+	if err := execution.Get(ctx, valuePtr); err != nil {
 		return fmt.Errorf("workflow execution failed (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
 	}
 	return nil

@@ -10,7 +10,7 @@ type KitchenSinkExecutor struct {
 	WorkflowParams kitchensink.WorkflowParams
 
 	// Called once on start
-	PrepareWorkflowParams func(context.Context, RunOptions, *kitchensink.WorkflowParams) error
+	PrepareWorkflowParams func(context.Context, ScenarioInfo, *kitchensink.WorkflowParams) error
 
 	// Called for each iteration. Developers must not mutate any fields in or
 	// beneath Params, but only replace those fields (it is only shallow copied
@@ -21,7 +21,7 @@ type KitchenSinkExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
-func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error {
+func (k KitchenSinkExecutor) Run(ctx context.Context, options ScenarioInfo) error {
 	// Build base set of params
 	params := k.WorkflowParams
 	if k.PrepareWorkflowParams != nil {
@@ -30,9 +30,9 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error 
 		}
 	}
 	// Create generic executor and run it
-	ge := &GenericExecutor{
+	ge := &GenericExecutor[any]{
 		DefaultConfiguration: k.DefaultConfiguration,
-		Execute: func(ctx context.Context, run *Run) error {
+		Execute: func(ctx context.Context, run *Run, _ *any) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
 			// Shallow copies params, users are expected not to mutate any slices
 			options.Params = params
@@ -43,6 +43,14 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options RunOptions) error 
 		},
 	}
 	return ge.Run(ctx, options)
+}
+
+func (k KitchenSinkExecutor) PreScenario(_ context.Context, _ ScenarioInfo) error {
+	return nil
+}
+
+func (k KitchenSinkExecutor) PostScenario(_ context.Context, _ ScenarioInfo) error {
+	return nil
 }
 
 func (k KitchenSinkExecutor) GetDefaultConfiguration() RunConfiguration {

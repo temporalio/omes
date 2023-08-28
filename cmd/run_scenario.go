@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"strings"
 	"time"
 
@@ -101,7 +102,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 	defer client.Close()
-	return scenario.Executor.Run(ctx, loadgen.RunOptions{
+	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario,
 		RunID:          r.runID,
 		Logger:         r.logger,
@@ -113,5 +114,20 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxConcurrent: r.maxConcurrent,
 		},
 		ScenarioOptions: scenarioOptions,
-	})
+		Namespace:       r.clientOptions.Namespace,
+		Salt:            uuid.New(),
+	}
+	err = scenario.Executor.PreScenario(ctx, scenarioInfo)
+	if err != nil {
+		return fmt.Errorf("failed pre-scenario hook: %w", err)
+	}
+	err = scenario.Executor.Run(ctx, scenarioInfo)
+	if err != nil {
+		return fmt.Errorf("failed scenario: %w", err)
+	}
+	err = scenario.Executor.PostScenario(ctx, scenarioInfo)
+	if err != nil {
+		return fmt.Errorf("failed post-scenario hook: %w", err)
+	}
+	return err
 }

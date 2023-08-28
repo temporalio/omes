@@ -12,7 +12,7 @@ func init() {
 		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities. " +
 			"Additional options: children-per-workflow (default 30), activities-per-workflow (default 30).",
 		Executor: loadgen.KitchenSinkExecutor{
-			PrepareWorkflowParams: func(ctx context.Context, opts loadgen.RunOptions, params *kitchensink.WorkflowParams) error {
+			PrepareWorkflowParams: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.WorkflowParams) error {
 				// We want these executed concurrently
 				params.ActionSet.Concurrent = true
 

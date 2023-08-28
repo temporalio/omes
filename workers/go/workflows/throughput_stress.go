@@ -2,6 +2,7 @@ package workflows
 
 import (
 	"fmt"
+	"github.com/temporalio/omes/scenarios"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/throughput_stress"
@@ -20,19 +21,23 @@ const (
 // ThroughputStressWorkflow is meant to mimic the throughputstress scenario from bench-go of days
 // past, but in a less-opaque way. We do not ask why it is the way it is, it is not our place to
 // question the inscrutable ways of the old code.
-func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.WorkflowParams) (string, error) {
+func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.WorkflowParams) (throughput_stress.WorkflowOutput, error) {
+	output := throughput_stress.WorkflowOutput{
+		ChildrenSpawned: params.ChildrenSpawned,
+		TimesContinued:  params.TimesContinued,
+	}
 	// Establish handlers
 	err := workflow.SetQueryHandler(ctx, "myquery", func() (string, error) {
 		return "hi", nil
 	})
 	if err != nil {
-		return "", err
+		return output, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateSleep, func(ctx workflow.Context) error {
 		return workflow.Sleep(ctx, 1*time.Second)
 	})
 	if err != nil {
-		return "", err
+		return output, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateActivity, func(ctx workflow.Context) error {
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
@@ -40,7 +45,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.Wo
 			actCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
 	})
 	if err != nil {
-		return "", err
+		return output, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateLocalActivity, func(ctx workflow.Context) error {
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
@@ -48,7 +53,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.Wo
 			localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
 	})
 	if err != nil {
-		return "", err
+		return output, err
 	}
 	signchan := workflow.GetSignalChannel(ctx, ASignal)
 	workflow.Go(ctx, func(ctx workflow.Context) {
@@ -63,35 +68,44 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.Wo
 		err = workflow.ExecuteActivity(
 			actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 
 		err = workflow.ExecuteActivity(actCtx, "SelfQuery", "myquery").Get(ctx, nil)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 
 		err = workflow.ExecuteActivity(actCtx, "SelfDescribe").Get(ctx, nil)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
 		err = workflow.ExecuteLocalActivity(
 			localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 		err = workflow.ExecuteLocalActivity(
 			localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 
 		// Do some stuff in parallel
 		err = RunConcurrently(ctx,
 			func(ctx workflow.Context) error {
-				child := workflow.ExecuteChildWorkflow(ctx, "throughputStressChild")
+				// Make sure we pass through the search attribute that correlates us to a scenario
+				// run to the child.
+				attrs := workflow.GetInfo(ctx).SearchAttributes.IndexedFields
+				childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+					SearchAttributes: map[string]interface{}{
+						scenarios.ThroughputStressScenarioIdSearchAttribute: attrs[scenarios.ThroughputStressScenarioIdSearchAttribute],
+					},
+				})
+				child := workflow.ExecuteChildWorkflow(childCtx, "throughputStressChild")
+				output.ChildrenSpawned++
 				return child.Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
@@ -135,19 +149,21 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughput_stress.Wo
 			},
 		)
 		if err != nil {
-			return "", err
+			return output, err
 		}
 		// Possibly continue as new
 		if workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
 			if i == 0 {
-				return "", fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
+				return output, fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
 			}
 			params.InitialIteration = i
-			return "", workflow.NewContinueAsNewError(ctx, "throughputStress", params)
+			params.TimesContinued++
+			params.ChildrenSpawned = output.ChildrenSpawned
+			return output, workflow.NewContinueAsNewError(ctx, "throughputStress", params)
 		}
 	}
 
-	return "hi", nil
+	return output, nil
 }
 
 func ThroughputStressChild(ctx workflow.Context) error {

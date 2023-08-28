@@ -9,4 +9,16 @@ type WorkflowParams struct {
 	InitialIteration int `json:"initialIteration"`
 	// If nonzero, we will continue as new after history has grown to be at least this many events.
 	ContinueAsNewAfterEventCount int `json:"continueAsNewAfterEventCount"`
+
+	// Set internally and incremented every time the workflow continues as new.
+	TimesContinued int `json:"timesContinued"`
+	// Set internally and incremented every time the workflow spawns a child.
+	ChildrenSpawned int `json:"childrenSpawned"`
+}
+
+type WorkflowOutput struct {
+	// The total number of children that were spawned across all continued runs of the workflow.
+	ChildrenSpawned int `json:"childrenSpawned"`
+	// The total number of times the workflow continued as new.
+	TimesContinued int `json:"timesContinued"`
 }
