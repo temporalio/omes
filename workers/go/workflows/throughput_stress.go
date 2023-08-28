@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"fmt"
 	"github.com/temporalio/omes/loadgen/througput_stress"
 	"github.com/temporalio/omes/workers/go/activities"
 	"go.temporal.io/sdk/temporal"
@@ -8,38 +9,11 @@ import (
 	"time"
 )
 
-// Recreating:
-// 	return createInfiniteRepetition(
-//		createSequence(
-//			createRemote(0, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes), 10),
-//			createQuery(1),
-//			createDescribe(1),
-//			createLocal(0, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes)),
-//			createLocal(0, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes)),
-//			createParallel(
-//				createChildWorkflow("simple1", 7*86400, false, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes), false),
-//				createRemote(0.00, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes), 10),
-//				createRemote(0.00, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes), 10),
-//				createLocal(0, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes)),
-//				createLocal(0, 0, zeroWait, getPayloadSizeGenerator(payloadSizeInBytes), getPayloadSizeGenerator(payloadSizeInBytes)),
-//				createUpdate(),
-//				createUpdate(),
-//			),
-//			// If you dig in here, you might wonder how this workflow ever completes or makes progress, since after each
-//			// iteration it's going to wait on this long timer. The answer is that the bench driver signal-with-starts the
-//			// configdriven workflows, and if the `Count` parameter is sufficiently high, then this workflow will get
-//			// periodically signalled via that mechanism. To abort this loop cleanly, send the `AbortInfiniteLoopSignalName` signal
-//			// - which the configdriven monitor does by default upon completion.
-//			createSignalWait(signalWait),
-//			createContinueAsNew(continueAsNewStepThreshold, continueAsNewDurationThresholdInSeconds, 1000000),
-//			createSendStats(),
-//		),
-//	)
-
 const (
 	UpdateSleep         = "sleep"
 	UpdateActivity      = "activity"
 	UpdateLocalActivity = "localActivity"
+	ASignal             = "someSignal"
 )
 
 // ThroughputStressWorkflow is meant to mimic the throughputstress scenario from bench-go of days
@@ -75,78 +49,101 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *througput_stress.Wor
 	if err != nil {
 		return "", err
 	}
+	signchan := workflow.GetSignalChannel(ctx, ASignal)
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for {
+			signchan.Receive(ctx, nil)
+		}
+	})
 
-	// Repeat the steps as defined by the ancient ritual TODO: Loop
-	actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-	err = workflow.ExecuteActivity(
-		actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
-	if err != nil {
-		return "", err
-	}
+	for i := params.InitialIteration; i < params.Iterations; i++ {
+		// Repeat the steps as defined by the ancient ritual
+		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+		err = workflow.ExecuteActivity(
+			actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
 
-	err = workflow.ExecuteActivity(actCtx, "SelfQuery", "myquery").Get(ctx, nil)
-	if err != nil {
-		return "", err
-	}
+		err = workflow.ExecuteActivity(actCtx, "SelfQuery", "myquery").Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
 
-	err = workflow.ExecuteActivity(actCtx, "SelfDescribe").Get(ctx, nil)
-	if err != nil {
-		return "", err
-	}
+		err = workflow.ExecuteActivity(actCtx, "SelfDescribe").Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
 
-	localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
-	err = workflow.ExecuteLocalActivity(
-		localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
-	if err != nil {
-		return "", err
-	}
-	err = workflow.ExecuteLocalActivity(
-		localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
-	if err != nil {
-		return "", err
-	}
+		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+		err = workflow.ExecuteLocalActivity(
+			localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
+		err = workflow.ExecuteLocalActivity(
+			localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
+		if err != nil {
+			return "", err
+		}
 
-	// Do some stuff in parallel
-	err = RunConcurrently(ctx,
-		func(ctx workflow.Context) error {
-			child := workflow.ExecuteChildWorkflow(ctx, "throughputStressChild")
-			return child.Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-			return workflow.ExecuteActivity(
-				actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-			return workflow.ExecuteActivity(
-				actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
-			return workflow.ExecuteLocalActivity(
-				localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
-			return workflow.ExecuteLocalActivity(
-				localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-			return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateSleep).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-			return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateActivity).Get(ctx, nil)
-		},
-		func(ctx workflow.Context) error {
-			actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
-			return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateLocalActivity).Get(ctx, nil)
-		},
-	)
-	if err != nil {
-		return "", err
+		// Do some stuff in parallel
+		err = RunConcurrently(ctx,
+			func(ctx workflow.Context) error {
+				child := workflow.ExecuteChildWorkflow(ctx, "throughputStressChild")
+				return child.Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				return workflow.ExecuteActivity(
+					actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				return workflow.ExecuteActivity(
+					actCtx, "Payload", activities.MakePayloadInput(256, 256)).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				return workflow.ExecuteLocalActivity(
+					localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				return workflow.ExecuteLocalActivity(
+					localActCtx, "Payload", activities.MakePayloadInput(0, 256)).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				// This self-signal activity didn't exist in the original bench-go workflow, but
+				// it was signaled semi-routinely externally. This is slightly more obvious and
+				// introduces receiving signals in the workflow.
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				return workflow.ExecuteLocalActivity(localActCtx, "SelfSignal", ASignal).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateSleep).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateActivity).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				return workflow.ExecuteActivity(actCtx, "SelfUpdate", UpdateLocalActivity).Get(ctx, nil)
+			},
+		)
+		if err != nil {
+			return "", err
+		}
+		// Possibly continue as new
+		if workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventNumber {
+			if i == 0 {
+				return "", fmt.Errorf("trying to coninue as new on first iteration, workflow will never end")
+			}
+			params.InitialIteration = i
+			return "", workflow.NewContinueAsNewError(ctx, "throughputStress", params)
+		}
 	}
 
 	return "hi", nil

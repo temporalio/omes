@@ -83,3 +83,8 @@ func (a *Activities) SelfUpdate(ctx context.Context, updateName string) error {
 	}
 	return handle.Get(ctx, nil)
 }
+
+func (a *Activities) SelfSignal(ctx context.Context, signalName string) error {
+	we := activity.GetInfo(ctx).WorkflowExecution
+	return a.Client.SignalWorkflow(ctx, we.ID, we.RunID, signalName, nil)
+}

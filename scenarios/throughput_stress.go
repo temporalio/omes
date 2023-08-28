@@ -27,7 +27,10 @@ func init() {
 						WorkflowExecutionErrorWhenAlreadyStarted: true,
 					},
 					"throughputStress",
-					througput_stress.WorkflowParams{})
+					througput_stress.WorkflowParams{
+						Iterations:                    5,
+						ContinueAsNewAfterEventNumber: 100,
+					})
 			},
 		},
 	})
