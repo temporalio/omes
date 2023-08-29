@@ -18,6 +18,12 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
+// --option flags
+const (
+	IterFlag     = "internal-iterations"
+	CANEventFlag = "continue-as-new-after-event-count"
+)
+
 const ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
 
 type ThroughputStressStorage struct {
@@ -26,7 +32,9 @@ type ThroughputStressStorage struct {
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Throughput stress scenario",
+		Description: fmt.Sprintf(
+			"Throughput stress scenario. Use --%s and --%s to control internal parameters",
+			IterFlag, CANEventFlag),
 		Executor: &loadgen.GenericExecutor[ThroughputStressStorage]{
 			DefaultConfiguration: loadgen.RunConfiguration{
 				Iterations:    20,
@@ -51,13 +59,17 @@ func init() {
 				return err
 			},
 			Execute: func(ctx context.Context, run *loadgen.Run, storage *ThroughputStressStorage) error {
+				internalIterations := run.ScenarioInfo.ScenarioOptionInt(IterFlag, 5)
+				continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 100)
+				timeout := time.Duration(1*internalIterations) * time.Minute
+
 				wfID := fmt.Sprintf("throughputStress-%s-%d", run.ID, run.IterationInTest)
 				var result throughputstress.WorkflowOutput
 				err := run.ExecuteAnyWorkflow(ctx,
 					client.StartWorkflowOptions{
 						ID:                                       wfID,
 						TaskQueue:                                run.TaskQueue(),
-						WorkflowExecutionTimeout:                 30 * time.Minute,
+						WorkflowExecutionTimeout:                 timeout,
 						WorkflowExecutionErrorWhenAlreadyStarted: true,
 						SearchAttributes: map[string]interface{}{
 							ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.UniqueRunID(),
@@ -66,8 +78,8 @@ func init() {
 					"throughputStress",
 					&result,
 					throughputstress.WorkflowParams{
-						Iterations:                   5,
-						ContinueAsNewAfterEventCount: 100,
+						Iterations:                   internalIterations,
+						ContinueAsNewAfterEventCount: continueAsNewCount,
 					})
 				// The 1 is for the final workflow run
 				storage.workflowCount.Add(uint64(result.TimesContinued + result.ChildrenSpawned + 1))
