@@ -3,9 +3,10 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
-	"time"
 )
 
 func VisibilityCountIsEventually(

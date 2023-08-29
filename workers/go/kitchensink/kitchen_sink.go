@@ -1,4 +1,4 @@
-package workflows
+package kitchensink
 
 import (
 	"encoding/json"

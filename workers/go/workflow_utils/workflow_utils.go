@@ -1,4 +1,4 @@
-package workflows
+package workflow_utils
 
 import (
 	"fmt"

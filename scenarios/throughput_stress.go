@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.temporal.io/api/serviceerror"
-	"go.temporal.io/api/workflowservice/v1"
 	"sync/atomic"
 	"time"
+
+	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/throughput_stress"
+	"github.com/temporalio/omes/loadgen/throughputstress"
 	"go.temporal.io/sdk/client"
 )
 
@@ -51,7 +52,7 @@ func init() {
 			},
 			Execute: func(ctx context.Context, run *loadgen.Run, storage *ThroughputStressStorage) error {
 				wfID := fmt.Sprintf("throughputStress-%s-%d", run.ID, run.IterationInTest)
-				var result throughput_stress.WorkflowOutput
+				var result throughputstress.WorkflowOutput
 				err := run.ExecuteAnyWorkflow(ctx,
 					client.StartWorkflowOptions{
 						ID:                                       wfID,
@@ -64,7 +65,7 @@ func init() {
 					},
 					"throughputStress",
 					&result,
-					throughput_stress.WorkflowParams{
+					throughputstress.WorkflowParams{
 						Iterations:                   5,
 						ContinueAsNewAfterEventCount: 100,
 					})

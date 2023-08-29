@@ -1,4 +1,4 @@
-package throughput_stress
+package throughputstress
 
 // WorkflowParams is the single input for the throughput stress workflow.
 type WorkflowParams struct {

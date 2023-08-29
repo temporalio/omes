@@ -44,7 +44,7 @@ type Action struct {
 }
 
 // NopActivityName is the name of the noop activity
-const NopActivityName = "Noop"
+const NopActivityName = "noop"
 
 // NopActionExecuteActivity is an action that executes a noop activity
 var NopActionExecuteActivity = &Action{ExecuteActivity: &ExecuteActivityAction{Name: NopActivityName}}

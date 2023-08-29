@@ -3,12 +3,13 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
