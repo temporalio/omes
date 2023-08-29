@@ -193,7 +193,7 @@ type KitchenSinkWorkflowOptions struct {
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
 // completion ignoring its result.
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", options.Params)
+	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params)
 }
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,

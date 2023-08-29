@@ -37,7 +37,10 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options ScenarioInfo) erro
 			// Shallow copies params, users are expected not to mutate any slices
 			options.Params = params
 			if k.UpdateWorkflowOptions != nil {
-				k.UpdateWorkflowOptions(ctx, run, &options)
+				err := k.UpdateWorkflowOptions(ctx, run, &options)
+				if err != nil {
+					return err
+				}
 			}
 			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 		},
