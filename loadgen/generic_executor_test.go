@@ -136,8 +136,8 @@ func TestStorage(t *testing.T) {
 			return nil
 		},
 		Execute: func(ctx context.Context, run *Run, t *iterationTracker) error {
-			t.track(run.IterationInTest)
-			if run.IterationInTest == 2 {
+			t.track(run.Iteration)
+			if run.Iteration == 2 {
 				return errors.New("deliberate fail from test")
 			}
 			return nil

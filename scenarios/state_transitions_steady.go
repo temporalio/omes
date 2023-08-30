@@ -17,13 +17,13 @@ func init() {
 			"and the state-transitions-per-second scenario option to be set. Any iteration configuration is ignored. For " +
 			"example, can be run with: run-scenario-with-worker --scenario state_transitions_steady --language go " +
 			"--embedded-server --duration 5m --option state-transitions-per-second=3",
-		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.RunOptions) error {
+		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 			return (&stateTransitionsSteady{runOptions}).run(ctx)
 		}),
 	})
 }
 
-type stateTransitionsSteady struct{ loadgen.RunOptions }
+type stateTransitionsSteady struct{ loadgen.ScenarioInfo }
 
 func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	// The goal here is to meet a certain number of state transitions per second.

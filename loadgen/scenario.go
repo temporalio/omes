@@ -34,10 +34,10 @@ type Executor interface {
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
-type ExecutorFunc func(context.Context, RunOptions) error
+type ExecutorFunc func(context.Context, ScenarioInfo) error
 
 // Run implements [Executor.Run].
-func (e ExecutorFunc) Run(ctx context.Context, opts RunOptions) error { return e(ctx, opts) }
+func (e ExecutorFunc) Run(ctx context.Context, opts ScenarioInfo) error { return e(ctx, opts) }
 
 // HasDefaultConfiguration is an interface executors can implement to show their
 // default configuration.
@@ -146,18 +146,18 @@ func (r *RunConfiguration) ApplyDefaults() {
 // Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
-	*RunOptions
+	*ScenarioInfo
 	// Each run should have a unique iteration.
 	Iteration int
 	Logger    *zap.SugaredLogger
 }
 
 // NewRun creates a new run.
-func (r *RunOptions) NewRun(iteration int) *Run {
+func (s *ScenarioInfo) NewRun(iteration int) *Run {
 	return &Run{
-		RunOptions: r,
-		Iteration:  iteration,
-		Logger:     r.Logger.With("iteration", iteration),
+		ScenarioInfo: s,
+		Iteration:    iteration,
+		Logger:       s.Logger.With("iteration", iteration),
 	}
 }
 
@@ -167,7 +167,7 @@ func TaskQueueForRun(scenarioName, runID string) string {
 }
 
 func (r *Run) TaskQueue() string {
-	return TaskQueueForRun(r.ScenarioName, r.ID)
+	return TaskQueueForRun(r.ScenarioName, r.RunID)
 }
 
 // DefaultStartWorkflowOptions gets default start workflow options.
@@ -178,7 +178,6 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
 }
-
 
 // DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {

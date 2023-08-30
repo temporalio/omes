@@ -63,7 +63,7 @@ func init() {
 				continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 100)
 				timeout := time.Duration(1*internalIterations) * time.Minute
 
-				wfID := fmt.Sprintf("throughputStress-%s-%d", run.ID, run.IterationInTest)
+				wfID := fmt.Sprintf("throughputStress-%s-%d", run.RunID, run.Iteration)
 				var result throughputstress.WorkflowOutput
 				err := run.ExecuteAnyWorkflow(ctx,
 					client.StartWorkflowOptions{
