@@ -23,14 +23,8 @@ type Scenario struct {
 
 // Executor for a scenario.
 type Executor interface {
-	// PreScenario is called once before the scenario begins execution. Use it for one-time setup,
-	// like adding a custom search attribute.
-	PreScenario(context.Context, ScenarioInfo) error
 	// Run the scenario
 	Run(context.Context, ScenarioInfo) error
-	// PostScenario is called after the scenario has finished running. Use it for things like
-	// verifying that visibility records are as expected, etc.
-	PostScenario(context.Context, ScenarioInfo) error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function

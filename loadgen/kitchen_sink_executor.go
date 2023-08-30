@@ -30,9 +30,9 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options ScenarioInfo) erro
 		}
 	}
 	// Create generic executor and run it
-	ge := &GenericExecutor[any]{
+	ge := &GenericExecutor{
 		DefaultConfiguration: k.DefaultConfiguration,
-		Execute: func(ctx context.Context, run *Run, _ *any) error {
+		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
 			// Shallow copies params, users are expected not to mutate any slices
 			options.Params = params

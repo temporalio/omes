@@ -18,19 +18,19 @@ func TestIterationsAndDuration(t *testing.T) {
 	var err error
 	{
 		// only iterations
-		executor := &GenericExecutor[any]{DefaultConfiguration: RunConfiguration{Iterations: 3}}
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Iterations: 3}}
 		_, err = executor.newRun(options)
 		require.NoError(t, err)
 	}
 	{
 		// only duration
-		executor := &GenericExecutor[any]{DefaultConfiguration: RunConfiguration{Duration: time.Hour}}
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: time.Hour}}
 		_, err = executor.newRun(options)
 		require.NoError(t, err)
 	}
 	{
 		// both
-		executor := &GenericExecutor[any]{DefaultConfiguration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}}
+		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}}
 		_, err = executor.newRun(options)
 		require.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
 	}
@@ -57,7 +57,7 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 	}
 }
 
-func execute[S any](executor *GenericExecutor[S]) error {
+func execute(executor *GenericExecutor) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
 	options := ScenarioInfo{
@@ -69,8 +69,8 @@ func execute[S any](executor *GenericExecutor[S]) error {
 
 func TestRunHappyPathIterations(t *testing.T) {
 	tracker := newIterationTracker()
-	err := execute(&GenericExecutor[any]{
-		Execute: func(ctx context.Context, run *Run, _ *any) error {
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.Iteration)
 			return nil
 		},
@@ -83,8 +83,8 @@ func TestRunHappyPathIterations(t *testing.T) {
 func TestRunFailIterations(t *testing.T) {
 	tracker := newIterationTracker()
 	concurrency := 3
-	err := execute(&GenericExecutor[any]{
-		Execute: func(ctx context.Context, run *Run, _ *any) error {
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.Iteration)
 			// Start this short timer to allow all concurrent routines to be spawned
 			<-time.After(time.Millisecond)
@@ -101,8 +101,8 @@ func TestRunFailIterations(t *testing.T) {
 
 func TestRunHappyPathDuration(t *testing.T) {
 	tracker := newIterationTracker()
-	err := execute(&GenericExecutor[any]{
-		Execute: func(ctx context.Context, run *Run, _ *any) error {
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.Iteration)
 			time.Sleep(time.Millisecond * 20)
 			return nil
@@ -115,8 +115,8 @@ func TestRunHappyPathDuration(t *testing.T) {
 
 func TestRunFailDuration(t *testing.T) {
 	tracker := newIterationTracker()
-	err := execute(&GenericExecutor[any]{
-		Execute: func(ctx context.Context, run *Run, _ *any) error {
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
 			tracker.track(run.Iteration)
 			if run.Iteration == 2 {
 				return errors.New("deliberate fail from test")
@@ -127,26 +127,4 @@ func TestRunFailDuration(t *testing.T) {
 	})
 	require.ErrorContains(t, err, "run finished with error")
 	tracker.assertSeen(t, 2)
-}
-
-func TestStorage(t *testing.T) {
-	err := execute(&GenericExecutor[iterationTracker]{
-		PreScenarioImpl: func(ctx context.Context, info ScenarioInfo, t *iterationTracker) error {
-			t = newIterationTracker()
-			return nil
-		},
-		Execute: func(ctx context.Context, run *Run, t *iterationTracker) error {
-			t.track(run.Iteration)
-			if run.Iteration == 2 {
-				return errors.New("deliberate fail from test")
-			}
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Duration: 200 * time.Millisecond},
-		PostScenarioImpl: func(ctx context.Context, info ScenarioInfo, tr *iterationTracker) error {
-			tr.assertSeen(t, 2)
-			return nil
-		},
-	})
-	require.ErrorContains(t, err, "run finished with error")
 }

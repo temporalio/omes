@@ -9,25 +9,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type GenericExecutor[STORAGE any] struct {
-	// Used for Executor.PreScenario
-	PreScenarioImpl func(context.Context, ScenarioInfo, *STORAGE) error
+type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
-	Execute func(context.Context, *Run, *STORAGE) error
-	// Used for Executor.PostScenario
-	PostScenarioImpl func(context.Context, ScenarioInfo, *STORAGE) error
+	Execute func(context.Context, *Run) error
 	// Default configuration if any.
 	DefaultConfiguration RunConfiguration
-	// Storage for the scenario
-	ScenarioStorage STORAGE
 }
 
-func (g *GenericExecutor[S]) GetDefaultConfiguration() RunConfiguration {
+func (g *GenericExecutor) GetDefaultConfiguration() RunConfiguration {
 	return g.DefaultConfiguration
 }
 
-type genericRun[S any] struct {
-	executor *GenericExecutor[S]
+type genericRun struct {
+	executor *GenericExecutor
 	options  ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
@@ -35,14 +29,7 @@ type genericRun[S any] struct {
 	executeTimer client.MetricsTimer
 }
 
-func (g *GenericExecutor[S]) PreScenario(ctx context.Context, info ScenarioInfo) error {
-	if g.PreScenarioImpl == nil {
-		return nil
-	}
-	return g.PreScenarioImpl(ctx, info, &g.ScenarioStorage)
-}
-
-func (g *GenericExecutor[S]) Run(ctx context.Context, info ScenarioInfo) error {
+func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	r, err := g.newRun(info)
 	if err != nil {
 		return err
@@ -50,15 +37,8 @@ func (g *GenericExecutor[S]) Run(ctx context.Context, info ScenarioInfo) error {
 	return r.Run(ctx)
 }
 
-func (g *GenericExecutor[S]) PostScenario(ctx context.Context, info ScenarioInfo) error {
-	if g.PostScenarioImpl == nil {
-		return nil
-	}
-	return g.PostScenarioImpl(ctx, info, &g.ScenarioStorage)
-}
-
-func (g *GenericExecutor[S]) newRun(options ScenarioInfo) (*genericRun[S], error) {
-	run := &genericRun[S]{
+func (g *GenericExecutor) newRun(options ScenarioInfo) (*genericRun, error) {
+	run := &genericRun{
 		executor: g,
 		options:  options,
 		config:   options.Configuration,
@@ -86,7 +66,7 @@ func (g *GenericExecutor[S]) newRun(options ScenarioInfo) (*genericRun[S], error
 // Spins up coroutines according to the scenario configuration.
 // Each coroutine runs the scenario Execute method in a loop until the scenario duration or max
 // iterations is reached.
-func (g *genericRun[S]) Run(ctx context.Context) error {
+func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	if g.config.Duration > 0 {
 		ctx, cancel = context.WithTimeout(ctx, g.config.Duration)
@@ -125,7 +105,7 @@ func (g *genericRun[S]) Run(ctx context.Context) error {
 		run := g.options.NewRun(i + 1)
 		go func() {
 			startTime := time.Now()
-			err := g.executor.Execute(ctx, run, &g.executor.ScenarioStorage)
+			err := g.executor.Execute(ctx, run)
 			// Only log/wrap/send to channel if context is not done
 			if ctx.Err() == nil {
 				if err != nil {
