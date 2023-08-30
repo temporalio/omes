@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
@@ -116,7 +114,6 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
-		Salt:            uuid.New(),
 	}
 	err = scenario.Executor.Run(ctx, scenarioInfo)
 	if err != nil {

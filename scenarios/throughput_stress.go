@@ -44,6 +44,19 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return err
 	}
 
+	// Complain if there are already existing workflows with the provided run id
+	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
+		Namespace: info.Namespace,
+		Query:     fmt.Sprintf("%s='%s'", ThroughputStressScenarioIdSearchAttribute, info.RunID),
+	})
+	if err != nil {
+		return err
+	}
+	if visibilityCount.Count > 0 {
+		return fmt.Errorf("there are already %d workflows with scenario Run ID '%s'",
+			visibilityCount.Count, info.RunID)
+	}
+
 	genericExec := &loadgen.GenericExecutor{
 		DefaultConfiguration: loadgen.RunConfiguration{
 			Iterations:    20,
@@ -63,7 +76,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					WorkflowExecutionTimeout:                 timeout,
 					WorkflowExecutionErrorWhenAlreadyStarted: true,
 					SearchAttributes: map[string]interface{}{
-						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.UniqueRunID(),
+						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
 					},
 				},
 				"throughputStress",
@@ -91,7 +104,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query: fmt.Sprintf("%s='%s'",
-				ThroughputStressScenarioIdSearchAttribute, info.UniqueRunID()),
+				ThroughputStressScenarioIdSearchAttribute, info.RunID),
 		},
 		int(totalWorkflowCount),
 		3*time.Minute,

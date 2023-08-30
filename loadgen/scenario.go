@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -91,9 +89,6 @@ type ScenarioInfo struct {
 	ScenarioOptions map[string]string
 	// The namespace that was used when connecting the client.
 	Namespace string
-	// Unique salt for this scenario run. Use to provide values that are unique but stable for
-	// the duration of the scenario run.
-	Salt uuid.UUID
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -106,12 +101,6 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 		panic(err)
 	}
 	return i
-}
-
-// UniqueRunID returns a unique RunID for this scenario run. Since RunID is user-specified and may
-// be non-unique, you can use this for a stable (for the run) and guaranteed unique ID.
-func (s *ScenarioInfo) UniqueRunID() string {
-	return fmt.Sprintf("%s-%s", s.RunID, s.Salt.String())
 }
 
 const DefaultIterations = 10
