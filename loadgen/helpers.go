@@ -9,6 +9,8 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
+// VisibilityCountIsEventually ensures that some visibility query count matches the provided
+// expected number within the provided time limit.
 func VisibilityCountIsEventually(
 	ctx context.Context,
 	client client.Client,
@@ -20,7 +22,7 @@ func VisibilityCountIsEventually(
 	for {
 		visibilityCount, err := client.CountWorkflow(ctx, request)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to count workflows in visibility: %w", err)
 		}
 		if visibilityCount.Count == int64(expectedCount) {
 			return nil

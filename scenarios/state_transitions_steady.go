@@ -126,22 +126,15 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	s.Logger.Infof("Run complete, ran %v iterations, waiting on all workflows to complete", iter)
 	// First, wait for all starts to have started (they are done in goroutine)
 	startWG.Wait()
-	// Now check every so often
-	start := time.Now()
-	const interval = 3 * time.Second
-	const maxWait = time.Minute
-	for {
-		resp, err := s.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
+	return loadgen.VisibilityCountIsEventually(
+		ctx,
+		s.Client,
+		&workflowservice.CountWorkflowExecutionsRequest{
+			Namespace: s.Namespace,
 			Query: fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
 				loadgen.TaskQueueForRun(s.ScenarioName, s.RunID)),
-		})
-		if err != nil {
-			return fmt.Errorf("failed getting still-running workflow count: %w", err)
-		} else if resp.Count == 0 {
-			return nil
-		} else if time.Since(start) >= maxWait {
-			return fmt.Errorf("after waiting at least %v, still %v workflows running", maxWait, resp.Count)
-		}
-		time.Sleep(interval)
-	}
+		},
+		0,
+		time.Minute,
+	)
 }

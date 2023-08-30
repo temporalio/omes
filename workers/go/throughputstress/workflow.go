@@ -2,7 +2,7 @@ package throughputstress
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/workers/go/workflow_utils"
+	"github.com/temporalio/omes/workers/go/workflowutils"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/throughputstress"
@@ -96,7 +96,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		}
 
 		// Do some stuff in parallel
-		err = workflow_utils.RunConcurrently(ctx,
+		err = workflowutils.RunConcurrently(ctx,
 			func(ctx workflow.Context) error {
 				// Make sure we pass through the search attribute that correlates us to a scenario
 				// run to the child.

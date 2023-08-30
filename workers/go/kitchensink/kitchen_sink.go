@@ -1,6 +1,7 @@
 package kitchensink
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -205,4 +206,8 @@ func handleAction(
 		return true, nil, fmt.Errorf("unrecognized action")
 	}
 	return false, nil, nil
+}
+
+func Noop(_ context.Context) error {
+	return nil
 }
