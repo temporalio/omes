@@ -101,7 +101,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 	defer client.Close()
-	return scenario.Executor.Run(ctx, loadgen.RunOptions{
+	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario,
 		RunID:          r.runID,
 		Logger:         r.logger,
@@ -113,5 +113,11 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxConcurrent: r.maxConcurrent,
 		},
 		ScenarioOptions: scenarioOptions,
-	})
+		Namespace:       r.clientOptions.Namespace,
+	}
+	err = scenario.Executor.Run(ctx, scenarioInfo)
+	if err != nil {
+		return fmt.Errorf("failed scenario: %w", err)
+	}
+	return nil
 }

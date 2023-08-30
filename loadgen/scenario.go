@@ -22,14 +22,14 @@ type Scenario struct {
 // Executor for a scenario.
 type Executor interface {
 	// Run the scenario
-	Run(context.Context, RunOptions) error
+	Run(context.Context, ScenarioInfo) error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
-type ExecutorFunc func(context.Context, RunOptions) error
+type ExecutorFunc func(context.Context, ScenarioInfo) error
 
 // Run implements [Executor.Run].
-func (e ExecutorFunc) Run(ctx context.Context, opts RunOptions) error { return e(ctx, opts) }
+func (e ExecutorFunc) Run(ctx context.Context, info ScenarioInfo) error { return e(ctx, info) }
 
 // HasDefaultConfiguration is an interface executors can implement to show their
 // default configuration.
@@ -69,11 +69,13 @@ func GetScenario(name string) *Scenario {
 	return registeredScenarios[name]
 }
 
-type RunOptions struct {
+// ScenarioInfo contains information about the scenario under execution.
+type ScenarioInfo struct {
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue
-	// and workflow ID prefix. This is a single value for the whole scenario.
+	// and workflow ID prefix. This is a single value for the whole scenario, and
+	// not a Workflow RunId.
 	RunID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
@@ -81,14 +83,16 @@ type RunOptions struct {
 	Logger *zap.SugaredLogger
 	// A Temporal client.
 	Client client.Client
-	// Configuration options passed by user if any.
+	// Configuration info passed by user if any.
 	Configuration RunConfiguration
-	// ScenarioOptions are options passed from the command line. Do not mutate these.
+	// ScenarioOptions are info passed from the command line. Do not mutate these.
 	ScenarioOptions map[string]string
+	// The namespace that was used when connecting the client.
+	Namespace string
 }
 
-func (r *RunOptions) ScenarioOptionInt(name string, defaultValue int) int {
-	v := r.ScenarioOptions[name]
+func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
+	v := s.ScenarioOptions[name]
 	if v == "" {
 		return defaultValue
 	}
@@ -122,21 +126,21 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-// Run represents an individual scenario run (many may be in a scenario).
+// Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
-	*RunOptions
+	*ScenarioInfo
 	// Each run should have a unique iteration.
 	Iteration int
 	Logger    *zap.SugaredLogger
 }
 
 // NewRun creates a new run.
-func (r *RunOptions) NewRun(iteration int) *Run {
+func (s *ScenarioInfo) NewRun(iteration int) *Run {
 	return &Run{
-		RunOptions: r,
-		Iteration:  iteration,
-		Logger:     r.Logger.With("iteration", iteration),
+		ScenarioInfo: s,
+		Iteration:    iteration,
+		Logger:       s.Logger.With("iteration", iteration),
 	}
 }
 
@@ -145,7 +149,11 @@ func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
 }
 
-// DefaultStartWorkflowOptions gets default start workflow options.
+func (r *Run) TaskQueue() string {
+	return TaskQueueForRun(r.ScenarioName, r.RunID)
+}
+
+// DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
 		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
@@ -154,7 +162,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	}
 }
 
-// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
+// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow info.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
 }
@@ -164,15 +172,22 @@ type KitchenSinkWorkflowOptions struct {
 	StartOptions client.StartWorkflowOptions
 }
 
-// ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its completion ignoring its result.
+// ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
+// completion ignoring its result.
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	r.Logger.Debugf("Executing workflow with options: %v", options.StartOptions)
-	execution, err := r.Client.ExecuteWorkflow(ctx, options.StartOptions, "kitchenSink", options.Params)
+	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params)
+}
+
+// ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
+// returning an error if the execution fails.
+func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, valuePtr interface{}, args ...interface{}) error {
+	r.Logger.Debugf("Executing workflow %s with info: %v", workflow, options)
+	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		return err
 	}
-	if err := execution.Get(ctx, nil); err != nil {
-		return fmt.Errorf("error executing workflow (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
+	if err := execution.Get(ctx, valuePtr); err != nil {
+		return fmt.Errorf("workflow execution failed (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
 	}
 	return nil
 }

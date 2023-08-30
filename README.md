@@ -49,8 +49,8 @@ The executor has other options such as altering the workflow parameters based on
 
 #### Scenario Authoring Guidelines
 
-1. Use snake care for scenario file names.
-1. Use `KitchenSinkExecutor` for most basic scenarios, adding common/generic actions as need, but for really unique
+1. Use snake case for scenario file names.
+1. Use `KitchenSinkExecutor` for most basic scenarios, adding common/generic actions as need, but for unique
    scenarios use `GenericExecutor`.
 1. When using `GenericExecutor`, use methods of `*loadgen.Run` in your `Execute` as much as possible.
 1. Liberally add helpers to the `loadgen` package that will be useful to other scenario authors.

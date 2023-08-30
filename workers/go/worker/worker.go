@@ -3,11 +3,12 @@ package worker
 import (
 	"fmt"
 
+	"github.com/temporalio/omes/workers/go/kitchensink"
+	"github.com/temporalio/omes/workers/go/throughputstress"
+	"go.temporal.io/sdk/activity"
+
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
-	"github.com/temporalio/omes/workers/go/activities"
-	"github.com/temporalio/omes/workers/go/workflows"
-	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -53,12 +54,18 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string) error {
 	errCh := make(chan error, len(taskQueues))
+	tpsActivities := throughputstress.Activities{
+		Client: client,
+	}
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{})
-			w.RegisterWorkflowWithOptions(workflows.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
-			w.RegisterActivityWithOptions(activities.NoopActivity, activity.RegisterOptions{Name: "noop"})
+			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
+			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
+			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
+			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
+			w.RegisterActivity(&tpsActivities)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
 	}
