@@ -31,7 +31,7 @@ type Executor interface {
 type ExecutorFunc func(context.Context, ScenarioInfo) error
 
 // Run implements [Executor.Run].
-func (e ExecutorFunc) Run(ctx context.Context, opts ScenarioInfo) error { return e(ctx, opts) }
+func (e ExecutorFunc) Run(ctx context.Context, info ScenarioInfo) error { return e(ctx, info) }
 
 // HasDefaultConfiguration is an interface executors can implement to show their
 // default configuration.
@@ -85,9 +85,9 @@ type ScenarioInfo struct {
 	Logger *zap.SugaredLogger
 	// A Temporal client.
 	Client client.Client
-	// Configuration options passed by user if any.
+	// Configuration info passed by user if any.
 	Configuration RunConfiguration
-	// ScenarioOptions are options passed from the command line. Do not mutate these.
+	// ScenarioOptions are info passed from the command line. Do not mutate these.
 	ScenarioOptions map[string]string
 	// The namespace that was used when connecting the client.
 	Namespace string
@@ -164,7 +164,7 @@ func (r *Run) TaskQueue() string {
 	return TaskQueueForRun(r.ScenarioName, r.RunID)
 }
 
-// DefaultStartWorkflowOptions gets default start workflow options.
+// DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
 		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
@@ -173,7 +173,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	}
 }
 
-// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
+// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow info.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
 }
@@ -192,7 +192,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
 // returning an error if the execution fails.
 func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, valuePtr interface{}, args ...interface{}) error {
-	r.Logger.Debugf("Executing workflow %s with options: %v", workflow, options)
+	r.Logger.Debugf("Executing workflow %s with info: %v", workflow, options)
 	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		return err

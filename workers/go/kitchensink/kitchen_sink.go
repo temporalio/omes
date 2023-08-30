@@ -208,6 +208,7 @@ func handleAction(
 	return false, nil, nil
 }
 
+// Noop is used as a no-op activity
 func Noop(_ context.Context) error {
 	return nil
 }

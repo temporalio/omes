@@ -21,11 +21,11 @@ type KitchenSinkExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
-func (k KitchenSinkExecutor) Run(ctx context.Context, options ScenarioInfo) error {
+func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	// Build base set of params
 	params := k.WorkflowParams
 	if k.PrepareWorkflowParams != nil {
-		if err := k.PrepareWorkflowParams(ctx, options, &params); err != nil {
+		if err := k.PrepareWorkflowParams(ctx, info, &params); err != nil {
 			return err
 		}
 	}
@@ -45,15 +45,7 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, options ScenarioInfo) erro
 			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 		},
 	}
-	return ge.Run(ctx, options)
-}
-
-func (k KitchenSinkExecutor) PreScenario(_ context.Context, _ ScenarioInfo) error {
-	return nil
-}
-
-func (k KitchenSinkExecutor) PostScenario(_ context.Context, _ ScenarioInfo) error {
-	return nil
+	return ge.Run(ctx, info)
 }
 
 func (k KitchenSinkExecutor) GetDefaultConfiguration() RunConfiguration {

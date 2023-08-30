@@ -13,25 +13,25 @@ import (
 )
 
 func TestIterationsAndDuration(t *testing.T) {
-	options := ScenarioInfo{MetricsHandler: client.MetricsNopHandler}
+	info := ScenarioInfo{MetricsHandler: client.MetricsNopHandler}
 
 	var err error
 	{
 		// only iterations
 		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Iterations: 3}}
-		_, err = executor.newRun(options)
+		_, err = executor.newRun(info)
 		require.NoError(t, err)
 	}
 	{
 		// only duration
 		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: time.Hour}}
-		_, err = executor.newRun(options)
+		_, err = executor.newRun(info)
 		require.NoError(t, err)
 	}
 	{
 		// both
 		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}}
-		_, err = executor.newRun(options)
+		_, err = executor.newRun(info)
 		require.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
 	}
 }
@@ -60,11 +60,11 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 func execute(executor *GenericExecutor) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
-	options := ScenarioInfo{
+	info := ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
 	}
-	return executor.Run(context.Background(), options)
+	return executor.Run(context.Background(), info)
 }
 
 func TestRunHappyPathIterations(t *testing.T) {

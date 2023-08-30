@@ -22,7 +22,7 @@ func (g *GenericExecutor) GetDefaultConfiguration() RunConfiguration {
 
 type genericRun struct {
 	executor *GenericExecutor
-	options  ScenarioInfo
+	info     ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
 	// Timer capturing E2E execution of each scenario run iteration.
@@ -37,14 +37,14 @@ func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	return r.Run(ctx)
 }
 
-func (g *GenericExecutor) newRun(options ScenarioInfo) (*genericRun, error) {
+func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	run := &genericRun{
 		executor: g,
-		options:  options,
-		config:   options.Configuration,
-		logger:   options.Logger,
-		executeTimer: options.MetricsHandler.WithTags(
-			map[string]string{"scenario": options.ScenarioName}).Timer("omes_execute_histogram"),
+		info:     info,
+		config:   info.Configuration,
+		logger:   info.Logger,
+		executeTimer: info.MetricsHandler.WithTags(
+			map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram"),
 	}
 
 	// Setup config
@@ -102,7 +102,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
-		run := g.options.NewRun(i + 1)
+		run := g.info.NewRun(i + 1)
 		go func() {
 			startTime := time.Now()
 			err := g.executor.Execute(ctx, run)
