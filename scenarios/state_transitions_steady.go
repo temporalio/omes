@@ -3,10 +3,12 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/workflowservice/v1"
 )
 
 func init() {
@@ -84,6 +86,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	defer ticker.Stop()
 	var consecutiveErrCount int
 	iter := 1
+	var startWG sync.WaitGroup
 	for begin := time.Now(); time.Since(begin) < s.Configuration.Duration; iter++ {
 		select {
 		case <-ctx.Done():
@@ -99,7 +102,9 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 			}
 		case <-ticker.C:
 			s.Logger.Debugf("Running iteration %v", iter)
+			startWG.Add(1)
 			go func(iter int) {
+				defer startWG.Done()
 				_, err := s.Client.ExecuteWorkflow(
 					ctx,
 					s.NewRun(iter).DefaultStartWorkflowOptions(),
@@ -114,10 +119,29 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 			}(iter)
 		}
 	}
-	// We don't want to wait to let workflows complete here. In dev cases the
-	// local server will just shutdown, in non-dev cases, the server admin can
-	// wait. But we don't want to introduce delays for those that may want to run
-	// this quickly/frequently.
-	s.Logger.Infof("Run complete, ran %v iterations", iter)
-	return nil
+
+	// We are waiting to let workflows complete here, knowing that this part of
+	// the scenario is not steady state transitions. We will wait a minute max to
+	// confirm all workflows on the task queue are no longer running.
+	s.Logger.Infof("Run complete, ran %v iterations, waiting on all workflows to complete", iter)
+	// First, wait for all starts to have started (they are done in goroutine)
+	startWG.Wait()
+	// Now check every so often
+	start := time.Now()
+	const interval = 3 * time.Second
+	const maxWait = time.Minute
+	for {
+		resp, err := s.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
+			Query: fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
+				loadgen.TaskQueueForRun(s.ScenarioName, s.RunID)),
+		})
+		if err != nil {
+			return fmt.Errorf("failed getting still-running workflow count: %w", err)
+		} else if resp.Count == 0 {
+			return nil
+		} else if time.Since(start) >= maxWait {
+			return fmt.Errorf("after waiting at least %v, still %v workflows running", maxWait, resp.Count)
+		}
+		time.Sleep(interval)
+	}
 }
