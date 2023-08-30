@@ -99,21 +99,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
-		run := &Run{
-			Client:          g.options.Client,
-			ScenarioName:    g.options.ScenarioName,
-			IterationInTest: i + 1,
-			Logger:          g.logger.With("iteration", i),
-			ID:              g.options.RunID,
-			RunOptions:      &g.options,
-		}
+		run := g.options.NewRun(i + 1)
 		go func() {
 			startTime := time.Now()
 			err := g.executor.Execute(ctx, run)
 			// Only log/wrap/send to channel if context is not done
 			if ctx.Err() == nil {
 				if err != nil {
-					err = fmt.Errorf("iteration %v failed: %w", run.IterationInTest, err)
+					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
 					g.logger.Error(err)
 				}
 				select {

@@ -12,7 +12,7 @@ import (
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowParams) (interface{}, error) {
 	b, _ := json.Marshal(params)
-	workflow.GetLogger(ctx).Info("Started kitchen sink workflow", "params", string(b))
+	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow", "params", string(b))
 	if params == nil {
 		return nil, nil
 	}

@@ -25,6 +25,12 @@ type Executor interface {
 	Run(context.Context, RunOptions) error
 }
 
+// ExecutorFunc is an [Executor] implementation for a function
+type ExecutorFunc func(context.Context, RunOptions) error
+
+// Run implements [Executor.Run].
+func (e ExecutorFunc) Run(ctx context.Context, opts RunOptions) error { return e(ctx, opts) }
+
 // HasDefaultConfiguration is an interface executors can implement to show their
 // default configuration.
 type HasDefaultConfiguration interface {
@@ -66,7 +72,8 @@ func GetScenario(name string) *Scenario {
 type RunOptions struct {
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
-	// Run ID of the current scenario run, used to generate a unique task queue and workflow ID prefix.
+	// Run ID of the current scenario run, used to generate a unique task queue
+	// and workflow ID prefix. This is a single value for the whole scenario.
 	RunID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
@@ -115,20 +122,22 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-// Run represents a scenario run.
+// Run represents an individual scenario run (many may be in a scenario).
 type Run struct {
-	// Used for Workflow ID and task queue name generation.
-	ID string
-	// The name of the scenario used for the run.
-	ScenarioName string
-	// Temporal client to use for executing workflows, etc.
-	Client client.Client
-	// Each call to the Execute method gets a distinct `IterationInTest`. This
-	// will never be 0.
-	IterationInTest int
-	Logger          *zap.SugaredLogger
-	// Do not mutate this
-	RunOptions *RunOptions
+	// Do not mutate this, this is shared across the entire scenario
+	*RunOptions
+	// Each run should have a unique iteration.
+	Iteration int
+	Logger    *zap.SugaredLogger
+}
+
+// NewRun creates a new run.
+func (r *RunOptions) NewRun(iteration int) *Run {
+	return &Run{
+		RunOptions: r,
+		Iteration:  iteration,
+		Logger:     r.Logger.With("iteration", iteration),
+	}
 }
 
 // TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
@@ -136,14 +145,18 @@ func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
 }
 
-func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
-	return KitchenSinkWorkflowOptions{
-		StartOptions: client.StartWorkflowOptions{
-			TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.ID),
-			ID:                                       fmt.Sprintf("w-%s-%d", r.ID, r.IterationInTest),
-			WorkflowExecutionErrorWhenAlreadyStarted: true,
-		},
+// DefaultStartWorkflowOptions gets default start workflow options.
+func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
+	return client.StartWorkflowOptions{
+		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
+		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
+		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
+}
+
+// DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow options.
+func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
+	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
 }
 
 type KitchenSinkWorkflowOptions struct {
