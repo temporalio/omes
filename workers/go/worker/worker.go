@@ -65,6 +65,7 @@ func runWorkers(client client.Client, taskQueues []string) error {
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
+			w.RegisterWorkflow(throughputstress.ThroughputStressExecutorWorkflow)
 			w.RegisterActivity(&tpsActivities)
 			errCh <- w.Run(worker.InterruptCh())
 		}()

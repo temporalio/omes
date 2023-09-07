@@ -2,11 +2,10 @@ package throughputstress
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/workers/go/workflowutils"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/throughputstress"
-	"github.com/temporalio/omes/scenarios"
+	"github.com/temporalio/omes/workers/go/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -19,6 +18,103 @@ const (
 )
 
 var activityStub = Activities{}
+
+// ThroughputStressExecutorWorkflow drives the throughputstress scenario. It exists so that it's
+// trivial to start the scenario by simply invoking this workflow, without needing to use an omes
+// binary. It also provides durability for very long-running configurations.
+func ThroughputStressExecutorWorkflow(
+	ctx workflow.Context,
+	params *throughputstress.ExecutorWorkflowInput,
+) error {
+	// Make sure the search attribute is registered
+	actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+	err := workflow.ExecuteActivity(
+		actCtx,
+		activityStub.EnsureSearchAttributeRegistered,
+		workflow.GetInfo(ctx).Namespace,
+	).Get(ctx, nil)
+	if err != nil {
+		return err
+	}
+	visQuery := fmt.Sprintf("%s='%s'", throughputstress.ThroughputStressScenarioIdSearchAttribute, params.RunID)
+	// Complain if there are already existing workflows with the provided run id
+	var count int64
+	err = workflow.ExecuteActivity(actCtx, activityStub.VisibilityCount, visQuery).Get(ctx, &count)
+	if count > 0 {
+		return fmt.Errorf("there are already %d workflows with scenario Run ID '%s'", count, params.RunID)
+	}
+
+	// Run the load
+	timeout := time.Duration(1*params.LoadParams.Iterations) * time.Minute
+
+	startingChan := workflow.NewChannel(ctx)
+	allWorkflowsDone, allWorkflowsDoneSet := workflow.NewFuture(ctx)
+	completedTopLevelWorkflowCount := 0
+	completedWorkflowCount := 0
+
+	for i := 0; i < params.MaxConcurrent; i++ {
+		workflow.Go(ctx, func(ctx workflow.Context) {
+			for {
+				var iterNumber int
+				more := startingChan.Receive(ctx, &iterNumber)
+				if !more {
+					return
+				}
+				wfID := fmt.Sprintf("throughputStress-%s-%d", params.RunID, iterNumber)
+				childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+					WorkflowID:               wfID,
+					WorkflowExecutionTimeout: timeout,
+					SearchAttributes: map[string]interface{}{
+						throughputstress.ThroughputStressScenarioIdSearchAttribute: params.RunID,
+					},
+				})
+				var result throughputstress.WorkflowOutput
+				err := workflow.ExecuteChildWorkflow(
+					childCtx,
+					ThroughputStressWorkflow,
+					params.LoadParams,
+				).Get(ctx, &result)
+				if err != nil {
+					allWorkflowsDoneSet.SetError(err)
+				}
+				completedTopLevelWorkflowCount++
+				completedWorkflowCount += 1 + result.ChildrenSpawned + result.TimesContinued
+				if completedTopLevelWorkflowCount == params.Iterations {
+					allWorkflowsDoneSet.SetValue(nil)
+				}
+			}
+		})
+	}
+
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for i := 0; i < params.Iterations; i++ {
+			startingChan.Send(ctx, i)
+		}
+		startingChan.Close()
+	})
+
+	err = allWorkflowsDone.Get(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	// Post, load, verify visibility counts
+	workflow.GetLogger(ctx).Info("Total workflows executed: ", "wfc", completedWorkflowCount)
+	visCountCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: 3 * time.Minute,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:    3 * time.Second,
+			BackoffCoefficient: 1.0,
+		},
+	})
+	err = workflow.ExecuteActivity(visCountCtx, activityStub.VisibilityCountMatches,
+		&VisibilityCountMatchesInput{
+			Query:    visQuery, // TODO: Should include status check
+			Expected: completedWorkflowCount,
+		}).Get(ctx, nil)
+
+	return nil
+}
 
 // ThroughputStressWorkflow is meant to mimic the throughputstress scenario from bench-go of days
 // past, but in a less-opaque way. We do not ask why it is the way it is, it is not our place to
@@ -103,7 +199,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				attrs := workflow.GetInfo(ctx).SearchAttributes.IndexedFields
 				childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
 					SearchAttributes: map[string]interface{}{
-						scenarios.ThroughputStressScenarioIdSearchAttribute: attrs[scenarios.ThroughputStressScenarioIdSearchAttribute],
+						throughputstress.ThroughputStressScenarioIdSearchAttribute: attrs[throughputstress.ThroughputStressScenarioIdSearchAttribute],
 					},
 				})
 				child := workflow.ExecuteChildWorkflow(childCtx, ThroughputStressChild)

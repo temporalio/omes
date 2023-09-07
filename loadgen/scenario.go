@@ -75,7 +75,7 @@ type ScenarioInfo struct {
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue
 	// and workflow ID prefix. This is a single value for the whole scenario, and
-	// not a Workflow RunId.
+	// not a Workflow RunID.
 	RunID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
@@ -101,6 +101,22 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 		panic(err)
 	}
 	return i
+}
+
+func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func (s *ScenarioInfo) TaskQueue() string {
+	return TaskQueueForRun(s.ScenarioName, s.RunID)
 }
 
 const DefaultIterations = 10
@@ -147,10 +163,6 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 // TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
 func TaskQueueForRun(scenarioName, runID string) string {
 	return fmt.Sprintf("%s:%s", scenarioName, runID)
-}
-
-func (r *Run) TaskQueue() string {
-	return TaskQueueForRun(r.ScenarioName, r.RunID)
 }
 
 // DefaultStartWorkflowOptions gets default start workflow info.
