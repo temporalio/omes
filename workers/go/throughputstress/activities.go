@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"math/rand"
 
-	"go.temporal.io/api/workflowservice/v1"
-
+	"github.com/temporalio/omes/loadgen/throughputstress"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
-
-	"github.com/temporalio/omes/loadgen/throughputstress"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 )

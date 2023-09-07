@@ -2,6 +2,8 @@ package scenarios
 
 import (
 	"fmt"
+	"go.temporal.io/sdk/client"
+	"time"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/throughputstress"
@@ -9,8 +11,9 @@ import (
 
 // --option arguments
 const (
-	IterFlag     = "internal-iterations"
-	CANEventFlag = "continue-as-new-after-event-count"
+	IterFlag            = "internal-iterations"
+	CANEventFlag        = "continue-as-new-after-event-count"
+	ExecutorTimeoutFlag = "executor-timeout"
 )
 
 func init() {
@@ -20,6 +23,10 @@ func init() {
 			IterFlag, CANEventFlag),
 		Executor: &loadgen.WorkflowExecutor{
 			WorkflowType: "ThroughputStressExecutorWorkflow",
+			StartOptsModifier: func(info loadgen.ScenarioInfo, opts *client.StartWorkflowOptions) {
+				opts.WorkflowExecutionTimeout = info.ScenarioOptionDuration(ExecutorTimeoutFlag, 1*time.Hour)
+
+			},
 			WorkflowArgCreator: func(info loadgen.ScenarioInfo) []interface{} {
 				internalIterations := info.ScenarioOptionInt(IterFlag, 5)
 				continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 100)

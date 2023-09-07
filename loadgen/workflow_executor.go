@@ -3,8 +3,6 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"go.temporal.io/sdk/client"
 )
 
@@ -13,16 +11,16 @@ import (
 type WorkflowExecutor struct {
 	WorkflowType       string
 	WorkflowArgCreator func(info ScenarioInfo) []interface{}
+	StartOptsModifier  func(info ScenarioInfo, opts *client.StartWorkflowOptions)
 }
 
 func (w WorkflowExecutor) Run(ctx context.Context, info ScenarioInfo) error {
-	// TODO: ??
-	//executorTimeout := info.ScenarioOptionDuration(scenarios.ExecutorTimeoutFlag, 1*time.Hour)
-	executorTimeout := 1 * time.Hour
 	workflowOpts := client.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("%s-driver", info.TaskQueue()),
-		TaskQueue:                info.TaskQueue(), // TODO: Should be special tq for driver?
-		WorkflowExecutionTimeout: executorTimeout,
+		ID:        fmt.Sprintf("%s-driver", info.TaskQueue()),
+		TaskQueue: info.TaskQueue(),
+	}
+	if w.StartOptsModifier != nil {
+		w.StartOptsModifier(info, &workflowOpts)
 	}
 	run, err := info.Client.ExecuteWorkflow(
 		ctx,
