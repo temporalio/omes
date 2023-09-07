@@ -36,10 +36,13 @@ func ThroughputStressExecutorWorkflow(
 	if err != nil {
 		return err
 	}
-	visQuery := fmt.Sprintf("%s='%s'", throughputstress.ThroughputStressScenarioIdSearchAttribute, params.RunID)
 	// Complain if there are already existing workflows with the provided run id
 	var count int64
-	err = workflow.ExecuteActivity(actCtx, activityStub.VisibilityCount, visQuery).Get(ctx, &count)
+	err = workflow.ExecuteActivity(
+		actCtx,
+		activityStub.VisibilityCount,
+		fmt.Sprintf("%s='%s'", throughputstress.ThroughputStressScenarioIdSearchAttribute, params.RunID),
+	).Get(ctx, &count)
 	if count > 0 {
 		return fmt.Errorf("there are already %d workflows with scenario Run ID '%s'", count, params.RunID)
 	}
@@ -109,7 +112,11 @@ func ThroughputStressExecutorWorkflow(
 	})
 	err = workflow.ExecuteActivity(visCountCtx, activityStub.VisibilityCountMatches,
 		&VisibilityCountMatchesInput{
-			Query:    visQuery, // TODO: Should include status check
+			Query: fmt.Sprintf(
+				"%s='%s' AND (ExecutionStatus = 'Completed' OR ExecutionStatus = 'ContinuedAsNew')",
+				throughputstress.ThroughputStressScenarioIdSearchAttribute,
+				params.RunID,
+			),
 			Expected: completedWorkflowCount,
 		}).Get(ctx, nil)
 
