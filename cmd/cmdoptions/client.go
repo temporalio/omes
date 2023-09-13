@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-
 	"github.com/spf13/pflag"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -16,6 +15,8 @@ type ClientOptions struct {
 	Address string
 	// Temporal namespace
 	Namespace string
+	// Enable TLS
+	EnableTLS bool
 	// TLS client cert
 	ClientCertPath string
 	// TLS client private key
@@ -33,6 +34,8 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 			return nil, fmt.Errorf("failed to load certs: %s", err)
 		}
 		return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
+	} else if c.EnableTLS {
+		return &tls.Config{}, nil
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
 	}
@@ -73,6 +76,7 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
 	fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
+	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 }
@@ -84,6 +88,9 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	}
 	if c.Namespace != "" {
 		flags = append(flags, "--namespace", c.Namespace)
+	}
+	if c.EnableTLS {
+		flags = append(flags, "--tls")
 	}
 	if c.ClientCertPath != "" {
 		flags = append(flags, "--tls-cert-path", c.ClientCertPath)
