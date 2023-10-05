@@ -1,39 +1,40 @@
 package cmdoptions
 
 import (
-	"github.com/spf13/pflag"
 	"strconv"
+
+	"github.com/spf13/pflag"
 )
 
 // WorkerOptions for setting up worker parameters
 type WorkerOptions struct {
-	MaxConcurrentActivityTaskPollers       int
-	MaxConcurrentWorkflowTaskPollers       int
-	MaxConcurrentActivityExecutionSize     int
-	MaxConcurrentWorkflowTaskExecutionSize int
+	MaxConcurrentActivityPollers int
+	MaxConcurrentWorkflowPollers int
+	MaxConcurrentActivities      int
+	MaxConcurrentWorkflowTasks   int
 }
 
 // AddCLIFlags adds the relevant flags to populate the options struct.
 func (m *WorkerOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
-	fs.IntVar(&m.MaxConcurrentActivityTaskPollers, prefix+"max-concurrent-activity-task-pollers", 0, "Max concurrent activity task pollers")
-	fs.IntVar(&m.MaxConcurrentWorkflowTaskPollers, prefix+"max-concurrent-workflow-task-pollers", 0, "Max concurrent workflow task pollers")
-	fs.IntVar(&m.MaxConcurrentActivityExecutionSize, prefix+"max-concurrent-activity-execution-size", 0, "Max concurrent activity execution size")
-	fs.IntVar(&m.MaxConcurrentWorkflowTaskExecutionSize, prefix+"max-concurrent-workflow-task-execution-size", 0, "Max concurrent workflow task execution size")
+	fs.IntVar(&m.MaxConcurrentActivityPollers, prefix+"max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
+	fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
+	fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
+	fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
 }
 
 // ToFlags converts these options to string flags.
 func (m *WorkerOptions) ToFlags() (flags []string) {
-	if m.MaxConcurrentActivityTaskPollers != 0 {
-		flags = append(flags, "--max-concurrent-activity-task-pollers", strconv.Itoa(m.MaxConcurrentActivityTaskPollers))
+	if m.MaxConcurrentActivityPollers != 0 {
+		flags = append(flags, "--max-concurrent-activity-pollers", strconv.Itoa(m.MaxConcurrentActivityPollers))
 	}
-	if m.MaxConcurrentWorkflowTaskPollers != 0 {
-		flags = append(flags, "--max-concurrent-workflow-task-pollers", strconv.Itoa(m.MaxConcurrentWorkflowTaskPollers))
+	if m.MaxConcurrentWorkflowPollers != 0 {
+		flags = append(flags, "--max-concurrent-workflow-pollers", strconv.Itoa(m.MaxConcurrentWorkflowPollers))
 	}
-	if m.MaxConcurrentActivityExecutionSize != 0 {
-		flags = append(flags, "--max-concurrent-activity-execution-size", strconv.Itoa(m.MaxConcurrentActivityExecutionSize))
+	if m.MaxConcurrentActivities != 0 {
+		flags = append(flags, "--max-concurrent-activities", strconv.Itoa(m.MaxConcurrentActivities))
 	}
-	if m.MaxConcurrentWorkflowTaskExecutionSize != 0 {
-		flags = append(flags, "--max-concurrent-workflow-task-execution-size", strconv.Itoa(m.MaxConcurrentWorkflowTaskExecutionSize))
+	if m.MaxConcurrentWorkflowTasks != 0 {
+		flags = append(flags, "--max-concurrent-workflow-tasks", strconv.Itoa(m.MaxConcurrentWorkflowTasks))
 	}
 	return
 }

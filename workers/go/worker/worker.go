@@ -3,12 +3,11 @@ package worker
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
-
-	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/cmd/cmdoptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -62,10 +61,10 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 		taskQueue := taskQueue
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{
-				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivityExecutionSize,
-				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTaskExecutionSize,
-				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityTaskPollers,
-				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowTaskPollers,
+				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
+				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
+				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
+				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
