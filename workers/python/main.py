@@ -49,22 +49,20 @@ async def run():
     parser.add_argument(
         "--max-concurrent-activity-pollers",
         type=int,
-        help="Max concurrent activity pollers"
+        help="Max concurrent activity pollers",
     )
     parser.add_argument(
         "--max-concurrent-workflow-pollers",
         type=int,
-        help="Max concurrent workflow pollers"
+        help="Max concurrent workflow pollers",
     )
     parser.add_argument(
-        "--max-concurrent-activities",
-        type=int,
-        help="Max concurrent activities"
+        "--max-concurrent-activities", type=int, help="Max concurrent activities"
     )
     parser.add_argument(
         "--max-concurrent-workflow-tasks",
         type=int,
-        help="Max concurrent workflow tasks "
+        help="Max concurrent workflow tasks",
     )
     # Log arguments
     parser.add_argument(
@@ -163,13 +161,19 @@ async def run():
 
     worker_kwargs = {}
     if args.max_concurrent_activity_pollers is not None:
-        worker_kwargs['max_concurrent_activity_task_polls'] = args.max_concurrent_activity_pollers
+        worker_kwargs[
+            "max_concurrent_activity_task_polls"
+        ] = args.max_concurrent_activity_pollers
     if args.max_concurrent_workflow_pollers is not None:
-        worker_kwargs['max_concurrent_workflow_task_polls'] = args.max_concurrent_workflow_pollers
+        worker_kwargs[
+            "max_concurrent_workflow_task_polls"
+        ] = args.max_concurrent_workflow_pollers
     if args.max_concurrent_activities is not None:
-        worker_kwargs['max_concurrent_activities'] = args.max_concurrent_activities
+        worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:
-        worker_kwargs['max_concurrent_workflow_tasks'] = args.max_concurrent_workflow_tasks
+        worker_kwargs[
+            "max_concurrent_workflow_tasks"
+        ] = args.max_concurrent_workflow_tasks
 
     # Start all workers, throwing on first exception
     workers = [
