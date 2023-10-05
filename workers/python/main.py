@@ -61,6 +61,7 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
+    parser.add_argument("--tls", action="store_true", help="Enable TLS")
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"
     )
@@ -87,6 +88,8 @@ async def run():
         tls_config = TLSConfig(client_cert=client_cert, client_private_key=client_key)
     elif args.tls_key_path and not args.tls_cert_path:
         raise ValueError("Client key specified, but not client cert!")
+    elif args.tls:
+        tls_config = TLSConfig()
 
     # Configure logging
     logger = logging.getLogger()

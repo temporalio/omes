@@ -93,8 +93,8 @@ func (r *workerRunner) run(ctx context.Context) error {
 	// Run an embedded server if requested
 	if r.embeddedServer || r.embeddedServerAddress != "" {
 		// Intentionally don't use context, will stop on defer
-		if r.clientOptions.ClientCertPath != "" || r.clientOptions.ClientKeyPath != "" {
-			return fmt.Errorf("cannot give TLS certs with embedded server")
+		if r.clientOptions.EnableTLS || r.clientOptions.ClientCertPath != "" || r.clientOptions.ClientKeyPath != "" {
+			return fmt.Errorf("cannot use TLS with embedded server")
 		} else if r.clientOptions.Address != client.DefaultHostPort {
 			return fmt.Errorf("cannot supply non-default client address when using embedded server")
 		}
