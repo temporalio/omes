@@ -34,10 +34,11 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 			return nil, fmt.Errorf("failed to load certs: %s", err)
 		}
 		return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
-	} else if c.EnableTLS {
-		return &tls.Config{}, nil
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
+	}
+	if c.EnableTLS {
+		return &tls.Config{}, nil
 	}
 	return nil, nil
 }
