@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go.temporal.io/sdk/client"
+	"time"
 )
 
 // WorkflowExecutor is a very dumb executor that does nothing but run the specified workflow.
@@ -15,6 +16,8 @@ type WorkflowExecutor struct {
 }
 
 func (w WorkflowExecutor) Run(ctx context.Context, info ScenarioInfo) error {
+	executeTimer := info.MetricsHandler.WithTags(
+		map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram")
 	workflowOpts := client.StartWorkflowOptions{
 		ID:        fmt.Sprintf("%s-driver", info.TaskQueue()),
 		TaskQueue: info.TaskQueue(),
@@ -22,6 +25,7 @@ func (w WorkflowExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if w.StartOptsModifier != nil {
 		w.StartOptsModifier(info, &workflowOpts)
 	}
+	startTime := time.Now()
 	run, err := info.Client.ExecuteWorkflow(
 		ctx,
 		workflowOpts,
@@ -35,5 +39,6 @@ func (w WorkflowExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if err != nil {
 		return err
 	}
+	executeTimer.Record(time.Since(startTime))
 	return nil
 }

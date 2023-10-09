@@ -55,6 +55,8 @@ func ThroughputStressExecutorWorkflow(
 	completedTopLevelWorkflowCount := 0
 	completedWorkflowCount := 0
 
+	// If/when necessary, this could be changed to have multiple levels of children to allow even
+	// greater fan-out
 	for i := 0; i < params.MaxConcurrent; i++ {
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			for {
