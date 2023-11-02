@@ -1,0 +1,328 @@
+syntax = "proto3";
+
+package temporal.omes.kitchen_sink;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+import "child_workflow.proto";
+import "activity.proto";
+
+import "temporal/api/common/v1/message.proto";
+import "temporal/api/failure/v1/message.proto";
+import "temporal/api/enums/v1/workflow.proto";
+
+// The input to the test overall. A copy of this constitutes everything that is needed to reproduce
+// the test.
+message TestInput {
+  WorkflowInput workflow_input = 1;
+  ClientSequence client_sequence = 2;
+  // Technically worker options should be known as well. We don't have any common format for that
+  // and creating one feels overkill to start with. Requiring the harness to print the config at
+  // startup seems good enough for now.
+}
+
+// All the client actions that will be taken over the course of this test
+message ClientSequence {
+  repeated ClientActionSet action_sets = 1;
+}
+
+// A set of client actions to execute. Client actions are always executed concurrently, since
+// sequential execution can be represented by a series of 1-size action sets.
+message ClientActionSet {
+  repeated ClientAction actions = 1;
+}
+
+message ClientAction {
+  oneof variant {
+    DoSignal do_signal = 1;
+    DoQuery do_query = 2;
+    DoUpdate do_update = 3;
+  }
+}
+
+message DoSignal {
+  oneof variant {
+    // An signal handler must exist named `do_actions_signal` which is responsible for executing
+    // the action set.
+    ActionSet do_actions = 1;
+    // Send an arbitrary signal
+    HandlerInvocation custom = 2;
+  }
+}
+
+message DoQuery {
+  oneof variant {
+    // A query must exist named `report_state` which returns the `WorkflowState` message. The input
+    // is pointless and only exists to allow testing of variably-sized query args.
+    temporal.api.common.v1.Payloads report_state = 1;
+    // Send an arbitrary query
+    HandlerInvocation custom = 2;
+  }
+}
+
+message DoUpdate {
+  oneof variant {
+    // An update must exist named `do_actions_update` which does the same thing the signal handler
+    // would do when given the provided action set. The handler should return the `WorkflowState`
+    // when done.
+    ActionSet do_actions = 1;
+    // This update request must be rejected by the workflow using a handler named `always_reject`
+    google.protobuf.Empty reject_me = 2;
+    // This update request must be accepted and then failed by the workflow using a handler named
+    // `always_fail`
+    temporal.api.failure.v1.Failure fail_update = 3;
+    // Send an arbitrary update request
+    HandlerInvocation custom = 4;
+  }
+}
+
+message HandlerInvocation {
+  string name = 1;
+  repeated temporal.api.common.v1.Payload args = 2;
+}
+
+// Each workflow must maintain an instance of this state
+message WorkflowState {
+  map<string, string> kvs = 1;
+}
+
+message WorkflowInput {
+  repeated ActionSet initial_actions = 1;
+}
+
+// A set of actions to execute concurrently or sequentially. It is necessary to be able to represent
+// sequential execution without multiple 1-size action sets, as that implies the receipt of a signal
+// between each of those sets, which may not be desired.
+//
+// All actions are handled before proceeding to the next action set, unless one of those actions
+// would cause the workflow to complete/fail/CAN.
+message ActionSet {
+  repeated Action actions = 1;
+  bool concurrent = 2;
+}
+
+message Action {
+  oneof variant {
+    TimerAction timer = 1;
+    ExecuteActivityAction exec_activity = 2;
+    ExecuteChildWorkflowAction exec_child_workflow = 3;
+    AwaitSignalAction await_signal = 4;
+    AwaitUpdateAction await_update = 5;
+    SendSignalAction send_signal = 6;
+    SetPatchMarkerAction set_patch_marker = 7;
+    UpsertSearchAttributesAction upsert_search_attributes = 8;
+    UpsertMemoAction upsert_memo = 9;
+    WorkflowState set_workflow_state = 10;
+
+    ReturnResultAction return_result = 11;
+    ReturnErrorAction return_error = 12;
+    ContinueAsNewAction continue_as_new = 13;
+
+    ActionSet nested_action_set = 14;
+  }
+}
+
+// The following actions and the messages they depend on are largely duplicative of Core/Server's
+// commands, but some care is taken to remove things that would be uninteresting for these tests.
+
+// All cancellable commands will have this available as a field. If it is set, the command
+// should be cancelled at the specified juncture.
+message CancelCondition {
+  oneof condition {
+    google.protobuf.Empty before_started = 1;
+    google.protobuf.Empty after_started = 2;
+    google.protobuf.Empty after_completed = 3;
+  }
+}
+
+message TimerAction {
+  uint64 milliseconds = 1;
+}
+
+message ExecuteActivityAction {
+  string activity_id = 1;
+  string activity_type = 2;
+  // The name of the task queue to place this activity request in
+  string task_queue = 3;
+  map<string, temporal.api.common.v1.Payload> headers = 4;
+  // Arguments/input to the activity. Called "input" upstream.
+  repeated temporal.api.common.v1.Payload arguments = 5;
+  // Indicates how long the caller is willing to wait for an activity completion. Limits how long
+  // retries will be attempted. Either this or start_to_close_timeout_seconds must be specified.
+  // When not specified defaults to the workflow execution timeout.
+  google.protobuf.Duration schedule_to_close_timeout = 6;
+  // Limits time an activity task can stay in a task queue before a worker picks it up. This
+  // timeout is always non retryable as all a retry would achieve is to put it back into the same
+  // queue. Defaults to schedule_to_close_timeout or workflow execution timeout if not specified.
+  google.protobuf.Duration schedule_to_start_timeout = 7;
+  // Maximum time an activity is allowed to execute after a pick up by a worker. This timeout is
+  // always retryable. Either this or schedule_to_close_timeout must be specified.
+  google.protobuf.Duration start_to_close_timeout = 8;
+  // Maximum time allowed between successful worker heartbeats.
+  google.protobuf.Duration heartbeat_timeout = 9;
+  // Activities are provided by a default retry policy controlled through the service dynamic
+  // configuration. Retries are happening up to schedule_to_close_timeout. To disable retries set
+  // retry_policy.maximum_attempts to 1.
+  temporal.api.common.v1.RetryPolicy retry_policy = 10;
+  // Whether or not this activity will be a local activity
+  oneof locality {
+    google.protobuf.Empty is_local = 11;
+    RemoteActivityOptions remote = 12;
+  }
+  // If set, when to cancel the activity
+  CancelCondition cancel_condition = 13;
+}
+
+message ExecuteChildWorkflowAction {
+  string namespace = 2;
+  string workflow_id = 3;
+  string workflow_type = 4;
+  string task_queue = 5;
+  repeated temporal.api.common.v1.Payload input = 6;
+  // Total workflow execution timeout including retries and continue as new.
+  google.protobuf.Duration workflow_execution_timeout = 7;
+  // Timeout of a single workflow run.
+  google.protobuf.Duration workflow_run_timeout = 8;
+  // Timeout of a single workflow task.
+  google.protobuf.Duration workflow_task_timeout = 9;
+  // Default: PARENT_CLOSE_POLICY_TERMINATE.
+  ParentClosePolicy parent_close_policy = 10;
+  // string control = 11; (unused from StartChildWorkflowExecutionCommandAttributes)
+  // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
+  temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 12;
+  temporal.api.common.v1.RetryPolicy retry_policy = 13;
+  string cron_schedule = 14;
+  // Header fields
+  map<string, temporal.api.common.v1.Payload> headers = 15;
+  // Memo fields
+  map<string, temporal.api.common.v1.Payload> memo = 16;
+  // Search attributes
+  map<string, temporal.api.common.v1.Payload> search_attributes = 17;
+  // Defines behaviour of the underlying workflow when child workflow cancellation has been requested.
+  temporal.omes.kitchen_sink.child_workflow.ChildWorkflowCancellationType cancellation_type = 18;
+  // Whether this child should run on a worker with a compatible build id or not.
+  VersioningIntent versioning_intent = 19;
+}
+
+message AwaitSignalAction {
+  string signal_name = 1;
+}
+
+message AwaitUpdateAction {
+  string update_name = 1;
+}
+
+message SendSignalAction {
+  // What workflow is being targeted
+  string workflow_id = 1;
+  string run_id = 2;
+  // Name of the signal handler
+  string signal_name = 3;
+  // Arguments for the handler
+  repeated temporal.api.common.v1.Payload args = 4;
+  // Headers to attach to the signal
+  map<string, temporal.api.common.v1.Payload> headers = 5;
+}
+
+// patched or getVersion API
+// For getVersion SDKs, use `DEFAULT_VERSION, 1` as the numeric arguments,
+message SetPatchMarkerAction {
+  // A user-chosen identifier for this patch. If the same identifier is used in multiple places in
+  // the code, those places are considered to be versioned as one unit. IE: The check call will
+  // return the same result for all of them
+  string patch_id = 1;
+  // TODO Not sure how we could use this in these tests
+  // Can be set to true to indicate that branches using this change are being removed, and all
+  // future worker deployments will only have the "with change" code in them.
+  bool deprecated = 2;
+}
+
+message UpsertSearchAttributesAction {
+  // SearchAttributes fields - equivalent to indexed_fields on api. Key = search index, Value =
+  // value
+  map<string, temporal.api.common.v1.Payload> search_attributes = 1;
+}
+
+message UpsertMemoAction {
+  // Update the workflow memo with the provided values. The values will be merged with
+  // the existing memo. If the user wants to delete values, a default/empty Payload should be
+  // used as the value for the key being deleted.
+  temporal.api.common.v1.Memo upserted_memo = 1;
+}
+
+message ReturnResultAction {
+  temporal.api.common.v1.Payload return_this = 1;
+}
+
+message ReturnErrorAction {
+  temporal.api.failure.v1.Failure failure = 1;
+}
+
+message ContinueAsNewAction {
+  // The identifier the lang-specific sdk uses to execute workflow code
+  string workflow_type = 1;
+  // Task queue for the new workflow execution
+  string task_queue = 2;
+  // Inputs to the workflow code. Should be specified. Will not re-use old arguments, as that
+  // typically wouldn't make any sense.
+  repeated temporal.api.common.v1.Payload arguments = 3;
+  // Timeout for a single run of the new workflow. Will not re-use current workflow's value.
+  google.protobuf.Duration workflow_run_timeout = 4;
+  // Timeout of a single workflow task. Will not re-use current workflow's value.
+  google.protobuf.Duration workflow_task_timeout = 5;
+  // If set, the new workflow will have this memo. If unset, re-uses the current workflow's memo
+  map<string, temporal.api.common.v1.Payload> memo = 6;
+  // If set, the new workflow will have these headers. Will *not* re-use current workflow's
+  // headers otherwise.
+  map<string, temporal.api.common.v1.Payload> headers = 7;
+  // If set, the new workflow will have these search attributes. If unset, re-uses the current
+  // workflow's search attributes.
+  map<string, temporal.api.common.v1.Payload> search_attributes = 8;
+  // If set, the new workflow will have this retry policy. If unset, re-uses the current
+  // workflow's retry policy.
+  temporal.api.common.v1.RetryPolicy retry_policy = 9;
+  // Whether the continued workflow should run on a worker with a compatible build id or not.
+  VersioningIntent versioning_intent = 10;
+}
+
+message RemoteActivityOptions {
+  // Defines how the workflow will wait (or not) for cancellation of the activity to be confirmed
+  temporal.omes.kitchen_sink.activity.ActivityCancellationType cancellation_type = 1;
+  // If set, the worker will not tell the service that it can immediately start executing this
+  // activity. When unset/default, workers will always attempt to do so if activity execution
+  // slots are available.
+  bool do_not_eagerly_execute = 2;
+  // Whether this activity should run on a worker with a compatible build id or not.
+  VersioningIntent versioning_intent = 3;
+}
+
+// Used by the service to determine the fate of a child workflow
+// in case its parent is closed.
+enum ParentClosePolicy {
+  // Let's the server set the default.
+  PARENT_CLOSE_POLICY_UNSPECIFIED = 0;
+  // Terminate means terminating the child workflow.
+  PARENT_CLOSE_POLICY_TERMINATE = 1;
+  // Abandon means not doing anything on the child workflow.
+  PARENT_CLOSE_POLICY_ABANDON = 2;
+  // Cancel means requesting cancellation on the child workflow.
+  PARENT_CLOSE_POLICY_REQUEST_CANCEL = 3;
+}
+
+// An indication of user's intent concerning what Build ID versioning approach should be used for
+// a specific command
+enum VersioningIntent {
+  // Indicates that core should choose the most sensible default behavior for the type of
+  // command, accounting for whether the command will be run on the same task queue as the current
+  // worker.
+  UNSPECIFIED = 0;
+  // Indicates that the command should run on a worker with compatible version if possible. It may
+  // not be possible if the target task queue does not also have knowledge of the current worker's
+  // build ID.
+  COMPATIBLE = 1;
+  // Indicates that the command should run on the target task queue's current overall-default
+  // build ID.
+  DEFAULT = 2;
+}
