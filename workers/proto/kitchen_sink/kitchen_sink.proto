@@ -28,10 +28,10 @@ message ClientSequence {
   repeated ClientActionSet action_sets = 1;
 }
 
-// A set of client actions to execute. Client actions are always executed concurrently, since
-// sequential execution can be represented by a series of 1-size action sets.
+// A set of client actions to execute.
 message ClientActionSet {
   repeated ClientAction actions = 1;
+  bool concurrent = 2;
 }
 
 message ClientAction {
@@ -39,6 +39,7 @@ message ClientAction {
     DoSignal do_signal = 1;
     DoQuery do_query = 2;
     DoUpdate do_update = 3;
+    ClientActionSet nested_actions = 4;
   }
 }
 
@@ -66,15 +67,14 @@ message DoUpdate {
   oneof variant {
     // An update must exist named `do_actions_update` which does the same thing the signal handler
     // would do when given the provided action set. The handler should return the `WorkflowState`
-    // when done.
+    // when done. You may also include a `ReturnErrorAction` or `ContinueAsNewAction` in the set
+    // to exit the handler in those ways.
     ActionSet do_actions = 1;
-    // This update request must be rejected by the workflow using a handler named `always_reject`
+    // This update request must be rejected (at validation time) by the workflow using a handler
+    // named `always_reject`
     google.protobuf.Empty reject_me = 2;
-    // This update request must be accepted and then failed by the workflow using a handler named
-    // `always_fail`
-    temporal.api.failure.v1.Failure fail_update = 3;
     // Send an arbitrary update request
-    HandlerInvocation custom = 4;
+    HandlerInvocation custom = 3;
   }
 }
 
@@ -108,9 +108,9 @@ message Action {
     TimerAction timer = 1;
     ExecuteActivityAction exec_activity = 2;
     ExecuteChildWorkflowAction exec_child_workflow = 3;
-    AwaitSignalAction await_signal = 4;
-    AwaitUpdateAction await_update = 5;
-    SendSignalAction send_signal = 6;
+    AwaitWorkflowState await_workflow_state = 4;
+    SendSignalAction send_signal = 5;
+    CancelWorkflowAction cancel_workflow = 6;
     SetPatchMarkerAction set_patch_marker = 7;
     UpsertSearchAttributesAction upsert_search_attributes = 8;
     UpsertMemoAction upsert_memo = 9;
@@ -128,11 +128,18 @@ message Action {
 // commands, but some care is taken to remove things that would be uninteresting for these tests.
 
 // All cancellable commands will have this available as a field. If it is set, the command
-// should be cancelled at the specified juncture.
+// should be cancelled at the specified juncture (if possible, not all command types will be
+// cancellable at all stages. Is is up to the generator to produce valid conditions).
 message CancelCondition {
   oneof condition {
+    // Cancel the command before it's begun - IE: Cancel it immediately after starting it with
+    // no await, within the same workflow task.
     google.protobuf.Empty before_started = 1;
+    // Cancel the command after it's been started. Not all SDKs will know when a command is started
+    // and in those cases they should issue the cancellation in the next workflow task after
+    // creating the command.
     google.protobuf.Empty after_started = 2;
+    // Cancel the command after it's already completed.
     google.protobuf.Empty after_completed = 3;
   }
 }
@@ -189,7 +196,6 @@ message ExecuteChildWorkflowAction {
   google.protobuf.Duration workflow_task_timeout = 9;
   // Default: PARENT_CLOSE_POLICY_TERMINATE.
   ParentClosePolicy parent_close_policy = 10;
-  // string control = 11; (unused from StartChildWorkflowExecutionCommandAttributes)
   // Default: WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE.
   temporal.api.enums.v1.WorkflowIdReusePolicy workflow_id_reuse_policy = 12;
   temporal.api.common.v1.RetryPolicy retry_policy = 13;
@@ -204,14 +210,14 @@ message ExecuteChildWorkflowAction {
   temporal.omes.kitchen_sink.child_workflow.ChildWorkflowCancellationType cancellation_type = 18;
   // Whether this child should run on a worker with a compatible build id or not.
   VersioningIntent versioning_intent = 19;
+  // If set, when to cancel the child
+  CancelCondition cancel_condition = 20;
 }
 
-message AwaitSignalAction {
-  string signal_name = 1;
-}
-
-message AwaitUpdateAction {
-  string update_name = 1;
+// Wait for the workflow state to have a matching k/v entry
+message AwaitWorkflowState {
+  string key = 1;
+  string value = 2;
 }
 
 message SendSignalAction {
@@ -224,6 +230,14 @@ message SendSignalAction {
   repeated temporal.api.common.v1.Payload args = 4;
   // Headers to attach to the signal
   map<string, temporal.api.common.v1.Payload> headers = 5;
+  // If set, when to cancel the sending of the signal (only before-sent is valid)
+  CancelCondition cancel_condition = 6;
+}
+
+// Cancel an external workflow (may be a child)
+message CancelWorkflowAction {
+  string workflow_id = 1;
+  string run_id = 2;
 }
 
 // patched or getVersion API
