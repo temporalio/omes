@@ -155,7 +155,6 @@ message TimerAction {
 }
 
 message ExecuteActivityAction {
-  string activity_id = 1;
   string activity_type = 2;
   // The name of the task queue to place this activity request in
   string task_queue = 3;

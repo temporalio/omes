@@ -3,10 +3,25 @@ pub mod temporal {
         pub mod kitchen_sink {
             include!(concat!(env!("OUT_DIR"), "/temporal.omes.kitchen_sink.rs"));
             pub mod activity {
-                include!(concat!(env!("OUT_DIR"), "/temporal.omes.kitchen_sink.activity.rs"));
+                include!(concat!(
+                    env!("OUT_DIR"),
+                    "/temporal.omes.kitchen_sink.activity.rs"
+                ));
             }
             pub mod child_workflow {
-                include!(concat!(env!("OUT_DIR"), "/temporal.omes.kitchen_sink.child_workflow.rs"));
+                include!(concat!(
+                    env!("OUT_DIR"),
+                    "/temporal.omes.kitchen_sink.child_workflow.rs"
+                ));
+            }
+
+            impl HandlerInvocation {
+                pub fn nonexistent() -> Self {
+                    HandlerInvocation {
+                        name: "nonexistent handler on purpose".to_string(),
+                        args: vec![],
+                    }
+                }
             }
         }
     }
