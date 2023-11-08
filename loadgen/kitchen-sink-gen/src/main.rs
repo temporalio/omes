@@ -9,6 +9,7 @@ use crate::protos::temporal::{
         WorkflowInput,
     },
 };
+use anyhow::Error;
 use arbitrary::{Arbitrary, Unstructured};
 use clap::Parser;
 use prost::Message;
@@ -19,6 +20,21 @@ use std::{cell::RefCell, io::Write, ops::RangeInclusive, path::PathBuf, time::Du
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum Command {
+    /// Generate test input.
+    Generate(GenerateCmd),
+    /// Generate the standard example test input, useful for testing kitchen sink implementations
+    /// with a reasonably small input.
+    Example(ExampleCmd),
+}
+
+#[derive(clap::Args, Debug)]
+struct GenerateCmd {
     /// Use the specified seed as input, guaranteeing the same output as any invocation of the tool
     /// which used the same seed.
     #[arg(short, long)]
@@ -56,9 +72,59 @@ struct GeneratorConfig {
     max_payload_size: usize,
 }
 
-fn main() -> Result<(), anyhow::Error> {
-    let args = Args::parse();
+#[derive(clap::Args, Debug)]
+struct ExampleCmd {
+    /// Dump the test input as proto binary to the provided file path
+    #[arg()]
+    proto_output: PathBuf,
+}
 
+fn main() -> Result<(), Error> {
+    let args = Args::parse();
+    match args.command {
+        Command::Example(ex) => {
+            example(ex)?;
+        }
+        Command::Generate(args) => {
+            generate(args)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn example(args: ExampleCmd) -> Result<(), Error> {
+    let mut example_input = TestInput::default();
+    let mut client_sequence = ClientSequence::default();
+    client_sequence.action_sets = vec![ClientActionSet {
+        actions: vec![
+            mk_client_signal_action([TimerAction {
+                milliseconds: 100,
+                awaitable_choice: None,
+            }
+            .into()]),
+            mk_client_signal_action([
+                TimerAction {
+                    milliseconds: 100,
+                    awaitable_choice: None,
+                }
+                .into(),
+                ExecuteActivityAction {
+                    activity_type: "echo".to_string(),
+                    schedule_to_start_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                    ..Default::default()
+                }
+                .into(),
+            ]),
+        ],
+        concurrent: false,
+    }];
+    example_input.client_sequence = Some(client_sequence);
+    dump_to_file(example_input, args.proto_output)?;
+    Ok(())
+}
+
+fn generate(args: GenerateCmd) -> Result<(), Error> {
     let (mut rng, seed) = if let Some(seed) = args.explicit_seed {
         (rand::rngs::StdRng::seed_from_u64(seed), seed)
     } else {
@@ -76,14 +142,9 @@ fn main() -> Result<(), anyhow::Error> {
     let mut raw_dat = [0u8; 1024 * 100];
     rng.fill(&mut raw_dat[..]);
     let mut unstructured = Unstructured::new(&raw_dat);
-    let generated_input: TestInput = unstructured
-        .arbitrary()
-        .expect("Can generate arbitrary input");
+    let generated_input: TestInput = unstructured.arbitrary()?;
     if let Some(path) = args.proto_output {
-        let mut file = std::fs::File::create(path)?;
-        let mut buf = Vec::with_capacity(1024 * 10);
-        generated_input.encode(&mut buf)?;
-        file.write_all(&buf)?;
+        dump_to_file(generated_input, path)?;
     }
     Ok(())
 }
@@ -308,4 +369,32 @@ fn vec_of_size<'a, T: Arbitrary<'a>>(
         vec.push(u.arbitrary()?)
     }
     Ok(vec)
+}
+
+fn dump_to_file(generated_input: TestInput, path: PathBuf) -> Result<(), Error> {
+    let mut file = std::fs::File::create(path)?;
+    let mut buf = Vec::with_capacity(1024 * 10);
+    generated_input.encode(&mut buf)?;
+    file.write_all(&buf)?;
+    Ok(())
+}
+
+fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -> ClientAction {
+    ClientAction {
+        variant: Some(client_action::Variant::DoSignal(DoSignal {
+            variant: Some(do_signal::Variant::DoActions(mk_action_set(actions))),
+        })),
+    }
+}
+
+fn mk_action_set(actions: impl IntoIterator<Item = action::Variant>) -> ActionSet {
+    ActionSet {
+        actions: actions
+            .into_iter()
+            .map(|variant| Action {
+                variant: Some(variant),
+            })
+            .collect(),
+        concurrent: true,
+    }
 }
