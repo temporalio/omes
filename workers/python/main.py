@@ -95,7 +95,7 @@ async def run():
         raise ValueError("Task queue suffix start after end")
 
     # Configure TLS
-    tls_config = TLSConfig()
+    tls_config = None
     if args.tls_cert_path:
         if not args.tls_key_path:
             raise ValueError("Client cert specified, but not client key!")
