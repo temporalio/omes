@@ -1,4 +1,5 @@
 use prost_build::protoc_from_env;
+use std::path::PathBuf;
 use std::process::Command;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,8 +29,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     cmd.arg("--python_out=../../workers/python/protos");
     cmd.arg("--pyi_out=../../workers/python/protos");
-    dbg!(&cmd);
-    cmd.output()?;
+    if !PathBuf::from("../../workers/python/protos").exists() {
+        std::fs::create_dir_all("../../workers/python/protos")?;
+    }
+    let cmd_res = cmd.status()?;
+    assert!(cmd_res.success(), "python protoc failed");
 
     Ok(())
 }

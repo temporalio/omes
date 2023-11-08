@@ -184,7 +184,7 @@ impl<'a> Arbitrary<'a> for WorkflowInput {
 impl<'a> Arbitrary<'a> for ClientSequence {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let num_action_sets = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_action_sets);
-        let mut action_sets = vec_of_size(u, num_action_sets)?;
+        let action_sets = vec_of_size(u, num_action_sets)?;
         Ok(Self { action_sets })
     }
 }
