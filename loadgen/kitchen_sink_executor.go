@@ -3,29 +3,26 @@ package loadgen
 import (
 	"context"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 type KitchenSinkExecutor struct {
-	WorkflowParams kitchensink.WorkflowParams
+	TestInput *kitchensink.TestInput
 
 	// Called once on start
-	PrepareWorkflowParams func(context.Context, ScenarioInfo, *kitchensink.WorkflowParams) error
+	PrepareTestInput func(context.Context, ScenarioInfo, *kitchensink.TestInput) error
 
-	// Called for each iteration. Developers must not mutate any fields in or
-	// beneath Params, but only replace those fields (it is only shallow copied
-	// between each execution). Therefore to add an action to an action set, an
-	// entirely new slice must be created, do not append.
+	// Called for each iteration. TestInput is copied entirely into KitchenSinkWorkflowOptions on
+	// each iteration.
 	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
 
 	DefaultConfiguration RunConfiguration
 }
 
 func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
-	// Build base set of params
-	params := k.WorkflowParams
-	if k.PrepareWorkflowParams != nil {
-		if err := k.PrepareWorkflowParams(ctx, info, &params); err != nil {
+	if k.PrepareTestInput != nil {
+		if err := k.PrepareTestInput(ctx, info, k.TestInput); err != nil {
 			return err
 		}
 	}
@@ -34,8 +31,11 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
-			// Shallow copies params, users are expected not to mutate any slices
-			options.Params = params
+			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
+			if !ok {
+				panic("failed to clone test input")
+			}
+			options.Params = testInputClone
 			if k.UpdateWorkflowOptions != nil {
 				err := k.UpdateWorkflowOptions(ctx, run, &options)
 				if err != nil {

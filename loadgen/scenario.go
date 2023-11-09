@@ -168,14 +168,14 @@ func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 }
 
 type KitchenSinkWorkflowOptions struct {
-	Params       kitchensink.WorkflowParams
+	Params       *kitchensink.TestInput
 	StartOptions client.StartWorkflowOptions
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
 // completion ignoring its result.
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params)
+	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params.WorkflowInput)
 }
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,

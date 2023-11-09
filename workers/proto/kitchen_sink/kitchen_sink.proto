@@ -1,13 +1,10 @@
 syntax = "proto3";
 
 package temporal.omes.kitchen_sink;
+option go_package = "github.com/temporalio/omes/loadgen/kitchensink";
 
 import "google/protobuf/duration.proto";
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
-
-import "child_workflow.proto";
-import "activity.proto";
 
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
@@ -211,7 +208,7 @@ message ExecuteChildWorkflowAction {
   // Search attributes
   map<string, temporal.api.common.v1.Payload> search_attributes = 17;
   // Defines behaviour of the underlying workflow when child workflow cancellation has been requested.
-  temporal.omes.kitchen_sink.child_workflow.ChildWorkflowCancellationType cancellation_type = 18;
+  temporal.omes.kitchen_sink.ChildWorkflowCancellationType cancellation_type = 18;
   // Whether this child should run on a worker with a compatible build id or not.
   VersioningIntent versioning_intent = 19;
   AwaitableChoice awaitable_choice = 20;
@@ -305,7 +302,7 @@ message ContinueAsNewAction {
 
 message RemoteActivityOptions {
   // Defines how the workflow will wait (or not) for cancellation of the activity to be confirmed
-  temporal.omes.kitchen_sink.activity.ActivityCancellationType cancellation_type = 1;
+  temporal.omes.kitchen_sink.ActivityCancellationType cancellation_type = 1;
   // If set, the worker will not tell the service that it can immediately start executing this
   // activity. When unset/default, workers will always attempt to do so if activity execution
   // slots are available.
@@ -342,3 +339,28 @@ enum VersioningIntent {
   // build ID.
   DEFAULT = 2;
 }
+
+// Controls at which point to report back to lang when a child workflow is cancelled
+enum ChildWorkflowCancellationType {
+  // Do not request cancellation of the child workflow if already scheduled
+  CHILD_WF_ABANDON = 0;
+  // Initiate a cancellation request and immediately report cancellation to the parent.
+  CHILD_WF_TRY_CANCEL = 1;
+  // Wait for child cancellation completion.
+  CHILD_WF_WAIT_CANCELLATION_COMPLETED = 2;
+  // Request cancellation of the child and wait for confirmation that the request was received.
+  CHILD_WF_WAIT_CANCELLATION_REQUESTED = 3;
+}
+
+enum ActivityCancellationType {
+  // Initiate a cancellation request and immediately report cancellation to the workflow.
+  TRY_CANCEL = 0;
+  // Wait for activity cancellation completion. Note that activity must heartbeat to receive a
+  // cancellation notification. This can block the cancellation for a long time if activity
+  // doesn't heartbeat or chooses to ignore the cancellation request.
+  WAIT_CANCELLATION_COMPLETED = 1;
+  // Do not request cancellation of the activity and immediately report cancellation to the
+  // workflow
+  ABANDON = 2;
+}
+

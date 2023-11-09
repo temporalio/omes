@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import Any, Awaitable, Optional, Tuple
+
+import temporalio.workflow
+from temporalio.common import RetryPolicy
+from temporalio import exceptions, workflow
 
 from protos.kitchen_sink_pb2 import (
     WorkflowInput,
     Action,
     ActionSet,
     ExecuteActivityAction,
+    ActivityCancellationType,
 )
-from temporalio import exceptions, workflow
 
 
 @workflow.defn(name="kitchenSink")
@@ -44,6 +49,7 @@ class KitchenSinkWorkflow:
         # If these are non-concurrent, just execute and return if requested
         if not action_set.concurrent:
             for action in action_set.actions:
+                workflow.logger.info("Doing action " + str(action))
                 should_return, return_value = await self.handle_action(action)
                 if should_return:
                     return should_return, return_value
@@ -66,46 +72,58 @@ class KitchenSinkWorkflow:
         return should_return, return_value
 
     async def handle_action(self, action: Action) -> Tuple[bool, Any]:
-        if action.return_result:
+        if action.HasField("return_result"):
             return True, action.return_result.return_this
-        elif action.return_error:
+        elif action.HasField("return_error"):
             raise exceptions.ApplicationError(action.return_error.failure.message)
-        elif action.continue_as_new:
+        elif action.HasField("continue_as_new"):
             workflow.continue_as_new(action.continue_as_new.arguments)
-        elif action.timer:
+        elif action.HasField("timer"):
             await asyncio.sleep(action.timer.milliseconds / 1000)
-        elif action.exec_activity:
+        elif action.HasField("exec_activity"):
             await launch_activity(action.exec_activity)
             return False, None
-        elif action.exec_child_workflow:
+        elif action.HasField("exec_child_workflow"):
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
             # TODO: Raw input
             args = child_action.input
             await workflow.execute_child_workflow(child, args=args)
             return False, None
-        elif action.nested_action_set:
+        elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:
-            raise exceptions.ApplicationError("unrecognized action")
+            raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
         return False, None
 
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
+    workflow.logger.info("Should be running activity " + str(execute_activity))
+    workflow.logger.info(
+        "Has retry policy? " + str(execute_activity.HasField("retry_policy"))
+    )
     args = execute_activity.arguments
 
     if args is None:
         args = []
 
-    if execute_activity.is_local:
+    if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
             activity=execute_activity.activity_type,
             args=args,
-            schedule_to_close_timeout=execute_activity.schedule_to_close_timeout,
-            start_to_close_timeout=execute_activity.start_to_close_timeout,
-            schedule_to_start_timeout=execute_activity.schedule_to_start_timeout,
-            retry_policy=execute_activity.retry_policy,
+            schedule_to_close_timeout=timeout_or_none(
+                execute_activity, "schedule_to_close_timeout"
+            ),
+            start_to_close_timeout=timeout_or_none(
+                execute_activity, "start_to_close_timeout"
+            ),
+            schedule_to_start_timeout=timeout_or_none(
+                execute_activity, "schedule_to_start_timeout"
+            ),
+            retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
+            if execute_activity.HasField("retry_policy")
+            else None,
             # TODO: cancel type can be in local
         )
     else:
@@ -113,12 +131,49 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
             activity=execute_activity.activity_type,
             args=args,
             task_queue=execute_activity.task_queue,
-            schedule_to_close_timeout=execute_activity.schedule_to_close_timeout,
-            start_to_close_timeout=execute_activity.start_to_close_timeout,
-            schedule_to_start_timeout=execute_activity.schedule_to_start_timeout,
-            heartbeat_timeout=execute_activity.heartbeat_timeout,
-            retry_policy=execute_activity.retry_policy,
-            cancellation_type=execute_activity.remote.cancellation_type,
+            schedule_to_close_timeout=timeout_or_none(
+                execute_activity, "schedule_to_close_timeout"
+            ),
+            start_to_close_timeout=timeout_or_none(
+                execute_activity, "start_to_close_timeout"
+            ),
+            schedule_to_start_timeout=timeout_or_none(
+                execute_activity, "schedule_to_start_timeout"
+            ),
+            heartbeat_timeout=timeout_or_none(execute_activity, "heartbeat_timeout"),
+            retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
+            if execute_activity.HasField("retry_policy")
+            else None,
+            cancellation_type=convert_act_cancel_type(
+                execute_activity.remote.cancellation_type
+            ),
         )
     # TODO: Handle cancels
     return activity_task
+
+
+# Various proto conversions below ==============================================
+
+
+def timeout_or_none(
+    activity_action: ExecuteActivityAction, timeout_field: str
+) -> Optional[timedelta]:
+    if activity_action.HasField(timeout_field):
+        return timedelta(
+            seconds=getattr(activity_action, timeout_field).seconds,
+            microseconds=getattr(activity_action, timeout_field).nanos / 1000,
+        )
+    return None
+
+
+def convert_act_cancel_type(
+    ctype: ActivityCancellationType,
+) -> temporalio.workflow.ActivityCancellationType:
+    if ctype == ActivityCancellationType.TRY_CANCEL:
+        return temporalio.workflow.ActivityCancellationType.TRY_CANCEL
+    elif ctype == ActivityCancellationType.WAIT_CANCELLATION_COMPLETED:
+        return temporalio.workflow.ActivityCancellationType.WAIT_CANCELLATION_COMPLETED
+    elif ctype == ActivityCancellationType.ABANDON:
+        return temporalio.workflow.ActivityCancellationType.ABANDON
+    else:
+        raise NotImplementedError("Unknown cancellation type " + str(ctype))

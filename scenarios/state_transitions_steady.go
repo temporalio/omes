@@ -49,8 +49,12 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	)
 
 	// Execute initial workflow and get the transition count
-	workflowParams := kitchensink.WorkflowParams{
-		ActionSet: kitchensink.ActionSet{Actions: []*kitchensink.Action{kitchensink.NopActionExecuteActivity}},
+	workflowParams := &kitchensink.TestInput{
+		WorkflowInput: &kitchensink.WorkflowInput{
+			InitialActions: []*kitchensink.ActionSet{
+				kitchensink.NoOpSingleActivityActionSet(),
+			},
+		},
 	}
 	workflowRun, err := s.Client.ExecuteWorkflow(
 		ctx,

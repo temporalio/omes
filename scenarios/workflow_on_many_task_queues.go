@@ -14,8 +14,14 @@ func init() {
 			"Workers must be started with --task-queue-suffix-index-end as one less than task queue count here. " +
 			"Additional options: task-queue-count (required).",
 		Executor: loadgen.KitchenSinkExecutor{
-			WorkflowParams: kitchensink.NewWorkflowParams(kitchensink.NopActionExecuteActivity),
-			PrepareWorkflowParams: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.WorkflowParams) error {
+			TestInput: &kitchensink.TestInput{
+				WorkflowInput: &kitchensink.WorkflowInput{
+					InitialActions: []*kitchensink.ActionSet{
+						kitchensink.NoOpSingleActivityActionSet(),
+					},
+				},
+			},
+			PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
 				// Require task queue count
 				if opts.ScenarioOptionInt("task-queue-count", 0) == 0 {
 					return fmt.Errorf("task-queue-count option required")

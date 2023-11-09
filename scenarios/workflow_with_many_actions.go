@@ -12,9 +12,13 @@ func init() {
 		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities. " +
 			"Additional options: children-per-workflow (default 30), activities-per-workflow (default 30).",
 		Executor: loadgen.KitchenSinkExecutor{
-			PrepareWorkflowParams: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.WorkflowParams) error {
-				// We want these executed concurrently
-				params.ActionSet.Concurrent = true
+			PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
+				actionSet := &kitchensink.ActionSet{
+					Actions: []*kitchensink.Action{},
+					// We want these executed concurrently
+					Concurrent: true,
+				}
+				params.WorkflowInput.InitialActions[0] = actionSet
 
 				// Get options
 				children := opts.ScenarioOptionInt("children-per-workflow", 30)
@@ -23,19 +27,24 @@ func init() {
 
 				// Add children
 				if children > 0 {
-					params.ActionSet.Actions = append(params.ActionSet.Actions, &kitchensink.Action{
-						ExecuteChildWorkflow: &kitchensink.ExecuteChildWorkflow{
-							Count: children,
+					actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
+						Variant: &kitchensink.Action_ExecChildWorkflow{
+							ExecChildWorkflow: &kitchensink.ExecuteChildWorkflowAction{
+								// TODO: Fill in
+								WorkflowId:   "",
+								WorkflowType: "",
+							},
 						},
 					})
 				}
 
 				// Add activities
 				if activities > 0 {
-					params.ActionSet.Actions = append(params.ActionSet.Actions, &kitchensink.Action{
-						ExecuteActivity: &kitchensink.ExecuteActivityAction{
-							Name:  kitchensink.NopActivityName,
-							Count: activities,
+					actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
+						Variant: &kitchensink.Action_ExecActivity{
+							ExecActivity: &kitchensink.ExecuteActivityAction{
+								ActivityType: "noop",
+							},
 						},
 					})
 				}
