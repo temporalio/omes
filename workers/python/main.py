@@ -46,6 +46,24 @@ async def run():
         type=int,
         help="Inclusive end for task queue suffix range",
     )
+    parser.add_argument(
+        "--max-concurrent-activity-pollers",
+        type=int,
+        help="Max concurrent activity pollers",
+    )
+    parser.add_argument(
+        "--max-concurrent-workflow-pollers",
+        type=int,
+        help="Max concurrent workflow pollers",
+    )
+    parser.add_argument(
+        "--max-concurrent-activities", type=int, help="Max concurrent activities"
+    )
+    parser.add_argument(
+        "--max-concurrent-workflow-tasks",
+        type=int,
+        help="Max concurrent workflow tasks",
+    )
     # Log arguments
     parser.add_argument(
         "--log-level", default="info", help="(debug info warn error panic fatal)"
@@ -141,6 +159,22 @@ async def run():
         ]
         logger.info("Python worker running for %s task queue(s)" % len(task_queues))
 
+    worker_kwargs = {}
+    if args.max_concurrent_activity_pollers is not None:
+        worker_kwargs[
+            "max_concurrent_activity_task_polls"
+        ] = args.max_concurrent_activity_pollers
+    if args.max_concurrent_workflow_pollers is not None:
+        worker_kwargs[
+            "max_concurrent_workflow_task_polls"
+        ] = args.max_concurrent_workflow_pollers
+    if args.max_concurrent_activities is not None:
+        worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
+    if args.max_concurrent_workflow_tasks is not None:
+        worker_kwargs[
+            "max_concurrent_workflow_tasks"
+        ] = args.max_concurrent_workflow_tasks
+
     # Start all workers, throwing on first exception
     workers = [
         Worker(
@@ -148,6 +182,7 @@ async def run():
             task_queue=task_queue,
             workflows=[KitchenSinkWorkflow],
             activities=[noop_activity],
+            **worker_kwargs,
         )
         for task_queue in task_queues
     ]

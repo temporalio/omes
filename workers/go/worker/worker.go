@@ -3,12 +3,11 @@ package worker
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
-
-	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/cmd/cmdoptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -24,6 +23,7 @@ type App struct {
 	loggingOptions cmdoptions.LoggingOptions
 	clientOptions  cmdoptions.ClientOptions
 	metricsOptions cmdoptions.MetricsOptions
+	workerOptions  cmdoptions.WorkerOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
@@ -44,7 +44,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if err := runWorkers(client, taskQueues); err != nil {
+	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
 	if err := metrics.Shutdown(cmd.Context()); err != nil {
@@ -52,7 +52,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func runWorkers(client client.Client, taskQueues []string) error {
+func runWorkers(client client.Client, taskQueues []string, options cmdoptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
 	tpsActivities := throughputstress.Activities{
 		Client: client,
@@ -60,7 +60,12 @@ func runWorkers(client client.Client, taskQueues []string) error {
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
-			w := worker.New(client, taskQueue, worker.Options{})
+			w := worker.New(client, taskQueue, worker.Options{
+				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
+				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
+				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
+				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
+			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
@@ -89,6 +94,7 @@ func Main() {
 	app.loggingOptions.AddCLIFlags(cmd.Flags())
 	app.clientOptions.AddCLIFlags(cmd.Flags())
 	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
+	app.workerOptions.AddCLIFlags(cmd.Flags(), "")
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")

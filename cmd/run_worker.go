@@ -53,6 +53,7 @@ type workerRunner struct {
 	taskQueueIndexSuffixEnd   int
 	clientOptions             cmdoptions.ClientOptions
 	metricsOptions            cmdoptions.MetricsOptions
+	workerOptions             cmdoptions.WorkerOptions
 	onWorkerStarted           func()
 }
 
@@ -70,6 +71,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&r.taskQueueIndexSuffixEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "worker-")
+	r.workerOptions.AddCLIFlags(fs, "worker-")
 }
 
 func (r *workerRunner) run(ctx context.Context) error {
@@ -164,6 +166,7 @@ func (r *workerRunner) run(ctx context.Context) error {
 	args = append(args, r.clientOptions.ToFlags()...)
 	args = append(args, r.metricsOptions.ToFlags()...)
 	args = append(args, r.loggingOptions.ToFlags()...)
+	args = append(args, r.workerOptions.ToFlags()...)
 
 	// Start the command. Do not use the context so we can send interrupt.
 	cmd, err := prog.NewCommand(context.Background(), args...)
