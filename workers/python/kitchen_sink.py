@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from typing import Any, Awaitable, Optional, Tuple
+from typing import Any, Awaitable, Optional
 
 import temporalio.workflow
-from temporalio.common import RetryPolicy
 from temporalio import exceptions, workflow
+from temporalio.common import RetryPolicy, RawValue
 
 from protos.kitchen_sink_pb2 import (
-    WorkflowInput,
     Action,
     ActionSet,
-    ExecuteActivityAction,
     ActivityCancellationType,
+    ExecuteActivityAction,
+    WorkflowInput,
 )
 
 
@@ -32,48 +32,49 @@ class KitchenSinkWorkflow:
         # Run all initial input actions
         if input and input.initial_actions:
             for action_set in input.initial_actions:
-                should_return, return_value = await self.handle_action_set(action_set)
-                if should_return:
+                return_value = await self.handle_action_set(action_set)
+                if return_value is not None:
                     return return_value
 
         # Run all actions from signals
         while True:
             action_set = await self.action_set_queue.get()
-            should_return, return_value = await self.handle_action_set(action_set)
-            if should_return:
+            return_value = await self.handle_action_set(action_set)
+            if return_value is not None:
                 return return_value
 
-    async def handle_action_set(self, action_set: ActionSet) -> Tuple[bool, Any]:
-        should_return = False
+    async def handle_action_set(self, action_set: ActionSet) -> Optional[Any]:
         return_value = None
         # If these are non-concurrent, just execute and return if requested
         if not action_set.concurrent:
             for action in action_set.actions:
-                workflow.logger.info("Doing action " + str(action))
-                should_return, return_value = await self.handle_action(action)
-                if should_return:
-                    return should_return, return_value
-            return False, return_value
+                return_value = await self.handle_action(action)
+                if return_value is not None:
+                    return return_value
+            return return_value
 
         # With a concurrent set, we'll create a task for each, only updating
         # return values if we should return, then awaiting on that or completion
-        async def run_child(action: Action) -> None:
-            maybe_should_return, maybe_return_value = await self.handle_action(action)
-            if maybe_should_return:
-                nonlocal should_return, return_value
-                should_return = maybe_should_return
+        async def run_action(action: Action) -> None:
+            workflow.logger.info("Doing action " + str(action))
+            maybe_return_value = await self.handle_action(action)
+
+            if maybe_return_value is not None:
+                nonlocal return_value
                 return_value = maybe_return_value
 
-        gather_fut = asyncio.gather(*[run_child(a) for a in action_set.actions])
+        gather_fut = asyncio.gather(*[run_action(a) for a in action_set.actions])
         should_return_task = asyncio.create_task(
-            workflow.wait_condition(lambda: should_return)
+            workflow.wait_condition(lambda: return_value is not None)
         )
-        await asyncio.wait([gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED)  # type: ignore
-        return should_return, return_value
+        await asyncio.wait(
+            [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
+        )  # type: ignore
+        return return_value
 
-    async def handle_action(self, action: Action) -> Tuple[bool, Any]:
+    async def handle_action(self, action: Action) -> Optional[Any]:
         if action.HasField("return_result"):
-            return True, action.return_result.return_this
+            return action.return_result.return_this
         elif action.HasField("return_error"):
             raise exceptions.ApplicationError(action.return_error.failure.message)
         elif action.HasField("continue_as_new"):
@@ -82,27 +83,20 @@ class KitchenSinkWorkflow:
             await asyncio.sleep(action.timer.milliseconds / 1000)
         elif action.HasField("exec_activity"):
             await launch_activity(action.exec_activity)
-            return False, None
         elif action.HasField("exec_child_workflow"):
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
-            # TODO: Raw input
-            args = child_action.input
-            await workflow.execute_child_workflow(child, args=args)
-            return False, None
+            args = [RawValue(i) for i in child_action.input]
+            await workflow.execute_child_workflow(child, id=child_action.workflow_id, args=args)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
-        return False, None
+        return None
 
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
-    workflow.logger.info("Should be running activity " + str(execute_activity))
-    workflow.logger.info(
-        "Has retry policy? " + str(execute_activity.HasField("retry_policy"))
-    )
     args = execute_activity.arguments
 
     if args is None:
