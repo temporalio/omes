@@ -89,6 +89,8 @@ type ScenarioInfo struct {
 	ScenarioOptions map[string]string
 	// The namespace that was used when connecting the client.
 	Namespace string
+	// Path to the root of the omes dir
+	RootPath string
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -173,9 +175,40 @@ type KitchenSinkWorkflowOptions struct {
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
-// completion ignoring its result.
+// completion ignoring its result. Concurrently it will perform any client actions specified in
+// kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params.WorkflowInput)
+	// Start the workflow
+	r.Logger.Debugf("Executing kitchen sink workflow with info: %v", options)
+	handle, err := r.Client.ExecuteWorkflow(
+		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
+	if err != nil {
+		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
+	}
+
+	clientSeq := options.Params.ClientSequence
+	clientActionsCtx, cancel := context.WithCancel(ctx)
+	var clientActionsErr error
+	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
+		executor := &kitchensink.ClientActionsExecutor{
+			Client:     r.Client,
+			WorkflowID: handle.GetID(),
+			RunID:      handle.GetRunID(),
+		}
+		go func() {
+			clientActionsErr = executor.ExecuteClientSequence(clientActionsCtx, clientSeq)
+		}()
+	}
+
+	executeErr := handle.Get(ctx, nil)
+	cancel()
+	if executeErr != nil {
+		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
+	}
+	if clientActionsErr != nil {
+		return fmt.Errorf("kitchen sink client actions failed: %w", clientActionsErr)
+	}
+	return nil
 }
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,

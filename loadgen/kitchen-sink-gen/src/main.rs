@@ -5,8 +5,8 @@ use crate::protos::temporal::{
     omes::kitchen_sink::{
         action, client_action, do_query, do_signal, do_update, execute_activity_action, Action,
         ActionSet, ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
-        ExecuteActivityAction, HandlerInvocation, RemoteActivityOptions, TestInput, TimerAction,
-        WorkflowInput,
+        ExecuteActivityAction, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
+        TestInput, TimerAction, WorkflowInput,
     },
 };
 use anyhow::Error;
@@ -40,9 +40,8 @@ struct GenerateCmd {
     #[arg(short, long)]
     explicit_seed: Option<u64>,
 
-    /// If specified, dump the test input as proto binary to the provided file path
-    #[arg(short, long)]
-    proto_output: Option<PathBuf>,
+    #[command(flatten)]
+    proto_output: OutputConfig,
 
     #[command(flatten)]
     generator_config: GeneratorConfig,
@@ -74,9 +73,21 @@ struct GeneratorConfig {
 
 #[derive(clap::Args, Debug)]
 struct ExampleCmd {
-    /// Dump the test input as proto binary to the provided file path
-    #[arg()]
-    proto_output: PathBuf,
+    #[command(flatten)]
+    proto_output: OutputConfig,
+}
+
+#[derive(clap::Args, Debug, Clone)]
+#[clap(group(
+    clap::ArgGroup::new("output").args(&["use_stdout", "output_path"]),
+))]
+struct OutputConfig {
+    /// Output goes to stdout as protobuf binary, this is the default.
+    #[clap(long, default_value_t = true)]
+    use_stdout: bool,
+    /// Output goes to the provided file path as protobuf binary.
+    #[clap(long)]
+    output_path: Option<PathBuf>,
 }
 
 fn main() -> Result<(), Error> {
@@ -110,9 +121,13 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                 }
                 .into(),
                 ExecuteActivityAction {
-                    activity_type: "echo".to_string(),
-                    schedule_to_start_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                    activity_type: "noop".to_string(),
+                    start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
                     ..Default::default()
+                }
+                .into(),
+                ReturnResultAction {
+                    return_this: Some(Payload::default()),
                 }
                 .into(),
             ]),
@@ -120,7 +135,7 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
         concurrent: false,
     }];
     example_input.client_sequence = Some(client_sequence);
-    dump_to_file(example_input, args.proto_output)?;
+    output_proto(example_input, args.proto_output)?;
     Ok(())
 }
 
@@ -143,9 +158,7 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     rng.fill(&mut raw_dat[..]);
     let mut unstructured = Unstructured::new(&raw_dat);
     let generated_input: TestInput = unstructured.arbitrary()?;
-    if let Some(path) = args.proto_output {
-        dump_to_file(generated_input, path)?;
-    }
+    output_proto(generated_input, args.proto_output)?;
     Ok(())
 }
 
@@ -371,11 +384,18 @@ fn vec_of_size<'a, T: Arbitrary<'a>>(
     Ok(vec)
 }
 
-fn dump_to_file(generated_input: TestInput, path: PathBuf) -> Result<(), Error> {
-    let mut file = std::fs::File::create(path)?;
+fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result<(), Error> {
     let mut buf = Vec::with_capacity(1024 * 10);
     generated_input.encode(&mut buf)?;
-    file.write_all(&buf)?;
+    if output_kind.use_stdout {
+        std::io::stdout().write_all(&buf)?;
+    } else {
+        let path = output_kind
+            .output_path
+            .expect("Output path must have been set");
+        let mut file = std::fs::File::create(path)?;
+        file.write_all(&buf)?;
+    }
     Ok(())
 }
 

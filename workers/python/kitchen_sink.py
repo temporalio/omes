@@ -56,7 +56,6 @@ class KitchenSinkWorkflow:
         # With a concurrent set, we'll create a task for each, only updating
         # return values if we should return, then awaiting on that or completion
         async def run_action(action: Action) -> None:
-            workflow.logger.info("Doing action " + str(action))
             maybe_return_value = await self.handle_action(action)
 
             if maybe_return_value is not None:
