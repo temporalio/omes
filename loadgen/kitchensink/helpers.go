@@ -7,6 +7,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"time"
 )
 
 func NoOpSingleActivityActionSet() *ActionSet {
@@ -56,6 +57,13 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 			if err := e.executeClientAction(ctx, action); err != nil {
 				return err
 			}
+		}
+	}
+	if actionSet.WaitAtEnd != nil {
+		select {
+		case <-time.After(actionSet.WaitAtEnd.AsDuration()):
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	return errs.Wait()

@@ -29,6 +29,9 @@ message ClientSequence {
 message ClientActionSet {
   repeated ClientAction actions = 1;
   bool concurrent = 2;
+  // Wait the specified amount of time at the end of the action set before proceeding to the next
+  // (if there is one, if not, ignored).
+  google.protobuf.Duration wait_at_end = 3;
 }
 
 message ClientAction {

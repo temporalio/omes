@@ -107,14 +107,18 @@ fn main() -> Result<(), Error> {
 fn example(args: ExampleCmd) -> Result<(), Error> {
     let mut example_input = TestInput::default();
     let mut client_sequence = ClientSequence::default();
-    client_sequence.action_sets = vec![ClientActionSet {
-        actions: vec![
-            mk_client_signal_action([TimerAction {
+    client_sequence.action_sets = vec![
+        ClientActionSet {
+            actions: vec![mk_client_signal_action([TimerAction {
                 milliseconds: 100,
                 awaitable_choice: None,
             }
-            .into()]),
-            mk_client_signal_action([
+            .into()])],
+            concurrent: false,
+            wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
+        },
+        ClientActionSet {
+            actions: vec![mk_client_signal_action([
                 TimerAction {
                     milliseconds: 100,
                     awaitable_choice: None,
@@ -130,10 +134,10 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                     return_this: Some(Payload::default()),
                 }
                 .into(),
-            ]),
-        ],
-        concurrent: false,
-    }];
+            ])],
+            ..Default::default()
+        },
+    ];
     example_input.client_sequence = Some(client_sequence);
     output_proto(example_input, args.proto_output)?;
     Ok(())
@@ -208,6 +212,8 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
         Ok(Self {
             actions: vec_of_size(u, num_actions)?,
             concurrent: u.arbitrary()?,
+            // TODO: Waits?
+            wait_at_end: None,
         })
     }
 }
