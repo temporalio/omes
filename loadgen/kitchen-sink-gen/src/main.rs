@@ -51,7 +51,7 @@ struct GenerateCmd {
 #[derive(clap::Args, Debug, Default)]
 struct GeneratorConfig {
     /// The maximum number of client action sets that will be generated.
-    #[arg(long, default_value_t = 1000)]
+    #[arg(long, default_value_t = 250)]
     max_client_action_sets: usize,
 
     /// The maximum number of actions in a single client action set.
@@ -69,6 +69,9 @@ struct GeneratorConfig {
     /// Max size in bytes that a payload will be
     #[arg(long, default_value_t = 256)]
     max_payload_size: usize,
+
+    #[arg(long, default_value_t = 1000)]
+    max_client_action_set_wait_ms: u64,
 }
 
 #[derive(clap::Args, Debug)]
@@ -151,14 +154,14 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
         let seed = seed_maker.gen();
         (rand::rngs::StdRng::seed_from_u64(seed), seed)
     };
-    println!("Using seed: {}", seed);
-    println!("Using config: {:?}", &args.generator_config);
+    eprintln!("Using seed: {}", seed);
+    eprintln!("Using config: {:?}", &args.generator_config);
     let context = ArbContext {
         config: args.generator_config,
     };
     ARB_CONTEXT.set(context);
 
-    let mut raw_dat = [0u8; 1024 * 100];
+    let mut raw_dat = [0u8; 1024 * 200];
     rng.fill(&mut raw_dat[..]);
     let mut unstructured = Unstructured::new(&raw_dat);
     let generated_input: TestInput = unstructured.arbitrary()?;
@@ -180,12 +183,23 @@ struct ArbContext {
 
 impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        Ok(Self {
+        let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
             // We always want a client sequence
             client_sequence: Some(u.arbitrary()?),
-        })
+        };
+        // TODO: There needs to be some kind of coordination during generation to ensure
+        //   we don't have multiple returns etc.
+        let cs = ti.client_sequence.get_or_insert(Default::default());
+        cs.action_sets.push(ClientActionSet {
+            actions: vec![mk_client_signal_action([ReturnResultAction {
+                return_this: Some(Payload::default()),
+            }
+            .into()])],
+            ..Default::default()
+        });
+        Ok(ti)
     }
 }
 
@@ -212,8 +226,7 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
         Ok(Self {
             actions: vec_of_size(u, num_actions)?,
             concurrent: u.arbitrary()?,
-            // TODO: Waits?
-            wait_at_end: None,
+            wait_at_end: u.arbitrary::<Option<ClientActionWait>>()?.map(Into::into),
         })
     }
 }
@@ -331,7 +344,7 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
             execute_activity_action::Locality::IsLocal(())
         };
         Ok(Self {
-            activity_type: "echo".to_string(),
+            activity_type: "noop".to_string(),
             task_queue: "".to_string(),
             headers: Default::default(),
             arguments: vec![],
@@ -375,6 +388,25 @@ impl<'a> Arbitrary<'a> for Payload {
             metadata: Default::default(),
             data: u.bytes(num_bytes)?.to_vec(),
         })
+    }
+}
+
+struct ClientActionWait {
+    duration: Duration,
+}
+impl<'a> Arbitrary<'a> for ClientActionWait {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let duration_ms = u.int_in_range(
+            0..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_action_set_wait_ms),
+        )?;
+        Ok(Self {
+            duration: Duration::from_millis(duration_ms),
+        })
+    }
+}
+impl From<ClientActionWait> for prost_types::Duration {
+    fn from(v: ClientActionWait) -> Self {
+        v.duration.try_into().unwrap()
     }
 }
 

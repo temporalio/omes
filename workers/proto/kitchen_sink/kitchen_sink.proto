@@ -67,8 +67,8 @@ message DoUpdate {
   oneof variant {
     // An update must exist named `do_actions_update` which does the same thing the signal handler
     // would do when given the provided action set. The handler should return the `WorkflowState`
-    // when done. You may also include a `ReturnErrorAction` or `ContinueAsNewAction` in the set
-    // to exit the handler in those ways.
+    // when done with all the provided actions. You may also include a `ReturnErrorAction` or
+    // `ContinueAsNewAction` in the set to exit the handler in those ways.
     ActionSet do_actions = 1;
     // This update request must be rejected (at validation time) by the workflow using a handler
     // named `always_reject`

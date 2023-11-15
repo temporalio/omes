@@ -14,16 +14,37 @@ from protos.kitchen_sink_pb2 import (
     ActivityCancellationType,
     ExecuteActivityAction,
     WorkflowInput,
+    WorkflowState,
 )
 
 
 @workflow.defn(name="kitchenSink")
 class KitchenSinkWorkflow:
     action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
+    workflow_state = WorkflowState()
 
     @workflow.signal
     async def do_actions_signal(self, action_set: ActionSet) -> None:
         self.action_set_queue.put_nowait(action_set)
+
+    @workflow.update
+    async def do_actions_update(self, action_set: ActionSet) -> Any:
+        retval = await self.handle_action_set(action_set)
+        if retval is not None:
+            return retval
+        return self.workflow_state
+
+    @workflow.update
+    async def always_reject(self) -> WorkflowState:
+        return self.workflow_state
+
+    @always_reject.validator
+    def rejectifyer(self):
+        raise exceptions.ApplicationError("Rejected")
+
+    @workflow.query
+    def report_state(self, _: Any) -> WorkflowState:
+        return self.workflow_state
 
     @workflow.run
     async def run(self, input: Optional[WorkflowInput]) -> Any:
@@ -86,7 +107,9 @@ class KitchenSinkWorkflow:
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
             args = [RawValue(i) for i in child_action.input]
-            await workflow.execute_child_workflow(child, id=child_action.workflow_id, args=args)
+            await workflow.execute_child_workflow(
+                child, id=child_action.workflow_id, args=args
+            )
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:

@@ -7,12 +7,17 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "This scenario runs the kitchen sink input generation tool `example` " +
-			"command to help with basic verification of KS implementations.",
+		Description: "This scenario uses the kitchen sink input generation tool to run fuzzy" +
+			" workflows",
 		Executor: loadgen.FuzzExecutor{
 			InitInputs: func(ctx context.Context, info loadgen.ScenarioInfo) loadgen.FileOrArgs {
+				args := []string{"generate"}
+				seed, ok := info.ScenarioOptions["seed"]
+				if ok && seed != "" {
+					args = append(args, "--explicit-seed", seed)
+				}
 				return loadgen.FileOrArgs{
-					Args: []string{"example"},
+					Args: args,
 				}
 			},
 			DefaultConfiguration: loadgen.RunConfiguration{},

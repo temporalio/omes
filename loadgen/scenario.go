@@ -187,7 +187,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 	}
 
 	clientSeq := options.Params.ClientSequence
-	clientActionsCtx, cancel := context.WithCancel(ctx)
+	cancelCtx, cancel := context.WithCancel(ctx)
 	var clientActionsErr error
 	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
 		executor := &kitchensink.ClientActionsExecutor{
@@ -196,11 +196,21 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 			RunID:      handle.GetRunID(),
 		}
 		go func() {
-			clientActionsErr = executor.ExecuteClientSequence(clientActionsCtx, clientSeq)
+			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
+			if clientActionsErr != nil {
+				fmt.Printf("Client actions failed: %v\n", clientActionsErr)
+				// TODO: Remove or change to "always terminate when exiting early" flag
+				err := r.Client.TerminateWorkflow(
+					ctx, handle.GetID(), handle.GetRunID(), "client actions failed", nil)
+				if err != nil {
+					return
+				}
+				cancel()
+			}
 		}()
 	}
 
-	executeErr := handle.Get(ctx, nil)
+	executeErr := handle.Get(cancelCtx, nil)
 	cancel()
 	if executeErr != nil {
 		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)

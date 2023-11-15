@@ -49,7 +49,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		args = append(args, fileOrArgs.Args...)
 		cmd := exec.CommandContext(ctx, "cargo", args...)
 		cmd.Dir = filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen")
-		//cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		cmd.Stderr = os.Stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
 			return fmt.Errorf("failed to run rust generator: %w", err)
