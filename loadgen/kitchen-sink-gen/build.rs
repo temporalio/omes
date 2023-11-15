@@ -16,6 +16,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "temporal.omes.kitchen_sink.Action.variant",
         "#[derive(::derive_more::From)]",
     );
+    cfg.type_attribute(
+        "temporal.omes.kitchen_sink.DoUpdate.variant",
+        "#[derive(::derive_more::From)]",
+    );
+    cfg.type_attribute(
+        "temporal.omes.kitchen_sink.DoActionsUpdate.variant",
+        "#[derive(::derive_more::From)]",
+    );
+    cfg.type_attribute(
+        "temporal.omes.kitchen_sink.DoActionsUpdate",
+        "#[derive(::derive_more::From)]",
+    );
     cfg.compile_protos(&ks_protos, &include_paths)?;
 
     // Compile for python

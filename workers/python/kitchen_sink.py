@@ -15,6 +15,7 @@ from protos.kitchen_sink_pb2 import (
     ExecuteActivityAction,
     WorkflowInput,
     WorkflowState,
+    DoActionsUpdate,
 )
 
 
@@ -28,19 +29,17 @@ class KitchenSinkWorkflow:
         self.action_set_queue.put_nowait(action_set)
 
     @workflow.update
-    async def do_actions_update(self, action_set: ActionSet) -> Any:
-        retval = await self.handle_action_set(action_set)
+    async def do_actions_update(self, actions_update: DoActionsUpdate) -> Any:
+        # IF variant was rejected we wouldn't even be in here, so access action set directly
+        retval = await self.handle_action_set(actions_update.do_actions)
         if retval is not None:
             return retval
         return self.workflow_state
 
-    @workflow.update
-    async def always_reject(self) -> WorkflowState:
-        return self.workflow_state
-
-    @always_reject.validator
-    def rejectifyer(self):
-        raise exceptions.ApplicationError("Rejected")
+    @do_actions_update.validator
+    def do_actions_update_val(self, actions_update: DoActionsUpdate):
+        if actions_update.HasField("reject_me"):
+            raise exceptions.ApplicationError("Rejected")
 
     @workflow.query
     def report_state(self, _: Any) -> WorkflowState:

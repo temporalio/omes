@@ -8,7 +8,6 @@ import (
 	"go.temporal.io/sdk/client"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"strings"
 	"time"
 )
 
@@ -109,15 +108,15 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			return fmt.Errorf("do_signal must recognizable variant")
 		}
 	} else if update := action.GetDoUpdate(); update != nil {
-		if actionSet := update.GetDoActions(); actionSet != nil {
-			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_update", actionSet)
-		} else if update.GetRejectMe() != nil {
-			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, "always_reject", actionSet)
+		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
+			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_update", actionsUpdate)
 		} else if handler := update.GetCustom(); handler != nil {
 			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
-			err = clearErrorIfExpectedNotFound(handler, err)
 		} else {
 			return fmt.Errorf("do_update must recognizable variant")
+		}
+		if update.FailureExpected {
+			err = nil
 		}
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
@@ -125,23 +124,16 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, e.RunID, "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
 			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
-			err = clearErrorIfExpectedNotFound(handler, err)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
+		}
+		if query.FailureExpected {
+			err = nil
 		}
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 	}
 	println("!!!!!! CLIENT ACTION DONE")
 
-	return err
-}
-
-func clearErrorIfExpectedNotFound(handler *HandlerInvocation, err error) error {
-	if err != nil && handler.Name == nonexistentHandler {
-		if strings.Contains(err.Error(), "not found") {
-			err = nil
-		}
-	}
 	return err
 }

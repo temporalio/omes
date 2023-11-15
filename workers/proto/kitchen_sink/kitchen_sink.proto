@@ -61,20 +61,32 @@ message DoQuery {
     // Send an arbitrary query
     HandlerInvocation custom = 2;
   }
+
+  // If set, the client should expect the query to fail
+  bool failure_expected = 10;
 }
 
 message DoUpdate {
   oneof variant {
-    // An update must exist named `do_actions_update` which does the same thing the signal handler
-    // would do when given the provided action set. The handler should return the `WorkflowState`
-    // when done with all the provided actions. You may also include a `ReturnErrorAction` or
-    // `ContinueAsNewAction` in the set to exit the handler in those ways.
-    ActionSet do_actions = 1;
-    // This update request must be rejected (at validation time) by the workflow using a handler
-    // named `always_reject`
-    google.protobuf.Empty reject_me = 2;
+    // An update must exist named `do_actions_update` which handles the `DoActionsUpdate` message.
+    // See message doc for what it should do.
+    DoActionsUpdate do_actions = 1;
     // Send an arbitrary update request
-    HandlerInvocation custom = 3;
+    HandlerInvocation custom = 2;
+  }
+
+  // If set, the client should expect the update to fail
+  bool failure_expected = 10;
+}
+
+message DoActionsUpdate {
+  oneof variant {
+    // Do same thing signal handler would do when given the provided action set. The handler should
+    // return the `WorkflowState` when done with all the provided actions. You may also include a
+    // `ReturnErrorAction` or `ContinueAsNewAction` in the set to exit the handler in those ways.
+    ActionSet do_actions = 1;
+    // The validator should reject the update
+    google.protobuf.Empty reject_me = 2;
   }
 }
 

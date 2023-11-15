@@ -1,5 +1,6 @@
 mod protos;
 
+use crate::protos::temporal::omes::kitchen_sink::do_actions_update;
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
@@ -266,35 +267,44 @@ impl<'a> Arbitrary<'a> for DoSignal {
 
 impl<'a> Arbitrary<'a> for DoQuery {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let mut failure_expected = false;
         // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time report state
             do_query::Variant::ReportState(u.arbitrary()?)
         } else {
             // Sometimes do a not found query
+            failure_expected = true;
             do_query::Variant::Custom(HandlerInvocation::nonexistent())
         };
         Ok(Self {
             variant: Some(variant),
+            failure_expected,
         })
     }
 }
 
 impl<'a> Arbitrary<'a> for DoUpdate {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let mut failure_expected = false;
         // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
-            do_update::Variant::DoActions(u.arbitrary()?)
+            do_update::Variant::DoActions(
+                Some(do_actions_update::Variant::DoActions(u.arbitrary()?)).into(),
+            )
         } else if u.ratio(50, 100)? {
             // 5% of the time do a rejection
-            do_update::Variant::RejectMe(())
+            failure_expected = true;
+            do_update::Variant::DoActions(Some(do_actions_update::Variant::RejectMe(())).into())
         } else {
             // Or not found
+            failure_expected = true;
             do_update::Variant::Custom(HandlerInvocation::nonexistent())
         };
         Ok(Self {
             variant: Some(variant),
+            failure_expected,
         })
     }
 }
