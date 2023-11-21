@@ -6,16 +6,16 @@ from typing import Any, Awaitable, Optional
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
-from temporalio.common import RetryPolicy, RawValue
+from temporalio.common import RawValue, RetryPolicy
 
 from protos.kitchen_sink_pb2 import (
     Action,
     ActionSet,
     ActivityCancellationType,
+    DoActionsUpdate,
     ExecuteActivityAction,
     WorkflowInput,
     WorkflowState,
-    DoActionsUpdate,
 )
 
 

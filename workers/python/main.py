@@ -11,10 +11,10 @@ from prometheus_client import make_wsgi_app
 from pythonjsonlogger import jsonlogger
 from temporalio.client import Client, TLSConfig
 from temporalio.runtime import (
+    LoggingConfig,
     PrometheusConfig,
     Runtime,
     TelemetryConfig,
-    LoggingConfig,
     TelemetryFilter,
 )
 from temporalio.worker import Worker
