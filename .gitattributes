@@ -1,0 +1,2 @@
+workers/python/protos/*pb2.py* linguist-generated=true
+loadgen/kitchensink/kitchen_sink.pb.go linguist-generated=true

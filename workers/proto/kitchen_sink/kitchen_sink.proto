@@ -151,13 +151,13 @@ message AwaitableChoice {
     google.protobuf.Empty abandon_after_start = 2;
     // Cancel the command before it's begun - IE: Cancel it immediately after starting it with
     // no await, within the same workflow task.
-    google.protobuf.Empty before_started = 3;
+    google.protobuf.Empty cancel_before_started = 3;
     // Cancel the command after it's been started. Not all SDKs will know when a command is started
     // and in those cases they should issue the cancellation in the next workflow task after
     // creating the command.
-    google.protobuf.Empty after_started = 4;
+    google.protobuf.Empty cancel_after_started = 4;
     // Cancel the command after it's already completed.
-    google.protobuf.Empty after_completed = 5;
+    google.protobuf.Empty cancel_after_completed = 5;
   }
 }
 
