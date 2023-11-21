@@ -191,18 +191,18 @@ class Action(_message.Message):
     def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ...) -> None: ...
 
 class AwaitableChoice(_message.Message):
-    __slots__ = ("wait_finish", "abandon_after_start", "cancel_before_started", "cancel_after_started", "cancel_after_completed")
+    __slots__ = ("wait_finish", "abandon", "cancel_before_started", "cancel_after_started", "cancel_after_completed")
     WAIT_FINISH_FIELD_NUMBER: _ClassVar[int]
-    ABANDON_AFTER_START_FIELD_NUMBER: _ClassVar[int]
+    ABANDON_FIELD_NUMBER: _ClassVar[int]
     CANCEL_BEFORE_STARTED_FIELD_NUMBER: _ClassVar[int]
     CANCEL_AFTER_STARTED_FIELD_NUMBER: _ClassVar[int]
     CANCEL_AFTER_COMPLETED_FIELD_NUMBER: _ClassVar[int]
     wait_finish: _empty_pb2.Empty
-    abandon_after_start: _empty_pb2.Empty
+    abandon: _empty_pb2.Empty
     cancel_before_started: _empty_pb2.Empty
     cancel_after_started: _empty_pb2.Empty
     cancel_after_completed: _empty_pb2.Empty
-    def __init__(self, wait_finish: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., abandon_after_start: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_before_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_completed: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ...) -> None: ...
+    def __init__(self, wait_finish: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., abandon: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_before_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_completed: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ...) -> None: ...
 
 class TimerAction(_message.Message):
     __slots__ = ("milliseconds", "awaitable_choice")
