@@ -147,8 +147,8 @@ message AwaitableChoice {
   oneof condition {
     // Wait for the command to finish. This is the default.
     google.protobuf.Empty wait_finish = 1;
-    // Start the command, but don't bother waiting on it after that.
-    google.protobuf.Empty abandon_after_start = 2;
+    // Call the command API but immediately move on. IE: Don't await on it at all.
+    google.protobuf.Empty abandon = 2;
     // Cancel the command before it's begun - IE: Cancel it immediately after starting it with
     // no await, within the same workflow task.
     google.protobuf.Empty cancel_before_started = 3;
