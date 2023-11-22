@@ -3,7 +3,6 @@ package kitchensink
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"golang.org/x/sync/errgroup"
@@ -43,19 +42,16 @@ type ClientActionsExecutor struct {
 }
 
 func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clientSeq *ClientSequence) error {
-	println("!!!!!!!! Number of action sets ", len(clientSeq.ActionSets))
 	for _, actionSet := range clientSeq.ActionSets {
 		if err := e.executeClientActionSet(ctx, actionSet); err != nil {
 			return err
 		}
-		println("!!!!!!!!! Done")
 	}
 
 	return nil
 }
 
 func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, actionSet *ClientActionSet) error {
-	println("!!!!!!!! Running action set is concurrent: ", actionSet.Concurrent)
 	errs, errGroupCtx := errgroup.WithContext(ctx)
 	for _, action := range actionSet.Actions {
 		if actionSet.Concurrent {
@@ -78,10 +74,8 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 			return err
 		}
 		if actionSet.WaitAtEnd != nil {
-			println("WAITING AT END", actionSet.WaitAtEnd.Seconds, " n ", actionSet.WaitAtEnd.Nanos)
 			select {
 			case <-time.After(actionSet.WaitAtEnd.AsDuration()):
-				println("Done waiting")
 			case <-ctx.Done():
 				return fmt.Errorf("context done while waiting for end %w", ctx.Err())
 			}
@@ -95,8 +89,6 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	if action.Variant == nil {
 		return fmt.Errorf("client action variant must be set")
 	}
-
-	println("Running client action: ", proto.MarshalTextString(action))
 
 	var err error
 	if sig := action.GetDoSignal(); sig != nil {
@@ -133,7 +125,6 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 	}
-	println("!!!!!! CLIENT ACTION DONE")
 
 	return err
 }
