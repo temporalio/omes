@@ -12,7 +12,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (interface{}, error) {
+func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	b, _ := json.Marshal(params)
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow", "params", string(b))
 	if params == nil {
@@ -22,8 +22,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	// Handle initial set
 	if params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
-			shouldReturn, ret, err := handleActionSet(ctx, actionSet)
-			if shouldReturn {
+			if ret, err := handleActionSet(ctx, actionSet); ret != nil || err != nil {
 				return ret, err
 			}
 		}
@@ -34,7 +33,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	for {
 		var actionSet kitchensink.ActionSet
 		actionSetCh.Receive(ctx, &actionSet)
-		if shouldReturn, ret, err := handleActionSet(ctx, &actionSet); shouldReturn {
+		if ret, err := handleActionSet(ctx, &actionSet); ret != nil || err != nil {
 			return ret, err
 		}
 	}
@@ -43,11 +42,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 func handleActionSet(
 	ctx workflow.Context,
 	set *kitchensink.ActionSet,
-) (shouldReturn bool, returnValue interface{}, err error) {
+) (returnValue *common.Payload, err error) {
 	// If these are non-concurrent, just execute and return if requested
 	if !set.Concurrent {
 		for _, action := range set.Actions {
-			if shouldReturn, returnValue, err = handleAction(ctx, action); shouldReturn {
+			if returnValue, err = handleAction(ctx, action); returnValue != nil || err != nil {
 				return
 			}
 		}
@@ -59,17 +58,17 @@ func handleActionSet(
 	for _, action := range set.Actions {
 		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			if maybeShouldReturn, maybeReturnValue, maybeErr := handleAction(ctx, action); maybeShouldReturn {
-				shouldReturn, returnValue, err = maybeShouldReturn, maybeReturnValue, maybeErr
+			if maybeReturnValue, maybeErr := handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
+				returnValue, err = maybeReturnValue, maybeErr
 			}
 			actionsCompleted++
 		})
 	}
 	awaitErr := workflow.Await(ctx, func() bool {
-		return shouldReturn || actionsCompleted == len(set.Actions)
+		return (returnValue != nil || err != nil) || actionsCompleted == len(set.Actions)
 	})
 	if awaitErr != nil {
-		return true, nil, fmt.Errorf("failed waiting on actions: %w", err)
+		return nil, fmt.Errorf("failed waiting on actions: %w", err)
 	}
 	return
 }
@@ -77,19 +76,19 @@ func handleActionSet(
 func handleAction(
 	ctx workflow.Context,
 	action *kitchensink.Action,
-) (shouldReturn bool, returnValue interface{}, err error) {
+) (returnValue *common.Payload, err error) {
 	if rr := action.GetReturnResult(); rr != nil {
-		return true, rr.ReturnThis, nil
+		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
-		return true, nil, temporal.NewApplicationError(re.Failure.Message, "")
+		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
-		return true, nil, workflow.NewContinueAsNewError(ctx, KitchenSinkWorkflow, can.Arguments)
+		return nil, workflow.NewContinueAsNewError(ctx, KitchenSinkWorkflow, can.Arguments)
 	} else if timer := action.GetTimer(); timer != nil {
 		if err := workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond); err != nil {
-			return true, nil, err
+			return nil, err
 		}
 	} else if act := action.GetExecActivity(); act != nil {
-		return launchActivity(ctx, action.GetExecActivity())
+		return nil, launchActivity(ctx, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
 		// Use name if present, otherwise use this one
 		childType := "kitchenSink"
@@ -97,16 +96,16 @@ func handleAction(
 			childType = child.WorkflowType
 		}
 		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()).Get(ctx, nil)
-		return false, nil, err
+		return nil, err
 	} else if action.GetNestedActionSet() != nil {
 		return handleActionSet(ctx, action.GetNestedActionSet())
 	} else {
-		return true, nil, fmt.Errorf("unrecognized action")
+		return nil, fmt.Errorf("unrecognized action")
 	}
-	return false, nil, nil
+	return nil, nil
 }
 
-func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) (bool, interface{}, error) {
+func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
 	var actCtx workflow.Context
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -134,7 +133,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		actCtx = workflow.WithActivityOptions(ctx, opts)
 	}
 	err := workflow.ExecuteActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
-	return false, nil, err
+	return err
 }
 
 // Noop is used as a no-op activity

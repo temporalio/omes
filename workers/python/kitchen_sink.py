@@ -6,6 +6,7 @@ from typing import Any, Awaitable, Optional
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
+from temporalio.api.common.v1 import Payload
 from temporalio.common import RawValue, RetryPolicy
 
 from protos.kitchen_sink_pb2 import (
@@ -46,7 +47,7 @@ class KitchenSinkWorkflow:
         return self.workflow_state
 
     @workflow.run
-    async def run(self, input: Optional[WorkflowInput]) -> Any:
+    async def run(self, input: Optional[WorkflowInput]) -> Payload:
         workflow.logger.info("Started kitchen sink workflow")
 
         # Run all initial input actions
@@ -63,7 +64,7 @@ class KitchenSinkWorkflow:
             if return_value is not None:
                 return return_value
 
-    async def handle_action_set(self, action_set: ActionSet) -> Optional[Any]:
+    async def handle_action_set(self, action_set: ActionSet) -> Optional[Payload]:
         return_value = None
         # If these are non-concurrent, just execute and return if requested
         if not action_set.concurrent:
@@ -91,7 +92,7 @@ class KitchenSinkWorkflow:
         )  # type: ignore
         return return_value
 
-    async def handle_action(self, action: Action) -> Optional[Any]:
+    async def handle_action(self, action: Action) -> Optional[Payload]:
         if action.HasField("return_result"):
             return action.return_result.return_this
         elif action.HasField("return_error"):
