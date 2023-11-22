@@ -4,3 +4,4 @@
 go.work
 go.work.sum
 .idea/
+/loadgen/kitchen-sink-gen/target/
