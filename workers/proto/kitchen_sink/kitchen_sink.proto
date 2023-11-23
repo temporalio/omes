@@ -1,13 +1,10 @@
 syntax = "proto3";
 
 package temporal.omes.kitchen_sink;
+option go_package = "github.com/temporalio/omes/loadgen/kitchensink";
 
 import "google/protobuf/duration.proto";
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
-
-import "child_workflow.proto";
-import "activity.proto";
 
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
@@ -32,6 +29,9 @@ message ClientSequence {
 message ClientActionSet {
   repeated ClientAction actions = 1;
   bool concurrent = 2;
+  // Wait the specified amount of time at the end of the action set before proceeding to the next
+  // (if there is one, if not, ignored).
+  google.protobuf.Duration wait_at_end = 3;
 }
 
 message ClientAction {
@@ -44,10 +44,21 @@ message ClientAction {
 }
 
 message DoSignal {
+  message DoSignalActions {
+    oneof variant {
+      // Execute the action set in the handler. Since Go doesn't have explicit signal handlers it
+      // should instead run the actions in a goroutine for both of these variants, as the
+      // distinction doesn't really matter there.
+      ActionSet do_actions = 1;
+      // Pipe the actions back to the main workflow function via a queue or similar mechanism, where
+      // they will then be run.
+      ActionSet do_actions_in_main = 2;
+    }
+  }
   oneof variant {
-    // An signal handler must exist named `do_actions_signal` which is responsible for executing
-    // the action set.
-    ActionSet do_actions = 1;
+    // A signal handler must exist named `do_actions_signal` which is responsible for handling the
+    // DoSignalActions message. See it's doc for details.
+    DoSignalActions do_signal_actions = 1;
     // Send an arbitrary signal
     HandlerInvocation custom = 2;
   }
@@ -61,20 +72,32 @@ message DoQuery {
     // Send an arbitrary query
     HandlerInvocation custom = 2;
   }
+
+  // If set, the client should expect the query to fail
+  bool failure_expected = 10;
 }
 
 message DoUpdate {
   oneof variant {
-    // An update must exist named `do_actions_update` which does the same thing the signal handler
-    // would do when given the provided action set. The handler should return the `WorkflowState`
-    // when done. You may also include a `ReturnErrorAction` or `ContinueAsNewAction` in the set
-    // to exit the handler in those ways.
-    ActionSet do_actions = 1;
-    // This update request must be rejected (at validation time) by the workflow using a handler
-    // named `always_reject`
-    google.protobuf.Empty reject_me = 2;
+    // An update must exist named `do_actions_update` which handles the `DoActionsUpdate` message.
+    // See message doc for what it should do.
+    DoActionsUpdate do_actions = 1;
     // Send an arbitrary update request
-    HandlerInvocation custom = 3;
+    HandlerInvocation custom = 2;
+  }
+
+  // If set, the client should expect the update to fail
+  bool failure_expected = 10;
+}
+
+message DoActionsUpdate {
+  oneof variant {
+    // Do same thing signal handler would do when given the provided action set. The handler should
+    // return the `WorkflowState` when done with all the provided actions. You may also include a
+    // `ReturnErrorAction` or `ContinueAsNewAction` in the set to exit the handler in those ways.
+    ActionSet do_actions = 1;
+    // The validator should reject the update
+    google.protobuf.Empty reject_me = 2;
   }
 }
 
@@ -135,17 +158,17 @@ message AwaitableChoice {
   oneof condition {
     // Wait for the command to finish. This is the default.
     google.protobuf.Empty wait_finish = 1;
-    // Start the command, but don't bother waiting on it after that.
-    google.protobuf.Empty abandon_after_start = 2;
+    // Call the command API but immediately move on. IE: Don't await on it at all.
+    google.protobuf.Empty abandon = 2;
     // Cancel the command before it's begun - IE: Cancel it immediately after starting it with
     // no await, within the same workflow task.
-    google.protobuf.Empty before_started = 3;
+    google.protobuf.Empty cancel_before_started = 3;
     // Cancel the command after it's been started. Not all SDKs will know when a command is started
     // and in those cases they should issue the cancellation in the next workflow task after
     // creating the command.
-    google.protobuf.Empty after_started = 4;
+    google.protobuf.Empty cancel_after_started = 4;
     // Cancel the command after it's already completed.
-    google.protobuf.Empty after_completed = 5;
+    google.protobuf.Empty cancel_after_completed = 5;
   }
 }
 
@@ -155,7 +178,6 @@ message TimerAction {
 }
 
 message ExecuteActivityAction {
-  string activity_id = 1;
   string activity_type = 2;
   // The name of the task queue to place this activity request in
   string task_queue = 3;
@@ -212,7 +234,7 @@ message ExecuteChildWorkflowAction {
   // Search attributes
   map<string, temporal.api.common.v1.Payload> search_attributes = 17;
   // Defines behaviour of the underlying workflow when child workflow cancellation has been requested.
-  temporal.omes.kitchen_sink.child_workflow.ChildWorkflowCancellationType cancellation_type = 18;
+  temporal.omes.kitchen_sink.ChildWorkflowCancellationType cancellation_type = 18;
   // Whether this child should run on a worker with a compatible build id or not.
   VersioningIntent versioning_intent = 19;
   AwaitableChoice awaitable_choice = 20;
@@ -306,7 +328,7 @@ message ContinueAsNewAction {
 
 message RemoteActivityOptions {
   // Defines how the workflow will wait (or not) for cancellation of the activity to be confirmed
-  temporal.omes.kitchen_sink.activity.ActivityCancellationType cancellation_type = 1;
+  temporal.omes.kitchen_sink.ActivityCancellationType cancellation_type = 1;
   // If set, the worker will not tell the service that it can immediately start executing this
   // activity. When unset/default, workers will always attempt to do so if activity execution
   // slots are available.
@@ -343,3 +365,28 @@ enum VersioningIntent {
   // build ID.
   DEFAULT = 2;
 }
+
+// Controls at which point to report back to lang when a child workflow is cancelled
+enum ChildWorkflowCancellationType {
+  // Do not request cancellation of the child workflow if already scheduled
+  CHILD_WF_ABANDON = 0;
+  // Initiate a cancellation request and immediately report cancellation to the parent.
+  CHILD_WF_TRY_CANCEL = 1;
+  // Wait for child cancellation completion.
+  CHILD_WF_WAIT_CANCELLATION_COMPLETED = 2;
+  // Request cancellation of the child and wait for confirmation that the request was received.
+  CHILD_WF_WAIT_CANCELLATION_REQUESTED = 3;
+}
+
+enum ActivityCancellationType {
+  // Initiate a cancellation request and immediately report cancellation to the workflow.
+  TRY_CANCEL = 0;
+  // Wait for activity cancellation completion. Note that activity must heartbeat to receive a
+  // cancellation notification. This can block the cancellation for a long time if activity
+  // doesn't heartbeat or chooses to ignore the cancellation request.
+  WAIT_CANCELLATION_COMPLETED = 1;
+  // Do not request cancellation of the activity and immediately report cancellation to the
+  // workflow
+  ABANDON = 2;
+}
+

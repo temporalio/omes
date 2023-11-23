@@ -1,269 +1,199 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Awaitable, Optional, Sequence, Tuple
+from typing import Any, Awaitable, Optional
 
+import temporalio.workflow
 from temporalio import exceptions, workflow
-from temporalio.common import RetryPolicy
-from temporalio.workflow import ActivityCancellationType
+from temporalio.api.common.v1 import Payload
+from temporalio.common import RawValue, RetryPolicy
 
-
-@dataclass
-class WorkflowParams:
-    action_set: Optional[ActionSet]
-    action_set_signal: str
-
-
-@dataclass
-class ActionSet:
-    actions: Sequence[Action]
-    concurrent: bool
-
-
-@dataclass
-class Action:
-    result: Optional[ResultAction]
-    error: Optional[ErrorAction]
-    continue_as_new: Optional[ContinueAsNewAction]
-    sleep: Optional[SleepAction]
-    query_handler: Optional[QueryHandlerAction]
-    signal: Optional[SignalAction]
-    execute_activity: Optional[ExecuteActivityAction]
-    execute_child_workflow: Optional[ExecuteChildWorkflowAction]
-    nested_action_set: Optional[ActionSet]
-
-
-@dataclass
-class ResultAction:
-    value: Any
-    run_id: bool
-
-
-@dataclass
-class ErrorAction:
-    message: str
-    details: Any
-    attempt: bool
-
-
-@dataclass
-class ContinueAsNewAction:
-    while_above_zero: int
-
-
-@dataclass
-class SleepAction:
-    millis: int
-
-
-@dataclass
-class QueryHandlerAction:
-    name: str
-
-
-@dataclass
-class SignalAction:
-    name: str
-
-
-@dataclass
-class ExecuteActivityAction:
-    name: str
-    task_queue: str
-    args: Optional[Sequence[Any]]
-    count: int
-    index_as_arg: bool
-    schedule_to_close_timeout_ms: int
-    start_to_close_timeout_ms: int
-    schedule_to_start_timeout_ms: int
-    cancel_after_ms: int
-    wait_for_cancellation: bool
-    heartbeat_timeout_ms: int
-    retry_max_attempts: int
-    non_retryable_error_types: Optional[Sequence[str]]
-
-
-@dataclass
-class ExecuteChildWorkflowAction:
-    name: Optional[str]
-    count: int
-    args: Optional[Sequence[Any]]
-    params: Optional[WorkflowParams]
-
-
-def workflow_query(arg: str) -> str:
-    return arg
+from protos.kitchen_sink_pb2 import (
+    Action,
+    ActionSet,
+    ActivityCancellationType,
+    DoActionsUpdate,
+    DoSignal,
+    ExecuteActivityAction,
+    WorkflowInput,
+    WorkflowState,
+)
 
 
 @workflow.defn(name="kitchenSink")
 class KitchenSinkWorkflow:
+    action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
+    workflow_state = WorkflowState()
+
+    @workflow.signal
+    async def do_actions_signal(self, signal_actions: DoSignal.DoSignalActions) -> None:
+        if signal_actions.HasField("do_actions_in_main"):
+            self.action_set_queue.put_nowait(signal_actions.do_actions_in_main)
+        else:
+            await self.handle_action_set(signal_actions.do_actions)
+
+    @workflow.update
+    async def do_actions_update(self, actions_update: DoActionsUpdate) -> Any:
+        # IF variant was rejected we wouldn't even be in here, so access action set directly
+        retval = await self.handle_action_set(actions_update.do_actions)
+        if retval is not None:
+            return retval
+        return self.workflow_state
+
+    @do_actions_update.validator
+    def do_actions_update_val(self, actions_update: DoActionsUpdate):
+        if actions_update.HasField("reject_me"):
+            raise exceptions.ApplicationError("Rejected")
+
+    @workflow.query
+    def report_state(self, _: Any) -> WorkflowState:
+        return self.workflow_state
+
     @workflow.run
-    async def run(self, input: Optional[WorkflowParams]) -> Any:
-        workflow.logger.info("Started kitchen sink workflow {}".format(input))
-        if not input:
-            return None
-        if input.action_set and input.action_set.actions:
-            should_return, return_value = await self.handle_action_set(
-                input, input.action_set
-            )
-            if should_return:
-                return return_value
+    async def run(self, input: Optional[WorkflowInput]) -> Payload:
+        workflow.logger.info("Started kitchen sink workflow")
 
-        if input.action_set_signal:
-            action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
-
-            def enqueue(item: ActionSet) -> None:
-                action_set_queue.put_nowait(item)
-
-            workflow.set_signal_handler(input.action_set_signal, enqueue)
-            while True:
-                action_set = await action_set_queue.get()
-                should_return, return_value = await self.handle_action_set(
-                    input, action_set
-                )
-                if should_return:
+        # Run all initial input actions
+        if input and input.initial_actions:
+            for action_set in input.initial_actions:
+                return_value = await self.handle_action_set(action_set)
+                if return_value is not None:
                     return return_value
 
-        return return_value
+        # Run all actions from signals
+        while True:
+            action_set = await self.action_set_queue.get()
+            return_value = await self.handle_action_set(action_set)
+            if return_value is not None:
+                return return_value
 
-    async def handle_action_set(
-        self, input: WorkflowParams, action_set: ActionSet
-    ) -> Tuple[bool, Any]:
-        should_return = False
+    async def handle_action_set(self, action_set: ActionSet) -> Optional[Payload]:
         return_value = None
         # If these are non-concurrent, just execute and return if requested
         if not action_set.concurrent:
             for action in action_set.actions:
-                should_return, return_value = await self.handle_action(input, action)
-                if should_return:
-                    return (should_return, return_value)
-            return (False, return_value)
+                return_value = await self.handle_action(action)
+                if return_value is not None:
+                    return return_value
+            return return_value
+
         # With a concurrent set, we'll create a task for each, only updating
         # return values if we should return, then awaiting on that or completion
-        async def run_child(action: Action) -> None:
-            maybe_should_return, maybe_return_value = await self.handle_action(
-                input, action
-            )
-            if maybe_should_return:
-                nonlocal should_return, return_value
-                should_return = maybe_should_return
+        async def run_action(action: Action) -> None:
+            maybe_return_value = await self.handle_action(action)
+
+            if maybe_return_value is not None:
+                nonlocal return_value
                 return_value = maybe_return_value
 
-        gather_fut = asyncio.gather(*[run_child(a) for a in action_set.actions])
+        gather_fut = asyncio.gather(*[run_action(a) for a in action_set.actions])
         should_return_task = asyncio.create_task(
-            workflow.wait_condition(lambda: should_return)
+            workflow.wait_condition(lambda: return_value is not None)
         )
-        await asyncio.wait([gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED)  # type: ignore
-        return should_return, return_value
+        await asyncio.wait(
+            [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
+        )  # type: ignore
+        return return_value
 
-    async def handle_action(
-        self, input: WorkflowParams, action: Action
-    ) -> Tuple[bool, Any]:
-        info = workflow.info()
-        if action.result:
-            if action.result.run_id:
-                return (True, info.run_id)
-            return (True, action.result.value)
-        elif action.error:
-            if action.error.attempt:
-                raise exceptions.ApplicationError(
-                    "attempt {}".format(action.error.attempt)
-                )
-            raise exceptions.ApplicationError(
-                action.error.message, action.error.details
+    async def handle_action(self, action: Action) -> Optional[Payload]:
+        if action.HasField("return_result"):
+            return action.return_result.return_this
+        elif action.HasField("return_error"):
+            raise exceptions.ApplicationError(action.return_error.failure.message)
+        elif action.HasField("continue_as_new"):
+            workflow.continue_as_new(action.continue_as_new.arguments)
+        elif action.HasField("timer"):
+            await asyncio.sleep(action.timer.milliseconds / 1000)
+        elif action.HasField("exec_activity"):
+            await launch_activity(action.exec_activity)
+        elif action.HasField("exec_child_workflow"):
+            child_action = action.exec_child_workflow
+            child = child_action.workflow_type or "kitchenSink"
+            args = [RawValue(i) for i in child_action.input]
+            await workflow.execute_child_workflow(
+                child, id=child_action.workflow_id, args=args
             )
-        elif action.continue_as_new:
-            if action.continue_as_new.while_above_zero > 0:
-                action.continue_as_new.while_above_zero -= 1
-                workflow.continue_as_new(input)
-        elif action.sleep:
-            await asyncio.sleep(action.sleep.millis / 1000)
-        elif action.query_handler:
-            workflow.set_query_handler(action.query_handler.name, workflow_query)
-            return (True, None)
-        elif action.signal:
-            signal_event = asyncio.Event()
-
-            def signal_handler(arg: Optional[Any] = None) -> None:
-                signal_event.set()
-
-            workflow.set_signal_handler(action.signal.name, signal_handler)
-            await signal_event.wait()
-        elif action.execute_activity:
-            execute_activity = action.execute_activity
-            count = max(1, execute_activity.count)
-            results = await asyncio.gather(
-                *[launch_activity(execute_activity) for x in range(count)]
-            )
-            return (False, results[-1])
-        elif action.execute_child_workflow:
-            child = action.execute_child_workflow.name or "kitchenSink"
-            args = (
-                [action.execute_child_workflow.params]
-                if action.execute_child_workflow.params
-                else action.execute_child_workflow.args or [None]
-            )
-            count = action.execute_child_workflow.count or 1
-            await asyncio.gather(
-                *[
-                    workflow.execute_child_workflow(child, args=args)
-                    for _ in range(count)
-                ]
-            )
-            return (False, None)
-        elif action.nested_action_set:
-            return await self.handle_action_set(input, action.nested_action_set)
+        elif action.HasField("nested_action_set"):
+            return await self.handle_action_set(action.nested_action_set)
         else:
-            raise exceptions.ApplicationError("unrecognized action")
+            raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
-        return (False, None)
+        return None
 
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
-    if (
-        execute_activity.start_to_close_timeout_ms == 0
-        and execute_activity.schedule_to_close_timeout_ms == 0
-    ):
-        execute_activity.schedule_to_close_timeout_ms = 3 * 60 * 1000
-
-    args = execute_activity.args
-    if execute_activity.index_as_arg:
-        args = [execute_activity.index_as_arg]
+    args = execute_activity.arguments
 
     if args is None:
         args = []
 
-    cancelation_type = ActivityCancellationType.ABANDON
-    if execute_activity.wait_for_cancellation:
-        cancelation_type = ActivityCancellationType.WAIT_CANCELLATION_COMPLETED
-
-    activity_task: Awaitable = workflow.start_activity(
-        activity=execute_activity.name,
-        args=args,
-        task_queue=execute_activity.task_queue,
-        schedule_to_close_timeout=timedelta(
-            milliseconds=execute_activity.schedule_to_close_timeout_ms
-        ),
-        start_to_close_timeout=timedelta(
-            milliseconds=execute_activity.start_to_close_timeout_ms
-        ),
-        schedule_to_start_timeout=timedelta(
-            milliseconds=execute_activity.schedule_to_start_timeout_ms
-        ),
-        heartbeat_timeout=timedelta(milliseconds=execute_activity.heartbeat_timeout_ms),
-        retry_policy=RetryPolicy(
-            initial_interval=timedelta(milliseconds=1),
-            backoff_coefficient=1.01,
-            maximum_interval=timedelta(milliseconds=2),
-            maximum_attempts=max(1, execute_activity.retry_max_attempts),
-            non_retryable_error_types=execute_activity.non_retryable_error_types,
-        ),
-        cancellation_type=cancelation_type,
-    )
-    if execute_activity.cancel_after_ms > 0:
-        activity_task = asyncio.wait_for(
-            activity_task, execute_activity.cancel_after_ms / 1000
+    if execute_activity.HasField("is_local"):
+        activity_task = workflow.start_local_activity(
+            activity=execute_activity.activity_type,
+            args=args,
+            schedule_to_close_timeout=timeout_or_none(
+                execute_activity, "schedule_to_close_timeout"
+            ),
+            start_to_close_timeout=timeout_or_none(
+                execute_activity, "start_to_close_timeout"
+            ),
+            schedule_to_start_timeout=timeout_or_none(
+                execute_activity, "schedule_to_start_timeout"
+            ),
+            retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
+            if execute_activity.HasField("retry_policy")
+            else None,
+            # TODO: cancel type can be in local
         )
+    else:
+        activity_task = workflow.start_activity(
+            activity=execute_activity.activity_type,
+            args=args,
+            task_queue=execute_activity.task_queue,
+            schedule_to_close_timeout=timeout_or_none(
+                execute_activity, "schedule_to_close_timeout"
+            ),
+            start_to_close_timeout=timeout_or_none(
+                execute_activity, "start_to_close_timeout"
+            ),
+            schedule_to_start_timeout=timeout_or_none(
+                execute_activity, "schedule_to_start_timeout"
+            ),
+            heartbeat_timeout=timeout_or_none(execute_activity, "heartbeat_timeout"),
+            retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
+            if execute_activity.HasField("retry_policy")
+            else None,
+            cancellation_type=convert_act_cancel_type(
+                execute_activity.remote.cancellation_type
+            ),
+        )
+    # TODO: Handle cancels
     return activity_task
+
+
+# Various proto conversions below ==============================================
+
+
+def timeout_or_none(
+    activity_action: ExecuteActivityAction, timeout_field: str
+) -> Optional[timedelta]:
+    if activity_action.HasField(timeout_field):
+        return timedelta(
+            seconds=getattr(activity_action, timeout_field).seconds,
+            microseconds=getattr(activity_action, timeout_field).nanos / 1000,
+        )
+    return None
+
+
+def convert_act_cancel_type(
+    ctype: ActivityCancellationType,
+) -> temporalio.workflow.ActivityCancellationType:
+    if ctype == ActivityCancellationType.TRY_CANCEL:
+        return temporalio.workflow.ActivityCancellationType.TRY_CANCEL
+    elif ctype == ActivityCancellationType.WAIT_CANCELLATION_COMPLETED:
+        return temporalio.workflow.ActivityCancellationType.WAIT_CANCELLATION_COMPLETED
+    elif ctype == ActivityCancellationType.ABANDON:
+        return temporalio.workflow.ActivityCancellationType.ABANDON
+    else:
+        raise NotImplementedError("Unknown cancellation type " + str(ctype))

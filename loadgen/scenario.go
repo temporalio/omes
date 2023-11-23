@@ -89,6 +89,8 @@ type ScenarioInfo struct {
 	ScenarioOptions map[string]string
 	// The namespace that was used when connecting the client.
 	Namespace string
+	// Path to the root of the omes dir
+	RootPath string
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -168,14 +170,55 @@ func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 }
 
 type KitchenSinkWorkflowOptions struct {
-	Params       kitchensink.WorkflowParams
+	Params       *kitchensink.TestInput
 	StartOptions client.StartWorkflowOptions
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
-// completion ignoring its result.
+// completion ignoring its result. Concurrently it will perform any client actions specified in
+// kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	return r.ExecuteAnyWorkflow(ctx, options.StartOptions, "kitchenSink", nil, options.Params)
+	// Start the workflow
+	r.Logger.Debugf("Executing kitchen sink workflow with info: %v", options)
+	handle, err := r.Client.ExecuteWorkflow(
+		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
+	if err != nil {
+		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
+	}
+
+	clientSeq := options.Params.ClientSequence
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var clientActionsErr error
+	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
+		executor := &kitchensink.ClientActionsExecutor{
+			Client:     r.Client,
+			WorkflowID: handle.GetID(),
+			RunID:      handle.GetRunID(),
+		}
+		go func() {
+			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
+			if clientActionsErr != nil {
+				r.Logger.Error("Client actions failed: ", clientActionsErr)
+				cancel()
+				// TODO: Remove or change to "always terminate when exiting early" flag
+				err := r.Client.TerminateWorkflow(
+					ctx, handle.GetID(), handle.GetRunID(), "client actions failed", nil)
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
+
+	executeErr := handle.Get(cancelCtx, nil)
+	if executeErr != nil {
+		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
+	}
+	if clientActionsErr != nil {
+		return fmt.Errorf("kitchen sink client actions failed: %w", clientActionsErr)
+	}
+	return nil
 }
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,

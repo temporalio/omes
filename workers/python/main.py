@@ -3,7 +3,6 @@ import asyncio
 import logging
 import sys
 import threading
-from signal import SIGINT, SIGTERM
 from typing import List
 from urllib.parse import urlparse
 from wsgiref.simple_server import make_server
@@ -11,7 +10,13 @@ from wsgiref.simple_server import make_server
 from prometheus_client import make_wsgi_app
 from pythonjsonlogger import jsonlogger
 from temporalio.client import Client, TLSConfig
-from temporalio.runtime import PrometheusConfig, Runtime, TelemetryConfig
+from temporalio.runtime import (
+    LoggingConfig,
+    PrometheusConfig,
+    Runtime,
+    TelemetryConfig,
+    TelemetryFilter,
+)
 from temporalio.worker import Worker
 
 from activities import noop_activity
@@ -136,7 +141,15 @@ async def run():
         t.start()
         prometheus = PrometheusConfig(bind_address=parser.prom_listen_address)
 
-    new_runtime = Runtime(telemetry=TelemetryConfig(metrics=prometheus))
+    # TODO: Env var / arg for filter
+    new_runtime = Runtime(
+        telemetry=TelemetryConfig(
+            metrics=prometheus,
+            logging=LoggingConfig(
+                filter=TelemetryFilter(core_level="DEBUG", other_level="WARN")
+            ),
+        ),
+    )
     client = await Client.connect(
         target_host=args.server_address,
         namespace=args.namespace,

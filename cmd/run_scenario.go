@@ -114,6 +114,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
+		RootPath:        rootDir(),
 	}
 	err = scenario.Executor.Run(ctx, scenarioInfo)
 	if err != nil {
