@@ -22,7 +22,7 @@ isort = "^5.10.1"
 [tool.poe.tasks]
 format = [{cmd = "black ."}, {cmd = "isort ."}]
 lint = [
-  {cmd = "black --check . --extend-exclude 'protos/'"},
+  {cmd = "black --check ."},
   {cmd = "isort --check-only ."},
   {ref = "lint-types"},
 ]
@@ -32,6 +32,11 @@ lint-types = "mypy --explicit-package-bases --namespace-packages ."
 profile = "black"
 skip_gitignore = true
 skip_glob = "protos/*"
+
+[tool.black]
+extend-exclude = '''
+protos/
+'''
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

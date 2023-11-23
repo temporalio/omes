@@ -92,8 +92,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 
 	var err error
 	if sig := action.GetDoSignal(); sig != nil {
-		if actionSet := sig.GetDoActions(); actionSet != nil {
-			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_signal", actionSet)
+		if sigActions := sig.GetDoSignalActions(); sigActions != nil {
+			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_signal", sigActions)
 		} else if handler := sig.GetCustom(); handler != nil {
 			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
 		} else {

@@ -2,7 +2,6 @@ package kitchensink
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,29 +12,51 @@ import (
 )
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
-	b, _ := json.Marshal(params)
-	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow", "params", string(b))
-	if params == nil {
-		return nil, nil
+	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
+
+	workflowState := &kitchensink.WorkflowState{}
+	queryErr := workflow.SetQueryHandler(ctx, "report_state",
+		func(input interface{}) (*kitchensink.WorkflowState, error) {
+			return workflowState, nil
+		})
+	if queryErr != nil {
+		return nil, queryErr
 	}
 
 	// Handle initial set
 	if params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := handleActionSet(ctx, actionSet); ret != nil || err != nil {
+				workflow.GetLogger(ctx).Warn("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
 		}
 	}
 
 	// Handle signal action sets
-	actionSetCh := workflow.GetSignalChannel(ctx, "do_actions_signal")
-	for {
-		var actionSet kitchensink.ActionSet
-		actionSetCh.Receive(ctx, &actionSet)
-		if ret, err := handleActionSet(ctx, &actionSet); ret != nil || err != nil {
-			return ret, err
+	signalActionsChan := workflow.GetSignalChannel(ctx, "do_actions_signal")
+	retOrErrChan := workflow.NewChannel(ctx)
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for {
+			var sigActions kitchensink.DoSignal_DoSignalActions
+			signalActionsChan.Receive(ctx, &sigActions)
+			actionSet := sigActions.GetDoActionsInMain()
+			if actionSet == nil {
+				actionSet = sigActions.GetDoActions()
+			}
+			workflow.Go(ctx, func(ctx workflow.Context) {
+				ret, err := handleActionSet(ctx, actionSet)
+				if ret != nil || err != nil {
+					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
+				}
+			})
 		}
+	})
+	for {
+		var retOrErr ReturnOrErr
+		retOrErrChan.Receive(ctx, &retOrErr)
+		workflow.GetLogger(ctx).Warn("Finishing workflow", "retOrErr", retOrErr)
+		return retOrErr.retme, retOrErr.err
 	}
 }
 
@@ -106,14 +127,14 @@ func handleAction(
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
-	var actCtx workflow.Context
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
-		actCtx = workflow.WithLocalActivityOptions(ctx, opts)
+		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
+		return workflow.ExecuteLocalActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
 	} else {
 		waitForCancel := false
 		if remote := act.GetRemote(); remote != nil {
@@ -130,14 +151,13 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
-		actCtx = workflow.WithActivityOptions(ctx, opts)
+		actCtx := workflow.WithActivityOptions(ctx, opts)
+		return workflow.ExecuteActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
 	}
-	err := workflow.ExecuteActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
-	return err
 }
 
 // Noop is used as a no-op activity
-func Noop(_ context.Context) error {
+func Noop(_ context.Context, _ []*common.Payload) error {
 	return nil
 }
 
@@ -161,4 +181,9 @@ func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPo
 	}
 
 	return &p
+}
+
+type ReturnOrErr struct {
+	retme *common.Payload
+	err   error
 }

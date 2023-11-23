@@ -88,12 +88,19 @@ class ClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
-    __slots__ = ("do_actions", "custom")
-    DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("do_signal_actions", "custom")
+    class DoSignalActions(_message.Message):
+        __slots__ = ("do_actions", "do_actions_in_main")
+        DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+        DO_ACTIONS_IN_MAIN_FIELD_NUMBER: _ClassVar[int]
+        do_actions: ActionSet
+        do_actions_in_main: ActionSet
+        def __init__(self, do_actions: _Optional[_Union[ActionSet, _Mapping]] = ..., do_actions_in_main: _Optional[_Union[ActionSet, _Mapping]] = ...) -> None: ...
+    DO_SIGNAL_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
-    do_actions: ActionSet
+    do_signal_actions: DoSignal.DoSignalActions
     custom: HandlerInvocation
-    def __init__(self, do_actions: _Optional[_Union[ActionSet, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ...) -> None: ...
+    def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ...) -> None: ...
 
 class DoQuery(_message.Message):
     __slots__ = ("report_state", "custom", "failure_expected")

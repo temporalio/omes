@@ -1,11 +1,11 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::do_actions_update;
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
-        action, client_action, do_query, do_signal, do_update, execute_activity_action, Action,
-        ActionSet, ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
+        action, client_action, do_actions_update, do_query, do_signal,
+        do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
+        ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
         ExecuteActivityAction, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
         TestInput, TimerAction, WorkflowInput,
     },
@@ -254,7 +254,16 @@ impl<'a> Arbitrary<'a> for DoSignal {
         // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
-            do_signal::Variant::DoActions(u.arbitrary()?)
+            // Half of that in the handler half in main
+            if u.ratio(50, 100)? {
+                do_signal::Variant::DoSignalActions(
+                    Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)).into(),
+                )
+            } else {
+                do_signal::Variant::DoSignalActions(
+                    Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)).into(),
+                )
+            }
         } else {
             // Sometimes do a not found signal
             do_signal::Variant::Custom(HandlerInvocation::nonexistent())
@@ -450,7 +459,12 @@ fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result
 fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -> ClientAction {
     ClientAction {
         variant: Some(client_action::Variant::DoSignal(DoSignal {
-            variant: Some(do_signal::Variant::DoActions(mk_action_set(actions))),
+            variant: Some(do_signal::Variant::DoSignalActions(
+                Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
+                    actions,
+                )))
+                .into(),
+            )),
         })),
     }
 }

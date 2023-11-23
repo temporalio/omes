@@ -14,6 +14,7 @@ from protos.kitchen_sink_pb2 import (
     ActionSet,
     ActivityCancellationType,
     DoActionsUpdate,
+    DoSignal,
     ExecuteActivityAction,
     WorkflowInput,
     WorkflowState,
@@ -26,8 +27,11 @@ class KitchenSinkWorkflow:
     workflow_state = WorkflowState()
 
     @workflow.signal
-    async def do_actions_signal(self, action_set: ActionSet) -> None:
-        self.action_set_queue.put_nowait(action_set)
+    async def do_actions_signal(self, signal_actions: DoSignal.DoSignalActions) -> None:
+        if signal_actions.HasField("do_actions_in_main"):
+            self.action_set_queue.put_nowait(signal_actions.do_actions_in_main)
+        else:
+            await self.handle_action_set(signal_actions.do_actions)
 
     @workflow.update
     async def do_actions_update(self, actions_update: DoActionsUpdate) -> Any:

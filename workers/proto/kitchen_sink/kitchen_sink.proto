@@ -44,10 +44,21 @@ message ClientAction {
 }
 
 message DoSignal {
+  message DoSignalActions {
+    oneof variant {
+      // Execute the action set in the handler. Since Go doesn't have explicit signal handlers it
+      // should instead run the actions in a goroutine for both of these variants, as the
+      // distinction doesn't really matter there.
+      ActionSet do_actions = 1;
+      // Pipe the actions back to the main workflow function via a queue or similar mechanism, where
+      // they will then be run.
+      ActionSet do_actions_in_main = 2;
+    }
+  }
   oneof variant {
-    // An signal handler must exist named `do_actions_signal` which is responsible for executing
-    // the action set.
-    ActionSet do_actions = 1;
+    // A signal handler must exist named `do_actions_signal` which is responsible for handling the
+    // DoSignalActions message. See it's doc for details.
+    DoSignalActions do_signal_actions = 1;
     // Send an arbitrary signal
     HandlerInvocation custom = 2;
   }

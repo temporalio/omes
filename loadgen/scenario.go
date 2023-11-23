@@ -199,7 +199,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		go func() {
 			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if clientActionsErr != nil {
-				r.Logger.Error("Client actions failed", clientActionsErr)
+				r.Logger.Error("Client actions failed: ", clientActionsErr)
 				cancel()
 				// TODO: Remove or change to "always terminate when exiting early" flag
 				err := r.Client.TerminateWorkflow(
