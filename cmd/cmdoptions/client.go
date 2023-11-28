@@ -3,12 +3,16 @@ package cmdoptions
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
 )
 
@@ -94,6 +98,16 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 		})
 	}
 
+	dataConverter := converter.NewCompositeDataConverter(
+		converter.NewNilPayloadConverter(),
+		converter.NewByteSlicePayloadConverter(),
+		&PassThroughPayloadConverter{},
+		converter.NewProtoJSONPayloadConverter(),
+		converter.NewProtoPayloadConverter(),
+		converter.NewJSONPayloadConverter(),
+	)
+	clientOptions.DataConverter = dataConverter
+
 	client, err := client.Dial(clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %w", err)
@@ -134,4 +148,40 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 		flags = append(flags, "--auth-header", c.AuthHeader)
 	}
 	return
+}
+
+type PassThroughPayloadConverter struct{}
+
+func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payload, error) {
+	if valuePayload, ok := value.(*common.Payload); ok {
+		asBytes, err := proto.Marshal(valuePayload)
+		if err != nil {
+			return nil, fmt.Errorf("unable to encode raw payload: %w", err)
+		}
+
+		return &common.Payload{
+			Metadata: map[string][]byte{
+				"encoding": []byte(p.Encoding()),
+			},
+			Data: asBytes,
+		}, nil
+	}
+	return nil, nil
+}
+
+func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, valuePtr interface{}) error {
+	innerPayload := &common.Payload{}
+	err := proto.Unmarshal(payload.GetData(), innerPayload)
+	if err != nil {
+		return fmt.Errorf("unable to decode raw payload: %w", err)
+	}
+	return converter.GetDefaultDataConverter().FromPayload(innerPayload, valuePtr)
+}
+
+func (p *PassThroughPayloadConverter) ToString(payload *common.Payload) string {
+	return base64.RawStdEncoding.EncodeToString(payload.GetData())
+}
+
+func (p *PassThroughPayloadConverter) Encoding() string {
+	return "_passthrough"
 }

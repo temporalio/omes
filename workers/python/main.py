@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import threading
 from typing import List
@@ -141,12 +142,14 @@ async def run():
         t.start()
         prometheus = PrometheusConfig(bind_address=parser.prom_listen_address)
 
-    # TODO: Env var / arg for filter
     new_runtime = Runtime(
         telemetry=TelemetryConfig(
             metrics=prometheus,
             logging=LoggingConfig(
-                filter=TelemetryFilter(core_level="DEBUG", other_level="WARN")
+                filter=TelemetryFilter(
+                    core_level=os.getenv("TEMPORAL_CORE_LOG_LEVEL", "INFO"),
+                    other_level="WARN",
+                )
             ),
         ),
     )

@@ -1,5 +1,6 @@
 mod protos;
 
+use crate::protos::temporal::omes::kitchen_sink::ExecuteChildWorkflowAction;
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
@@ -15,6 +16,7 @@ use arbitrary::{Arbitrary, Unstructured};
 use clap::Parser;
 use prost::Message;
 use rand::{Rng, SeedableRng};
+use std::collections::HashMap;
 use std::{cell::RefCell, io::Write, ops::RangeInclusive, path::PathBuf, time::Duration};
 
 /// A tool for generating client actions and inputs to the kitchen sink workflows in omes.
@@ -332,10 +334,11 @@ impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: Adjustable ratio of choice?
         // TODO: The rest of the kinds of actions
-        let action_kind = u.int_in_range(0..=1)?;
+        let action_kind = u.int_in_range(0..=2)?;
         let variant = match action_kind {
             0 => action::Variant::Timer(u.arbitrary()?),
             1 => action::Variant::ExecActivity(u.arbitrary()?),
+            2 => action::Variant::ExecChildWorkflow(u.arbitrary()?),
             _ => unreachable!(),
         };
         Ok(Self {
@@ -364,16 +367,33 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         };
         Ok(Self {
             activity_type: "noop".to_string(),
-            task_queue: "".to_string(),
-            headers: Default::default(),
-            arguments: vec![],
-            schedule_to_close_timeout: None,
-            schedule_to_start_timeout: None,
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
-            heartbeat_timeout: None,
-            retry_policy: None,
-            awaitable_choice: None,
             locality: Some(locality),
+            // TODO: Awaitable choice
+            ..Default::default()
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
+    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let input = WorkflowInput {
+            initial_actions: vec![ActionSet {
+                actions: vec![Action {
+                    variant: Some(action::Variant::ReturnResult(ReturnResultAction {
+                        return_this: Some(Payload::default()),
+                    })),
+                }],
+                concurrent: false,
+            }],
+        };
+        let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
+        Ok(Self {
+            // Use KS as own child, with an input to just return right away
+            workflow_type: "kitchenSink".to_string(),
+            input: vec![input],
+            // TODO: Awaitable choice / cancellation type
+            ..Default::default()
         })
     }
 }
@@ -478,5 +498,17 @@ fn mk_action_set(actions: impl IntoIterator<Item = action::Variant>) -> ActionSe
             })
             .collect(),
         concurrent: true,
+    }
+}
+
+fn to_proto_payload(msg: impl Message, type_name: &str) -> Payload {
+    Payload {
+        metadata: {
+            let mut m = HashMap::new();
+            m.insert("encoding".to_string(), "binary/protobuf".into());
+            m.insert("messageType".to_string(), type_name.into());
+            m
+        },
+        data: msg.encode_to_vec(),
     }
 }

@@ -24,10 +24,10 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	}
 
 	// Handle initial set
-	if params.InitialActions != nil {
+	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Warn("Finishing early", "ret", ret, "err", err)
+				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
 		}
@@ -55,7 +55,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	for {
 		var retOrErr ReturnOrErr
 		retOrErrChan.Receive(ctx, &retOrErr)
-		workflow.GetLogger(ctx).Warn("Finishing workflow", "retOrErr", retOrErr)
+		workflow.GetLogger(ctx).Info("Finishing workflow", "retOrErr", retOrErr)
 		return retOrErr.retme, retOrErr.err
 	}
 }
@@ -116,7 +116,7 @@ func handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()).Get(ctx, nil)
+		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0]).Get(ctx, nil)
 		return nil, err
 	} else if action.GetNestedActionSet() != nil {
 		return handleActionSet(ctx, action.GetNestedActionSet())
@@ -127,6 +127,10 @@ func handleAction(
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
+	args := act.GetArguments()
+	if len(args) == 0 {
+		args = nil
+	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -134,7 +138,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
-		return workflow.ExecuteLocalActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
+		return workflow.ExecuteLocalActivity(actCtx, act.ActivityType, args).Get(actCtx, nil)
 	} else {
 		waitForCancel := false
 		if remote := act.GetRemote(); remote != nil {
@@ -152,7 +156,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
-		return workflow.ExecuteActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
+		return workflow.ExecuteActivity(actCtx, act.ActivityType, args).Get(actCtx, nil)
 	}
 }
 
