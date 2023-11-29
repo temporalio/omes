@@ -276,6 +276,8 @@ message SetPatchMarkerAction {
   // Can be set to true to indicate that branches using this change are being removed, and all
   // future worker deployments will only have the "with change" code in them.
   bool deprecated = 2;
+  // Perform this action behind the if guard
+  Action inner_action = 3;
 }
 
 message UpsertSearchAttributesAction {

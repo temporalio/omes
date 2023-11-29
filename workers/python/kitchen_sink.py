@@ -114,6 +114,15 @@ class KitchenSinkWorkflow:
             await workflow.execute_child_workflow(
                 child, id=child_action.workflow_id, args=args
             )
+        elif action.HasField("set_patch_marker"):
+            if action.set_patch_marker.deprecated:
+                workflow.deprecate_patch(action.set_patch_marker.patch_id)
+                was_patched = True
+            else:
+                was_patched = workflow.patched(action.set_patch_marker.patch_id)
+
+            if was_patched:
+                return await self.handle_action(action.set_patch_marker.inner_action)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:

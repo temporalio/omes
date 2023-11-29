@@ -1,6 +1,8 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::ExecuteChildWorkflowAction;
+use crate::protos::temporal::omes::kitchen_sink::{
+    ExecuteChildWorkflowAction, SetPatchMarkerAction,
+};
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
@@ -207,7 +209,7 @@ impl<'a> Arbitrary<'a> for TestInput {
 }
 
 impl<'a> Arbitrary<'a> for WorkflowInput {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO impl
         Ok(Self {
             initial_actions: vec![],
@@ -334,11 +336,12 @@ impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: Adjustable ratio of choice?
         // TODO: The rest of the kinds of actions
-        let action_kind = u.int_in_range(0..=2)?;
+        let action_kind = u.int_in_range(0..=3)?;
         let variant = match action_kind {
             0 => action::Variant::Timer(u.arbitrary()?),
             1 => action::Variant::ExecActivity(u.arbitrary()?),
             2 => action::Variant::ExecChildWorkflow(u.arbitrary()?),
+            3 => action::Variant::SetPatchMarker(u.arbitrary()?),
             _ => unreachable!(),
         };
         Ok(Self {
@@ -398,8 +401,20 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
     }
 }
 
-impl<'a> Arbitrary<'a> for RemoteActivityOptions {
+impl<'a> Arbitrary<'a> for SetPatchMarkerAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let patch_id = u.int_in_range(1..=10)?;
+        Ok(Self {
+            patch_id: patch_id.to_string(),
+            // Patches should be consistently deprecated or not for the same ID
+            deprecated: patch_id % 2 == 0,
+            inner_action: Some(u.arbitrary()?),
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for RemoteActivityOptions {
+    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: impl
         Ok(Self::default())
     }

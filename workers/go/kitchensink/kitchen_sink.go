@@ -118,6 +118,10 @@ func handleAction(
 		}
 		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0]).Get(ctx, nil)
 		return nil, err
+	} else if patch := action.GetSetPatchMarker(); patch != nil {
+		if workflow.GetVersion(ctx, patch.GetPatchId(), workflow.DefaultVersion, 1) == 1 {
+			return handleAction(ctx, patch.GetInnerAction())
+		}
 	} else if action.GetNestedActionSet() != nil {
 		return handleActionSet(ctx, action.GetNestedActionSet())
 	} else {

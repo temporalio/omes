@@ -355,12 +355,14 @@ class CancelWorkflowAction(_message.Message):
     def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class SetPatchMarkerAction(_message.Message):
-    __slots__ = ("patch_id", "deprecated")
+    __slots__ = ("patch_id", "deprecated", "inner_action")
     PATCH_ID_FIELD_NUMBER: _ClassVar[int]
     DEPRECATED_FIELD_NUMBER: _ClassVar[int]
+    INNER_ACTION_FIELD_NUMBER: _ClassVar[int]
     patch_id: str
     deprecated: bool
-    def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ...) -> None: ...
+    inner_action: Action
+    def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ..., inner_action: _Optional[_Union[Action, _Mapping]] = ...) -> None: ...
 
 class UpsertSearchAttributesAction(_message.Message):
     __slots__ = ("search_attributes",)
