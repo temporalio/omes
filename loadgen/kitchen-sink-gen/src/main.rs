@@ -1,16 +1,15 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::{
-    ExecuteChildWorkflowAction, SetPatchMarkerAction,
-};
+use crate::protos::temporal::omes::kitchen_sink::AwaitWorkflowState;
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
         action, client_action, do_actions_update, do_query, do_signal,
         do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
         ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
-        ExecuteActivityAction, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
-        TestInput, TimerAction, WorkflowInput,
+        ExecuteActivityAction, ExecuteChildWorkflowAction, HandlerInvocation,
+        RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction, TestInput, TimerAction,
+        WorkflowInput, WorkflowState,
     },
 };
 use anyhow::Error;
@@ -114,38 +113,39 @@ fn main() -> Result<(), Error> {
 
 fn example(args: ExampleCmd) -> Result<(), Error> {
     let mut example_input = TestInput::default();
-    let mut client_sequence = ClientSequence::default();
-    client_sequence.action_sets = vec![
-        ClientActionSet {
-            actions: vec![mk_client_signal_action([TimerAction {
-                milliseconds: 100,
-                awaitable_choice: None,
-            }
-            .into()])],
-            concurrent: false,
-            wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
-        },
-        ClientActionSet {
-            actions: vec![mk_client_signal_action([
-                TimerAction {
+    let client_sequence = ClientSequence {
+        action_sets: vec![
+            ClientActionSet {
+                actions: vec![mk_client_signal_action([TimerAction {
                     milliseconds: 100,
                     awaitable_choice: None,
                 }
-                .into(),
-                ExecuteActivityAction {
-                    activity_type: "noop".to_string(),
-                    start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
-                    ..Default::default()
-                }
-                .into(),
-                ReturnResultAction {
-                    return_this: Some(Payload::default()),
-                }
-                .into(),
-            ])],
-            ..Default::default()
-        },
-    ];
+                .into()])],
+                concurrent: false,
+                wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
+            },
+            ClientActionSet {
+                actions: vec![mk_client_signal_action([
+                    TimerAction {
+                        milliseconds: 100,
+                        awaitable_choice: None,
+                    }
+                    .into(),
+                    ExecuteActivityAction {
+                        activity_type: "noop".to_string(),
+                        start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                        ..Default::default()
+                    }
+                    .into(),
+                    ReturnResultAction {
+                        return_this: Some(Payload::default()),
+                    }
+                    .into(),
+                ])],
+                ..Default::default()
+            },
+        ],
+    };
     example_input.client_sequence = Some(client_sequence);
     output_proto(example_input, args.proto_output)?;
     Ok(())
@@ -163,6 +163,7 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     eprintln!("Using config: {:?}", &args.generator_config);
     let context = ArbContext {
         config: args.generator_config,
+        cur_workflow_state: Default::default(),
     };
     ARB_CONTEXT.set(context);
 
@@ -181,9 +182,12 @@ thread_local! {
     static ARB_CONTEXT: RefCell<ArbContext> = RefCell::new(ArbContext::default());
 }
 
+static WF_STATE_FIELD_VALUE: &str = "x";
+
 #[derive(Default)]
 struct ArbContext {
     config: GeneratorConfig,
+    cur_workflow_state: WorkflowState,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
@@ -336,12 +340,41 @@ impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: Adjustable ratio of choice?
         // TODO: The rest of the kinds of actions
-        let action_kind = u.int_in_range(0..=3)?;
+        let action_kind = u.int_in_range(0..=5)?;
         let variant = match action_kind {
             0 => action::Variant::Timer(u.arbitrary()?),
             1 => action::Variant::ExecActivity(u.arbitrary()?),
             2 => action::Variant::ExecChildWorkflow(u.arbitrary()?),
             3 => action::Variant::SetPatchMarker(u.arbitrary()?),
+            4 => action::Variant::SetWorkflowState({
+                let chosen_int = u.int_in_range(1..=100)?;
+                ARB_CONTEXT.with_borrow_mut(|c| {
+                    c.cur_workflow_state
+                        .kvs
+                        .insert(chosen_int.to_string(), WF_STATE_FIELD_VALUE.to_string());
+                    c.cur_workflow_state.clone()
+                })
+            }),
+            5 => {
+                let key = ARB_CONTEXT.with_borrow(|c| {
+                    if c.cur_workflow_state.kvs.is_empty() {
+                        None
+                    } else {
+                        let keys = c.cur_workflow_state.kvs.keys().collect::<Vec<_>>();
+                        Some(u.choose(&keys).map(|s| s.to_string()))
+                    }
+                });
+                if let Some(key) = key {
+                    action::Variant::AwaitWorkflowState(AwaitWorkflowState {
+                        key: key?,
+                        value: WF_STATE_FIELD_VALUE.to_string(),
+                    })
+                } else {
+                    // Pick a different action if we've never set anything in state
+                    let action: Action = u.arbitrary()?;
+                    action.variant.unwrap()
+                }
+            }
             _ => unreachable!(),
         };
         Ok(Self {

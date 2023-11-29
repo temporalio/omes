@@ -26,7 +26,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	// Handle initial set
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
-			if ret, err := handleActionSet(ctx, actionSet); ret != nil || err != nil {
+			if ret, err := handleActionSet(ctx, workflowState, actionSet); ret != nil || err != nil {
 				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
@@ -45,7 +45,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				actionSet = sigActions.GetDoActions()
 			}
 			workflow.Go(ctx, func(ctx workflow.Context) {
-				ret, err := handleActionSet(ctx, actionSet)
+				ret, err := handleActionSet(ctx, workflowState, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
 				}
@@ -62,12 +62,13 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 func handleActionSet(
 	ctx workflow.Context,
+	workflowState *kitchensink.WorkflowState,
 	set *kitchensink.ActionSet,
 ) (returnValue *common.Payload, err error) {
 	// If these are non-concurrent, just execute and return if requested
 	if !set.Concurrent {
 		for _, action := range set.Actions {
-			if returnValue, err = handleAction(ctx, action); returnValue != nil || err != nil {
+			if returnValue, err = handleAction(ctx, workflowState, action); returnValue != nil || err != nil {
 				return
 			}
 		}
@@ -79,7 +80,7 @@ func handleActionSet(
 	for _, action := range set.Actions {
 		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			if maybeReturnValue, maybeErr := handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
+			if maybeReturnValue, maybeErr := handleAction(ctx, workflowState, action); maybeReturnValue != nil || maybeErr != nil {
 				returnValue, err = maybeReturnValue, maybeErr
 			}
 			actionsCompleted++
@@ -96,8 +97,9 @@ func handleActionSet(
 
 func handleAction(
 	ctx workflow.Context,
+	workflowState *kitchensink.WorkflowState,
 	action *kitchensink.Action,
-) (returnValue *common.Payload, err error) {
+) (*common.Payload, error) {
 	if rr := action.GetReturnResult(); rr != nil {
 		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
@@ -120,10 +122,20 @@ func handleAction(
 		return nil, err
 	} else if patch := action.GetSetPatchMarker(); patch != nil {
 		if workflow.GetVersion(ctx, patch.GetPatchId(), workflow.DefaultVersion, 1) == 1 {
-			return handleAction(ctx, patch.GetInnerAction())
+			return handleAction(ctx, workflowState, patch.GetInnerAction())
 		}
+	} else if setWfState := action.GetSetWorkflowState(); setWfState != nil {
+		workflowState = setWfState
+	} else if awaitState := action.GetAwaitWorkflowState(); awaitState != nil {
+		err := workflow.Await(ctx, func() bool {
+			if val, ok := workflowState.Kvs[awaitState.Key]; ok {
+				return val == awaitState.Value
+			}
+			return false
+		})
+		return nil, err
 	} else if action.GetNestedActionSet() != nil {
-		return handleActionSet(ctx, action.GetNestedActionSet())
+		return handleActionSet(ctx, workflowState, action.GetNestedActionSet())
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}

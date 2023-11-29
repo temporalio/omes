@@ -123,6 +123,13 @@ class KitchenSinkWorkflow:
 
             if was_patched:
                 return await self.handle_action(action.set_patch_marker.inner_action)
+        elif action.HasField("set_workflow_state"):
+            self.workflow_state = action.set_workflow_state
+        elif action.HasField("await_workflow_state"):
+            await workflow.wait_condition(
+                lambda: self.workflow_state.kvs.get(action.await_workflow_state.key)
+                == action.await_workflow_state.value
+            )
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:

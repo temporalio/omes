@@ -1,5 +1,6 @@
 pub mod temporal {
     pub mod omes {
+        #[allow(clippy::all)]
         pub mod kitchen_sink {
             include!(concat!(env!("OUT_DIR"), "/temporal.omes.kitchen_sink.rs"));
             impl HandlerInvocation {
@@ -13,6 +14,7 @@ pub mod temporal {
         }
     }
 
+    #[allow(clippy::all)]
     pub mod api {
         pub mod common {
             pub mod v1 {
