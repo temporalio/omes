@@ -134,6 +134,20 @@ func handleAction(
 			return false
 		})
 		return nil, err
+	} else if upsertMemo := action.GetUpsertMemo(); upsertMemo != nil {
+		convertedMap := make(map[string]interface{}, len(upsertMemo.GetUpsertedMemo().Fields))
+		for k, v := range upsertMemo.GetUpsertedMemo().Fields {
+			convertedMap[k] = v
+		}
+		err := workflow.UpsertMemo(ctx, convertedMap)
+		return nil, err
+	} else if upsertSA := action.GetUpsertSearchAttributes(); upsertSA != nil {
+		convertedMap := make(map[string]interface{}, len(upsertSA.GetSearchAttributes()))
+		for k, v := range upsertSA.GetSearchAttributes() {
+			convertedMap[k] = v
+		}
+		err := workflow.UpsertSearchAttributes(ctx, convertedMap)
+		return nil, err
 	} else if action.GetNestedActionSet() != nil {
 		return handleActionSet(ctx, workflowState, action.GetNestedActionSet())
 	} else {

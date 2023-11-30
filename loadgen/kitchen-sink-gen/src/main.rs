@@ -1,6 +1,9 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::AwaitWorkflowState;
+use crate::protos::temporal::api::common::v1::Memo;
+use crate::protos::temporal::omes::kitchen_sink::{
+    AwaitWorkflowState, UpsertMemoAction, UpsertSearchAttributesAction,
+};
 use crate::protos::temporal::{
     api::common::v1::{Payload, Payloads},
     omes::kitchen_sink::{
@@ -340,7 +343,7 @@ impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: Adjustable ratio of choice?
         // TODO: The rest of the kinds of actions
-        let action_kind = u.int_in_range(0..=5)?;
+        let action_kind = u.int_in_range(0..=7)?;
         let variant = match action_kind {
             0 => action::Variant::Timer(u.arbitrary()?),
             1 => action::Variant::ExecActivity(u.arbitrary()?),
@@ -375,6 +378,8 @@ impl<'a> Arbitrary<'a> for Action {
                     action.variant.unwrap()
                 }
             }
+            6 => action::Variant::UpsertMemo(u.arbitrary()?),
+            7 => action::Variant::UpsertSearchAttributes(u.arbitrary()?),
             _ => unreachable!(),
         };
         Ok(Self {
@@ -442,6 +447,58 @@ impl<'a> Arbitrary<'a> for SetPatchMarkerAction {
             // Patches should be consistently deprecated or not for the same ID
             deprecated: patch_id % 2 == 0,
             inner_action: Some(u.arbitrary()?),
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for UpsertMemoAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self {
+            upserted_memo: Some(Memo {
+                fields: {
+                    let mut hm = HashMap::new();
+                    let chosen_int = u.int_in_range(1..=100)?;
+                    hm.insert(
+                        chosen_int.to_string(),
+                        Payload {
+                            metadata: Default::default(),
+                            data: vec![chosen_int],
+                        },
+                    );
+                    hm
+                },
+            }),
+        })
+    }
+}
+
+static SEARCH_ATTR_KEYS: [&str; 2] = ["KS_Keyword", "KS_Int"];
+
+impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let chosen_sa = *u.choose(&SEARCH_ATTR_KEYS)?;
+        Ok(Self {
+            search_attributes: {
+                let mut hm = HashMap::new();
+                let data = if chosen_sa == "KS_Keyword" {
+                    serde_json::to_vec(&u.int_in_range(1..=255)?.to_string())
+                } else {
+                    serde_json::to_vec(&u.int_in_range(1..=255)?)
+                }
+                .expect("serializes");
+                hm.insert(
+                    chosen_sa.to_string(),
+                    Payload {
+                        metadata: {
+                            let mut m = HashMap::new();
+                            m.insert("encoding".to_string(), "json/plain".into());
+                            m
+                        },
+                        data,
+                    },
+                );
+                hm
+            },
         })
     }
 }

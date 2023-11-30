@@ -7,7 +7,7 @@ from typing import Any, Awaitable, Optional
 import temporalio.workflow
 from temporalio import exceptions, workflow
 from temporalio.api.common.v1 import Payload
-from temporalio.common import RawValue, RetryPolicy
+from temporalio.common import RawValue, RetryPolicy, SearchAttributeKey
 
 from protos.kitchen_sink_pb2 import (
     Action,
@@ -130,6 +130,20 @@ class KitchenSinkWorkflow:
                 lambda: self.workflow_state.kvs.get(action.await_workflow_state.key)
                 == action.await_workflow_state.value
             )
+        elif action.HasField("upsert_memo"):
+            pass  # Python doesn't have memo upserting
+        elif action.HasField("upsert_search_attributes"):
+            updates = []
+            # TODO: Use RawValue after https://github.com/temporalio/sdk-python/issues/438
+            #  and avoid checking key by name
+            for k, v in action.upsert_search_attributes.search_attributes.items():
+                if "Keyword" in k:
+                    updates.append(
+                        SearchAttributeKey.for_keyword(k).value_set(str(v.data[0]))
+                    )
+                else:
+                    updates.append(SearchAttributeKey.for_int(k).value_set(v.data[0]))
+            workflow.upsert_search_attributes(updates)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:
