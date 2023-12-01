@@ -27,7 +27,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	// Handle initial set
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
-			if ret, err := handleActionSet(ctx, workflowState, actionSet); ret != nil || err != nil {
+			if ret, err := handleActionSet(ctx, &workflowState, actionSet); ret != nil || err != nil {
 				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
@@ -46,7 +46,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				actionSet = sigActions.GetDoActions()
 			}
 			workflow.Go(ctx, func(ctx workflow.Context) {
-				ret, err := handleActionSet(ctx, workflowState, actionSet)
+				ret, err := handleActionSet(ctx, &workflowState, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
 				}
@@ -63,7 +63,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 func handleActionSet(
 	ctx workflow.Context,
-	workflowState *kitchensink.WorkflowState,
+	workflowState **kitchensink.WorkflowState,
 	set *kitchensink.ActionSet,
 ) (returnValue *common.Payload, err error) {
 	// If these are non-concurrent, just execute and return if requested
@@ -98,7 +98,7 @@ func handleActionSet(
 
 func handleAction(
 	ctx workflow.Context,
-	workflowState *kitchensink.WorkflowState,
+	workflowState **kitchensink.WorkflowState,
 	action *kitchensink.Action,
 ) (*common.Payload, error) {
 	if rr := action.GetReturnResult(); rr != nil {
@@ -133,10 +133,10 @@ func handleAction(
 			return handleAction(ctx, workflowState, patch.GetInnerAction())
 		}
 	} else if setWfState := action.GetSetWorkflowState(); setWfState != nil {
-		workflowState = setWfState
+		*workflowState = setWfState
 	} else if awaitState := action.GetAwaitWorkflowState(); awaitState != nil {
 		err := workflow.Await(ctx, func() bool {
-			if val, ok := workflowState.Kvs[awaitState.Key]; ok {
+			if val, ok := (*workflowState).Kvs[awaitState.Key]; ok {
 				return val == awaitState.Value
 			}
 			return false
