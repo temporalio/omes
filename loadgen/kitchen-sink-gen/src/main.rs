@@ -1,5 +1,6 @@
 mod protos;
 
+use crate::protos::temporal::omes::kitchen_sink::{awaitable_choice, AwaitableChoice};
 use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
@@ -493,8 +494,7 @@ impl<'a> Arbitrary<'a> for TimerAction {
             milliseconds: u.int_in_range(
                 0..=ARB_CONTEXT.with_borrow(|c| c.config.max_timer.as_millis() as u64),
             )?,
-            // TODO: implement
-            awaitable_choice: None,
+            awaitable_choice: Some(u.arbitrary()?),
         })
     }
 }
@@ -511,14 +511,14 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
             activity_type: "noop".to_string(),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
             locality: Some(locality),
-            // TODO: Awaitable choice
+            awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
         })
     }
 }
 
 impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
-    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let input = WorkflowInput {
             initial_actions: vec![ActionSet {
                 actions: vec![Action {
@@ -534,7 +534,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
             // Use KS as own child, with an input to just return right away
             workflow_type: "kitchenSink".to_string(),
             input: vec![input],
-            // TODO: Awaitable choice / cancellation type
+            awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
         })
     }
@@ -652,6 +652,21 @@ impl<'a> Arbitrary<'a> for ClientActionWait {
 impl From<ClientActionWait> for prost_types::Duration {
     fn from(v: ClientActionWait) -> Self {
         v.duration.try_into().unwrap()
+    }
+}
+
+impl<'a> Arbitrary<'a> for AwaitableChoice {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let choices = [
+            awaitable_choice::Condition::WaitFinish(()),
+            awaitable_choice::Condition::Abandon(()),
+            awaitable_choice::Condition::CancelBeforeStarted(()),
+            awaitable_choice::Condition::CancelAfterStarted(()),
+            awaitable_choice::Condition::CancelAfterCompleted(()),
+        ];
+        Ok(AwaitableChoice {
+            condition: Some(u.choose(&choices)?.clone()),
+        })
     }
 }
 

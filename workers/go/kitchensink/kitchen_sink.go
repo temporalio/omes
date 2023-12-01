@@ -2,6 +2,7 @@ package kitchensink
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -107,9 +108,14 @@ func handleAction(
 	} else if can := action.GetContinueAsNew(); can != nil {
 		return nil, workflow.NewContinueAsNewError(ctx, KitchenSinkWorkflow, can.Arguments)
 	} else if timer := action.GetTimer(); timer != nil {
-		if err := workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond); err != nil {
-			return nil, err
-		}
+		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+			fut, setter := workflow.NewFuture(ctx)
+			workflow.Go(ctx, func(ctx workflow.Context) {
+				_ = workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond)
+				setter.Set(struct{}{}, nil)
+			})
+			return fut
+		}, timer.AwaitableChoice)
 	} else if act := action.GetExecActivity(); act != nil {
 		return nil, launchActivity(ctx, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
@@ -118,7 +124,9 @@ func handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0]).Get(ctx, nil)
+		err := withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+			return workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0])
+		}, child.AwaitableChoice)
 		return nil, err
 	} else if patch := action.GetSetPatchMarker(); patch != nil {
 		if workflow.GetVersion(ctx, patch.GetPatchId(), workflow.DefaultVersion, 1) == 1 {
@@ -168,7 +176,9 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
-		return workflow.ExecuteLocalActivity(actCtx, act.ActivityType, args).Get(actCtx, nil)
+		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+			return workflow.ExecuteLocalActivity(ctx, act.ActivityType, args)
+		}, act.GetAwaitableChoice())
 	} else {
 		waitForCancel := false
 		if remote := act.GetRemote(); remote != nil {
@@ -186,8 +196,45 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
-		return workflow.ExecuteActivity(actCtx, act.ActivityType, args).Get(actCtx, nil)
+		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+			return workflow.ExecuteActivity(ctx, act.ActivityType, args)
+		}, act.GetAwaitableChoice())
 	}
+}
+
+func withAwaitableChoice(ctx workflow.Context, starter func(workflow.Context) workflow.Future,
+	awaitChoice *kitchensink.AwaitableChoice) error {
+	cancelCtx, cancel := workflow.WithCancel(ctx)
+	fut := starter(cancelCtx)
+	var err error
+	didCancel := false
+	if awaitChoice.GetAbandon() != nil {
+		return nil
+	} else if awaitChoice.GetCancelBeforeStarted() != nil {
+		cancel()
+		didCancel = true
+		err = fut.Get(ctx, nil)
+	} else if awaitChoice.GetCancelAfterStarted() != nil {
+		_ = workflow.Sleep(ctx, time.Duration(1))
+		cancel()
+		didCancel = true
+		err = fut.Get(ctx, nil)
+	} else if awaitChoice.GetCancelAfterCompleted() != nil {
+		res := fut.Get(ctx, nil)
+		cancel()
+		didCancel = true
+		err = res
+	} else {
+		err = fut.Get(ctx, nil)
+	}
+
+	// If we intentionally cancelled we want to swallow the cancel error to avoid bombing out the
+	// whole workflow
+	var canceledErr *temporal.CanceledError
+	if didCancel && errors.As(err, &canceledErr) {
+		err = nil
+	}
+	return err
 }
 
 // Noop is used as a no-op activity
