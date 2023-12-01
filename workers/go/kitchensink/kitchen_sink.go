@@ -166,9 +166,6 @@ func handleAction(
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
 	args := act.GetArguments()
-	if len(args) == 0 {
-		args = nil
-	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -202,8 +199,11 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	}
 }
 
-func withAwaitableChoice(ctx workflow.Context, starter func(workflow.Context) workflow.Future,
-	awaitChoice *kitchensink.AwaitableChoice) error {
+func withAwaitableChoice(
+	ctx workflow.Context,
+	starter func(workflow.Context) workflow.Future,
+	awaitChoice *kitchensink.AwaitableChoice,
+) error {
 	cancelCtx, cancel := workflow.WithCancel(ctx)
 	fut := starter(cancelCtx)
 	var err error
@@ -215,7 +215,7 @@ func withAwaitableChoice(ctx workflow.Context, starter func(workflow.Context) wo
 		didCancel = true
 		err = fut.Get(ctx, nil)
 	} else if awaitChoice.GetCancelAfterStarted() != nil {
-		_ = workflow.Sleep(ctx, time.Duration(1))
+		_ = workflow.Sleep(ctx, 1)
 		cancel()
 		didCancel = true
 		err = fut.Get(ctx, nil)

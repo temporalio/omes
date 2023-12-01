@@ -99,6 +99,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		} else {
 			return fmt.Errorf("do_signal must recognizable variant")
 		}
+		return err
 	} else if update := action.GetDoUpdate(); update != nil {
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
 			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_update", actionsUpdate)
@@ -110,6 +111,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		if update.FailureExpected {
 			err = nil
 		}
+		return err
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
@@ -122,9 +124,11 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		if query.FailureExpected {
 			err = nil
 		}
+		return err
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
+		return err
+	} else {
+		return fmt.Errorf("client action must be set")
 	}
-
-	return err
 }

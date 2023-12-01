@@ -196,6 +196,9 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		},
 		Namespace: r.Namespace,
 	})
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return fmt.Errorf("failed to register search attributes: %w", err)
+	}
 
 	clientSeq := options.Params.ClientSequence
 	cancelCtx, cancel := context.WithCancel(ctx)

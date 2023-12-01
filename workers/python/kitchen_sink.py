@@ -219,7 +219,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
 
 
 async def handle_awaitable_choice(
-    awaitable: Union[Coroutine | asyncio.Task], choice: AwaitableChoice
+    awaitable: Union[Coroutine, asyncio.Task], choice: AwaitableChoice
 ):
     if isinstance(awaitable, asyncio.Task):
         task = awaitable
@@ -249,7 +249,7 @@ async def handle_awaitable_choice(
             await task
     except asyncio.CancelledError:
         if not did_cancel:
-            raise exceptions.ApplicationError("Unexpected cancellation")
+            raise
 
 
 # Various proto conversions below ==============================================
