@@ -1,13 +1,30 @@
 package cmdoptions
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/spf13/pflag"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
+
+const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
+
+type authHeaderProvider struct {
+	value string
+}
+
+func (p *authHeaderProvider) GetHeaders(ctx context.Context) (map[string]string, error) {
+	return map[string]string{"Authorization": p.value}, nil
+}
+
+func newAuthHeaderProvider(value string) *authHeaderProvider {
+	return &authHeaderProvider{value: value}
+}
 
 // Options for creating a Temporal client.
 type ClientOptions struct {
@@ -21,6 +38,8 @@ type ClientOptions struct {
 	ClientCertPath string
 	// TLS client private key
 	ClientKeyPath string
+	// Authorization header value
+	AuthHeader string
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -64,6 +83,11 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 	clientOptions.ConnectionOptions.TLS = tlsCfg
 	clientOptions.Logger = NewZapAdapter(logger.Desugar())
 	clientOptions.MetricsHandler = metrics.NewHandler()
+	authHeader := os.Getenv(AUTH_HEADER_ENV_VAR)
+	if c.AuthHeader != "" {
+		authHeader = c.AuthHeader // CLI argument value overrides env var value
+	}
+	clientOptions.HeadersProvider = newAuthHeaderProvider(authHeader)
 
 	client, err := client.Dial(clientOptions)
 	if err != nil {
@@ -80,6 +104,8 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	fs.StringVar(&c.AuthHeader, "auth-header", "",
+		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
 
 // ToFlags converts these options to string flags.
@@ -98,6 +124,9 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	}
 	if c.ClientKeyPath != "" {
 		flags = append(flags, "--tls-key-path", c.ClientKeyPath)
+	}
+	if c.AuthHeader != "" {
+		flags = append(flags, "--auth-header", c.AuthHeader)
 	}
 	return
 }
