@@ -14,16 +14,14 @@ import (
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
 
-type authHeaderProvider struct {
-	value string
+type headersProvider map[string]string
+
+func (hp headersProvider) GetHeaders(ctx context.Context) (map[string]string, error) {
+	return hp, nil
 }
 
-func (p *authHeaderProvider) GetHeaders(ctx context.Context) (map[string]string, error) {
-	return map[string]string{"Authorization": p.value}, nil
-}
-
-func newAuthHeaderProvider(value string) *authHeaderProvider {
-	return &authHeaderProvider{value: value}
+func newHeadersProvider(headers map[string]string) headersProvider {
+	return headers
 }
 
 // Options for creating a Temporal client.
@@ -71,7 +69,7 @@ func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) cl
 	return client
 }
 
-// Dial connects to a Temporal server, with logging, metrics and loaded TLS certs.
+// Dial connects to a Temporal server, with logging, metrics, loaded TLS certs and set auth header.
 func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (client.Client, error) {
 	tlsCfg, err := c.loadTLSConfig()
 	if err != nil {
@@ -83,11 +81,18 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 	clientOptions.ConnectionOptions.TLS = tlsCfg
 	clientOptions.Logger = NewZapAdapter(logger.Desugar())
 	clientOptions.MetricsHandler = metrics.NewHandler()
-	authHeader := os.Getenv(AUTH_HEADER_ENV_VAR)
-	if c.AuthHeader != "" {
-		authHeader = c.AuthHeader // CLI argument value overrides env var value
+
+	var authHeader string
+	if c.AuthHeader == "" {
+		authHeader = os.Getenv(AUTH_HEADER_ENV_VAR)
+	} else {
+		authHeader = c.AuthHeader
 	}
-	clientOptions.HeadersProvider = newAuthHeaderProvider(authHeader)
+	if authHeader != "" {
+		clientOptions.HeadersProvider = newHeadersProvider(map[string]string{
+			"Authorization": authHeader,
+		})
+	}
 
 	client, err := client.Dial(clientOptions)
 	if err != nil {
