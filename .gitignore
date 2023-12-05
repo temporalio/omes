@@ -4,4 +4,11 @@
 go.work
 go.work.sum
 .idea/
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+workers/java/bin
+workers/java/build
+
 /loadgen/kitchen-sink-gen/target/

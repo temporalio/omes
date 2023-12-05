@@ -9,6 +9,9 @@ on:
       py-ver:
         description: Python SDK ver to build. Skipped if not specified. Must start with v.
         type: string
+      java-ver:
+        description: Java SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
       do-push:
         description: If set, push the built images to Docker Hub.
         type: boolean
@@ -22,6 +25,9 @@ on:
         type: string
       py-ver:
         description: Python SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      java-ver:
+        description: Java SDK ver to build. Skipped if not specified. Must start with v.
         type: string
       do-push:
         description: If set, push the built images to Docker Hub.
@@ -46,4 +52,13 @@ jobs:
     with:
       lang: py
       sdk-version: ${{ inputs.py-ver }}
+      do-push: ${{ inputs.do-push }}
+
+  build-java-docker-images:
+    if: inputs.java-ver
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      lang: java
+      sdk-version: ${{ inputs.java-ver }}
       do-push: ${{ inputs.do-push }}

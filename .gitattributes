@@ -1,3 +1,12 @@
+#
+# https://help.github.com/articles/dealing-with-line-endings/
+#
+# Linux start script should use lf
+/gradlew        text eol=lf
+
+# These are Windows script files and should use crlf
+*.bat           text eol=crlf
+
 workers/python/protos/*pb2.py* linguist-generated=true
 loadgen/kitchensink/kitchen_sink.pb.go linguist-generated=true
 loadgen/kitchensink/temporal/** linguist-generated=true

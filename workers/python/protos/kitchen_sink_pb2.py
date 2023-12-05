@@ -26,7 +26,7 @@ _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'kitchen_sink_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['DESCRIPTOR']._options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z.github.com/temporalio/omes/loadgen/kitchensink'
+  _globals['DESCRIPTOR']._serialized_options = b'\n\020io.temporal.omesZ.github.com/temporalio/omes/loadgen/kitchensink'
   _globals['_WORKFLOWSTATE_KVSENTRY']._options = None
   _globals['_WORKFLOWSTATE_KVSENTRY']._serialized_options = b'8\001'
   _globals['_EXECUTEACTIVITYACTION_HEADERSENTRY']._options = None

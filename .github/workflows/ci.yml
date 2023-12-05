@@ -31,6 +31,37 @@ jobs:
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
+  build-lint-test-java:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print build information
+        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Lint Java worker
+        run: cd workers/java && ./gradlew --no-daemon spotlessCheck
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.20"
+      - name: Build exe
+        run: go build -o temporal-omes ./cmd
+      - name: Run local scenario with worker
+        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language java --embedded-server --iterations 5
+      - name: Build worker image
+        run: ./temporal-omes build-worker-image --language java --version 1.22.3 --tag-as-latest
+      - name: Run worker image
+        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.22.3 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+      - name: Run scenario against image
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+
   build-lint-test-python:
     runs-on: ubuntu-latest
     steps:
