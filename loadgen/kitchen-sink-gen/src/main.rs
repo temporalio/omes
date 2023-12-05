@@ -1,5 +1,6 @@
 mod protos;
 
+use crate::protos::temporal::omes::kitchen_sink::ActivityCancellationType;
 use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
@@ -617,9 +618,23 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
 }
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
-    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: impl
-        Ok(Self::default())
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(RemoteActivityOptions {
+            cancellation_type: u.arbitrary::<ActivityCancellationType>()?.into(),
+            do_not_eagerly_execute: false,
+            versioning_intent: 0,
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for ActivityCancellationType {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let choices = [
+            ActivityCancellationType::Abandon,
+            ActivityCancellationType::TryCancel,
+            ActivityCancellationType::WaitCancellationCompleted,
+        ];
+        Ok(*u.choose(&choices)?)
     }
 }
 
