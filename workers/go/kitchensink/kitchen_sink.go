@@ -128,9 +128,16 @@ func (ws *KSWorkflowState) handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		err := withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
 			return workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0])
-		}, child.AwaitableChoice)
+		}, child.AwaitableChoice,
+			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
+				return fut.GetChildWorkflowExecution().Get(ctx, nil)
+			},
+			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
+				return fut.Get(ctx, nil)
+			},
+		)
 		return nil, err
 	} else if patch := action.GetSetPatchMarker(); patch != nil {
 		if workflow.GetVersion(ctx, patch.GetPatchId(), workflow.DefaultVersion, 1) == 1 {
@@ -209,10 +216,27 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	}
 }
 
-func withAwaitableChoice(
+func withAwaitableChoice[F workflow.Future](
 	ctx workflow.Context,
-	starter func(workflow.Context) workflow.Future,
+	starter func(workflow.Context) F,
 	awaitChoice *kitchensink.AwaitableChoice,
+) error {
+	return withAwaitableChoiceCustom(ctx, starter, awaitChoice,
+		func(ctx workflow.Context, fut F) error {
+			_ = workflow.Sleep(ctx, 1)
+			return nil
+		},
+		func(ctx workflow.Context, fut F) error {
+			return fut.Get(ctx, nil)
+		})
+}
+
+func withAwaitableChoiceCustom[F workflow.Future](
+	ctx workflow.Context,
+	starter func(workflow.Context) F,
+	awaitChoice *kitchensink.AwaitableChoice,
+	afterStartedWaiter func(workflow.Context, F) error,
+	afterCompletedWaiter func(workflow.Context, F) error,
 ) error {
 	cancelCtx, cancel := workflow.WithCancel(ctx)
 	fut := starter(cancelCtx)
@@ -225,12 +249,15 @@ func withAwaitableChoice(
 		didCancel = true
 		err = fut.Get(ctx, nil)
 	} else if awaitChoice.GetCancelAfterStarted() != nil {
-		_ = workflow.Sleep(ctx, 1)
+		err = afterStartedWaiter(ctx, fut)
+		if err != nil {
+			return err
+		}
 		cancel()
 		didCancel = true
 		err = fut.Get(ctx, nil)
 	} else if awaitChoice.GetCancelAfterCompleted() != nil {
-		res := fut.Get(ctx, nil)
+		res := afterCompletedWaiter(ctx, fut)
 		cancel()
 		err = res
 	} else {

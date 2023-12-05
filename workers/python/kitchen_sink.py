@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from typing import Any, Coroutine, Optional, Union
+from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
@@ -13,7 +13,7 @@ from temporalio.common import (
     SearchAttributeKey,
     SearchAttributeUpdate,
 )
-from temporalio.workflow import ActivityHandle
+from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
 from protos.kitchen_sink_pb2 import (
     Action,
@@ -129,6 +129,8 @@ class KitchenSinkWorkflow:
                     child, id=child_action.workflow_id, args=args
                 ),
                 child_action.awaitable_choice,
+                after_started_fn=wait_task_complete,
+                after_completed_fn=wait_child_wf_complete,
             )
         elif action.HasField("set_patch_marker"):
             if action.set_patch_marker.deprecated:
@@ -220,8 +222,24 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
     return activity_task
 
 
+async def brief_wait(_: asyncio.Task):
+    await asyncio.sleep(0.001)
+
+
+async def wait_task_complete(task: asyncio.Task):
+    await task
+
+
+async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
+    res = await task
+    await res
+
+
 async def handle_awaitable_choice(
-    awaitable: Union[Coroutine, asyncio.Task], choice: AwaitableChoice
+    awaitable: Union[Coroutine, asyncio.Task],
+    choice: AwaitableChoice,
+    after_started_fn: Callable[[asyncio.Task], Awaitable] = brief_wait,
+    after_completed_fn: Callable[[asyncio.Task], Awaitable] = wait_task_complete,
 ):
     if isinstance(awaitable, asyncio.Task):
         task = awaitable
@@ -239,12 +257,12 @@ async def handle_awaitable_choice(
             did_cancel = True
             await task
         elif choice.HasField("cancel_after_started"):
-            await asyncio.sleep(0.001)
+            await after_started_fn(task)
             task.cancel()
             did_cancel = True
             await task
         elif choice.HasField("cancel_after_completed"):
-            await task
+            await after_completed_fn(task)
             task.cancel()
             did_cancel = True
         else:
