@@ -72,6 +72,8 @@ struct GeneratorConfig {
     max_client_action_set_wait: Duration,
     /// How likely various actions are to be generated
     action_chances: ActionChances,
+    /// Maximum number of initial actions in a workflow input
+    max_initial_actions: usize,
 }
 
 impl Default for GeneratorConfig {
@@ -84,6 +86,7 @@ impl Default for GeneratorConfig {
             max_payload_size: 256,
             max_client_action_set_wait: Duration::from_secs(1),
             action_chances: Default::default(),
+            max_initial_actions: 10,
         }
     }
 }
@@ -311,11 +314,10 @@ impl<'a> Arbitrary<'a> for TestInput {
 }
 
 impl<'a> Arbitrary<'a> for WorkflowInput {
-    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO impl
-        Ok(Self {
-            initial_actions: vec![],
-        })
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_initial_actions);
+        let initial_actions = vec_of_size(u, num_actions)?;
+        Ok(Self { initial_actions })
     }
 }
 
@@ -340,7 +342,6 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
 
 impl<'a> Arbitrary<'a> for ClientAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: Adjustable ratio of choice?
         let action_kind = u.int_in_range(0..=2)?;
         let variant = match action_kind {
             0 => client_action::Variant::DoSignal(u.arbitrary()?),
@@ -357,7 +358,6 @@ impl<'a> Arbitrary<'a> for ClientAction {
 
 impl<'a> Arbitrary<'a> for DoSignal {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
             // Half of that in the handler half in main
@@ -383,7 +383,6 @@ impl<'a> Arbitrary<'a> for DoSignal {
 impl<'a> Arbitrary<'a> for DoQuery {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut failure_expected = false;
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time report state
             do_query::Variant::ReportState(u.arbitrary()?)
@@ -402,7 +401,6 @@ impl<'a> Arbitrary<'a> for DoQuery {
 impl<'a> Arbitrary<'a> for DoUpdate {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut failure_expected = false;
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
             do_update::Variant::DoActions(
@@ -503,7 +501,6 @@ impl<'a> Arbitrary<'a> for TimerAction {
 
 impl<'a> Arbitrary<'a> for ExecuteActivityAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: configurable ratio?
         let locality = if u.ratio(50, 100)? {
             execute_activity_action::Locality::Remote(u.arbitrary()?)
         } else {
@@ -628,7 +625,6 @@ impl<'a> Arbitrary<'a> for RemoteActivityOptions {
 
 impl<'a> Arbitrary<'a> for Payloads {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: configurable ratio?
         let payloads = if u.ratio(80, 100)? {
             vec![u.arbitrary()?]
         } else if u.ratio(50, 100)? {
