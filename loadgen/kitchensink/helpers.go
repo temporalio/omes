@@ -19,7 +19,7 @@ func NoOpSingleActivityActionSet() *ActionSet {
 			{
 				Variant: &Action_ExecActivity{
 					ExecActivity: &ExecuteActivityAction{
-						ActivityType:        "noop",
+						ActivityType:        &ExecuteActivityAction_Noop{},
 						StartToCloseTimeout: &durationpb.Duration{Seconds: 5},
 					},
 				},

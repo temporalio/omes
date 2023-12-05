@@ -169,14 +169,16 @@ class KitchenSinkWorkflow:
 
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
-    args = execute_activity.arguments
+    act_type = "noop"
+    args = []
 
-    if args is None:
-        args = []
+    if execute_activity.HasField("delay"):
+        act_type = "delay"
+        args.append(execute_activity.delay)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
-            activity=execute_activity.activity_type,
+            activity=act_type,
             args=args,
             schedule_to_close_timeout=timeout_or_none(
                 execute_activity, "schedule_to_close_timeout"
@@ -194,7 +196,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
         )
     else:
         activity_task = workflow.start_activity(
-            activity=execute_activity.activity_type,
+            activity=act_type,
             args=args,
             task_queue=execute_activity.task_queue,
             schedule_to_close_timeout=timeout_or_none(

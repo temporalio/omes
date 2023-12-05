@@ -178,12 +178,21 @@ message TimerAction {
 }
 
 message ExecuteActivityAction {
-  string activity_type = 2;
+  message GenericActivity {
+    string type = 1;
+    repeated temporal.api.common.v1.Payload arguments = 2;
+  }
+  oneof activity_type {
+    GenericActivity generic = 1;
+    // There must be an activity named `delay` which accepts some kind of duration and waits
+    // for that long
+    google.protobuf.Duration delay = 2;
+    // There must be an activity named `noop` which does nothing
+    google.protobuf.Empty noop = 3;
+  }
   // The name of the task queue to place this activity request in
-  string task_queue = 3;
-  map<string, temporal.api.common.v1.Payload> headers = 4;
-  // Arguments/input to the activity. Called "input" upstream.
-  repeated temporal.api.common.v1.Payload arguments = 5;
+  string task_queue = 4;
+  map<string, temporal.api.common.v1.Payload> headers = 5;
   // Indicates how long the caller is willing to wait for an activity completion. Limits how long
   // retries will be attempted. Either this or start_to_close_timeout_seconds must be specified.
   // When not specified defaults to the workflow execution timeout.

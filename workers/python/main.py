@@ -20,7 +20,7 @@ from temporalio.runtime import (
 )
 from temporalio.worker import Worker
 
-from activities import noop_activity
+from activities import delay_activity, noop_activity
 from kitchen_sink import KitchenSinkWorkflow
 
 nameToLevel = {
@@ -197,7 +197,7 @@ async def run():
             client,
             task_queue=task_queue,
             workflows=[KitchenSinkWorkflow],
-            activities=[noop_activity],
+            activities=[noop_activity, delay_activity],
             **worker_kwargs,
         )
         for task_queue in task_queues

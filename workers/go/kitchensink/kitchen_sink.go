@@ -165,7 +165,12 @@ func handleAction(
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
-	args := act.GetArguments()
+	actType := "noop"
+	args := make([]interface{}, 0)
+	if delay := act.GetDelay(); delay != nil {
+		actType = "delay"
+		args = append(args, delay.AsDuration())
+	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -173,8 +178,9 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
+
 		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
-			return workflow.ExecuteLocalActivity(ctx, act.ActivityType, args)
+			return workflow.ExecuteLocalActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	} else {
 		waitForCancel := false
@@ -194,7 +200,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
 		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
-			return workflow.ExecuteActivity(ctx, act.ActivityType, args)
+			return workflow.ExecuteActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	}
 }
@@ -222,7 +228,6 @@ func withAwaitableChoice(
 	} else if awaitChoice.GetCancelAfterCompleted() != nil {
 		res := fut.Get(ctx, nil)
 		cancel()
-		didCancel = true
 		err = res
 	} else {
 		err = fut.Get(ctx, nil)
@@ -239,6 +244,12 @@ func withAwaitableChoice(
 
 // Noop is used as a no-op activity
 func Noop(_ context.Context, _ []*common.Payload) error {
+	return nil
+}
+
+// Delay runs for the provided delay period
+func Delay(_ context.Context, delayFor time.Duration) error {
+	time.Sleep(delayFor)
 	return nil
 }
 

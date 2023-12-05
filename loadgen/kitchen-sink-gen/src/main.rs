@@ -1,15 +1,15 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::{awaitable_choice, AwaitableChoice};
 use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
-        action, client_action, do_actions_update, do_query, do_signal,
+        action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
         do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
-        AwaitWorkflowState, ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal,
-        DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction, HandlerInvocation,
-        RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction, TestInput, TimerAction,
-        UpsertMemoAction, UpsertSearchAttributesAction, WorkflowInput, WorkflowState,
+        AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
+        DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
+        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
+        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WorkflowInput,
+        WorkflowState,
     },
 };
 use anyhow::Error;
@@ -17,8 +17,10 @@ use arbitrary::{Arbitrary, Unstructured};
 use clap::Parser;
 use prost::Message;
 use rand::{Rng, SeedableRng};
-use std::collections::HashMap;
-use std::{cell::RefCell, io::Write, ops::RangeInclusive, path::PathBuf, time::Duration};
+use std::{
+    cell::RefCell, collections::HashMap, io::Write, ops::RangeInclusive, path::PathBuf,
+    time::Duration,
+};
 
 /// A tool for generating client actions and inputs to the kitchen sink workflows in omes.
 #[derive(Parser, Debug)]
@@ -216,7 +218,7 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                     }
                     .into(),
                     ExecuteActivityAction {
-                        activity_type: "noop".to_string(),
+                        activity_type: Some(execute_activity_action::ActivityType::Noop(())),
                         start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
                         ..Default::default()
                     }
@@ -507,8 +509,13 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         } else {
             execute_activity_action::Locality::IsLocal(())
         };
+        let delay = u.int_in_range(0..=1_000)?;
         Ok(Self {
-            activity_type: "noop".to_string(),
+            activity_type: Some(execute_activity_action::ActivityType::Delay(
+                Duration::from_millis(delay)
+                    .try_into()
+                    .expect("proto duration works"),
+            )),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
             locality: Some(locality),
             awaitable_choice: Some(u.arbitrary()?),
@@ -521,11 +528,19 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let input = WorkflowInput {
             initial_actions: vec![ActionSet {
-                actions: vec![Action {
-                    variant: Some(action::Variant::ReturnResult(ReturnResultAction {
-                        return_this: Some(Payload::default()),
-                    })),
-                }],
+                actions: vec![
+                    Action {
+                        variant: Some(action::Variant::Timer(TimerAction {
+                            milliseconds: u.int_in_range(0..=1_000)?,
+                            awaitable_choice: None,
+                        })),
+                    },
+                    Action {
+                        variant: Some(action::Variant::ReturnResult(ReturnResultAction {
+                            return_this: Some(Payload::default()),
+                        })),
+                    },
+                ],
                 concurrent: false,
             }],
         };

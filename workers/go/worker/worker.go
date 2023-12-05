@@ -68,6 +68,7 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
+			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
 			w.RegisterActivity(&tpsActivities)
