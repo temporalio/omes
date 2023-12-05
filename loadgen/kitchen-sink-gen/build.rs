@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cmd.arg(format!("--python_out={out_dir}"));
             cmd.arg(format!("--pyi_out={out_dir}"));
         } else if lang == "go" {
-            cmd.arg(format!("--go_opt=paths=source_relative"));
+            cmd.arg("--go_opt=paths=source_relative");
             cmd.arg(format!("--go_out={out_dir}"));
         }
 
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let new_data = content.replace("from temporal.api", "from temporalio.api");
 
                 let mut dst = fs::File::create(&fpath)?;
-                dst.write(new_data.as_bytes())?;
+                dst.write_all(new_data.as_bytes())?;
             }
         }
     }

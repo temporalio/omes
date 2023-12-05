@@ -1,13 +1,15 @@
 mod protos;
 
 use crate::protos::temporal::{
-    api::common::v1::{Payload, Payloads},
+    api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
-        action, client_action, do_actions_update, do_query, do_signal,
+        action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
         do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
-        ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
-        ExecuteActivityAction, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
-        TestInput, TimerAction, WorkflowInput,
+        AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
+        DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
+        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
+        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WorkflowInput,
+        WorkflowState,
     },
 };
 use anyhow::Error;
@@ -15,7 +17,10 @@ use arbitrary::{Arbitrary, Unstructured};
 use clap::Parser;
 use prost::Message;
 use rand::{Rng, SeedableRng};
-use std::{cell::RefCell, io::Write, ops::RangeInclusive, path::PathBuf, time::Duration};
+use std::{
+    cell::RefCell, collections::HashMap, io::Write, ops::RangeInclusive, path::PathBuf,
+    time::Duration,
+};
 
 /// A tool for generating client actions and inputs to the kitchen sink workflows in omes.
 #[derive(Parser, Debug)]
@@ -44,35 +49,43 @@ struct GenerateCmd {
     #[command(flatten)]
     proto_output: OutputConfig,
 
-    #[command(flatten)]
-    generator_config: GeneratorConfig,
+    /// When specified, override the generator configuration with the JSON config in the specified
+    /// file.
+    #[arg(long)]
+    generator_config_override: Option<PathBuf>,
 }
 
-// TODO: Make this restorable from serialized form
-#[derive(clap::Args, Debug, Default)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct GeneratorConfig {
     /// The maximum number of client action sets that will be generated.
-    #[arg(long, default_value_t = 250)]
     max_client_action_sets: usize,
-
     /// The maximum number of actions in a single client action set.
-    #[arg(long, default_value_t = 5)]
     max_client_actions_per_set: usize,
-
     /// The maximum number of actions in an action set (in the workflow context).
-    #[arg(long, default_value_t = 5)]
     max_actions_per_set: usize,
-
-    /// The max timer duration in milliseconds
-    #[arg(long, default_value_t = 1000)]
-    max_timer_ms: u64,
-
+    /// The max timer duration
+    max_timer: Duration,
     /// Max size in bytes that a payload will be
-    #[arg(long, default_value_t = 256)]
     max_payload_size: usize,
+    /// The maximum time that a client action set will wait at the end of the set before moving on
+    /// to the next set.
+    max_client_action_set_wait: Duration,
+    /// How likely various actions are to be generated
+    action_chances: ActionChances,
+}
 
-    #[arg(long, default_value_t = 1000)]
-    max_client_action_set_wait_ms: u64,
+impl Default for GeneratorConfig {
+    fn default() -> Self {
+        Self {
+            max_client_action_sets: 250,
+            max_client_actions_per_set: 5,
+            max_actions_per_set: 5,
+            max_timer: Duration::from_secs(1),
+            max_payload_size: 256,
+            max_client_action_set_wait: Duration::from_secs(1),
+            action_chances: Default::default(),
+        }
+    }
 }
 
 #[derive(clap::Args, Debug)]
@@ -94,6 +107,82 @@ struct OutputConfig {
     output_path: Option<PathBuf>,
 }
 
+/// The relative likelihood of each action type being generated as floats which must sum to exactly
+/// 100.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+struct ActionChances {
+    timer: f32,
+    activity: f32,
+    child_workflow: f32,
+    patch_marker: f32,
+    set_workflow_state: f32,
+    await_workflow_state: f32,
+    upsert_memo: f32,
+    upsert_search_attributes: f32,
+    nested_action_set: f32,
+}
+impl Default for ActionChances {
+    fn default() -> Self {
+        Self {
+            timer: 25.0,
+            activity: 25.0,
+            child_workflow: 25.0,
+            nested_action_set: 12.5,
+            patch_marker: 2.5,
+            set_workflow_state: 2.5,
+            await_workflow_state: 2.5,
+            upsert_memo: 2.5,
+            upsert_search_attributes: 2.5,
+        }
+    }
+}
+impl ActionChances {
+    fn verify(&self) -> bool {
+        let sum = self.timer
+            + self.activity
+            + self.child_workflow
+            + self.patch_marker
+            + self.set_workflow_state
+            + self.await_workflow_state
+            + self.upsert_memo
+            + self.upsert_search_attributes
+            + self.nested_action_set;
+        sum == 100.0
+    }
+}
+macro_rules! define_action_chances {
+    ($($field:ident),+) => {
+        impl ActionChances {
+            pub fn get_field_order(&self) -> Vec<(&'static str, f32)> {
+                vec![$((stringify!($field), self.$field),)+]
+            }
+
+            $(
+                pub fn $field(&self, value: f32) -> bool {
+                    let chances = self.get_field_order();
+                    let mut lower_bound = 0.0;
+                    for (_, chance) in chances.iter().take_while(|(f, _)| *f != stringify!($field)) {
+                        lower_bound += chance;
+                    }
+                    let upper_bound = lower_bound + self.$field;
+                    value >= lower_bound && value <= upper_bound
+                }
+            )+
+        }
+    };
+}
+define_action_chances!(
+    timer,
+    activity,
+    child_workflow,
+    nested_action_set,
+    patch_marker,
+    set_workflow_state,
+    await_workflow_state,
+    upsert_memo,
+    upsert_search_attributes
+);
+
 fn main() -> Result<(), Error> {
     let args = Args::parse();
     match args.command {
@@ -110,38 +199,39 @@ fn main() -> Result<(), Error> {
 
 fn example(args: ExampleCmd) -> Result<(), Error> {
     let mut example_input = TestInput::default();
-    let mut client_sequence = ClientSequence::default();
-    client_sequence.action_sets = vec![
-        ClientActionSet {
-            actions: vec![mk_client_signal_action([TimerAction {
-                milliseconds: 100,
-                awaitable_choice: None,
-            }
-            .into()])],
-            concurrent: false,
-            wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
-        },
-        ClientActionSet {
-            actions: vec![mk_client_signal_action([
-                TimerAction {
+    let client_sequence = ClientSequence {
+        action_sets: vec![
+            ClientActionSet {
+                actions: vec![mk_client_signal_action([TimerAction {
                     milliseconds: 100,
                     awaitable_choice: None,
                 }
-                .into(),
-                ExecuteActivityAction {
-                    activity_type: "noop".to_string(),
-                    start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
-                    ..Default::default()
-                }
-                .into(),
-                ReturnResultAction {
-                    return_this: Some(Payload::default()),
-                }
-                .into(),
-            ])],
-            ..Default::default()
-        },
-    ];
+                .into()])],
+                concurrent: false,
+                wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
+            },
+            ClientActionSet {
+                actions: vec![mk_client_signal_action([
+                    TimerAction {
+                        milliseconds: 100,
+                        awaitable_choice: None,
+                    }
+                    .into(),
+                    ExecuteActivityAction {
+                        activity_type: Some(execute_activity_action::ActivityType::Noop(())),
+                        start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                        ..Default::default()
+                    }
+                    .into(),
+                    ReturnResultAction {
+                        return_this: Some(Payload::default()),
+                    }
+                    .into(),
+                ])],
+                ..Default::default()
+            },
+        ],
+    };
     example_input.client_sequence = Some(client_sequence);
     output_proto(example_input, args.proto_output)?;
     Ok(())
@@ -156,9 +246,22 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
         (rand::rngs::StdRng::seed_from_u64(seed), seed)
     };
     eprintln!("Using seed: {}", seed);
-    eprintln!("Using config: {:?}", &args.generator_config);
+    let config = if let Some(path) = args.generator_config_override {
+        let config_str = std::fs::read_to_string(path)?;
+        serde_json::from_str(&config_str)?
+    } else {
+        GeneratorConfig::default()
+    };
+    if !config.action_chances.verify() {
+        return Err(anyhow::anyhow!(
+            "ActionChances must sum to exactly 100, got {:?}",
+            config.action_chances
+        ));
+    }
+    eprintln!("Using config: {:?}", serde_json::to_string(&config)?);
     let context = ArbContext {
-        config: args.generator_config,
+        config,
+        cur_workflow_state: Default::default(),
     };
     ARB_CONTEXT.set(context);
 
@@ -177,9 +280,12 @@ thread_local! {
     static ARB_CONTEXT: RefCell<ArbContext> = RefCell::new(ArbContext::default());
 }
 
+static WF_STATE_FIELD_VALUE: &str = "x";
+
 #[derive(Default)]
 struct ArbContext {
     config: GeneratorConfig,
+    cur_workflow_state: WorkflowState,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
@@ -205,7 +311,7 @@ impl<'a> Arbitrary<'a> for TestInput {
 }
 
 impl<'a> Arbitrary<'a> for WorkflowInput {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO impl
         Ok(Self {
             initial_actions: vec![],
@@ -330,13 +436,53 @@ impl<'a> Arbitrary<'a> for ActionSet {
 
 impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: Adjustable ratio of choice?
-        // TODO: The rest of the kinds of actions
-        let action_kind = u.int_in_range(0..=1)?;
-        let variant = match action_kind {
-            0 => action::Variant::Timer(u.arbitrary()?),
-            1 => action::Variant::ExecActivity(u.arbitrary()?),
-            _ => unreachable!(),
+        let action_kind = u.int_in_range(0..=100)? as f32;
+        let chances = ARB_CONTEXT.with_borrow(|c| c.config.action_chances.clone());
+        let variant = if chances.timer(action_kind) {
+            action::Variant::Timer(u.arbitrary()?)
+        } else if chances.activity(action_kind) {
+            action::Variant::ExecActivity(u.arbitrary()?)
+        } else if chances.child_workflow(action_kind) {
+            action::Variant::ExecChildWorkflow(u.arbitrary()?)
+        } else if chances.patch_marker(action_kind) {
+            action::Variant::SetPatchMarker(u.arbitrary()?)
+        } else if chances.set_workflow_state(action_kind) {
+            action::Variant::SetWorkflowState({
+                let chosen_int = u.int_in_range(1..=100)?;
+                ARB_CONTEXT.with_borrow_mut(|c| {
+                    c.cur_workflow_state
+                        .kvs
+                        .insert(chosen_int.to_string(), WF_STATE_FIELD_VALUE.to_string());
+                    c.cur_workflow_state.clone()
+                })
+            })
+        } else if chances.await_workflow_state(action_kind) {
+            let key = ARB_CONTEXT.with_borrow(|c| {
+                if c.cur_workflow_state.kvs.is_empty() {
+                    None
+                } else {
+                    let keys = c.cur_workflow_state.kvs.keys().collect::<Vec<_>>();
+                    Some(u.choose(&keys).map(|s| s.to_string()))
+                }
+            });
+            if let Some(key) = key {
+                action::Variant::AwaitWorkflowState(AwaitWorkflowState {
+                    key: key?,
+                    value: WF_STATE_FIELD_VALUE.to_string(),
+                })
+            } else {
+                // Pick a different action if we've never set anything in state
+                let action: Action = u.arbitrary()?;
+                action.variant.unwrap()
+            }
+        } else if chances.upsert_memo(action_kind) {
+            action::Variant::UpsertMemo(u.arbitrary()?)
+        } else if chances.upsert_search_attributes(action_kind) {
+            action::Variant::UpsertSearchAttributes(u.arbitrary()?)
+        } else if chances.nested_action_set(action_kind) {
+            action::Variant::NestedActionSet(u.arbitrary()?)
+        } else {
+            unreachable!()
         };
         Ok(Self {
             variant: Some(variant),
@@ -347,9 +493,10 @@ impl<'a> Arbitrary<'a> for Action {
 impl<'a> Arbitrary<'a> for TimerAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         Ok(Self {
-            milliseconds: u.int_in_range(0..=ARB_CONTEXT.with_borrow(|c| c.config.max_timer_ms))?,
-            // TODO: implement
-            awaitable_choice: None,
+            milliseconds: u.int_in_range(
+                0..=ARB_CONTEXT.with_borrow(|c| c.config.max_timer.as_millis() as u64),
+            )?,
+            awaitable_choice: Some(u.arbitrary()?),
         })
     }
 }
@@ -362,24 +509,118 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         } else {
             execute_activity_action::Locality::IsLocal(())
         };
+        let delay = u.int_in_range(0..=1_000)?;
         Ok(Self {
-            activity_type: "noop".to_string(),
-            task_queue: "".to_string(),
-            headers: Default::default(),
-            arguments: vec![],
-            schedule_to_close_timeout: None,
-            schedule_to_start_timeout: None,
+            activity_type: Some(execute_activity_action::ActivityType::Delay(
+                Duration::from_millis(delay)
+                    .try_into()
+                    .expect("proto duration works"),
+            )),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
-            heartbeat_timeout: None,
-            retry_policy: None,
-            awaitable_choice: None,
             locality: Some(locality),
+            awaitable_choice: Some(u.arbitrary()?),
+            ..Default::default()
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let input = WorkflowInput {
+            initial_actions: vec![ActionSet {
+                actions: vec![
+                    Action {
+                        variant: Some(action::Variant::Timer(TimerAction {
+                            milliseconds: u.int_in_range(0..=1_000)?,
+                            awaitable_choice: None,
+                        })),
+                    },
+                    Action {
+                        variant: Some(action::Variant::ReturnResult(ReturnResultAction {
+                            return_this: Some(Payload::default()),
+                        })),
+                    },
+                ],
+                concurrent: false,
+            }],
+        };
+        let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
+        Ok(Self {
+            // Use KS as own child, with an input to just return right away
+            workflow_type: "kitchenSink".to_string(),
+            input: vec![input],
+            awaitable_choice: Some(u.arbitrary()?),
+            ..Default::default()
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for SetPatchMarkerAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let patch_id = u.int_in_range(1..=10)?;
+        Ok(Self {
+            patch_id: patch_id.to_string(),
+            // Patches should be consistently deprecated or not for the same ID
+            deprecated: patch_id % 2 == 0,
+            inner_action: Some(u.arbitrary()?),
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for UpsertMemoAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self {
+            upserted_memo: Some(Memo {
+                fields: {
+                    let mut hm = HashMap::new();
+                    let chosen_int = u.int_in_range(1..=100)?;
+                    hm.insert(
+                        chosen_int.to_string(),
+                        Payload {
+                            metadata: Default::default(),
+                            data: vec![chosen_int],
+                        },
+                    );
+                    hm
+                },
+            }),
+        })
+    }
+}
+
+static SEARCH_ATTR_KEYS: [&str; 2] = ["KS_Keyword", "KS_Int"];
+
+impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let chosen_sa = *u.choose(&SEARCH_ATTR_KEYS)?;
+        Ok(Self {
+            search_attributes: {
+                let mut hm = HashMap::new();
+                let data = if chosen_sa == "KS_Keyword" {
+                    serde_json::to_vec(&u.int_in_range(1..=255)?.to_string())
+                } else {
+                    serde_json::to_vec(&u.int_in_range(1..=255)?)
+                }
+                .expect("serializes");
+                hm.insert(
+                    chosen_sa.to_string(),
+                    Payload {
+                        metadata: {
+                            let mut m = HashMap::new();
+                            m.insert("encoding".to_string(), "json/plain".into());
+                            m
+                        },
+                        data,
+                    },
+                );
+                hm
+            },
         })
     }
 }
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // TODO: impl
         Ok(Self::default())
     }
@@ -416,7 +657,7 @@ struct ClientActionWait {
 impl<'a> Arbitrary<'a> for ClientActionWait {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let duration_ms = u.int_in_range(
-            0..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_action_set_wait_ms),
+            0..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_action_set_wait.as_millis() as u64),
         )?;
         Ok(Self {
             duration: Duration::from_millis(duration_ms),
@@ -426,6 +667,21 @@ impl<'a> Arbitrary<'a> for ClientActionWait {
 impl From<ClientActionWait> for prost_types::Duration {
     fn from(v: ClientActionWait) -> Self {
         v.duration.try_into().unwrap()
+    }
+}
+
+impl<'a> Arbitrary<'a> for AwaitableChoice {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let choices = [
+            awaitable_choice::Condition::WaitFinish(()),
+            awaitable_choice::Condition::Abandon(()),
+            awaitable_choice::Condition::CancelBeforeStarted(()),
+            awaitable_choice::Condition::CancelAfterStarted(()),
+            awaitable_choice::Condition::CancelAfterCompleted(()),
+        ];
+        Ok(AwaitableChoice {
+            condition: Some(u.choose(&choices)?.clone()),
+        })
     }
 }
 
@@ -478,5 +734,17 @@ fn mk_action_set(actions: impl IntoIterator<Item = action::Variant>) -> ActionSe
             })
             .collect(),
         concurrent: true,
+    }
+}
+
+fn to_proto_payload(msg: impl Message, type_name: &str) -> Payload {
+    Payload {
+        metadata: {
+            let mut m = HashMap::new();
+            m.insert("encoding".to_string(), "binary/protobuf".into());
+            m.insert("messageType".to_string(), type_name.into());
+            m
+        },
+        data: msg.encode_to_vec(),
     }
 }

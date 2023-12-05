@@ -62,7 +62,7 @@ func init() {
 					actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
 						Variant: &kitchensink.Action_ExecActivity{
 							ExecActivity: &kitchensink.ExecuteActivityAction{
-								ActivityType:        "noop",
+								ActivityType:        &kitchensink.ExecuteActivityAction_Noop{},
 								StartToCloseTimeout: &durationpb.Duration{Seconds: 5},
 							},
 						},

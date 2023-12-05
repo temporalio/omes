@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import threading
 from typing import List
@@ -19,7 +20,7 @@ from temporalio.runtime import (
 )
 from temporalio.worker import Worker
 
-from activities import noop_activity
+from activities import delay_activity, noop_activity
 from kitchen_sink import KitchenSinkWorkflow
 
 nameToLevel = {
@@ -141,12 +142,14 @@ async def run():
         t.start()
         prometheus = PrometheusConfig(bind_address=parser.prom_listen_address)
 
-    # TODO: Env var / arg for filter
     new_runtime = Runtime(
         telemetry=TelemetryConfig(
             metrics=prometheus,
             logging=LoggingConfig(
-                filter=TelemetryFilter(core_level="DEBUG", other_level="WARN")
+                filter=TelemetryFilter(
+                    core_level=os.getenv("TEMPORAL_CORE_LOG_LEVEL", "INFO"),
+                    other_level="WARN",
+                )
             ),
         ),
     )
@@ -194,7 +197,7 @@ async def run():
             client,
             task_queue=task_queue,
             workflows=[KitchenSinkWorkflow],
-            activities=[noop_activity],
+            activities=[noop_activity, delay_activity],
             **worker_kwargs,
         )
         for task_queue in task_queues

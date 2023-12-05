@@ -2,6 +2,7 @@ package kitchensink
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,23 +12,29 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
+type KSWorkflowState struct {
+	workflowState *kitchensink.WorkflowState
+}
+
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
-	workflowState := &kitchensink.WorkflowState{}
+	state := KSWorkflowState{
+		workflowState: &kitchensink.WorkflowState{},
+	}
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
 		func(input interface{}) (*kitchensink.WorkflowState, error) {
-			return workflowState, nil
+			return state.workflowState, nil
 		})
 	if queryErr != nil {
 		return nil, queryErr
 	}
 
 	// Handle initial set
-	if params.InitialActions != nil {
+	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
-			if ret, err := handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Warn("Finishing early", "ret", ret, "err", err)
+			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
+				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
 		}
@@ -45,7 +52,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				actionSet = sigActions.GetDoActions()
 			}
 			workflow.Go(ctx, func(ctx workflow.Context) {
-				ret, err := handleActionSet(ctx, actionSet)
+				ret, err := state.handleActionSet(ctx, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
 				}
@@ -55,19 +62,19 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	for {
 		var retOrErr ReturnOrErr
 		retOrErrChan.Receive(ctx, &retOrErr)
-		workflow.GetLogger(ctx).Warn("Finishing workflow", "retOrErr", retOrErr)
+		workflow.GetLogger(ctx).Info("Finishing workflow", "retOrErr", retOrErr)
 		return retOrErr.retme, retOrErr.err
 	}
 }
 
-func handleActionSet(
+func (ws *KSWorkflowState) handleActionSet(
 	ctx workflow.Context,
 	set *kitchensink.ActionSet,
 ) (returnValue *common.Payload, err error) {
 	// If these are non-concurrent, just execute and return if requested
 	if !set.Concurrent {
 		for _, action := range set.Actions {
-			if returnValue, err = handleAction(ctx, action); returnValue != nil || err != nil {
+			if returnValue, err = ws.handleAction(ctx, action); returnValue != nil || err != nil {
 				return
 			}
 		}
@@ -79,7 +86,7 @@ func handleActionSet(
 	for _, action := range set.Actions {
 		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			if maybeReturnValue, maybeErr := handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
+			if maybeReturnValue, maybeErr := ws.handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
 				returnValue, err = maybeReturnValue, maybeErr
 			}
 			actionsCompleted++
@@ -94,10 +101,10 @@ func handleActionSet(
 	return
 }
 
-func handleAction(
+func (ws *KSWorkflowState) handleAction(
 	ctx workflow.Context,
 	action *kitchensink.Action,
-) (returnValue *common.Payload, err error) {
+) (*common.Payload, error) {
 	if rr := action.GetReturnResult(); rr != nil {
 		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
@@ -105,9 +112,14 @@ func handleAction(
 	} else if can := action.GetContinueAsNew(); can != nil {
 		return nil, workflow.NewContinueAsNewError(ctx, KitchenSinkWorkflow, can.Arguments)
 	} else if timer := action.GetTimer(); timer != nil {
-		if err := workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond); err != nil {
-			return nil, err
-		}
+		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+			fut, setter := workflow.NewFuture(ctx)
+			workflow.Go(ctx, func(ctx workflow.Context) {
+				_ = workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond)
+				setter.Set(struct{}{}, nil)
+			})
+			return fut
+		}, timer.AwaitableChoice)
 	} else if act := action.GetExecActivity(); act != nil {
 		return nil, launchActivity(ctx, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
@@ -116,10 +128,47 @@ func handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		err := workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()).Get(ctx, nil)
+		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
+			return workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0])
+		}, child.AwaitableChoice,
+			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
+				return fut.GetChildWorkflowExecution().Get(ctx, nil)
+			},
+			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
+				return fut.Get(ctx, nil)
+			},
+		)
+		return nil, err
+	} else if patch := action.GetSetPatchMarker(); patch != nil {
+		if workflow.GetVersion(ctx, patch.GetPatchId(), workflow.DefaultVersion, 1) == 1 {
+			return ws.handleAction(ctx, patch.GetInnerAction())
+		}
+	} else if setWfState := action.GetSetWorkflowState(); setWfState != nil {
+		ws.workflowState = setWfState
+	} else if awaitState := action.GetAwaitWorkflowState(); awaitState != nil {
+		err := workflow.Await(ctx, func() bool {
+			if val, ok := ws.workflowState.Kvs[awaitState.Key]; ok {
+				return val == awaitState.Value
+			}
+			return false
+		})
+		return nil, err
+	} else if upsertMemo := action.GetUpsertMemo(); upsertMemo != nil {
+		convertedMap := make(map[string]interface{}, len(upsertMemo.GetUpsertedMemo().Fields))
+		for k, v := range upsertMemo.GetUpsertedMemo().Fields {
+			convertedMap[k] = v
+		}
+		err := workflow.UpsertMemo(ctx, convertedMap)
+		return nil, err
+	} else if upsertSA := action.GetUpsertSearchAttributes(); upsertSA != nil {
+		convertedMap := make(map[string]interface{}, len(upsertSA.GetSearchAttributes()))
+		for k, v := range upsertSA.GetSearchAttributes() {
+			convertedMap[k] = v
+		}
+		err := workflow.UpsertSearchAttributes(ctx, convertedMap)
 		return nil, err
 	} else if action.GetNestedActionSet() != nil {
-		return handleActionSet(ctx, action.GetNestedActionSet())
+		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -127,6 +176,12 @@ func handleAction(
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
+	actType := "noop"
+	args := make([]interface{}, 0)
+	if delay := act.GetDelay(); delay != nil {
+		actType = "delay"
+		args = append(args, delay.AsDuration())
+	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -134,7 +189,10 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
-		return workflow.ExecuteLocalActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
+
+		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+			return workflow.ExecuteLocalActivity(ctx, actType, args...)
+		}, act.GetAwaitableChoice())
 	} else {
 		waitForCancel := false
 		if remote := act.GetRemote(); remote != nil {
@@ -152,12 +210,77 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
-		return workflow.ExecuteActivity(actCtx, act.ActivityType, act.Arguments).Get(actCtx, nil)
+		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+			return workflow.ExecuteActivity(ctx, actType, args...)
+		}, act.GetAwaitableChoice())
 	}
+}
+
+func withAwaitableChoice[F workflow.Future](
+	ctx workflow.Context,
+	starter func(workflow.Context) F,
+	awaitChoice *kitchensink.AwaitableChoice,
+) error {
+	return withAwaitableChoiceCustom(ctx, starter, awaitChoice,
+		func(ctx workflow.Context, fut F) error {
+			_ = workflow.Sleep(ctx, 1)
+			return nil
+		},
+		func(ctx workflow.Context, fut F) error {
+			return fut.Get(ctx, nil)
+		})
+}
+
+func withAwaitableChoiceCustom[F workflow.Future](
+	ctx workflow.Context,
+	starter func(workflow.Context) F,
+	awaitChoice *kitchensink.AwaitableChoice,
+	afterStartedWaiter func(workflow.Context, F) error,
+	afterCompletedWaiter func(workflow.Context, F) error,
+) error {
+	cancelCtx, cancel := workflow.WithCancel(ctx)
+	fut := starter(cancelCtx)
+	var err error
+	didCancel := false
+	if awaitChoice.GetAbandon() != nil {
+		return nil
+	} else if awaitChoice.GetCancelBeforeStarted() != nil {
+		cancel()
+		didCancel = true
+		err = fut.Get(ctx, nil)
+	} else if awaitChoice.GetCancelAfterStarted() != nil {
+		err = afterStartedWaiter(ctx, fut)
+		if err != nil {
+			return err
+		}
+		cancel()
+		didCancel = true
+		err = fut.Get(ctx, nil)
+	} else if awaitChoice.GetCancelAfterCompleted() != nil {
+		res := afterCompletedWaiter(ctx, fut)
+		cancel()
+		err = res
+	} else {
+		err = fut.Get(ctx, nil)
+	}
+
+	// If we intentionally cancelled we want to swallow the cancel error to avoid bombing out the
+	// whole workflow
+	var canceledErr *temporal.CanceledError
+	if didCancel && errors.As(err, &canceledErr) {
+		err = nil
+	}
+	return err
 }
 
 // Noop is used as a no-op activity
 func Noop(_ context.Context, _ []*common.Payload) error {
+	return nil
+}
+
+// Delay runs for the provided delay period
+func Delay(_ context.Context, delayFor time.Duration) error {
+	time.Sleep(delayFor)
 	return nil
 }
 

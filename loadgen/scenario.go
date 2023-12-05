@@ -3,6 +3,8 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -184,6 +186,18 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
 	if err != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
+	}
+
+	// Ensure custom search attributes are registered
+	_, err = r.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+		SearchAttributes: map[string]enums.IndexedValueType{
+			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
+			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
+		},
+		Namespace: r.Namespace,
+	})
+	if err != nil && !strings.Contains(err.Error(), "already exists") {
+		return fmt.Errorf("failed to register search attributes: %w", err)
 	}
 
 	clientSeq := options.Params.ClientSequence

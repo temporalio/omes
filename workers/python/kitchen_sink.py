@@ -2,17 +2,24 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from typing import Any, Awaitable, Optional
+from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
 from temporalio.api.common.v1 import Payload
-from temporalio.common import RawValue, RetryPolicy
+from temporalio.common import (
+    RawValue,
+    RetryPolicy,
+    SearchAttributeKey,
+    SearchAttributeUpdate,
+)
+from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
 from protos.kitchen_sink_pb2 import (
     Action,
     ActionSet,
     ActivityCancellationType,
+    AwaitableChoice,
     DoActionsUpdate,
     DoSignal,
     ExecuteActivityAction,
@@ -104,16 +111,57 @@ class KitchenSinkWorkflow:
         elif action.HasField("continue_as_new"):
             workflow.continue_as_new(action.continue_as_new.arguments)
         elif action.HasField("timer"):
-            await asyncio.sleep(action.timer.milliseconds / 1000)
+            await handle_awaitable_choice(
+                asyncio.sleep(action.timer.milliseconds / 1000),
+                action.timer.awaitable_choice,
+            )
         elif action.HasField("exec_activity"):
-            await launch_activity(action.exec_activity)
+            await handle_awaitable_choice(
+                launch_activity(action.exec_activity),
+                action.exec_activity.awaitable_choice,
+            )
         elif action.HasField("exec_child_workflow"):
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
             args = [RawValue(i) for i in child_action.input]
-            await workflow.execute_child_workflow(
-                child, id=child_action.workflow_id, args=args
+            await handle_awaitable_choice(
+                workflow.start_child_workflow(
+                    child, id=child_action.workflow_id, args=args
+                ),
+                child_action.awaitable_choice,
+                after_started_fn=wait_task_complete,
+                after_completed_fn=wait_child_wf_complete,
             )
+        elif action.HasField("set_patch_marker"):
+            if action.set_patch_marker.deprecated:
+                workflow.deprecate_patch(action.set_patch_marker.patch_id)
+                was_patched = True
+            else:
+                was_patched = workflow.patched(action.set_patch_marker.patch_id)
+
+            if was_patched:
+                return await self.handle_action(action.set_patch_marker.inner_action)
+        elif action.HasField("set_workflow_state"):
+            self.workflow_state = action.set_workflow_state
+        elif action.HasField("await_workflow_state"):
+            await workflow.wait_condition(
+                lambda: self.workflow_state.kvs.get(action.await_workflow_state.key)
+                == action.await_workflow_state.value
+            )
+        elif action.HasField("upsert_memo"):
+            pass  # Python doesn't have memo upserting
+        elif action.HasField("upsert_search_attributes"):
+            updates: list[SearchAttributeUpdate[Any]] = []
+            # TODO: Use RawValue after https://github.com/temporalio/sdk-python/issues/438
+            #  and avoid checking key by name
+            for k, v in action.upsert_search_attributes.search_attributes.items():
+                if "Keyword" in k:
+                    updates.append(
+                        SearchAttributeKey.for_keyword(k).value_set(str(v.data[0]))
+                    )
+                else:
+                    updates.append(SearchAttributeKey.for_int(k).value_set(v.data[0]))
+            workflow.upsert_search_attributes(updates)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         else:
@@ -122,15 +170,17 @@ class KitchenSinkWorkflow:
         return None
 
 
-def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
-    args = execute_activity.arguments
+def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
+    act_type = "noop"
+    args = []
 
-    if args is None:
-        args = []
+    if execute_activity.HasField("delay"):
+        act_type = "delay"
+        args.append(execute_activity.delay)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
-            activity=execute_activity.activity_type,
+            activity=act_type,
             args=args,
             schedule_to_close_timeout=timeout_or_none(
                 execute_activity, "schedule_to_close_timeout"
@@ -148,7 +198,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
         )
     else:
         activity_task = workflow.start_activity(
-            activity=execute_activity.activity_type,
+            activity=act_type,
             args=args,
             task_queue=execute_activity.task_queue,
             schedule_to_close_timeout=timeout_or_none(
@@ -168,8 +218,58 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> Awaitable:
                 execute_activity.remote.cancellation_type
             ),
         )
-    # TODO: Handle cancels
+
     return activity_task
+
+
+async def brief_wait(_: asyncio.Task):
+    await asyncio.sleep(0.001)
+
+
+async def wait_task_complete(task: asyncio.Task):
+    await task
+
+
+async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
+    res = await task
+    await res
+
+
+async def handle_awaitable_choice(
+    awaitable: Union[Coroutine, asyncio.Task],
+    choice: AwaitableChoice,
+    after_started_fn: Callable[[asyncio.Task], Awaitable] = brief_wait,
+    after_completed_fn: Callable[[asyncio.Task], Awaitable] = wait_task_complete,
+):
+    if isinstance(awaitable, asyncio.Task):
+        task = awaitable
+    else:
+        # Place the awaitable into a task so we can cancel it easily
+        task = asyncio.create_task(awaitable)
+
+    did_cancel = False
+    try:
+        if choice.HasField("abandon"):
+            # Do nothing
+            return
+        elif choice.HasField("cancel_before_started"):
+            task.cancel()
+            did_cancel = True
+            await task
+        elif choice.HasField("cancel_after_started"):
+            await after_started_fn(task)
+            task.cancel()
+            did_cancel = True
+            await task
+        elif choice.HasField("cancel_after_completed"):
+            await after_completed_fn(task)
+            task.cancel()
+            did_cancel = True
+        else:
+            await task
+    except asyncio.CancelledError:
+        if not did_cancel:
+            raise
 
 
 # Various proto conversions below ==============================================

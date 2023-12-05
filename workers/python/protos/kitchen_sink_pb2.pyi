@@ -220,7 +220,14 @@ class TimerAction(_message.Message):
     def __init__(self, milliseconds: _Optional[int] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class ExecuteActivityAction(_message.Message):
-    __slots__ = ("activity_type", "task_queue", "headers", "arguments", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice")
+    __slots__ = ("generic", "delay", "noop", "task_queue", "headers", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice")
+    class GenericActivity(_message.Message):
+        __slots__ = ("type", "arguments")
+        TYPE_FIELD_NUMBER: _ClassVar[int]
+        ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
+        type: str
+        arguments: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
+        def __init__(self, type: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -228,10 +235,11 @@ class ExecuteActivityAction(_message.Message):
         key: str
         value: _message_pb2.Payload
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ...) -> None: ...
-    ACTIVITY_TYPE_FIELD_NUMBER: _ClassVar[int]
+    GENERIC_FIELD_NUMBER: _ClassVar[int]
+    DELAY_FIELD_NUMBER: _ClassVar[int]
+    NOOP_FIELD_NUMBER: _ClassVar[int]
     TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
-    ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
     SCHEDULE_TO_CLOSE_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
     SCHEDULE_TO_START_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
     START_TO_CLOSE_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
@@ -240,10 +248,11 @@ class ExecuteActivityAction(_message.Message):
     IS_LOCAL_FIELD_NUMBER: _ClassVar[int]
     REMOTE_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
-    activity_type: str
+    generic: ExecuteActivityAction.GenericActivity
+    delay: _duration_pb2.Duration
+    noop: _empty_pb2.Empty
     task_queue: str
     headers: _containers.MessageMap[str, _message_pb2.Payload]
-    arguments: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
     schedule_to_close_timeout: _duration_pb2.Duration
     schedule_to_start_timeout: _duration_pb2.Duration
     start_to_close_timeout: _duration_pb2.Duration
@@ -252,7 +261,7 @@ class ExecuteActivityAction(_message.Message):
     is_local: _empty_pb2.Empty
     remote: RemoteActivityOptions
     awaitable_choice: AwaitableChoice
-    def __init__(self, activity_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
+    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class ExecuteChildWorkflowAction(_message.Message):
     __slots__ = ("namespace", "workflow_id", "workflow_type", "task_queue", "input", "workflow_execution_timeout", "workflow_run_timeout", "workflow_task_timeout", "parent_close_policy", "workflow_id_reuse_policy", "retry_policy", "cron_schedule", "headers", "memo", "search_attributes", "cancellation_type", "versioning_intent", "awaitable_choice")
@@ -355,12 +364,14 @@ class CancelWorkflowAction(_message.Message):
     def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ...) -> None: ...
 
 class SetPatchMarkerAction(_message.Message):
-    __slots__ = ("patch_id", "deprecated")
+    __slots__ = ("patch_id", "deprecated", "inner_action")
     PATCH_ID_FIELD_NUMBER: _ClassVar[int]
     DEPRECATED_FIELD_NUMBER: _ClassVar[int]
+    INNER_ACTION_FIELD_NUMBER: _ClassVar[int]
     patch_id: str
     deprecated: bool
-    def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ...) -> None: ...
+    inner_action: Action
+    def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ..., inner_action: _Optional[_Union[Action, _Mapping]] = ...) -> None: ...
 
 class UpsertSearchAttributesAction(_message.Message):
     __slots__ = ("search_attributes",)
