@@ -103,12 +103,16 @@ struct ExampleCmd {
     clap::ArgGroup::new("output").args(&["use_stdout", "output_path"]),
 ))]
 struct OutputConfig {
-    /// Output goes to stdout as protobuf binary, this is the default.
+    /// Output goes to stdout, this is the default.
     #[clap(long, default_value_t = true)]
     use_stdout: bool,
     /// Output goes to the provided file path as protobuf binary.
     #[clap(long)]
     output_path: Option<PathBuf>,
+    /// Output will be in Rust debug format if set true. JSON is obnoxious to use with prost at
+    /// the moment, and this option is really meant for human inspection.
+    #[clap(long, default_value_t = false)]
+    debug: bool,
 }
 
 /// The relative likelihood of each action type being generated as floats which must sum to exactly
@@ -343,12 +347,12 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
 
 impl<'a> Arbitrary<'a> for ClientAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let action_kind = u.int_in_range(0..=2)?;
+        let action_kind = u.int_in_range(0..=3)?;
         let variant = match action_kind {
             0 => client_action::Variant::DoSignal(u.arbitrary()?),
             1 => client_action::Variant::DoQuery(u.arbitrary()?),
             2 => client_action::Variant::DoUpdate(u.arbitrary()?),
-            // TODO: Nested, if/when desired
+            3 => client_action::Variant::NestedActions(u.arbitrary()?),
             _ => unreachable!(),
         };
         Ok(Self {
@@ -435,7 +439,7 @@ impl<'a> Arbitrary<'a> for ActionSet {
 
 impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let action_kind = u.int_in_range(0..=100)? as f32;
+        let action_kind = u.int_in_range(0..=1_000)? as f32 / 10.0;
         let chances = ARB_CONTEXT.with_borrow(|c| c.config.action_chances.clone());
         let variant = if chances.timer(action_kind) {
             action::Variant::Timer(u.arbitrary()?)
@@ -710,15 +714,17 @@ fn vec_of_size<'a, T: Arbitrary<'a>>(
 
 fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result<(), Error> {
     let mut buf = Vec::with_capacity(1024 * 10);
-    generated_input.encode(&mut buf)?;
-    if output_kind.use_stdout {
-        std::io::stdout().write_all(&buf)?;
+    if output_kind.debug {
+        let as_str = format!("{:#?}", generated_input);
+        buf.write_all(as_str.as_bytes())?;
     } else {
-        let path = output_kind
-            .output_path
-            .expect("Output path must have been set");
+        generated_input.encode(&mut buf)?;
+    }
+    if let Some(path) = output_kind.output_path {
         let mut file = std::fs::File::create(path)?;
         file.write_all(&buf)?;
+    } else {
+        std::io::stdout().write_all(&buf)?;
     }
     Ok(())
 }
