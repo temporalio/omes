@@ -1,6 +1,6 @@
 mod protos;
 
-use crate::protos::temporal::omes::kitchen_sink::ActivityCancellationType;
+use crate::protos::temporal::omes::kitchen_sink::{ActivityCancellationType, ContinueAsNewAction};
 use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
@@ -217,6 +217,7 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                 .into()])],
                 concurrent: false,
                 wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
+                wait_for_current_run_to_finish_at_end: false,
             },
             ClientActionSet {
                 actions: vec![mk_client_signal_action([
@@ -270,6 +271,8 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     let context = ArbContext {
         config,
         cur_workflow_state: Default::default(),
+        did_a_nested_action: false,
+        action_set_nest_level: 0,
     };
     ARB_CONTEXT.set(context);
 
@@ -289,31 +292,35 @@ thread_local! {
 }
 
 static WF_STATE_FIELD_VALUE: &str = "x";
+static WF_TYPE_NAME: &str = "kitchenSink";
 
 #[derive(Default)]
 struct ArbContext {
     config: GeneratorConfig,
     cur_workflow_state: WorkflowState,
+    did_a_nested_action: bool,
+    action_set_nest_level: usize,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // We always want a client sequence
+        let mut client_sequence: ClientSequence = u.arbitrary()?;
         let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
-            // We always want a client sequence
-            client_sequence: Some(u.arbitrary()?),
+            client_sequence: None,
         };
-        // TODO: There needs to be some kind of coordination during generation to ensure
-        //   we don't have multiple returns etc.
-        let cs = ti.client_sequence.get_or_insert(Default::default());
-        cs.action_sets.push(ClientActionSet {
+
+        // Finally, return at the end
+        client_sequence.action_sets.push(ClientActionSet {
             actions: vec![mk_client_signal_action([ReturnResultAction {
                 return_this: Some(Payload::default()),
             }
             .into()])],
             ..Default::default()
         });
+        ti.client_sequence = Some(client_sequence);
         Ok(ti)
     }
 }
@@ -336,18 +343,53 @@ impl<'a> Arbitrary<'a> for ClientSequence {
 
 impl<'a> Arbitrary<'a> for ClientActionSet {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_actions_per_set);
-        Ok(Self {
-            actions: vec_of_size(u, num_actions)?,
-            concurrent: u.arbitrary()?,
-            wait_at_end: u.arbitrary::<Option<ClientActionWait>>()?.map(Into::into),
-        })
+        let nest_level = ARB_CONTEXT.with_borrow_mut(|c| {
+            c.action_set_nest_level += 1;
+            c.action_set_nest_level
+        });
+        // Small chance of continuing as new
+        let action_set = if nest_level == 1 && u.ratio(1, 100)? {
+            let actions = vec![mk_client_signal_action([ContinueAsNewAction {
+                workflow_type: WF_TYPE_NAME.to_string(),
+                arguments: vec![to_proto_payload(
+                    WorkflowInput {
+                        initial_actions: vec![mk_action_set([action::Variant::SetWorkflowState(
+                            ARB_CONTEXT.with_borrow(|c| c.cur_workflow_state.clone()),
+                        )])],
+                    },
+                    "temporal.omes.kitchen_sink.WorkflowInput",
+                )],
+                ..Default::default()
+            }
+            .into()])];
+            Self {
+                actions,
+                wait_for_current_run_to_finish_at_end: true,
+                ..Default::default()
+            }
+        } else {
+            let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_actions_per_set);
+            Self {
+                actions: vec_of_size(u, num_actions)?,
+                concurrent: u.arbitrary()?,
+                wait_at_end: u.arbitrary::<Option<ClientActionWait>>()?.map(Into::into),
+                wait_for_current_run_to_finish_at_end: false,
+            }
+        };
+        ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level -= 1);
+        Ok(action_set)
     }
 }
 
 impl<'a> Arbitrary<'a> for ClientAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let action_kind = u.int_in_range(0..=3)?;
+        // Too much nesting can lead to very long action sets, which are also very confusing
+        // to understand. One level of nesting ought to be sufficient for coverage.
+        let action_kind = if ARB_CONTEXT.with_borrow(|c| c.action_set_nest_level == 1) {
+            u.int_in_range(0..=3)?
+        } else {
+            u.int_in_range(0..=2)?
+        };
         let variant = match action_kind {
             0 => client_action::Variant::DoSignal(u.arbitrary()?),
             1 => client_action::Variant::DoQuery(u.arbitrary()?),
@@ -549,7 +591,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {
             // Use KS as own child, with an input to just return right away
-            workflow_type: "kitchenSink".to_string(),
+            workflow_type: WF_TYPE_NAME.to_string(),
             input: vec![input],
             awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
@@ -750,7 +792,7 @@ fn mk_action_set(actions: impl IntoIterator<Item = action::Variant>) -> ActionSe
                 variant: Some(variant),
             })
             .collect(),
-        concurrent: true,
+        concurrent: false,
     }
 }
 

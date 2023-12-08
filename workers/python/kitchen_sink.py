@@ -58,8 +58,8 @@ class KitchenSinkWorkflow:
         return self.workflow_state
 
     @workflow.run
-    async def run(self, input: Optional[WorkflowInput]) -> Payload:
-        workflow.logger.info("Started kitchen sink workflow")
+    async def run(self, input: Optional[WorkflowInput] = None) -> Payload:
+        workflow.logger.debug("Started kitchen sink workflow")
 
         # Run all initial input actions
         if input and input.initial_actions:
@@ -98,9 +98,11 @@ class KitchenSinkWorkflow:
         should_return_task = asyncio.create_task(
             workflow.wait_condition(lambda: return_value is not None)
         )
-        await asyncio.wait(
+        done, _ = await asyncio.wait(
             [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
         )  # type: ignore
+        for fut in done:
+            await fut
         return return_value
 
     async def handle_action(self, action: Action) -> Optional[Payload]:
@@ -109,7 +111,8 @@ class KitchenSinkWorkflow:
         elif action.HasField("return_error"):
             raise exceptions.ApplicationError(action.return_error.failure.message)
         elif action.HasField("continue_as_new"):
-            workflow.continue_as_new(action.continue_as_new.arguments)
+            args = [RawValue(i) for i in action.continue_as_new.arguments]
+            workflow.continue_as_new(args=args)
         elif action.HasField("timer"):
             await handle_awaitable_choice(
                 asyncio.sleep(action.timer.milliseconds / 1000),
