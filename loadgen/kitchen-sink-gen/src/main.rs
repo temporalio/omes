@@ -1,5 +1,6 @@
 mod protos;
 
+use crate::protos::temporal::omes::kitchen_sink::{ActivityCancellationType, ContinueAsNewAction};
 use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
@@ -72,6 +73,8 @@ struct GeneratorConfig {
     max_client_action_set_wait: Duration,
     /// How likely various actions are to be generated
     action_chances: ActionChances,
+    /// Maximum number of initial actions in a workflow input
+    max_initial_actions: usize,
 }
 
 impl Default for GeneratorConfig {
@@ -84,6 +87,7 @@ impl Default for GeneratorConfig {
             max_payload_size: 256,
             max_client_action_set_wait: Duration::from_secs(1),
             action_chances: Default::default(),
+            max_initial_actions: 10,
         }
     }
 }
@@ -99,12 +103,16 @@ struct ExampleCmd {
     clap::ArgGroup::new("output").args(&["use_stdout", "output_path"]),
 ))]
 struct OutputConfig {
-    /// Output goes to stdout as protobuf binary, this is the default.
+    /// Output goes to stdout, this is the default.
     #[clap(long, default_value_t = true)]
     use_stdout: bool,
     /// Output goes to the provided file path as protobuf binary.
     #[clap(long)]
     output_path: Option<PathBuf>,
+    /// Output will be in Rust debug format if set true. JSON is obnoxious to use with prost at
+    /// the moment, and this option is really meant for human inspection.
+    #[clap(long, default_value_t = false)]
+    debug: bool,
 }
 
 /// The relative likelihood of each action type being generated as floats which must sum to exactly
@@ -209,6 +217,7 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                 .into()])],
                 concurrent: false,
                 wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
+                wait_for_current_run_to_finish_at_end: false,
             },
             ClientActionSet {
                 actions: vec![mk_client_signal_action([
@@ -262,6 +271,8 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     let context = ArbContext {
         config,
         cur_workflow_state: Default::default(),
+        did_a_nested_action: false,
+        action_set_nest_level: 0,
     };
     ARB_CONTEXT.set(context);
 
@@ -281,41 +292,44 @@ thread_local! {
 }
 
 static WF_STATE_FIELD_VALUE: &str = "x";
+static WF_TYPE_NAME: &str = "kitchenSink";
 
 #[derive(Default)]
 struct ArbContext {
     config: GeneratorConfig,
     cur_workflow_state: WorkflowState,
+    did_a_nested_action: bool,
+    action_set_nest_level: usize,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // We always want a client sequence
+        let mut client_sequence: ClientSequence = u.arbitrary()?;
         let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
-            // We always want a client sequence
-            client_sequence: Some(u.arbitrary()?),
+            client_sequence: None,
         };
-        // TODO: There needs to be some kind of coordination during generation to ensure
-        //   we don't have multiple returns etc.
-        let cs = ti.client_sequence.get_or_insert(Default::default());
-        cs.action_sets.push(ClientActionSet {
+
+        // Finally, return at the end
+        client_sequence.action_sets.push(ClientActionSet {
             actions: vec![mk_client_signal_action([ReturnResultAction {
                 return_this: Some(Payload::default()),
             }
             .into()])],
             ..Default::default()
         });
+        ti.client_sequence = Some(client_sequence);
         Ok(ti)
     }
 }
 
 impl<'a> Arbitrary<'a> for WorkflowInput {
-    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO impl
-        Ok(Self {
-            initial_actions: vec![],
-        })
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_initial_actions);
+        let initial_actions = vec_of_size(u, num_actions)?;
+        Ok(Self { initial_actions })
     }
 }
 
@@ -329,24 +343,58 @@ impl<'a> Arbitrary<'a> for ClientSequence {
 
 impl<'a> Arbitrary<'a> for ClientActionSet {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_actions_per_set);
-        Ok(Self {
-            actions: vec_of_size(u, num_actions)?,
-            concurrent: u.arbitrary()?,
-            wait_at_end: u.arbitrary::<Option<ClientActionWait>>()?.map(Into::into),
-        })
+        let nest_level = ARB_CONTEXT.with_borrow_mut(|c| {
+            c.action_set_nest_level += 1;
+            c.action_set_nest_level
+        });
+        // Small chance of continuing as new
+        let action_set = if nest_level == 1 && u.ratio(1, 100)? {
+            let actions = vec![mk_client_signal_action([ContinueAsNewAction {
+                workflow_type: WF_TYPE_NAME.to_string(),
+                arguments: vec![to_proto_payload(
+                    WorkflowInput {
+                        initial_actions: vec![mk_action_set([action::Variant::SetWorkflowState(
+                            ARB_CONTEXT.with_borrow(|c| c.cur_workflow_state.clone()),
+                        )])],
+                    },
+                    "temporal.omes.kitchen_sink.WorkflowInput",
+                )],
+                ..Default::default()
+            }
+            .into()])];
+            Self {
+                actions,
+                wait_for_current_run_to_finish_at_end: true,
+                ..Default::default()
+            }
+        } else {
+            let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_client_actions_per_set);
+            Self {
+                actions: vec_of_size(u, num_actions)?,
+                concurrent: u.arbitrary()?,
+                wait_at_end: u.arbitrary::<Option<ClientActionWait>>()?.map(Into::into),
+                wait_for_current_run_to_finish_at_end: false,
+            }
+        };
+        ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level -= 1);
+        Ok(action_set)
     }
 }
 
 impl<'a> Arbitrary<'a> for ClientAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: Adjustable ratio of choice?
-        let action_kind = u.int_in_range(0..=2)?;
+        // Too much nesting can lead to very long action sets, which are also very confusing
+        // to understand. One level of nesting ought to be sufficient for coverage.
+        let action_kind = if ARB_CONTEXT.with_borrow(|c| c.action_set_nest_level == 1) {
+            u.int_in_range(0..=3)?
+        } else {
+            u.int_in_range(0..=2)?
+        };
         let variant = match action_kind {
             0 => client_action::Variant::DoSignal(u.arbitrary()?),
             1 => client_action::Variant::DoQuery(u.arbitrary()?),
             2 => client_action::Variant::DoUpdate(u.arbitrary()?),
-            // TODO: Nested, if/when desired
+            3 => client_action::Variant::NestedActions(u.arbitrary()?),
             _ => unreachable!(),
         };
         Ok(Self {
@@ -357,7 +405,6 @@ impl<'a> Arbitrary<'a> for ClientAction {
 
 impl<'a> Arbitrary<'a> for DoSignal {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
             // Half of that in the handler half in main
@@ -383,7 +430,6 @@ impl<'a> Arbitrary<'a> for DoSignal {
 impl<'a> Arbitrary<'a> for DoQuery {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut failure_expected = false;
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time report state
             do_query::Variant::ReportState(u.arbitrary()?)
@@ -402,7 +448,6 @@ impl<'a> Arbitrary<'a> for DoQuery {
 impl<'a> Arbitrary<'a> for DoUpdate {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut failure_expected = false;
-        // TODO: Configurable?
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
             do_update::Variant::DoActions(
@@ -436,7 +481,7 @@ impl<'a> Arbitrary<'a> for ActionSet {
 
 impl<'a> Arbitrary<'a> for Action {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let action_kind = u.int_in_range(0..=100)? as f32;
+        let action_kind = u.int_in_range(0..=1_000)? as f32 / 10.0;
         let chances = ARB_CONTEXT.with_borrow(|c| c.config.action_chances.clone());
         let variant = if chances.timer(action_kind) {
             action::Variant::Timer(u.arbitrary()?)
@@ -503,7 +548,6 @@ impl<'a> Arbitrary<'a> for TimerAction {
 
 impl<'a> Arbitrary<'a> for ExecuteActivityAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: configurable ratio?
         let locality = if u.ratio(50, 100)? {
             execute_activity_action::Locality::Remote(u.arbitrary()?)
         } else {
@@ -547,7 +591,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {
             // Use KS as own child, with an input to just return right away
-            workflow_type: "kitchenSink".to_string(),
+            workflow_type: WF_TYPE_NAME.to_string(),
             input: vec![input],
             awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
@@ -620,15 +664,28 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
 }
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
-    fn arbitrary(_: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: impl
-        Ok(Self::default())
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(RemoteActivityOptions {
+            cancellation_type: u.arbitrary::<ActivityCancellationType>()?.into(),
+            do_not_eagerly_execute: false,
+            versioning_intent: 0,
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for ActivityCancellationType {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let choices = [
+            ActivityCancellationType::Abandon,
+            ActivityCancellationType::TryCancel,
+            ActivityCancellationType::WaitCancellationCompleted,
+        ];
+        Ok(*u.choose(&choices)?)
     }
 }
 
 impl<'a> Arbitrary<'a> for Payloads {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // TODO: configurable ratio?
         let payloads = if u.ratio(80, 100)? {
             vec![u.arbitrary()?]
         } else if u.ratio(50, 100)? {
@@ -699,15 +756,17 @@ fn vec_of_size<'a, T: Arbitrary<'a>>(
 
 fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result<(), Error> {
     let mut buf = Vec::with_capacity(1024 * 10);
-    generated_input.encode(&mut buf)?;
-    if output_kind.use_stdout {
-        std::io::stdout().write_all(&buf)?;
+    if output_kind.debug {
+        let as_str = format!("{:#?}", generated_input);
+        buf.write_all(as_str.as_bytes())?;
     } else {
-        let path = output_kind
-            .output_path
-            .expect("Output path must have been set");
+        generated_input.encode(&mut buf)?;
+    }
+    if let Some(path) = output_kind.output_path {
         let mut file = std::fs::File::create(path)?;
         file.write_all(&buf)?;
+    } else {
+        std::io::stdout().write_all(&buf)?;
     }
     Ok(())
 }
@@ -733,7 +792,7 @@ fn mk_action_set(actions: impl IntoIterator<Item = action::Variant>) -> ActionSe
                 variant: Some(variant),
             })
             .collect(),
-        concurrent: true,
+        concurrent: false,
     }
 }
 

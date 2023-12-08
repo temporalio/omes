@@ -32,6 +32,9 @@ message ClientActionSet {
   // Wait the specified amount of time at the end of the action set before proceeding to the next
   // (if there is one, if not, ignored).
   google.protobuf.Duration wait_at_end = 3;
+  // If set, the client should wait for the current run to end before proceeding (IE: the workflow
+  // is going to continue-as-new).
+  bool wait_for_current_run_to_finish_at_end = 4;
 }
 
 message ClientAction {

@@ -30,11 +30,30 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, queryErr
 	}
 
+	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
+		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
+			rval, err = state.handleActionSet(ctx, actions.GetDoActions())
+			if rval == nil {
+				rval = &state.workflowState
+			}
+			return rval, err
+		}, workflow.UpdateHandlerOptions{
+			Validator: func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) error {
+				if actions.GetRejectMe() != nil {
+					return errors.New("rejected")
+				}
+				return nil
+			},
+		})
+	if updateErr != nil {
+		return nil, updateErr
+	}
+
 	// Handle initial set
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err)
+				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
 				return ret, err
 			}
 		}
@@ -110,7 +129,8 @@ func (ws *KSWorkflowState) handleAction(
 	} else if re := action.GetReturnError(); re != nil {
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
-		return nil, workflow.NewContinueAsNewError(ctx, KitchenSinkWorkflow, can.Arguments)
+		// Use string arg to avoid the SDK trying to convert payload to input type
+		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
 		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)

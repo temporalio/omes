@@ -66,14 +66,16 @@ class ClientSequence(_message.Message):
     def __init__(self, action_sets: _Optional[_Iterable[_Union[ClientActionSet, _Mapping]]] = ...) -> None: ...
 
 class ClientActionSet(_message.Message):
-    __slots__ = ("actions", "concurrent", "wait_at_end")
+    __slots__ = ("actions", "concurrent", "wait_at_end", "wait_for_current_run_to_finish_at_end")
     ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CONCURRENT_FIELD_NUMBER: _ClassVar[int]
     WAIT_AT_END_FIELD_NUMBER: _ClassVar[int]
+    WAIT_FOR_CURRENT_RUN_TO_FINISH_AT_END_FIELD_NUMBER: _ClassVar[int]
     actions: _containers.RepeatedCompositeFieldContainer[ClientAction]
     concurrent: bool
     wait_at_end: _duration_pb2.Duration
-    def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: bool = ..., wait_at_end: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+    wait_for_current_run_to_finish_at_end: bool
+    def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: bool = ..., wait_at_end: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., wait_for_current_run_to_finish_at_end: bool = ...) -> None: ...
 
 class ClientAction(_message.Message):
     __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")

@@ -2,9 +2,11 @@ package kitchensink
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"time"
@@ -81,6 +83,15 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 			}
 		}
 	}
+	if actionSet.GetWaitForCurrentRunToFinishAtEnd() {
+		err := e.Client.GetWorkflow(ctx, e.WorkflowID, e.RunID).
+			GetWithOptions(ctx, nil, client.WorkflowRunGetOptions{DisableFollowingRuns: true})
+		var canErr *workflow.ContinueAsNewError
+		if err != nil && !errors.As(err, &canErr) {
+			return err
+		}
+		e.RunID = e.Client.GetWorkflow(ctx, e.WorkflowID, "").GetRunID()
+	}
 	return nil
 }
 
@@ -93,20 +104,24 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	var err error
 	if sig := action.GetDoSignal(); sig != nil {
 		if sigActions := sig.GetDoSignalActions(); sigActions != nil {
-			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_signal", sigActions)
+			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", "do_actions_signal", sigActions)
 		} else if handler := sig.GetCustom(); handler != nil {
-			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
+			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_signal must recognizable variant")
 		}
 		return err
 	} else if update := action.GetDoUpdate(); update != nil {
+		var handle client.WorkflowUpdateHandle
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
-			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, "do_actions_update", actionsUpdate)
+			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", "do_actions_update", actionsUpdate)
 		} else if handler := update.GetCustom(); handler != nil {
-			_, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
+			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_update must recognizable variant")
+		}
+		if err == nil {
+			err = handle.Get(ctx, nil)
 		}
 		if update.FailureExpected {
 			err = nil
@@ -115,9 +130,9 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, e.RunID, "report_state", nil)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, e.RunID, handler.Name, handler.Args)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
 		}

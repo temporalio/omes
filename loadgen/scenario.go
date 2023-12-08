@@ -217,7 +217,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 				cancel()
 				// TODO: Remove or change to "always terminate when exiting early" flag
 				err := r.Client.TerminateWorkflow(
-					ctx, handle.GetID(), handle.GetRunID(), "client actions failed", nil)
+					ctx, handle.GetID(), "", "client actions failed", nil)
 				if err != nil {
 					return
 				}
