@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/scenariorunner"
 )
 
 func runScenarioWithWorkerCmd() *cobra.Command {
@@ -62,7 +63,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	}
 
 	// Run scenario
-	scenarioRunner := ScenarioRunner{
+	scenarioRunner := scenariorunner.ScenarioRunner{
 		Logger:          r.logger,
 		Scenario:        r.scenario,
 		RunID:           r.runID,
