@@ -15,67 +15,67 @@ import (
 )
 
 func runScenarioCmd() *cobra.Command {
-	var r scenarioRunner
+	var r ScenarioRunner
 	cmd := &cobra.Command{
 		Use:   "run-scenario",
 		Short: "Run scenario",
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
-			if err := r.run(ctx); err != nil {
-				r.logger.Fatal(err)
+			if err := r.Run(ctx); err != nil {
+				r.Logger.Fatal(err)
 			}
 		},
 	}
-	r.addCLIFlags(cmd.Flags())
+	r.AddCLIFlags(cmd.Flags())
 	cmd.MarkFlagRequired("scenario")
 	cmd.MarkFlagRequired("run-id")
 	return cmd
 }
 
-type scenarioRunner struct {
-	logger          *zap.SugaredLogger
-	scenario        string
-	runID           string
-	iterations      int
-	duration        time.Duration
-	maxConcurrent   int
-	scenarioOptions []string
-	connectTimeout  time.Duration
-	clientOptions   cmdoptions.ClientOptions
-	metricsOptions  cmdoptions.MetricsOptions
-	loggingOptions  cmdoptions.LoggingOptions
+type ScenarioRunner struct {
+	Logger          *zap.SugaredLogger
+	Scenario        string
+	RunID           string
+	Iterations      int
+	Duration        time.Duration
+	MaxConcurrent   int
+	ScenarioOptions []string
+	ConnectTimeout  time.Duration
+	ClientOptions   cmdoptions.ClientOptions
+	MetricsOptions  cmdoptions.MetricsOptions
+	LoggingOptions  cmdoptions.LoggingOptions
 }
 
-func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
-	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
-	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
-	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)")
-	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
-	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
-	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
-	r.clientOptions.AddCLIFlags(fs)
-	r.metricsOptions.AddCLIFlags(fs, "")
-	r.loggingOptions.AddCLIFlags(fs)
+func (r *ScenarioRunner) AddCLIFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&r.Scenario, "scenario", "", "Scenario name to run")
+	fs.StringVar(&r.RunID, "run-id", "", "Run ID for this run")
+	fs.IntVar(&r.Iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
+	fs.DurationVar(&r.Duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)")
+	fs.IntVar(&r.MaxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
+	fs.StringSliceVar(&r.ScenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	fs.DurationVar(&r.ConnectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
+	r.ClientOptions.AddCLIFlags(fs)
+	r.MetricsOptions.AddCLIFlags(fs, "")
+	r.LoggingOptions.AddCLIFlags(fs)
 }
 
-func (r *scenarioRunner) run(ctx context.Context) error {
-	if r.logger == nil {
-		r.logger = r.loggingOptions.MustCreateLogger()
+func (r *ScenarioRunner) Run(ctx context.Context) error {
+	if r.Logger == nil {
+		r.Logger = r.LoggingOptions.MustCreateLogger()
 	}
-	scenario := loadgen.GetScenario(r.scenario)
+	scenario := loadgen.GetScenario(r.Scenario)
 	if scenario == nil {
 		return fmt.Errorf("scenario not found")
-	} else if r.runID == "" {
+	} else if r.RunID == "" {
 		return fmt.Errorf("run ID not found")
-	} else if r.iterations > 0 && r.duration > 0 {
+	} else if r.Iterations > 0 && r.Duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
 	}
 
 	// Parse options
-	scenarioOptions := make(map[string]string, len(r.scenarioOptions))
-	for _, v := range r.scenarioOptions {
+	scenarioOptions := make(map[string]string, len(r.ScenarioOptions))
+	for _, v := range r.ScenarioOptions {
 		pieces := strings.SplitN(v, "=", 2)
 		if len(pieces) != 2 {
 			return fmt.Errorf("option does not have '='")
@@ -83,18 +83,18 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioOptions[pieces[0]] = pieces[1]
 	}
 
-	metrics := r.metricsOptions.MustCreateMetrics(r.logger)
+	metrics := r.MetricsOptions.MustCreateMetrics(r.Logger)
 	defer metrics.Shutdown(ctx)
 	start := time.Now()
 	var client client.Client
 	var err error
 	for {
-		client, err = r.clientOptions.Dial(metrics, r.logger)
+		client, err = r.ClientOptions.Dial(metrics, r.Logger)
 		if err == nil {
 			break
 		}
 		// Only fail if past wait period
-		if time.Since(start) > r.connectTimeout {
+		if time.Since(start) > r.ConnectTimeout {
 			return fmt.Errorf("failed dialing: %w", err)
 		}
 		// Wait 300ms and try again
@@ -102,18 +102,18 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 	defer client.Close()
 	scenarioInfo := loadgen.ScenarioInfo{
-		ScenarioName:   r.scenario,
-		RunID:          r.runID,
-		Logger:         r.logger,
+		ScenarioName:   r.Scenario,
+		RunID:          r.RunID,
+		Logger:         r.Logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
 		Configuration: loadgen.RunConfiguration{
-			Iterations:    r.iterations,
-			Duration:      r.duration,
-			MaxConcurrent: r.maxConcurrent,
+			Iterations:    r.Iterations,
+			Duration:      r.Duration,
+			MaxConcurrent: r.MaxConcurrent,
 		},
 		ScenarioOptions: scenarioOptions,
-		Namespace:       r.clientOptions.Namespace,
+		Namespace:       r.ClientOptions.Namespace,
 		RootPath:        rootDir(),
 	}
 	err = scenario.Executor.Run(ctx, scenarioInfo)
