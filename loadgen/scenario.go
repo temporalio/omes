@@ -181,6 +181,7 @@ type KitchenSinkWorkflowOptions struct {
 // kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
 	// Start the workflow
+	r.Logger.Infof("At Info: Executing kitchen sink workflow with options: %v", options)
 	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
 	handle, err := r.Client.ExecuteWorkflow(
 		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
