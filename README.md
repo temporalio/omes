@@ -57,8 +57,8 @@ The executor has other options such as altering the workflow parameters based on
 
 ### Run a worker for a specific language SDK
 
-```console
-$ go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
+```sh
+go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
 ```
 
 Notes:
@@ -70,8 +70,8 @@ Notes:
 
 ### Run a test scenario
 
-```console
-$ go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+```sh
+go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -84,14 +84,14 @@ Notes:
 
 ### Cleanup after scenario run
 
-```console
-$ go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+```sh
+go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 ### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
 
-```console
-$ go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
+```sh
+go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
 ```
 
 Notes:
@@ -103,8 +103,8 @@ Notes:
 
 For example, to build a go worker image using v1.24.0 of the Temporal Go SDK:
 
-```console
-$ go run ./cmd build-worker-image --language go --version v1.24.0
+```sh
+go run ./cmd build-worker-image --language go --version v1.24.0
 ```
 
 This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
