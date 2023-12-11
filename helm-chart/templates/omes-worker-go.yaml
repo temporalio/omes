@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omes-deployment
+  labels:
+    app: omes-workers
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: omes-workers
+  template:
+    metadata:
+      labels:
+        app: omes-workers
+      annotations:
+        prometheus.io/job: 'omes-workers'
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      serviceAccountName: 'default' # TODO: Should this be something else?
+      volumes:
+        - name: tls
+          secret:
+            secretName: oss-e2e-worker-mtls
+        - name: ca
+          configMap:
+            name: dev-temporal-root-ca
+      containers:
+        - name: 'omes-worker-go'
+          image: 'dandavison7/temporalio-omes-go'
+          imagePullPolicy: Always
+          args:
+            - '--scenario=workflow_with_single_noop_activity' # Must be coordinated with scenario starter
+            - '--run-id=omes-cicd-run' # Must be coordinated with scenario starter
+            - '--namespace=omes'
+            - '--server-address=temporal-frontend:7233'
+            - '--tls-cert-path=/tls/tls.crt'
+            - '--tls-key-path=/tls/tls.key'
+            - '--worker-prom-listen-address=0.0.0.0:9090'
+          ports:
+            - name: metrics
+              protocol: TCP
+              containerPort: 9090
+
+          volumeMounts:
+            - mountPath: /tls
+              name: tls
+              readOnly: true
+            - mountPath: /ca
+              name: ca
+              readOnly: true
