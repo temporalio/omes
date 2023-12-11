@@ -13,6 +13,7 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 - [Node](https://nodejs.org) 16+
 - [Python](https://www.python.org/) 3.10+
   - [Poetry](https://python-poetry.org/): `poetry install`
+
 (More TBD when we support workers in other languages)
 
 ## Installation
@@ -28,7 +29,7 @@ multiple defined that can be used.
 
 A scenario must select an `Executor`. The most common is the `KitchenSinkExecutor` which is a wrapper on the
 `GenericExecutor` specific for executing the Kitchen Sink workflow. The Kitchen Sink workflow accepts
-[actions](./loadgen/kitchensink/kitchen_sink.go) and is implemented in every worker language.
+[actions](./workers/go/kitchensink/kitchen_sink.go) and is implemented in every worker language.
 
 For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios/workflow_with_single_noop_activity.go):
 
@@ -45,8 +46,6 @@ func init() {
 
 > NOTE: The file name where the `Register` function is called, will be used as the name of the scenario.
 
-The executor has other options such as altering the workflow parameters based on 
-
 #### Scenario Authoring Guidelines
 
 1. Use snake case for scenario file names.
@@ -57,8 +56,8 @@ The executor has other options such as altering the workflow parameters based on
 
 ### Run a worker for a specific language SDK
 
-```console
-$ go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
+```sh
+go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
 ```
 
 Notes:
@@ -70,28 +69,28 @@ Notes:
 
 ### Run a test scenario
 
-```console
-$ go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+```sh
+go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
 
-- Run ID is used to derive ID prefixes and the task queue name, it should to start a worker on the correct task queue
-  and by the cleanup script
-- By default the number of iterations or duration is specified in the scenario config, those can be overridden with CLI
-  flags
-- See help output for available flags
+- Run ID is used to derive ID prefixes and the task queue name, it should be used to start a worker on the correct task queue
+  and by the cleanup script.
+- By default the number of iterations or duration is specified in the scenario config. They can be overridden with CLI
+  flags.
+- See help output for available flags.
 
 ### Cleanup after scenario run
 
-```console
-$ go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+```sh
+go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 ### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
 
-```console
-$ go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
+```sh
+go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
 ```
 
 Notes:
@@ -103,8 +102,8 @@ Notes:
 
 For example, to build a go worker image using v1.24.0 of the Temporal Go SDK:
 
-```console
-$ go run ./cmd build-worker-image --language go --version v1.24.0
+```sh
+go run ./cmd build-worker-image --language go --version v1.24.0
 ```
 
 This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
