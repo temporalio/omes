@@ -14,12 +14,11 @@ import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.workflow.*;
-import org.slf4j.Logger;
-
-import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nonnull;
+import org.slf4j.Logger;
 
 public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public static final Logger log = Workflow.getLogger(KitchenSinkWorkflowImpl.class);
@@ -157,7 +156,10 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     } else if (action.hasAwaitWorkflowState()) {
       KitchenSink.AwaitWorkflowState awaitWorkflowState = action.getAwaitWorkflowState();
       Workflow.await(
-          () -> awaitWorkflowState.getValue().equals(state.getKvsOrDefault(awaitWorkflowState.getKey(), "")));
+          () ->
+              awaitWorkflowState
+                  .getValue()
+                  .equals(state.getKvsOrDefault(awaitWorkflowState.getKey(), "")));
     } else if (action.hasNestedActionSet()) {
       KitchenSink.ActionSet nestedActionSet = action.getNestedActionSet();
       return handleActionSet(nestedActionSet);

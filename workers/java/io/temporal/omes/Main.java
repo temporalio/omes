@@ -23,10 +23,6 @@ import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
 import io.temporal.worker.WorkerOptions;
-import net.logstash.logback.encoder.LogstashEncoder;
-import picocli.CommandLine;
-
-import javax.net.ssl.SSLException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -34,6 +30,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import javax.net.ssl.SSLException;
+import net.logstash.logback.encoder.LogstashEncoder;
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "features", description = "Runs Java features")
 public class Main implements Runnable {
@@ -209,7 +208,9 @@ public class Main implements Runnable {
       }
     }
     // Create worker factory
-    WorkerFactory workerFactory = WorkerFactory.newInstance(client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000).build());
+    WorkerFactory workerFactory =
+        WorkerFactory.newInstance(
+            client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000).build());
     // Create the base worker options
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     // Workflow options
