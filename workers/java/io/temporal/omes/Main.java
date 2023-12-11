@@ -21,6 +21,7 @@ import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
+import io.temporal.worker.WorkerFactoryOptions;
 import io.temporal.worker.WorkerOptions;
 import net.logstash.logback.encoder.LogstashEncoder;
 import picocli.CommandLine;
@@ -208,7 +209,7 @@ public class Main implements Runnable {
       }
     }
     // Create worker factory
-    WorkerFactory workerFactory = WorkerFactory.newInstance(client);
+    WorkerFactory workerFactory = WorkerFactory.newInstance(client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000).build());
     // Create the base worker options
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     // Workflow options

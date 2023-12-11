@@ -19,19 +19,17 @@ import org.slf4j.Logger;
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public static final Logger log = Workflow.getLogger(KitchenSinkWorkflowImpl.class);
-  Map<String, String> state = new HashMap<>();
-  WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(100);
+  KitchenSink.WorkflowState state = KitchenSink.WorkflowState.getDefaultInstance();
+  WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(1_000);
 
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
     // Run all initial input actions
-    if (input != null && input.getInitialActionsList().size() > 0) {
+    if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
         Payload result = handleActionSet(actionSet);
         if (result != null) {
@@ -77,7 +75,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
   @Override
   public KitchenSink.WorkflowState reportState(Object queryInput) {
-    return KitchenSink.WorkflowState.newBuilder().putAllKvs(state).build();
+    return state;
   }
 
   private Payload handleActionSet(KitchenSink.ActionSet actionSet) {
@@ -136,15 +134,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       throw ApplicationFailure.newFailure(error.getFailure().getMessage(), "");
     } else if (action.hasContinueAsNew()) {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
-      ContinueAsNewOptions options =
-          ContinueAsNewOptions.newBuilder()
-              .setTaskQueue(continueAsNew.getTaskQueue())
-              .setWorkflowRunTimeout(toJavaDuration(continueAsNew.getWorkflowRunTimeout()))
-              .setWorkflowTaskTimeout(toJavaDuration(continueAsNew.getWorkflowTaskTimeout()))
-              // TODO fill in remaining fields
-              .setVersioningIntent(getVersioningIntent(continueAsNew.getVersioningIntent()))
-              .build();
-      Workflow.continueAsNew(options, continueAsNew.getArgumentsList());
+      Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
       CancellationScope scope =
@@ -163,11 +153,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       launchChildWorkflow(childWorkflow);
     } else if (action.hasSetWorkflowState()) {
       KitchenSink.WorkflowState workflowState = action.getSetWorkflowState();
-      state.putAll(workflowState.getKvsMap());
+      state = workflowState;
     } else if (action.hasAwaitWorkflowState()) {
       KitchenSink.AwaitWorkflowState awaitWorkflowState = action.getAwaitWorkflowState();
       Workflow.await(
-          () -> awaitWorkflowState.getValue().equals(state.get(awaitWorkflowState.getKey())));
+          () -> awaitWorkflowState.getValue().equals(state.getKvsOrDefault(awaitWorkflowState.getKey(), "")));
     } else if (action.hasNestedActionSet()) {
       KitchenSink.ActionSet nestedActionSet = action.getNestedActionSet();
       return handleActionSet(nestedActionSet);
@@ -199,7 +189,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
     } else if (action.hasUpsertMemo()) {
       // TODO(https://github.com/temporalio/sdk-java/issues/623) Java does not support upsert memo.
-      log.warn("Java does not support upsert memo");
+      log.debug("Java does not support upsert memo");
     } else {
       throw Workflow.wrap(new IllegalArgumentException("Unrecognized action type"));
     }
