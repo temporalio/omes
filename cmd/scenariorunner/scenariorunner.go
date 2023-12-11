@@ -46,6 +46,7 @@ func (r *ScenarioRunner) Run(ctx context.Context) error {
 	if r.Logger == nil {
 		r.Logger = r.LoggingOptions.MustCreateLogger()
 	}
+	r.Logger.Info("In ScenarioRunner.Run")
 	scenario := loadgen.GetScenario(r.Scenario)
 	if scenario == nil {
 		return fmt.Errorf("scenario not found")
