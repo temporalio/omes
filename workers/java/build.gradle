@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'com.diffplug.spotless' version '6.18.0'
+}
+
+group 'io.temporal'
+version '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_10
+    targetCompatibility = JavaVersion.VERSION_1_10
+}
+
+repositories {
+    mavenCentral()
+}
+
+spotless {
+    java {
+        googleJavaFormat('1.16.0')
+    }
+}
+
+dependencies {
+    implementation 'ch.qos.logback:logback-classic:1.2.9'
+    implementation 'com.google.guava:guava:31.0.1-jre'
+    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'com.jayway.jsonpath:json-path:2.6.0'
+    implementation 'info.picocli:picocli:4.6.2'
+    implementation 'io.temporal:temporal-sdk:1.22.3'
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    implementation 'org.reflections:reflections:0.10.2'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation "io.micrometer:micrometer-registry-prometheus"
+
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.15.2"))
+    implementation "com.fasterxml.jackson.core:jackson-databind"
+    implementation "com.fasterxml.jackson.core:jackson-core"
+    implementation 'com.google.protobuf:protobuf-java:3.25.0'
+
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['./']
+        }
+    }
+}

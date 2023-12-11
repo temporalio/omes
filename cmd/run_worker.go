@@ -144,6 +144,8 @@ func (r *workerRunner) run(ctx context.Context) error {
 			prog, err = sdkbuild.GoProgramFromDir(filepath.Join(baseDir, r.dirName))
 		case "python":
 			prog, err = sdkbuild.PythonProgramFromDir(filepath.Join(baseDir, r.dirName))
+		case "java":
+			prog, err = sdkbuild.JavaProgramFromDir(filepath.Join(baseDir, r.dirName))
 		default:
 			return fmt.Errorf("unrecognized language %v", lang)
 		}

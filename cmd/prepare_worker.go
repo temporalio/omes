@@ -78,6 +78,8 @@ func (b *workerBuilder) build(ctx context.Context) (sdkbuild.Program, error) {
 		return b.buildGo(ctx, baseDir)
 	case "python":
 		return b.buildPython(ctx, baseDir)
+	case "java":
+		return b.buildJava(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", lang)
 	}
@@ -144,6 +146,21 @@ func (b *workerBuilder) buildPython(ctx context.Context, baseDir string) (sdkbui
 	return prog, nil
 }
 
+func (b *workerBuilder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	prog, err := sdkbuild.BuildJavaProgram(ctx, sdkbuild.BuildJavaProgramOptions{
+		BaseDir:           baseDir,
+		DirName:           b.dirName,
+		Version:           b.version,
+		MainClass:         "io.temporal.omes.Main",
+		HarnessDependency: "io.temporal:omes:0.1.0",
+		Build:             true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed preparing: %w", err)
+	}
+	return prog, nil
+}
+
 func rootDir() string {
 	_, currFile, _, _ := runtime.Caller(0)
 	return filepath.Dir(filepath.Dir(currFile))
@@ -151,7 +168,7 @@ func rootDir() string {
 
 func normalizeLangName(lang string) (string, error) {
 	switch lang {
-	case "go", "python":
+	case "go", "python", "java":
 	case "py":
 		lang = "python"
 	default:

@@ -38,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protoc = protoc_from_env();
     for (lang, out_dir) in [
         ("python", "../../workers/python/protos"),
+        ("java", "../../workers/java"),
         ("go", "../../loadgen/kitchensink"),
     ] {
         let mut cmd = Command::new(protoc.clone());
@@ -52,6 +53,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if lang == "python" {
             cmd.arg(format!("--python_out={out_dir}"));
             cmd.arg(format!("--pyi_out={out_dir}"));
+        } else if lang == "java" {
+            cmd.arg(format!("--java_out={out_dir}"));
         } else if lang == "go" {
             cmd.arg("--go_opt=paths=source_relative");
             cmd.arg(format!("--go_out={out_dir}"));
