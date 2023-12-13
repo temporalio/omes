@@ -139,13 +139,16 @@ func (r *workerRunner) run(ctx context.Context) error {
 			return err
 		}
 	} else {
+		loadDir := filepath.Join(baseDir, r.dirName)
 		switch lang {
 		case "go":
-			prog, err = sdkbuild.GoProgramFromDir(filepath.Join(baseDir, r.dirName))
+			prog, err = sdkbuild.GoProgramFromDir(loadDir)
 		case "python":
-			prog, err = sdkbuild.PythonProgramFromDir(filepath.Join(baseDir, r.dirName))
+			prog, err = sdkbuild.PythonProgramFromDir(loadDir)
 		case "java":
-			prog, err = sdkbuild.JavaProgramFromDir(filepath.Join(baseDir, r.dirName))
+			prog, err = sdkbuild.JavaProgramFromDir(loadDir)
+		case "typescript":
+			prog, err = sdkbuild.TypeScriptProgramFromDir(loadDir)
 		default:
 			return fmt.Errorf("unrecognized language %v", lang)
 		}
@@ -159,6 +162,9 @@ func (r *workerRunner) run(ctx context.Context) error {
 	if lang == "python" {
 		// Python needs module name first
 		args = append(args, "main")
+	} else if lang == "typescript" {
+		// Node also needs module
+		args = append(args, "./tslib/omes.js")
 	}
 	args = append(args, "--task-queue", loadgen.TaskQueueForRun(r.scenario, r.runID))
 	if r.taskQueueIndexSuffixEnd > 0 {

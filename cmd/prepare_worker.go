@@ -80,6 +80,8 @@ func (b *workerBuilder) build(ctx context.Context) (sdkbuild.Program, error) {
 		return b.buildPython(ctx, baseDir)
 	case "java":
 		return b.buildJava(ctx, baseDir)
+	case "typescript":
+		return b.buildTypeScript(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", lang)
 	}
@@ -119,7 +121,7 @@ func (b *workerBuilder) buildPython(ctx context.Context, baseDir string) (sdkbui
 	if version == "" {
 		b, err := os.ReadFile(filepath.Join(baseDir, "pyproject.toml"))
 		if err != nil {
-			return nil, fmt.Errorf("failed reading package.json: %w", err)
+			return nil, fmt.Errorf("failed reading pyproject.toml: %w", err)
 		}
 		for _, line := range strings.Split(string(b), "\n") {
 			line = strings.TrimSpace(line)
@@ -161,6 +163,41 @@ func (b *workerBuilder) buildJava(ctx context.Context, baseDir string) (sdkbuild
 	return prog, nil
 }
 
+func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	// If version not provided, try to read it from package.json
+	version := b.version
+	if version == "" {
+		b, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
+		if err != nil {
+			return nil, fmt.Errorf("failed reading package.json: %w", err)
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "\"temporalio\":") {
+				split := strings.Split(line, "\"")
+				version = split[len(split)-2]
+				break
+			}
+		}
+		if version == "" {
+			return nil, fmt.Errorf("version not found in package.json")
+		}
+	}
+	println("version", version)
+	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
+		BaseDir:        baseDir,
+		Version:        version,
+		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
+		DirName:        b.dirName,
+		ApplyToCommand: nil,
+		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed preparing: %w", err)
+	}
+	return prog, nil
+}
+
 func rootDir() string {
 	_, currFile, _, _ := runtime.Caller(0)
 	return filepath.Dir(filepath.Dir(currFile))
@@ -168,9 +205,11 @@ func rootDir() string {
 
 func normalizeLangName(lang string) (string, error) {
 	switch lang {
-	case "go", "python", "java":
+	case "go", "python", "java", "typescript":
 	case "py":
 		lang = "python"
+	case "ts":
+		lang = "typescript"
 	default:
 		return "", fmt.Errorf("invalid language %q, must be one of: go or python", lang)
 	}
