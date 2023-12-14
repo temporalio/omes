@@ -3,6 +3,7 @@ import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
   CancellationScope,
+  ChildWorkflowHandle,
   ChildWorkflowOptions,
   condition,
   continueAsNew,
@@ -17,15 +18,16 @@ import {
   setHandler,
   sleep,
   startChild,
-  upsertSearchAttributes
+  upsertSearchAttributes,
+  Workflow
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
   decompileRetryPolicy,
-  Duration as WFDuration,
   LocalActivityOptions,
   SearchAttributes
 } from '@temporalio/common';
+import Long from 'long';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -77,6 +79,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   }
 
   async function handleAction(action: IAction): Promise<IPayload | null | undefined> {
+    // console.log('Handling an action', action);
     async function handleAwaitableChoice<PR extends Promise<PRR>, PRR>(
       promise: PR, // TODO: should maybe be factory
       choice: IAwaitableChoice | null | undefined,
@@ -123,7 +126,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       continueAsNew(action.continueAsNew.arguments);
     } else if (action.timer) {
       await handleAwaitableChoice(
-        sleep(action.timer.milliseconds?.toNumber() ?? 0),
+        sleep(numify(action.timer.milliseconds)),
         action.timer.awaitableChoice);
     } else if (action.execActivity) {
       await handleAwaitableChoice(
@@ -140,9 +143,19 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       );
       await handleAwaitableChoice(
         childPromise,
-        action.execChildWorkflow.awaitableChoice);
+        action.execChildWorkflow.awaitableChoice,
+        async (task) => {
+          await task;
+        },
+        async (task: Promise<ChildWorkflowHandle<Workflow> | void>) => {
+          let handle = await task;
+          if (handle) {
+            await handle.result();
+          }
+        }
+      );
     } else if (action.setPatchMarker) {
-      let wasPatched = false;
+      let wasPatched: boolean;
       if (action.setPatchMarker.deprecated) {
         deprecatePatch(action.setPatchMarker.patchId!);
         wasPatched = true;
@@ -167,7 +180,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       const searchAttributes: SearchAttributes = {};
       for (const [key, value] of Object.entries(action.upsertSearchAttributes.searchAttributes ?? {})) {
         if (key.includes('Keyword')) {
-          searchAttributes[key] = [value.data![0].toString()]
+          searchAttributes[key] = [value.data![0].toString()];
         } else {
           searchAttributes[key] = [value.data![0]];
         }
@@ -229,7 +242,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
   let args = [];
   if (execActivity.delay) {
     actType = 'delay';
-    args.push(execActivity.delay);
+    args.push(durationConvert(execActivity.delay));
   }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
@@ -260,10 +273,22 @@ function convertCancelType(ct: ActivityCancellationType | null | undefined): WFA
   }
 }
 
-function durationConvert(d: IDuration | null | undefined): WFDuration | undefined {
+function durationConvert(d: IDuration | null | undefined): number {
   if (!d) {
-    return undefined;
+    return 0;
   }
-  const secondsNum: number = typeof d.seconds === 'number' ? d.seconds : d.seconds?.toNumber() ?? 0;
-  return secondsNum / 1000 + (d.nanos ?? 0) / 1000000000;
+  // convert to ms
+  return Math.round(numify(d.seconds) * 1000 + (d.nanos ?? 0) / 1000000);
+}
+
+// I just cannot get protobuf to use Long consistently. For whatever insane reason for child
+// workflows it reverts to using number.
+function numify(n: number | Long | undefined | null): number {
+  if (!n) {
+    return 0;
+  }
+  if (typeof n === 'number') {
+    return n;
+  }
+  return n.toNumber();
 }
