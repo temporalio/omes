@@ -3,6 +3,7 @@ import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
   CancellationScope,
+  ChildWorkflowOptions,
   condition,
   continueAsNew,
   defineQuery,
@@ -15,8 +16,8 @@ import {
   scheduleLocalActivity,
   setHandler,
   sleep,
-  upsertSearchAttributes,
-  startChild
+  startChild,
+  upsertSearchAttributes
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
@@ -25,7 +26,6 @@ import {
   LocalActivityOptions,
   SearchAttributes
 } from '@temporalio/common';
-import { delay, noop } from '../activities';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -130,12 +130,13 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         launchActivity(action.execActivity),
         action.execActivity.awaitableChoice);
     } else if (action.execChildWorkflow) {
+      const opts: ChildWorkflowOptions = {};
+      if (action.execChildWorkflow.workflowId) {
+        opts.workflowId = action.execChildWorkflow.workflowId;
+      }
       const childPromise = startChild(
         action.execChildWorkflow.workflowType ?? 'kitchenSink',
-        {
-          workflowId: action.execChildWorkflow.workflowId ?? undefined,
-          args: action.execChildWorkflow.input ?? []
-        }
+        { args: action.execChildWorkflow.input ?? [], ...opts }
       );
       await handleAwaitableChoice(
         childPromise,
@@ -155,18 +156,18 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.setWorkflowState) {
       workflowState = action.setWorkflowState;
     } else if (action.awaitWorkflowState) {
-      const key  = action.awaitWorkflowState.key!;
-      const value  = action.awaitWorkflowState.value!;
+      const key = action.awaitWorkflowState.key!;
+      const value = action.awaitWorkflowState.value!;
       await condition(() => {
         return workflowState.kvs?.[key] === value;
       });
     } else if (action.upsertMemo) {
       // no upsert memo in ts
     } else if (action.upsertSearchAttributes) {
-      const searchAttributes: SearchAttributes = {}
+      const searchAttributes: SearchAttributes = {};
       for (const [key, value] of Object.entries(action.upsertSearchAttributes.searchAttributes ?? {})) {
-        if (key.includes("Keyword")) {
-          searchAttributes[key] = [new TextDecoder().decode(value.data!)];
+        if (key.includes('Keyword')) {
+          searchAttributes[key] = [value.data![0].toString()]
         } else {
           searchAttributes[key] = [value.data![0]];
         }
@@ -224,10 +225,10 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
 }
 
 function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> {
-  let actFunc: any = noop;
+  let actType = 'noop';
   let args = [];
   if (execActivity.delay) {
-    actFunc = delay;
+    actType = 'delay';
     args.push(execActivity.delay);
   }
 
@@ -239,13 +240,13 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
   };
 
   if (execActivity.isLocal) {
-    return scheduleLocalActivity(actFunc, args, actArgs);
+    return scheduleLocalActivity(actType, args, actArgs);
   } else {
     const remoteArgs = actArgs as ActivityOptions;
     remoteArgs.taskQueue = execActivity.taskQueue ?? undefined;
     remoteArgs.cancellationType = convertCancelType(execActivity.remote?.cancellationType);
     remoteArgs.heartbeatTimeout = durationConvert(execActivity.heartbeatTimeout);
-    return scheduleActivity(actFunc, args, remoteArgs);
+    return scheduleActivity(actType, args, remoteArgs);
   }
 }
 
@@ -263,6 +264,6 @@ function durationConvert(d: IDuration | null | undefined): WFDuration | undefine
   if (!d) {
     return undefined;
   }
-  const secondsNum: number = typeof d.seconds === "number" ? d.seconds : d.seconds?.toNumber() ?? 0;
+  const secondsNum: number = typeof d.seconds === 'number' ? d.seconds : d.seconds?.toNumber() ?? 0;
   return secondsNum / 1000 + (d.nanos ?? 0) / 1000000000;
 }
