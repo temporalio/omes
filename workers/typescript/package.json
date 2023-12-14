@@ -17,7 +17,7 @@
     ]
   },
   "dependencies": {
-    "temporalio": "^1.8.6",
+    "temporalio": "1.9.0-rc.0",
     "commander": "^11.1.0"
   },
   "devDependencies": {
