@@ -135,3 +135,4 @@ workflow that waits for a signal for a configurable amount of time.
 
 * Python upsert SA with no initial attributes: [PR](https://github.com/temporalio/sdk-python/pull/440)
 * Core cancel-before-start on abandon activities: [PR](https://github.com/temporalio/sdk-core/pull/652)
+* Core panic on evicting run with buffered tasks: [PR](https://github.com/temporalio/sdk-core/pull/660)

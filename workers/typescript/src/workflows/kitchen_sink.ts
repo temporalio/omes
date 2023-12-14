@@ -123,7 +123,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.returnError) {
       throw new ApplicationFailure(action.returnError.failure?.message);
     } else if (action.continueAsNew) {
-      await continueAsNew(action.continueAsNew.arguments);
+      await continueAsNew(action.continueAsNew.arguments![0]);
     } else if (action.timer) {
       await handleAwaitableChoice(
         sleep(numify(action.timer.milliseconds)),
