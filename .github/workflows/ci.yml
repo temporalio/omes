@@ -106,7 +106,7 @@ jobs:
       - name: Initialize TypeScript worker
         run: cd workers/typescript && npm ci && npm run build
       - name: Lint TypeScript worker
-        run: cd workers/typescript && npm run lint
+        run: cd workers/typescript && npm run lint-ci
       - name: Setup Go
         uses: actions/setup-go@v2
         with:

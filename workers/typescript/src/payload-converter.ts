@@ -1,7 +1,7 @@
 import root, { temporal } from './protos/root';
 import {
   ProtobufBinaryPayloadConverter,
-  ProtobufJsonPayloadConverter
+  ProtobufJsonPayloadConverter,
 } from '@temporalio/common/lib/converter/protobuf-payload-converters';
 import {
   BinaryPayloadConverter,
@@ -9,13 +9,12 @@ import {
   JsonPayloadConverter,
   PayloadConverterWithEncoding,
   UndefinedPayloadConverter,
-  ValueError
+  ValueError,
 } from '@temporalio/common';
 import { decode, encode } from '@temporalio/common/lib/encoding';
 import Payload = temporal.api.common.v1.Payload;
 
 export class PassThroughPayload implements PayloadConverterWithEncoding {
-
   public toPayload(value: any): Payload | undefined {
     if (!value || value.metadata === undefined || value.data === undefined) {
       return undefined;
@@ -29,8 +28,9 @@ export class PassThroughPayload implements PayloadConverterWithEncoding {
     const asBytes = Payload.encode(asPayload).finish();
     return Payload.create({
       metadata: {
-        encoding: encode(this.encodingType)
-      }, data: asBytes
+        encoding: encode(this.encodingType),
+      },
+      data: asBytes,
     });
   }
 
@@ -39,7 +39,9 @@ export class PassThroughPayload implements PayloadConverterWithEncoding {
       const innerPayload = Payload.decode(new Uint8Array(content.data));
       return payloadConverter.fromPayload<T>(innerPayload);
     }
-    throw new ValueError('PassThroughPayload can only decode passthrough Payloads, got ' + JSON.stringify(content));
+    throw new ValueError(
+      'PassThroughPayload can only decode passthrough Payloads, got ' + JSON.stringify(content)
+    );
   }
 
   public get encodingType(): string {
@@ -55,4 +57,3 @@ export const payloadConverter = new CompositePayloadConverter(
   new ProtobufBinaryPayloadConverter(root),
   new JsonPayloadConverter()
 );
-

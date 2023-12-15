@@ -9,10 +9,16 @@ async function run() {
   program
     .option('-a, --server-address <address>', 'The host:port of the server', 'localhost:7233')
     .option('-q, --task-queue <taskQueue>', 'Task queue to use', 'omes')
-    .option('--task-queue-suffix-index-start <tqSufStart>',
-      'Inclusive start for task queue suffix range', '0')
-    .option('--task-queue-suffix-index-end <tqSufEnd>',
-      'Inclusive end for task queue suffix range', '0')
+    .option(
+      '--task-queue-suffix-index-start <tqSufStart>',
+      'Inclusive start for task queue suffix range',
+      '0'
+    )
+    .option(
+      '--task-queue-suffix-index-end <tqSufEnd>',
+      'Inclusive end for task queue suffix range',
+      '0'
+    )
     .option('-n, --namespace <namespace>', 'The namespace to use', 'default')
     .option('--max-concurrent-activity-pollers <maxActPollers>', 'Max concurrent activity pollers')
     .option('--max-concurrent-workflow-pollers <maxWfPollers>', 'Max concurrent workflow pollers')
@@ -65,15 +71,14 @@ async function run() {
     tlsConfig = {
       clientCertPair: {
         crt,
-        key
-      }
+        key,
+      },
     };
   }
 
-
   const connection = await NativeConnection.connect({
     address: opts.server,
-    tls: tlsConfig
+    tls: tlsConfig,
   });
 
   const worker = await Worker.create({
@@ -83,16 +88,18 @@ async function run() {
     activities,
     taskQueue: opts.taskQueue,
     dataConverter: {
-      payloadConverterPath: require.resolve('./payload-converter')
-    }
+      payloadConverterPath: require.resolve('./payload-converter'),
+    },
   });
 
   await worker.run();
 }
 
-run().then(() => {
-  process.exit(0);
-}).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+run()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

@@ -19,13 +19,13 @@ import {
   sleep,
   startChild,
   upsertSearchAttributes,
-  Workflow
+  Workflow,
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
   decompileRetryPolicy,
   LocalActivityOptions,
-  SearchAttributes
+  SearchAttributes,
 } from '@temporalio/common';
 import Long from 'long';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
@@ -50,8 +50,8 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
 
-  async function handleActionSet(actions: IActionSet): Promise<IPayload | null> {
-    let rval: IPayload | null = null;
+  async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
+    let rval: IPayload | undefined;
 
     if (!actions.concurrent) {
       for (const action of actions.actions ?? []) {
@@ -66,11 +66,13 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     // Concurrent actions run concurrently but we return early if any return a value
     const promises = new Array<Promise<void>>();
     for (const action of actions.actions ?? []) {
-      promises.push(handleAction(action).then((actionRval) => {
-        if (actionRval) {
-          rval = actionRval;
-        }
-      }));
+      promises.push(
+        handleAction(action).then((actionRval) => {
+          if (actionRval) {
+            rval = actionRval;
+          }
+        })
+      );
     }
     const allComplete = Promise.all(promises);
     await Promise.any([allComplete, condition(() => rval !== undefined)]);
@@ -93,12 +95,14 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       const cancelScope = new CancellationScope();
       let didCancel = false;
 
-      const cancellablePromise = cancelScope.run(() => promise).catch((err) => {
-        if (didCancel && isCancellation(err)) {
-          return;
-        }
-        throw err;
-      });
+      const cancellablePromise = cancelScope
+        .run(() => promise)
+        .catch((err) => {
+          if (didCancel && isCancellation(err)) {
+            return;
+          }
+          throw err;
+        });
 
       if (choice?.abandon) {
         // Do nothing
@@ -128,20 +132,22 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.timer) {
       await handleAwaitableChoice(
         sleep(numify(action.timer.milliseconds)),
-        action.timer.awaitableChoice);
+        action.timer.awaitableChoice
+      );
     } else if (action.execActivity) {
       await handleAwaitableChoice(
         launchActivity(action.execActivity),
-        action.execActivity.awaitableChoice);
+        action.execActivity.awaitableChoice
+      );
     } else if (action.execChildWorkflow) {
       const opts: ChildWorkflowOptions = {};
       if (action.execChildWorkflow.workflowId) {
         opts.workflowId = action.execChildWorkflow.workflowId;
       }
-      const childPromise = startChild(
-        action.execChildWorkflow.workflowType ?? 'kitchenSink',
-        { args: action.execChildWorkflow.input ?? [], ...opts }
-      );
+      const childPromise = startChild(action.execChildWorkflow.workflowType ?? 'kitchenSink', {
+        args: action.execChildWorkflow.input ?? [],
+        ...opts,
+      });
       await handleAwaitableChoice(
         childPromise,
         action.execChildWorkflow.awaitableChoice,
@@ -179,7 +185,9 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       // no upsert memo in ts
     } else if (action.upsertSearchAttributes) {
       const searchAttributes: SearchAttributes = {};
-      for (const [key, value] of Object.entries(action.upsertSearchAttributes.searchAttributes ?? {})) {
+      for (const [key, value] of Object.entries(
+        action.upsertSearchAttributes.searchAttributes ?? {}
+      )) {
         if (key.includes('Keyword')) {
           searchAttributes[key] = [value.data![0].toString()];
         } else {
@@ -204,18 +212,22 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       throw new ApplicationFailure('Actions signal received with no actions!');
     }
   });
-  setHandler(actionsUpdate, async (actions) => {
-    const rval = await handleActionSet(actions.doActions!);
-    if (rval) {
-      return rval;
-    }
-  }, {
-    validator: (actions) => {
-      if (actions.rejectMe) {
-        throw new ApplicationFailure('Rejected');
+  setHandler(
+    actionsUpdate,
+    async (actions) => {
+      const rval = await handleActionSet(actions.doActions!);
+      if (rval) {
+        return rval;
       }
+    },
+    {
+      validator: (actions) => {
+        if (actions.rejectMe) {
+          throw new ApplicationFailure('Rejected');
+        }
+      },
     }
-  });
+  );
 
   // Run all initial input actions
   if (input?.initialActions) {
@@ -250,7 +262,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),
     startToCloseTimeout: durationConvert(execActivity.startToCloseTimeout),
     scheduleToStartTimeout: durationConvert(execActivity.scheduleToStartTimeout),
-    retry: decompileRetryPolicy(execActivity.retryPolicy)
+    retry: decompileRetryPolicy(execActivity.retryPolicy),
   };
 
   if (execActivity.isLocal) {
@@ -264,7 +276,9 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
   }
 }
 
-function convertCancelType(ct: ActivityCancellationType | null | undefined): WFActivityCancellationType | undefined {
+function convertCancelType(
+  ct: ActivityCancellationType | null | undefined
+): WFActivityCancellationType | undefined {
   if (ct === ActivityCancellationType.TRY_CANCEL) {
     return WFActivityCancellationType.TRY_CANCEL;
   } else if (ct === ActivityCancellationType.WAIT_CANCELLATION_COMPLETED) {

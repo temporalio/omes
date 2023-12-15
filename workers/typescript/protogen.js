@@ -54,8 +54,14 @@ async function compileProtos(dtsOutputFile, ...args) {
     // things that looks like html tags. We fix both cases by rewriting these
     // using markdown "inline code" syntax.
     let tempFileContent = await readFile(tempFile, 'utf8');
-    tempFileContent = tempFileContent.replace(/(@(?:yearly|monthly|weekly|daily|hourly|every))/g, '`$1`');
-    tempFileContent = tempFileContent.replace(/<((?:interval|phase|timezone)(?: [^>]+)?)>/g, '`<$1>`');
+    tempFileContent = tempFileContent.replace(
+      /(@(?:yearly|monthly|weekly|daily|hourly|every))/g,
+      '`$1`'
+    );
+    tempFileContent = tempFileContent.replace(
+      /<((?:interval|phase|timezone)(?: [^>]+)?)>/g,
+      '`<$1>`'
+    );
     await writeFile(tempFile, tempFileContent, 'utf-8');
 
     await promisify(pbts.main)(['--out', dtsOutputFile, tempFile]);

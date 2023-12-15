@@ -5,7 +5,9 @@
     "build": "tsc --build",
     "build.watch": "tsc --build --watch",
     "proto-gen": "node ./protogen.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint-ci": "eslint . && prettier --check .",
+    "format": "prettier --write ."
   },
   "nodemonConfig": {
     "execMap": {
