@@ -50,10 +50,3 @@ require (
 )
 
 replace github.com/temporalio/omes => ../../
-
-replace (
-	//github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20231117211247-ca7959c1fe2c
-	//github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20231117211247-ca7959c1fe2c
-)
-
-replace github.com/temporalio/features => ../sdk-features/
