@@ -17,6 +17,10 @@ repositories {
 
 spotless {
     java {
+        target project.fileTree(project.rootDir) {
+            include '**/*.java'
+            exclude 'io/temporal/omes/KitchenSink.java'
+        }
         googleJavaFormat('1.16.0')
     }
 }

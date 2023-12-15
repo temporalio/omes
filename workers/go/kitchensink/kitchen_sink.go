@@ -315,12 +315,11 @@ func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPo
 		NonRetryableErrorTypes: retryPolicy.NonRetryableErrorTypes,
 	}
 
-	// Avoid nil pointer dereferences
 	if v := retryPolicy.MaximumInterval; v != nil {
-		p.MaximumInterval = *v
+		p.MaximumInterval = v.AsDuration()
 	}
 	if v := retryPolicy.InitialInterval; v != nil {
-		p.InitialInterval = *v
+		p.InitialInterval = v.AsDuration()
 	}
 
 	return &p
