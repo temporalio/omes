@@ -83,7 +83,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   async function handleAction(action: IAction): Promise<IPayload | null | undefined> {
     // console.log('Handling an action', action);
     async function handleAwaitableChoice<PR extends Promise<PRR>, PRR>(
-      promise: PR, // TODO: should maybe be factory
+      promise: () => PR,
       choice: IAwaitableChoice | null | undefined,
       afterStarted: (_: Promise<PRR | void>) => Promise<void> = async (_) => {
         await sleep(1);
@@ -96,7 +96,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       let didCancel = false;
 
       const cancellablePromise = cancelScope
-        .run(() => promise)
+        .run(() => promise())
         .catch((err) => {
           if (didCancel && isCancellation(err)) {
             return;
@@ -130,13 +130,13 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.continueAsNew) {
       await continueAsNew(action.continueAsNew.arguments![0]);
     } else if (action.timer) {
-      await handleAwaitableChoice(
-        sleep(numify(action.timer.milliseconds)),
-        action.timer.awaitableChoice
-      );
+      const ms = numify(action.timer.milliseconds);
+      const sleeper = () => sleep(ms);
+      await handleAwaitableChoice(sleeper, action.timer.awaitableChoice);
     } else if (action.execActivity) {
+      const execAct = action.execActivity;
       await handleAwaitableChoice(
-        launchActivity(action.execActivity),
+        () => launchActivity(execAct),
         action.execActivity.awaitableChoice
       );
     } else if (action.execChildWorkflow) {
@@ -144,12 +144,15 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       if (action.execChildWorkflow.workflowId) {
         opts.workflowId = action.execChildWorkflow.workflowId;
       }
-      const childPromise = startChild(action.execChildWorkflow.workflowType ?? 'kitchenSink', {
-        args: action.execChildWorkflow.input ?? [],
-        ...opts,
-      });
+      const execChild = action.execChildWorkflow;
+      const childStarter = () => {
+        return startChild(execChild.workflowType ?? 'kitchenSink', {
+          args: execChild.input ?? [],
+          ...opts,
+        });
+      };
       await handleAwaitableChoice(
-        childPromise,
+        childStarter,
         action.execChildWorkflow.awaitableChoice,
         async (task) => {
           await task;
