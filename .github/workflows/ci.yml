@@ -101,6 +101,8 @@ jobs:
         run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v2
+        with:
+          submodules: 'true'
       - name: Setup TypeScript
         uses: actions/setup-node@v4
       - name: Initialize TypeScript worker

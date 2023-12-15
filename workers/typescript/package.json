@@ -2,7 +2,7 @@
   "name": "omes",
   "version": "0.1.0",
   "scripts": {
-    "build": "tsc --build",
+    "build": "npm run proto-gen && tsc --build",
     "build.watch": "tsc --build --watch",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
