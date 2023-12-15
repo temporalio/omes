@@ -48,7 +48,7 @@ const actionsUpdate = defineUpdate<IPayload | undefined, [DoActionsUpdate]>('do_
 
 export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPayload | undefined> {
   let workflowState: IWorkflowState = WorkflowState.create();
-  let actionsQueue = new Array<IActionSet>();
+  const actionsQueue = new Array<IActionSet>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | null> {
     let rval: IPayload | null = null;
@@ -101,6 +101,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       });
 
       if (choice?.abandon) {
+        // Do nothing
       } else if (choice?.cancelBeforeStarted) {
         cancelScope.cancel();
         didCancel = true;
@@ -148,7 +149,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
           await task;
         },
         async (task: Promise<ChildWorkflowHandle<Workflow> | void>) => {
-          let handle = await task;
+          const handle = await task;
           if (handle) {
             await handle.result();
           }
@@ -227,7 +228,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   }
 
   // Run all actions from signals
-  while (true) {
+  for (;;) {
     await condition(() => actionsQueue.length > 0);
     const actions = actionsQueue.pop()!;
     const rval = await handleActionSet(actions);
@@ -239,7 +240,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
 
 function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> {
   let actType = 'noop';
-  let args = [];
+  const args = [];
   if (execActivity.delay) {
     actType = 'delay';
     args.push(durationConvert(execActivity.delay));

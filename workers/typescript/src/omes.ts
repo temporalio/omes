@@ -90,9 +90,9 @@ async function run() {
   await worker.run();
 }
 
-run().catch((err) => {
+run().then(() => {
+  process.exit(0);
+}).catch((err) => {
   console.error(err);
   process.exit(1);
-}).then(() => {
-  process.exit(0);
 });

@@ -11,13 +11,13 @@ import {
   UndefinedPayloadConverter,
   ValueError
 } from '@temporalio/common';
+import { decode, encode } from '@temporalio/common/lib/encoding';
 import Payload = temporal.api.common.v1.Payload;
-import { encode, decode } from '@temporalio/common/lib/encoding';
 
 export class PassThroughPayload implements PayloadConverterWithEncoding {
 
-  public toPayload(value: unknown): Payload | undefined {
-    if (!value || !value.hasOwnProperty("metadata") || !value.hasOwnProperty("data")) {
+  public toPayload(value: any): Payload | undefined {
+    if (!value || value.metadata === undefined || value.data === undefined) {
       return undefined;
     }
     let asPayload;
