@@ -167,7 +167,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         return await handleAction(action.setPatchMarker.innerAction);
       }
     } else if (action.setWorkflowState) {
-      workflowState = action.setWorkflowState;
+      workflowState = WorkflowState.fromObject(action.setWorkflowState);
     } else if (action.awaitWorkflowState) {
       const key = action.awaitWorkflowState.key!;
       const value = action.awaitWorkflowState.value!;

@@ -12,6 +12,9 @@ on:
       java-ver:
         description: Java SDK ver to build. Skipped if not specified. Must start with v.
         type: string
+      ts-ver:
+        description: TypeScript SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
       do-push:
         description: If set, push the built images to Docker Hub.
         type: boolean
@@ -28,6 +31,9 @@ on:
         type: string
       java-ver:
         description: Java SDK ver to build. Skipped if not specified. Must start with v.
+        type: string
+      ts-ver:
+        description: TypeScript SDK ver to build. Skipped if not specified. Must start with v.
         type: string
       do-push:
         description: If set, push the built images to Docker Hub.
@@ -61,4 +67,13 @@ jobs:
     with:
       lang: java
       sdk-version: ${{ inputs.java-ver }}
+      do-push: ${{ inputs.do-push }}
+
+  build-typescript-docker-images:
+    if: inputs.ts-ver
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      lang: typescript
+      sdk-version: ${{ inputs.ts-ver }}
       do-push: ${{ inputs.do-push }}
