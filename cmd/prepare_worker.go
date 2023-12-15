@@ -183,7 +183,6 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 			return nil, fmt.Errorf("version not found in package.json")
 		}
 	}
-	println("version", version)
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
