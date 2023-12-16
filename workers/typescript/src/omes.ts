@@ -42,7 +42,7 @@ async function run() {
     .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics');
 
   const opts = program.parse(process.argv).opts<{
-    server: string;
+    serverAddress: string;
     taskQueue: string;
     tqSufStart: number;
     tqSufEnd: number;
@@ -63,8 +63,6 @@ async function run() {
     promListenAddress: string;
     promHandlerPath: string;
   }>();
-
-  console.log('Running TypeScript Omes');
 
   // Configure TLS
   let tlsConfig: TLSConfig | undefined;
@@ -117,14 +115,15 @@ async function run() {
     telemetryOptions,
   });
 
+  logger.info(`Connecting to server at ${opts.serverAddress}`);
+
   const connection = await NativeConnection.connect({
-    address: opts.server,
+    address: opts.serverAddress,
     tls: tlsConfig,
   });
 
   // Possibly create multiple workers if we are being asked to use multiple task queues
   const taskQueues = [];
-  console.log(opts.tqSufStart, opts.tqSufEnd);
   if (opts.tqSufEnd === 0 || opts.tqSufEnd === undefined) {
     logger.info('Running TypeScript worker on task queue ' + opts.taskQueue);
     taskQueues.push(opts.taskQueue);
