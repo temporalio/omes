@@ -1,8 +1,17 @@
 import { Command } from 'commander';
-import { NativeConnection, Worker } from '@temporalio/worker';
+import {
+  DefaultLogger,
+  LogLevel,
+  NativeConnection,
+  Runtime,
+  TelemetryOptions,
+  Worker,
+  WorkerOptions,
+} from '@temporalio/worker';
 import { TLSConfig } from '@temporalio/client';
 import * as fs from 'fs';
 import * as activities from './activities';
+import winston from 'winston';
 
 async function run() {
   const program = new Command();
@@ -76,12 +85,58 @@ async function run() {
     };
   }
 
+  // Configure logging
+  const winstonLogger = winston.createLogger({
+    level: opts.logLevel,
+    format:
+      opts.logEncoding === 'json'
+        ? winston.format.json()
+        : winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple(),
+            winston.format.metadata()
+          ),
+    transports: [new winston.transports.Console()],
+  });
+  const logger = new DefaultLogger(coerceLogLevel(opts.logLevel), (entry) => {
+    winstonLogger.log({
+      level: entry.level.toLowerCase(),
+      message: entry.message,
+      timestamp: Number(entry.timestampNanos / 1_000_000n),
+      meta: entry.meta,
+    });
+  });
+  // Configure metrics
+  const telemetryOptions: TelemetryOptions = {};
+  if (opts.promListenAddress) {
+    telemetryOptions.metrics = { prometheus: { bindAddress: opts.promListenAddress } };
+  }
+
+  Runtime.install({
+    logger,
+    telemetryOptions,
+  });
+
   const connection = await NativeConnection.connect({
     address: opts.server,
     tls: tlsConfig,
   });
 
-  const worker = await Worker.create({
+  // Possibly create multiple workers if we are being asked to use multiple task queues
+  const taskQueues = [];
+  console.log(opts.tqSufStart, opts.tqSufEnd);
+  if (opts.tqSufEnd === 0 || opts.tqSufEnd === undefined) {
+    logger.info('Running TypeScript worker on task queue ' + opts.taskQueue);
+    taskQueues.push(opts.taskQueue);
+  } else {
+    for (let i = opts.tqSufStart; i <= opts.tqSufEnd; i++) {
+      const taskQueue = opts.taskQueue + '-' + i;
+      taskQueues.push(taskQueue);
+    }
+    logger.info(`Running TypeScript worker on ${taskQueues.length} task queues`);
+  }
+
+  const workerArgs: WorkerOptions = {
     connection,
     namespace: opts.namespace,
     workflowsPath: require.resolve('./workflows'),
@@ -90,9 +145,27 @@ async function run() {
     dataConverter: {
       payloadConverterPath: require.resolve('./payload-converter'),
     },
-  });
+  };
+  if (opts.maxActPollers) {
+    workerArgs.maxConcurrentActivityTaskPolls = opts.maxActPollers;
+  }
+  if (opts.maxWfPollers) {
+    workerArgs.maxConcurrentWorkflowTaskPolls = opts.maxWfPollers;
+  }
+  if (opts.maxActs) {
+    workerArgs.maxConcurrentActivityTaskExecutions = opts.maxActs;
+  }
+  if (opts.maxWFTs) {
+    workerArgs.maxConcurrentWorkflowTaskExecutions = opts.maxWFTs;
+  }
+  const workerPromises = [];
+  for (const taskQueue of taskQueues) {
+    workerArgs.taskQueue = taskQueue;
+    const worker = await Worker.create(workerArgs);
+    workerPromises.push(worker.run());
+  }
 
-  await worker.run();
+  await Promise.all(workerPromises);
 }
 
 run()
@@ -103,3 +176,21 @@ run()
     console.error(err);
     process.exit(1);
   });
+
+function coerceLogLevel(value: string): LogLevel {
+  const lowered = value.toLowerCase();
+  if (lowered === 'trace') {
+    return 'TRACE';
+  } else if (lowered === 'debug') {
+    return 'DEBUG';
+  } else if (lowered === 'info') {
+    return 'INFO';
+  } else if (lowered === 'warn') {
+    return 'WARN';
+  } else if (lowered === 'error') {
+    return 'ERROR';
+  } else if (lowered === 'fatal') {
+    return 'ERROR';
+  }
+  return 'INFO';
+}
