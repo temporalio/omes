@@ -62,19 +62,19 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	}
 
 	// Run scenario
-	scenarioRunner := scenarioRunner{
-		logger:          r.logger,
-		scenario:        r.scenario,
-		runID:           r.runID,
-		iterations:      r.iterations,
-		duration:        r.duration,
-		maxConcurrent:   r.maxConcurrent,
-		scenarioOptions: r.scenarioOptions,
-		clientOptions:   r.clientOptions,
-		metricsOptions:  r.metricsOptions,
-		loggingOptions:  r.loggingOptions,
+	scenarioRunner := cmdoptions.ScenarioRunner{
+		Logger:          r.logger,
+		Scenario:        r.scenario,
+		RunID:           r.runID,
+		Iterations:      r.iterations,
+		Duration:        r.duration,
+		MaxConcurrent:   r.maxConcurrent,
+		ScenarioOptions: r.scenarioOptions,
+		ClientOptions:   r.clientOptions,
+		MetricsOptions:  r.metricsOptions,
+		LoggingOptions:  r.loggingOptions,
 	}
-	scenarioErr := scenarioRunner.run(ctx)
+	scenarioErr := scenarioRunner.Run(ctx)
 	cancel()
 
 	// Wait for worker complete
