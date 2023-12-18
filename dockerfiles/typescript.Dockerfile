@@ -33,6 +33,7 @@ COPY ${SDK_DIR} ./repo
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.
+# hadolint ignore=DL3006
 FROM gcr.io/distroless/nodejs20-debian11
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
