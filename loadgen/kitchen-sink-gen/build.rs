@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("python", "../../workers/python/protos"),
         ("java", "../../workers/java"),
         ("go", "../../loadgen/kitchensink"),
+        ("dotnet", "../../workers/dotnet/Temporalio.Omes/protos"),
     ] {
         let mut cmd = Command::new(protoc.clone());
 
@@ -58,6 +59,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if lang == "go" {
             cmd.arg("--go_opt=paths=source_relative");
             cmd.arg(format!("--go_out={out_dir}"));
+        } else if lang == "dotnet" {
+            cmd.arg(format!("--csharp_out={out_dir}"));
         }
 
         if !PathBuf::from(out_dir).exists() {
