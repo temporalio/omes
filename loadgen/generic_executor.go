@@ -91,7 +91,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// Run all until we've gotten an error or reached iteration limit
 	for i := 0; runErr == nil && ctx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
-		// If there are already more running than max concurrent, wait for one
+		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
 			waitOne()
 			// Exit loop if error
