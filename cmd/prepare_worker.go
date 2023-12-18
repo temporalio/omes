@@ -190,6 +190,9 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 		DirName:        b.dirName,
 		ApplyToCommand: nil,
 		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+		MoreDependencies: map[string]string{
+			"winston": "^3.11.0",
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
