@@ -233,7 +233,7 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                     }
                     .into(),
                     ReturnResultAction {
-                        return_this: Some(Payload::default()),
+                        return_this: Some(empty_payload()),
                     }
                     .into(),
                 ])],
@@ -315,7 +315,7 @@ impl<'a> Arbitrary<'a> for TestInput {
         // Finally, return at the end
         client_sequence.action_sets.push(ClientActionSet {
             actions: vec![mk_client_signal_action([ReturnResultAction {
-                return_this: Some(Payload::default()),
+                return_this: Some(empty_payload()),
             }
             .into()])],
             ..Default::default()
@@ -581,7 +581,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
                     },
                     Action {
                         variant: Some(action::Variant::ReturnResult(ReturnResultAction {
-                            return_this: Some(Payload::default()),
+                            return_this: Some(empty_payload()),
                         })),
                     },
                 ],
@@ -805,5 +805,16 @@ fn to_proto_payload(msg: impl Message, type_name: &str) -> Payload {
             m
         },
         data: msg.encode_to_vec(),
+    }
+}
+
+fn empty_payload() -> Payload {
+    Payload {
+        metadata: {
+            let mut m = HashMap::new();
+            m.insert("encoding".to_string(), "json/plain".into());
+            m
+        },
+        data: serde_json::to_vec("").expect("serializes"),
     }
 }

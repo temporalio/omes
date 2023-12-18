@@ -1,0 +1,4 @@
+lib
+node_modules
+src/protos/json-module.js
+src/protos/root.d.ts

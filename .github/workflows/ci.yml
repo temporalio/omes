@@ -25,9 +25,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language go --version v1.24.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language go --version v1.25.2-0.20231129171107-288a04f72145 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.24.0 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.25.2-0.20231129171107-288a04f72145 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -91,6 +91,36 @@ jobs:
         run: ./temporal-omes build-worker-image --language python --version 1.4.0 --tag-as-latest
       - name: Run worker image
         run: docker run --rm --detach -i -p 10233:10233 omes:python-1.4.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+      - name: Run scenario against image
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+
+  build-lint-test-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print build information
+        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+      - name: Setup TypeScript
+        uses: actions/setup-node@v4
+      - name: Initialize TypeScript worker
+        run: cd workers/typescript && npm ci && npm run build
+      - name: Lint TypeScript worker
+        run: cd workers/typescript && npm run lint-ci
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "^1.20"
+      - name: Build exe
+        run: go build -o temporal-omes ./cmd
+      - name: Run local scenario with worker
+        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language ts --embedded-server --iterations 5
+      - name: Build worker image
+        run: ./temporal-omes build-worker-image --language ts --version 1.9.0-rc.0 --tag-as-latest
+      - name: Run worker image
+        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.9.0-rc.0 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
