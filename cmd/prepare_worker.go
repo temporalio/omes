@@ -82,6 +82,8 @@ func (b *workerBuilder) build(ctx context.Context) (sdkbuild.Program, error) {
 		return b.buildJava(ctx, baseDir)
 	case "typescript":
 		return b.buildTypeScript(ctx, baseDir)
+	case "dotnet":
+		return b.buildDotNet(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", lang)
 	}
@@ -200,6 +202,46 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 	return prog, nil
 }
 
+func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	// Get version from dotnet.csproj if not present
+	version := b.version
+	if version == "" {
+		csprojBytes, err := os.ReadFile(filepath.Join(baseDir, "Temporalio.Omes.csproj"))
+		if err != nil {
+			return nil, fmt.Errorf("failed reading dotnet.csproj: %w", err)
+		}
+		const prefix = `<PackageReference Include="Temporalio" Version="`
+		csproj := string(csprojBytes)
+		beginIndex := strings.Index(csproj, prefix)
+		if beginIndex == -1 {
+			return nil, fmt.Errorf("cannot find Temporal dependency in csproj")
+		}
+		beginIndex += len(prefix)
+		length := strings.Index(csproj[beginIndex:], `"`)
+		version = csproj[beginIndex : beginIndex+length]
+	}
+
+	prog, err := sdkbuild.BuildDotNetProgram(ctx, sdkbuild.BuildDotNetProgramOptions{
+		BaseDir:         baseDir,
+		Version:         version,
+		DirName:         b.dirName,
+		ProgramContents: "await Temporalio.Omes.App.RunAsync(args);",
+		CsprojContents: `<Project Sdk="Microsoft.NET.Sdk">
+			<PropertyGroup>
+				<OutputType>Exe</OutputType>
+				<TargetFramework>net7.0</TargetFramework>
+			</PropertyGroup>
+			<ItemGroup>
+				<ProjectReference Include="../Temporalio.Omes.csproj" />
+			</ItemGroup>
+		</Project>`,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed preparing: %w", err)
+	}
+	return prog, nil
+}
+
 func rootDir() string {
 	_, currFile, _, _ := runtime.Caller(0)
 	return filepath.Dir(filepath.Dir(currFile))
@@ -207,13 +249,15 @@ func rootDir() string {
 
 func normalizeLangName(lang string) (string, error) {
 	switch lang {
-	case "go", "python", "java", "typescript":
+	case "go", "python", "java", "typescript", "dotnet":
 	case "py":
 		lang = "python"
 	case "ts":
 		lang = "typescript"
+	case "cs":
+		lang = "dotnet"
 	default:
-		return "", fmt.Errorf("invalid language %q, must be one of: go or python", lang)
+		return "", fmt.Errorf("invalid language %q, must be one of: [go, python, java, typescript, dotnet]", lang)
 	}
 	return lang, nil
 }
