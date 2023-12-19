@@ -23,6 +23,7 @@ COPY go.mod go.sum ./
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 # Build typescript proto files
+# hadolint ignore=DL3003
 RUN cd workers/typescript && npm install && npm run proto-gen
 
 ARG SDK_VERSION

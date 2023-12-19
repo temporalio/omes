@@ -34,7 +34,9 @@ jobs:
       - name: Print build information
         run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF"'
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - uses: actions/setup-go@v4
         with:
