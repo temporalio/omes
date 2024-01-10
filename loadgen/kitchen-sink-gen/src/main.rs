@@ -504,7 +504,8 @@ impl<'a> Arbitrary<'a> for Action {
                 if c.cur_workflow_state.kvs.is_empty() {
                     None
                 } else {
-                    let keys = c.cur_workflow_state.kvs.keys().collect::<Vec<_>>();
+                    let mut keys = c.cur_workflow_state.kvs.keys().collect::<Vec<_>>();
+                    keys.sort();
                     Some(u.choose(&keys).map(|s| s.to_string()))
                 }
             });
