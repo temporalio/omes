@@ -12,3 +12,6 @@ workers/java/bin
 workers/java/build
 
 /loadgen/kitchen-sink-gen/target/
+
+# Ignore temporary files
+**/omes-temp*/
