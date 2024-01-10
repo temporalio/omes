@@ -271,7 +271,6 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     let context = ArbContext {
         config,
         cur_workflow_state: Default::default(),
-        did_a_nested_action: false,
         action_set_nest_level: 0,
     };
     ARB_CONTEXT.set(context);
@@ -298,7 +297,6 @@ static WF_TYPE_NAME: &str = "kitchenSink";
 struct ArbContext {
     config: GeneratorConfig,
     cur_workflow_state: WorkflowState,
-    did_a_nested_action: bool,
     action_set_nest_level: usize,
 }
 
