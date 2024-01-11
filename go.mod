@@ -1,10 +1,13 @@
 module github.com/temporalio/omes
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.3
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -12,7 +15,7 @@ require (
 	github.com/temporalio/features v0.0.0-20240110061640-5b9f4be6bb76
 	go.temporal.io/api v1.26.1-0.20240106224952-e65d246174b6
 	go.temporal.io/sdk v1.25.2-0.20240110060334-d09a3f3bfe09
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.5.0
 	golang.org/x/sys v0.15.0

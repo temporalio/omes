@@ -1,6 +1,8 @@
 module github.com/temporalio/omes/workers/go
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require github.com/temporalio/omes v1.0.0
 
@@ -8,7 +10,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	go.temporal.io/api v1.26.1-0.20240106224952-e65d246174b6
 	go.temporal.io/sdk v1.25.2-0.20240110060334-d09a3f3bfe09
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.26.0
 )
 
 require (
@@ -25,6 +27,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect

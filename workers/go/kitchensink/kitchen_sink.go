@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	ocommon "github.com/temporalio/omes/common"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/temporal"
@@ -130,7 +131,7 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
 		// Use string arg to avoid the SDK trying to convert payload to input type
-		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
+		return nil, workflow.NewContinueAsNewError(ctx, ocommon.WorkflowNameKitchenSink, can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
 		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)
@@ -144,7 +145,7 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, launchActivity(ctx, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
 		// Use name if present, otherwise use this one
-		childType := "kitchenSink"
+		childType := ocommon.WorkflowNameKitchenSink
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}

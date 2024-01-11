@@ -2,8 +2,10 @@ package throughputstress
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/workers/go/workflowutils"
 	"time"
+
+	"github.com/temporalio/omes/common"
+	"github.com/temporalio/omes/workers/go/workflowutils"
 
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
@@ -161,7 +163,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			params.InitialIteration = i
 			params.TimesContinued++
 			params.ChildrenSpawned = output.ChildrenSpawned
-			return output, workflow.NewContinueAsNewError(ctx, "throughputStress", params)
+			return output, workflow.NewContinueAsNewError(ctx, common.WorkflowNameThroughputStress, params)
 		}
 	}
 

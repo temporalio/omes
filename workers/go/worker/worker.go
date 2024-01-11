@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/common"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
@@ -66,10 +67,10 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
 				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
 			})
-			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
+			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: common.WorkflowNameKitchenSink})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
-			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
+			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: common.WorkflowNameThroughputStress})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
 			w.RegisterActivity(&tpsActivities)
 			errCh <- w.Run(worker.InterruptCh())
