@@ -2,6 +2,8 @@ package scenarios
 
 import (
 	"context"
+	"math"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/temporalio/omes/common"
@@ -15,6 +17,22 @@ import (
 // targeting one of a given set of addresses. After each iteration, we query all workflows to verify that all callbacks
 // have been delivered.
 
+const (
+	startingPortOptionKey     = "startingPort"
+	numCallbackHostsOptionKey = "numCallbackHosts"
+)
+
+func ExponentialSample(n int, rate float64, sample float64) int {
+	totalProbability := 1 - math.Exp(-rate*float64(n))
+	for i := 1; i < n; i++ {
+		cdf := 1 - math.Exp(-rate*float64(i))
+		if sample <= cdf/totalProbability {
+			return i - 1
+		}
+	}
+	return n - 1
+}
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "For this scenario, Iterations is not supported and Duration is required. We run a single" +
@@ -22,19 +40,22 @@ func init() {
 			" eventually delivered.",
 		Executor: &loadgen.GenericExecutor{
 			Execute: func(ctx context.Context, run *loadgen.Run) error {
-				//if run.Configuration.Iterations != 0 {
-				//	return fmt.Errorf("iterations not supported")
-				//}
-				//duration := run.Configuration.Duration
-				//if duration == 0 {
-				//	return fmt.Errorf("duration required for this scenario")
-				//}
-
 				options := run.DefaultStartWorkflowOptions()
+
+				startingPort := run.ScenarioOptionInt(startingPortOptionKey, 0)
+				if startingPort == 0 {
+					return errors.Errorf("%q is required", startingPortOptionKey)
+				}
+
+				numCallbackHosts := run.ScenarioOptionInt(numCallbackHostsOptionKey, 0)
+				if numCallbackHosts == 0 {
+					return errors.Errorf("%q is required", numCallbackHostsOptionKey)
+				}
+
 				completionCallbacks := []*commonpb.Callback{{
 					Variant: &commonpb.Callback_Nexus_{
 						Nexus: &commonpb.Callback_Nexus{
-							Url: "http://localhost:8080/callbacks",
+							Url: "http://localhost:9000",
 						},
 					},
 				}}
@@ -53,18 +74,34 @@ func init() {
 				if err != nil {
 					return errors.Wrap(err, "failed to get workflow result")
 				}
-				execution, err := run.Client.DescribeWorkflowExecution(ctx, workflowRun.GetID(), workflowRun.GetRunID())
-				if err != nil {
-					return errors.Wrap(err, "failed to describe workflow")
-				}
-				callbacks := execution.Callbacks
-				if len(callbacks) != len(completionCallbacks) {
-					return errors.Errorf("expected %d callbacks, got %d", len(completionCallbacks), len(callbacks))
-				}
-				for _, callback := range callbacks {
-					if callback.State != enums.CALLBACK_STATE_SUCCEEDED {
-						return errors.Errorf("expected callback state to be SUCCEEDED, got %s", callback.State.String())
+
+				for {
+					execution, err := run.Client.DescribeWorkflowExecution(ctx, workflowRun.GetID(), workflowRun.GetRunID())
+					if err != nil {
+						return errors.Wrap(err, "failed to describe workflow")
 					}
+					callbacks := execution.Callbacks
+					if len(callbacks) != len(completionCallbacks) {
+						return errors.Errorf("expected %d callbacks, got %d", len(completionCallbacks), len(callbacks))
+					}
+					allSucceeded := true
+					anyFailed := false
+					for _, callback := range callbacks {
+						if callback.State != enums.CALLBACK_STATE_SUCCEEDED {
+							allSucceeded = false
+						}
+						if callback.State == enums.CALLBACK_STATE_FAILED {
+							anyFailed = true
+							run.Logger.Error("Callback failed", "failure", callback.LastAttemptFailure)
+						}
+					}
+					if anyFailed {
+						return errors.New("one or more callbacks failed")
+					}
+					if allSucceeded {
+						break
+					}
+					time.Sleep(time.Second)
 				}
 				return nil
 			},
