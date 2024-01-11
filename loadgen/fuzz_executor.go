@@ -45,10 +45,16 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		}
 		testInputs = append(testInputs, asTInput)
 	} else if fileOrArgs.Args != nil {
-		args := []string{"run", "--"}
-		args = append(args, fileOrArgs.Args...)
-		cmd := exec.CommandContext(ctx, "cargo", args...)
-		cmd.Dir = filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen")
+		var cmd *exec.Cmd
+		executable, ok := info.ScenarioOptions["kitchen-sink-gen"]
+		if ok && executable != "" {
+			cmd = exec.CommandContext(ctx, executable, fileOrArgs.Args...)
+		} else {
+			args := []string{"run", "--"}
+			args = append(args, fileOrArgs.Args...)
+			cmd = exec.CommandContext(ctx, "cargo", args...)
+			cmd.Dir = filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen")
+		}
 		cmd.Stderr = os.Stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
