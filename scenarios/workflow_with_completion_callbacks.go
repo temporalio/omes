@@ -39,11 +39,9 @@ func init() {
 					},
 				}}
 				options.CompletionCallbacks = completionCallbacks
-				input := &kitchensink.TestInput{
-					WorkflowInput: &kitchensink.WorkflowInput{
-						InitialActions: []*kitchensink.ActionSet{
-							kitchensink.NoOpSingleActivityActionSet(),
-						},
+				input := &kitchensink.WorkflowInput{
+					InitialActions: []*kitchensink.ActionSet{
+						kitchensink.NoOpSingleActivityActionSet(),
 					},
 				}
 				workflowRun, err := run.Client.ExecuteWorkflow(ctx, options, common.WorkflowNameKitchenSink, input)
