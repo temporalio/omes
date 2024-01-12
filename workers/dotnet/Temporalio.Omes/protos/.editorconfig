@@ -1,0 +1,3 @@
+[*.cs]
+generated_code = true
+dotnet_diagnostic.CS8981.severity = none
