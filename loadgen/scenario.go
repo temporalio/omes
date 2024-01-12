@@ -3,13 +3,14 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
@@ -96,18 +97,61 @@ type ScenarioInfo struct {
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
-	v := s.ScenarioOptions[name]
-	if v == "" {
+	return ScenarioOptionInt(s.ScenarioOptions, name, defaultValue)
+}
+
+func ScenarioOptionInt(options map[string]string, name string, defaultValue int) int {
+	return ScenarioOption(options, name, defaultValue, strconv.Atoi)
+}
+
+func (s *ScenarioInfo) ScenarioOptionFloat64(name string, defaultValue float64) float64 {
+	return ScenarioOptionFloat64(s.ScenarioOptions, name, defaultValue)
+}
+
+func ScenarioOptionFloat64(options map[string]string, name string, defaultValue float64) float64 {
+	return ScenarioOption(options, name, defaultValue, func(s string) (float64, error) {
+		return strconv.ParseFloat(s, 64)
+	})
+}
+
+func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
+	return ScenarioOptionDuration(s.ScenarioOptions, name, defaultValue)
+}
+
+func ScenarioOptionDuration(options map[string]string, name string, defaultValue time.Duration) time.Duration {
+	return ScenarioOption(options, name, defaultValue, time.ParseDuration)
+}
+
+func (r *Run) ScenarioOptionBool(name string, defaultValue bool) bool {
+	return ScenarioOptionBool(r.ScenarioOptions, name, defaultValue)
+}
+
+func ScenarioOptionBool(options map[string]string, name string, defaultValue bool) bool {
+	s := options[name]
+	if s == "" {
 		return defaultValue
 	}
-	i, err := strconv.Atoi(v)
+	v, err := strconv.ParseBool(s)
 	if err != nil {
 		panic(err)
 	}
-	return i
+	return v
+}
+
+func ScenarioOption[T any](options map[string]string, name string, defaultValue T, f func(string) (T, error)) T {
+	s := options[name]
+	if s == "" {
+		return defaultValue
+	}
+	v, err := f(s)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 const DefaultIterations = 10
+
 const DefaultMaxConcurrent = 10
 
 type RunConfiguration struct {
