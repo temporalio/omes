@@ -1,4 +1,6 @@
-﻿namespace Temporalio.Omes;
+﻿using Temporalio.Worker;
+
+namespace Temporalio.Omes;
 
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -32,19 +34,19 @@ public static class App
         name: "--task-queue-suffix-index-end",
         description: "Inclusive end for task queue suffix range");
 
-    private static readonly Option<uint> maxATPollersOption = new(
+    private static readonly Option<uint?> maxATPollersOption = new(
         name: "--max-concurrent-activity-pollers",
         description: "Max concurrent activity pollers");
 
-    private static readonly Option<uint> maxWFTPollersOption = new(
+    private static readonly Option<uint?> maxWFTPollersOption = new(
         name: "--max-concurrent-workflow-pollers",
         description: "Max concurrent workflow pollers");
 
-    private static readonly Option<uint> maxATOption = new(
+    private static readonly Option<uint?> maxATOption = new(
         name: "--max-concurrent-activities",
         description: "Max concurrent activities");
 
-    private static readonly Option<uint> maxWFTOption = new(
+    private static readonly Option<uint?> maxWFTOption = new(
         name: "--max-concurrent-workflow-tasks",
         description: "Max concurrent workflow tasks");
 
@@ -147,5 +149,49 @@ public static class App
                 Namespace = ctx.ParseResult.GetValueForOption(namespaceOption)!,
                 Tls = tls
             });
+
+        // Collect task queues to run workers for
+        var taskQueues = new List<string>();
+        var taskQueueBase = ctx.ParseResult.GetValueForOption(taskQueueOption)!;
+        if (ctx.ParseResult.GetValueForOption(taskQSuffixStartOption) == 0)
+        {
+            taskQueues.Add(taskQueueBase);
+        }
+        else
+        {
+            var start = ctx.ParseResult.GetValueForOption(taskQSuffixStartOption);
+            var end = ctx.ParseResult.GetValueForOption(taskQSuffixEndOption);
+            for (var i = start; i <= end; i++)
+            {
+                taskQueues.Add($"{taskQueueBase}-{i}");
+            }
+        }
+
+        logger.LogInformation("Running .NET workers for {Count} task queues", taskQueues.Count);
+
+        // Start all workers, exiting early if any fail
+        var workerTasks = new List<Task>();
+        foreach (var taskQueue in taskQueues)
+        {
+            logger.LogInformation("Starting worker for task queue {TaskQueue}", taskQueue);
+            var workerOptions = new TemporalWorkerOptions(taskQueue);
+            if (ctx.ParseResult.GetValueForOption(maxWFTOption) is { } maxWft)
+            {
+                workerOptions.MaxConcurrentWorkflowTasks = (int)maxWft;
+            }
+
+            if (ctx.ParseResult.GetValueForOption(maxATOption) is { } maxAt)
+            {
+                workerOptions.MaxConcurrentActivities = (int)maxAt;
+            }
+            // TODO: Max pollers options aren't in .NET yet
+
+            workerOptions.AddWorkflow<KitchenSinkWorkflow>();
+            var worker = new TemporalWorker(client, workerOptions);
+            var workerTask = worker.ExecuteAsync(default);
+            workerTasks.Add(workerTask);
+        }
+
+        await Task.WhenAll(workerTasks.ToArray());
     }
 }
