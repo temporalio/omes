@@ -173,7 +173,6 @@ public static class App
         var workerTasks = new List<Task>();
         foreach (var taskQueue in taskQueues)
         {
-            logger.LogInformation("Starting worker for task queue {TaskQueue}", taskQueue);
             var workerOptions = new TemporalWorkerOptions(taskQueue);
             if (ctx.ParseResult.GetValueForOption(maxWFTOption) is { } maxWft)
             {
@@ -187,6 +186,8 @@ public static class App
             // TODO: Max pollers options aren't in .NET yet
 
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
+            workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
+            workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
             var worker = new TemporalWorker(client, workerOptions);
             var workerTask = worker.ExecuteAsync(default);
             workerTasks.Add(workerTask);
