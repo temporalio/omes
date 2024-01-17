@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net/url"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/scenarios"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -128,7 +129,7 @@ func TestNewCompletionCallbackScenario(t *testing.T) {
 			if tc.scenarioOptionsOverride != nil {
 				tc.scenarioOptionsOverride(scenarioOptions)
 			}
-			_, err := scenarios.NewCompletionCallbackScenario(scenarioOptions)
+			err := scenarios.RunCompletionCallbackScenario(context.Background(), scenarioOptions, loadgen.ScenarioInfo{})
 			if tc.expectedErrSubstring != "" {
 				assert.ErrorContains(t, err, tc.expectedErrSubstring)
 			}
@@ -136,8 +137,13 @@ func TestNewCompletionCallbackScenario(t *testing.T) {
 	}
 }
 
-func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
+func TestCompletionCallbackScenario_Run(t *testing.T) {
 	t.Parallel()
+
+	// Timeout the test after a second.
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	t.Cleanup(cancel)
 
 	// Mock SDK client.
 	sdkClient := &mocks.Client{}
@@ -147,7 +153,11 @@ func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
 	workflowRun.On("GetID").Return("test-workflow-id")
 	workflowRun.On("GetRunID").Return("test-run-id")
 	sdkClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-		executeWorkflowRequests <- args.Get(1).(client.StartWorkflowOptions)
+		select {
+		case <-ctx.Done():
+			t.Fatalf("test canceled before workflow execution: %v", ctx.Err())
+		case executeWorkflowRequests <- args.Get(1).(client.StartWorkflowOptions):
+		}
 	}).Return(workflowRun, nil)
 
 	// First call to DescribeWorkflowExecution returns a backing off callback.
@@ -160,12 +170,17 @@ func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
 	}, nil).Times(1)
 
 	// Advance the clock so that we retry after 1 timer.
-	var wg sync.WaitGroup
+	clkDone := make(chan struct{})
 	clk := clock.NewMock()
-	wg.Add(1)
-	defer wg.Wait()
+	defer func() {
+		select {
+		case <-clkDone:
+		case <-ctx.Done():
+			t.Errorf("test canceled before clock finished: %v", ctx.Err())
+		}
+	}()
 	go func() {
-		defer wg.Done()
+		defer close(clkDone)
 		clk.Wait(clock.Calls{
 			Timer: 1,
 		})
@@ -177,6 +192,13 @@ func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
 		Callbacks: []*workflow.CallbackInfo{
 			{
 				State: enums.CALLBACK_STATE_SUCCEEDED,
+				Callback: &common.Callback{
+					Variant: &common.Callback_Nexus_{
+						Nexus: &common.Callback_Nexus{
+							Url: "http://localhost:1024?delay=0s&failure-probability=0.000000",
+						},
+					},
+				},
 			},
 		},
 	}, nil).Times(1)
@@ -185,27 +207,37 @@ func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
 	logger, err := zap.NewDevelopment()
 	require.NoError(t, err)
 	opts := &scenarios.CompletionCallbackScenarioOptions{
-		Clock:               clk,
 		Logger:              logger.Sugar(),
-		CallbackHostName:    "localhost",
 		SdkClient:           sdkClient,
+		Clock:               clk,
 		StartingPort:        1024,
 		NumCallbackHosts:    1,
+		CallbackHostName:    "localhost",
+		DryRun:              false,
 		Lambda:              1.0,
 		HalfLife:            1.0,
 		MaxDelay:            0,
 		MaxErrorProbability: 0.0,
+		AttachWorkflowID:    false,
 	}
-	scenario, err := scenarios.NewCompletionCallbackScenario(opts)
-	require.NoError(t, err)
 
 	// Run an iteration.
-	ctx := context.Background()
-	_, err = scenario.RunIteration(ctx, client.StartWorkflowOptions{})
+	err = scenarios.RunCompletionCallbackScenario(ctx, opts, loadgen.ScenarioInfo{
+		MetricsHandler: client.MetricsNopHandler,
+		Logger:         logger.Sugar(),
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 1,
+		},
+	})
 	require.NoError(t, err)
 
 	// Get the request sent to the SDK client and verify it.
-	startWorkflowOptions := <-executeWorkflowRequests
+	var startWorkflowOptions client.StartWorkflowOptions
+	select {
+	case <-ctx.Done():
+		t.Fatalf("test canceled before workflow execution: %v", ctx.Err())
+	case startWorkflowOptions = <-executeWorkflowRequests:
+	}
 	if assert.Len(t, startWorkflowOptions.CompletionCallbacks, 1) {
 		cb := startWorkflowOptions.CompletionCallbacks[0]
 		nexusCb := cb.GetNexus()

@@ -63,19 +63,13 @@ type CompletionCallbackScenarioOptions struct {
 	AttachWorkflowID bool
 }
 
-// CompletionCallbackScenario is a scenario where each iteration executes a single workflow that has a completion
-// callback attached targeting one of a given set of addresses. After each iteration, we query all workflows to verify
-// that all callbacks have been delivered.
-type CompletionCallbackScenario struct {
-	options *CompletionCallbackScenarioOptions
-}
-
-// CompletionCallbackScenarioIterationResult is the result of a single iteration of the CompletionCallbackScenario.
-type CompletionCallbackScenarioIterationResult struct {
+type completionCallbackScenarioIterationResult struct {
 	// WorkflowID of the workflow that was executed.
 	WorkflowID string
 	// RunID of the workflow that was executed.
 	RunID string
+	// URL of the callback that was used.
+	URL *url.URL
 }
 
 type completionCallbackScenarioExecutor struct{}
@@ -106,7 +100,7 @@ func init() {
 		Description: "For this scenario, Iterations is not supported and Duration is required. We run a single" +
 			" iteration which will spawn a number of workflows, execute them, and verify that all callbacks are" +
 			" eventually delivered.",
-		Executor: newExecutor(),
+		Executor: completionCallbackScenarioExecutor{},
 	})
 }
 
@@ -134,31 +128,52 @@ func ExponentialSample(n int, lambda float64, u float64) (int, error) {
 	return n - 1, nil
 }
 
-// NewCompletionCallbackScenario creates a new CompletionCallbackScenario or an error if the options are invalid.
-func NewCompletionCallbackScenario(opts *CompletionCallbackScenarioOptions) (*CompletionCallbackScenario, error) {
-	err := validateOptions(opts)
-	if err != nil {
-		return nil, err
+// RunCompletionCallbackScenario runs a scenario where each iteration executes a single workflow that has a completion
+// callback attached targeting one of a given set of addresses. After each iteration, we query all workflows to verify
+// that all callbacks have been delivered.
+func RunCompletionCallbackScenario(
+	ctx context.Context,
+	opts *CompletionCallbackScenarioOptions,
+	info loadgen.ScenarioInfo,
+) error {
+	if err := validateOptions(opts); err != nil {
+		return err
 	}
-	return &CompletionCallbackScenario{
-		options: opts,
-	}, nil
+	l := &loadgen.GenericExecutor{
+		Execute: func(ctx context.Context, run *loadgen.Run) error {
+			res, err := runIteration(ctx, opts, run.DefaultStartWorkflowOptions())
+			if err != nil {
+				return err
+			}
+			return verifyCallbackSucceeded(ctx, opts, res.WorkflowID, res.RunID, res.URL)
+		},
+	}
+	return l.Run(ctx, info)
 }
 
-// RunIteration runs a single iteration of this scenario.
-func (s *CompletionCallbackScenario) RunIteration(
+func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	opts := &CompletionCallbackScenarioOptions{}
+	parseOptions(info.ScenarioOptions, opts)
+	opts.Clock = clock.New()
+	opts.Logger = info.Logger
+	opts.SdkClient = info.Client
+	return RunCompletionCallbackScenario(ctx, opts, info)
+}
+
+func runIteration(
 	ctx context.Context,
+	scenarioOptions *CompletionCallbackScenarioOptions,
 	startWorkflowOptions client.StartWorkflowOptions,
-) (*CompletionCallbackScenarioIterationResult, error) {
+) (*completionCallbackScenarioIterationResult, error) {
 	workflowID := uuid.New()
-	u, err := generateURLFromOptions(s.options, workflowID)
+	u, err := generateURLFromOptions(scenarioOptions, workflowID)
 	if err != nil {
 		return nil, err
 	}
 
-	s.options.Logger.Debugw("Using callback URL", "url", u.String())
+	scenarioOptions.Logger.Debugw("Using callback URL", "url", u.String())
 
-	if s.options.DryRun {
+	if scenarioOptions.DryRun {
 		return nil, nil
 	}
 
@@ -176,7 +191,7 @@ func (s *CompletionCallbackScenario) RunIteration(
 			kitchensink.NoOpSingleActivityActionSet(),
 		},
 	}
-	workflowRun, err := s.options.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
+	workflowRun, err := scenarioOptions.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute workflow")
 	}
@@ -185,74 +200,43 @@ func (s *CompletionCallbackScenario) RunIteration(
 		return nil, errors.Wrap(err, "failed to get workflow result")
 	}
 
-	return nil, s.verifyCallbackSucceeded(ctx, workflowRun, completionCallbacks)
+	return &completionCallbackScenarioIterationResult{
+		WorkflowID: workflowRun.GetID(),
+		RunID:      workflowRun.GetRunID(),
+		URL:        u,
+	}, nil
 }
 
-func newExecutor() loadgen.Executor {
-	return completionCallbackScenarioExecutor{}
-}
-
-func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	opts := &CompletionCallbackScenarioOptions{}
-	parseOptions(info.ScenarioOptions, opts)
-	opts.Clock = clock.New()
-	opts.Logger = info.Logger
-	opts.SdkClient = info.Client
-	scenario, err := NewCompletionCallbackScenario(opts)
-	if err != nil {
-		return err
-	}
-	l := &loadgen.GenericExecutor{
-		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			_, err := scenario.RunIteration(ctx, run.DefaultStartWorkflowOptions())
-			return err
-		},
-	}
-	return l.Run(ctx, info)
-}
-
-// verifyCallbackSucceeded verifies that all callbacks have been delivered by querying the workflow and checking the
-// Callbacks field. It will retry until all callbacks have been delivered or until the context is canceled.
-func (s *CompletionCallbackScenario) verifyCallbackSucceeded(
-	ctx context.Context,
-	workflowRun client.WorkflowRun,
-	completionCallbacks []*commonpb.Callback,
-) error {
+func verifyCallbackSucceeded(ctx context.Context, options *CompletionCallbackScenarioOptions, workflowID string, runID string, u *url.URL) error {
 	retryDelay := time.Millisecond * 10
 	for {
-		execution, err := s.options.SdkClient.DescribeWorkflowExecution(ctx, workflowRun.GetID(), workflowRun.GetRunID())
+		execution, err := options.SdkClient.DescribeWorkflowExecution(ctx, workflowID, runID)
 		if err != nil {
 			return errors.Wrap(err, "failed to describe workflow")
 		}
 		callbacks := execution.Callbacks
-		if len(callbacks) != len(completionCallbacks) {
+		if len(callbacks) != 1 {
 			callbacksString := ""
 			for i, callback := range callbacks {
 				callbacksString += fmt.Sprintf("%d: %t: %+v\n", i, callback == nil, callback)
 			}
-			return errors.Errorf("expected %d callbacks, got %d: %s", len(completionCallbacks), len(callbacks), callbacksString)
+			return errors.Errorf("expected 1 callback, got %d: %s", len(callbacks), callbacksString)
 		}
-		allSucceeded := true
-		anyFailed := false
-		for _, callback := range callbacks {
-			if callback.State != enums.CALLBACK_STATE_SUCCEEDED {
-				allSucceeded = false
+		callback := callbacks[0]
+		if callback.State == enums.CALLBACK_STATE_SUCCEEDED {
+			if callback.Callback.GetNexus().Url != u.String() {
+				return errors.Errorf("expected callback URL %q, got %q", u.String(), callback.Callback.GetNexus().Url)
 			}
-			if callback.State == enums.CALLBACK_STATE_BACKING_OFF {
-				s.options.Logger.Infow("Callback backing off", "failure", callback.LastAttemptFailure)
-			}
-			if callback.State == enums.CALLBACK_STATE_FAILED {
-				anyFailed = true
-				s.options.Logger.Errorw("Callback failed", "failure", callback.LastAttemptFailure)
-			}
-		}
-		if anyFailed {
-			return errors.New("one or more callbacks failed")
-		}
-		if allSucceeded {
 			return nil
 		}
-		timer := s.options.Clock.Timer(retryDelay)
+		if callback.State == enums.CALLBACK_STATE_BACKING_OFF {
+			options.Logger.Infow("Callback backing off", "failure", callback.LastAttemptFailure)
+		}
+		if callback.State == enums.CALLBACK_STATE_FAILED {
+			options.Logger.Errorw("Callback failed", "failure", callback.LastAttemptFailure)
+			return errors.New("one or more callbacks failed")
+		}
+		timer := options.Clock.Timer(retryDelay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
