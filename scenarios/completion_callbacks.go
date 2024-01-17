@@ -70,6 +70,14 @@ type CompletionCallbackScenario struct {
 	options *CompletionCallbackScenarioOptions
 }
 
+// CompletionCallbackScenarioIterationResult is the result of a single iteration of the CompletionCallbackScenario.
+type CompletionCallbackScenarioIterationResult struct {
+	// WorkflowID of the workflow that was executed.
+	WorkflowID string
+	// RunID of the workflow that was executed.
+	RunID string
+}
+
 type completionCallbackScenarioExecutor struct{}
 
 const (
@@ -141,17 +149,17 @@ func NewCompletionCallbackScenario(opts *CompletionCallbackScenarioOptions) (*Co
 func (s *CompletionCallbackScenario) RunIteration(
 	ctx context.Context,
 	startWorkflowOptions client.StartWorkflowOptions,
-) error {
+) (*CompletionCallbackScenarioIterationResult, error) {
 	workflowID := uuid.New()
 	u, err := generateURLFromOptions(s.options, workflowID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	s.options.Logger.Debugw("Using callback URL", "url", u.String())
 
 	if s.options.DryRun {
-		return nil
+		return nil, nil
 	}
 
 	completionCallbacks := []*commonpb.Callback{{
@@ -170,14 +178,14 @@ func (s *CompletionCallbackScenario) RunIteration(
 	}
 	workflowRun, err := s.options.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
 	if err != nil {
-		return errors.Wrap(err, "failed to execute workflow")
+		return nil, errors.Wrap(err, "failed to execute workflow")
 	}
 	err = workflowRun.Get(ctx, nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to get workflow result")
+		return nil, errors.Wrap(err, "failed to get workflow result")
 	}
 
-	return s.verifyCallbackSucceeded(ctx, workflowRun, completionCallbacks)
+	return nil, s.verifyCallbackSucceeded(ctx, workflowRun, completionCallbacks)
 }
 
 func newExecutor() loadgen.Executor {
@@ -185,19 +193,19 @@ func newExecutor() loadgen.Executor {
 }
 
 func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	opts := loadOptions(info.ScenarioOptions)
+	opts := &CompletionCallbackScenarioOptions{}
+	parseOptions(info.ScenarioOptions, opts)
 	opts.Clock = clock.New()
 	opts.Logger = info.Logger
 	opts.SdkClient = info.Client
+	scenario, err := NewCompletionCallbackScenario(opts)
+	if err != nil {
+		return err
+	}
 	l := &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			opts.SdkClient = run.Client
-			opts.Logger = run.Logger
-			scenario, err := NewCompletionCallbackScenario(opts)
-			if err != nil {
-				return err
-			}
-			return scenario.RunIteration(ctx, run.DefaultStartWorkflowOptions())
+			_, err := scenario.RunIteration(ctx, run.DefaultStartWorkflowOptions())
+			return err
 		},
 	}
 	return l.Run(ctx, info)
@@ -286,19 +294,17 @@ func validateOptions(options *CompletionCallbackScenarioOptions) error {
 	return nil
 }
 
-// loadOptions loads the options for this scenario from the given map.
-func loadOptions(scenarioOptions map[string]string) *CompletionCallbackScenarioOptions {
-	options := &CompletionCallbackScenarioOptions{
-		StartingPort:        loadgen.ScenarioOptionInt(scenarioOptions, OptionKeyStartingPort, 0),
-		NumCallbackHosts:    loadgen.ScenarioOptionInt(scenarioOptions, OptionKeyNumCallbackHosts, 0),
-		CallbackHostName:    scenarioOptions[OptionKeyCallbackHostName],
-		DryRun:              loadgen.ScenarioOptionBool(scenarioOptions, OptionKeyDryRun, false),
-		Lambda:              loadgen.ScenarioOptionFloat64(scenarioOptions, OptionKeyLambda, 1.0),
-		HalfLife:            loadgen.ScenarioOptionFloat64(scenarioOptions, OptionKeyHalfLife, 1.0),
-		MaxDelay:            loadgen.ScenarioOptionDuration(scenarioOptions, OptionKeyMaxDelay, time.Second*5),
-		MaxErrorProbability: loadgen.ScenarioOptionFloat64(scenarioOptions, OptionKeyMaxErrorProbability, 0.0),
-		AttachWorkflowID:    loadgen.ScenarioOptionBool(scenarioOptions, OptionKeyAttachWorkflowID, true),
-	}
+// parseOptions parses the options for this scenario from the given map.
+func parseOptions(m map[string]string, options *CompletionCallbackScenarioOptions) *CompletionCallbackScenarioOptions {
+	options.StartingPort = loadgen.ScenarioOptionInt(m, OptionKeyStartingPort, 0)
+	options.NumCallbackHosts = loadgen.ScenarioOptionInt(m, OptionKeyNumCallbackHosts, 0)
+	options.CallbackHostName = m[OptionKeyCallbackHostName]
+	options.DryRun = loadgen.ScenarioOptionBool(m, OptionKeyDryRun, false)
+	options.Lambda = loadgen.ScenarioOptionFloat64(m, OptionKeyLambda, 1.0)
+	options.HalfLife = loadgen.ScenarioOptionFloat64(m, OptionKeyHalfLife, 1.0)
+	options.MaxDelay = loadgen.ScenarioOptionDuration(m, OptionKeyMaxDelay, time.Second*5)
+	options.MaxErrorProbability = loadgen.ScenarioOptionFloat64(m, OptionKeyMaxErrorProbability, 0.0)
+	options.AttachWorkflowID = loadgen.ScenarioOptionBool(m, OptionKeyAttachWorkflowID, true)
 	return options
 }
 

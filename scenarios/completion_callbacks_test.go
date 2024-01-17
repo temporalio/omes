@@ -201,7 +201,7 @@ func TestCompletionCallbackScenario_RunIteration(t *testing.T) {
 
 	// Run an iteration.
 	ctx := context.Background()
-	err = scenario.RunIteration(ctx, client.StartWorkflowOptions{})
+	_, err = scenario.RunIteration(ctx, client.StartWorkflowOptions{})
 	require.NoError(t, err)
 
 	// Get the request sent to the SDK client and verify it.
