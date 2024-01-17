@@ -10,7 +10,6 @@ import (
 
 	"github.com/facebookgo/clock"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/temporalio/omes/common"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -116,7 +115,7 @@ func init() {
 // The `u` parameter should be a uniform random number in [0, 1).
 func ExponentialSample(n int, lambda float64, u float64) (int, error) {
 	if u < 0 || u >= 1 {
-		return 0, errors.Errorf("u must be in [0, 1)")
+		return 0, fmt.Errorf("u must be in [0, 1)")
 	}
 	totalProbability := 1 - math.Exp(-lambda*float64(n))
 	for i := 1; i < n; i++ {
@@ -139,16 +138,42 @@ func RunCompletionCallbackScenario(
 	if err := validateOptions(opts); err != nil {
 		return err
 	}
+	results := make(chan *completionCallbackScenarioIterationResult)
 	l := &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			res, err := runIteration(ctx, opts, run.DefaultStartWorkflowOptions())
+			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions())
 			if err != nil {
 				return err
 			}
-			return verifyCallbackSucceeded(ctx, opts, res.WorkflowID, res.RunID, res.URL)
+			opts.Logger.Debugw("Workflow finished", "url", res.URL.String())
+			results <- res
+			return nil
 		},
 	}
-	return l.Run(ctx, info)
+	numErrs := 0
+	verificationDone := make(chan struct{})
+	go func() {
+		for res := range results {
+			opts.Logger.Debugw("Verifying callback succeeded", "url", res.URL.String())
+			err := verifyCallbackSucceeded(ctx, opts, res.WorkflowID, res.RunID, res.URL)
+			if err != nil {
+				numErrs++
+				opts.Logger.Errorw("Callback verification failed", "url", res.URL.String(), "error", err)
+			} else {
+				opts.Logger.Debugw("Callback succeeded", "url", res.URL.String())
+			}
+		}
+		close(verificationDone)
+	}()
+	if err := l.Run(ctx, info); err != nil {
+		return fmt.Errorf("run workflows: %w", err)
+	}
+	close(results)
+	<-verificationDone
+	if numErrs > 0 {
+		return fmt.Errorf("%d callbacks failed", numErrs)
+	}
+	return nil
 }
 
 func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
@@ -160,7 +185,7 @@ func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.
 	return RunCompletionCallbackScenario(ctx, opts, info)
 }
 
-func runIteration(
+func runWorkflow(
 	ctx context.Context,
 	scenarioOptions *CompletionCallbackScenarioOptions,
 	startWorkflowOptions client.StartWorkflowOptions,
@@ -170,8 +195,6 @@ func runIteration(
 	if err != nil {
 		return nil, err
 	}
-
-	scenarioOptions.Logger.Debugw("Using callback URL", "url", u.String())
 
 	if scenarioOptions.DryRun {
 		return nil, nil
@@ -193,11 +216,11 @@ func runIteration(
 	}
 	workflowRun, err := scenarioOptions.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute workflow")
+		return nil, fmt.Errorf("iteration start workflow: %w", err)
 	}
 	err = workflowRun.Get(ctx, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get workflow result")
+		return nil, fmt.Errorf("iteration wait for workflow: %w", err)
 	}
 
 	return &completionCallbackScenarioIterationResult{
@@ -212,7 +235,7 @@ func verifyCallbackSucceeded(ctx context.Context, options *CompletionCallbackSce
 	for {
 		execution, err := options.SdkClient.DescribeWorkflowExecution(ctx, workflowID, runID)
 		if err != nil {
-			return errors.Wrap(err, "failed to describe workflow")
+			return fmt.Errorf("verify callback succeeded describe workflow: %w", err)
 		}
 		callbacks := execution.Callbacks
 		if len(callbacks) != 1 {
@@ -220,21 +243,20 @@ func verifyCallbackSucceeded(ctx context.Context, options *CompletionCallbackSce
 			for i, callback := range callbacks {
 				callbacksString += fmt.Sprintf("%d: %t: %+v\n", i, callback == nil, callback)
 			}
-			return errors.Errorf("expected 1 callback, got %d: %s", len(callbacks), callbacksString)
+			return fmt.Errorf("expected 1 callback, got %d: %s", len(callbacks), callbacksString)
 		}
 		callback := callbacks[0]
 		if callback.State == enums.CALLBACK_STATE_SUCCEEDED {
 			if callback.Callback.GetNexus().Url != u.String() {
-				return errors.Errorf("expected callback URL %q, got %q", u.String(), callback.Callback.GetNexus().Url)
+				return fmt.Errorf("expected callback URL %q, got %q", u.String(), callback.Callback.GetNexus().Url)
 			}
 			return nil
 		}
 		if callback.State == enums.CALLBACK_STATE_BACKING_OFF {
-			options.Logger.Infow("Callback backing off", "failure", callback.LastAttemptFailure)
+			options.Logger.Debugw("Callback backing off", "failure", callback.LastAttemptFailure)
 		}
 		if callback.State == enums.CALLBACK_STATE_FAILED {
-			options.Logger.Errorw("Callback failed", "failure", callback.LastAttemptFailure)
-			return errors.New("one or more callbacks failed")
+			return fmt.Errorf("callback failed: %+v", callback.LastAttemptFailure)
 		}
 		timer := options.Clock.Timer(retryDelay)
 		select {

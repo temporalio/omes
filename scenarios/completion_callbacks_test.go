@@ -161,13 +161,16 @@ func TestCompletionCallbackScenario_Run(t *testing.T) {
 	}).Return(workflowRun, nil)
 
 	// First call to DescribeWorkflowExecution returns a backing off callback.
-	sdkClient.On("DescribeWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(&workflowservice.DescribeWorkflowExecutionResponse{
-		Callbacks: []*workflow.CallbackInfo{
-			{
-				State: enums.CALLBACK_STATE_BACKING_OFF,
+	sdkClient.On("DescribeWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(
+		&workflowservice.DescribeWorkflowExecutionResponse{
+			Callbacks: []*workflow.CallbackInfo{
+				{
+					State: enums.CALLBACK_STATE_BACKING_OFF,
+				},
 			},
 		},
-	}, nil).Times(1)
+		nil,
+	).Times(1)
 
 	// Advance the clock so that we retry after 1 timer.
 	clkDone := make(chan struct{})
@@ -188,24 +191,26 @@ func TestCompletionCallbackScenario_Run(t *testing.T) {
 	}()
 
 	// Second call to DescribeWorkflowExecution returns a succeeded callback.
-	sdkClient.On("DescribeWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(&workflowservice.DescribeWorkflowExecutionResponse{
-		Callbacks: []*workflow.CallbackInfo{
-			{
-				State: enums.CALLBACK_STATE_SUCCEEDED,
-				Callback: &common.Callback{
-					Variant: &common.Callback_Nexus_{
-						Nexus: &common.Callback_Nexus{
-							Url: "http://localhost:1024?delay=0s&failure-probability=0.000000",
+	sdkClient.On("DescribeWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(
+		&workflowservice.DescribeWorkflowExecutionResponse{
+			Callbacks: []*workflow.CallbackInfo{
+				{
+					State: enums.CALLBACK_STATE_SUCCEEDED,
+					Callback: &common.Callback{
+						Variant: &common.Callback_Nexus_{
+							Nexus: &common.Callback_Nexus{
+								Url: "http://localhost:1024?delay=0s&failure-probability=0.000000",
+							},
 						},
 					},
 				},
 			},
 		},
-	}, nil).Times(1)
+		nil,
+	).Times(1)
 
 	// Create the scenario.
-	logger, err := zap.NewDevelopment()
-	require.NoError(t, err)
+	logger := zap.NewNop()
 	opts := &scenarios.CompletionCallbackScenarioOptions{
 		Logger:              logger.Sugar(),
 		SdkClient:           sdkClient,
@@ -221,8 +226,8 @@ func TestCompletionCallbackScenario_Run(t *testing.T) {
 		AttachWorkflowID:    false,
 	}
 
-	// Run an iteration.
-	err = scenarios.RunCompletionCallbackScenario(ctx, opts, loadgen.ScenarioInfo{
+	// Run the scenario.
+	err := scenarios.RunCompletionCallbackScenario(ctx, opts, loadgen.ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
 		Configuration: loadgen.RunConfiguration{
