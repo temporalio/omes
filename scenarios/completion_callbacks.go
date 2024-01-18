@@ -67,6 +67,8 @@ type CompletionCallbackScenarioOptions struct {
 	AttachWorkflowID bool
 	// AttachCallbacks determines whether the callback URLs should be attached to the workflow.
 	AttachCallbacks bool
+	// MaxErrors is the maximum number of errors to allow before failing the scenario.
+	MaxErrors int
 }
 
 type completionCallbackScenarioIterationResult struct {
@@ -81,7 +83,7 @@ type completionCallbackScenarioIterationResult struct {
 type completionCallbackScenarioExecutor struct{}
 
 const (
-	// OptionKeyRPS determines CompletionCallbackScenarioOptions.RPS. The default value is 1000.
+	// OptionKeyRPS determines CompletionCallbackScenarioOptions.RPS. The default value is 10.
 	OptionKeyRPS = "rps"
 	// OptionKeyStartingPort determines CompletionCallbackScenarioOptions.StartingPort.
 	OptionKeyStartingPort = "startingPort"
@@ -106,6 +108,8 @@ const (
 	// OptionKeyAttachCallbacks determines CompletionCallbackScenarioOptions.AttachCallbacks. The default value is
 	// true.
 	OptionKeyAttachCallbacks = "attachCallbacks"
+	// OptionKeyMaxErrors determines CompletionCallbackScenarioOptions.MaxErrors. The default value is 1.
+	OptionKeyMaxErrors = "maxErrors"
 )
 
 func init() {
@@ -155,7 +159,9 @@ func RunCompletionCallbackScenario(
 		return err
 	}
 	opts.Logger.Infow("Starting scenario", "options", opts)
-	var numSuccesses, numFailures, numStarted, numFinished atomic.Int32
+	var (
+		numCallbacksDelivered, numCallbacksFailed, numWorkflowsStarted, numWorkflowsFinished, numWorkflowsFailed atomic.Int32
+	)
 	go func() {
 		t := time.NewTicker(time.Second)
 		for {
@@ -165,8 +171,8 @@ func RunCompletionCallbackScenario(
 				return
 			case <-t.C:
 				opts.Logger.Infow("Scenario status",
-					"numStarted", numStarted.Load(), "numFinished", numFinished.Load(),
-					"numSuccesses", numSuccesses.Load(), "numFailures", numFailures.Load(),
+					"numWorkflowsStarted", numWorkflowsStarted.Load(), "numWorkflowsFinished", numWorkflowsFinished.Load(), "numWorkflowsFailed", numWorkflowsFailed.Load(),
+					"numCallbacksDelivered", numCallbacksDelivered.Load(), "numCallbacksFailed", numCallbacksFailed.Load(),
 				)
 			}
 		}
@@ -175,11 +181,16 @@ func RunCompletionCallbackScenario(
 	results := make([]*completionCallbackScenarioIterationResult, 0, info.Configuration.Iterations)
 	l := &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions(), rateLimiter, &numStarted)
+			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions(), rateLimiter, &numWorkflowsStarted)
 			if err != nil {
-				return fmt.Errorf("run workflow: %w", err)
+				opts.Logger.Errorw("Run workflow failed", "error", err)
+				numFailed := numWorkflowsFailed.Add(1)
+				if numFailed > int32(opts.MaxErrors) {
+					return fmt.Errorf("max errors exceeded: %d; last error: %w", opts.MaxErrors, err)
+				}
+				return nil
 			}
-			numFinished.Add(1)
+			numWorkflowsFinished.Add(1)
 			opts.Logger.Debugw("Workflow finished", "url", res.URL.String())
 			results = append(results, res)
 			return nil
@@ -197,15 +208,15 @@ func RunCompletionCallbackScenario(
 		opts.Logger.Debugw("Verifying callback succeeded", "url", res.URL.String())
 		err := verifyCallbackSucceeded(ctx, opts, rateLimiter, res.WorkflowID, res.RunID, res.URL)
 		if err != nil {
-			numFailures.Add(1)
+			numCallbacksFailed.Add(1)
 			opts.Logger.Errorw("Callback verification failed", "url", res.URL.String(), "error", err)
 		} else {
-			numSuccesses.Add(1)
+			numCallbacksDelivered.Add(1)
 			opts.Logger.Debugw("Callback succeeded", "url", res.URL.String())
 		}
 	}
-	if numFailures.Load() > 0 {
-		return fmt.Errorf("%d callbacks failed", numFailures.Load())
+	if numCallbacksFailed.Load() > 0 {
+		return fmt.Errorf("%d callbacks failed", numCallbacksFailed.Load())
 	}
 	return nil
 }
@@ -381,7 +392,7 @@ func validateOptions(options *CompletionCallbackScenarioOptions) error {
 
 // parseOptions parses the options for this scenario from the given map.
 func parseOptions(m map[string]string, options *CompletionCallbackScenarioOptions) *CompletionCallbackScenarioOptions {
-	options.RPS = loadgen.ScenarioOptionInt(m, OptionKeyRPS, 1000)
+	options.RPS = loadgen.ScenarioOptionInt(m, OptionKeyRPS, 10)
 	options.StartingPort = loadgen.ScenarioOptionInt(m, OptionKeyStartingPort, 0)
 	options.NumCallbackHosts = loadgen.ScenarioOptionInt(m, OptionKeyNumCallbackHosts, 0)
 	options.CallbackHostName = m[OptionKeyCallbackHostName]
@@ -392,6 +403,7 @@ func parseOptions(m map[string]string, options *CompletionCallbackScenarioOption
 	options.MaxErrorProbability = loadgen.ScenarioOptionFloat64(m, OptionKeyMaxErrorProbability, 0.05)
 	options.AttachWorkflowID = loadgen.ScenarioOptionBool(m, OptionKeyAttachWorkflowID, true)
 	options.AttachCallbacks = loadgen.ScenarioOptionBool(m, OptionKeyAttachCallbacks, true)
+	options.MaxErrors = loadgen.ScenarioOptionInt(m, OptionKeyMaxErrors, 0)
 	return options
 }
 
