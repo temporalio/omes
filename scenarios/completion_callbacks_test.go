@@ -225,6 +225,7 @@ func TestCompletionCallbackScenario_Run(t *testing.T) {
 		MaxDelay:            0,
 		MaxErrorProbability: 0.0,
 		AttachWorkflowID:    false,
+		AttachCallbacks:     true,
 	}
 
 	// Run the scenario.

@@ -63,8 +63,10 @@ type CompletionCallbackScenarioOptions struct {
 	// function of the host index. This must be in [0, 1].
 	MaxErrorProbability float64
 	// AttachWorkflowID determines whether the workflow ID should be attached to the callback URL. This is useful for
-	// debugging. The default value is true.
+	// debugging.
 	AttachWorkflowID bool
+	// AttachCallbacks determines whether the callback URLs should be attached to the workflow.
+	AttachCallbacks bool
 }
 
 type completionCallbackScenarioIterationResult struct {
@@ -98,8 +100,12 @@ const (
 	// OptionKeyMaxErrorProbability determines CompletionCallbackScenarioOptions.MaxErrorProbability.
 	// The default value is 0.05.
 	OptionKeyMaxErrorProbability = "maxErrorProbability"
-	// OptionKeyAttachWorkflowID determines CompletionCallbackScenarioOptions.AttachWorkflowID.
+	// OptionKeyAttachWorkflowID determines CompletionCallbackScenarioOptions.AttachWorkflowID. The default value is
+	// true.
 	OptionKeyAttachWorkflowID = "attachWorkflowID"
+	// OptionKeyAttachCallbacks determines CompletionCallbackScenarioOptions.AttachCallbacks. The default value is
+	// true.
+	OptionKeyAttachCallbacks = "attachCallbacks"
 )
 
 func init() {
@@ -183,6 +189,10 @@ func RunCompletionCallbackScenario(
 		return fmt.Errorf("completion callback scenario run generic executor: %w", err)
 	}
 	opts.Logger.Infow("All workflows finished", "numWorkflows", len(results))
+	if !opts.AttachCallbacks {
+		opts.Logger.Infow("Skipping callback verification because callbacks are not attached")
+		return nil
+	}
 	for _, res := range results {
 		opts.Logger.Debugw("Verifying callback succeeded", "url", res.URL.String())
 		err := verifyCallbackSucceeded(ctx, opts, rateLimiter, res.WorkflowID, res.RunID, res.URL)
@@ -245,14 +255,16 @@ func runWorkflow(
 		return nil, nil
 	}
 
-	completionCallbacks := []*commonpb.Callback{{
-		Variant: &commonpb.Callback_Nexus_{
-			Nexus: &commonpb.Callback_Nexus{
-				Url: u.String(),
+	if scenarioOptions.AttachCallbacks {
+		completionCallbacks := []*commonpb.Callback{{
+			Variant: &commonpb.Callback_Nexus_{
+				Nexus: &commonpb.Callback_Nexus{
+					Url: u.String(),
+				},
 			},
-		},
-	}}
-	startWorkflowOptions.CompletionCallbacks = completionCallbacks
+		}}
+		startWorkflowOptions.CompletionCallbacks = completionCallbacks
+	}
 	startWorkflowOptions.ID = workflowID
 	input := &kitchensink.WorkflowInput{
 		InitialActions: []*kitchensink.ActionSet{
@@ -379,6 +391,7 @@ func parseOptions(m map[string]string, options *CompletionCallbackScenarioOption
 	options.MaxDelay = loadgen.ScenarioOptionDuration(m, OptionKeyMaxDelay, time.Second*1)
 	options.MaxErrorProbability = loadgen.ScenarioOptionFloat64(m, OptionKeyMaxErrorProbability, 0.05)
 	options.AttachWorkflowID = loadgen.ScenarioOptionBool(m, OptionKeyAttachWorkflowID, true)
+	options.AttachCallbacks = loadgen.ScenarioOptionBool(m, OptionKeyAttachCallbacks, true)
 	return options
 }
 
