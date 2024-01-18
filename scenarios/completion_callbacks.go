@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 // This file contains code for a scenario to test workflow completion callbacks. You can test it by running:
@@ -26,6 +28,8 @@ import (
 
 // CompletionCallbackScenarioOptions are the options for the CompletionCallbackScenario.
 type CompletionCallbackScenarioOptions struct {
+	// RPS is the maximum number of requests per second to send. This is required and must be > 0.
+	RPS int
 	// Logger must be non-nil.
 	Logger *zap.SugaredLogger
 	// SdkClient is the client to use to start workflows. This is required.
@@ -37,19 +41,19 @@ type CompletionCallbackScenarioOptions struct {
 	StartingPort int
 	// NumCallbackHosts is the number of hosts to use for callbacks. This is required and must be > 0.
 	NumCallbackHosts int
-	// CallbackHostName is the host name to use for the callback URL. Defaults to "localhost". Do not include the port.
+	// CallbackHostName is the host name to use for the callback URL. Do not include the port.
 	CallbackHostName string
 	// DryRun determines whether this is a dry run. If the value is true, the scenario will not actually execute
 	// workflows, but will instead just log what it would have done.
 	DryRun bool
 	// Lambda is the λ parameter for the exponential distribution function used to determine which host to use for a
-	// given workflow. The default value is 1. A value of 0 means that all hosts have the same priority of being
-	// selected. The higher the value, the more likely it is that the first host will be selected. This must be >= 0.
+	// given workflow. A value close to zero means that all hosts have a similar priority of being selected. The higher
+	// the value, the more likely it is that the first host will be selected. This must be > 0.
 	Lambda float64
 	// HalfLife is τ for the exponential decay function used to determine the delay and error probability for a given
-	// host. The default value is 1. This means that the delay and error probability will be halved for each subsequent
-	// host. This must be > 0. Set it to a very large value to make all hosts have the same delay and error probability.
-	// Set it to a very small value to make only the first host have a very large delay and error probability.
+	// host. This means that the delay and error probability will be halved for each subsequent host. This must be > 0.
+	// Set it to a very large value to make all hosts have the same delay and error probability. Set it to a very small
+	// value to make only the first host have a very large delay and error probability.
 	HalfLife float64
 	// MaxDelay is the maximum delay to use for a callback. The actual delay will be this value times the exponential
 	// decay function of the host index. This must be >= 0.
@@ -75,6 +79,8 @@ type completionCallbackScenarioIterationResult struct {
 type completionCallbackScenarioExecutor struct{}
 
 const (
+	// OptionKeyRPS determines CompletionCallbackScenarioOptions.RPS. The default value is 1000.
+	OptionKeyRPS = "rps"
 	// OptionKeyStartingPort determines CompletionCallbackScenarioOptions.StartingPort.
 	OptionKeyStartingPort = "startingPort"
 	// OptionKeyNumCallbackHosts determines CompletionCallbackScenarioOptions.NumCallbackHosts.
@@ -83,13 +89,14 @@ const (
 	OptionKeyCallbackHostName = "hostName"
 	// OptionKeyDryRun determines CompletionCallbackScenarioOptions.DryRun.
 	OptionKeyDryRun = "dryRun"
-	// OptionKeyLambda determines CompletionCallbackScenarioOptions.Lambda.
+	// OptionKeyLambda determines CompletionCallbackScenarioOptions.Lambda. The default value is 1.0.
 	OptionKeyLambda = "lambda"
-	// OptionKeyHalfLife determines CompletionCallbackScenarioOptions.HalfLife.
+	// OptionKeyHalfLife determines CompletionCallbackScenarioOptions.HalfLife. The default value is 1.0.
 	OptionKeyHalfLife = "halfLife"
-	// OptionKeyMaxDelay determines CompletionCallbackScenarioOptions.MaxDelay.
+	// OptionKeyMaxDelay determines CompletionCallbackScenarioOptions.MaxDelay. The default value is 1s.
 	OptionKeyMaxDelay = "maxDelay"
 	// OptionKeyMaxErrorProbability determines CompletionCallbackScenarioOptions.MaxErrorProbability.
+	// The default value is 0.05.
 	OptionKeyMaxErrorProbability = "maxErrorProbability"
 	// OptionKeyAttachWorkflowID determines CompletionCallbackScenarioOptions.AttachWorkflowID.
 	OptionKeyAttachWorkflowID = "attachWorkflowID"
@@ -141,6 +148,7 @@ func RunCompletionCallbackScenario(
 	if err := validateOptions(opts); err != nil {
 		return err
 	}
+	opts.Logger.Infow("Starting scenario", "options", opts)
 	var numSuccesses, numFailures, numStarted, numFinished atomic.Int32
 	go func() {
 		t := time.NewTicker(time.Second)
@@ -157,11 +165,11 @@ func RunCompletionCallbackScenario(
 			}
 		}
 	}()
+	rateLimiter := rate.NewLimiter(rate.Limit(opts.RPS), opts.RPS)
 	results := make([]*completionCallbackScenarioIterationResult, 0, info.Configuration.Iterations)
 	l := &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			numStarted.Add(1)
-			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions())
+			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions(), rateLimiter, &numStarted)
 			if err != nil {
 				return fmt.Errorf("run workflow: %w", err)
 			}
@@ -177,7 +185,7 @@ func RunCompletionCallbackScenario(
 	opts.Logger.Infow("All workflows finished", "numWorkflows", len(results))
 	for _, res := range results {
 		opts.Logger.Debugw("Verifying callback succeeded", "url", res.URL.String())
-		err := verifyCallbackSucceeded(ctx, opts, res.WorkflowID, res.RunID, res.URL)
+		err := verifyCallbackSucceeded(ctx, opts, rateLimiter, res.WorkflowID, res.RunID, res.URL)
 		if err != nil {
 			numFailures.Add(1)
 			opts.Logger.Errorw("Callback verification failed", "url", res.URL.String(), "error", err)
@@ -201,10 +209,31 @@ func (completionCallbackScenarioExecutor) Run(ctx context.Context, info loadgen.
 	return RunCompletionCallbackScenario(ctx, opts, info)
 }
 
+func timed(f func() error) error {
+	_, err := timed2(func() (struct{}, error) {
+		return struct{}{}, f()
+	})
+	return err
+}
+
+func timed2[T any](f func() (T, error)) (T, error) {
+	now := time.Now()
+	t, err := f()
+	if err != nil {
+		if strings.Contains(err.Error(), "deadline") {
+			return t, fmt.Errorf("deadline exceeded after %v", time.Since(now))
+		}
+		return t, err
+	}
+	return t, nil
+}
+
 func runWorkflow(
 	ctx context.Context,
 	scenarioOptions *CompletionCallbackScenarioOptions,
 	startWorkflowOptions client.StartWorkflowOptions,
+	limiter *rate.Limiter,
+	numStarted *atomic.Int32,
 ) (*completionCallbackScenarioIterationResult, error) {
 	workflowID := uuid.New()
 	u, err := generateURLFromOptions(scenarioOptions, workflowID)
@@ -230,9 +259,18 @@ func runWorkflow(
 			kitchensink.NoOpSingleActivityActionSet(),
 		},
 	}
-	workflowRun, err := scenarioOptions.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
+	if err := limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("wait for rate limiter to start workflow: %w", err)
+	}
+	workflowRun, err := timed2(func() (client.WorkflowRun, error) {
+		return scenarioOptions.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("start workflow with completion callback: %w", err)
+	}
+	numStarted.Add(1)
+	if err := limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("wait for rate limiter to get workflow completion: %w", err)
 	}
 	err = workflowRun.Get(ctx, nil)
 	if err != nil {
@@ -246,9 +284,19 @@ func runWorkflow(
 	}, nil
 }
 
-func verifyCallbackSucceeded(ctx context.Context, options *CompletionCallbackScenarioOptions, workflowID string, runID string, u *url.URL) error {
+func verifyCallbackSucceeded(
+	ctx context.Context,
+	options *CompletionCallbackScenarioOptions,
+	limiter *rate.Limiter,
+	workflowID string,
+	runID string,
+	u *url.URL,
+) error {
 	retryDelay := time.Millisecond * 10
 	for {
+		if err := limiter.Wait(ctx); err != nil {
+			return fmt.Errorf("wait for rate limiter to verify callback succeeded: %w", err)
+		}
 		execution, err := options.SdkClient.DescribeWorkflowExecution(ctx, workflowID, runID)
 		if err != nil {
 			return fmt.Errorf("verify callback succeeded describe workflow: %w", err)
@@ -288,6 +336,9 @@ func verifyCallbackSucceeded(ctx context.Context, options *CompletionCallbackSce
 // validateOptions validates the options for this scenario.
 func validateOptions(options *CompletionCallbackScenarioOptions) error {
 	var errs []error
+	if options.RPS <= 0 {
+		errs = append(errs, fmt.Errorf("%q is required and must be > 0", OptionKeyRPS))
+	}
 	if options.StartingPort < 1024 || options.StartingPort >= 65535 {
 		errs = append(errs, fmt.Errorf("%q is required and must be in [1024, 65535]", OptionKeyStartingPort))
 	}
@@ -318,14 +369,15 @@ func validateOptions(options *CompletionCallbackScenarioOptions) error {
 
 // parseOptions parses the options for this scenario from the given map.
 func parseOptions(m map[string]string, options *CompletionCallbackScenarioOptions) *CompletionCallbackScenarioOptions {
+	options.RPS = loadgen.ScenarioOptionInt(m, OptionKeyRPS, 1000)
 	options.StartingPort = loadgen.ScenarioOptionInt(m, OptionKeyStartingPort, 0)
 	options.NumCallbackHosts = loadgen.ScenarioOptionInt(m, OptionKeyNumCallbackHosts, 0)
 	options.CallbackHostName = m[OptionKeyCallbackHostName]
 	options.DryRun = loadgen.ScenarioOptionBool(m, OptionKeyDryRun, false)
 	options.Lambda = loadgen.ScenarioOptionFloat64(m, OptionKeyLambda, 1.0)
 	options.HalfLife = loadgen.ScenarioOptionFloat64(m, OptionKeyHalfLife, 1.0)
-	options.MaxDelay = loadgen.ScenarioOptionDuration(m, OptionKeyMaxDelay, time.Second*5)
-	options.MaxErrorProbability = loadgen.ScenarioOptionFloat64(m, OptionKeyMaxErrorProbability, 0.0)
+	options.MaxDelay = loadgen.ScenarioOptionDuration(m, OptionKeyMaxDelay, time.Second*1)
+	options.MaxErrorProbability = loadgen.ScenarioOptionFloat64(m, OptionKeyMaxErrorProbability, 0.05)
 	options.AttachWorkflowID = loadgen.ScenarioOptionBool(m, OptionKeyAttachWorkflowID, true)
 	return options
 }

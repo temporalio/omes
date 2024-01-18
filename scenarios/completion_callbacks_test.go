@@ -212,6 +212,7 @@ func TestCompletionCallbackScenario_Run(t *testing.T) {
 	// Create the scenario.
 	logger := zap.NewNop()
 	opts := &scenarios.CompletionCallbackScenarioOptions{
+		RPS:                 100,
 		Logger:              logger.Sugar(),
 		SdkClient:           sdkClient,
 		Clock:               clk,
