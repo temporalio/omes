@@ -14,8 +14,6 @@ public class KitchenSinkWorkflow
 {
     private WorkflowState _workflowState = new();
 
-    // private Channel<ActionSet> _actionSetQueue =
-    //     System.Threading.Channels.Channel.CreateUnbounded<ActionSet>();
     private readonly Queue<ActionSet> _actionSetQueue = new();
 
     [WorkflowSignal("do_actions_signal")]
@@ -23,7 +21,6 @@ public class KitchenSinkWorkflow
     {
         if (doSignals.DoActionsInMain is { } inMain)
         {
-            // _actionSetQueue.Writer.TryWrite(inMain);
             _actionSetQueue.Enqueue(inMain);
         }
         else
@@ -75,7 +72,6 @@ public class KitchenSinkWorkflow
         // Run all actions from signals
         while (true)
         {
-            // var actionSet = await _actionSetQueue.Reader.ReadAsync();
             await Workflow.WaitConditionAsync(() => _actionSetQueue.Count > 0);
             var actionSet = _actionSetQueue.Dequeue();
             var returnMe = await HandleActionSet(actionSet);

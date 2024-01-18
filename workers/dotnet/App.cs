@@ -129,7 +129,7 @@ public static class App
         {
             Telemetry = new TelemetryOptions
             {
-                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Debug) }
             }
         });
 
