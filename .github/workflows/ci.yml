@@ -135,8 +135,8 @@ jobs:
           submodules: 'true'
       - name: Setup Dotnet
         uses: actions/setup-dotnet@v3
-#      - name: Lint TypeScript worker
-#        run: cd workers/typescript && npm run lint-ci
+      - name: Check formatting
+        run: cd workers/dotnet && dotnet format --verify-no-changes
       - name: Setup Go
         uses: actions/setup-go@v2
         with:

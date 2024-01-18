@@ -12,36 +12,36 @@ namespace Temporalio.Omes;
 [Workflow("kitchenSink")]
 public class KitchenSinkWorkflow
 {
-    private WorkflowState _workflowState = new();
+    private WorkflowState workflowState = new();
 
-    private readonly Queue<ActionSet> _actionSetQueue = new();
+    private readonly Queue<ActionSet> actionSetQueue = new();
 
     [WorkflowSignal("do_actions_signal")]
-    public async Task DoActionsSignal(DoSignal.Types.DoSignalActions doSignals)
+    public async Task DoActionsSignalAsync(DoSignal.Types.DoSignalActions doSignals)
     {
         if (doSignals.DoActionsInMain is { } inMain)
         {
-            _actionSetQueue.Enqueue(inMain);
+            actionSetQueue.Enqueue(inMain);
         }
         else
         {
-            await HandleActionSet(doSignals.DoActions);
+            await HandleActionSetAsync(doSignals.DoActions);
         }
     }
 
     [WorkflowUpdate("do_actions_update")]
-    public async Task<object> DoActionsUpdate(DoActionsUpdate actionsUpdate)
+    public async Task<object> DoActionsUpdateAsync(DoActionsUpdate actionsUpdate)
     {
-        var retval = await HandleActionSet(actionsUpdate.DoActions);
+        var retval = await HandleActionSetAsync(actionsUpdate.DoActions);
         if (retval != null)
         {
             return retval;
         }
 
-        return _workflowState;
+        return workflowState;
     }
 
-    [WorkflowUpdateValidator(nameof(DoActionsUpdate))]
+    [WorkflowUpdateValidator(nameof(DoActionsUpdateAsync))]
     public void DoActionsUpdateValidator(DoActionsUpdate actionsUpdate)
     {
         if (actionsUpdate.RejectMe != null)
@@ -51,7 +51,7 @@ public class KitchenSinkWorkflow
     }
 
     [WorkflowQuery("report_state")]
-    public WorkflowState ReportState(object _) => _workflowState;
+    public WorkflowState ReportState(object _) => workflowState;
 
     [WorkflowRun]
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
@@ -61,7 +61,7 @@ public class KitchenSinkWorkflow
         {
             foreach (var actionSet in actions)
             {
-                var returnMe = await HandleActionSet(actionSet);
+                var returnMe = await HandleActionSetAsync(actionSet);
                 if (returnMe != null)
                 {
                     return null;
@@ -72,9 +72,9 @@ public class KitchenSinkWorkflow
         // Run all actions from signals
         while (true)
         {
-            await Workflow.WaitConditionAsync(() => _actionSetQueue.Count > 0);
-            var actionSet = _actionSetQueue.Dequeue();
-            var returnMe = await HandleActionSet(actionSet);
+            await Workflow.WaitConditionAsync(() => actionSetQueue.Count > 0);
+            var actionSet = actionSetQueue.Dequeue();
+            var returnMe = await HandleActionSetAsync(actionSet);
             if (returnMe != null)
             {
                 return returnMe;
@@ -82,7 +82,7 @@ public class KitchenSinkWorkflow
         }
     }
 
-    private async Task<Payload?> HandleActionSet(ActionSet actionSet)
+    private async Task<Payload?> HandleActionSetAsync(ActionSet actionSet)
     {
         Payload? returnMe = null;
         // If actions are non-concurrent, just execute and return if requested
@@ -90,7 +90,7 @@ public class KitchenSinkWorkflow
         {
             foreach (var action in actionSet.Actions)
             {
-                returnMe = await HandleAction(action);
+                returnMe = await HandleActionAsync(action);
                 if (returnMe != null)
                 {
                     return returnMe;
@@ -106,7 +106,7 @@ public class KitchenSinkWorkflow
         {
             async void Action()
             {
-                returnMe = await HandleAction(action);
+                returnMe = await HandleActionAsync(action);
             }
 
             var task = new Task(Action);
@@ -121,7 +121,7 @@ public class KitchenSinkWorkflow
         return returnMe;
     }
 
-    private async Task<Payload?> HandleAction(Temporal.Omes.KitchenSink.Action action)
+    private async Task<Payload?> HandleActionAsync(Temporal.Omes.KitchenSink.Action action)
     {
         var tokenSrc = CancellationTokenSource.CreateLinkedTokenSource(Workflow.CancellationToken);
         if (action.ReturnResult is { } rr)
@@ -139,7 +139,7 @@ public class KitchenSinkWorkflow
         }
         else if (action.Timer is { } timer)
         {
-            await HandleAwaitableChoice(
+            await HandleAwaitableChoiceAsync(
                 Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)
                     .ContinueWith(_ => true),
                 tokenSrc,
@@ -147,7 +147,7 @@ public class KitchenSinkWorkflow
         }
         else if (action.ExecActivity is { } execActivity)
         {
-            await HandleAwaitableChoice(
+            await HandleAwaitableChoiceAsync(
                 LaunchActivity(execActivity, tokenSrc).ContinueWith(_ => true),
                 tokenSrc,
                 execActivity.AwaitableChoice);
@@ -166,7 +166,7 @@ public class KitchenSinkWorkflow
                 RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan()
             };
             var childTask = Workflow.StartChildWorkflowAsync(childType, args, options);
-            await HandleAwaitableChoice(childTask, tokenSrc, execChild.AwaitableChoice,
+            await HandleAwaitableChoiceAsync(childTask, tokenSrc, execChild.AwaitableChoice,
                 afterStartedFn: t => t, afterCompletedFn: async t =>
                 {
                     var childHandle = await t;
@@ -188,12 +188,12 @@ public class KitchenSinkWorkflow
 
             if (wasPatched)
             {
-                return await HandleAction(setPatchMarker.InnerAction);
+                return await HandleActionAsync(setPatchMarker.InnerAction);
             }
         }
         else if (action.SetWorkflowState is { } setWorkflowState)
         {
-            _workflowState = setWorkflowState;
+            workflowState = setWorkflowState;
         }
         else if (action.AwaitWorkflowState is { } awaitWorkflowState)
         {
@@ -244,7 +244,7 @@ public class KitchenSinkWorkflow
         }
         else if (action.NestedActionSet is { } nestedActionSet)
         {
-            return await HandleActionSet(nestedActionSet);
+            return await HandleActionSetAsync(nestedActionSet);
         }
         else
         {
@@ -255,7 +255,7 @@ public class KitchenSinkWorkflow
         return null;
     }
 
-    private async Task HandleAwaitableChoice<T>(
+    private async Task HandleAwaitableChoiceAsync<T>(
         Task<T> awaitableTask,
         CancellationTokenSource canceller,
         AwaitableChoice? choice,
@@ -372,7 +372,7 @@ public class KitchenSinkWorkflow
         };
     }
 
-    private WorkflowState GetWorkflowState() => _workflowState;
+    private WorkflowState GetWorkflowState() => workflowState;
 
     [Activity("noop")]
     public static void Noop()

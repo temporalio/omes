@@ -1,0 +1,3 @@
+- seed: 14244682960483809875
+  sdk: dotnet
+  desc: Encountered nondeterminism error with child workflow / timer interaction
