@@ -368,7 +368,7 @@ public class KitchenSinkWorkflow
             MaximumAttempts = proto.MaximumAttempts,
             NonRetryableErrorTypes = proto.NonRetryableErrorTypes.Count == 0
                 ? null
-                : proto.NonRetryableErrorTypes,
+                : proto.NonRetryableErrorTypes
         };
     }
 
