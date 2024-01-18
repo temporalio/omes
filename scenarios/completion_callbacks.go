@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"github.com/facebookgo/clock"
@@ -135,37 +136,58 @@ func RunCompletionCallbackScenario(
 	opts *CompletionCallbackScenarioOptions,
 	info loadgen.ScenarioInfo,
 ) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	if err := validateOptions(opts); err != nil {
 		return err
 	}
+	var numSuccesses, numFailures, numStarted, numFinished atomic.Int32
+	go func() {
+		t := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return
+			case <-t.C:
+				opts.Logger.Infow("Scenario status",
+					"numStarted", numStarted.Load(), "numFinished", numFinished.Load(),
+					"numSuccesses", numSuccesses.Load(), "numFailures", numFailures.Load(),
+				)
+			}
+		}
+	}()
 	results := make([]*completionCallbackScenarioIterationResult, 0, info.Configuration.Iterations)
 	l := &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
+			numStarted.Add(1)
 			res, err := runWorkflow(ctx, opts, run.DefaultStartWorkflowOptions())
 			if err != nil {
-				return err
+				return fmt.Errorf("run workflow: %w", err)
 			}
+			numFinished.Add(1)
 			opts.Logger.Debugw("Workflow finished", "url", res.URL.String())
 			results = append(results, res)
 			return nil
 		},
 	}
 	if err := l.Run(ctx, info); err != nil {
-		return fmt.Errorf("run workflows: %w", err)
+		return fmt.Errorf("completion callback scenario run generic executor: %w", err)
 	}
-	numErrs := 0
+	opts.Logger.Infow("All workflows finished", "numWorkflows", len(results))
 	for _, res := range results {
 		opts.Logger.Debugw("Verifying callback succeeded", "url", res.URL.String())
 		err := verifyCallbackSucceeded(ctx, opts, res.WorkflowID, res.RunID, res.URL)
 		if err != nil {
-			numErrs++
+			numFailures.Add(1)
 			opts.Logger.Errorw("Callback verification failed", "url", res.URL.String(), "error", err)
 		} else {
+			numSuccesses.Add(1)
 			opts.Logger.Debugw("Callback succeeded", "url", res.URL.String())
 		}
 	}
-	if numErrs > 0 {
-		return fmt.Errorf("%d callbacks failed", numErrs)
+	if numFailures.Load() > 0 {
+		return fmt.Errorf("%d callbacks failed", numFailures.Load())
 	}
 	return nil
 }
@@ -187,7 +209,7 @@ func runWorkflow(
 	workflowID := uuid.New()
 	u, err := generateURLFromOptions(scenarioOptions, workflowID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate callback URL: %w", err)
 	}
 
 	if scenarioOptions.DryRun {
@@ -210,11 +232,11 @@ func runWorkflow(
 	}
 	workflowRun, err := scenarioOptions.SdkClient.ExecuteWorkflow(ctx, startWorkflowOptions, common.WorkflowNameKitchenSink, input)
 	if err != nil {
-		return nil, fmt.Errorf("iteration start workflow: %w", err)
+		return nil, fmt.Errorf("start workflow with completion callback: %w", err)
 	}
 	err = workflowRun.Get(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("iteration wait for workflow: %w", err)
+		return nil, fmt.Errorf("wait for workflow with completion callback: %w", err)
 	}
 
 	return &completionCallbackScenarioIterationResult{
