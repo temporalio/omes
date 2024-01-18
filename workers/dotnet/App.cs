@@ -1,4 +1,5 @@
-﻿using Temporalio.Worker;
+﻿using Temporalio.Runtime;
+using Temporalio.Worker;
 
 namespace Temporalio.Omes;
 
@@ -124,6 +125,13 @@ public static class App
         var logger = loggerFactory.CreateLogger(typeof(App));
 
         // TODO: Configure metrics
+        var runtime = new TemporalRuntime(new()
+        {
+            Telemetry = new TelemetryOptions
+            {
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
+            }
+        });
 
         // Connect a client
         TlsOptions? tls = null;
@@ -133,8 +141,8 @@ public static class App
                 ? null
                 : new()
                 {
-                    ClientCert = File.ReadAllBytes(certPath.FullName),
-                    ClientPrivateKey = File.ReadAllBytes(
+                    ClientCert = await File.ReadAllBytesAsync(certPath.FullName),
+                    ClientPrivateKey = await File.ReadAllBytesAsync(
                         ctx.ParseResult.GetValueForOption(clientKeyPathOption)?.FullName ??
                         throw new ArgumentException("Missing key with cert"))
                 };
@@ -146,8 +154,10 @@ public static class App
         var client = await TemporalClient.ConnectAsync(
             new(serverAddr)
             {
+                Runtime = runtime,
                 Namespace = ctx.ParseResult.GetValueForOption(namespaceOption)!,
-                Tls = tls
+                Tls = tls,
+                LoggerFactory = loggerFactory
             });
 
         // Collect task queues to run workers for

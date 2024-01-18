@@ -1,4 +1,3 @@
-using System.Threading.Channels;
 using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
@@ -15,15 +14,17 @@ public class KitchenSinkWorkflow
 {
     private WorkflowState _workflowState = new();
 
-    private Channel<ActionSet> _actionSetQueue =
-        System.Threading.Channels.Channel.CreateUnbounded<ActionSet>();
+    // private Channel<ActionSet> _actionSetQueue =
+    //     System.Threading.Channels.Channel.CreateUnbounded<ActionSet>();
+    private readonly Queue<ActionSet> _actionSetQueue = new();
 
     [WorkflowSignal("do_actions_signal")]
     public async Task DoActionsSignal(DoSignal.Types.DoSignalActions doSignals)
     {
         if (doSignals.DoActionsInMain is { } inMain)
         {
-            _actionSetQueue.Writer.TryWrite(inMain);
+            // _actionSetQueue.Writer.TryWrite(inMain);
+            _actionSetQueue.Enqueue(inMain);
         }
         else
         {
@@ -74,7 +75,9 @@ public class KitchenSinkWorkflow
         // Run all actions from signals
         while (true)
         {
-            var actionSet = await _actionSetQueue.Reader.ReadAsync();
+            // var actionSet = await _actionSetQueue.Reader.ReadAsync();
+            await Workflow.WaitConditionAsync(() => _actionSetQueue.Count > 0);
+            var actionSet = _actionSetQueue.Dequeue();
             var returnMe = await HandleActionSet(actionSet);
             if (returnMe != null)
             {
@@ -105,7 +108,13 @@ public class KitchenSinkWorkflow
         var tasks = new List<Task>();
         foreach (var action in actionSet.Actions)
         {
-            var task = new Task(async () => { returnMe = await HandleAction(action); });
+            async void Action()
+            {
+                returnMe = await HandleAction(action);
+            }
+
+            var task = new Task(Action);
+            task.Start();
             tasks.Add(task);
         }
 
@@ -113,12 +122,12 @@ public class KitchenSinkWorkflow
         var allTasksDone = Task.WhenAll(tasks);
         await Workflow.WhenAnyAsync(waitReturnSet, allTasksDone);
 
-
         return returnMe;
     }
 
     private async Task<Payload?> HandleAction(Temporal.Omes.KitchenSink.Action action)
     {
+        var tokenSrc = CancellationTokenSource.CreateLinkedTokenSource(Workflow.CancellationToken);
         if (action.ReturnResult is { } rr)
         {
             return rr.ReturnThis;
@@ -134,15 +143,14 @@ public class KitchenSinkWorkflow
         }
         else if (action.Timer is { } timer)
         {
-            var tokenSrc = new CancellationTokenSource();
             await HandleAwaitableChoice(
-                Workflow.DelayAsync((int)timer.Milliseconds).ContinueWith(_ => true),
+                Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)
+                    .ContinueWith(_ => true),
                 tokenSrc,
                 timer.AwaitableChoice);
         }
         else if (action.ExecActivity is { } execActivity)
         {
-            var tokenSrc = new CancellationTokenSource();
             await HandleAwaitableChoice(
                 LaunchActivity(execActivity, tokenSrc).ContinueWith(_ => true),
                 tokenSrc,
@@ -150,11 +158,11 @@ public class KitchenSinkWorkflow
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
-            var tokenSrc = new CancellationTokenSource();
             var childType = execChild.WorkflowType ?? "kitchenSink";
             var args = execChild.Input.Select(p => new RawValue(p)).ToArray();
             var options = new ChildWorkflowOptions
             {
+                CancellationToken = tokenSrc.Token,
                 Id = execChild.WorkflowId == "" ? null : execChild.WorkflowId,
                 TaskQueue = execChild.TaskQueue,
                 ExecutionTimeout = execChild.WorkflowExecutionTimeout?.ToTimeSpan(),
@@ -171,7 +179,7 @@ public class KitchenSinkWorkflow
         }
         else if (action.SetPatchMarker is { } setPatchMarker)
         {
-            var wasPatched = false;
+            bool wasPatched;
             if (setPatchMarker.Deprecated)
             {
                 Workflow.DeprecatePatch(setPatchMarker.PatchId);
@@ -193,15 +201,20 @@ public class KitchenSinkWorkflow
         }
         else if (action.AwaitWorkflowState is { } awaitWorkflowState)
         {
+            Workflow.Logger.LogInformation("Awaiting workflow state key {}",
+                awaitWorkflowState.Key);
             await Workflow.WaitConditionAsync(() =>
             {
-                if (!_workflowState.Kvs.TryGetValue(awaitWorkflowState.Key, out string? value))
+                if (!GetWorkflowState().Kvs.TryGetValue(awaitWorkflowState.Key, out string value))
                 {
                     return false;
                 }
 
                 return value == awaitWorkflowState.Value;
             });
+            Workflow.Logger.LogInformation("Workflow state key {} is now {}",
+                awaitWorkflowState.Key,
+                awaitWorkflowState.Value);
         }
         else if (action.UpsertMemo is { } upsertMemo)
         {
@@ -297,6 +310,16 @@ public class KitchenSinkWorkflow
                 throw;
             }
         }
+        catch (ChildWorkflowFailureException e)
+        {
+            // TODO: remove when https://github.com/temporalio/sdk-dotnet/issues/178 is fixed
+            if (didCancel && e.Message.Contains("cancelled"))
+            {
+                return;
+            }
+
+            throw;
+        }
     }
 
     private Task LaunchActivity(ExecuteActivityAction eaa, CancellationTokenSource tokenSrc)
@@ -352,6 +375,8 @@ public class KitchenSinkWorkflow
                 : proto.NonRetryableErrorTypes,
         };
     }
+
+    private WorkflowState GetWorkflowState() => _workflowState;
 
     [Activity("noop")]
     public static void Noop()
