@@ -99,14 +99,12 @@ struct ExampleCmd {
 }
 
 #[derive(clap::Args, Debug, Clone)]
-#[clap(group(
-    clap::ArgGroup::new("output").args(&["use_stdout", "output_path"]),
-))]
 struct OutputConfig {
     /// Output goes to stdout, this is the default.
     #[clap(long, default_value_t = true)]
     use_stdout: bool,
-    /// Output goes to the provided file path as protobuf binary.
+    /// Output goes to the provided file path as protobuf binary. Not exclusive with stdout. Both
+    /// may be used if desired.
     #[clap(long)]
     output_path: Option<PathBuf>,
     /// Output will be in Rust debug format if set true. JSON is obnoxious to use with prost at
@@ -764,7 +762,8 @@ fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result
     if let Some(path) = output_kind.output_path {
         let mut file = std::fs::File::create(path)?;
         file.write_all(&buf)?;
-    } else {
+    }
+    if output_kind.use_stdout {
         std::io::stdout().write_all(&buf)?;
     }
     Ok(())
