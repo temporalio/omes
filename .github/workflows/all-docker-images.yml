@@ -15,6 +15,9 @@ on:
       ts-version:
         description: TypeScript SDK version to build. Skipped if not specified. Must start with v.
         type: string
+      dotnet-version:
+        description: Dotnet SDK version to build. Skipped if not specified. Must start with v.
+        type: string
       do-push:
         description: If set, push the built images to Docker Hub.
         type: boolean
@@ -34,6 +37,9 @@ on:
         type: string
       ts-version:
         description: TypeScript SDK version to build. Skipped if not specified. Must start with v.
+        type: string
+      dotnet-version:
+        description: Dotnet SDK version to build. Skipped if not specified. Must start with v.
         type: string
       do-push:
         description: If set, push the built images to Docker Hub.
@@ -76,4 +82,13 @@ jobs:
     with:
       lang: typescript
       sdk-version: ${{ inputs.ts-version }}
+      do-push: ${{ inputs.do-push }}
+
+  build-dotnet-docker-images:
+    if: inputs.dotnet-version
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      lang: dotnet
+      sdk-version: ${{ inputs.dotnet-version }}
       do-push: ${{ inputs.do-push }}

@@ -149,6 +149,8 @@ func (r *workerRunner) run(ctx context.Context) error {
 			prog, err = sdkbuild.JavaProgramFromDir(loadDir)
 		case "typescript":
 			prog, err = sdkbuild.TypeScriptProgramFromDir(loadDir)
+		case "dotnet":
+			prog, err = sdkbuild.DotNetProgramFromDir(loadDir)
 		default:
 			return fmt.Errorf("unrecognized language %v", lang)
 		}
