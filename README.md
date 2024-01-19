@@ -111,6 +111,23 @@ This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
 Publishing images is typically done via CI, using the `push-images` command. See the GHA workflows
 for more.
 
+### Debugging workers
+
+First, generate the worker code:
+
+```shell
+go run ./cmd prepare-worker --dir-name omes-temp-worker --language go
+```
+
+Then, run it:
+
+```shell
+cd workers/go/omes-temp-worker
+SCENARIO=completion_callbacks
+RUN_ID=local-test-run
+dlv debug -- --task-queue "${SCENARIO}:${RUN_ID}"
+```
+
 ## Design decisions
 
 ### Kitchen Sink Workflow

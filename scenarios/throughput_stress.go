@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.temporal.io/api/workflowservice/v1"
 	"sync/atomic"
 	"time"
+
+	"github.com/temporalio/omes/common"
+	"go.temporal.io/api/workflowservice/v1"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -79,7 +81,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
 					},
 				},
-				"throughputStress",
+				common.WorkflowNameThroughputStress,
 				&result,
 				throughputstress.WorkflowParams{
 					Iterations:                   internalIterations,

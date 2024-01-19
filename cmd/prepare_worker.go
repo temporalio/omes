@@ -22,7 +22,13 @@ func prepareWorkerCmd() *cobra.Command {
 		Short: "Build worker ready to run",
 		Run: func(cmd *cobra.Command, args []string) {
 			if _, err := b.build(cmd.Context()); err != nil {
-				b.logger.Fatal(err)
+				logger := b.logger
+				if logger != nil {
+					logger.Fatal(err)
+				} else {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
 			}
 		},
 	}
@@ -94,7 +100,9 @@ func (b *workerBuilder) buildGo(ctx context.Context, baseDir string) (sdkbuild.P
 		Version: b.version,
 		GoModContents: `module github.com/temporalio/omes-worker
 
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
