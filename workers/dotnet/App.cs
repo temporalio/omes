@@ -129,23 +129,22 @@ public static class App
         {
             Telemetry = new TelemetryOptions
             {
-                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Debug) }
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
             }
         });
 
         // Connect a client
         TlsOptions? tls = null;
-        if (ctx.ParseResult.GetValueForOption(useTLSOption))
+        var certPath = ctx.ParseResult.GetValueForOption(clientCertPathOption);
+        if (ctx.ParseResult.GetValueForOption(useTLSOption) || certPath != null)
         {
-            tls = ctx.ParseResult.GetValueForOption(clientCertPathOption) is not { } certPath
-                ? null
-                : new()
-                {
-                    ClientCert = await File.ReadAllBytesAsync(certPath.FullName),
-                    ClientPrivateKey = await File.ReadAllBytesAsync(
+            tls = certPath is null ? new() : new()
+            {
+                ClientCert = await File.ReadAllBytesAsync(certPath.FullName),
+                ClientPrivateKey = await File.ReadAllBytesAsync(
                         ctx.ParseResult.GetValueForOption(clientKeyPathOption)?.FullName ??
                         throw new ArgumentException("Missing key with cert"))
-                };
+            };
         }
 
         var serverAddr = ctx.ParseResult.GetValueForOption(serverOption)!;
@@ -203,6 +202,13 @@ public static class App
             workerTasks.Add(workerTask);
         }
 
+        var doneTask = await Task.WhenAny(workerTasks.ToArray());
+        await doneTask;
+        if (doneTask.IsFaulted)
+        {
+            throw doneTask.Exception!;
+        }
+        // Make sure every worker task is completed
         await Task.WhenAll(workerTasks.ToArray());
     }
 }

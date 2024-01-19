@@ -12,8 +12,6 @@ namespace Temporalio.Omes;
 [Workflow("kitchenSink")]
 public class KitchenSinkWorkflow
 {
-    private WorkflowState workflowState = new();
-
     private readonly Queue<ActionSet> actionSetQueue = new();
 
     [WorkflowSignal("do_actions_signal")]
@@ -38,7 +36,7 @@ public class KitchenSinkWorkflow
             return retval;
         }
 
-        return workflowState;
+        return CurrentWorkflowState;
     }
 
     [WorkflowUpdateValidator(nameof(DoActionsUpdateAsync))]
@@ -51,7 +49,7 @@ public class KitchenSinkWorkflow
     }
 
     [WorkflowQuery("report_state")]
-    public WorkflowState ReportState(object _) => workflowState;
+    public WorkflowState CurrentWorkflowState { get; private set; } = new();
 
     [WorkflowRun]
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
@@ -193,24 +191,19 @@ public class KitchenSinkWorkflow
         }
         else if (action.SetWorkflowState is { } setWorkflowState)
         {
-            workflowState = setWorkflowState;
+            CurrentWorkflowState = setWorkflowState;
         }
         else if (action.AwaitWorkflowState is { } awaitWorkflowState)
         {
-            Workflow.Logger.LogInformation("Awaiting workflow state key {}",
-                awaitWorkflowState.Key);
             await Workflow.WaitConditionAsync(() =>
             {
-                if (!GetWorkflowState().Kvs.TryGetValue(awaitWorkflowState.Key, out string value))
+                if (!CurrentWorkflowState.Kvs.TryGetValue(awaitWorkflowState.Key, out string value))
                 {
                     return false;
                 }
 
                 return value == awaitWorkflowState.Value;
             });
-            Workflow.Logger.LogInformation("Workflow state key {} is now {}",
-                awaitWorkflowState.Key,
-                awaitWorkflowState.Value);
         }
         else if (action.UpsertMemo is { } upsertMemo)
         {
@@ -371,8 +364,6 @@ public class KitchenSinkWorkflow
                 : proto.NonRetryableErrorTypes
         };
     }
-
-    private WorkflowState GetWorkflowState() => workflowState;
 
     [Activity("noop")]
     public static void Noop()
