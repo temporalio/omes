@@ -7,6 +7,7 @@ import (
 
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 type GenericExecutor struct {
@@ -25,6 +26,7 @@ type genericRun struct {
 	info     ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
+	limiter  *rate.Limiter
 	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
 }
@@ -104,8 +106,16 @@ func (g *genericRun) Run(ctx context.Context) error {
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
 		go func() {
-			startTime := time.Now()
-			err := g.executor.Execute(ctx, run)
+			var runStartTime time.Time
+			err := func() error {
+				if g.limiter != nil {
+					if innerErr := g.limiter.Wait(ctx); innerErr != nil {
+						return innerErr
+					}
+				}
+				runStartTime = time.Now()
+				return g.executor.Execute(ctx, run)
+			}()
 			// Only log/wrap/send to channel if context is not done
 			if ctx.Err() == nil {
 				if err != nil {
@@ -116,7 +126,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				case <-ctx.Done():
 				case doneCh <- err:
 					// Record/log here, not if it was cut short by context complete
-					g.executeTimer.Record(time.Since(startTime))
+					g.executeTimer.Record(time.Since(runStartTime))
 				}
 			}
 		}()
