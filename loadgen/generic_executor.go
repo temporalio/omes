@@ -7,7 +7,6 @@ import (
 
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 )
 
 type GenericExecutor struct {
@@ -26,7 +25,6 @@ type genericRun struct {
 	info     ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
-	limiter  *rate.Limiter
 	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
 }
@@ -55,6 +53,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	}
 	if run.config.MaxConcurrent == 0 {
 		run.config.MaxConcurrent = g.DefaultConfiguration.MaxConcurrent
+	}
+	if run.config.Limiter == nil {
+		run.config.Limiter = g.DefaultConfiguration.Limiter
 	}
 	run.config.ApplyDefaults()
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
@@ -108,8 +109,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 		go func() {
 			var runStartTime time.Time
 			err := func() error {
-				if g.limiter != nil {
-					if innerErr := g.limiter.Wait(ctx); innerErr != nil {
+				if g.config.Limiter != nil {
+					if innerErr := g.config.Limiter.Wait(ctx); innerErr != nil {
 						return innerErr
 					}
 				}
