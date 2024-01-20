@@ -54,6 +54,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if run.config.MaxConcurrent == 0 {
 		run.config.MaxConcurrent = g.DefaultConfiguration.MaxConcurrent
 	}
+	if run.config.Limiter == nil {
+		run.config.Limiter = g.DefaultConfiguration.Limiter
+	}
 	run.config.ApplyDefaults()
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
 		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
@@ -104,8 +107,16 @@ func (g *genericRun) Run(ctx context.Context) error {
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
 		go func() {
-			startTime := time.Now()
-			err := g.executor.Execute(ctx, run)
+			var runStartTime time.Time
+			err := func() error {
+				if g.config.Limiter != nil {
+					if innerErr := g.config.Limiter.Wait(ctx); innerErr != nil {
+						return innerErr
+					}
+				}
+				runStartTime = time.Now()
+				return g.executor.Execute(ctx, run)
+			}()
 			// Only log/wrap/send to channel if context is not done
 			if ctx.Err() == nil {
 				if err != nil {
@@ -116,7 +127,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				case <-ctx.Done():
 				case doneCh <- err:
 					// Record/log here, not if it was cut short by context complete
-					g.executeTimer.Record(time.Since(startTime))
+					g.executeTimer.Record(time.Since(runStartTime))
 				}
 			}
 		}()

@@ -3,8 +3,6 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -12,8 +10,11 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 type Scenario struct {
@@ -110,6 +111,9 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 const DefaultIterations = 10
 const DefaultMaxConcurrent = 10
 
+// DefaultRateLimiter is unlimited
+var DefaultRateLimiter = rate.NewLimiter(rate.Inf, 0)
+
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
@@ -119,6 +123,8 @@ type RunConfiguration struct {
 	// Maximum number of instances of the Execute method to run concurrently.
 	// Default is DefaultMaxConcurrent.
 	MaxConcurrent int
+	// Rate limiter to be Wait-ed before each iteration.
+	Limiter *rate.Limiter
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
@@ -127,6 +133,9 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 	if r.MaxConcurrent == 0 {
 		r.MaxConcurrent = DefaultMaxConcurrent
+	}
+	if r.Limiter == nil {
+		r.Limiter = DefaultRateLimiter
 	}
 }
 
