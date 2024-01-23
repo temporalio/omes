@@ -113,8 +113,10 @@ const DefaultMaxConcurrent = 10
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
-	// Duration limit of this scenario (mutually exclusive with Iterations). If
-	// neither iterations nor duration is set, default is DefaultIterations.
+	// Duration limit of this scenario (mutually exclusive with Iterations). If neither iterations
+	// nor duration is set, default is DefaultIterations. When the Duration is elapsed, no new
+	// iterations will be started, but we will wait for any currently running iterations to
+	// complete.
 	Duration time.Duration
 	// Maximum number of instances of the Execute method to run concurrently.
 	// Default is DefaultMaxConcurrent.

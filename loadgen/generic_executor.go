@@ -94,6 +94,12 @@ func (g *genericRun) Run(ctx context.Context) error {
 		}
 	}
 
+	if g.config.Iterations > 0 {
+		g.logger.Debugf("Will run %v iterations", g.config.Iterations)
+	} else {
+		g.logger.Debugf("Will start iterations for %v", g.config.Duration)
+	}
+
 	// Run all until we've gotten an error or reached iteration limit or timeout
 	for i := 0; runErr == nil && timeoutCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {

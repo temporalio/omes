@@ -34,30 +34,47 @@ func runScenarioCmd() *cobra.Command {
 }
 
 type scenarioRunner struct {
-	logger          *zap.SugaredLogger
-	scenario        string
-	runID           string
+	scenarioID
+	scenarioRunConfig
+	logger         *zap.SugaredLogger
+	connectTimeout time.Duration
+	clientOptions  cmdoptions.ClientOptions
+	metricsOptions cmdoptions.MetricsOptions
+	loggingOptions cmdoptions.LoggingOptions
+}
+
+type scenarioID struct {
+	scenario string
+	runID    string
+}
+
+type scenarioRunConfig struct {
 	iterations      int
 	duration        time.Duration
 	maxConcurrent   int
 	scenarioOptions []string
-	connectTimeout  time.Duration
-	clientOptions   cmdoptions.ClientOptions
-	metricsOptions  cmdoptions.MetricsOptions
-	loggingOptions  cmdoptions.LoggingOptions
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
-	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
-	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
-	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)")
-	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
-	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	r.scenarioID.addCLIFlags(fs)
+	r.scenarioRunConfig.addCLIFlags(fs)
 	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "")
 	r.loggingOptions.AddCLIFlags(fs)
+}
+
+func (r *scenarioID) addCLIFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
+	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
+}
+
+func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
+	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
+	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
+		" This is the amount of time for which we will start new iterations of the scenario.")
+	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
+	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
