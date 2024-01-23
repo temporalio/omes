@@ -54,6 +54,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if run.config.MaxConcurrent == 0 {
 		run.config.MaxConcurrent = g.DefaultConfiguration.MaxConcurrent
 	}
+	if run.config.Timeout == 0 {
+		run.config.Timeout = g.DefaultConfiguration.Timeout
+	}
 	run.config.ApplyDefaults()
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
 		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
@@ -68,20 +71,26 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 // iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
-	timeoutCtx := ctx
-	if g.config.Duration > 0 {
-		timeoutCtx, cancel = context.WithTimeout(ctx, g.config.Duration)
+	if g.config.Timeout > 0 {
+		g.logger.Debugf("Will timeout after %v", g.config.Timeout)
+		ctx, cancel = context.WithTimeout(ctx, g.config.Timeout)
 	}
 	defer cancel()
+
+	durationCtx := ctx
+	if g.config.Duration > 0 {
+		durationCtx, cancel = context.WithTimeout(ctx, g.config.Duration)
+		defer cancel()
+	}
 
 	startTime := time.Now()
 	var runErr error
 	doneCh := make(chan error)
 	var currentlyRunning int
-	waitOne := func(exitOnTimeout bool) {
+	waitOne := func(exitOnDurationDone bool) {
 		timeoutOrPending := make(<-chan struct{})
-		if exitOnTimeout {
-			timeoutOrPending = timeoutCtx.Done()
+		if exitOnDurationDone {
+			timeoutOrPending = durationCtx.Done()
 		}
 		select {
 		case err := <-doneCh:
@@ -101,13 +110,13 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := 0; runErr == nil && timeoutCtx.Err() == nil &&
+	for i := 0; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
 			waitOne(true)
 			// Exit loop if error
-			if runErr != nil || timeoutCtx.Err() != nil {
+			if runErr != nil || durationCtx.Err() != nil {
 				break
 			}
 		}
@@ -137,8 +146,11 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
-	for runErr == nil && currentlyRunning > 0 {
+	for runErr == nil && currentlyRunning > 0 && ctx.Err() == nil {
 		waitOne(false)
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 	}
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)

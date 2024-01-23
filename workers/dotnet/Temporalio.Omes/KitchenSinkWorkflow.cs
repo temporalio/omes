@@ -292,22 +292,9 @@ public class KitchenSinkWorkflow
                 await awaitableTask;
             }
         }
-        catch (CanceledFailureException)
+        catch (Exception e) when (TemporalException.IsCanceledException(e)
         {
-            if (!didCancel)
-            {
-                throw;
-            }
-        }
-        catch (ChildWorkflowFailureException e)
-        {
-            // TODO: remove when https://github.com/temporalio/sdk-dotnet/issues/178 is fixed
-            if (didCancel && e.Message.Contains("cancelled"))
-            {
-                return;
-            }
-
-            throw;
+            return;
         }
     }
 

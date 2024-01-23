@@ -53,6 +53,7 @@ type scenarioRunConfig struct {
 	duration        time.Duration
 	maxConcurrent   int
 	scenarioOptions []string
+	timeout         time.Duration
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -73,6 +74,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
+	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
+		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
 	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
 }
@@ -128,6 +131,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			Iterations:    r.iterations,
 			Duration:      r.duration,
 			MaxConcurrent: r.maxConcurrent,
+			Timeout:       r.timeout,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,

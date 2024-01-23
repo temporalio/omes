@@ -65,6 +65,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 			duration:        r.duration,
 			maxConcurrent:   r.maxConcurrent,
 			scenarioOptions: r.scenarioOptions,
+			timeout:         r.timeout,
 		},
 		clientOptions:  r.clientOptions,
 		metricsOptions: r.metricsOptions,
