@@ -68,8 +68,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 // iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
+	timeoutCtx := ctx
 	if g.config.Duration > 0 {
-		ctx, cancel = context.WithTimeout(ctx, g.config.Duration)
+		timeoutCtx, cancel = context.WithTimeout(ctx, g.config.Duration)
 	}
 	defer cancel()
 
@@ -77,7 +78,11 @@ func (g *genericRun) Run(ctx context.Context) error {
 	var runErr error
 	doneCh := make(chan error)
 	var currentlyRunning int
-	waitOne := func() {
+	waitOne := func(exitOnTimeout bool) {
+		timeoutOrPending := make(<-chan struct{})
+		if exitOnTimeout {
+			timeoutOrPending = timeoutCtx.Done()
+		}
 		select {
 		case err := <-doneCh:
 			currentlyRunning--
@@ -85,17 +90,18 @@ func (g *genericRun) Run(ctx context.Context) error {
 				runErr = err
 			}
 		case <-ctx.Done():
+		case <-timeoutOrPending:
 		}
 	}
 
-	// Run all until we've gotten an error or reached iteration limit
-	for i := 0; runErr == nil && ctx.Err() == nil &&
+	// Run all until we've gotten an error or reached iteration limit or timeout
+	for i := 0; runErr == nil && timeoutCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
-			waitOne()
+			waitOne(true)
 			// Exit loop if error
-			if runErr != nil || ctx.Err() != nil {
+			if runErr != nil || timeoutCtx.Err() != nil {
 				break
 			}
 		}
@@ -106,24 +112,27 @@ func (g *genericRun) Run(ctx context.Context) error {
 		go func() {
 			startTime := time.Now()
 			err := g.executor.Execute(ctx, run)
-			// Only log/wrap/send to channel if context is not done
-			if ctx.Err() == nil {
-				if err != nil {
-					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-					g.logger.Error(err)
-				}
-				select {
-				case <-ctx.Done():
-				case doneCh <- err:
-					// Record/log here, not if it was cut short by context complete
-					g.executeTimer.Record(time.Since(startTime))
-				}
+			if err != nil {
+				err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
+				g.logger.Error(err)
+			}
+			select {
+			case <-ctx.Done():
+			case doneCh <- err:
+				// Record/log here, not if it was cut short by context complete
+				g.executeTimer.Record(time.Since(startTime))
 			}
 		}()
 	}
-	// Wait for all to be done or an error to occur
-	for runErr == nil && ctx.Err() == nil && currentlyRunning > 0 {
-		waitOne()
+	g.logger.Debugf("No longer starting new iterations")
+	if currentlyRunning == 0 {
+		return fmt.Errorf("no runs were started. Iterations should be >0 or duration should be >0")
+	}
+	// Wait for all to be done or an error to occur. We will wait past the overall duration for
+	// executions to complete. It is expected that whatever is running omes may choose to enforce
+	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
+	for runErr == nil && currentlyRunning > 0 {
+		waitOne(false)
 	}
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
