@@ -128,3 +128,36 @@ func TestRunFailDuration(t *testing.T) {
 	require.ErrorContains(t, err, "run finished with error")
 	tracker.assertSeen(t, 2)
 }
+
+func TestRunDurationWithTimeout(t *testing.T) {
+	tracker := newIterationTracker()
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
+			tracker.track(run.Iteration)
+			time.Sleep(time.Millisecond * 20)
+			return nil
+		},
+		DefaultConfiguration: RunConfiguration{
+			Duration: 100 * time.Millisecond,
+			Timeout:  10 * time.Millisecond},
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "timed out")
+}
+
+func TestRunIterationsWithTimeout(t *testing.T) {
+	tracker := newIterationTracker()
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
+			time.Sleep(time.Millisecond * 20)
+			tracker.track(run.Iteration)
+			return nil
+		},
+		DefaultConfiguration: RunConfiguration{
+			Iterations: 5,
+			Timeout:    10 * time.Millisecond,
+		},
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "timed out")
+}
