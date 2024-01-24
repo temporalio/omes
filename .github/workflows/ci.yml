@@ -183,8 +183,8 @@ jobs:
         run: cargo build
       - name: Check diff
         run: |
-          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; exit 1)
-  
+          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; false) 1>&2
+
   push-latest-docker-images:
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
