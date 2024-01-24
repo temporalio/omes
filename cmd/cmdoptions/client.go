@@ -3,6 +3,7 @@ package cmdoptions
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -36,6 +37,10 @@ type ClientOptions struct {
 	Namespace string
 	// Enable TLS
 	EnableTLS bool
+	// Skip host verification
+	SkipVerify bool
+	// TLS CA cert
+	CACertPath string
 	// TLS client cert
 	ClientCertPath string
 	// TLS client private key
@@ -46,6 +51,10 @@ type ClientOptions struct {
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
 func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
+	config := &tls.Config{
+		InsecureSkipVerify: c.SkipVerify,
+	}
+
 	if c.ClientCertPath != "" {
 		if c.ClientKeyPath == "" {
 			return nil, errors.New("got TLS cert with no key")
@@ -54,12 +63,22 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load certs: %s", err)
 		}
-		return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
+		config.Certificates = []tls.Certificate{cert}
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
 	}
+	if c.CACertPath != "" {
+		tlsCaPool := x509.NewCertPool()
+		b, err := os.ReadFile(c.CACertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed reading CA cert: %w", err)
+		} else if !tlsCaPool.AppendCertsFromPEM(b) {
+			return nil, fmt.Errorf("CA cert file invalid")
+		}
+		config.RootCAs = tlsCaPool
+	}
 	if c.EnableTLS {
-		return &tls.Config{}, nil
+		return config, nil
 	}
 	return nil, nil
 }
@@ -121,6 +140,8 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
 	fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
 	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
+	fs.BoolVar(&c.SkipVerify, "tls-skip-verify", false, "TLS skip verify")
+	fs.StringVar(&c.CACertPath, "tls-ca-cert-path", "", "Path to CA TLS certificate")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
@@ -137,6 +158,12 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	}
 	if c.EnableTLS {
 		flags = append(flags, "--tls")
+	}
+	if c.SkipVerify {
+		flags = append(flags, "--tls-skip-verify")
+	}
+	if c.CACertPath != "" {
+		flags = append(flags, "--tls-ca-cert-path", c.CACertPath)
 	}
 	if c.ClientCertPath != "" {
 		flags = append(flags, "--tls-cert-path", c.ClientCertPath)
