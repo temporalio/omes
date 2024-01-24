@@ -18,10 +18,6 @@ type KSWorkflowState struct {
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
-	err := workflow.Sleep(ctx, 10*time.Second)
-	if err != nil {
-		return nil, err
-	}
 
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},

@@ -87,10 +87,10 @@ func (g *genericRun) Run(ctx context.Context) error {
 	var runErr error
 	doneCh := make(chan error)
 	var currentlyRunning int
-	waitOne := func(exitOnDurationDone bool) {
-		timeoutOrPending := make(<-chan struct{})
-		if exitOnDurationDone {
-			timeoutOrPending = durationCtx.Done()
+	waitOne := func(respectDuration bool) {
+		durationDone := make(<-chan struct{})
+		if respectDuration {
+			durationDone = durationCtx.Done()
 		}
 		select {
 		case err := <-doneCh:
@@ -99,7 +99,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				runErr = err
 			}
 		case <-ctx.Done():
-		case <-timeoutOrPending:
+		case <-durationDone:
 		}
 	}
 
@@ -110,7 +110,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := 0; runErr == nil && durationCtx.Err() == nil &&
+	for i := 0; runErr == nil && durationCtx.Err() == nil && ctx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
@@ -140,17 +140,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 		}()
 	}
 	g.logger.Debugf("No longer starting new iterations")
-	if currentlyRunning == 0 {
-		return fmt.Errorf("no runs were started. Iterations should be >0 or duration should be >0")
-	}
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
-	for runErr == nil && currentlyRunning > 0 && ctx.Err() == nil {
+	for runErr == nil && currentlyRunning > 0 {
 		waitOne(false)
-	}
-	if ctx.Err() != nil {
-		return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
+		if ctx.Err() != nil {
+			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
+		}
 	}
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
