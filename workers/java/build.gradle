@@ -29,7 +29,7 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.2.9'
     implementation 'com.google.guava:guava:31.0.1-jre'
     implementation 'com.google.code.gson:gson:2.8.9'
-    implementation 'com.jayway.jsonpath:json-path:2.6.0'
+    implementation 'com.jayway.jsonpath:json-path:2.9.0'
     implementation 'info.picocli:picocli:4.6.2'
     implementation 'io.temporal:temporal-sdk:1.22.3'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
