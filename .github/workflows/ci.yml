@@ -1,5 +1,8 @@
 name: Continuous Integration
 
+## !!NOTE!! Make sure you keep the sdk versions used in the build/test steps consistent with
+##   the versions used when building & pushing the docker images.
+
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
@@ -180,4 +183,17 @@ jobs:
         run: cargo build
       - name: Check diff
         run: |
-          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; exit 1)
+          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; false) 1>&2
+
+  push-latest-docker-images:
+    uses: ./.github/workflows/all-docker-images.yml
+    secrets: inherit
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    with:
+      do-push: true
+      as-latest: true
+      go-version: 'v1.25.2-0.20231129171107-288a04f72145'
+      ts-version: 'v1.9.0-rc.0'
+      java-version: 'v1.22.3'
+      py-version: 'v1.4.0'
+      dotnet-version: 'v1.0.0'
