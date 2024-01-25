@@ -87,19 +87,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 	var runErr error
 	doneCh := make(chan error)
 	var currentlyRunning int
-	waitOne := func(respectDuration bool) {
-		durationDone := make(<-chan struct{})
-		if respectDuration {
-			durationDone = durationCtx.Done()
-		}
+	waitOne := func(contextToWaitOn context.Context) {
 		select {
 		case err := <-doneCh:
 			currentlyRunning--
 			if err != nil {
 				runErr = err
 			}
-		case <-ctx.Done():
-		case <-durationDone:
+		case <-contextToWaitOn.Done():
 		}
 	}
 
@@ -110,12 +105,12 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := 0; runErr == nil && durationCtx.Err() == nil && ctx.Err() == nil &&
+	for i := 0; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 		// If there are already more running than max concurrent, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
-			waitOne(true)
-			// Exit loop if error
+			waitOne(durationCtx)
+			// Exit loop on first error, or if scenario duration has elapsed
 			if runErr != nil || durationCtx.Err() != nil {
 				break
 			}
@@ -144,7 +139,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
 	for runErr == nil && currentlyRunning > 0 {
-		waitOne(false)
+		waitOne(ctx)
 		if ctx.Err() != nil {
 			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 		}

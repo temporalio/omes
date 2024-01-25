@@ -130,10 +130,8 @@ func TestRunFailDuration(t *testing.T) {
 }
 
 func TestRunDurationWithTimeout(t *testing.T) {
-	tracker := newIterationTracker()
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
 			time.Sleep(time.Millisecond * 20)
 			return nil
 		},
@@ -146,11 +144,9 @@ func TestRunDurationWithTimeout(t *testing.T) {
 }
 
 func TestRunIterationsWithTimeout(t *testing.T) {
-	tracker := newIterationTracker()
 	err := execute(&GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
 			time.Sleep(time.Millisecond * 20)
-			tracker.track(run.Iteration)
 			return nil
 		},
 		DefaultConfiguration: RunConfiguration{
@@ -160,4 +156,36 @@ func TestRunIterationsWithTimeout(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "timed out")
+}
+
+func TestRunDurationWithoutTimeout(t *testing.T) {
+	tracker := newIterationTracker()
+	startTime := time.Now()
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
+			tracker.track(run.Iteration)
+			time.Sleep(time.Millisecond * 20)
+			return nil
+		},
+		DefaultConfiguration: RunConfiguration{Duration: 1 * time.Millisecond},
+	})
+	require.GreaterOrEqual(t, time.Since(startTime), time.Millisecond*20)
+	require.NoError(t, err)
+	tracker.assertSeen(t, DefaultMaxConcurrent)
+}
+
+func TestRunIterationsWithoutTimeout(t *testing.T) {
+	tracker := newIterationTracker()
+	startTime := time.Now()
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
+			tracker.track(run.Iteration)
+			time.Sleep(time.Millisecond * 20)
+			return nil
+		},
+		DefaultConfiguration: RunConfiguration{Iterations: 5},
+	})
+	require.GreaterOrEqual(t, time.Since(startTime), time.Millisecond*20)
+	require.NoError(t, err)
+	tracker.assertSeen(t, 5)
 }
