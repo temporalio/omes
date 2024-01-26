@@ -175,7 +175,7 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 		}
 		for _, line := range strings.Split(string(b), "\n") {
 			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "\"temporalio\":") {
+			if strings.HasPrefix(line, "\"temporalio:\"") || strings.HasPrefix(line, "\"@temporalio/") {
 				split := strings.Split(line, "\"")
 				version = split[len(split)-2]
 				break
