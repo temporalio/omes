@@ -7,11 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"go.temporal.io/api/workflowservice/v1"
-
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/throughputstress"
