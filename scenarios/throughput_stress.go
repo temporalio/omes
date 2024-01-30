@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.temporal.io/api/workflowservice/v1"
 	"sync/atomic"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/throughputstress"
@@ -41,7 +41,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		})
 	var svcErr *serviceerror.AlreadyExists
 	if !errors.As(err, &svcErr) {
-		return err
+		return fmt.Errorf("failed adding search attribute: %w", err)
 	}
 
 	// Complain if there are already existing workflows with the provided run id
