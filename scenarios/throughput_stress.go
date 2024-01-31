@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.temporal.io/api/workflowservice/v1"
 	"sync/atomic"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflowservice/v1"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/throughputstress"
@@ -34,13 +34,18 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	attribMap := map[string]enums.IndexedValueType{
 		ThroughputStressScenarioIdSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
 	}
+
 	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace:        info.Namespace,
 			SearchAttributes: attribMap,
 		})
-	var svcErr *serviceerror.AlreadyExists
-	if !errors.As(err, &svcErr) {
+	var deniedErr *serviceerror.PermissionDenied
+	var alreadyErr *serviceerror.AlreadyExists
+
+	if errors.As(err, &deniedErr) {
+		info.Logger.Warnf("Failed to add Search Attribute: %v", err)
+	} else if !errors.As(err, &alreadyErr) {
 		return err
 	}
 
