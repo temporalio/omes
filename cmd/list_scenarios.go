@@ -30,6 +30,9 @@ func listScenariosCmd() *cobra.Command {
 					if config.MaxConcurrent != 0 {
 						defaultConfigDesc += fmt.Sprintf("\n        Max concurrent: %v", config.MaxConcurrent)
 					}
+					if config.Timeout != 0 {
+						defaultConfigDesc += fmt.Sprintf("\n        Timeout: %v", config.Timeout)
+					}
 				}
 				descs = append(descs, fmt.Sprintf("Scenario: %v\n    Description: %v%v\n",
 					name, scen.Description, defaultConfigDesc))

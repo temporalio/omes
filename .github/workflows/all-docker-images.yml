@@ -22,6 +22,10 @@ on:
         description: If set, push the built images to Docker Hub.
         type: boolean
         default: false
+      as-latest:
+        description: If set, tag the images as latest for the lang ('<lang>-latest').
+        type: boolean
+        default: false
   # To support manual triggering:
   # AFAICT there is no way to avoid repeating all these inputs over and over w/o resorting to templating
   workflow_dispatch:
@@ -45,6 +49,10 @@ on:
         description: If set, push the built images to Docker Hub.
         type: boolean
         default: false
+      as-latest:
+        description: If set, tag the images as latest for the lang ('<lang>-latest').
+        type: boolean
+        default: false
 
 
 jobs:
@@ -56,6 +64,7 @@ jobs:
       lang: go
       sdk-version: ${{ inputs.go-version }}
       do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
 
   build-python-docker-images:
     if: inputs.py-version
@@ -65,6 +74,7 @@ jobs:
       lang: python
       sdk-version: ${{ inputs.py-version }}
       do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
 
   build-java-docker-images:
     if: inputs.java-version
@@ -74,6 +84,7 @@ jobs:
       lang: java
       sdk-version: ${{ inputs.java-version }}
       do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
 
   build-typescript-docker-images:
     if: inputs.ts-version
@@ -83,6 +94,7 @@ jobs:
       lang: typescript
       sdk-version: ${{ inputs.ts-version }}
       do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
 
   build-dotnet-docker-images:
     if: inputs.dotnet-version
@@ -92,3 +104,4 @@ jobs:
       lang: dotnet
       sdk-version: ${{ inputs.dotnet-version }}
       do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}

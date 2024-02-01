@@ -23,6 +23,10 @@ on:
         description: If set, push the built image to Docker Hub.
         type: boolean
         default: false
+      as-latest:
+        description: If set, tag the images as latest for the lang ('<lang>-latest').
+        type: boolean
+        default: false
 
 jobs:
   build-image:
@@ -48,7 +52,8 @@ jobs:
       - name: Build docker image
         run: |
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
-          --version ${{ inputs.sdk-version }}
+          --version ${{ inputs.sdk-version }} \
+          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
 
       - name: Login to DockerHub
         uses: docker/login-action@v2

@@ -43,8 +43,7 @@ func runWorkerCmd() *cobra.Command {
 
 type workerRunner struct {
 	workerBuilder
-	scenario                  string
-	runID                     string
+	scenarioID
 	retainTempDir             bool
 	gracefulShutdownDuration  time.Duration
 	embeddedServer            bool
@@ -59,8 +58,7 @@ type workerRunner struct {
 
 func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.workerBuilder.addCLIFlags(fs)
-	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
-	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
+	r.scenarioID.addCLIFlags(fs)
 	fs.BoolVar(&r.retainTempDir, "retain-temp-dir", false,
 		"If set, retain the temp directory created if one wasn't given")
 	fs.DurationVar(&r.gracefulShutdownDuration, "graceful-shutdown-duration", 30*time.Second,

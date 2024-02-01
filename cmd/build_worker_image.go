@@ -105,6 +105,7 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
 		if b.tagAsLatest {
 			b.tags = append(b.tags, langTagComponent)
+			b.tags = append(b.tags, lang+"-latest")
 		}
 	}
 
@@ -123,6 +124,7 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	b.addLabelIfNotPresent("org.opencontainers.image.documentation", "See README at https://github.com/temporalio/omes")
 	b.addLabelIfNotPresent("io.temporal.sdk.name", lang)
 	b.addLabelIfNotPresent("io.temporal.sdk.version", b.version)
+	b.addLabelIfNotPresent("io.temporal.omes.githash", omesVersion)
 
 	// Prepare docker command args
 	args := []string{
