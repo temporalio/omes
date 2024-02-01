@@ -34,14 +34,23 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	attribMap := map[string]enums.IndexedValueType{
 		ThroughputStressScenarioIdSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
 	}
+
 	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace:        info.Namespace,
 			SearchAttributes: attribMap,
 		})
-	var svcErr *serviceerror.AlreadyExists
-	if !errors.As(err, &svcErr) {
-		return fmt.Errorf("failed adding search attribute: %w", err)
+	var deniedErr *serviceerror.PermissionDenied
+	var alreadyErr *serviceerror.AlreadyExists
+
+	if errors.As(err, &deniedErr) {
+		info.Logger.Warnf("Failed to add Search Attribute %s: %v", ThroughputStressScenarioIdSearchAttribute, err)
+	} else if !errors.As(err, &alreadyErr) {
+		info.Logger.Info("Search Attribute %s already exists", ThroughputStressScenarioIdSearchAttribute)
+
+		return err
+	} else {
+		info.Logger.Info("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
 	}
 
 	// Complain if there are already existing workflows with the provided run id
