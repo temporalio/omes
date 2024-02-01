@@ -7,7 +7,7 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
@@ -69,7 +69,7 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
 	taskQueue := loadgen.TaskQueueForRun(c.scenario, c.runID)
-	jobID := "omes-cleanup-" + taskQueue + "-" + uuid.NewRandom().String()
+	jobID := "omes-cleanup-" + taskQueue + "-" + uuid.New().String()
 	username, hostname := "anonymous", "unknown"
 	if user, err := user.Current(); err == nil {
 		username = user.Name
