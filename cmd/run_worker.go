@@ -14,9 +14,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/sdkbuild"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )
