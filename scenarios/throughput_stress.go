@@ -46,11 +46,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if errors.As(err, &deniedErr) {
 		info.Logger.Warnf("Failed to add Search Attribute %s: %v", ThroughputStressScenarioIdSearchAttribute, err)
 	} else if !errors.As(err, &alreadyErr) {
-		info.Logger.Info("Search Attribute %s already exists", ThroughputStressScenarioIdSearchAttribute)
+		info.Logger.Infof("Search Attribute %s already exists", ThroughputStressScenarioIdSearchAttribute)
 
 		return err
 	} else {
-		info.Logger.Info("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
+		info.Logger.Infof("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
 	}
 
 	// Complain if there are already existing workflows with the provided run id
