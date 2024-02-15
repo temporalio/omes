@@ -43,12 +43,14 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	var deniedErr *serviceerror.PermissionDenied
 	var alreadyErr *serviceerror.AlreadyExists
 
-	if errors.As(err, &deniedErr) {
-		info.Logger.Warnf("Failed to add Search Attribute %s: %v", ThroughputStressScenarioIdSearchAttribute, err)
-	} else if !errors.As(err, &alreadyErr) {
+	if errors.As(err, &alreadyErr) {
 		info.Logger.Infof("Search Attribute %s already exists", ThroughputStressScenarioIdSearchAttribute)
+	} else if err != nil {
+		info.Logger.Warnf("Failed to add Search Attribute %s: %v", ThroughputStressScenarioIdSearchAttribute, err)
 
-		return err
+		if !errors.As(err, &deniedErr) {
+			return err
+		}
 	} else {
 		info.Logger.Infof("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
 	}
