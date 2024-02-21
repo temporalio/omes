@@ -2,9 +2,10 @@ package cmdoptions
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,49 +17,113 @@ import (
 )
 
 type metricsHandler struct {
-	registry *prometheus.Registry
-	tags     map[string]string
+	metrics *Metrics
+	labels  []string
+	values  []string
 }
 
 var _ client.MetricsHandler = (*metricsHandler)(nil)
 
 func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler {
 	// Make enough space for the handlers tags which are populated first
-	mergedTags := make(map[string]string, len(h.tags))
-	for t, v := range h.tags {
-		mergedTags[t] = v
+	mergedTags := make(map[string]string, len(h.labels))
+	for i, l := range h.labels {
+		mergedTags[l] = h.values[i]
 	}
-	for t, v := range tags {
-		mergedTags[t] = v
+	for l, v := range tags {
+		mergedTags[l] = v
 	}
-	return &metricsHandler{registry: h.registry, tags: mergedTags}
+
+	var labels, values []string
+	for l, v := range mergedTags {
+		labels = append(labels, l)
+		values = append(values, v)
+	}
+
+	return &metricsHandler{
+		metrics: h.metrics,
+		labels:  labels,
+		values:  values,
+	}
 }
 
-func (h *metricsHandler) mustRegisterIgnoreDuplicate(c prometheus.Collector) {
-	err := h.registry.Register(c)
-	var alreadyRegisteredError prometheus.AlreadyRegisteredError
-	if err != nil && !errors.As(err, &alreadyRegisteredError) {
-		panic(err)
+func (h *metricsHandler) getOrCreateCounter(name string) *prometheus.CounterVec {
+	h.metrics.mutex.Lock()
+	defer h.metrics.mutex.Unlock()
+
+	if c, ok := h.metrics.cache[name]; ok {
+		if ctr, ok := c.(*prometheus.CounterVec); ok {
+			return ctr
+		}
+		panic(fmt.Errorf("duplicate metric with different type: %s", name))
 	}
+
+	m := prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: name},
+		h.labels,
+	)
+	h.metrics.registry.MustRegister(m)
+	h.metrics.cache[name] = m
+
+	return m
 }
 
 func (h *metricsHandler) Counter(name string) client.MetricsCounter {
-	ctr := prometheus.NewCounter(prometheus.CounterOpts{Name: name, ConstLabels: prometheus.Labels(h.tags)})
-	h.mustRegisterIgnoreDuplicate(ctr)
-	return metricsCounter{ctr}
+	ctr := h.getOrCreateCounter(name)
+	return metricsCounter{ctr.WithLabelValues(h.values...)}
+}
+
+func (h *metricsHandler) getOrCreateGauge(name string) *prometheus.GaugeVec {
+	h.metrics.mutex.Lock()
+	defer h.metrics.mutex.Unlock()
+
+	if c, ok := h.metrics.cache[name]; ok {
+		if gauge, ok := c.(*prometheus.GaugeVec); ok {
+			return gauge
+		}
+		panic(fmt.Errorf("duplicate metric with different type: %s", name))
+	}
+
+	m := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{Name: name},
+		h.labels,
+	)
+	h.metrics.registry.MustRegister(m)
+	h.metrics.cache[name] = m
+
+	return m
 }
 
 func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
-	gauge := prometheus.NewGauge(prometheus.GaugeOpts{Name: name, ConstLabels: prometheus.Labels(h.tags)})
-	h.mustRegisterIgnoreDuplicate(gauge)
-	return metricsGauge{gauge}
+	gauge := h.getOrCreateGauge(name)
+	return metricsGauge{gauge.WithLabelValues(h.values...)}
+}
+
+func (h *metricsHandler) getOrCreateTimer(name string) *prometheus.HistogramVec {
+	h.metrics.mutex.Lock()
+	defer h.metrics.mutex.Unlock()
+
+	if c, ok := h.metrics.cache[name]; ok {
+		if h, ok := c.(*prometheus.HistogramVec); ok {
+			return h
+		}
+		panic(fmt.Errorf("duplicate metric with different type: %s", name))
+	}
+
+	m := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: name},
+		h.labels,
+	)
+	h.metrics.registry.MustRegister(m)
+	h.metrics.cache[name] = m
+
+	return m
 }
 
 func (h *metricsHandler) Timer(name string) client.MetricsTimer {
 	// TODO: buckets
-	timer := prometheus.NewHistogram(prometheus.HistogramOpts{Name: name, ConstLabels: prometheus.Labels(h.tags)})
-	h.mustRegisterIgnoreDuplicate(timer)
-	return metricsTimer{timer}
+	timer := h.getOrCreateTimer(name)
+	return metricsTimer{timer.WithLabelValues(h.values...)}
 }
 
 type metricsCounter struct {
@@ -80,7 +145,7 @@ func (m metricsGauge) Update(x float64) {
 }
 
 type metricsTimer struct {
-	prom prometheus.Histogram
+	prom prometheus.Observer
 }
 
 // Record records a duration.
@@ -102,6 +167,8 @@ type MetricsOptions struct {
 type Metrics struct {
 	server   *http.Server
 	registry *prometheus.Registry
+	cache    map[string]interface{}
+	mutex    sync.Mutex
 }
 
 // MustCreateMetrics sets up Prometheus based metrics and starts an HTTP server
@@ -116,14 +183,14 @@ func (m *MetricsOptions) MustCreateMetrics(logger *zap.SugaredLogger) *Metrics {
 	return &Metrics{
 		server:   server,
 		registry: registry,
+		cache:    make(map[string]interface{}),
 	}
 }
 
 // Handler returns a new Temporal-client-compatible metrics handler.
 func (m *Metrics) NewHandler() client.MetricsHandler {
 	return &metricsHandler{
-		registry: m.registry,
-		tags:     make(map[string]string),
+		metrics: m,
 	}
 }
 
