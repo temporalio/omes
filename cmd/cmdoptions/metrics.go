@@ -103,7 +103,7 @@ func (h *metricsHandler) Timer(name string) client.MetricsTimer {
 		}
 	} else {
 		// TODO: buckets
-		timer := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, h.labels)
+		timer = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, h.labels)
 		h.metrics.registry.MustRegister(timer)
 		h.metrics.cache[name] = timer
 	}
