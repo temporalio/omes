@@ -47,82 +47,67 @@ func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler 
 	}
 }
 
-func (h *metricsHandler) getOrCreateCounter(name string) *prometheus.CounterVec {
+func (h *metricsHandler) Counter(name string) client.MetricsCounter {
 	h.metrics.mutex.Lock()
 	defer h.metrics.mutex.Unlock()
 
+	var ctr *prometheus.CounterVec
 	if c, ok := h.metrics.cache[name]; ok {
-		if ctr, ok := c.(*prometheus.CounterVec); ok {
-			return ctr
+		ctr, ok = c.(*prometheus.CounterVec)
+		if !ok {
+			panic(fmt.Errorf("duplicate metric with different type: %s", name))
 		}
-		panic(fmt.Errorf("duplicate metric with different type: %s", name))
+	} else {
+		ctr = prometheus.NewCounterVec(
+			prometheus.CounterOpts{Name: name},
+			h.labels,
+		)
+		h.metrics.registry.MustRegister(ctr)
+		h.metrics.cache[name] = ctr
 	}
 
-	m := prometheus.NewCounterVec(
-		prometheus.CounterOpts{Name: name},
-		h.labels,
-	)
-	h.metrics.registry.MustRegister(m)
-	h.metrics.cache[name] = m
-
-	return m
-}
-
-func (h *metricsHandler) Counter(name string) client.MetricsCounter {
-	ctr := h.getOrCreateCounter(name)
 	return metricsCounter{ctr.WithLabelValues(h.values...)}
 }
 
-func (h *metricsHandler) getOrCreateGauge(name string) *prometheus.GaugeVec {
+func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
 	h.metrics.mutex.Lock()
 	defer h.metrics.mutex.Unlock()
 
+	var gauge *prometheus.GaugeVec
 	if c, ok := h.metrics.cache[name]; ok {
-		if gauge, ok := c.(*prometheus.GaugeVec); ok {
-			return gauge
+		gauge, ok = c.(*prometheus.GaugeVec)
+		if !ok {
+			panic(fmt.Errorf("duplicate metric with different type: %s", name))
 		}
-		panic(fmt.Errorf("duplicate metric with different type: %s", name))
+	} else {
+		gauge = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{Name: name},
+			h.labels,
+		)
+		h.metrics.registry.MustRegister(gauge)
+		h.metrics.cache[name] = gauge
 	}
 
-	m := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{Name: name},
-		h.labels,
-	)
-	h.metrics.registry.MustRegister(m)
-	h.metrics.cache[name] = m
-
-	return m
-}
-
-func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
-	gauge := h.getOrCreateGauge(name)
 	return metricsGauge{gauge.WithLabelValues(h.values...)}
 }
 
-func (h *metricsHandler) getOrCreateTimer(name string) *prometheus.HistogramVec {
+func (h *metricsHandler) Timer(name string) client.MetricsTimer {
 	h.metrics.mutex.Lock()
 	defer h.metrics.mutex.Unlock()
 
+	var timer *prometheus.HistogramVec
 	if c, ok := h.metrics.cache[name]; ok {
-		if h, ok := c.(*prometheus.HistogramVec); ok {
-			return h
+		timer, ok = c.(*prometheus.HistogramVec)
+		if !ok {
+			panic(fmt.Errorf("duplicate metric with different type: %s", name))
 		}
-		panic(fmt.Errorf("duplicate metric with different type: %s", name))
+	} else {
+		// TODO: buckets
+		timer := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, h.labels)
+		h.metrics.registry.MustRegister(timer)
+		h.metrics.cache[name] = timer
 	}
 
-	m := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{Name: name},
-		h.labels,
-	)
-	h.metrics.registry.MustRegister(m)
-	h.metrics.cache[name] = m
-
-	return m
-}
-
-func (h *metricsHandler) Timer(name string) client.MetricsTimer {
-	// TODO: buckets
-	timer := h.getOrCreateTimer(name)
 	return metricsTimer{timer.WithLabelValues(h.values...)}
 }
 
