@@ -810,9 +810,9 @@ fn empty_payload() -> Payload {
     Payload {
         metadata: {
             let mut m = HashMap::new();
-            m.insert("encoding".to_string(), "json/plain".into());
+            m.insert("encoding".to_string(), "binary/null".into());
             m
         },
-        data: serde_json::to_vec("").expect("serializes"),
+        data: vec![], // Empty
     }
 }
