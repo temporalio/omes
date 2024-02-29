@@ -32,6 +32,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
+			workflow.GetLogger(ctx).Info("Running update", "updateID", workflow.GetUpdateInfo(ctx).ID)
 			rval, err = state.handleActionSet(ctx, actions.GetDoActions())
 			if rval == nil {
 				rval = &state.workflowState
@@ -39,6 +40,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			return rval, err
 		}, workflow.UpdateHandlerOptions{
 			Validator: func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) error {
+				workflow.GetLogger(ctx).Info("Validating update", "updateID", workflow.GetUpdateInfo(ctx).ID)
 				if actions.GetRejectMe() != nil {
 					return errors.New("rejected")
 				}

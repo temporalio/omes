@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	updatepb "go.temporal.io/api/update/v1"
+
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"time"
 )
 
 // Must match string used in rust generator
@@ -104,6 +110,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	var err error
 	if sig := action.GetDoSignal(); sig != nil {
 		if sigActions := sig.GetDoSignalActions(); sigActions != nil {
+			fmt.Println(time.Now().String() + " --- signaling workflow " + e.WorkflowID + " with actions --- \n" + prototext.Format(sigActions))
 			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", "do_actions_signal", sigActions)
 		} else if handler := sig.GetCustom(); handler != nil {
 			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
@@ -114,7 +121,18 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if update := action.GetDoUpdate(); update != nil {
 		var handle client.WorkflowUpdateHandle
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
-			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", "do_actions_update", actionsUpdate)
+			updateID := uuid.New().String()
+			fmt.Println(time.Now().String() + " --- updating workflow " + e.WorkflowID + " with ID " + updateID + " with actions --- \n" + prototext.Format(actionsUpdate))
+			handle, err = e.Client.UpdateWorkflowWithOptions(ctx, &client.UpdateWorkflowWithOptionsRequest{
+				WorkflowID: e.WorkflowID,
+				RunID:      "",
+				UpdateName: "do_actions_update",
+				UpdateID:   updateID,
+				Args:       []any{actionsUpdate},
+				WaitPolicy: &updatepb.WaitPolicy{
+					LifecycleStage: enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED,
+				},
+			})
 		} else if handler := update.GetCustom(); handler != nil {
 			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
 		} else {
@@ -130,6 +148,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
+			fmt.Println(time.Now().String() + " --- querying workflow " + e.WorkflowID + " with actions ---")
 			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
 			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
@@ -141,6 +160,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		}
 		return err
 	} else if action.GetNestedActions() != nil {
+		fmt.Println(time.Now().String() + " --- running nested actions " + e.WorkflowID + " ---")
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
 	} else {
