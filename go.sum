@@ -105,6 +105,8 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 go.temporal.io/api v1.27.0 h1:M7a7p3A/gIKEMAYVBQD+/2hfzh/hC0410393TwD20Ko=
 go.temporal.io/api v1.27.0/go.mod h1:iASB2zPPR+FtFKn5w7/hF7AG2dkvkW7TTMAqL06tz0g=
+go.temporal.io/sdk v1.26.0-rc.3 h1:klb8p/KE/oofnCc7H2YbLz1qgxcfKc0khlX5ZcxIInk=
+go.temporal.io/sdk v1.26.0-rc.3/go.mod h1:HDr8fIWJ/HF8dJwTPgOayI8PYB5WoVIxUMjzE78M2ng=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/goleak v1.1.10/go.mod h1:8a7PlsEVH3e/a/GLqe5IIrQx6GzcnRmZEufDUTk4A7A=
 go.uber.org/goleak v1.2.1 h1:NBol2c7O1ZokfZ0LEU9K6Whx/KnwvepVetCUhtKja4A=

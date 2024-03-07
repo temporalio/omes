@@ -59,5 +59,4 @@ require (
 replace (
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20231218231852-27c681667dae
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20231218231852-27c681667dae
-	go.temporal.io/sdk => ../sdk-go
 )

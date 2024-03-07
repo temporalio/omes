@@ -1,1 +1,26 @@
-zsh: file name too long: {\n    max_client_action_sets: 250,\n    max_client_actions_per_set: 5,\n    max_actions_per_set: 5,\n    max_timer: {\n        secs: 1,\n        nanos: 0\n    },\n    max_payload_size: 256,\n    max_client_action_set_wait: {\n        secs: 1,\n        nanos: 0\n    },\n    action_chances: {\n        timer: 25,\n        activity: 30,\n        child_workflow: 25,\n        nested_action_set: 12.5,\n        patch_marker: 2.5,\n        set_workflow_state: 0,\n        await_workflow_state: 0,\n        upsert_memo: 0,\n        upsert_search_attributes: 5.0\n    },\n    max_initial_actions: 10\n}
+{
+    "max_client_action_sets": 250,
+    "max_client_actions_per_set": 5,
+    "max_actions_per_set": 5,
+    "max_timer": {
+        "secs": 1,
+        "nanos": 0
+    },
+    "max_payload_size": 256,
+    "max_client_action_set_wait": {
+        "secs": 1,
+        "nanos": 0
+    },
+    "action_chances": {
+        "timer": 25,
+        "activity": 30,
+        "child_workflow": 25,
+        "nested_action_set": 12.5,
+        "patch_marker": 2.5,
+        "set_workflow_state": 0,
+        "await_workflow_state": 0,
+        "upsert_memo": 0,
+        "upsert_search_attributes": 5.0
+    },
+    "max_initial_actions": 10
+}
