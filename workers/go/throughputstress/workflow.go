@@ -2,11 +2,11 @@ package throughputstress
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/workers/go/workflowutils"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
+	"github.com/temporalio/omes/workers/go/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -154,7 +154,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			return output, err
 		}
 		// Possibly continue as new
-		if workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
+		if params.ContinueAsNewAfterEventCount > 0 && workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
 			if i == 0 {
 				return output, fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
 			}
