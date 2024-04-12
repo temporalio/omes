@@ -19,8 +19,9 @@ import (
 
 // --option arguments
 const (
-	IterFlag     = "internal-iterations"
-	CANEventFlag = "continue-as-new-after-event-count"
+	IterFlag      = "internal-iterations"
+	SkipSleepFlag = "skip-sleep"
+	CANEventFlag  = "continue-as-new-after-event-count"
 )
 
 const ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
@@ -76,6 +77,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			internalIterations := run.ScenarioInfo.ScenarioOptionInt(IterFlag, 5)
 			continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 100)
+			skipSleep := run.ScenarioInfo.ScenarioOptionBool(SkipSleepFlag, false)
 			timeout := time.Duration(1*internalIterations) * time.Minute
 
 			wfID := fmt.Sprintf("throughputStress-%s-%d", run.RunID, run.Iteration)
@@ -93,6 +95,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				"throughputStress",
 				&result,
 				throughputstress.WorkflowParams{
+					SkipSleep:                    skipSleep,
 					Iterations:                   internalIterations,
 					ContinueAsNewAfterEventCount: continueAsNewCount,
 				})
@@ -126,8 +129,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --%s and --%s to control internal parameters",
-			IterFlag, CANEventFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s' '%s' to control internal parameters",
+			IterFlag, CANEventFlag, SkipSleepFlag),
 		Executor: &tpsExecutor{
 			workflowCount: atomic.Uint64{},
 		},

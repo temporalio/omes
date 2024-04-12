@@ -3,8 +3,6 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -12,6 +10,8 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -105,6 +105,11 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 		panic(err)
 	}
 	return i
+}
+
+func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
+	v := s.ScenarioOptions[name]
+	return v == "true"
 }
 
 const DefaultIterations = 10

@@ -139,6 +139,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			},
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				if params.SkipSleep {
+					return nil
+				}
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateSleep).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
