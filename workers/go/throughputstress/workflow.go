@@ -36,9 +36,6 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		return output, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateSleep, func(ctx workflow.Context) error {
-		if params.SkipSleep {
-			return nil
-		}
 		return workflow.Sleep(ctx, 1*time.Second)
 	})
 	if err != nil {
@@ -142,6 +139,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			},
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				if params.SkipSleep {
+					return nil
+				}
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateSleep).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
