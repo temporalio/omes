@@ -2,11 +2,11 @@ package throughputstress
 
 import (
 	"fmt"
-	"github.com/temporalio/omes/workers/go/workflowutils"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
+	"github.com/temporalio/omes/workers/go/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -36,6 +36,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		return output, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateSleep, func(ctx workflow.Context) error {
+		if params.SkipSleep {
+			return nil
+		}
 		return workflow.Sleep(ctx, 1*time.Second)
 	})
 	if err != nil {
