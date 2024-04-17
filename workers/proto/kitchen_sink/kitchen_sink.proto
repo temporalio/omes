@@ -185,6 +185,11 @@ message ExecuteActivityAction {
     string type = 1;
     repeated temporal.api.common.v1.Payload arguments = 2;
   }
+  message ResourcesActivity {
+    uint64 bytes_to_allocate = 1;
+    uint32 cpu_yield_every_n_iterations = 2;
+    uint32 cpu_yield_for_ms = 3;
+  }
   oneof activity_type {
     GenericActivity generic = 1;
     // There must be an activity named `delay` which accepts some kind of duration and waits
@@ -192,6 +197,8 @@ message ExecuteActivityAction {
     google.protobuf.Duration delay = 2;
     // There must be an activity named `noop` which does nothing
     google.protobuf.Empty noop = 3;
+    // There must be an activity named `resources` which accepts the ResourcesActivity message as input
+    ResourcesActivity resources = 14;
   }
   // The name of the task queue to place this activity request in
   string task_queue = 4;
