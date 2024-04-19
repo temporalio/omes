@@ -103,7 +103,7 @@ namespace Temporal.Omes.KitchenSink {
             "OAoWY2FuY2VsX2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90",
             "b2J1Zi5FbXB0eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxt",
             "aWxsaXNlY29uZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIr",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSKT",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLA",
             "CQoVRXhlY3V0ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50",
             "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rp",
             "b24uR2VuZXJpY0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUu",
@@ -125,9 +125,10 @@ namespace Temporal.Omes.KitchenSink {
             "b2ljZRgNIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0",
             "YWJsZUNob2ljZRpTCg9HZW5lcmljQWN0aXZpdHkSDAoEdHlwZRgBIAEoCRIy",
             "Cglhcmd1bWVudHMYAiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBh",
-            "eWxvYWQabgoRUmVzb3VyY2VzQWN0aXZpdHkSGQoRYnl0ZXNfdG9fYWxsb2Nh",
-            "dGUYASABKAQSJAocY3B1X3lpZWxkX2V2ZXJ5X25faXRlcmF0aW9ucxgCIAEo",
-            "DRIYChBjcHVfeWllbGRfZm9yX21zGAMgASgNGk8KDEhlYWRlcnNFbnRyeRIL",
+            "eWxvYWQamgEKEVJlc291cmNlc0FjdGl2aXR5EioKB3J1bl9mb3IYASABKAsy",
+            "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SGQoRYnl0ZXNfdG9fYWxsb2Nh",
+            "dGUYAiABKAQSJAocY3B1X3lpZWxkX2V2ZXJ5X25faXRlcmF0aW9ucxgDIAEo",
+            "DRIYChBjcHVfeWllbGRfZm9yX21zGAQgASgNGk8KDEhlYWRlcnNFbnRyeRIL",
             "CgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29t",
             "bW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFjdGl2aXR5X3R5cGVCCgoIbG9jYWxp",
             "dHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9uEhEKCW5hbWVzcGFj",
@@ -239,7 +240,7 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitableChoice), global::Temporal.Omes.KitchenSink.AwaitableChoice.Parser, new[]{ "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted" }, new[]{ "Condition" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.TimerAction), global::Temporal.Omes.KitchenSink.TimerAction.Parser, new[]{ "Milliseconds", "AwaitableChoice" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity.Parser, new[]{ "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity.Parser, new[]{ "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs" }, null, null, null, null),
             null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction), global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction.Parser, new[]{ "Namespace", "WorkflowId", "WorkflowType", "TaskQueue", "Input", "WorkflowExecutionTimeout", "WorkflowRunTimeout", "WorkflowTaskTimeout", "ParentClosePolicy", "WorkflowIdReusePolicy", "RetryPolicy", "CronSchedule", "Headers", "Memo", "SearchAttributes", "CancellationType", "VersioningIntent", "AwaitableChoice" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitWorkflowState), global::Temporal.Omes.KitchenSink.AwaitWorkflowState.Parser, new[]{ "Key", "Value" }, null, null, null, null),
@@ -6623,6 +6624,7 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public ResourcesActivity(ResourcesActivity other) : this() {
+          runFor_ = other.runFor_ != null ? other.runFor_.Clone() : null;
           bytesToAllocate_ = other.bytesToAllocate_;
           cpuYieldEveryNIterations_ = other.cpuYieldEveryNIterations_;
           cpuYieldForMs_ = other.cpuYieldForMs_;
@@ -6635,8 +6637,20 @@ namespace Temporal.Omes.KitchenSink {
           return new ResourcesActivity(this);
         }
 
+        /// <summary>Field number for the "run_for" field.</summary>
+        public const int RunForFieldNumber = 1;
+        private global::Google.Protobuf.WellKnownTypes.Duration runFor_;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration RunFor {
+          get { return runFor_; }
+          set {
+            runFor_ = value;
+          }
+        }
+
         /// <summary>Field number for the "bytes_to_allocate" field.</summary>
-        public const int BytesToAllocateFieldNumber = 1;
+        public const int BytesToAllocateFieldNumber = 2;
         private ulong bytesToAllocate_;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -6648,7 +6662,7 @@ namespace Temporal.Omes.KitchenSink {
         }
 
         /// <summary>Field number for the "cpu_yield_every_n_iterations" field.</summary>
-        public const int CpuYieldEveryNIterationsFieldNumber = 2;
+        public const int CpuYieldEveryNIterationsFieldNumber = 3;
         private uint cpuYieldEveryNIterations_;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -6660,7 +6674,7 @@ namespace Temporal.Omes.KitchenSink {
         }
 
         /// <summary>Field number for the "cpu_yield_for_ms" field.</summary>
-        public const int CpuYieldForMsFieldNumber = 3;
+        public const int CpuYieldForMsFieldNumber = 4;
         private uint cpuYieldForMs_;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -6686,6 +6700,7 @@ namespace Temporal.Omes.KitchenSink {
           if (ReferenceEquals(other, this)) {
             return true;
           }
+          if (!object.Equals(RunFor, other.RunFor)) return false;
           if (BytesToAllocate != other.BytesToAllocate) return false;
           if (CpuYieldEveryNIterations != other.CpuYieldEveryNIterations) return false;
           if (CpuYieldForMs != other.CpuYieldForMs) return false;
@@ -6696,6 +6711,7 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override int GetHashCode() {
           int hash = 1;
+          if (runFor_ != null) hash ^= RunFor.GetHashCode();
           if (BytesToAllocate != 0UL) hash ^= BytesToAllocate.GetHashCode();
           if (CpuYieldEveryNIterations != 0) hash ^= CpuYieldEveryNIterations.GetHashCode();
           if (CpuYieldForMs != 0) hash ^= CpuYieldForMs.GetHashCode();
@@ -6717,16 +6733,20 @@ namespace Temporal.Omes.KitchenSink {
         #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           output.WriteRawMessage(this);
         #else
+          if (runFor_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(RunFor);
+          }
           if (BytesToAllocate != 0UL) {
-            output.WriteRawTag(8);
+            output.WriteRawTag(16);
             output.WriteUInt64(BytesToAllocate);
           }
           if (CpuYieldEveryNIterations != 0) {
-            output.WriteRawTag(16);
+            output.WriteRawTag(24);
             output.WriteUInt32(CpuYieldEveryNIterations);
           }
           if (CpuYieldForMs != 0) {
-            output.WriteRawTag(24);
+            output.WriteRawTag(32);
             output.WriteUInt32(CpuYieldForMs);
           }
           if (_unknownFields != null) {
@@ -6739,16 +6759,20 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (runFor_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(RunFor);
+          }
           if (BytesToAllocate != 0UL) {
-            output.WriteRawTag(8);
+            output.WriteRawTag(16);
             output.WriteUInt64(BytesToAllocate);
           }
           if (CpuYieldEveryNIterations != 0) {
-            output.WriteRawTag(16);
+            output.WriteRawTag(24);
             output.WriteUInt32(CpuYieldEveryNIterations);
           }
           if (CpuYieldForMs != 0) {
-            output.WriteRawTag(24);
+            output.WriteRawTag(32);
             output.WriteUInt32(CpuYieldForMs);
           }
           if (_unknownFields != null) {
@@ -6761,6 +6785,9 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public int CalculateSize() {
           int size = 0;
+          if (runFor_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(RunFor);
+          }
           if (BytesToAllocate != 0UL) {
             size += 1 + pb::CodedOutputStream.ComputeUInt64Size(BytesToAllocate);
           }
@@ -6781,6 +6808,12 @@ namespace Temporal.Omes.KitchenSink {
         public void MergeFrom(ResourcesActivity other) {
           if (other == null) {
             return;
+          }
+          if (other.runFor_ != null) {
+            if (runFor_ == null) {
+              RunFor = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            RunFor.MergeFrom(other.RunFor);
           }
           if (other.BytesToAllocate != 0UL) {
             BytesToAllocate = other.BytesToAllocate;
@@ -6806,15 +6839,22 @@ namespace Temporal.Omes.KitchenSink {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
-              case 8: {
-                BytesToAllocate = input.ReadUInt64();
+              case 10: {
+                if (runFor_ == null) {
+                  RunFor = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(RunFor);
                 break;
               }
               case 16: {
-                CpuYieldEveryNIterations = input.ReadUInt32();
+                BytesToAllocate = input.ReadUInt64();
                 break;
               }
               case 24: {
+                CpuYieldEveryNIterations = input.ReadUInt32();
+                break;
+              }
+              case 32: {
                 CpuYieldForMs = input.ReadUInt32();
                 break;
               }
@@ -6833,15 +6873,22 @@ namespace Temporal.Omes.KitchenSink {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
-              case 8: {
-                BytesToAllocate = input.ReadUInt64();
+              case 10: {
+                if (runFor_ == null) {
+                  RunFor = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(RunFor);
                 break;
               }
               case 16: {
-                CpuYieldEveryNIterations = input.ReadUInt32();
+                BytesToAllocate = input.ReadUInt64();
                 break;
               }
               case 24: {
+                CpuYieldEveryNIterations = input.ReadUInt32();
+                break;
+              }
+              case 32: {
                 CpuYieldForMs = input.ReadUInt32();
                 break;
               }

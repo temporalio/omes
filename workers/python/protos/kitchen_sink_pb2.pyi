@@ -231,14 +231,16 @@ class ExecuteActivityAction(_message.Message):
         arguments: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
         def __init__(self, type: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ...) -> None: ...
     class ResourcesActivity(_message.Message):
-        __slots__ = ("bytes_to_allocate", "cpu_yield_every_n_iterations", "cpu_yield_for_ms")
+        __slots__ = ("run_for", "bytes_to_allocate", "cpu_yield_every_n_iterations", "cpu_yield_for_ms")
+        RUN_FOR_FIELD_NUMBER: _ClassVar[int]
         BYTES_TO_ALLOCATE_FIELD_NUMBER: _ClassVar[int]
         CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER: _ClassVar[int]
         CPU_YIELD_FOR_MS_FIELD_NUMBER: _ClassVar[int]
+        run_for: _duration_pb2.Duration
         bytes_to_allocate: int
         cpu_yield_every_n_iterations: int
         cpu_yield_for_ms: int
-        def __init__(self, bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
+        def __init__(self, run_for: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]

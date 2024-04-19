@@ -37,6 +37,24 @@ func NoOpSingleActivityActionSet() *ActionSet {
 	}
 }
 
+func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint32, cpuYieldForMs uint32) *Action {
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: &ExecuteActivityAction{
+				ActivityType: &ExecuteActivityAction_Resources{
+					Resources: &ExecuteActivityAction_ResourcesActivity{
+						BytesToAllocate:          bytesToAllocate,
+						CpuYieldEveryNIterations: cpuYieldEveryNIters,
+						CpuYieldForMs:            cpuYieldForMs,
+						RunFor:                   &durationpb.Duration{Seconds: 60},
+					},
+				},
+				StartToCloseTimeout: &durationpb.Duration{Seconds: 90},
+			},
+		},
+	}
+}
+
 type ClientActionsExecutor struct {
 	Client     client.Client
 	WorkflowID string

@@ -186,9 +186,10 @@ message ExecuteActivityAction {
     repeated temporal.api.common.v1.Payload arguments = 2;
   }
   message ResourcesActivity {
-    uint64 bytes_to_allocate = 1;
-    uint32 cpu_yield_every_n_iterations = 2;
-    uint32 cpu_yield_for_ms = 3;
+    google.protobuf.Duration run_for = 1;
+    uint64 bytes_to_allocate = 2;
+    uint32 cpu_yield_every_n_iterations = 3;
+    uint32 cpu_yield_for_ms = 4;
   }
   oneof activity_type {
     GenericActivity generic = 1;

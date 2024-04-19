@@ -20735,19 +20735,34 @@ io.temporal.api.common.v1.Payload defaultValue);
         com.google.protobuf.MessageOrBuilder {
 
       /**
-       * <code>uint64 bytes_to_allocate = 1;</code>
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return Whether the runFor field is set.
+       */
+      boolean hasRunFor();
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return The runFor.
+       */
+      com.google.protobuf.Duration getRunFor();
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       */
+      com.google.protobuf.DurationOrBuilder getRunForOrBuilder();
+
+      /**
+       * <code>uint64 bytes_to_allocate = 2;</code>
        * @return The bytesToAllocate.
        */
       long getBytesToAllocate();
 
       /**
-       * <code>uint32 cpu_yield_every_n_iterations = 2;</code>
+       * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
        * @return The cpuYieldEveryNIterations.
        */
       int getCpuYieldEveryNIterations();
 
       /**
-       * <code>uint32 cpu_yield_for_ms = 3;</code>
+       * <code>uint32 cpu_yield_for_ms = 4;</code>
        * @return The cpuYieldForMs.
        */
       int getCpuYieldForMs();
@@ -20789,10 +20804,37 @@ io.temporal.api.common.v1.Payload defaultValue);
                 io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.class, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder.class);
       }
 
-      public static final int BYTES_TO_ALLOCATE_FIELD_NUMBER = 1;
+      private int bitField0_;
+      public static final int RUN_FOR_FIELD_NUMBER = 1;
+      private com.google.protobuf.Duration runFor_;
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return Whether the runFor field is set.
+       */
+      @java.lang.Override
+      public boolean hasRunFor() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return The runFor.
+       */
+      @java.lang.Override
+      public com.google.protobuf.Duration getRunFor() {
+        return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+      }
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       */
+      @java.lang.Override
+      public com.google.protobuf.DurationOrBuilder getRunForOrBuilder() {
+        return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+      }
+
+      public static final int BYTES_TO_ALLOCATE_FIELD_NUMBER = 2;
       private long bytesToAllocate_ = 0L;
       /**
-       * <code>uint64 bytes_to_allocate = 1;</code>
+       * <code>uint64 bytes_to_allocate = 2;</code>
        * @return The bytesToAllocate.
        */
       @java.lang.Override
@@ -20800,10 +20842,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         return bytesToAllocate_;
       }
 
-      public static final int CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER = 2;
+      public static final int CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER = 3;
       private int cpuYieldEveryNIterations_ = 0;
       /**
-       * <code>uint32 cpu_yield_every_n_iterations = 2;</code>
+       * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
        * @return The cpuYieldEveryNIterations.
        */
       @java.lang.Override
@@ -20811,10 +20853,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         return cpuYieldEveryNIterations_;
       }
 
-      public static final int CPU_YIELD_FOR_MS_FIELD_NUMBER = 3;
+      public static final int CPU_YIELD_FOR_MS_FIELD_NUMBER = 4;
       private int cpuYieldForMs_ = 0;
       /**
-       * <code>uint32 cpu_yield_for_ms = 3;</code>
+       * <code>uint32 cpu_yield_for_ms = 4;</code>
        * @return The cpuYieldForMs.
        */
       @java.lang.Override
@@ -20836,14 +20878,17 @@ io.temporal.api.common.v1.Payload defaultValue);
       @java.lang.Override
       public void writeTo(com.google.protobuf.CodedOutputStream output)
                           throws java.io.IOException {
+        if (((bitField0_ & 0x00000001) != 0)) {
+          output.writeMessage(1, getRunFor());
+        }
         if (bytesToAllocate_ != 0L) {
-          output.writeUInt64(1, bytesToAllocate_);
+          output.writeUInt64(2, bytesToAllocate_);
         }
         if (cpuYieldEveryNIterations_ != 0) {
-          output.writeUInt32(2, cpuYieldEveryNIterations_);
+          output.writeUInt32(3, cpuYieldEveryNIterations_);
         }
         if (cpuYieldForMs_ != 0) {
-          output.writeUInt32(3, cpuYieldForMs_);
+          output.writeUInt32(4, cpuYieldForMs_);
         }
         getUnknownFields().writeTo(output);
       }
@@ -20854,17 +20899,21 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (size != -1) return size;
 
         size = 0;
+        if (((bitField0_ & 0x00000001) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(1, getRunFor());
+        }
         if (bytesToAllocate_ != 0L) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt64Size(1, bytesToAllocate_);
+            .computeUInt64Size(2, bytesToAllocate_);
         }
         if (cpuYieldEveryNIterations_ != 0) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(2, cpuYieldEveryNIterations_);
+            .computeUInt32Size(3, cpuYieldEveryNIterations_);
         }
         if (cpuYieldForMs_ != 0) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(3, cpuYieldForMs_);
+            .computeUInt32Size(4, cpuYieldForMs_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSize = size;
@@ -20881,6 +20930,11 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity other = (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) obj;
 
+        if (hasRunFor() != other.hasRunFor()) return false;
+        if (hasRunFor()) {
+          if (!getRunFor()
+              .equals(other.getRunFor())) return false;
+        }
         if (getBytesToAllocate()
             != other.getBytesToAllocate()) return false;
         if (getCpuYieldEveryNIterations()
@@ -20898,6 +20952,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         int hash = 41;
         hash = (19 * hash) + getDescriptor().hashCode();
+        if (hasRunFor()) {
+          hash = (37 * hash) + RUN_FOR_FIELD_NUMBER;
+          hash = (53 * hash) + getRunFor().hashCode();
+        }
         hash = (37 * hash) + BYTES_TO_ALLOCATE_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getBytesToAllocate());
@@ -21024,18 +21082,29 @@ io.temporal.api.common.v1.Payload defaultValue);
 
         // Construct using io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.newBuilder()
         private Builder() {
-
+          maybeForceBuilderInitialization();
         }
 
         private Builder(
             com.google.protobuf.GeneratedMessage.BuilderParent parent) {
           super(parent);
-
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage
+                  .alwaysUseFieldBuilders) {
+            getRunForFieldBuilder();
+          }
         }
         @java.lang.Override
         public Builder clear() {
           super.clear();
           bitField0_ = 0;
+          runFor_ = null;
+          if (runForBuilder_ != null) {
+            runForBuilder_.dispose();
+            runForBuilder_ = null;
+          }
           bytesToAllocate_ = 0L;
           cpuYieldEveryNIterations_ = 0;
           cpuYieldForMs_ = 0;
@@ -21072,15 +21141,23 @@ io.temporal.api.common.v1.Payload defaultValue);
 
         private void buildPartial0(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity result) {
           int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
           if (((from_bitField0_ & 0x00000001) != 0)) {
-            result.bytesToAllocate_ = bytesToAllocate_;
+            result.runFor_ = runForBuilder_ == null
+                ? runFor_
+                : runForBuilder_.build();
+            to_bitField0_ |= 0x00000001;
           }
           if (((from_bitField0_ & 0x00000002) != 0)) {
-            result.cpuYieldEveryNIterations_ = cpuYieldEveryNIterations_;
+            result.bytesToAllocate_ = bytesToAllocate_;
           }
           if (((from_bitField0_ & 0x00000004) != 0)) {
+            result.cpuYieldEveryNIterations_ = cpuYieldEveryNIterations_;
+          }
+          if (((from_bitField0_ & 0x00000008) != 0)) {
             result.cpuYieldForMs_ = cpuYieldForMs_;
           }
+          result.bitField0_ |= to_bitField0_;
         }
 
         @java.lang.Override
@@ -21095,6 +21172,9 @@ io.temporal.api.common.v1.Payload defaultValue);
 
         public Builder mergeFrom(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity other) {
           if (other == io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance()) return this;
+          if (other.hasRunFor()) {
+            mergeRunFor(other.getRunFor());
+          }
           if (other.getBytesToAllocate() != 0L) {
             setBytesToAllocate(other.getBytesToAllocate());
           }
@@ -21130,21 +21210,28 @@ io.temporal.api.common.v1.Payload defaultValue);
                 case 0:
                   done = true;
                   break;
-                case 8: {
-                  bytesToAllocate_ = input.readUInt64();
+                case 10: {
+                  input.readMessage(
+                      getRunForFieldBuilder().getBuilder(),
+                      extensionRegistry);
                   bitField0_ |= 0x00000001;
                   break;
-                } // case 8
+                } // case 10
                 case 16: {
-                  cpuYieldEveryNIterations_ = input.readUInt32();
+                  bytesToAllocate_ = input.readUInt64();
                   bitField0_ |= 0x00000002;
                   break;
                 } // case 16
                 case 24: {
-                  cpuYieldForMs_ = input.readUInt32();
+                  cpuYieldEveryNIterations_ = input.readUInt32();
                   bitField0_ |= 0x00000004;
                   break;
                 } // case 24
+                case 32: {
+                  cpuYieldForMs_ = input.readUInt32();
+                  bitField0_ |= 0x00000008;
+                  break;
+                } // case 32
                 default: {
                   if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                     done = true; // was an endgroup tag
@@ -21162,9 +21249,130 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         private int bitField0_;
 
+        private com.google.protobuf.Duration runFor_;
+        private com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> runForBuilder_;
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         * @return Whether the runFor field is set.
+         */
+        public boolean hasRunFor() {
+          return ((bitField0_ & 0x00000001) != 0);
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         * @return The runFor.
+         */
+        public com.google.protobuf.Duration getRunFor() {
+          if (runForBuilder_ == null) {
+            return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+          } else {
+            return runForBuilder_.getMessage();
+          }
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder setRunFor(com.google.protobuf.Duration value) {
+          if (runForBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            runFor_ = value;
+          } else {
+            runForBuilder_.setMessage(value);
+          }
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder setRunFor(
+            com.google.protobuf.Duration.Builder builderForValue) {
+          if (runForBuilder_ == null) {
+            runFor_ = builderForValue.build();
+          } else {
+            runForBuilder_.setMessage(builderForValue.build());
+          }
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder mergeRunFor(com.google.protobuf.Duration value) {
+          if (runForBuilder_ == null) {
+            if (((bitField0_ & 0x00000001) != 0) &&
+              runFor_ != null &&
+              runFor_ != com.google.protobuf.Duration.getDefaultInstance()) {
+              getRunForBuilder().mergeFrom(value);
+            } else {
+              runFor_ = value;
+            }
+          } else {
+            runForBuilder_.mergeFrom(value);
+          }
+          if (runFor_ != null) {
+            bitField0_ |= 0x00000001;
+            onChanged();
+          }
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder clearRunFor() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          runFor_ = null;
+          if (runForBuilder_ != null) {
+            runForBuilder_.dispose();
+            runForBuilder_ = null;
+          }
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public com.google.protobuf.Duration.Builder getRunForBuilder() {
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return getRunForFieldBuilder().getBuilder();
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public com.google.protobuf.DurationOrBuilder getRunForOrBuilder() {
+          if (runForBuilder_ != null) {
+            return runForBuilder_.getMessageOrBuilder();
+          } else {
+            return runFor_ == null ?
+                com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+          }
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        private com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
+            getRunForFieldBuilder() {
+          if (runForBuilder_ == null) {
+            runForBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+                com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>(
+                    getRunFor(),
+                    getParentForChildren(),
+                    isClean());
+            runFor_ = null;
+          }
+          return runForBuilder_;
+        }
+
         private long bytesToAllocate_ ;
         /**
-         * <code>uint64 bytes_to_allocate = 1;</code>
+         * <code>uint64 bytes_to_allocate = 2;</code>
          * @return The bytesToAllocate.
          */
         @java.lang.Override
@@ -21172,23 +21380,23 @@ io.temporal.api.common.v1.Payload defaultValue);
           return bytesToAllocate_;
         }
         /**
-         * <code>uint64 bytes_to_allocate = 1;</code>
+         * <code>uint64 bytes_to_allocate = 2;</code>
          * @param value The bytesToAllocate to set.
          * @return This builder for chaining.
          */
         public Builder setBytesToAllocate(long value) {
 
           bytesToAllocate_ = value;
-          bitField0_ |= 0x00000001;
+          bitField0_ |= 0x00000002;
           onChanged();
           return this;
         }
         /**
-         * <code>uint64 bytes_to_allocate = 1;</code>
+         * <code>uint64 bytes_to_allocate = 2;</code>
          * @return This builder for chaining.
          */
         public Builder clearBytesToAllocate() {
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = (bitField0_ & ~0x00000002);
           bytesToAllocate_ = 0L;
           onChanged();
           return this;
@@ -21196,7 +21404,7 @@ io.temporal.api.common.v1.Payload defaultValue);
 
         private int cpuYieldEveryNIterations_ ;
         /**
-         * <code>uint32 cpu_yield_every_n_iterations = 2;</code>
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
          * @return The cpuYieldEveryNIterations.
          */
         @java.lang.Override
@@ -21204,23 +21412,23 @@ io.temporal.api.common.v1.Payload defaultValue);
           return cpuYieldEveryNIterations_;
         }
         /**
-         * <code>uint32 cpu_yield_every_n_iterations = 2;</code>
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
          * @param value The cpuYieldEveryNIterations to set.
          * @return This builder for chaining.
          */
         public Builder setCpuYieldEveryNIterations(int value) {
 
           cpuYieldEveryNIterations_ = value;
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000004;
           onChanged();
           return this;
         }
         /**
-         * <code>uint32 cpu_yield_every_n_iterations = 2;</code>
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
          * @return This builder for chaining.
          */
         public Builder clearCpuYieldEveryNIterations() {
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000004);
           cpuYieldEveryNIterations_ = 0;
           onChanged();
           return this;
@@ -21228,7 +21436,7 @@ io.temporal.api.common.v1.Payload defaultValue);
 
         private int cpuYieldForMs_ ;
         /**
-         * <code>uint32 cpu_yield_for_ms = 3;</code>
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
          * @return The cpuYieldForMs.
          */
         @java.lang.Override
@@ -21236,23 +21444,23 @@ io.temporal.api.common.v1.Payload defaultValue);
           return cpuYieldForMs_;
         }
         /**
-         * <code>uint32 cpu_yield_for_ms = 3;</code>
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
          * @param value The cpuYieldForMs to set.
          * @return This builder for chaining.
          */
         public Builder setCpuYieldForMs(int value) {
 
           cpuYieldForMs_ = value;
-          bitField0_ |= 0x00000004;
+          bitField0_ |= 0x00000008;
           onChanged();
           return this;
         }
         /**
-         * <code>uint32 cpu_yield_for_ms = 3;</code>
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
          * @return This builder for chaining.
          */
         public Builder clearCpuYieldForMs() {
-          bitField0_ = (bitField0_ & ~0x00000004);
+          bitField0_ = (bitField0_ & ~0x00000008);
           cpuYieldForMs_ = 0;
           onChanged();
           return this;
@@ -40769,7 +40977,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "leted\030\005 \001(\0132\026.google.protobuf.EmptyH\000B\013\n" +
       "\tcondition\"j\n\013TimerAction\022\024\n\014millisecond" +
       "s\030\001 \001(\004\022E\n\020awaitable_choice\030\002 \001(\0132+.temp" +
-      "oral.omes.kitchen_sink.AwaitableChoice\"\223" +
+      "oral.omes.kitchen_sink.AwaitableChoice\"\300" +
       "\t\n\025ExecuteActivityAction\022T\n\007generic\030\001 \001(" +
       "\0132A.temporal.omes.kitchen_sink.ExecuteAc" +
       "tivityAction.GenericActivityH\000\022*\n\005delay\030" +
@@ -40793,113 +41001,114 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "aitable_choice\030\r \001(\0132+.temporal.omes.kit" +
       "chen_sink.AwaitableChoice\032S\n\017GenericActi" +
       "vity\022\014\n\004type\030\001 \001(\t\0222\n\targuments\030\002 \003(\0132\037." +
-      "temporal.api.common.v1.Payload\032n\n\021Resour" +
-      "cesActivity\022\031\n\021bytes_to_allocate\030\001 \001(\004\022$" +
-      "\n\034cpu_yield_every_n_iterations\030\002 \001(\r\022\030\n\020" +
-      "cpu_yield_for_ms\030\003 \001(\r\032O\n\014HeadersEntry\022\013" +
-      "\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.ap" +
-      "i.common.v1.Payload:\0028\001B\017\n\ractivity_type" +
-      "B\n\n\010locality\"\255\n\n\032ExecuteChildWorkflowAct" +
-      "ion\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_id\030\003 " +
-      "\001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_queue" +
-      "\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.api.com" +
-      "mon.v1.Payload\022=\n\032workflow_execution_tim" +
-      "eout\030\007 \001(\0132\031.google.protobuf.Duration\0227\n" +
-      "\024workflow_run_timeout\030\010 \001(\0132\031.google.pro" +
-      "tobuf.Duration\0228\n\025workflow_task_timeout\030" +
-      "\t \001(\0132\031.google.protobuf.Duration\022J\n\023pare" +
-      "nt_close_policy\030\n \001(\0162-.temporal.omes.ki" +
-      "tchen_sink.ParentClosePolicy\022N\n\030workflow" +
-      "_id_reuse_policy\030\014 \001(\0162,.temporal.api.en" +
-      "ums.v1.WorkflowIdReusePolicy\0229\n\014retry_po" +
-      "licy\030\r \001(\0132#.temporal.api.common.v1.Retr" +
-      "yPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007header" +
-      "s\030\017 \003(\0132C.temporal.omes.kitchen_sink.Exe" +
-      "cuteChildWorkflowAction.HeadersEntry\022N\n\004" +
-      "memo\030\020 \003(\0132@.temporal.omes.kitchen_sink." +
-      "ExecuteChildWorkflowAction.MemoEntry\022g\n\021" +
-      "search_attributes\030\021 \003(\0132L.temporal.omes." +
-      "kitchen_sink.ExecuteChildWorkflowAction." +
-      "SearchAttributesEntry\022T\n\021cancellation_ty" +
-      "pe\030\022 \001(\01629.temporal.omes.kitchen_sink.Ch" +
-      "ildWorkflowCancellationType\022G\n\021versionin" +
-      "g_intent\030\023 \001(\0162,.temporal.omes.kitchen_s" +
-      "ink.VersioningIntent\022E\n\020awaitable_choice" +
-      "\030\024 \001(\0132+.temporal.omes.kitchen_sink.Awai" +
-      "tableChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t" +
-      "\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v1" +
-      ".Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022." +
-      "\n\005value\030\002 \001(\0132\037.temporal.api.common.v1.P" +
-      "ayload:\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003k" +
-      "ey\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.c" +
-      "ommon.v1.Payload:\0028\001\"0\n\022AwaitWorkflowSta" +
-      "te\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020SendS" +
-      "ignalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_" +
-      "id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004args\030\004 " +
-      "\003(\0132\037.temporal.api.common.v1.Payload\022J\n\007" +
-      "headers\030\005 \003(\01329.temporal.omes.kitchen_si" +
-      "nk.SendSignalAction.HeadersEntry\022E\n\020awai" +
-      "table_choice\030\006 \001(\0132+.temporal.omes.kitch" +
-      "en_sink.AwaitableChoice\032O\n\014HeadersEntry\022" +
-      "\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.a" +
-      "pi.common.v1.Payload:\0028\001\";\n\024CancelWorkfl" +
-      "owAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030" +
-      "\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010patch_i" +
-      "d\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inner_act" +
-      "ion\030\003 \001(\0132\".temporal.omes.kitchen_sink.A" +
-      "ction\"\343\001\n\034UpsertSearchAttributesAction\022i" +
-      "\n\021search_attributes\030\001 \003(\0132N.temporal.ome" +
-      "s.kitchen_sink.UpsertSearchAttributesAct" +
-      "ion.SearchAttributesEntry\032X\n\025SearchAttri" +
-      "butesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
-      ".temporal.api.common.v1.Payload:\0028\001\"G\n\020U" +
-      "psertMemoAction\0223\n\rupserted_memo\030\001 \001(\0132\034" +
-      ".temporal.api.common.v1.Memo\"J\n\022ReturnRe" +
-      "sultAction\0224\n\013return_this\030\001 \001(\0132\037.tempor" +
-      "al.api.common.v1.Payload\"F\n\021ReturnErrorA" +
-      "ction\0221\n\007failure\030\001 \001(\0132 .temporal.api.fa" +
-      "ilure.v1.Failure\"\336\006\n\023ContinueAsNewAction" +
-      "\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_queue\030\002 " +
-      "\001(\t\0222\n\targuments\030\003 \003(\0132\037.temporal.api.co" +
-      "mmon.v1.Payload\0227\n\024workflow_run_timeout\030" +
-      "\004 \001(\0132\031.google.protobuf.Duration\0228\n\025work" +
-      "flow_task_timeout\030\005 \001(\0132\031.google.protobu" +
-      "f.Duration\022G\n\004memo\030\006 \003(\01329.temporal.omes" +
-      ".kitchen_sink.ContinueAsNewAction.MemoEn" +
-      "try\022M\n\007headers\030\007 \003(\0132<.temporal.omes.kit" +
-      "chen_sink.ContinueAsNewAction.HeadersEnt" +
-      "ry\022`\n\021search_attributes\030\010 \003(\0132E.temporal" +
-      ".omes.kitchen_sink.ContinueAsNewAction.S" +
-      "earchAttributesEntry\0229\n\014retry_policy\030\t \001" +
-      "(\0132#.temporal.api.common.v1.RetryPolicy\022" +
-      "G\n\021versioning_intent\030\n \001(\0162,.temporal.om" +
-      "es.kitchen_sink.VersioningIntent\032L\n\tMemo" +
-      "Entry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temp" +
-      "oral.api.common.v1.Payload:\0028\001\032O\n\014Header" +
-      "sEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tem" +
-      "poral.api.common.v1.Payload:\0028\001\032X\n\025Searc" +
-      "hAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002" +
-      " \001(\0132\037.temporal.api.common.v1.Payload:\0028" +
-      "\001\"\321\001\n\025RemoteActivityOptions\022O\n\021cancellat" +
-      "ion_type\030\001 \001(\01624.temporal.omes.kitchen_s" +
-      "ink.ActivityCancellationType\022\036\n\026do_not_e" +
-      "agerly_execute\030\002 \001(\010\022G\n\021versioning_inten" +
-      "t\030\003 \001(\0162,.temporal.omes.kitchen_sink.Ver" +
-      "sioningIntent*\244\001\n\021ParentClosePolicy\022#\n\037P" +
-      "ARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARE" +
-      "NT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CL" +
-      "OSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POL" +
-      "ICY_REQUEST_CANCEL\020\003*@\n\020VersioningIntent" +
-      "\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEF" +
-      "AULT\020\002*\242\001\n\035ChildWorkflowCancellationType" +
-      "\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_C" +
-      "ANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_CO" +
-      "MPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_" +
-      "REQUESTED\020\003*X\n\030ActivityCancellationType\022" +
-      "\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COM" +
-      "PLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.ome" +
-      "sZ.github.com/temporalio/omes/loadgen/ki" +
-      "tchensinkb\006proto3"
+      "temporal.api.common.v1.Payload\032\232\001\n\021Resou" +
+      "rcesActivity\022*\n\007run_for\030\001 \001(\0132\031.google.p" +
+      "rotobuf.Duration\022\031\n\021bytes_to_allocate\030\002 " +
+      "\001(\004\022$\n\034cpu_yield_every_n_iterations\030\003 \001(" +
+      "\r\022\030\n\020cpu_yield_for_ms\030\004 \001(\r\032O\n\014HeadersEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
+      "al.api.common.v1.Payload:\0028\001B\017\n\ractivity" +
+      "_typeB\n\n\010locality\"\255\n\n\032ExecuteChildWorkfl" +
+      "owAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_" +
+      "id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_" +
+      "queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.ap" +
+      "i.common.v1.Payload\022=\n\032workflow_executio" +
+      "n_timeout\030\007 \001(\0132\031.google.protobuf.Durati" +
+      "on\0227\n\024workflow_run_timeout\030\010 \001(\0132\031.googl" +
+      "e.protobuf.Duration\0228\n\025workflow_task_tim" +
+      "eout\030\t \001(\0132\031.google.protobuf.Duration\022J\n" +
+      "\023parent_close_policy\030\n \001(\0162-.temporal.om" +
+      "es.kitchen_sink.ParentClosePolicy\022N\n\030wor" +
+      "kflow_id_reuse_policy\030\014 \001(\0162,.temporal.a" +
+      "pi.enums.v1.WorkflowIdReusePolicy\0229\n\014ret" +
+      "ry_policy\030\r \001(\0132#.temporal.api.common.v1" +
+      ".RetryPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007h" +
+      "eaders\030\017 \003(\0132C.temporal.omes.kitchen_sin" +
+      "k.ExecuteChildWorkflowAction.HeadersEntr" +
+      "y\022N\n\004memo\030\020 \003(\0132@.temporal.omes.kitchen_" +
+      "sink.ExecuteChildWorkflowAction.MemoEntr" +
+      "y\022g\n\021search_attributes\030\021 \003(\0132L.temporal." +
+      "omes.kitchen_sink.ExecuteChildWorkflowAc" +
+      "tion.SearchAttributesEntry\022T\n\021cancellati" +
+      "on_type\030\022 \001(\01629.temporal.omes.kitchen_si" +
+      "nk.ChildWorkflowCancellationType\022G\n\021vers" +
+      "ioning_intent\030\023 \001(\0162,.temporal.omes.kitc" +
+      "hen_sink.VersioningIntent\022E\n\020awaitable_c" +
+      "hoice\030\024 \001(\0132+.temporal.omes.kitchen_sink" +
+      ".AwaitableChoice\032O\n\014HeadersEntry\022\013\n\003key\030" +
+      "\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.comm" +
+      "on.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 " +
+      "\001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common" +
+      ".v1.Payload:\0028\001\032X\n\025SearchAttributesEntry" +
+      "\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal." +
+      "api.common.v1.Payload:\0028\001\"0\n\022AwaitWorkfl" +
+      "owState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020" +
+      "SendSignalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n" +
+      "\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004ar" +
+      "gs\030\004 \003(\0132\037.temporal.api.common.v1.Payloa" +
+      "d\022J\n\007headers\030\005 \003(\01329.temporal.omes.kitch" +
+      "en_sink.SendSignalAction.HeadersEntry\022E\n" +
+      "\020awaitable_choice\030\006 \001(\0132+.temporal.omes." +
+      "kitchen_sink.AwaitableChoice\032O\n\014HeadersE" +
+      "ntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempo" +
+      "ral.api.common.v1.Payload:\0028\001\";\n\024CancelW" +
+      "orkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006ru" +
+      "n_id\030\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010pa" +
+      "tch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inne" +
+      "r_action\030\003 \001(\0132\".temporal.omes.kitchen_s" +
+      "ink.Action\"\343\001\n\034UpsertSearchAttributesAct" +
+      "ion\022i\n\021search_attributes\030\001 \003(\0132N.tempora" +
+      "l.omes.kitchen_sink.UpsertSearchAttribut" +
+      "esAction.SearchAttributesEntry\032X\n\025Search" +
+      "AttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 " +
+      "\001(\0132\037.temporal.api.common.v1.Payload:\0028\001" +
+      "\"G\n\020UpsertMemoAction\0223\n\rupserted_memo\030\001 " +
+      "\001(\0132\034.temporal.api.common.v1.Memo\"J\n\022Ret" +
+      "urnResultAction\0224\n\013return_this\030\001 \001(\0132\037.t" +
+      "emporal.api.common.v1.Payload\"F\n\021ReturnE" +
+      "rrorAction\0221\n\007failure\030\001 \001(\0132 .temporal.a" +
+      "pi.failure.v1.Failure\"\336\006\n\023ContinueAsNewA" +
+      "ction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_que" +
+      "ue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.temporal.a" +
+      "pi.common.v1.Payload\0227\n\024workflow_run_tim" +
+      "eout\030\004 \001(\0132\031.google.protobuf.Duration\0228\n" +
+      "\025workflow_task_timeout\030\005 \001(\0132\031.google.pr" +
+      "otobuf.Duration\022G\n\004memo\030\006 \003(\01329.temporal" +
+      ".omes.kitchen_sink.ContinueAsNewAction.M" +
+      "emoEntry\022M\n\007headers\030\007 \003(\0132<.temporal.ome" +
+      "s.kitchen_sink.ContinueAsNewAction.Heade" +
+      "rsEntry\022`\n\021search_attributes\030\010 \003(\0132E.tem" +
+      "poral.omes.kitchen_sink.ContinueAsNewAct" +
+      "ion.SearchAttributesEntry\0229\n\014retry_polic" +
+      "y\030\t \001(\0132#.temporal.api.common.v1.RetryPo" +
+      "licy\022G\n\021versioning_intent\030\n \001(\0162,.tempor" +
+      "al.omes.kitchen_sink.VersioningIntent\032L\n" +
+      "\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
+      ".temporal.api.common.v1.Payload:\0028\001\032O\n\014H" +
+      "eadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132" +
+      "\037.temporal.api.common.v1.Payload:\0028\001\032X\n\025" +
+      "SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005va" +
+      "lue\030\002 \001(\0132\037.temporal.api.common.v1.Paylo" +
+      "ad:\0028\001\"\321\001\n\025RemoteActivityOptions\022O\n\021canc" +
+      "ellation_type\030\001 \001(\01624.temporal.omes.kitc" +
+      "hen_sink.ActivityCancellationType\022\036\n\026do_" +
+      "not_eagerly_execute\030\002 \001(\010\022G\n\021versioning_" +
+      "intent\030\003 \001(\0162,.temporal.omes.kitchen_sin" +
+      "k.VersioningIntent*\244\001\n\021ParentClosePolicy" +
+      "\022#\n\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n" +
+      "\035PARENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARE" +
+      "NT_CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOS" +
+      "E_POLICY_REQUEST_CANCEL\020\003*@\n\020VersioningI" +
+      "ntent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013" +
+      "\n\007DEFAULT\020\002*\242\001\n\035ChildWorkflowCancellatio" +
+      "nType\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_" +
+      "TRY_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATI" +
+      "ON_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLA" +
+      "TION_REQUESTED\020\003*X\n\030ActivityCancellation" +
+      "Type\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATIO" +
+      "N_COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.tempora" +
+      "l.omesZ.github.com/temporalio/omes/loadg" +
+      "en/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -41029,7 +41238,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor,
-        new java.lang.String[] { "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs", });
+        new java.lang.String[] { "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(2);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_fieldAccessorTable = new
