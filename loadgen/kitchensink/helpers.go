@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// Must match string used in rust generator
-const nonexistentHandler = "nonexistent handler on purpose"
-
 func NoOpSingleActivityActionSet() *ActionSet {
 	return &ActionSet{
 		Actions: []*Action{
@@ -37,7 +34,7 @@ func NoOpSingleActivityActionSet() *ActionSet {
 	}
 }
 
-func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint32, cpuYieldForMs uint32) *Action {
+func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint32, cpuYieldForMs uint32, runForSeconds int64) *Action {
 	return &Action{
 		Variant: &Action_ExecActivity{
 			ExecActivity: &ExecuteActivityAction{
@@ -46,10 +43,13 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 						BytesToAllocate:          bytesToAllocate,
 						CpuYieldEveryNIterations: cpuYieldEveryNIters,
 						CpuYieldForMs:            cpuYieldForMs,
-						RunFor:                   &durationpb.Duration{Seconds: 60},
+						RunFor:                   &durationpb.Duration{Seconds: runForSeconds},
 					},
 				},
-				StartToCloseTimeout: &durationpb.Duration{Seconds: 90},
+				StartToCloseTimeout: &durationpb.Duration{Seconds: runForSeconds * 2},
+				RetryPolicy: &common.RetryPolicy{
+					MaximumAttempts: 1,
+				},
 			},
 		},
 	}

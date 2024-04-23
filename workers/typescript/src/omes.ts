@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import {
   DefaultLogger,
   LogLevel,
+  makeTelemetryFilterString,
   NativeConnection,
   Runtime,
   TelemetryOptions,
@@ -83,9 +84,10 @@ async function run() {
     };
   }
 
-  // Configure logging
+  // Configure logging (winston doesn't know about trace level which is obnoxious)
+  const winstonLevel = opts.logLevel.toLowerCase() === 'trace' ? 'debug' : opts.logLevel;
   const winstonLogger = winston.createLogger({
-    level: opts.logLevel,
+    level: winstonLevel,
     format:
       opts.logEncoding === 'json'
         ? winston.format.json()
@@ -98,14 +100,16 @@ async function run() {
   });
   const logger = new DefaultLogger(coerceLogLevel(opts.logLevel), (entry) => {
     winstonLogger.log({
-      level: entry.level.toLowerCase(),
+      level: entry.level.toLowerCase() === 'trace' ? 'debug' : entry.level.toLowerCase(),
       message: entry.message,
       timestamp: Number(entry.timestampNanos / 1_000_000n),
       meta: entry.meta,
     });
   });
   // Configure metrics
-  const telemetryOptions: TelemetryOptions = {};
+  const telemetryOptions: TelemetryOptions = {
+    logging: { filter: makeTelemetryFilterString({ core: 'DEBUG', other: 'INFO' }) },
+  };
   if (opts.promListenAddress) {
     telemetryOptions.metrics = { prometheus: { bindAddress: opts.promListenAddress } };
   }

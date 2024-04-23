@@ -10,6 +10,7 @@ export async function noop() {
 
 export async function resources(input: IResourcesActivity) {
   if (isMainThread) {
+    console.log('Starting resources worker');
     return new Promise<void>((resolve, reject) => {
       const worker = new Worker(__dirname + '/resources_activity_thread.js', { workerData: input });
       worker.on('message', (message) => console.log(message));

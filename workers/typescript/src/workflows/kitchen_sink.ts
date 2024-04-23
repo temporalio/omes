@@ -1,4 +1,4 @@
-import { google, temporal } from '../protos/root';
+import { temporal } from '../protos/root';
 import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
@@ -20,6 +20,7 @@ import {
   startChild,
   upsertSearchAttributes,
   Workflow,
+  log,
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
@@ -50,6 +51,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   const actionsQueue = new Array<IActionSet>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
+    log.info('Handling an action set', { actions });
     let rval: IPayload | undefined;
 
     if (!actions.concurrent) {
@@ -73,6 +75,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         })
       );
     }
+    log.info(`Should be waiting on ${promises.length} promises`);
     const allComplete = Promise.all(promises);
     await Promise.any([allComplete, condition(() => rval !== undefined)]);
 
@@ -278,6 +281,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     remoteArgs.taskQueue = execActivity.taskQueue ?? undefined;
     remoteArgs.cancellationType = convertCancelType(execActivity.remote?.cancellationType);
     remoteArgs.heartbeatTimeout = durationConvert(execActivity.heartbeatTimeout);
+    log.info('Scheduling activity', { actType, args, remoteArgs });
     return scheduleActivity(actType, args, remoteArgs);
   }
 }
