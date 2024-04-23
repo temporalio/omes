@@ -75,9 +75,15 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         })
       );
     }
-    log.info(`Should be waiting on ${promises.length} promises`);
     const allComplete = Promise.all(promises);
-    await Promise.any([allComplete, condition(() => rval !== undefined)]);
+    log.info(`Should be waiting on ${promises.length} promises`);
+    await Promise.any([
+      allComplete,
+      condition(() => {
+        log.warn('rval', { retval: rval });
+        return rval !== undefined;
+      }),
+    ]);
 
     return rval;
   }
