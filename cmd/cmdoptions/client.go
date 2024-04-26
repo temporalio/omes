@@ -53,6 +53,7 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.DisableHostVerification,
 		ServerName:         c.TLSServerName,
+		MinVersion:         tls.VersionTLS13,
 	}
 	if c.ClientCertPath != "" {
 		if c.ClientKeyPath == "" {
@@ -133,7 +134,7 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
-	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "Override for target server name")
+	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
