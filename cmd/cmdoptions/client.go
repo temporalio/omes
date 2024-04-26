@@ -40,7 +40,8 @@ type ClientOptions struct {
 	ClientCertPath string
 	// TLS client private key
 	ClientKeyPath string
-	ServiceName   string
+	// TLS server name
+	TLSServerName string
 	// Authorization header value
 	AuthHeader string
 	// Disable Host Verification
@@ -51,7 +52,7 @@ type ClientOptions struct {
 func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.DisableHostVerification,
-		ServerName:         c.ServiceName,
+		ServerName:         c.TLSServerName,
 	}
 	if c.ClientCertPath != "" {
 		if c.ClientKeyPath == "" {
@@ -132,7 +133,7 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
-	fs.StringVar(&c.ServiceName, "tls-server-name", "", "Override for target server name")
+	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "Override for target server name")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
@@ -157,8 +158,8 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	if c.DisableHostVerification {
 		flags = append(flags, "--disable-tls-host-verification")
 	}
-	if c.ServiceName != "" {
-		flags = append(flags, "--tls-server-name", c.ServiceName)
+	if c.TLSServerName != "" {
+		flags = append(flags, "--tls-server-name", c.TLSServerName)
 	}
 	if c.AuthHeader != "" {
 		flags = append(flags, "--auth-header", c.AuthHeader)
