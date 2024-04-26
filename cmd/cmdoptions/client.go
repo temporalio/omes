@@ -42,6 +42,8 @@ type ClientOptions struct {
 	ClientKeyPath string
 	// Authorization header value
 	AuthHeader string
+	// Disable Host Verification
+	DisableHostVerification bool
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -54,12 +56,17 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load certs: %s", err)
 		}
-		return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
+		return &tls.Config{
+			Certificates:       []tls.Certificate{cert},
+			InsecureSkipVerify: c.DisableHostVerification,
+		}, nil
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
 	}
 	if c.EnableTLS {
-		return &tls.Config{}, nil
+		return &tls.Config{
+			InsecureSkipVerify: c.DisableHostVerification,
+		}, nil
 	}
 	return nil, nil
 }
@@ -123,6 +130,7 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
