@@ -207,8 +207,23 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		},
 		Namespace: r.Namespace,
 	})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return fmt.Errorf("failed to register search attributes: %w", err)
+
+	// Throw an error if the attributes could not be registered, but ignore already exists errs
+	alreadyExistsStrings := []string{
+		"already exists",
+		"attributes mapping unavailble",
+	}
+	if err != nil {
+		isAlreadyExistsErr := false
+		for _, s := range alreadyExistsStrings {
+			if strings.Contains(err.Error(), s) {
+				isAlreadyExistsErr = true
+				break
+			}
+		}
+		if !isAlreadyExistsErr {
+			return fmt.Errorf("failed to register search attributes: %w", err)
+		}
 	}
 
 	clientSeq := options.Params.ClientSequence
