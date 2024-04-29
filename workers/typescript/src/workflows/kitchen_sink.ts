@@ -1,4 +1,4 @@
-import { google, temporal } from '../protos/root';
+import { temporal } from '../protos/root';
 import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
@@ -27,7 +27,6 @@ import {
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
-import Long from 'long';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -39,8 +38,8 @@ import IPayload = temporal.api.common.v1.IPayload;
 import IAwaitableChoice = temporal.omes.kitchen_sink.IAwaitableChoice;
 import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
 import ActivityCancellationType = temporal.omes.kitchen_sink.ActivityCancellationType;
-import IDuration = google.protobuf.IDuration;
 import IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
+import { durationConvert, numify } from '../proto_help';
 
 const reportStateQuery = defineQuery<IWorkflowState, [Payload]>('report_state');
 const actionsSignal = defineSignal<[DoSignalActions]>('do_actions_signal');
@@ -75,13 +74,12 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       );
     }
     const allComplete = Promise.all(promises);
-    await Promise.any([allComplete, condition(() => rval !== undefined)]);
+    await Promise.race([allComplete, condition(() => rval !== undefined)]);
 
     return rval;
   }
 
   async function handleAction(action: IAction): Promise<IPayload | null | undefined> {
-    // console.log('Handling an action', action);
     async function handleAwaitableChoice<PR extends Promise<PRR>, PRR>(
       promise: () => PR,
       choice: IAwaitableChoice | null | undefined,
@@ -260,6 +258,10 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'delay';
     args.push(durationConvert(execActivity.delay));
   }
+  if (execActivity.resources) {
+    actType = 'resources';
+    args.push(execActivity.resources);
+  }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),
@@ -289,24 +291,4 @@ function convertCancelType(
   } else if (ct === ActivityCancellationType.ABANDON) {
     return WFActivityCancellationType.ABANDON;
   }
-}
-
-function durationConvert(d: IDuration | null | undefined): number {
-  if (!d) {
-    return 0;
-  }
-  // convert to ms
-  return Math.round(numify(d.seconds) * 1000 + (d.nanos ?? 0) / 1000000);
-}
-
-// I just cannot get protobuf to use Long consistently. For whatever insane reason for child
-// workflows it reverts to using number.
-function numify(n: number | Long | undefined | null): number {
-  if (!n) {
-    return 0;
-  }
-  if (typeof n === 'number') {
-    return n;
-  }
-  return n.toNumber();
 }

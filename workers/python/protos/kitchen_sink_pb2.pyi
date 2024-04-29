@@ -222,7 +222,7 @@ class TimerAction(_message.Message):
     def __init__(self, milliseconds: _Optional[int] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class ExecuteActivityAction(_message.Message):
-    __slots__ = ("generic", "delay", "noop", "task_queue", "headers", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice")
+    __slots__ = ("generic", "delay", "noop", "resources", "task_queue", "headers", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice")
     class GenericActivity(_message.Message):
         __slots__ = ("type", "arguments")
         TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -230,6 +230,17 @@ class ExecuteActivityAction(_message.Message):
         type: str
         arguments: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
         def __init__(self, type: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ...) -> None: ...
+    class ResourcesActivity(_message.Message):
+        __slots__ = ("run_for", "bytes_to_allocate", "cpu_yield_every_n_iterations", "cpu_yield_for_ms")
+        RUN_FOR_FIELD_NUMBER: _ClassVar[int]
+        BYTES_TO_ALLOCATE_FIELD_NUMBER: _ClassVar[int]
+        CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER: _ClassVar[int]
+        CPU_YIELD_FOR_MS_FIELD_NUMBER: _ClassVar[int]
+        run_for: _duration_pb2.Duration
+        bytes_to_allocate: int
+        cpu_yield_every_n_iterations: int
+        cpu_yield_for_ms: int
+        def __init__(self, run_for: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -240,6 +251,7 @@ class ExecuteActivityAction(_message.Message):
     GENERIC_FIELD_NUMBER: _ClassVar[int]
     DELAY_FIELD_NUMBER: _ClassVar[int]
     NOOP_FIELD_NUMBER: _ClassVar[int]
+    RESOURCES_FIELD_NUMBER: _ClassVar[int]
     TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     SCHEDULE_TO_CLOSE_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
@@ -253,6 +265,7 @@ class ExecuteActivityAction(_message.Message):
     generic: ExecuteActivityAction.GenericActivity
     delay: _duration_pb2.Duration
     noop: _empty_pb2.Empty
+    resources: ExecuteActivityAction.ResourcesActivity
     task_queue: str
     headers: _containers.MessageMap[str, _message_pb2.Payload]
     schedule_to_close_timeout: _duration_pb2.Duration
@@ -263,7 +276,7 @@ class ExecuteActivityAction(_message.Message):
     is_local: _empty_pb2.Empty
     remote: RemoteActivityOptions
     awaitable_choice: AwaitableChoice
-    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
+    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., resources: _Optional[_Union[ExecuteActivityAction.ResourcesActivity, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class ExecuteChildWorkflowAction(_message.Message):
     __slots__ = ("namespace", "workflow_id", "workflow_type", "task_queue", "input", "workflow_execution_timeout", "workflow_run_timeout", "workflow_task_timeout", "parent_close_policy", "workflow_id_reuse_policy", "retry_policy", "cron_schedule", "headers", "memo", "search_attributes", "cancellation_type", "versioning_intent", "awaitable_choice")

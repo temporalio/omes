@@ -20135,6 +20135,33 @@ java.lang.String defaultValue) {
 
     /**
      * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     * @return Whether the resources field is set.
+     */
+    boolean hasResources();
+    /**
+     * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     * @return The resources.
+     */
+    io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getResources();
+    /**
+     * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     */
+    io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder getResourcesOrBuilder();
+
+    /**
+     * <pre>
      * The name of the task queue to place this activity request in
      * </pre>
      *
@@ -21370,6 +21397,835 @@ io.temporal.api.common.v1.Payload defaultValue);
 
     }
 
+    public interface ResourcesActivityOrBuilder extends
+        // @@protoc_insertion_point(interface_extends:temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity)
+        com.google.protobuf.MessageOrBuilder {
+
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return Whether the runFor field is set.
+       */
+      boolean hasRunFor();
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return The runFor.
+       */
+      com.google.protobuf.Duration getRunFor();
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       */
+      com.google.protobuf.DurationOrBuilder getRunForOrBuilder();
+
+      /**
+       * <code>uint64 bytes_to_allocate = 2;</code>
+       * @return The bytesToAllocate.
+       */
+      long getBytesToAllocate();
+
+      /**
+       * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
+       * @return The cpuYieldEveryNIterations.
+       */
+      int getCpuYieldEveryNIterations();
+
+      /**
+       * <code>uint32 cpu_yield_for_ms = 4;</code>
+       * @return The cpuYieldForMs.
+       */
+      int getCpuYieldForMs();
+    }
+    /**
+     * Protobuf type {@code temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity}
+     */
+    public static final class ResourcesActivity extends
+        com.google.protobuf.GeneratedMessageV3 implements
+        // @@protoc_insertion_point(message_implements:temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity)
+        ResourcesActivityOrBuilder {
+    private static final long serialVersionUID = 0L;
+      // Use ResourcesActivity.newBuilder() to construct.
+      private ResourcesActivity(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+        super(builder);
+      }
+      private ResourcesActivity() {
+      }
+
+      @java.lang.Override
+      @SuppressWarnings({"unused"})
+      protected java.lang.Object newInstance(
+          UnusedPrivateParameter unused) {
+        return new ResourcesActivity();
+      }
+
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.class, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder.class);
+      }
+
+      private int bitField0_;
+      public static final int RUN_FOR_FIELD_NUMBER = 1;
+      private com.google.protobuf.Duration runFor_;
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return Whether the runFor field is set.
+       */
+      @java.lang.Override
+      public boolean hasRunFor() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       * @return The runFor.
+       */
+      @java.lang.Override
+      public com.google.protobuf.Duration getRunFor() {
+        return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+      }
+      /**
+       * <code>.google.protobuf.Duration run_for = 1;</code>
+       */
+      @java.lang.Override
+      public com.google.protobuf.DurationOrBuilder getRunForOrBuilder() {
+        return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+      }
+
+      public static final int BYTES_TO_ALLOCATE_FIELD_NUMBER = 2;
+      private long bytesToAllocate_ = 0L;
+      /**
+       * <code>uint64 bytes_to_allocate = 2;</code>
+       * @return The bytesToAllocate.
+       */
+      @java.lang.Override
+      public long getBytesToAllocate() {
+        return bytesToAllocate_;
+      }
+
+      public static final int CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER = 3;
+      private int cpuYieldEveryNIterations_ = 0;
+      /**
+       * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
+       * @return The cpuYieldEveryNIterations.
+       */
+      @java.lang.Override
+      public int getCpuYieldEveryNIterations() {
+        return cpuYieldEveryNIterations_;
+      }
+
+      public static final int CPU_YIELD_FOR_MS_FIELD_NUMBER = 4;
+      private int cpuYieldForMs_ = 0;
+      /**
+       * <code>uint32 cpu_yield_for_ms = 4;</code>
+       * @return The cpuYieldForMs.
+       */
+      @java.lang.Override
+      public int getCpuYieldForMs() {
+        return cpuYieldForMs_;
+      }
+
+      private byte memoizedIsInitialized = -1;
+      @java.lang.Override
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized == 1) return true;
+        if (isInitialized == 0) return false;
+
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      @java.lang.Override
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        if (((bitField0_ & 0x00000001) != 0)) {
+          output.writeMessage(1, getRunFor());
+        }
+        if (bytesToAllocate_ != 0L) {
+          output.writeUInt64(2, bytesToAllocate_);
+        }
+        if (cpuYieldEveryNIterations_ != 0) {
+          output.writeUInt32(3, cpuYieldEveryNIterations_);
+        }
+        if (cpuYieldForMs_ != 0) {
+          output.writeUInt32(4, cpuYieldForMs_);
+        }
+        getUnknownFields().writeTo(output);
+      }
+
+      @java.lang.Override
+      public int getSerializedSize() {
+        int size = memoizedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        if (((bitField0_ & 0x00000001) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(1, getRunFor());
+        }
+        if (bytesToAllocate_ != 0L) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(2, bytesToAllocate_);
+        }
+        if (cpuYieldEveryNIterations_ != 0) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(3, cpuYieldEveryNIterations_);
+        }
+        if (cpuYieldForMs_ != 0) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(4, cpuYieldForMs_);
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSize = size;
+        return size;
+      }
+
+      @java.lang.Override
+      public boolean equals(final java.lang.Object obj) {
+        if (obj == this) {
+         return true;
+        }
+        if (!(obj instanceof io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity)) {
+          return super.equals(obj);
+        }
+        io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity other = (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) obj;
+
+        if (hasRunFor() != other.hasRunFor()) return false;
+        if (hasRunFor()) {
+          if (!getRunFor()
+              .equals(other.getRunFor())) return false;
+        }
+        if (getBytesToAllocate()
+            != other.getBytesToAllocate()) return false;
+        if (getCpuYieldEveryNIterations()
+            != other.getCpuYieldEveryNIterations()) return false;
+        if (getCpuYieldForMs()
+            != other.getCpuYieldForMs()) return false;
+        if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+        return true;
+      }
+
+      @java.lang.Override
+      public int hashCode() {
+        if (memoizedHashCode != 0) {
+          return memoizedHashCode;
+        }
+        int hash = 41;
+        hash = (19 * hash) + getDescriptor().hashCode();
+        if (hasRunFor()) {
+          hash = (37 * hash) + RUN_FOR_FIELD_NUMBER;
+          hash = (53 * hash) + getRunFor().hashCode();
+        }
+        hash = (37 * hash) + BYTES_TO_ALLOCATE_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getBytesToAllocate());
+        hash = (37 * hash) + CPU_YIELD_EVERY_N_ITERATIONS_FIELD_NUMBER;
+        hash = (53 * hash) + getCpuYieldEveryNIterations();
+        hash = (37 * hash) + CPU_YIELD_FOR_MS_FIELD_NUMBER;
+        hash = (53 * hash) + getCpuYieldForMs();
+        hash = (29 * hash) + getUnknownFields().hashCode();
+        memoizedHashCode = hash;
+        return hash;
+      }
+
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          java.nio.ByteBuffer data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          java.nio.ByteBuffer data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input, extensionRegistry);
+      }
+
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseDelimitedWithIOException(PARSER, input);
+      }
+
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input);
+      }
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return com.google.protobuf.GeneratedMessageV3
+            .parseWithIOException(PARSER, input, extensionRegistry);
+      }
+
+      @java.lang.Override
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder() {
+        return DEFAULT_INSTANCE.toBuilder();
+      }
+      public static Builder newBuilder(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity prototype) {
+        return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+      }
+      @java.lang.Override
+      public Builder toBuilder() {
+        return this == DEFAULT_INSTANCE
+            ? new Builder() : new Builder().mergeFrom(this);
+      }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+          // @@protoc_insertion_point(builder_implements:temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity)
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor;
+        }
+
+        @java.lang.Override
+        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.class, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder.class);
+        }
+
+        // Construct using io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessageV3
+                  .alwaysUseFieldBuilders) {
+            getRunForFieldBuilder();
+          }
+        }
+        @java.lang.Override
+        public Builder clear() {
+          super.clear();
+          bitField0_ = 0;
+          runFor_ = null;
+          if (runForBuilder_ != null) {
+            runForBuilder_.dispose();
+            runForBuilder_ = null;
+          }
+          bytesToAllocate_ = 0L;
+          cpuYieldEveryNIterations_ = 0;
+          cpuYieldForMs_ = 0;
+          return this;
+        }
+
+        @java.lang.Override
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor;
+        }
+
+        @java.lang.Override
+        public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getDefaultInstanceForType() {
+          return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+        }
+
+        @java.lang.Override
+        public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity build() {
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        @java.lang.Override
+        public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity buildPartial() {
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity result = new io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity(this);
+          if (bitField0_ != 0) { buildPartial0(result); }
+          onBuilt();
+          return result;
+        }
+
+        private void buildPartial0(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity result) {
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) != 0)) {
+            result.runFor_ = runForBuilder_ == null
+                ? runFor_
+                : runForBuilder_.build();
+            to_bitField0_ |= 0x00000001;
+          }
+          if (((from_bitField0_ & 0x00000002) != 0)) {
+            result.bytesToAllocate_ = bytesToAllocate_;
+          }
+          if (((from_bitField0_ & 0x00000004) != 0)) {
+            result.cpuYieldEveryNIterations_ = cpuYieldEveryNIterations_;
+          }
+          if (((from_bitField0_ & 0x00000008) != 0)) {
+            result.cpuYieldForMs_ = cpuYieldForMs_;
+          }
+          result.bitField0_ |= to_bitField0_;
+        }
+
+        @java.lang.Override
+        public Builder clone() {
+          return super.clone();
+        }
+        @java.lang.Override
+        public Builder setField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            java.lang.Object value) {
+          return super.setField(field, value);
+        }
+        @java.lang.Override
+        public Builder clearField(
+            com.google.protobuf.Descriptors.FieldDescriptor field) {
+          return super.clearField(field);
+        }
+        @java.lang.Override
+        public Builder clearOneof(
+            com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+          return super.clearOneof(oneof);
+        }
+        @java.lang.Override
+        public Builder setRepeatedField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            int index, java.lang.Object value) {
+          return super.setRepeatedField(field, index, value);
+        }
+        @java.lang.Override
+        public Builder addRepeatedField(
+            com.google.protobuf.Descriptors.FieldDescriptor field,
+            java.lang.Object value) {
+          return super.addRepeatedField(field, value);
+        }
+        @java.lang.Override
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) {
+            return mergeFrom((io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity other) {
+          if (other == io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance()) return this;
+          if (other.hasRunFor()) {
+            mergeRunFor(other.getRunFor());
+          }
+          if (other.getBytesToAllocate() != 0L) {
+            setBytesToAllocate(other.getBytesToAllocate());
+          }
+          if (other.getCpuYieldEveryNIterations() != 0) {
+            setCpuYieldEveryNIterations(other.getCpuYieldEveryNIterations());
+          }
+          if (other.getCpuYieldForMs() != 0) {
+            setCpuYieldForMs(other.getCpuYieldForMs());
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          onChanged();
+          return this;
+        }
+
+        @java.lang.Override
+        public final boolean isInitialized() {
+          return true;
+        }
+
+        @java.lang.Override
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          if (extensionRegistry == null) {
+            throw new java.lang.NullPointerException();
+          }
+          try {
+            boolean done = false;
+            while (!done) {
+              int tag = input.readTag();
+              switch (tag) {
+                case 0:
+                  done = true;
+                  break;
+                case 10: {
+                  input.readMessage(
+                      getRunForFieldBuilder().getBuilder(),
+                      extensionRegistry);
+                  bitField0_ |= 0x00000001;
+                  break;
+                } // case 10
+                case 16: {
+                  bytesToAllocate_ = input.readUInt64();
+                  bitField0_ |= 0x00000002;
+                  break;
+                } // case 16
+                case 24: {
+                  cpuYieldEveryNIterations_ = input.readUInt32();
+                  bitField0_ |= 0x00000004;
+                  break;
+                } // case 24
+                case 32: {
+                  cpuYieldForMs_ = input.readUInt32();
+                  bitField0_ |= 0x00000008;
+                  break;
+                } // case 32
+                default: {
+                  if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                    done = true; // was an endgroup tag
+                  }
+                  break;
+                } // default:
+              } // switch (tag)
+            } // while (!done)
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            throw e.unwrapIOException();
+          } finally {
+            onChanged();
+          } // finally
+          return this;
+        }
+        private int bitField0_;
+
+        private com.google.protobuf.Duration runFor_;
+        private com.google.protobuf.SingleFieldBuilderV3<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> runForBuilder_;
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         * @return Whether the runFor field is set.
+         */
+        public boolean hasRunFor() {
+          return ((bitField0_ & 0x00000001) != 0);
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         * @return The runFor.
+         */
+        public com.google.protobuf.Duration getRunFor() {
+          if (runForBuilder_ == null) {
+            return runFor_ == null ? com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+          } else {
+            return runForBuilder_.getMessage();
+          }
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder setRunFor(com.google.protobuf.Duration value) {
+          if (runForBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            runFor_ = value;
+          } else {
+            runForBuilder_.setMessage(value);
+          }
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder setRunFor(
+            com.google.protobuf.Duration.Builder builderForValue) {
+          if (runForBuilder_ == null) {
+            runFor_ = builderForValue.build();
+          } else {
+            runForBuilder_.setMessage(builderForValue.build());
+          }
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder mergeRunFor(com.google.protobuf.Duration value) {
+          if (runForBuilder_ == null) {
+            if (((bitField0_ & 0x00000001) != 0) &&
+              runFor_ != null &&
+              runFor_ != com.google.protobuf.Duration.getDefaultInstance()) {
+              getRunForBuilder().mergeFrom(value);
+            } else {
+              runFor_ = value;
+            }
+          } else {
+            runForBuilder_.mergeFrom(value);
+          }
+          if (runFor_ != null) {
+            bitField0_ |= 0x00000001;
+            onChanged();
+          }
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public Builder clearRunFor() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          runFor_ = null;
+          if (runForBuilder_ != null) {
+            runForBuilder_.dispose();
+            runForBuilder_ = null;
+          }
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public com.google.protobuf.Duration.Builder getRunForBuilder() {
+          bitField0_ |= 0x00000001;
+          onChanged();
+          return getRunForFieldBuilder().getBuilder();
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        public com.google.protobuf.DurationOrBuilder getRunForOrBuilder() {
+          if (runForBuilder_ != null) {
+            return runForBuilder_.getMessageOrBuilder();
+          } else {
+            return runFor_ == null ?
+                com.google.protobuf.Duration.getDefaultInstance() : runFor_;
+          }
+        }
+        /**
+         * <code>.google.protobuf.Duration run_for = 1;</code>
+         */
+        private com.google.protobuf.SingleFieldBuilderV3<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
+            getRunForFieldBuilder() {
+          if (runForBuilder_ == null) {
+            runForBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+                com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>(
+                    getRunFor(),
+                    getParentForChildren(),
+                    isClean());
+            runFor_ = null;
+          }
+          return runForBuilder_;
+        }
+
+        private long bytesToAllocate_ ;
+        /**
+         * <code>uint64 bytes_to_allocate = 2;</code>
+         * @return The bytesToAllocate.
+         */
+        @java.lang.Override
+        public long getBytesToAllocate() {
+          return bytesToAllocate_;
+        }
+        /**
+         * <code>uint64 bytes_to_allocate = 2;</code>
+         * @param value The bytesToAllocate to set.
+         * @return This builder for chaining.
+         */
+        public Builder setBytesToAllocate(long value) {
+
+          bytesToAllocate_ = value;
+          bitField0_ |= 0x00000002;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>uint64 bytes_to_allocate = 2;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearBytesToAllocate() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          bytesToAllocate_ = 0L;
+          onChanged();
+          return this;
+        }
+
+        private int cpuYieldEveryNIterations_ ;
+        /**
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
+         * @return The cpuYieldEveryNIterations.
+         */
+        @java.lang.Override
+        public int getCpuYieldEveryNIterations() {
+          return cpuYieldEveryNIterations_;
+        }
+        /**
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
+         * @param value The cpuYieldEveryNIterations to set.
+         * @return This builder for chaining.
+         */
+        public Builder setCpuYieldEveryNIterations(int value) {
+
+          cpuYieldEveryNIterations_ = value;
+          bitField0_ |= 0x00000004;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>uint32 cpu_yield_every_n_iterations = 3;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearCpuYieldEveryNIterations() {
+          bitField0_ = (bitField0_ & ~0x00000004);
+          cpuYieldEveryNIterations_ = 0;
+          onChanged();
+          return this;
+        }
+
+        private int cpuYieldForMs_ ;
+        /**
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
+         * @return The cpuYieldForMs.
+         */
+        @java.lang.Override
+        public int getCpuYieldForMs() {
+          return cpuYieldForMs_;
+        }
+        /**
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
+         * @param value The cpuYieldForMs to set.
+         * @return This builder for chaining.
+         */
+        public Builder setCpuYieldForMs(int value) {
+
+          cpuYieldForMs_ = value;
+          bitField0_ |= 0x00000008;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>uint32 cpu_yield_for_ms = 4;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearCpuYieldForMs() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          cpuYieldForMs_ = 0;
+          onChanged();
+          return this;
+        }
+        @java.lang.Override
+        public final Builder setUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.setUnknownFields(unknownFields);
+        }
+
+        @java.lang.Override
+        public final Builder mergeUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.mergeUnknownFields(unknownFields);
+        }
+
+
+        // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity)
+      }
+
+      // @@protoc_insertion_point(class_scope:temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity)
+      private static final io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity DEFAULT_INSTANCE;
+      static {
+        DEFAULT_INSTANCE = new io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity();
+      }
+
+      public static io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getDefaultInstance() {
+        return DEFAULT_INSTANCE;
+      }
+
+      private static final com.google.protobuf.Parser<ResourcesActivity>
+          PARSER = new com.google.protobuf.AbstractParser<ResourcesActivity>() {
+        @java.lang.Override
+        public ResourcesActivity parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          Builder builder = newBuilder();
+          try {
+            builder.mergeFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            throw e.setUnfinishedMessage(builder.buildPartial());
+          } catch (com.google.protobuf.UninitializedMessageException e) {
+            throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+          } catch (java.io.IOException e) {
+            throw new com.google.protobuf.InvalidProtocolBufferException(e)
+                .setUnfinishedMessage(builder.buildPartial());
+          }
+          return builder.buildPartial();
+        }
+      };
+
+      public static com.google.protobuf.Parser<ResourcesActivity> parser() {
+        return PARSER;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<ResourcesActivity> getParserForType() {
+        return PARSER;
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getDefaultInstanceForType() {
+        return DEFAULT_INSTANCE;
+      }
+
+    }
+
     private int bitField0_;
     private int activityTypeCase_ = 0;
     @SuppressWarnings("serial")
@@ -21380,6 +22236,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       GENERIC(1),
       DELAY(2),
       NOOP(3),
+      RESOURCES(14),
       ACTIVITYTYPE_NOT_SET(0);
       private final int value;
       private ActivityTypeCase(int value) {
@@ -21400,6 +22257,7 @@ io.temporal.api.common.v1.Payload defaultValue);
           case 1: return GENERIC;
           case 2: return DELAY;
           case 3: return NOOP;
+          case 14: return RESOURCES;
           case 0: return ACTIVITYTYPE_NOT_SET;
           default: return null;
         }
@@ -21575,6 +22433,49 @@ io.temporal.api.common.v1.Payload defaultValue);
          return (com.google.protobuf.Empty) activityType_;
       }
       return com.google.protobuf.Empty.getDefaultInstance();
+    }
+
+    public static final int RESOURCES_FIELD_NUMBER = 14;
+    /**
+     * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     * @return Whether the resources field is set.
+     */
+    @java.lang.Override
+    public boolean hasResources() {
+      return activityTypeCase_ == 14;
+    }
+    /**
+     * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     * @return The resources.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getResources() {
+      if (activityTypeCase_ == 14) {
+         return (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_;
+      }
+      return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+    }
+    /**
+     * <pre>
+     * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder getResourcesOrBuilder() {
+      if (activityTypeCase_ == 14) {
+         return (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_;
+      }
+      return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
     }
 
     public static final int TASK_QUEUE_FIELD_NUMBER = 4;
@@ -22058,6 +22959,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
       if (((bitField0_ & 0x00000020) != 0)) {
         output.writeMessage(13, getAwaitableChoice());
       }
+      if (activityTypeCase_ == 14) {
+        output.writeMessage(14, (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -22124,6 +23028,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(13, getAwaitableChoice());
       }
+      if (activityTypeCase_ == 14) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(14, (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
@@ -22186,6 +23094,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         case 3:
           if (!getNoop()
               .equals(other.getNoop())) return false;
+          break;
+        case 14:
+          if (!getResources()
+              .equals(other.getResources())) return false;
           break;
         case 0:
         default:
@@ -22256,6 +23168,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         case 3:
           hash = (37 * hash) + NOOP_FIELD_NUMBER;
           hash = (53 * hash) + getNoop().hashCode();
+          break;
+        case 14:
+          hash = (37 * hash) + RESOURCES_FIELD_NUMBER;
+          hash = (53 * hash) + getResources().hashCode();
           break;
         case 0:
         default:
@@ -22445,6 +23361,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (noopBuilder_ != null) {
           noopBuilder_.clear();
         }
+        if (resourcesBuilder_ != null) {
+          resourcesBuilder_.clear();
+        }
         taskQueue_ = "";
         internalGetMutableHeaders().clear();
         scheduleToCloseTimeout_ = null;
@@ -22521,44 +23440,44 @@ io.temporal.api.common.v1.Payload defaultValue) {
 
       private void buildPartial0(io.temporal.omes.KitchenSink.ExecuteActivityAction result) {
         int from_bitField0_ = bitField0_;
-        if (((from_bitField0_ & 0x00000008) != 0)) {
+        if (((from_bitField0_ & 0x00000010) != 0)) {
           result.taskQueue_ = taskQueue_;
         }
-        if (((from_bitField0_ & 0x00000010) != 0)) {
+        if (((from_bitField0_ & 0x00000020) != 0)) {
           result.headers_ = internalGetHeaders().build(HeadersDefaultEntryHolder.defaultEntry);
         }
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000020) != 0)) {
+        if (((from_bitField0_ & 0x00000040) != 0)) {
           result.scheduleToCloseTimeout_ = scheduleToCloseTimeoutBuilder_ == null
               ? scheduleToCloseTimeout_
               : scheduleToCloseTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000001;
         }
-        if (((from_bitField0_ & 0x00000040) != 0)) {
+        if (((from_bitField0_ & 0x00000080) != 0)) {
           result.scheduleToStartTimeout_ = scheduleToStartTimeoutBuilder_ == null
               ? scheduleToStartTimeout_
               : scheduleToStartTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000002;
         }
-        if (((from_bitField0_ & 0x00000080) != 0)) {
+        if (((from_bitField0_ & 0x00000100) != 0)) {
           result.startToCloseTimeout_ = startToCloseTimeoutBuilder_ == null
               ? startToCloseTimeout_
               : startToCloseTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000004;
         }
-        if (((from_bitField0_ & 0x00000100) != 0)) {
+        if (((from_bitField0_ & 0x00000200) != 0)) {
           result.heartbeatTimeout_ = heartbeatTimeoutBuilder_ == null
               ? heartbeatTimeout_
               : heartbeatTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000008;
         }
-        if (((from_bitField0_ & 0x00000200) != 0)) {
+        if (((from_bitField0_ & 0x00000400) != 0)) {
           result.retryPolicy_ = retryPolicyBuilder_ == null
               ? retryPolicy_
               : retryPolicyBuilder_.build();
           to_bitField0_ |= 0x00000010;
         }
-        if (((from_bitField0_ & 0x00001000) != 0)) {
+        if (((from_bitField0_ & 0x00002000) != 0)) {
           result.awaitableChoice_ = awaitableChoiceBuilder_ == null
               ? awaitableChoice_
               : awaitableChoiceBuilder_.build();
@@ -22581,6 +23500,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (activityTypeCase_ == 3 &&
             noopBuilder_ != null) {
           result.activityType_ = noopBuilder_.build();
+        }
+        if (activityTypeCase_ == 14 &&
+            resourcesBuilder_ != null) {
+          result.activityType_ = resourcesBuilder_.build();
         }
         result.localityCase_ = localityCase_;
         result.locality_ = this.locality_;
@@ -22640,12 +23563,12 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (other == io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance()) return this;
         if (!other.getTaskQueue().isEmpty()) {
           taskQueue_ = other.taskQueue_;
-          bitField0_ |= 0x00000008;
+          bitField0_ |= 0x00000010;
           onChanged();
         }
         internalGetMutableHeaders().mergeFrom(
             other.internalGetHeaders());
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         if (other.hasScheduleToCloseTimeout()) {
           mergeScheduleToCloseTimeout(other.getScheduleToCloseTimeout());
         }
@@ -22675,6 +23598,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
           }
           case NOOP: {
             mergeNoop(other.getNoop());
+            break;
+          }
+          case RESOURCES: {
+            mergeResources(other.getResources());
             break;
           }
           case ACTIVITYTYPE_NOT_SET: {
@@ -22743,7 +23670,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
               } // case 26
               case 34: {
                 taskQueue_ = input.readStringRequireUtf8();
-                bitField0_ |= 0x00000008;
+                bitField0_ |= 0x00000010;
                 break;
               } // case 34
               case 42: {
@@ -22752,42 +23679,42 @@ io.temporal.api.common.v1.Payload defaultValue) {
                     HeadersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
                 internalGetMutableHeaders().ensureBuilderMap().put(
                     headers__.getKey(), headers__.getValue());
-                bitField0_ |= 0x00000010;
+                bitField0_ |= 0x00000020;
                 break;
               } // case 42
               case 50: {
                 input.readMessage(
                     getScheduleToCloseTimeoutFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000020;
+                bitField0_ |= 0x00000040;
                 break;
               } // case 50
               case 58: {
                 input.readMessage(
                     getScheduleToStartTimeoutFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000040;
+                bitField0_ |= 0x00000080;
                 break;
               } // case 58
               case 66: {
                 input.readMessage(
                     getStartToCloseTimeoutFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000080;
+                bitField0_ |= 0x00000100;
                 break;
               } // case 66
               case 74: {
                 input.readMessage(
                     getHeartbeatTimeoutFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000100;
+                bitField0_ |= 0x00000200;
                 break;
               } // case 74
               case 82: {
                 input.readMessage(
                     getRetryPolicyFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000200;
+                bitField0_ |= 0x00000400;
                 break;
               } // case 82
               case 90: {
@@ -22808,9 +23735,16 @@ io.temporal.api.common.v1.Payload defaultValue) {
                 input.readMessage(
                     getAwaitableChoiceFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00001000;
+                bitField0_ |= 0x00002000;
                 break;
               } // case 106
+              case 114: {
+                input.readMessage(
+                    getResourcesFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                activityTypeCase_ = 14;
+                break;
+              } // case 114
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -23365,6 +24299,184 @@ io.temporal.api.common.v1.Payload defaultValue) {
         return noopBuilder_;
       }
 
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder> resourcesBuilder_;
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       * @return Whether the resources field is set.
+       */
+      @java.lang.Override
+      public boolean hasResources() {
+        return activityTypeCase_ == 14;
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       * @return The resources.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity getResources() {
+        if (resourcesBuilder_ == null) {
+          if (activityTypeCase_ == 14) {
+            return (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_;
+          }
+          return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+        } else {
+          if (activityTypeCase_ == 14) {
+            return resourcesBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      public Builder setResources(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity value) {
+        if (resourcesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          activityType_ = value;
+          onChanged();
+        } else {
+          resourcesBuilder_.setMessage(value);
+        }
+        activityTypeCase_ = 14;
+        return this;
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      public Builder setResources(
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder builderForValue) {
+        if (resourcesBuilder_ == null) {
+          activityType_ = builderForValue.build();
+          onChanged();
+        } else {
+          resourcesBuilder_.setMessage(builderForValue.build());
+        }
+        activityTypeCase_ = 14;
+        return this;
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      public Builder mergeResources(io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity value) {
+        if (resourcesBuilder_ == null) {
+          if (activityTypeCase_ == 14 &&
+              activityType_ != io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance()) {
+            activityType_ = io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.newBuilder((io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            activityType_ = value;
+          }
+          onChanged();
+        } else {
+          if (activityTypeCase_ == 14) {
+            resourcesBuilder_.mergeFrom(value);
+          } else {
+            resourcesBuilder_.setMessage(value);
+          }
+        }
+        activityTypeCase_ = 14;
+        return this;
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      public Builder clearResources() {
+        if (resourcesBuilder_ == null) {
+          if (activityTypeCase_ == 14) {
+            activityTypeCase_ = 0;
+            activityType_ = null;
+            onChanged();
+          }
+        } else {
+          if (activityTypeCase_ == 14) {
+            activityTypeCase_ = 0;
+            activityType_ = null;
+          }
+          resourcesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder getResourcesBuilder() {
+        return getResourcesFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder getResourcesOrBuilder() {
+        if ((activityTypeCase_ == 14) && (resourcesBuilder_ != null)) {
+          return resourcesBuilder_.getMessageOrBuilder();
+        } else {
+          if (activityTypeCase_ == 14) {
+            return (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_;
+          }
+          return io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * There must be an activity named `resources` which accepts the ResourcesActivity message as input
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity resources = 14;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder> 
+          getResourcesFieldBuilder() {
+        if (resourcesBuilder_ == null) {
+          if (!(activityTypeCase_ == 14)) {
+            activityType_ = io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.getDefaultInstance();
+          }
+          resourcesBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity.Builder, io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivityOrBuilder>(
+                  (io.temporal.omes.KitchenSink.ExecuteActivityAction.ResourcesActivity) activityType_,
+                  getParentForChildren(),
+                  isClean());
+          activityType_ = null;
+        }
+        activityTypeCase_ = 14;
+        onChanged();
+        return resourcesBuilder_;
+      }
+
       private java.lang.Object taskQueue_ = "";
       /**
        * <pre>
@@ -23420,7 +24532,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         taskQueue_ = value;
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -23434,7 +24546,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder clearTaskQueue() {
         taskQueue_ = getDefaultInstance().getTaskQueue();
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         onChanged();
         return this;
       }
@@ -23452,7 +24564,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         taskQueue_ = value;
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -23485,7 +24597,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (headers_ == null) {
           headers_ = new com.google.protobuf.MapFieldBuilder<>(headersConverter);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         onChanged();
         return headers_;
       }
@@ -23543,7 +24655,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         return headersConverter.build(map.get(key));
       }
       public Builder clearHeaders() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000020);
         internalGetMutableHeaders().clear();
         return this;
       }
@@ -23563,7 +24675,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       @java.lang.Deprecated
       public java.util.Map<java.lang.String, io.temporal.api.common.v1.Payload>
           getMutableHeaders() {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return internalGetMutableHeaders().ensureMessageMap();
       }
       /**
@@ -23576,7 +24688,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (value == null) { throw new NullPointerException("map value"); }
         internalGetMutableHeaders().ensureBuilderMap()
             .put(key, value);
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -23591,7 +24703,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         }
         internalGetMutableHeaders().ensureBuilderMap()
             .putAll(values);
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -23626,7 +24738,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the scheduleToCloseTimeout field is set.
        */
       public boolean hasScheduleToCloseTimeout() {
-        return ((bitField0_ & 0x00000020) != 0);
+        return ((bitField0_ & 0x00000040) != 0);
       }
       /**
        * <pre>
@@ -23663,7 +24775,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           scheduleToCloseTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         onChanged();
         return this;
       }
@@ -23683,7 +24795,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           scheduleToCloseTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         onChanged();
         return this;
       }
@@ -23698,7 +24810,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeScheduleToCloseTimeout(com.google.protobuf.Duration value) {
         if (scheduleToCloseTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) != 0) &&
+          if (((bitField0_ & 0x00000040) != 0) &&
             scheduleToCloseTimeout_ != null &&
             scheduleToCloseTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getScheduleToCloseTimeoutBuilder().mergeFrom(value);
@@ -23709,7 +24821,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           scheduleToCloseTimeoutBuilder_.mergeFrom(value);
         }
         if (scheduleToCloseTimeout_ != null) {
-          bitField0_ |= 0x00000020;
+          bitField0_ |= 0x00000040;
           onChanged();
         }
         return this;
@@ -23724,7 +24836,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration schedule_to_close_timeout = 6;</code>
        */
       public Builder clearScheduleToCloseTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000040);
         scheduleToCloseTimeout_ = null;
         if (scheduleToCloseTimeoutBuilder_ != null) {
           scheduleToCloseTimeoutBuilder_.dispose();
@@ -23743,7 +24855,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration schedule_to_close_timeout = 6;</code>
        */
       public com.google.protobuf.Duration.Builder getScheduleToCloseTimeoutBuilder() {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000040;
         onChanged();
         return getScheduleToCloseTimeoutFieldBuilder().getBuilder();
       }
@@ -23801,7 +24913,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the scheduleToStartTimeout field is set.
        */
       public boolean hasScheduleToStartTimeout() {
-        return ((bitField0_ & 0x00000040) != 0);
+        return ((bitField0_ & 0x00000080) != 0);
       }
       /**
        * <pre>
@@ -23838,7 +24950,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           scheduleToStartTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
         onChanged();
         return this;
       }
@@ -23858,7 +24970,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           scheduleToStartTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
         onChanged();
         return this;
       }
@@ -23873,7 +24985,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeScheduleToStartTimeout(com.google.protobuf.Duration value) {
         if (scheduleToStartTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000040) != 0) &&
+          if (((bitField0_ & 0x00000080) != 0) &&
             scheduleToStartTimeout_ != null &&
             scheduleToStartTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getScheduleToStartTimeoutBuilder().mergeFrom(value);
@@ -23884,7 +24996,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           scheduleToStartTimeoutBuilder_.mergeFrom(value);
         }
         if (scheduleToStartTimeout_ != null) {
-          bitField0_ |= 0x00000040;
+          bitField0_ |= 0x00000080;
           onChanged();
         }
         return this;
@@ -23899,7 +25011,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration schedule_to_start_timeout = 7;</code>
        */
       public Builder clearScheduleToStartTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000080);
         scheduleToStartTimeout_ = null;
         if (scheduleToStartTimeoutBuilder_ != null) {
           scheduleToStartTimeoutBuilder_.dispose();
@@ -23918,7 +25030,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration schedule_to_start_timeout = 7;</code>
        */
       public com.google.protobuf.Duration.Builder getScheduleToStartTimeoutBuilder() {
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000080;
         onChanged();
         return getScheduleToStartTimeoutFieldBuilder().getBuilder();
       }
@@ -23975,7 +25087,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the startToCloseTimeout field is set.
        */
       public boolean hasStartToCloseTimeout() {
-        return ((bitField0_ & 0x00000080) != 0);
+        return ((bitField0_ & 0x00000100) != 0);
       }
       /**
        * <pre>
@@ -24010,7 +25122,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           startToCloseTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
         return this;
       }
@@ -24029,7 +25141,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           startToCloseTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
         return this;
       }
@@ -24043,7 +25155,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeStartToCloseTimeout(com.google.protobuf.Duration value) {
         if (startToCloseTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000080) != 0) &&
+          if (((bitField0_ & 0x00000100) != 0) &&
             startToCloseTimeout_ != null &&
             startToCloseTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getStartToCloseTimeoutBuilder().mergeFrom(value);
@@ -24054,7 +25166,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           startToCloseTimeoutBuilder_.mergeFrom(value);
         }
         if (startToCloseTimeout_ != null) {
-          bitField0_ |= 0x00000080;
+          bitField0_ |= 0x00000100;
           onChanged();
         }
         return this;
@@ -24068,7 +25180,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration start_to_close_timeout = 8;</code>
        */
       public Builder clearStartToCloseTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000100);
         startToCloseTimeout_ = null;
         if (startToCloseTimeoutBuilder_ != null) {
           startToCloseTimeoutBuilder_.dispose();
@@ -24086,7 +25198,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration start_to_close_timeout = 8;</code>
        */
       public com.google.protobuf.Duration.Builder getStartToCloseTimeoutBuilder() {
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000100;
         onChanged();
         return getStartToCloseTimeoutFieldBuilder().getBuilder();
       }
@@ -24140,7 +25252,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the heartbeatTimeout field is set.
        */
       public boolean hasHeartbeatTimeout() {
-        return ((bitField0_ & 0x00000100) != 0);
+        return ((bitField0_ & 0x00000200) != 0);
       }
       /**
        * <pre>
@@ -24173,7 +25285,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           heartbeatTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000200;
         onChanged();
         return this;
       }
@@ -24191,7 +25303,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           heartbeatTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000200;
         onChanged();
         return this;
       }
@@ -24204,7 +25316,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeHeartbeatTimeout(com.google.protobuf.Duration value) {
         if (heartbeatTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000100) != 0) &&
+          if (((bitField0_ & 0x00000200) != 0) &&
             heartbeatTimeout_ != null &&
             heartbeatTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getHeartbeatTimeoutBuilder().mergeFrom(value);
@@ -24215,7 +25327,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           heartbeatTimeoutBuilder_.mergeFrom(value);
         }
         if (heartbeatTimeout_ != null) {
-          bitField0_ |= 0x00000100;
+          bitField0_ |= 0x00000200;
           onChanged();
         }
         return this;
@@ -24228,7 +25340,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration heartbeat_timeout = 9;</code>
        */
       public Builder clearHeartbeatTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000100);
+        bitField0_ = (bitField0_ & ~0x00000200);
         heartbeatTimeout_ = null;
         if (heartbeatTimeoutBuilder_ != null) {
           heartbeatTimeoutBuilder_.dispose();
@@ -24245,7 +25357,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.google.protobuf.Duration heartbeat_timeout = 9;</code>
        */
       public com.google.protobuf.Duration.Builder getHeartbeatTimeoutBuilder() {
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000200;
         onChanged();
         return getHeartbeatTimeoutFieldBuilder().getBuilder();
       }
@@ -24299,7 +25411,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the retryPolicy field is set.
        */
       public boolean hasRetryPolicy() {
-        return ((bitField0_ & 0x00000200) != 0);
+        return ((bitField0_ & 0x00000400) != 0);
       }
       /**
        * <pre>
@@ -24336,7 +25448,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           retryPolicyBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
         return this;
       }
@@ -24356,7 +25468,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           retryPolicyBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
         return this;
       }
@@ -24371,7 +25483,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeRetryPolicy(io.temporal.api.common.v1.RetryPolicy value) {
         if (retryPolicyBuilder_ == null) {
-          if (((bitField0_ & 0x00000200) != 0) &&
+          if (((bitField0_ & 0x00000400) != 0) &&
             retryPolicy_ != null &&
             retryPolicy_ != io.temporal.api.common.v1.RetryPolicy.getDefaultInstance()) {
             getRetryPolicyBuilder().mergeFrom(value);
@@ -24382,7 +25494,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           retryPolicyBuilder_.mergeFrom(value);
         }
         if (retryPolicy_ != null) {
-          bitField0_ |= 0x00000200;
+          bitField0_ |= 0x00000400;
           onChanged();
         }
         return this;
@@ -24397,7 +25509,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 10;</code>
        */
       public Builder clearRetryPolicy() {
-        bitField0_ = (bitField0_ & ~0x00000200);
+        bitField0_ = (bitField0_ & ~0x00000400);
         retryPolicy_ = null;
         if (retryPolicyBuilder_ != null) {
           retryPolicyBuilder_.dispose();
@@ -24416,7 +25528,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 10;</code>
        */
       public io.temporal.api.common.v1.RetryPolicy.Builder getRetryPolicyBuilder() {
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000400;
         onChanged();
         return getRetryPolicyFieldBuilder().getBuilder();
       }
@@ -24752,7 +25864,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * @return Whether the awaitableChoice field is set.
        */
       public boolean hasAwaitableChoice() {
-        return ((bitField0_ & 0x00001000) != 0);
+        return ((bitField0_ & 0x00002000) != 0);
       }
       /**
        * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 13;</code>
@@ -24777,7 +25889,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00002000;
         onChanged();
         return this;
       }
@@ -24791,7 +25903,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00002000;
         onChanged();
         return this;
       }
@@ -24800,7 +25912,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        */
       public Builder mergeAwaitableChoice(io.temporal.omes.KitchenSink.AwaitableChoice value) {
         if (awaitableChoiceBuilder_ == null) {
-          if (((bitField0_ & 0x00001000) != 0) &&
+          if (((bitField0_ & 0x00002000) != 0) &&
             awaitableChoice_ != null &&
             awaitableChoice_ != io.temporal.omes.KitchenSink.AwaitableChoice.getDefaultInstance()) {
             getAwaitableChoiceBuilder().mergeFrom(value);
@@ -24811,7 +25923,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           awaitableChoiceBuilder_.mergeFrom(value);
         }
         if (awaitableChoice_ != null) {
-          bitField0_ |= 0x00001000;
+          bitField0_ |= 0x00002000;
           onChanged();
         }
         return this;
@@ -24820,7 +25932,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 13;</code>
        */
       public Builder clearAwaitableChoice() {
-        bitField0_ = (bitField0_ & ~0x00001000);
+        bitField0_ = (bitField0_ & ~0x00002000);
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
           awaitableChoiceBuilder_.dispose();
@@ -24833,7 +25945,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
        * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 13;</code>
        */
       public io.temporal.omes.KitchenSink.AwaitableChoice.Builder getAwaitableChoiceBuilder() {
-        bitField0_ |= 0x00001000;
+        bitField0_ |= 0x00002000;
         onChanged();
         return getAwaitableChoiceFieldBuilder().getBuilder();
       }
@@ -40878,6 +41990,11 @@ io.temporal.api.common.v1.Payload defaultValue) {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -41075,132 +42192,138 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "leted\030\005 \001(\0132\026.google.protobuf.EmptyH\000B\013\n" +
       "\tcondition\"j\n\013TimerAction\022\024\n\014millisecond" +
       "s\030\001 \001(\004\022E\n\020awaitable_choice\030\002 \001(\0132+.temp" +
-      "oral.omes.kitchen_sink.AwaitableChoice\"\311" +
-      "\007\n\025ExecuteActivityAction\022T\n\007generic\030\001 \001(" +
+      "oral.omes.kitchen_sink.AwaitableChoice\"\300" +
+      "\t\n\025ExecuteActivityAction\022T\n\007generic\030\001 \001(" +
       "\0132A.temporal.omes.kitchen_sink.ExecuteAc" +
       "tivityAction.GenericActivityH\000\022*\n\005delay\030" +
       "\002 \001(\0132\031.google.protobuf.DurationH\000\022&\n\004no" +
-      "op\030\003 \001(\0132\026.google.protobuf.EmptyH\000\022\022\n\nta" +
-      "sk_queue\030\004 \001(\t\022O\n\007headers\030\005 \003(\0132>.tempor" +
-      "al.omes.kitchen_sink.ExecuteActivityActi" +
-      "on.HeadersEntry\022<\n\031schedule_to_close_tim" +
-      "eout\030\006 \001(\0132\031.google.protobuf.Duration\022<\n" +
-      "\031schedule_to_start_timeout\030\007 \001(\0132\031.googl" +
-      "e.protobuf.Duration\0229\n\026start_to_close_ti" +
-      "meout\030\010 \001(\0132\031.google.protobuf.Duration\0224" +
-      "\n\021heartbeat_timeout\030\t \001(\0132\031.google.proto" +
-      "buf.Duration\0229\n\014retry_policy\030\n \001(\0132#.tem" +
-      "poral.api.common.v1.RetryPolicy\022*\n\010is_lo" +
-      "cal\030\013 \001(\0132\026.google.protobuf.EmptyH\001\022C\n\006r" +
-      "emote\030\014 \001(\01321.temporal.omes.kitchen_sink" +
-      ".RemoteActivityOptionsH\001\022E\n\020awaitable_ch" +
-      "oice\030\r \001(\0132+.temporal.omes.kitchen_sink." +
-      "AwaitableChoice\032S\n\017GenericActivity\022\014\n\004ty" +
-      "pe\030\001 \001(\t\0222\n\targuments\030\002 \003(\0132\037.temporal.a" +
-      "pi.common.v1.Payload\032O\n\014HeadersEntry\022\013\n\003" +
-      "key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api." +
-      "common.v1.Payload:\0028\001B\017\n\ractivity_typeB\n" +
-      "\n\010locality\"\255\n\n\032ExecuteChildWorkflowActio" +
-      "n\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_id\030\003 \001(" +
-      "\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_queue\030\005" +
-      " \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.api.commo" +
-      "n.v1.Payload\022=\n\032workflow_execution_timeo" +
-      "ut\030\007 \001(\0132\031.google.protobuf.Duration\0227\n\024w" +
-      "orkflow_run_timeout\030\010 \001(\0132\031.google.proto" +
-      "buf.Duration\0228\n\025workflow_task_timeout\030\t " +
-      "\001(\0132\031.google.protobuf.Duration\022J\n\023parent" +
-      "_close_policy\030\n \001(\0162-.temporal.omes.kitc" +
-      "hen_sink.ParentClosePolicy\022N\n\030workflow_i" +
-      "d_reuse_policy\030\014 \001(\0162,.temporal.api.enum" +
-      "s.v1.WorkflowIdReusePolicy\0229\n\014retry_poli" +
-      "cy\030\r \001(\0132#.temporal.api.common.v1.RetryP" +
-      "olicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007headers\030" +
-      "\017 \003(\0132C.temporal.omes.kitchen_sink.Execu" +
-      "teChildWorkflowAction.HeadersEntry\022N\n\004me" +
-      "mo\030\020 \003(\0132@.temporal.omes.kitchen_sink.Ex" +
-      "ecuteChildWorkflowAction.MemoEntry\022g\n\021se" +
-      "arch_attributes\030\021 \003(\0132L.temporal.omes.ki" +
-      "tchen_sink.ExecuteChildWorkflowAction.Se" +
-      "archAttributesEntry\022T\n\021cancellation_type" +
-      "\030\022 \001(\01629.temporal.omes.kitchen_sink.Chil" +
-      "dWorkflowCancellationType\022G\n\021versioning_" +
-      "intent\030\023 \001(\0162,.temporal.omes.kitchen_sin" +
-      "k.VersioningIntent\022E\n\020awaitable_choice\030\024" +
-      " \001(\0132+.temporal.omes.kitchen_sink.Awaita" +
-      "bleChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022." +
-      "\n\005value\030\002 \001(\0132\037.temporal.api.common.v1.P" +
-      "ayload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005" +
-      "value\030\002 \001(\0132\037.temporal.api.common.v1.Pay" +
-      "load:\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003key" +
-      "\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.com" +
-      "mon.v1.Payload:\0028\001\"0\n\022AwaitWorkflowState" +
-      "\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020SendSig" +
-      "nalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id" +
-      "\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004args\030\004 \003(" +
-      "\0132\037.temporal.api.common.v1.Payload\022J\n\007he" +
-      "aders\030\005 \003(\01329.temporal.omes.kitchen_sink" +
-      ".SendSignalAction.HeadersEntry\022E\n\020awaita" +
-      "ble_choice\030\006 \001(\0132+.temporal.omes.kitchen" +
-      "_sink.AwaitableChoice\032O\n\014HeadersEntry\022\013\n" +
-      "\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api" +
-      ".common.v1.Payload:\0028\001\";\n\024CancelWorkflow" +
-      "Action\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 " +
-      "\001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010patch_id\030" +
-      "\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inner_actio" +
-      "n\030\003 \001(\0132\".temporal.omes.kitchen_sink.Act" +
-      "ion\"\343\001\n\034UpsertSearchAttributesAction\022i\n\021" +
-      "search_attributes\030\001 \003(\0132N.temporal.omes." +
-      "kitchen_sink.UpsertSearchAttributesActio" +
-      "n.SearchAttributesEntry\032X\n\025SearchAttribu" +
-      "tesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.t" +
-      "emporal.api.common.v1.Payload:\0028\001\"G\n\020Ups" +
-      "ertMemoAction\0223\n\rupserted_memo\030\001 \001(\0132\034.t" +
-      "emporal.api.common.v1.Memo\"J\n\022ReturnResu" +
-      "ltAction\0224\n\013return_this\030\001 \001(\0132\037.temporal" +
-      ".api.common.v1.Payload\"F\n\021ReturnErrorAct" +
-      "ion\0221\n\007failure\030\001 \001(\0132 .temporal.api.fail" +
-      "ure.v1.Failure\"\336\006\n\023ContinueAsNewAction\022\025" +
-      "\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_queue\030\002 \001(" +
-      "\t\0222\n\targuments\030\003 \003(\0132\037.temporal.api.comm" +
-      "on.v1.Payload\0227\n\024workflow_run_timeout\030\004 " +
-      "\001(\0132\031.google.protobuf.Duration\0228\n\025workfl" +
-      "ow_task_timeout\030\005 \001(\0132\031.google.protobuf." +
-      "Duration\022G\n\004memo\030\006 \003(\01329.temporal.omes.k" +
-      "itchen_sink.ContinueAsNewAction.MemoEntr" +
-      "y\022M\n\007headers\030\007 \003(\0132<.temporal.omes.kitch" +
-      "en_sink.ContinueAsNewAction.HeadersEntry" +
-      "\022`\n\021search_attributes\030\010 \003(\0132E.temporal.o" +
-      "mes.kitchen_sink.ContinueAsNewAction.Sea" +
-      "rchAttributesEntry\0229\n\014retry_policy\030\t \001(\013" +
-      "2#.temporal.api.common.v1.RetryPolicy\022G\n" +
-      "\021versioning_intent\030\n \001(\0162,.temporal.omes" +
-      ".kitchen_sink.VersioningIntent\032L\n\tMemoEn" +
+      "op\030\003 \001(\0132\026.google.protobuf.EmptyH\000\022X\n\tre" +
+      "sources\030\016 \001(\0132C.temporal.omes.kitchen_si" +
+      "nk.ExecuteActivityAction.ResourcesActivi" +
+      "tyH\000\022\022\n\ntask_queue\030\004 \001(\t\022O\n\007headers\030\005 \003(" +
+      "\0132>.temporal.omes.kitchen_sink.ExecuteAc" +
+      "tivityAction.HeadersEntry\022<\n\031schedule_to" +
+      "_close_timeout\030\006 \001(\0132\031.google.protobuf.D" +
+      "uration\022<\n\031schedule_to_start_timeout\030\007 \001" +
+      "(\0132\031.google.protobuf.Duration\0229\n\026start_t" +
+      "o_close_timeout\030\010 \001(\0132\031.google.protobuf." +
+      "Duration\0224\n\021heartbeat_timeout\030\t \001(\0132\031.go" +
+      "ogle.protobuf.Duration\0229\n\014retry_policy\030\n" +
+      " \001(\0132#.temporal.api.common.v1.RetryPolic" +
+      "y\022*\n\010is_local\030\013 \001(\0132\026.google.protobuf.Em" +
+      "ptyH\001\022C\n\006remote\030\014 \001(\01321.temporal.omes.ki" +
+      "tchen_sink.RemoteActivityOptionsH\001\022E\n\020aw" +
+      "aitable_choice\030\r \001(\0132+.temporal.omes.kit" +
+      "chen_sink.AwaitableChoice\032S\n\017GenericActi" +
+      "vity\022\014\n\004type\030\001 \001(\t\0222\n\targuments\030\002 \003(\0132\037." +
+      "temporal.api.common.v1.Payload\032\232\001\n\021Resou" +
+      "rcesActivity\022*\n\007run_for\030\001 \001(\0132\031.google.p" +
+      "rotobuf.Duration\022\031\n\021bytes_to_allocate\030\002 " +
+      "\001(\004\022$\n\034cpu_yield_every_n_iterations\030\003 \001(" +
+      "\r\022\030\n\020cpu_yield_for_ms\030\004 \001(\r\032O\n\014HeadersEn" +
       "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
-      "al.api.common.v1.Payload:\0028\001\032O\n\014HeadersE" +
+      "al.api.common.v1.Payload:\0028\001B\017\n\ractivity" +
+      "_typeB\n\n\010locality\"\255\n\n\032ExecuteChildWorkfl" +
+      "owAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_" +
+      "id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_" +
+      "queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.ap" +
+      "i.common.v1.Payload\022=\n\032workflow_executio" +
+      "n_timeout\030\007 \001(\0132\031.google.protobuf.Durati" +
+      "on\0227\n\024workflow_run_timeout\030\010 \001(\0132\031.googl" +
+      "e.protobuf.Duration\0228\n\025workflow_task_tim" +
+      "eout\030\t \001(\0132\031.google.protobuf.Duration\022J\n" +
+      "\023parent_close_policy\030\n \001(\0162-.temporal.om" +
+      "es.kitchen_sink.ParentClosePolicy\022N\n\030wor" +
+      "kflow_id_reuse_policy\030\014 \001(\0162,.temporal.a" +
+      "pi.enums.v1.WorkflowIdReusePolicy\0229\n\014ret" +
+      "ry_policy\030\r \001(\0132#.temporal.api.common.v1" +
+      ".RetryPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007h" +
+      "eaders\030\017 \003(\0132C.temporal.omes.kitchen_sin" +
+      "k.ExecuteChildWorkflowAction.HeadersEntr" +
+      "y\022N\n\004memo\030\020 \003(\0132@.temporal.omes.kitchen_" +
+      "sink.ExecuteChildWorkflowAction.MemoEntr" +
+      "y\022g\n\021search_attributes\030\021 \003(\0132L.temporal." +
+      "omes.kitchen_sink.ExecuteChildWorkflowAc" +
+      "tion.SearchAttributesEntry\022T\n\021cancellati" +
+      "on_type\030\022 \001(\01629.temporal.omes.kitchen_si" +
+      "nk.ChildWorkflowCancellationType\022G\n\021vers" +
+      "ioning_intent\030\023 \001(\0162,.temporal.omes.kitc" +
+      "hen_sink.VersioningIntent\022E\n\020awaitable_c" +
+      "hoice\030\024 \001(\0132+.temporal.omes.kitchen_sink" +
+      ".AwaitableChoice\032O\n\014HeadersEntry\022\013\n\003key\030" +
+      "\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.comm" +
+      "on.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 " +
+      "\001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common" +
+      ".v1.Payload:\0028\001\032X\n\025SearchAttributesEntry" +
+      "\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal." +
+      "api.common.v1.Payload:\0028\001\"0\n\022AwaitWorkfl" +
+      "owState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020" +
+      "SendSignalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n" +
+      "\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004ar" +
+      "gs\030\004 \003(\0132\037.temporal.api.common.v1.Payloa" +
+      "d\022J\n\007headers\030\005 \003(\01329.temporal.omes.kitch" +
+      "en_sink.SendSignalAction.HeadersEntry\022E\n" +
+      "\020awaitable_choice\030\006 \001(\0132+.temporal.omes." +
+      "kitchen_sink.AwaitableChoice\032O\n\014HeadersE" +
       "ntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempo" +
-      "ral.api.common.v1.Payload:\0028\001\032X\n\025SearchA" +
-      "ttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001" +
-      "(\0132\037.temporal.api.common.v1.Payload:\0028\001\"" +
-      "\321\001\n\025RemoteActivityOptions\022O\n\021cancellatio" +
-      "n_type\030\001 \001(\01624.temporal.omes.kitchen_sin" +
-      "k.ActivityCancellationType\022\036\n\026do_not_eag" +
-      "erly_execute\030\002 \001(\010\022G\n\021versioning_intent\030" +
-      "\003 \001(\0162,.temporal.omes.kitchen_sink.Versi" +
-      "oningIntent*\244\001\n\021ParentClosePolicy\022#\n\037PAR" +
-      "ENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT" +
-      "_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOS" +
-      "E_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLIC" +
-      "Y_REQUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017" +
-      "\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAU" +
-      "LT\020\002*\242\001\n\035ChildWorkflowCancellationType\022\024" +
-      "\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CAN" +
-      "CEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMP" +
-      "LETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_RE" +
-      "QUESTED\020\003*X\n\030ActivityCancellationType\022\016\n" +
-      "\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPL" +
-      "ETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ" +
-      ".github.com/temporalio/omes/loadgen/kitc" +
-      "hensinkb\006proto3"
+      "ral.api.common.v1.Payload:\0028\001\";\n\024CancelW" +
+      "orkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006ru" +
+      "n_id\030\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010pa" +
+      "tch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inne" +
+      "r_action\030\003 \001(\0132\".temporal.omes.kitchen_s" +
+      "ink.Action\"\343\001\n\034UpsertSearchAttributesAct" +
+      "ion\022i\n\021search_attributes\030\001 \003(\0132N.tempora" +
+      "l.omes.kitchen_sink.UpsertSearchAttribut" +
+      "esAction.SearchAttributesEntry\032X\n\025Search" +
+      "AttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 " +
+      "\001(\0132\037.temporal.api.common.v1.Payload:\0028\001" +
+      "\"G\n\020UpsertMemoAction\0223\n\rupserted_memo\030\001 " +
+      "\001(\0132\034.temporal.api.common.v1.Memo\"J\n\022Ret" +
+      "urnResultAction\0224\n\013return_this\030\001 \001(\0132\037.t" +
+      "emporal.api.common.v1.Payload\"F\n\021ReturnE" +
+      "rrorAction\0221\n\007failure\030\001 \001(\0132 .temporal.a" +
+      "pi.failure.v1.Failure\"\336\006\n\023ContinueAsNewA" +
+      "ction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_que" +
+      "ue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.temporal.a" +
+      "pi.common.v1.Payload\0227\n\024workflow_run_tim" +
+      "eout\030\004 \001(\0132\031.google.protobuf.Duration\0228\n" +
+      "\025workflow_task_timeout\030\005 \001(\0132\031.google.pr" +
+      "otobuf.Duration\022G\n\004memo\030\006 \003(\01329.temporal" +
+      ".omes.kitchen_sink.ContinueAsNewAction.M" +
+      "emoEntry\022M\n\007headers\030\007 \003(\0132<.temporal.ome" +
+      "s.kitchen_sink.ContinueAsNewAction.Heade" +
+      "rsEntry\022`\n\021search_attributes\030\010 \003(\0132E.tem" +
+      "poral.omes.kitchen_sink.ContinueAsNewAct" +
+      "ion.SearchAttributesEntry\0229\n\014retry_polic" +
+      "y\030\t \001(\0132#.temporal.api.common.v1.RetryPo" +
+      "licy\022G\n\021versioning_intent\030\n \001(\0162,.tempor" +
+      "al.omes.kitchen_sink.VersioningIntent\032L\n" +
+      "\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
+      ".temporal.api.common.v1.Payload:\0028\001\032O\n\014H" +
+      "eadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132" +
+      "\037.temporal.api.common.v1.Payload:\0028\001\032X\n\025" +
+      "SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005va" +
+      "lue\030\002 \001(\0132\037.temporal.api.common.v1.Paylo" +
+      "ad:\0028\001\"\321\001\n\025RemoteActivityOptions\022O\n\021canc" +
+      "ellation_type\030\001 \001(\01624.temporal.omes.kitc" +
+      "hen_sink.ActivityCancellationType\022\036\n\026do_" +
+      "not_eagerly_execute\030\002 \001(\010\022G\n\021versioning_" +
+      "intent\030\003 \001(\0162,.temporal.omes.kitchen_sin" +
+      "k.VersioningIntent*\244\001\n\021ParentClosePolicy" +
+      "\022#\n\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n" +
+      "\035PARENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARE" +
+      "NT_CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOS" +
+      "E_POLICY_REQUEST_CANCEL\020\003*@\n\020VersioningI" +
+      "ntent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013" +
+      "\n\007DEFAULT\020\002*\242\001\n\035ChildWorkflowCancellatio" +
+      "nType\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_" +
+      "TRY_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATI" +
+      "ON_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLA" +
+      "TION_REQUESTED\020\003*X\n\030ActivityCancellation" +
+      "Type\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATIO" +
+      "N_COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.tempora" +
+      "l.omesZ.github.com/temporalio/omes/loadg" +
+      "en/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -41318,15 +42441,21 @@ io.temporal.api.common.v1.Payload defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor,
-        new java.lang.String[] { "Generic", "Delay", "Noop", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "ActivityType", "Locality", });
+        new java.lang.String[] { "Generic", "Delay", "Noop", "Resources", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "ActivityType", "Locality", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(0);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_descriptor,
         new java.lang.String[] { "Type", "Arguments", });
-    internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor =
+    internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(1);
+    internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ResourcesActivity_descriptor,
+        new java.lang.String[] { "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs", });
+    internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor =
+      internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(2);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor,

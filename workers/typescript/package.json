@@ -19,10 +19,10 @@
     ]
   },
   "dependencies": {
-    "@temporalio/activity": "^1.9.0",
-    "@temporalio/client": "^1.9.0",
-    "@temporalio/worker": "^1.9.0",
-    "@temporalio/workflow": "^1.9.0",
+    "@temporalio/activity": "^1.9.3",
+    "@temporalio/client": "^1.9.3",
+    "@temporalio/worker": "^1.9.3",
+    "@temporalio/workflow": "^1.9.3",
     "commander": "^11.1.0",
     "long": "^5.2.3",
     "winston": "^3.11.0"
