@@ -107,9 +107,7 @@ async function run() {
     });
   });
   // Configure metrics
-  const telemetryOptions: TelemetryOptions = {
-    logging: { filter: makeTelemetryFilterString({ core: 'DEBUG', other: 'INFO' }) },
-  };
+  const telemetryOptions: TelemetryOptions = {};
   if (opts.promListenAddress) {
     telemetryOptions.metrics = { prometheus: { bindAddress: opts.promListenAddress } };
   }
