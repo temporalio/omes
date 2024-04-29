@@ -20,7 +20,6 @@ import {
   startChild,
   upsertSearchAttributes,
   Workflow,
-  log,
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
@@ -51,7 +50,6 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   const actionsQueue = new Array<IActionSet>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
-    log.info('Handling an action set', { actions });
     let rval: IPayload | undefined;
 
     if (!actions.concurrent) {
@@ -76,20 +74,12 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       );
     }
     const allComplete = Promise.all(promises);
-    log.info(`Should be waiting on ${promises.length} promises`);
-    await Promise.any([
-      allComplete,
-      condition(() => {
-        log.warn('rval', { retval: rval });
-        return rval !== undefined;
-      }),
-    ]);
+    await Promise.race([allComplete, condition(() => rval !== undefined)]);
 
     return rval;
   }
 
   async function handleAction(action: IAction): Promise<IPayload | null | undefined> {
-    // console.log('Handling an action', action);
     async function handleAwaitableChoice<PR extends Promise<PRR>, PRR>(
       promise: () => PR,
       choice: IAwaitableChoice | null | undefined,
@@ -287,7 +277,6 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     remoteArgs.taskQueue = execActivity.taskQueue ?? undefined;
     remoteArgs.cancellationType = convertCancelType(execActivity.remote?.cancellationType);
     remoteArgs.heartbeatTimeout = durationConvert(execActivity.heartbeatTimeout);
-    log.info('Scheduling activity', { actType, args, remoteArgs });
     return scheduleActivity(actType, args, remoteArgs);
   }
 }

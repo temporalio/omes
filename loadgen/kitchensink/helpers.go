@@ -48,7 +48,8 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 				},
 				StartToCloseTimeout: &durationpb.Duration{Seconds: runForSeconds * 2},
 				RetryPolicy: &common.RetryPolicy{
-					MaximumAttempts: 1,
+					MaximumAttempts:    1,
+					BackoffCoefficient: 1.0,
 				},
 			},
 		},

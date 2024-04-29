@@ -12,7 +12,6 @@ async function resourcesImpl(iinput: IResourcesActivity) {
   const msToRun = durationConvert(input.runFor);
   console.log('Running resources activity for', msToRun);
   const buffer = Buffer.alloc((input.bytesToAllocate ?? new Long(0)).toNumber());
-  console.log('Buffer size', buffer.length);
   let i = 0;
   while (Date.now() - started < msToRun) {
     if (input.cpuYieldEveryNIterations && i % input.cpuYieldEveryNIterations === 0) {
