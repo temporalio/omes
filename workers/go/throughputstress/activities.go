@@ -73,7 +73,11 @@ func (a *Activities) SelfDescribe(ctx context.Context) error {
 
 func (a *Activities) SelfUpdate(ctx context.Context, updateName string) error {
 	we := activity.GetInfo(ctx).WorkflowExecution
-	handle, err := a.Client.UpdateWorkflow(ctx, we.ID, we.RunID, updateName, nil)
+	handle, err := a.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
+		WorkflowID: we.ID,
+		RunID:      we.RunID,
+		UpdateName: updateName,
+	})
 	if err != nil {
 		return err
 	}
