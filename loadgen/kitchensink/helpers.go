@@ -114,9 +114,17 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if update := action.GetDoUpdate(); update != nil {
 		var handle client.WorkflowUpdateHandle
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
-			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", "do_actions_update", actionsUpdate)
+			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
+				WorkflowID: e.WorkflowID,
+				UpdateName: "do_actions_update",
+				Args:       []any{actionsUpdate},
+			})
 		} else if handler := update.GetCustom(); handler != nil {
-			handle, err = e.Client.UpdateWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
+			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
+				WorkflowID: e.WorkflowID,
+				UpdateName: handler.Name,
+				Args:       []any{handler.Args},
+			})
 		} else {
 			return fmt.Errorf("do_update must recognizable variant")
 		}
