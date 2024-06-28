@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/temporalio/features v0.0.0-20231218231852-27c681667dae
 	go.temporal.io/api v1.26.1
-	go.temporal.io/sdk v1.25.2-0.20231129171107-288a04f72145
+	go.temporal.io/sdk v1.27.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/mod v0.12.0
 	golang.org/x/sync v0.5.0
