@@ -134,15 +134,17 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		var handle client.WorkflowUpdateHandle
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
 			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID: e.WorkflowID,
-				UpdateName: "do_actions_update",
-				Args:       []any{actionsUpdate},
+				WorkflowID:   e.WorkflowID,
+				UpdateName:   "do_actions_update",
+				WaitForStage: client.WorkflowUpdateStageCompleted,
+				Args:         []any{actionsUpdate},
 			})
 		} else if handler := update.GetCustom(); handler != nil {
 			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID: e.WorkflowID,
-				UpdateName: handler.Name,
-				Args:       []any{handler.Args},
+				WorkflowID:   e.WorkflowID,
+				UpdateName:   handler.Name,
+				WaitForStage: client.WorkflowUpdateStageCompleted,
+				Args:         []any{handler.Args},
 			})
 		} else {
 			return fmt.Errorf("do_update must recognizable variant")
