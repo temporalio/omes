@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -197,33 +195,6 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
 	if err != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
-	}
-
-	// Ensure custom search attributes are registered
-	_, err = r.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
-		},
-		Namespace: r.Namespace,
-	})
-
-	// Throw an error if the attributes could not be registered, but ignore already exists errs
-	alreadyExistsStrings := []string{
-		"already exists",
-		"attributes mapping unavailble",
-	}
-	if err != nil {
-		isAlreadyExistsErr := false
-		for _, s := range alreadyExistsStrings {
-			if strings.Contains(err.Error(), s) {
-				isAlreadyExistsErr = true
-				break
-			}
-		}
-		if !isAlreadyExistsErr {
-			return fmt.Errorf("failed to register search attributes: %w", err)
-		}
 	}
 
 	clientSeq := options.Params.ClientSequence
