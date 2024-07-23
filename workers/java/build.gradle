@@ -31,7 +31,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
     implementation 'info.picocli:picocli:4.6.2'
-    implementation 'io.temporal:temporal-sdk:1.22.3'
+    implementation 'io.temporal:temporal-sdk:1.24.2'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     implementation 'org.reflections:reflections:0.10.2'
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
