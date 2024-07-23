@@ -1,3 +1,11 @@
 - seed: 14244682960483809875
   sdk: dotnet
   desc: Encountered nondeterminism error with child workflow / timer interaction
+  investigated: true
+  fixed: true
+
+- seed: 1757522628801078254
+  sdk: dotnet
+  desc: Hung after a brief time
+  investigated: false
+  fixed: false

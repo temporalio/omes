@@ -28,9 +28,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language go --version v1.27.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language go --version v1.28.1 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.27.0 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.28.1 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -59,9 +59,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language java --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language java --version 1.22.3 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language java --version 1.24.2 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.22.3 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.24.2 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -91,9 +91,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language python --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language python --version 1.4.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language python --version 1.6.0 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.4.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.6.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -121,9 +121,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language ts --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language ts --version 1.9.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language ts --version 1.10.2 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.9.0 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.10.2 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -149,9 +149,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language cs --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language cs --version 1.0.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language cs --version 1.2.0 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.0.0 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.2.0 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
