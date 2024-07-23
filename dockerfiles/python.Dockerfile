@@ -9,8 +9,8 @@ RUN apt-get update \
 
 # Get go compiler
 ARG PLATFORM=amd64
-RUN wget -q https://go.dev/dl/go1.20.4.linux-${PLATFORM}.tar.gz \
-    && tar -C /usr/local -xzf go1.20.4.linux-${PLATFORM}.tar.gz
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${PLATFORM}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${PLATFORM}.tar.gz
 # Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
 # in the "build" container (-y is for non-interactive install)
 # hadolint ignore=DL4006
