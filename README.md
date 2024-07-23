@@ -54,6 +54,20 @@ func init() {
 1. When using `GenericExecutor`, use methods of `*loadgen.Run` in your `Execute` as much as possible.
 1. Liberally add helpers to the `loadgen` package that will be useful to other scenario authors.
 
+### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
+
+During local development it's typically easiest to run both the worker and the scenario together.
+You can do that like so:
+
+```sh
+go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
+```
+
+Notes:
+
+- Cleanup is **not** automatically performed here
+- Accepts combined flags for `run-worker` and `run-scenario` commands
+
 ### Run a worker for a specific language SDK
 
 ```sh
@@ -87,16 +101,15 @@ Notes:
 go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
-### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
+### Running a specific version of the SDK
+
+The `--version` flag can be used to specify a version of the SDK to use, it accepts either
+a version number lik `v1.24.0` or you can also pass a local path to use a local SDK version.
+This is useful while testing unreleased or in-development versions of the SDK.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
+go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
 ```
-
-Notes:
-
-- Cleanup is **not** automatically performed here
-- Accepts combined flags for `run-worker` and `run-scenario` commands
 
 ### Building and publishing docker images
 
@@ -128,7 +141,7 @@ workflow that waits for a signal for a configurable amount of time.
 ## TODO
 
 - Nicer output that includes resource utilization for the worker (when running all-in-one)
-- More lang workers
+- Ruby worker
 
 ## Fuzzer trophy case
 
