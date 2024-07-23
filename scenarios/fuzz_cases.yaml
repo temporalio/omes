@@ -9,3 +9,18 @@
   desc: Hung after a brief time
   investigated: false
   fixed: false
+
+- seed: 1780716587243378472
+  sdk: python
+  desc: Encounters a not found update when completing task, eventually failed with context
+    cancelled/timeout on big action set containing updates
+  investigated: false
+  fixed: false
+
+- seed: 1319629445380874559
+  sdk: dotnet
+  desc: Encountered multiple invalid state transition update errors 
+    "received *update.Acceptance message while in state \"Admitted\"".
+    Some runs saw Core nondeterminism errors with missing LocalActivity machines.
+  investigated: false
+  fixed: false
