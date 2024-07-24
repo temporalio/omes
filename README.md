@@ -57,10 +57,11 @@ func init() {
 ### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
 
 During local development it's typically easiest to run both the worker and the scenario together.
-You can do that like so:
+You can do that like follows. If you want an embedded server rather than one you've already started,
+pass `--embedded-server`.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --embedded-server
+go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
 ```
 
 Notes:
@@ -153,6 +154,9 @@ go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --languag
 However, the fuzzer is also sensitive to its configuration, and thus the seed will only produce
 the exact same set of actions if the config has also not changed. Thus you should prefer to save
 binary files rather than seeds.
+
+Please do collect interesting fuzz cases in the `scenarios/fuzz_cases.yaml` file. This file
+currently has seeds, but could also easily reference stored binary files instead.
 
 ## Design decisions
 
