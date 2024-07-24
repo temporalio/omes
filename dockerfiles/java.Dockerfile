@@ -1,5 +1,5 @@
 # Build in a full featured container
-FROM eclipse-temurin:11 as build
+FROM eclipse-temurin:11-jammy as build
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \

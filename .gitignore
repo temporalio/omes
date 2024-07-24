@@ -14,3 +14,4 @@ workers/java/build
 /loadgen/kitchen-sink-gen/target/
 /workers/dotnet/obj/
 /workers/dotnet/bin/
+/last_fuzz_run.proto

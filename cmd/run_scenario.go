@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"strings"
 	"time"
 
@@ -121,6 +123,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 	defer client.Close()
+
+	// Ensure required search attributes are registered
+	_, err = client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+		SearchAttributes: map[string]enums.IndexedValueType{
+			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
+			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
+		},
+		Namespace: r.clientOptions.Namespace,
+	})
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario,
 		RunID:          r.runID,
