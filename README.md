@@ -14,11 +14,8 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 - [Python](https://www.python.org/) 3.10+
   - [Poetry](https://python-poetry.org/): `poetry install`
 
-(More TBD when we support workers in other languages)
-
-## Installation
-
-There's no need to install anything to use this, it's a self-contained Go project.
+And if you're running the fuzzer (see below)
+- [Rust](https://rustup.rs/)
 
 ## Usage
 
