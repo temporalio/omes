@@ -60,7 +60,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		cmd.Stderr = os.Stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run rust generator: %w", err)
+			return fmt.Errorf("failed to run rust generator (%v): %w", cmd, err)
 		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(protoBytes, asTInput)
