@@ -57,10 +57,15 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 			args = append(args, fileOrArgs.Args...)
 			cmd = exec.CommandContext(ctx, "cargo", args...)
 		}
-		cmd.Stderr = os.Stderr
+		// We are capturing stderr for use in the error message. This is just for development and
+		// should not be merged, since we do really want stderr to go to os.Stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run rust generator (%v): %w", cmd, err)
+			msg := fmt.Sprintf("failed to run kitchen-sink-gen (%v)", cmd)
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				msg = fmt.Sprintf("%s: %s", msg, exitErr.Stderr)
+			}
+			return fmt.Errorf("%s: %w", msg, err)
 		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(protoBytes, asTInput)
