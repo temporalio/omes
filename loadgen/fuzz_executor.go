@@ -38,10 +38,13 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	fileOrArgs := k.InitInputs(ctx, info)
 	if fileOrArgs.FilePath != "" {
 		fDat, err := os.ReadFile(fileOrArgs.FilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read file: %w", err)
+		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(fDat, asTInput)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal test input from file on disk: %w", err)
+			return fmt.Errorf("failed to unmarshal test input from file: %w", err)
 		}
 		testInputs = append(testInputs, asTInput)
 	} else if fileOrArgs.Args != nil {
@@ -57,14 +60,24 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 			args = append(args, fileOrArgs.Args...)
 			cmd = exec.CommandContext(ctx, "cargo", args...)
 		}
-		cmd.Stderr = os.Stderr
+		// We are capturing stderr for use in the error message. Therefore kitchen-sink-gen should
+		// do neither of the following things:
+		// 1. write to stderr but exit with code 0
+		// 2. write a lot to stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run rust generator (%v): %w", cmd, err)
+			msg := fmt.Sprintf("failed to run kitchen-sink-gen (%v)", cmd)
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				msg = fmt.Sprintf("%s: %s", msg, exitErr.Stderr)
+			}
+			return fmt.Errorf("%s: %w", msg, err)
 		}
-		asTInput := &kitchensink.TestInput{}
-		err = proto.Unmarshal(protoBytes, asTInput)
-		testInputs = append(testInputs, asTInput)
+		testInput := &kitchensink.TestInput{}
+		err = proto.Unmarshal(protoBytes, testInput)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal kitchen-sink-gen output: %w", err)
+		}
+		testInputs = append(testInputs, testInput)
 	} else {
 		return fmt.Errorf("InitInputs must specify either a file or args")
 	}
