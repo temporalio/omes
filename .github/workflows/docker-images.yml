@@ -80,7 +80,7 @@ jobs:
         run: |
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
           --version ${{ env.SDK_VERSION }} \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}', inputs.sdk-repo-ref) || ''}} \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.sdk-repo-ref) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
 
       - name: Login to DockerHub
