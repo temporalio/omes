@@ -41,7 +41,7 @@ jobs:
       REPO_URL: ${{ github.event.pull_request.head.repo.html_url }}
     steps:
       - name: Print build information
-        run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF"'
+        run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF", triggering sha: ${{ github.sha }}'
 
       - name: Checkout omes repo
         uses: actions/checkout@v4
@@ -81,16 +81,16 @@ jobs:
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
           --version ${{ env.SDK_VERSION }} \
           --save-image /tmp/image.tar \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.sdk-repo-ref) || ''}} \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, github.sha) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
 
       - name: Prepare docker artifact
         run: |
-          # Upload-artifact has no good way to flatten paths, so we need to move the compose file
-          # to avoid some disgustingly long inner path inside the artifact zip.
-          echo -n "${{env.IMAGE_TAG}}" > /tmp/image_tag
+          echo -n "${{env.SAVED_IMAGE_TAG}}" > /tmp/image_tag
 
       - name: Upload docker artifacts
+        # Access download url at ${{ steps.artifact-upload.outputs.artifact-url }}
+        id: artifact-upload
         uses: actions/upload-artifact@v4
         with:
           name: omes-${{ inputs.lang }}-docker-image

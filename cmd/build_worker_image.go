@@ -171,6 +171,10 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	}
 
 	if b.saveImage != "" {
+		err = writeGitHubEnv("SAVED_IMAGE_TAG", imageTagsForPublish[0])
+		if err != nil {
+			return fmt.Errorf("writing image tags to github env failed: %s", err)
+		}
 		saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
 		saveCmd.Stdout = os.Stdout
 		saveCmd.Stderr = os.Stderr
