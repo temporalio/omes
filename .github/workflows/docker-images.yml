@@ -80,8 +80,23 @@ jobs:
         run: |
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
           --version ${{ env.SDK_VERSION }} \
+          --save-image /tmp/image.tar \
           ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.sdk-repo-ref) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+
+      - name: Prepare docker artifact
+        run: |
+          # Upload-artifact has no good way to flatten paths, so we need to move the compose file
+          # to avoid some disgustingly long inner path inside the artifact zip.
+          echo -n "${{env.IMAGE_TAG}}" > /tmp/image_tag
+
+      - name: Upload docker artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: omes-${{ inputs.lang }}-docker-image
+          path: |
+            /tmp/image.tar
+            /tmp/image_tag
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
