@@ -6,15 +6,14 @@ on:
         description: SDK language to build the container for
         required: true
         type: string
-# TODO: Add ability to get SDK by repo ref. This should be shared with implementation in features.
-#      sdk-repo-ref:
-#        description: Git ref of SDK repo to use to build (overrides "sdk-version")
-#        required: false
-#        type: string
-#      sdk-repo-url:
-#        description: URL of SDK repo to use to build (only used if "sdk-repo-ref" is provided)
-#        required: false
-#        type: string
+      sdk-repo-ref:
+        description: Git ref of SDK repo to use to build (overrides "sdk-version")
+        required: false
+        type: string
+      sdk-repo-url:
+        description: URL of SDK repo to use to build (only used if "sdk-repo-ref" is provided)
+        required: false
+        type: string
       sdk-version:
         description: Version of SDK to use (ignored if "sdk-repo-ref" is provided)
         required: false
@@ -27,6 +26,12 @@ on:
         description: If set, tag the images as latest for the lang ('<lang>-latest').
         type: boolean
         default: false
+      omes-repo-path:
+        type: string
+        default: 'temporalio/omes'
+      omes-repo-ref:
+        type: string
+        default: 'main'
 
 jobs:
   build-image:
@@ -36,11 +41,25 @@ jobs:
       REPO_URL: ${{ github.event.pull_request.head.repo.html_url }}
     steps:
       - name: Print build information
-        run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF"'
+        run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF", triggering sha: ${{ github.sha }}'
 
-      - uses: actions/checkout@v4
+      - name: Checkout omes repo
+        uses: actions/checkout@v4
         with:
+          repository: ${{ inputs.omes-repo-path }}
+          ref: ${{ inputs.omes-repo-ref }}
           submodules: true
+          fetch-depth: 0
+
+      - name: Checkout lang repo
+        if: ${{ inputs.sdk-repo-ref }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.sdk-repo-url }}
+          submodules: recursive
+          path: checked-out-sdk/
+          ref: ${{ inputs.sdk-repo-ref }}
+          fetch-depth: 0
 
       - uses: actions/setup-go@v4
         with:
@@ -52,8 +71,24 @@ jobs:
       - name: Build docker image
         run: |
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
-          --version ${{ inputs.sdk-version }} \
+          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
+          --save-image /tmp/image.tar \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, github.sha) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+
+      - name: Prepare docker artifact
+        run: |
+          echo -n "${{env.SAVED_IMAGE_TAG}}" > /tmp/image_tag
+
+      - name: Upload docker artifacts
+        # Access download url at ${{ steps.artifact-upload.outputs.artifact-url }}
+        id: artifact-upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: omes-${{ inputs.lang }}-docker-image
+          path: |
+            /tmp/image.tar
+            /tmp/image_tag
 
       - name: Login to DockerHub
         uses: docker/login-action@v2

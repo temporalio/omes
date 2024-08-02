@@ -41,6 +41,7 @@ type workerImageBuilder struct {
 	platform       string
 	imageName      string
 	dryRun         bool
+	saveImage      string
 	tags           []string
 	labels         []string
 	loggingOptions cmdoptions.LoggingOptions
@@ -57,6 +58,7 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
 	fs.StringSliceVar(&b.tags, "image-tag", nil, "Additional tags to add to the image")
 	fs.StringSliceVar(&b.labels, "image-label", nil, "Additional labels to add to the image")
+	fs.StringVar(&b.saveImage, "save-image", "", "If set, will run `docker save` on the produced image, saving it to the provided path")
 	b.loggingOptions.AddCLIFlags(fs)
 }
 
@@ -163,7 +165,26 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed building image: %w", err)
+	}
+
+	if b.saveImage != "" {
+		err = writeGitHubEnv("SAVED_IMAGE_TAG", imageTagsForPublish[0])
+		if err != nil {
+			return fmt.Errorf("writing image tags to github env failed: %s", err)
+		}
+		saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
+		saveCmd.Stdout = os.Stdout
+		saveCmd.Stderr = os.Stderr
+		err = saveCmd.Run()
+		if err != nil {
+			return fmt.Errorf("failed saving image: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (b *workerImageBuilder) addLabelIfNotPresent(key, value string) {
