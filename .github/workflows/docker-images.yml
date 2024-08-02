@@ -61,14 +61,6 @@ jobs:
           ref: ${{ inputs.sdk-repo-ref }}
           fetch-depth: 0
 
-      - name: Set SDK Version Variable
-        run: |
-          if [ -z "${{ inputs.sdk-version }}" ]; then
-              echo "SDK_VERSION=checked-out-sdk/" >> $GITHUB_ENV
-          else
-              echo "SDK_VERSION=${{ inputs.sdk-version }}" >> $GITHUB_ENV
-          fi
-
       - uses: actions/setup-go@v4
         with:
           go-version: '^1.20'
@@ -79,7 +71,7 @@ jobs:
       - name: Build docker image
         run: |
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
-          --version ${{ env.SDK_VERSION }} \
+          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
           --save-image /tmp/image.tar \
           ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, github.sha) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
