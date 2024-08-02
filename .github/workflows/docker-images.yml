@@ -18,6 +18,11 @@ on:
         description: Version of SDK to use (ignored if "sdk-repo-ref" is provided)
         required: false
         type: string
+      docker-tag-ext:
+        description: Tag extension to use for the built image (only when using sdk-repo-ref)
+        required: false
+        type: string
+        default: github.sha
       do-push:
         description: If set, push the built image to Docker Hub.
         type: boolean
@@ -73,7 +78,7 @@ jobs:
           go run ./cmd build-worker-image --language ${{ inputs.lang }} \
           --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
           --save-image /tmp/image.tar \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, github.sha) || ''}} \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
           ${{ inputs.as-latest && '--tag-as-latest' || ''}}
 
       - name: Prepare docker artifact
