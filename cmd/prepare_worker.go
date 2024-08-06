@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -205,11 +206,11 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	// Get version from dotnet.csproj if not present
 	version := b.version
+	csprojBytes, err := os.ReadFile(filepath.Join(baseDir, "Temporalio.Omes.csproj"))
+	if err != nil {
+		return nil, fmt.Errorf("failed reading dotnet.csproj: %w", err)
+	}
 	if version == "" {
-		csprojBytes, err := os.ReadFile(filepath.Join(baseDir, "Temporalio.Omes.csproj"))
-		if err != nil {
-			return nil, fmt.Errorf("failed reading dotnet.csproj: %w", err)
-		}
 		const prefix = `<PackageReference Include="Temporalio" Version="`
 		csproj := string(csprojBytes)
 		beginIndex := strings.Index(csproj, prefix)
@@ -219,6 +220,32 @@ func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbui
 		beginIndex += len(prefix)
 		length := strings.Index(csproj[beginIndex:], `"`)
 		version = csproj[beginIndex : beginIndex+length]
+	}
+
+	// Prepare replaced csproj if using path-dependency
+	if strings.ContainsAny(version, `/\`) {
+		// Get absolute path of csproj file
+		absCsproj, err := filepath.Abs(filepath.Join(version, "src/Temporalio/Temporalio.csproj"))
+		if err != nil {
+			return nil, fmt.Errorf("cannot make absolute path from version: %w", err)
+		} else if _, err := os.Stat(absCsproj); err != nil {
+			return nil, fmt.Errorf("cannot find version path of %v: %w", absCsproj, err)
+		}
+		depLine := `<ProjectReference Include="` + html.EscapeString(absCsproj) + `" />`
+
+		// Remove whole original package reference tag
+		csproj := string(csprojBytes)
+		beginIndex := strings.Index(csproj, `<PackageReference Include="Temporalio"`)
+		packageRefStr := "</PackageReference>"
+		endIndex := strings.Index(csproj[beginIndex:], packageRefStr) + beginIndex
+		csproj = csproj[:beginIndex] + depLine + csproj[endIndex+len(packageRefStr):]
+
+		// Write new csproj
+		if err := os.WriteFile(filepath.Join(baseDir, "Temporalio.Omes.temp.csproj"), []byte(csproj), 0644); err != nil {
+			if err != nil {
+				return nil, fmt.Errorf("failed writing temp csproj: %w", err)
+			}
+		}
 	}
 
 	prog, err := sdkbuild.BuildDotNetProgram(ctx, sdkbuild.BuildDotNetProgramOptions{
@@ -232,7 +259,7 @@ func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbui
 				<TargetFramework>net8.0</TargetFramework>
 			</PropertyGroup>
 			<ItemGroup>
-				<ProjectReference Include="../Temporalio.Omes.csproj" />
+				<ProjectReference Include="../Temporalio.Omes.temp.csproj" />
 			</ItemGroup>
 		</Project>`,
 	})
