@@ -12,7 +12,7 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${PLATFORM}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${PLATFORM}.tar.gz
 
 # Need Rust to compile core if not already built
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN set -eux -o pipefail; wget -q -O - https://sh.rustup.rs | sh -s -- -y
 
 WORKDIR /app
 
