@@ -221,6 +221,13 @@ func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbui
 		length := strings.Index(csproj[beginIndex:], `"`)
 		version = csproj[beginIndex : beginIndex+length]
 	}
+	omesProjPath := "../Temporalio.Omes.csproj"
+
+	// Delete any existing temp csproj
+	tempCsProjPath := filepath.Join(baseDir, "Temporalio.Omes.temp.csproj")
+	if err := os.Remove(tempCsProjPath); err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed removing temp csproj: %w", err)
+	}
 
 	// Prepare replaced csproj if using path-dependency
 	if strings.ContainsAny(version, `/\`) {
@@ -241,11 +248,12 @@ func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbui
 		csproj = csproj[:beginIndex] + depLine + csproj[endIndex+len(packageRefStr):]
 
 		// Write new csproj
-		if err := os.WriteFile(filepath.Join(baseDir, "Temporalio.Omes.temp.csproj"), []byte(csproj), 0644); err != nil {
+		if err := os.WriteFile(tempCsProjPath, []byte(csproj), 0644); err != nil {
 			if err != nil {
 				return nil, fmt.Errorf("failed writing temp csproj: %w", err)
 			}
 		}
+		omesProjPath = "../Temporalio.Omes.temp.csproj"
 	}
 
 	prog, err := sdkbuild.BuildDotNetProgram(ctx, sdkbuild.BuildDotNetProgramOptions{
@@ -259,7 +267,7 @@ func (b *workerBuilder) buildDotNet(ctx context.Context, baseDir string) (sdkbui
 				<TargetFramework>net8.0</TargetFramework>
 			</PropertyGroup>
 			<ItemGroup>
-				<ProjectReference Include="../Temporalio.Omes.temp.csproj" />
+				<ProjectReference Include="` + omesProjPath + `" />
 			</ItemGroup>
 		</Project>`,
 	})
