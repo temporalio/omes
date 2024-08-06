@@ -12,13 +12,13 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/features v0.0.0-20240723000013-a2f09d645219
+	github.com/temporalio/features v0.0.0-20240806162950-f67fbc5550f0
 	go.temporal.io/api v1.36.0
 	go.temporal.io/sdk v1.28.1
-	go.uber.org/zap v1.25.0
-	golang.org/x/mod v0.17.0
-	golang.org/x/sync v0.7.0
-	golang.org/x/sys v0.22.0
+	go.uber.org/zap v1.27.0
+	golang.org/x/mod v0.20.0
+	golang.org/x/sync v0.8.0
+	golang.org/x/sys v0.23.0
 	google.golang.org/protobuf v1.34.2
 )
 
@@ -36,21 +36,20 @@ require (
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/nexus-rpc/sdk-go v0.0.9 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	go.uber.org/goleak v1.2.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240711142825-46eb208f015d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240711142825-46eb208f015d // indirect
+	golang.org/x/text v0.17.0 // indirect
+	golang.org/x/time v0.6.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	google.golang.org/grpc v1.65.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -58,6 +57,6 @@ require (
 // This is dumb, but necesary because Go (for some commands) can't figure out the transitive
 // local-replace inside of the features module itself, so we have to help it.
 replace (
-	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20240723000013-a2f09d645219
-	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20240723000013-a2f09d645219
+	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20240806162950-f67fbc5550f0
+	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20240806162950-f67fbc5550f0
 )
