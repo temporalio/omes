@@ -12,7 +12,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
-	github.com/temporalio/features v0.0.0-20240806162950-f67fbc5550f0
+	github.com/temporalio/features v0.0.0-20240806202554-bdfe567c9d89
 	go.temporal.io/api v1.36.0
 	go.temporal.io/sdk v1.28.1
 	go.uber.org/zap v1.27.0
@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
@@ -57,6 +57,6 @@ require (
 // This is dumb, but necesary because Go (for some commands) can't figure out the transitive
 // local-replace inside of the features module itself, so we have to help it.
 replace (
-	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20240806162950-f67fbc5550f0
-	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20240806162950-f67fbc5550f0
+	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20240806202554-bdfe567c9d89
+	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20240806202554-bdfe567c9d89
 )
