@@ -41,7 +41,7 @@ COPY ${SDK_DIR} ./repo
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a distroless "run" container
-FROM mcr.microsoft.com/dotnet/sdk:7.0-jammy
+FROM mcr.microsoft.com/dotnet/sdk:8.0-jammy
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/dotnet /app/workers/dotnet
