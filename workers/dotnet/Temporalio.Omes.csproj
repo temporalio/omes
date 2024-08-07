@@ -16,7 +16,11 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageReference Include="Temporalio" Version="1.2.0">
-           <PrivateAssets>all</PrivateAssets>
+            <!--
+              We have to make sure this isn't included transitively so it can be
+              overridden.
+            -->
+<!--            <PrivateAssets>all</PrivateAssets>-->
         </PackageReference>
         <PackageReference Include="Google.Protobuf" Version="3.26.1" />
     </ItemGroup>
