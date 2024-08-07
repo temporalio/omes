@@ -132,6 +132,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 		Namespace: r.clientOptions.Namespace,
 	})
+	if err != nil {
+		r.logger.Warnf("Error ignored when registering search attributes: %v", err)
+	}
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario,
