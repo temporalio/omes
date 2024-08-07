@@ -80,7 +80,7 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 			errs.Go(func() error {
 				err := e.executeClientAction(errGroupCtx, action)
 				if err != nil {
-					return fmt.Errorf("failed to execute client action %v: %w", action, err)
+					return fmt.Errorf("failed to execute concurrent client action %v: %w", action, err)
 				}
 				return nil
 			})

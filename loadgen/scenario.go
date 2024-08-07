@@ -3,6 +3,8 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -155,6 +157,35 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 		Iteration:    iteration,
 		Logger:       s.Logger.With("iteration", iteration),
 	}
+}
+
+func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
+	// Ensure custom search attributes are registered that many scenarios rely on
+	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+		SearchAttributes: map[string]enums.IndexedValueType{
+			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
+			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
+		},
+		Namespace: s.Namespace,
+	})
+	// Throw an error if the attributes could not be registered, but ignore already exists errs
+	alreadyExistsStrings := []string{
+		"already exists",
+		"attributes mapping unavailble",
+	}
+	if err != nil {
+		isAlreadyExistsErr := false
+		for _, s := range alreadyExistsStrings {
+			if strings.Contains(err.Error(), s) {
+				isAlreadyExistsErr = true
+				break
+			}
+		}
+		if !isAlreadyExistsErr {
+			return fmt.Errorf("failed to register search attributes: %w", err)
+		}
+	}
+	return nil
 }
 
 // TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
