@@ -1,5 +1,6 @@
 # Build in a full featured container
 FROM node:20-bullseye as build
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
@@ -10,6 +11,10 @@ RUN apt-get update \
 ARG PLATFORM=amd64
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${PLATFORM}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${PLATFORM}.tar.gz
+
+# Need Rust to compile core if not already built
+RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
 
