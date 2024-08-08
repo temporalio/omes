@@ -71,6 +71,13 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 // iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	err := g.info.RegisterDefaultSearchAttributes(ctx)
+	if err != nil {
+		return err
+	}
+
 	if g.config.Timeout > 0 {
 		g.logger.Debugf("Will timeout after %v", g.config.Timeout)
 		ctx, cancel = context.WithTimeout(ctx, g.config.Timeout)
