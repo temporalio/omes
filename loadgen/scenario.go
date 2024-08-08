@@ -160,6 +160,11 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 }
 
 func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
+	if s.Client == nil {
+		// No client in some unit tests. Ideally this would be mocked but no mock operator service
+		// client is readily available.
+		return nil
+	}
 	// Ensure custom search attributes are registered that many scenarios rely on
 	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
 		SearchAttributes: map[string]enums.IndexedValueType{
