@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -186,6 +187,22 @@ func (b *workerBuilder) buildTypeScript(ctx context.Context, baseDir string) (sd
 			return nil, fmt.Errorf("version not found in package.json")
 		}
 	}
+
+	// Prep the TypeScript runner to be built
+	cmd := exec.Command("npm", "install")
+	cmd.Dir = "./workers/typescript"
+	err := cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("npm install in ./workers/typescript failed: %w", err)
+	}
+
+	cmd = exec.Command("npm", "run", "build")
+	cmd.Dir = "./workers/typescript"
+	err = cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("npm run build in ./workers/typescript failed: %w", err)
+	}
+
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
