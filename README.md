@@ -10,9 +10,12 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 ## Prerequisites
 
 - [Go](https://golang.org/) 1.20+
-- [Node](https://nodejs.org) 16+
+  - `protoc` and `protoc-gen-go` must be installed
+- [Java](https://openjdk.org/) 8+
+- TypeScript: [Node](https://nodejs.org) 16+
 - [Python](https://www.python.org/) 3.10+
   - [Poetry](https://python-poetry.org/): `poetry install`
+- [.NET](https://dotnet.microsoft.com/en-us/download)
 
 And if you're running the fuzzer (see below)
 - [Rust](https://rustup.rs/)
@@ -132,7 +135,7 @@ run by a client inside the scenario executor.
 You can run the fuzzer with new random actions like so:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs 
+go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
 ```
 
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated
@@ -143,7 +146,7 @@ go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --languag
 ```
 
 Or you can run with a specific seed (seeds are printed at the start of the scenario):
-  
+
 ```sh
 go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
 ```
