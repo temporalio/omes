@@ -3,17 +3,19 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
+
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 type Scenario struct {
@@ -225,24 +227,24 @@ type KitchenSinkWorkflowOptions struct {
 // completion ignoring its result. Concurrently it will perform any client actions specified in
 // kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	// Start the workflow
 	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
-	handle, err := r.Client.ExecuteWorkflow(
-		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
-	if err != nil {
-		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
-	}
-
-	clientSeq := options.Params.ClientSequence
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	executor := &kitchensink.ClientActionsExecutor{
+		Client:        r.Client,
+		StartOptions:  options.StartOptions,
+		WorkflowType:  "kitchenSink",
+		WorkflowInput: options.Params.GetWorkflowInput(),
+	}
+	startErr := executor.Start(ctx, options.Params.WithStartAction)
+	if startErr != nil {
+		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
+	}
+
 	var clientActionsErr error
+	clientSeq := options.Params.ClientSequence
 	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
-		executor := &kitchensink.ClientActionsExecutor{
-			Client:     r.Client,
-			WorkflowID: handle.GetID(),
-			RunID:      handle.GetRunID(),
-		}
 		go func() {
 			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if clientActionsErr != nil {
@@ -250,7 +252,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 				cancel()
 				// TODO: Remove or change to "always terminate when exiting early" flag
 				err := r.Client.TerminateWorkflow(
-					ctx, handle.GetID(), "", "client actions failed", nil)
+					ctx, options.StartOptions.ID, "", "client actions failed", nil)
 				if err != nil {
 					return
 				}
@@ -258,7 +260,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		}()
 	}
 
-	executeErr := handle.Get(cancelCtx, nil)
+	executeErr := executor.Handle.Get(cancelCtx, nil)
 	if executeErr != nil {
 		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}

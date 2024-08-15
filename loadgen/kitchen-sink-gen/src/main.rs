@@ -5,12 +5,12 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
+        do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WorkflowInput,
-        WorkflowState,
+        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
+        WorkflowInput, WorkflowState,
     },
 };
 use anyhow::Error;
@@ -302,10 +302,19 @@ impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // We always want a client sequence
         let mut client_sequence: ClientSequence = u.arbitrary()?;
+
+        // Sometimes we want a with-start client action
+        let with_start_action = if u.ratio(80, 100)? {
+            None
+        } else {
+            Some(WithStartClientAction::arbitrary(u)?)
+        };
+
         let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
             client_sequence: None,
+            with_start_action: with_start_action,
         };
 
         // Finally, return at the end
@@ -399,6 +408,16 @@ impl<'a> Arbitrary<'a> for ClientAction {
     }
 }
 
+impl<'a> Arbitrary<'a> for WithStartClientAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let mut signal_action: DoSignal = u.arbitrary()?;
+        signal_action.with_start = true;
+        Ok(Self {
+            variant: Some(with_start_client_action::Variant::DoSignal(signal_action)),
+        })
+    }
+}
+
 impl<'a> Arbitrary<'a> for DoSignal {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let variant = if u.ratio(95, 100)? {
@@ -419,6 +438,7 @@ impl<'a> Arbitrary<'a> for DoSignal {
         };
         Ok(Self {
             variant: Some(variant),
+            with_start: u.arbitrary()?,
         })
     }
 }
@@ -778,6 +798,7 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
                 )))
                 .into(),
             )),
+            with_start: false,
         })),
     }
 }

@@ -183,7 +183,16 @@ jobs:
         run: cargo build
       - name: Check diff
         run: |
-          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; false) 1>&2
+          git config --global core.safecrlf false
+          git diff > generator.diff
+          git diff --exit-code
+      - name: Upload generator diff
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generator-diff
+          path: generator.diff
+          if-no-files-found: ignore
 
   push-latest-docker-images:
     uses: ./.github/workflows/all-docker-images.yml

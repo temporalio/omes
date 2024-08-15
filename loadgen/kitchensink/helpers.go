@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"time"
 )
 
 func NoOpSingleActivityActionSet() *ActionSet {
@@ -57,9 +58,31 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 }
 
 type ClientActionsExecutor struct {
-	Client     client.Client
-	WorkflowID string
-	RunID      string
+	Client        client.Client
+	StartOptions  client.StartWorkflowOptions
+	WorkflowType  string
+	WorkflowInput *WorkflowInput
+	Handle        client.WorkflowRun
+	runID         string
+}
+
+func (e *ClientActionsExecutor) Start(
+	ctx context.Context,
+	withStartAction *WithStartClientAction,
+) error {
+	var err error
+	if withStartAction == nil {
+		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.StartOptions, e.WorkflowType, e.WorkflowInput)
+	} else if sig := withStartAction.GetDoSignal(); sig != nil {
+		e.Handle, err = e.executeSignalAction(ctx, sig)
+	} else {
+		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
+	}
+	if err != nil {
+		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
+	}
+	e.runID = e.Handle.GetRunID()
+	return nil
 }
 
 func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clientSeq *ClientSequence) error {
@@ -68,7 +91,6 @@ func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clien
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -103,13 +125,13 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 		}
 	}
 	if actionSet.GetWaitForCurrentRunToFinishAtEnd() {
-		err := e.Client.GetWorkflow(ctx, e.WorkflowID, e.RunID).
+		err := e.Client.GetWorkflow(ctx, e.StartOptions.ID, e.runID).
 			GetWithOptions(ctx, nil, client.WorkflowRunGetOptions{DisableFollowingRuns: true})
 		var canErr *workflow.ContinueAsNewError
 		if err != nil && !errors.As(err, &canErr) {
 			return err
 		}
-		e.RunID = e.Client.GetWorkflow(ctx, e.WorkflowID, "").GetRunID()
+		e.runID = e.Client.GetWorkflow(ctx, e.StartOptions.ID, "").GetRunID()
 	}
 	return nil
 }
@@ -122,26 +144,20 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 
 	var err error
 	if sig := action.GetDoSignal(); sig != nil {
-		if sigActions := sig.GetDoSignalActions(); sigActions != nil {
-			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", "do_actions_signal", sigActions)
-		} else if handler := sig.GetCustom(); handler != nil {
-			err = e.Client.SignalWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
-		} else {
-			return fmt.Errorf("do_signal must recognizable variant")
-		}
+		_, err = e.executeSignalAction(ctx, sig)
 		return err
 	} else if update := action.GetDoUpdate(); update != nil {
 		var handle client.WorkflowUpdateHandle
 		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
 			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID:   e.WorkflowID,
+				WorkflowID:   e.StartOptions.ID,
 				UpdateName:   "do_actions_update",
 				WaitForStage: client.WorkflowUpdateStageCompleted,
 				Args:         []any{actionsUpdate},
 			})
 		} else if handler := update.GetCustom(); handler != nil {
 			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID:   e.WorkflowID,
+				WorkflowID:   e.StartOptions.ID,
 				UpdateName:   handler.Name,
 				WaitForStage: client.WorkflowUpdateStageCompleted,
 				Args:         []any{handler.Args},
@@ -159,9 +175,9 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", "report_state", nil)
+			_, err = e.Client.QueryWorkflow(ctx, e.StartOptions.ID, "", "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowID, "", handler.Name, handler.Args)
+			_, err = e.Client.QueryWorkflow(ctx, e.StartOptions.ID, "", handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
 		}
@@ -175,4 +191,24 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
+}
+
+func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {
+	var signalName string
+	var signalArgs any
+	if sigActions := sig.GetDoSignalActions(); sigActions != nil {
+		signalName = "do_actions_signal"
+		signalArgs = sigActions
+	} else if handler := sig.GetCustom(); handler != nil {
+		signalName = handler.Name
+		signalArgs = handler.Args
+	} else {
+		return nil, fmt.Errorf("do_signal must recognizable variant")
+	}
+
+	if sig.WithStart {
+		return e.Client.SignalWithStartWorkflow(
+			ctx, e.StartOptions.ID, signalName, signalArgs, e.StartOptions, e.WorkflowType, e.WorkflowInput)
+	}
+	return nil, e.Client.SignalWorkflow(ctx, e.StartOptions.ID, "", signalName, signalArgs)
 }

@@ -11,6 +11,8 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 - [Go](https://golang.org/) 1.20+
   - `protoc` and `protoc-gen-go` must be installed
+  - tip: don't worry about the specific versions here; instead, the GitHub action will make a diff
+    available for download that you can use with `git apply`
 - [Java](https://openjdk.org/) 8+
 - TypeScript: [Node](https://nodejs.org) 16+
 - [Python](https://www.python.org/) 3.10+
