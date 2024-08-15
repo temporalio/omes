@@ -302,10 +302,21 @@ impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // We always want a client sequence
         let mut client_sequence: ClientSequence = u.arbitrary()?;
+
+        // Sometimes we want a with_start_action
+        let with_start_action = if u.ratio(80, 100)? {
+            None
+        } else {
+            let mut signal_action: DoSignal = u.arbitrary()?;
+            signal_action.with_start = true;
+            Some(ClientAction { variant: Some(client_action::Variant::DoSignal(signal_action)) })
+        };
+
         let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
             client_sequence: None,
+            with_start_action: with_start_action,
         };
 
         // Finally, return at the end
@@ -419,6 +430,7 @@ impl<'a> Arbitrary<'a> for DoSignal {
         };
         Ok(Self {
             variant: Some(variant),
+            with_start: u.arbitrary()?,
         })
     }
 }
@@ -778,6 +790,7 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
                 )))
                 .into(),
             )),
+            with_start: false,
         })),
     }
 }

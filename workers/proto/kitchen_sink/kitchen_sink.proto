@@ -15,6 +15,7 @@ import "temporal/api/enums/v1/workflow.proto";
 message TestInput {
   WorkflowInput workflow_input = 1;
   ClientSequence client_sequence = 2;
+  ClientAction with_start_action = 3;
   // Technically worker options should be known as well. We don't have any common format for that
   // and creating one feels overkill to start with. Requiring the harness to print the config at
   // startup seems good enough for now.
@@ -65,6 +66,7 @@ message DoSignal {
     // Send an arbitrary signal
     HandlerInvocation custom = 2;
   }
+  bool with_start = 3;
 }
 
 message DoQuery {

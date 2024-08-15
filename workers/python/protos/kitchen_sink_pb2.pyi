@@ -52,12 +52,14 @@ WAIT_CANCELLATION_COMPLETED: ActivityCancellationType
 ABANDON: ActivityCancellationType
 
 class TestInput(_message.Message):
-    __slots__ = ("workflow_input", "client_sequence")
+    __slots__ = ("workflow_input", "client_sequence", "with_start_action")
     WORKFLOW_INPUT_FIELD_NUMBER: _ClassVar[int]
     CLIENT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    WITH_START_ACTION_FIELD_NUMBER: _ClassVar[int]
     workflow_input: WorkflowInput
     client_sequence: ClientSequence
-    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ...) -> None: ...
+    with_start_action: ClientAction
+    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., with_start_action: _Optional[_Union[ClientAction, _Mapping]] = ...) -> None: ...
 
 class ClientSequence(_message.Message):
     __slots__ = ("action_sets",)
@@ -90,7 +92,7 @@ class ClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
-    __slots__ = ("do_signal_actions", "custom")
+    __slots__ = ("do_signal_actions", "custom", "with_start")
     class DoSignalActions(_message.Message):
         __slots__ = ("do_actions", "do_actions_in_main")
         DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
@@ -100,9 +102,11 @@ class DoSignal(_message.Message):
         def __init__(self, do_actions: _Optional[_Union[ActionSet, _Mapping]] = ..., do_actions_in_main: _Optional[_Union[ActionSet, _Mapping]] = ...) -> None: ...
     DO_SIGNAL_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    WITH_START_FIELD_NUMBER: _ClassVar[int]
     do_signal_actions: DoSignal.DoSignalActions
     custom: HandlerInvocation
-    def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ...) -> None: ...
+    with_start: bool
+    def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ...) -> None: ...
 
 class DoQuery(_message.Message):
     __slots__ = ("report_state", "custom", "failure_expected")
