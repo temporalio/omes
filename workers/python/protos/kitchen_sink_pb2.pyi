@@ -58,8 +58,8 @@ class TestInput(_message.Message):
     WITH_START_ACTION_FIELD_NUMBER: _ClassVar[int]
     workflow_input: WorkflowInput
     client_sequence: ClientSequence
-    with_start_action: ClientAction
-    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., with_start_action: _Optional[_Union[ClientAction, _Mapping]] = ...) -> None: ...
+    with_start_action: WithStartClientAction
+    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., with_start_action: _Optional[_Union[WithStartClientAction, _Mapping]] = ...) -> None: ...
 
 class ClientSequence(_message.Message):
     __slots__ = ("action_sets",)
@@ -78,6 +78,12 @@ class ClientActionSet(_message.Message):
     wait_at_end: _duration_pb2.Duration
     wait_for_current_run_to_finish_at_end: bool
     def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: bool = ..., wait_at_end: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., wait_for_current_run_to_finish_at_end: bool = ...) -> None: ...
+
+class WithStartClientAction(_message.Message):
+    __slots__ = ("do_signal",)
+    DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
+    do_signal: DoSignal
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
     __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")

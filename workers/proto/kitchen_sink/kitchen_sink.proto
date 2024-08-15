@@ -15,7 +15,7 @@ import "temporal/api/enums/v1/workflow.proto";
 message TestInput {
   WorkflowInput workflow_input = 1;
   ClientSequence client_sequence = 2;
-  ClientAction with_start_action = 3;
+  WithStartClientAction with_start_action = 3;
   // Technically worker options should be known as well. We don't have any common format for that
   // and creating one feels overkill to start with. Requiring the harness to print the config at
   // startup seems good enough for now.
@@ -36,6 +36,12 @@ message ClientActionSet {
   // If set, the client should wait for the current run to end before proceeding (IE: the workflow
   // is going to continue-as-new).
   bool wait_for_current_run_to_finish_at_end = 4;
+}
+
+message WithStartClientAction {
+  oneof variant {
+    DoSignal do_signal = 1;
+  }
 }
 
 message ClientAction {

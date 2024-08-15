@@ -68,7 +68,7 @@ type ClientActionsExecutor struct {
 
 func (e *ClientActionsExecutor) Start(
 	ctx context.Context,
-	withStartAction *ClientAction,
+	withStartAction *WithStartClientAction,
 ) error {
 	var err error
 	if withStartAction == nil {
