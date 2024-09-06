@@ -41,6 +41,7 @@ message ClientActionSet {
 message WithStartClientAction {
   oneof variant {
     DoSignal do_signal = 1;
+    DoUpdate do_update = 2;
   }
 }
 
@@ -72,6 +73,7 @@ message DoSignal {
     // Send an arbitrary signal
     HandlerInvocation custom = 2;
   }
+  // If set, the Signal is a Signal-with-Start.
   bool with_start = 3;
 }
 
@@ -96,7 +98,8 @@ message DoUpdate {
     // Send an arbitrary update request
     HandlerInvocation custom = 2;
   }
-
+  // If set, the Update is an Update-with-Start.
+  bool with_start = 3;
   // If set, the client should expect the update to fail
   bool failure_expected = 10;
 }
