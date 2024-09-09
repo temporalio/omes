@@ -80,10 +80,12 @@ class ClientActionSet(_message.Message):
     def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: bool = ..., wait_at_end: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., wait_for_current_run_to_finish_at_end: bool = ...) -> None: ...
 
 class WithStartClientAction(_message.Message):
-    __slots__ = ("do_signal",)
+    __slots__ = ("do_signal", "do_update")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
+    DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ...) -> None: ...
+    do_update: DoUpdate
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
     __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")
@@ -125,14 +127,16 @@ class DoQuery(_message.Message):
     def __init__(self, report_state: _Optional[_Union[_message_pb2.Payloads, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., failure_expected: bool = ...) -> None: ...
 
 class DoUpdate(_message.Message):
-    __slots__ = ("do_actions", "custom", "failure_expected")
+    __slots__ = ("do_actions", "custom", "with_start", "failure_expected")
     DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    WITH_START_FIELD_NUMBER: _ClassVar[int]
     FAILURE_EXPECTED_FIELD_NUMBER: _ClassVar[int]
     do_actions: DoActionsUpdate
     custom: HandlerInvocation
+    with_start: bool
     failure_expected: bool
-    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., failure_expected: bool = ...) -> None: ...
+    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ..., failure_expected: bool = ...) -> None: ...
 
 class DoActionsUpdate(_message.Message):
     __slots__ = ("do_actions", "reject_me")

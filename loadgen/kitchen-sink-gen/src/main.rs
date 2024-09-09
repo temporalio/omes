@@ -410,11 +410,21 @@ impl<'a> Arbitrary<'a> for ClientAction {
 
 impl<'a> Arbitrary<'a> for WithStartClientAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let mut signal_action: DoSignal = u.arbitrary()?;
-        signal_action.with_start = true;
-        Ok(Self {
-            variant: Some(with_start_client_action::Variant::DoSignal(signal_action)),
-        })
+        let action_kind = u.int_in_range(0..=1)?;
+        let variant = match action_kind {
+            0 => with_start_client_action::Variant::DoSignal({
+                let mut signal_action: DoSignal = u.arbitrary()?;
+                signal_action.with_start = true;
+                signal_action
+            }),
+            1 => with_start_client_action::Variant::DoUpdate({
+                let mut update_action: DoUpdate = u.arbitrary()?;
+                update_action.with_start = true;
+                update_action
+            }),
+            _ => unreachable!(),
+        };
+        Ok(Self { variant: Some(variant) })
     }
 }
 
@@ -481,6 +491,7 @@ impl<'a> Arbitrary<'a> for DoUpdate {
         Ok(Self {
             variant: Some(variant),
             failure_expected,
+            with_start: u.arbitrary()?,
         })
     }
 }

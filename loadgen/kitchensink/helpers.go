@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
@@ -75,6 +76,8 @@ func (e *ClientActionsExecutor) Start(
 		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.StartOptions, e.WorkflowType, e.WorkflowInput)
 	} else if sig := withStartAction.GetDoSignal(); sig != nil {
 		e.Handle, err = e.executeSignalAction(ctx, sig)
+	} else if upd := withStartAction.GetDoUpdate(); upd != nil {
+		e.Handle, err = e.executeUpdateAction(ctx, upd)
 	} else {
 		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
 	}
@@ -147,30 +150,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		_, err = e.executeSignalAction(ctx, sig)
 		return err
 	} else if update := action.GetDoUpdate(); update != nil {
-		var handle client.WorkflowUpdateHandle
-		if actionsUpdate := update.GetDoActions(); actionsUpdate != nil {
-			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID:   e.StartOptions.ID,
-				UpdateName:   "do_actions_update",
-				WaitForStage: client.WorkflowUpdateStageCompleted,
-				Args:         []any{actionsUpdate},
-			})
-		} else if handler := update.GetCustom(); handler != nil {
-			handle, err = e.Client.UpdateWorkflow(ctx, client.UpdateWorkflowOptions{
-				WorkflowID:   e.StartOptions.ID,
-				UpdateName:   handler.Name,
-				WaitForStage: client.WorkflowUpdateStageCompleted,
-				Args:         []any{handler.Args},
-			})
-		} else {
-			return fmt.Errorf("do_update must recognizable variant")
-		}
-		if err == nil {
-			err = handle.Get(ctx, nil)
-		}
-		if update.FailureExpected {
-			err = nil
-		}
+		_, err = e.executeUpdateAction(ctx, update)
 		return err
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
@@ -211,4 +191,47 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 			ctx, e.StartOptions.ID, signalName, signalArgs, e.StartOptions, e.WorkflowType, e.WorkflowInput)
 	}
 	return nil, e.Client.SignalWorkflow(ctx, e.StartOptions.ID, "", signalName, signalArgs)
+}
+
+func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
+	var opts client.UpdateWorkflowOptions
+	if actionsUpdate := upd.GetDoActions(); actionsUpdate != nil {
+		opts = client.UpdateWorkflowOptions{
+			WorkflowID:   e.StartOptions.ID,
+			UpdateName:   "do_actions_update",
+			WaitForStage: client.WorkflowUpdateStageCompleted,
+			Args:         []any{actionsUpdate},
+		}
+	} else if handler := upd.GetCustom(); handler != nil {
+		opts = client.UpdateWorkflowOptions{
+			WorkflowID:   e.StartOptions.ID,
+			UpdateName:   handler.Name,
+			WaitForStage: client.WorkflowUpdateStageCompleted,
+			Args:         []any{handler.Args},
+		}
+	} else {
+		return nil, fmt.Errorf("do_update must recognizable variant")
+	}
+
+	var handle client.WorkflowUpdateHandle
+	if upd.WithStart {
+		op := client.NewUpdateWithStartWorkflowOperation(opts)
+		startOpts := e.StartOptions
+		startOpts.WithStartOperation = op
+		startOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		run, err = e.Client.ExecuteWorkflow(ctx, startOpts, e.WorkflowType, e.WorkflowInput)
+		if err == nil {
+			handle, err = op.Get(ctx)
+		}
+	} else {
+		handle, err = e.Client.UpdateWorkflow(ctx, opts)
+	}
+
+	if err == nil {
+		err = handle.Get(ctx, nil)
+	}
+	if upd.FailureExpected {
+		err = nil
+	}
+	return run, err
 }
