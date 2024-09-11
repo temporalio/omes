@@ -102,7 +102,9 @@ go 1.20
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
+require go.temporal.io/sdk/contrib/resourcetuner v1.29.0
 
+replace go.temporal.io/sdk/contrib/resourcetuner => ../../../repo/contrib/resourcetuner
 replace github.com/temporalio/omes => ../../../
 replace github.com/temporalio/omes/workers/go => ../`,
 		GoMainContents: `package main

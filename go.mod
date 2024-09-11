@@ -15,6 +15,7 @@ require (
 	github.com/temporalio/features v0.0.0-20240806202554-bdfe567c9d89
 	go.temporal.io/api v1.38.0
 	go.temporal.io/sdk v1.29.0
+	go.temporal.io/sdk/contrib/resourcetuner v1.29.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.20.0
 	golang.org/x/sync v0.8.0
@@ -59,4 +60,5 @@ require (
 replace (
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20240806202554-bdfe567c9d89
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20240806202554-bdfe567c9d89
+	go.temporal.io/sdk/contrib/resourcetuner => ../sdk-go/contrib/resourcetuner
 )

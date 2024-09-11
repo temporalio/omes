@@ -2,6 +2,7 @@ package worker
 
 import (
 	"fmt"
+	"go.temporal.io/sdk/contrib/resourcetuner"
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
@@ -59,12 +60,20 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 	}
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
+		tuner, err := resourcetuner.NewResourceBasedTuner(resourcetuner.ResourceBasedTunerOptions{
+			TargetMem: 0.9,
+			TargetCpu: 0.9,
+		})
+		if err != nil {
+			return err
+		}
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
 				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
 				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
+				Tuner:                                  tuner,
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})

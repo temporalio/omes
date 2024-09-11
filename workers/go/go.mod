@@ -10,6 +10,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	go.temporal.io/api v1.38.0
 	go.temporal.io/sdk v1.29.0
+	go.temporal.io/sdk/contrib/resourcetuner v1.29.0
 	go.uber.org/zap v1.27.0
 )
 
@@ -51,3 +52,4 @@ require (
 )
 
 replace github.com/temporalio/omes => ../../
+replace go.temporal.io/sdk/contrib/resourcetuner => ../../../sdk-go/contrib/resourcetuner
