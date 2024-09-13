@@ -86,14 +86,14 @@ func init() {
 						},
 
 						// Essentially not bound. Hard to get node to actually use this memory.
-						parallelResourcesActions(6, int(math.Pow(10, 9)), 10_000_000, 5, 30),
+						//parallelResourcesActions(6, int(math.Pow(10, 9)), 10_000_000, 5, 30),
 
-						// This section ends up being quite CPU bound.
-						parallelResourcesActions(300, int(math.Pow(10, 8)), 1_000_000, 2, 5),
+						// This section has high usage of both (20MB chunks)
+						parallelResourcesActions(200, int(math.Pow(10, 7)*2), 10_000_000, 2, 5),
 
 						// An IO bound scenario where the activities aren't doing much work and
 						// mostly waiting
-						parallelRandomDelays(1000, time.Millisecond*100, time.Second*5),
+						parallelRandomDelays(500, time.Millisecond*100, time.Second*5),
 
 						// Add a short delay before finishing so metrics can get emitted
 						{

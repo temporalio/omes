@@ -103,6 +103,7 @@ func (r *workerRunner) run(ctx context.Context) error {
 				HostPort:  r.embeddedServerAddress,
 				Namespace: r.clientOptions.Namespace,
 			},
+			EnableUI: true,
 			LogLevel: "error",
 		})
 		if err != nil {

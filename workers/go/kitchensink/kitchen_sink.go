@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.temporal.io/sdk/activity"
+	"math/rand/v2"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -124,6 +126,9 @@ func (ws *KSWorkflowState) handleAction(
 	ctx workflow.Context,
 	action *kitchensink.Action,
 ) (*common.Payload, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if rr := action.GetReturnResult(); rr != nil {
 		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
@@ -201,6 +206,10 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	if delay := act.GetDelay(); delay != nil {
 		actType = "delay"
 		args = append(args, delay.AsDuration())
+	}
+	if resources := act.GetResources(); resources != nil {
+		actType = "resources"
+		args = append(args, resources)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -302,6 +311,25 @@ func Noop(_ context.Context, _ []*common.Payload) error {
 func Delay(_ context.Context, delayFor time.Duration) error {
 	time.Sleep(delayFor)
 	return nil
+}
+
+// Resources consumes the specified amount of resources
+func Resources(ctx context.Context, input *kitchensink.ExecuteActivityAction_ResourcesActivity) error {
+	buf := make([]byte, int(input.BytesToAllocate))
+	started := time.Now()
+	runForTime := input.RunFor.AsDuration() - 1*time.Second
+	for i := 0; ctx.Err() == nil && time.Now().Sub(started) < runForTime; i++ {
+		if input.CpuYieldEveryNIterations > 0 && i%int(input.CpuYieldEveryNIterations) == 0 {
+			time.Sleep(time.Duration(input.CpuYieldForMs) * time.Millisecond)
+		}
+		buf[i%len(buf)] = byte(rand.Float32() * 256)
+		activity.RecordHeartbeat(ctx)
+	}
+	if ctx.Err() != nil {
+		println("Resources activity cancelled")
+	}
+	return nil
+
 }
 
 func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {

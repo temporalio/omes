@@ -98,7 +98,7 @@ func (b *workerBuilder) buildGo(ctx context.Context, baseDir string) (sdkbuild.P
 		Version: b.version,
 		GoModContents: `module github.com/temporalio/omes-worker
 
-go 1.20
+go 1.22
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
