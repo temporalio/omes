@@ -98,7 +98,7 @@ class KitchenSinkWorkflow:
         should_return_task = asyncio.create_task(
             workflow.wait_condition(lambda: return_value is not None)
         )
-        done, _ = await asyncio.wait(
+        done, _ = await workflow.wait(
             [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
         )  # type: ignore
         for fut in done:
