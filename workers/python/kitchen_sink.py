@@ -98,11 +98,12 @@ class KitchenSinkWorkflow:
         should_return_task = asyncio.create_task(
             workflow.wait_condition(lambda: return_value is not None)
         )
+        # mypy cannot handle the heterogeneous arguments to `wait`
         done, _ = await workflow.wait(
             [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
         )  # type: ignore
         for fut in done:
-            await fut
+            await fut  # type: ignore
         return return_value
 
     async def handle_action(self, action: Action) -> Optional[Payload]:
