@@ -61,6 +61,8 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 		taskQueue := taskQueue
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{
+				BuildID:                                options.BuildID,
+				UseBuildIDForVersioning:                options.BuildID != "",
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
 				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
