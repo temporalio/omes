@@ -16,7 +16,9 @@ import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
@@ -190,8 +192,10 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
         handleAction(patchMarker.getInnerAction());
       }
     } else if (action.hasUpsertMemo()) {
-      // TODO(https://github.com/temporalio/sdk-java/issues/623) Java does not support upsert memo.
-      log.debug("Java does not support upsert memo");
+      KitchenSink.UpsertMemoAction upsertMemoAction = action.getUpsertMemo();
+      Map<String, Object> memo = new HashMap();
+      upsertMemoAction.getUpsertedMemo().getFieldsMap().forEach(memo::put);
+      Workflow.upsertMemo(memo);
     } else {
       throw Workflow.wrap(new IllegalArgumentException("Unrecognized action type"));
     }
