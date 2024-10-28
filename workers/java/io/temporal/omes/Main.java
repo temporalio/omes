@@ -8,7 +8,9 @@ import com.sun.net.httpserver.HttpServer;
 import com.uber.m3.tally.RootScopeBuilder;
 import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
+import io.grpc.Metadata;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+import io.grpc.stub.MetadataUtils;
 import io.micrometer.core.instrument.util.StringUtils;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
@@ -23,6 +25,10 @@ import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
 import io.temporal.worker.WorkerOptions;
+import net.logstash.logback.encoder.LogstashEncoder;
+import picocli.CommandLine;
+
+import javax.net.ssl.SSLException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -30,9 +36,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import javax.net.ssl.SSLException;
-import net.logstash.logback.encoder.LogstashEncoder;
-import picocli.CommandLine;
 
 @CommandLine.Command(name = "features", description = "Runs Java features")
 public class Main implements Runnable {
@@ -86,6 +89,9 @@ public class Main implements Runnable {
   @CommandLine.Option(names = "--tls-key-path", description = "Path to a client key for TLS")
   private String clientKeyPath;
 
+  @CommandLine.Option(names = "--api-key", description = "API key for authentication")
+  private String apiKey;
+
   // Metric parameters
   @CommandLine.Option(
       names = "--prom-listen-address",
@@ -122,29 +128,36 @@ public class Main implements Runnable {
 
   @Override
   public void run() {
+    WorkflowServiceStubsOptions.Builder workflowServiceStubOptionsBuilder = WorkflowServiceStubsOptions.newBuilder();
     // Configure TLS
-    SslContext sslContext = null;
-    if (StringUtils.isNotEmpty(clientCertPath)) {
-      if (StringUtils.isEmpty(clientKeyPath)) {
+    if (StringUtils.isNotEmpty(clientCertPath) || StringUtils.isNotEmpty(clientKeyPath)) {
+      if (StringUtils.isEmpty(clientKeyPath) || StringUtils.isEmpty(clientCertPath)) {
         throw new RuntimeException("Client key path must be specified since cert path is");
       }
 
       try {
         InputStream clientCert = new FileInputStream(clientCertPath);
         InputStream clientKey = new FileInputStream(clientKeyPath);
-        sslContext = SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build();
+        SslContext sslContext = SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build();
+        workflowServiceStubOptionsBuilder.setSslContext(sslContext);
       } catch (FileNotFoundException | SSLException e) {
         throw new RuntimeException("Error loading certs", e);
       }
-
-    } else if (StringUtils.isNotEmpty(clientKeyPath) && StringUtils.isEmpty(clientCertPath)) {
-      throw new RuntimeException("Client cert path must be specified since key path is");
     } else if (isTlsEnabled) {
-      try {
-        sslContext = SimpleSslContextBuilder.noKeyOrCertChain().build();
-      } catch (SSLException e) {
-        throw new RuntimeException(e);
-      }
+      workflowServiceStubOptionsBuilder.setEnableHttps(true);
+    }
+    // Configure API key
+    if (StringUtils.isNotEmpty(apiKey)) {
+      workflowServiceStubOptionsBuilder.addApiKey(() -> apiKey);
+      Metadata.Key<String> TEMPORAL_NAMESPACE_HEADER_KEY =
+              Metadata.Key.of("temporal-namespace", Metadata.ASCII_STRING_MARSHALLER);
+      Metadata metadata = new Metadata();
+      metadata.put(TEMPORAL_NAMESPACE_HEADER_KEY, namespace);
+      workflowServiceStubOptionsBuilder.setChannelInitializer(
+              (channel) -> {
+                channel.intercept(MetadataUtils.newAttachHeadersInterceptor(metadata));
+              });
+
     }
 
     // Configure logging
@@ -174,9 +187,8 @@ public class Main implements Runnable {
     // Configure client
     WorkflowServiceStubs service =
         WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder()
+                workflowServiceStubOptionsBuilder
                 .setTarget(serverAddress)
-                .setSslContext(sslContext)
                 .setMetricsScope(scope)
                 .build());
 
