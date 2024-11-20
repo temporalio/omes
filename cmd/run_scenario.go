@@ -49,11 +49,12 @@ type scenarioID struct {
 }
 
 type scenarioRunConfig struct {
-	iterations      int
-	duration        time.Duration
-	maxConcurrent   int
-	scenarioOptions []string
-	timeout         time.Duration
+	iterations                    int
+	duration                      time.Duration
+	maxConcurrent                 int
+	scenarioOptions               []string
+	timeout                       time.Duration
+	doNotRegisterSearchAttributes bool
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -78,6 +79,9 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
 	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
+		"Do not register the default search attributes used by scenarios. "+
+			"If the search attributes are not registed by the scenario they must be registered through some other method")
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
@@ -129,10 +133,11 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
 		Configuration: loadgen.RunConfiguration{
-			Iterations:    r.iterations,
-			Duration:      r.duration,
-			MaxConcurrent: r.maxConcurrent,
-			Timeout:       r.timeout,
+			Iterations:                    r.iterations,
+			Duration:                      r.duration,
+			MaxConcurrent:                 r.maxConcurrent,
+			Timeout:                       r.timeout,
+			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,

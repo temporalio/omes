@@ -73,9 +73,11 @@ func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	err := g.info.RegisterDefaultSearchAttributes(ctx)
-	if err != nil {
-		return err
+	if !g.info.Configuration.DoNotRegisterSearchAttributes {
+		err := g.info.RegisterDefaultSearchAttributes(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	if g.config.Timeout > 0 {
