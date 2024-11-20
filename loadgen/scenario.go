@@ -133,7 +133,7 @@ type RunConfiguration struct {
 	// with an error. The default is unlimited.
 	Timeout time.Duration
 	// Do not register the default search attributes used by scenarios. If the SAs are not registered
-	// by the run, they must be registerd by some other method. This is needed because cloud cells
+	// by the run, they must be registered by some other method. This is needed because cloud cells
 	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
