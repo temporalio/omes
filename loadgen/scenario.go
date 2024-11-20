@@ -132,6 +132,11 @@ type RunConfiguration struct {
 	// If the timeout is hit any pending executions will be cancelled and the scenario will exit
 	// with an error. The default is unlimited.
 	Timeout time.Duration
+	// Do not register the default search attributes used by scenarios. If the SAs are not registered
+	// by the run, they must be registerd by some other method. This is needed because cloud cells
+	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
+	// Default is false.
+	DoNotRegisterSearchAttributes bool
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
