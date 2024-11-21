@@ -57,6 +57,8 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 	tpsActivities := throughputstress.Activities{
 		Client: client,
 	}
+	service := throughputstress.MustCreateNexusService()
+
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
@@ -73,7 +75,10 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
+			w.RegisterWorkflow(throughputstress.EchoWorkflow)
+			w.RegisterWorkflow(throughputstress.WaitForCancelWorkflow)
 			w.RegisterActivity(&tpsActivities)
+			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
 	}

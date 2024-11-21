@@ -127,6 +127,32 @@ This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
 Publishing images is typically done via CI, using the `push-images` command. See the GHA workflows
 for more.
 
+## Throughput stress and Nexus
+
+The throughput_stress scenario (which is currently only available for Golang) can generate Nexus load if the scenario is
+started with `--option nexus-endpoint=my-nexus-endpoint`. This doesn't work with the `--embedded-server` option, and
+requires the following steps:
+
+1. Allocate a scenario run-id. This determines the scenario's task queue. (we'll use `default-run-id` in this tutorial).
+1. Start a server with nexus enabled (e.g. `--http-port 7243 --dynamic-config-value system.enableNexus=true` for the
+   dev server).
+1. Create your namespace ahead of time. Note that the dev server will automatically create the `default` namespace
+   unless specified otherwise.
+1. Create a nexus endpoint:
+
+   ```
+   temporal operator nexus endpoint create \
+   --name my-nexus-endpoint \
+   --target-namespace default \ # Change if needed
+   --target-task-queue throughput_stress:default-run-id
+   ```
+
+1. Start the scenario with the given run-id:
+
+  ```
+  go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
+  ```
+
 ## The fuzzer
 
 The fuzzer scenario makes use of the kitchen sink workflow (see below) to exercise a wide

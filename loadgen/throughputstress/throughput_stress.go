@@ -16,6 +16,10 @@ type WorkflowParams struct {
 	TimesContinued int `json:"timesContinued"`
 	// Set internally and incremented every time the workflow spawns a child.
 	ChildrenSpawned int `json:"childrenSpawned"`
+
+	// If set, the workflow will run nexus tests.
+	// The endpoint should be created ahead of time.
+	NexusEndpoint string `json:"nexusEndpoint"`
 }
 
 type WorkflowOutput struct {
