@@ -129,7 +129,7 @@ for more.
 
 ## Throughput stress and Nexus
 
-The throughput_stress scenario, which is currently on avalilable for Golang) can generate Nexus load if the scenario is
+The throughput_stress scenario (which is currently only available for Golang) can generate Nexus load if the scenario is
 started with `--option nexus-endpoint=my-nexus-endpoint`. This doesn't work with the `--embedded-server` option, and
 requires the following steps:
 
@@ -140,12 +140,12 @@ requires the following steps:
    unless specified otherwise.
 1. Create a nexus endpoint:
 
-  ```
-  temporal operator nexus endpoint create \
-  --name my-nexus-endpoint \
-  --target-namespace default \ # Change if needed
-  --target-task-queue throughput_stress:default-run-id
-  ```
+   ```
+   temporal operator nexus endpoint create \
+   --name my-nexus-endpoint \
+   --target-namespace default \ # Change if needed
+   --target-task-queue throughput_stress:default-run-id
+   ```
 
 1. Start the scenario with the given run-id:
 
