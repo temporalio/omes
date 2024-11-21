@@ -1,9 +1,11 @@
 package throughputstress
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
 	"github.com/temporalio/omes/workers/go/workflowutils"
@@ -152,10 +154,46 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateLocalActivity).Get(ctx, nil)
 			},
+			func(ctx workflow.Context) error {
+				return runEchoNexusOperation(ctx, params, EchoSyncOperation)
+			},
+			func(ctx workflow.Context) error {
+				return runEchoNexusOperation(ctx, params, EchoAsyncOperation)
+			},
+			func(ctx workflow.Context) error {
+				client := nexusClient(ctx, params)
+				if client == nil {
+					return nil
+				}
+				opCtx, cancel := workflow.WithCancel(ctx)
+				defer cancel()
+				fut := client.ExecuteOperation(
+					opCtx,
+					WaitForCancelOperation,
+					nil,
+					workflow.NexusOperationOptions{},
+				)
+				// Wait for the operation to be started before canceling it.
+				if err := fut.GetNexusOperationExecution().Get(ctx, nil); err != nil {
+					workflow.GetLogger(ctx).Error("could not start nexus operation", "error", err)
+					return err
+				}
+				cancel()
+				err := fut.Get(ctx, nil)
+				if err == nil {
+					return fmt.Errorf("expected operation to fail but it succeeded")
+				}
+				var canceledErr *temporal.CanceledError
+				if !errors.As(err, &canceledErr) {
+					return fmt.Errorf("expected operation to fail as canceled, instead it failed with: %w", err)
+				}
+				return nil
+			},
 		)
 		if err != nil {
 			return output, err
 		}
+
 		// Possibly continue as new
 		if params.ContinueAsNewAfterEventCount > 0 && workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
 			if i == 0 {
@@ -169,6 +207,35 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 	}
 
 	return output, nil
+}
+
+func nexusClient(ctx workflow.Context, params *throughputstress.WorkflowParams) workflow.NexusClient {
+	if params.NexusEndpoint == "" {
+		workflow.GetLogger(ctx).Info("not running nexus tests, set nexusEndpoint in options to enable these tests")
+		return nil
+	}
+	return workflow.NewNexusClient(params.NexusEndpoint, ThroughputStressServiceName)
+}
+
+func runEchoNexusOperation(ctx workflow.Context, params *throughputstress.WorkflowParams, operation nexus.OperationReference[string, string]) error {
+	client := nexusClient(ctx, params)
+	if client == nil {
+		return nil
+	}
+	fut := client.ExecuteOperation(
+		ctx,
+		operation,
+		"hello",
+		workflow.NexusOperationOptions{},
+	)
+	var output string
+	if err := fut.Get(ctx, &output); err != nil {
+		return err
+	}
+	if output != "hello" {
+		return fmt.Errorf(`expected "hello", got %q`, output)
+	}
+	return nil
 }
 
 func ThroughputStressChild(ctx workflow.Context) error {

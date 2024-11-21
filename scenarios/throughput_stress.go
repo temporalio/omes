@@ -19,9 +19,10 @@ import (
 
 // --option arguments
 const (
-	IterFlag      = "internal-iterations"
-	SkipSleepFlag = "skip-sleep"
-	CANEventFlag  = "continue-as-new-after-event-count"
+	IterFlag          = "internal-iterations"
+	SkipSleepFlag     = "skip-sleep"
+	CANEventFlag      = "continue-as-new-after-event-count"
+	NexusEndpointFlag = "nexus-endpoint"
 )
 
 const ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
@@ -76,7 +77,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		},
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			internalIterations := run.ScenarioInfo.ScenarioOptionInt(IterFlag, 5)
-			continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 100)
+			continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 120)
+			// Disabled by default.
+			nexusEndpoint := run.ScenarioInfo.ScenarioOptions[NexusEndpointFlag]
 			skipSleep := run.ScenarioInfo.ScenarioOptionBool(SkipSleepFlag, false)
 			timeout := time.Duration(1*internalIterations) * time.Minute
 
@@ -98,6 +101,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					SkipSleep:                    skipSleep,
 					Iterations:                   internalIterations,
 					ContinueAsNewAfterEventCount: continueAsNewCount,
+					NexusEndpoint:                nexusEndpoint,
 				})
 			// The 1 is for the final workflow run
 			t.workflowCount.Add(uint64(result.TimesContinued + result.ChildrenSpawned + 1))
