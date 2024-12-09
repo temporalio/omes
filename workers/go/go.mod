@@ -7,6 +7,7 @@ toolchain go1.22.5
 require github.com/temporalio/omes v1.0.0
 
 require (
+	github.com/nexus-rpc/sdk-go v0.0.12
 	github.com/spf13/cobra v1.8.0
 	go.temporal.io/api v1.40.0
 	go.temporal.io/sdk v1.30.2-0.20241209170134-41e9b33d85c0
@@ -25,7 +26,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/nexus-rpc/sdk-go v0.0.12 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.18.0 // indirect
