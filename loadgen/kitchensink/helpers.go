@@ -215,13 +215,17 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 
 	var handle client.WorkflowUpdateHandle
 	if upd.WithStart {
-		op := client.NewUpdateWithStartWorkflowOperation(opts)
+		var updErr error
 		startOpts := e.StartOptions
-		startOpts.WithStartOperation = op
 		startOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
-		run, err = e.Client.ExecuteWorkflow(ctx, startOpts, e.WorkflowType, e.WorkflowInput)
+		startWorkflowOp := e.Client.NewWithStartWorkflowOperation(startOpts, e.WorkflowType, e.WorkflowInput)
+		handle, updErr = e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
+			StartWorkflowOperation: startWorkflowOp,
+			UpdateOptions:          opts,
+		})
+		run, err = startWorkflowOp.Get(ctx)
 		if err == nil {
-			handle, err = op.Get(ctx)
+			err = updErr
 		}
 	} else {
 		handle, err = e.Client.UpdateWorkflow(ctx, opts)
