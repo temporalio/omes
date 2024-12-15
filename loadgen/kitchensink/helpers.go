@@ -59,12 +59,12 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 }
 
 type ClientActionsExecutor struct {
-	Client        client.Client
-	StartOptions  client.StartWorkflowOptions
-	WorkflowType  string
-	WorkflowInput *WorkflowInput
-	Handle        client.WorkflowRun
-	runID         string
+	Client          client.Client
+	WorkflowOptions client.StartWorkflowOptions
+	WorkflowType    string
+	WorkflowInput   *WorkflowInput
+	Handle          client.WorkflowRun
+	runID           string
 }
 
 func (e *ClientActionsExecutor) Start(
@@ -73,7 +73,7 @@ func (e *ClientActionsExecutor) Start(
 ) error {
 	var err error
 	if withStartAction == nil {
-		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.StartOptions, e.WorkflowType, e.WorkflowInput)
+		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	} else if sig := withStartAction.GetDoSignal(); sig != nil {
 		e.Handle, err = e.executeSignalAction(ctx, sig)
 	} else if upd := withStartAction.GetDoUpdate(); upd != nil {
@@ -128,13 +128,13 @@ func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, acti
 		}
 	}
 	if actionSet.GetWaitForCurrentRunToFinishAtEnd() {
-		err := e.Client.GetWorkflow(ctx, e.StartOptions.ID, e.runID).
+		err := e.Client.GetWorkflow(ctx, e.WorkflowOptions.ID, e.runID).
 			GetWithOptions(ctx, nil, client.WorkflowRunGetOptions{DisableFollowingRuns: true})
 		var canErr *workflow.ContinueAsNewError
 		if err != nil && !errors.As(err, &canErr) {
 			return err
 		}
-		e.runID = e.Client.GetWorkflow(ctx, e.StartOptions.ID, "").GetRunID()
+		e.runID = e.Client.GetWorkflow(ctx, e.WorkflowOptions.ID, "").GetRunID()
 	}
 	return nil
 }
@@ -155,9 +155,9 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.StartOptions.ID, "", "report_state", nil)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.StartOptions.ID, "", handler.Name, handler.Args)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
 		}
@@ -188,23 +188,23 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 
 	if sig.WithStart {
 		return e.Client.SignalWithStartWorkflow(
-			ctx, e.StartOptions.ID, signalName, signalArgs, e.StartOptions, e.WorkflowType, e.WorkflowInput)
+			ctx, e.WorkflowOptions.ID, signalName, signalArgs, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.StartOptions.ID, "", signalName, signalArgs)
+	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArgs)
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
-	var opts client.UpdateWorkflowOptions
+	var updateOpts client.UpdateWorkflowOptions
 	if actionsUpdate := upd.GetDoActions(); actionsUpdate != nil {
-		opts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.StartOptions.ID,
+		updateOpts = client.UpdateWorkflowOptions{
+			WorkflowID:   e.WorkflowOptions.ID,
 			UpdateName:   "do_actions_update",
 			WaitForStage: client.WorkflowUpdateStageCompleted,
 			Args:         []any{actionsUpdate},
 		}
 	} else if handler := upd.GetCustom(); handler != nil {
-		opts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.StartOptions.ID,
+		updateOpts = client.UpdateWorkflowOptions{
+			WorkflowID:   e.WorkflowOptions.ID,
 			UpdateName:   handler.Name,
 			WaitForStage: client.WorkflowUpdateStageCompleted,
 			Args:         []any{handler.Args},
@@ -215,16 +215,15 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 
 	var handle client.WorkflowUpdateHandle
 	if upd.WithStart {
-		op := client.NewUpdateWithStartWorkflowOperation(opts)
-		startOpts := e.StartOptions
-		startOpts.WithStartOperation = op
-		startOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
-		run, err = e.Client.ExecuteWorkflow(ctx, startOpts, e.WorkflowType, e.WorkflowInput)
-		if err == nil {
-			handle, err = op.Get(ctx)
-		}
+		workflowOpts := e.WorkflowOptions
+		workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		op := e.Client.NewWithStartWorkflowOperation(workflowOpts, e.WorkflowType, e.WorkflowInput)
+		handle, err = e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
+			StartWorkflowOperation: op,
+			UpdateOptions:          updateOpts,
+		})
 	} else {
-		handle, err = e.Client.UpdateWorkflow(ctx, opts)
+		handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
 	}
 
 	if err == nil {
