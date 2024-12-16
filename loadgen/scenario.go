@@ -237,10 +237,10 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 	defer cancel()
 
 	executor := &kitchensink.ClientActionsExecutor{
-		Client:        r.Client,
-		StartOptions:  options.StartOptions,
-		WorkflowType:  "kitchenSink",
-		WorkflowInput: options.Params.GetWorkflowInput(),
+		Client:          r.Client,
+		WorkflowOptions: options.StartOptions,
+		WorkflowType:    "kitchenSink",
+		WorkflowInput:   options.Params.GetWorkflowInput(),
 	}
 	startErr := executor.Start(ctx, options.Params.WithStartAction)
 	if startErr != nil {
