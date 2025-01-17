@@ -10,7 +10,7 @@ require (
 	github.com/nexus-rpc/sdk-go v0.1.0
 	github.com/spf13/cobra v1.8.0
 	go.temporal.io/api v1.43.0
-	go.temporal.io/sdk v1.31.0
+	go.temporal.io/sdk v1.32.1
 	go.uber.org/zap v1.27.0
 )
 
