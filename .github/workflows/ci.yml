@@ -28,9 +28,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language go --version v1.31.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language go --version v1.32.1 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.31.0 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.32.1 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -59,9 +59,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language java --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language java --version 1.26.1 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language java --version 1.27.0 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.26.1 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.27.0 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -91,9 +91,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language python --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language python --version 1.7.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language python --version 1.9.0 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.7.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.9.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -121,9 +121,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language ts --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language ts --version 1.10.2 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language ts --version 1.11.6 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.10.2 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.11.6 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -149,9 +149,9 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language cs --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language cs --version 1.3.1 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language cs --version 1.4.0 --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.3.1 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.4.0 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
         run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
 
@@ -201,8 +201,8 @@ jobs:
     with:
       do-push: true
       as-latest: true
-      go-version: 'v1.31.0'
-      ts-version: 'v1.10.2'
-      java-version: 'v1.26.0'
-      py-version: 'v1.7.0'
-      dotnet-version: 'v1.3.1'
+      go-version: 'v1.32.1'
+      ts-version: 'v1.11.6'
+      java-version: 'v1.27.0'
+      py-version: 'v1.9.0'
+      dotnet-version: 'v1.4.0'
