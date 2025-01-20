@@ -6,6 +6,9 @@ on: # rebuild any PRs and main branch changes
     branches:
       - main
 
+# When changing these values you must also change the value in the
+# push-latest-docker-images workflow call below.
+# TODO: avoid this duplication
 env:
   DOTNET_SDK_VERSION: "1.4.0"
   GO_SDK_VERSION: "1.32.1"
@@ -211,8 +214,8 @@ jobs:
     with:
       do-push: true
       as-latest: true
-      go-version: v${{ env.GO_SDK_VERSION }}
-      ts-version: v${{ env.TYPESCRIPT_SDK_VERSION }}
-      java-version: v${{ env.JAVA_SDK_VERSION }}
-      py-version: v${{ env.PYTHON_SDK_VERSION }}
-      dotnet-version: v${{ env.DOTNET_SDK_VERSION }}
+      go-version: v1.32.1
+      ts-version: v1.11.6
+      java-version: v1.27.0
+      py-version: v1.9.0
+      dotnet-version: v1.4.0
