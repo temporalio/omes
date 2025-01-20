@@ -1,13 +1,26 @@
 name: Continuous Integration
 
-## !!NOTE!! Make sure you keep the sdk versions used in the build/test steps consistent with
-##   the versions used when building & pushing the docker images.
-
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
     branches:
       - main
+
+# When changing these values you must also change the value in the
+# push-latest-docker-images workflow call below.
+# TODO: avoid this duplication
+env:
+  DOTNET_SDK_VERSION: "1.4.0"
+  GO_SDK_VERSION: "1.32.1"
+  JAVA_SDK_VERSION: "1.27.0"
+  TYPESCRIPT_SDK_VERSION: "1.11.6"
+  GO_VERSION: "^1.21"
+  JAVA_VERSION: "11"
+  PROTOC_GEN_GO_VERSION: "v1.31.0"
+  PROTOC_VERSION: "25.1"
+  PYTHON_SDK_VERSION: "1.9.0"
+  PYTHON_VERSION: "3.10"
+  RUST_TOOLCHAIN: "1.74.0"
 
 jobs:
   build-lint-test-go:
@@ -20,7 +33,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.21"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Test
@@ -28,11 +41,11 @@ jobs:
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language go --version v1.32.1 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language go --version v${{ env.GO_SDK_VERSION }} --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.32.1 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:go-${{ env.GO_SDK_VERSION }} --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id ${{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id ${{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-lint-test-java:
     runs-on: ubuntu-latest
@@ -45,7 +58,7 @@ jobs:
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: "${{ env.JAVA_VERSION }}"
       - name: Set up Gradle
         uses: gradle/gradle-build-action@v2
       - name: Lint Java worker
@@ -53,17 +66,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.21"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language java --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language java --version 1.27.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language java --version ${{ env.JAVA_SDK_VERSION }} --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.27.0 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:java-${{ env.JAVA_SDK_VERSION }} --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id ${{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id ${{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-lint-test-python:
     runs-on: ubuntu-latest
@@ -75,7 +88,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: '3.10'
+          python-version: "${{ env.PYTHON_VERSION }}"
       - name: Install Python prequisites
         run: python -m pip install --upgrade wheel poetry poethepoet
       - name: Initialize Python worker
@@ -85,17 +98,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.20"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language python --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language python --version 1.9.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language python --version ${{ env.PYTHON_SDK_VERSION }} --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.9.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:python-${{ env.PYTHON_SDK_VERSION }} --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id ${{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id ${{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-lint-test-typescript:
     runs-on: ubuntu-latest
@@ -115,17 +128,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.21"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language ts --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language ts --version 1.11.6 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language ts --version ${{ env.TYPESCRIPT_SDK_VERSION }} --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.11.6 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-${{ env.TYPESCRIPT_SDK_VERSION }} --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id ${{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id ${{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-lint-test-dotnet:
     runs-on: ubuntu-latest
@@ -143,17 +156,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.21"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language cs --embedded-server --iterations 5
       - name: Build worker image
-        run: ./temporal-omes build-worker-image --language cs --version 1.4.0 --tag-as-latest
+        run: ./temporal-omes build-worker-image --language cs --version ${{ env.DOTNET_SDK_VERSION }} --tag-as-latest
       - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.4.0 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
+        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-${{ env.DOTNET_SDK_VERSION }} --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id ${{ github.run_id }} --embedded-server-address 0.0.0.0:10233
       - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id ${{ github.run_id }} --connect-timeout 1m --iterations 5
 
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest
@@ -165,19 +178,19 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.74.0
+          toolchain: "${{ env.RUST_TOOLCHAIN }}"
           override: true
       - name: Install protoc
         uses: arduino/setup-protoc@v2
         with:
-          version: '25.1'
+          version: "${{ env.PROTOC_VERSION }}"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: "^1.21"
+          go-version: "${{ env.GO_VERSION }}"
       - name: Install protoc-gen-go
-        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }}
       - name: Build kitchen-sink-gen
         working-directory: ./loadgen/kitchen-sink-gen
         run: cargo build
@@ -201,8 +214,8 @@ jobs:
     with:
       do-push: true
       as-latest: true
-      go-version: 'v1.32.1'
-      ts-version: 'v1.11.6'
-      java-version: 'v1.27.0'
-      py-version: 'v1.9.0'
-      dotnet-version: 'v1.4.0'
+      go-version: v1.32.1
+      ts-version: v1.11.6
+      java-version: v1.27.0
+      py-version: v1.9.0
+      dotnet-version: v1.4.0
