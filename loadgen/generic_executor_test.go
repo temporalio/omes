@@ -199,9 +199,9 @@ func TestRunIterationsWithRateLimit(t *testing.T) {
 			return nil
 		},
 		DefaultConfiguration: RunConfiguration{
-			Iterations:    4,
-			MaxConcurrent: 1,
-			RatePerSecond: 4.0,
+			Iterations:             4,
+			MaxConcurrent:          1,
+			MaxIterationsPerSecond: 4.0,
 		},
 	})
 	require.NoError(t, err)

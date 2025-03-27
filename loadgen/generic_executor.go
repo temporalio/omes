@@ -57,8 +57,8 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if run.config.Timeout == 0 {
 		run.config.Timeout = g.DefaultConfiguration.Timeout
 	}
-	if run.config.RatePerSecond == 0 {
-		run.config.RatePerSecond = g.DefaultConfiguration.RatePerSecond
+	if run.config.MaxIterationsPerSecond == 0 {
+		run.config.MaxIterationsPerSecond = g.DefaultConfiguration.MaxIterationsPerSecond
 	}
 	run.config.ApplyDefaults()
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
@@ -117,9 +117,9 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	var rateLimiter <-chan time.Time
-	if g.config.RatePerSecond > 0 {
-		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.RatePerSecond)
-		rateLimiter = time.Tick(time.Duration(float64(time.Second) / g.config.RatePerSecond))
+	if g.config.MaxIterationsPerSecond > 0 {
+		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.MaxIterationsPerSecond)
+		rateLimiter = time.Tick(time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond))
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
