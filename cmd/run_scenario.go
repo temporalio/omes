@@ -52,6 +52,7 @@ type scenarioRunConfig struct {
 	iterations                    int
 	duration                      time.Duration
 	maxConcurrent                 int
+	ratePerSecond                 float64
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
@@ -75,6 +76,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
+	fs.Float64Var(&r.ratePerSecond, "rps", 0, "Override iterations per second rate limit for the scenario."+
+		" This is the maximum rate at which we will start new iterations of the scenario.")
 	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
@@ -136,6 +139,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			Iterations:                    r.iterations,
 			Duration:                      r.duration,
 			MaxConcurrent:                 r.maxConcurrent,
+			RatePerSecond:                 r.ratePerSecond,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 		},

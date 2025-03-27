@@ -189,3 +189,22 @@ func TestRunIterationsWithoutTimeout(t *testing.T) {
 	require.NoError(t, err)
 	tracker.assertSeen(t, 5)
 }
+
+func TestRunIterationsWithRateLimit(t *testing.T) {
+	startTime := time.Now()
+	tracker := newIterationTracker()
+	err := execute(&GenericExecutor{
+		Execute: func(ctx context.Context, run *Run) error {
+			tracker.track(run.Iteration)
+			return nil
+		},
+		DefaultConfiguration: RunConfiguration{
+			Iterations:    4,
+			MaxConcurrent: 1,
+			RatePerSecond: 4.0,
+		},
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, time.Since(startTime), time.Second)
+	tracker.assertSeen(t, 4)
+}
