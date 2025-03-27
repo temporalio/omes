@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
@@ -64,6 +65,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 			iterations:                    r.iterations,
 			duration:                      r.duration,
 			maxConcurrent:                 r.maxConcurrent,
+			maxIterationsPerSecond:        r.maxIterationsPerSecond,
 			scenarioOptions:               r.scenarioOptions,
 			timeout:                       r.timeout,
 			doNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,

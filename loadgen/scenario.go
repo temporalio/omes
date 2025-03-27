@@ -128,6 +128,9 @@ type RunConfiguration struct {
 	// Maximum number of instances of the Execute method to run concurrently.
 	// Default is DefaultMaxConcurrent.
 	MaxConcurrent int
+	// MaxIterationsPerSecond is the maximum number of iterations to run per second.
+	// Default is zero, meaning unlimited.
+	MaxIterationsPerSecond float64
 	// Timeout is the maximum amount of time we'll wait for the scenario to finish running.
 	// If the timeout is hit any pending executions will be cancelled and the scenario will exit
 	// with an error. The default is unlimited.

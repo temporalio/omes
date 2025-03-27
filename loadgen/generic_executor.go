@@ -57,6 +57,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if run.config.Timeout == 0 {
 		run.config.Timeout = g.DefaultConfiguration.Timeout
 	}
+	if run.config.MaxIterationsPerSecond == 0 {
+		run.config.MaxIterationsPerSecond = g.DefaultConfiguration.MaxIterationsPerSecond
+	}
 	run.config.ApplyDefaults()
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
 		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
@@ -113,9 +116,21 @@ func (g *genericRun) Run(ctx context.Context) error {
 		g.logger.Debugf("Will start iterations for %v", g.config.Duration)
 	}
 
+	var rateLimiter <-chan time.Time
+	if g.config.MaxIterationsPerSecond > 0 {
+		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.MaxIterationsPerSecond)
+		rateLimiter = time.Tick(time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond))
+	}
+
 	// Run all until we've gotten an error or reached iteration limit or timeout
 	for i := 0; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
+
+		// If there is a rate limit, enforce it
+		if rateLimiter != nil {
+			<-rateLimiter
+		}
+
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
 			waitOne(durationCtx)
