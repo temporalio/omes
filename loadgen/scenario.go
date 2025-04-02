@@ -114,6 +114,18 @@ func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
 	return v == "true"
 }
 
+func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
 const DefaultIterations = 10
 const DefaultMaxConcurrent = 10
 
