@@ -1,8 +1,6 @@
 module github.com/temporalio/omes
 
-go 1.21
-
-toolchain go1.22.5
+go 1.24.2
 
 require (
 	github.com/gogo/protobuf v1.3.2
