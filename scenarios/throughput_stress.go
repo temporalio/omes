@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -24,9 +25,13 @@ const (
 	SkipSleepFlag     = "skip-sleep"
 	CANEventFlag      = "continue-as-new-after-event-count"
 	NexusEndpointFlag = "nexus-endpoint"
+	WorkflowIDPrefix  = "workflow-id-prefix"
 )
 
-const ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
+const (
+	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
+	defaultWorkflowIDPrefix                   = "throughputStress"
+)
 
 type tpsExecutor struct {
 	workflowCount atomic.Uint64
@@ -80,12 +85,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			internalIterations := run.ScenarioInfo.ScenarioOptionInt(IterFlag, 5)
 			internalIterTimeout := run.ScenarioInfo.ScenarioOptionDuration(IterTimeout, time.Minute)
 			continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 120)
+			workflowIDPrefix := cmp.Or(run.ScenarioInfo.ScenarioOptions[WorkflowIDPrefix], defaultWorkflowIDPrefix)
 			// Disabled by default.
 			nexusEndpoint := run.ScenarioInfo.ScenarioOptions[NexusEndpointFlag]
 			skipSleep := run.ScenarioInfo.ScenarioOptionBool(SkipSleepFlag, false)
 			timeout := time.Duration(internalIterations) * internalIterTimeout
 
-			wfID := fmt.Sprintf("throughputStress-%s-%d", run.RunID, run.Iteration)
+			wfID := fmt.Sprintf("%s-%s-%d", workflowIDPrefix, run.RunID, run.Iteration)
 			var result throughputstress.WorkflowOutput
 			err := run.ExecuteAnyWorkflow(ctx,
 				client.StartWorkflowOptions{
@@ -129,7 +135,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		int(totalWorkflowCount),
 		3*time.Minute,
 	)
-
 }
 
 func init() {
