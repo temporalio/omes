@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
@@ -138,6 +139,18 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				// introduces receiving signals in the workflow.
 				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
 				return workflow.ExecuteLocalActivity(localActCtx, activityStub.SelfSignal, ASignal).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
+				// TODO: also support sleeping without priorities
+				actInput := MakeSleepInput(params.SleepActivityWithPriorities)
+				if actInput == nil {
+					return nil
+				}
+				spew.Dump(actInput)
+				opts := defaultActivityOpts()
+				opts.Priority = temporal.Priority{PriorityKey: int(actInput.Priority)}
+				actCtx := workflow.WithActivityOptions(ctx, opts)
+				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
