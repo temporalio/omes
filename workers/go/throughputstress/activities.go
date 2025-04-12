@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"time"
 
+	"github.com/temporalio/omes/loadgen/throughputstress"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 )
@@ -19,6 +21,11 @@ type PayloadActivityInput struct {
 	DesiredOutputSize int
 }
 
+type SleepActivityInput struct {
+	Priority      int
+	SleepDuration time.Duration
+}
+
 func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 	inDat := make([]byte, inSize)
 	rand.Read(inDat)
@@ -28,6 +35,19 @@ func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 	}
 }
 
+func MakeSleepInput(distribution throughputstress.SleepActivity[int]) *SleepActivityInput {
+	prio, ok := distribution.PatternsDist.Sample()
+	if !ok {
+		return nil
+	}
+	sleep, ok := distribution.PatternDurationsDist[prio].Sample()
+	if !ok {
+		return nil
+	}
+	fmt.Println("priority", prio, "sleep", sleep)
+	return &SleepActivityInput{Priority: prio, SleepDuration: sleep}
+}
+
 // Payload serves no purpose other than to accept inputs and return outputs of a
 // specific size.
 func (a *Activities) Payload(_ context.Context, in *PayloadActivityInput) ([]byte, error) {
@@ -35,6 +55,12 @@ func (a *Activities) Payload(_ context.Context, in *PayloadActivityInput) ([]byt
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
 	rand.Read(output)
 	return output, nil
+}
+
+// Sleep is an activity that sleeps for a specified duration.
+func (a *Activities) Sleep(_ context.Context, in *SleepActivityInput) error {
+	time.Sleep(in.SleepDuration)
+	return nil
 }
 
 func (a *Activities) SelfQuery(ctx context.Context, queryType string) error {

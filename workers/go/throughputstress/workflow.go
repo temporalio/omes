@@ -140,6 +140,20 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				return workflow.ExecuteLocalActivity(localActCtx, activityStub.SelfSignal, ASignal).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
+				// This activity can simulate different traffic patterns as it will sleep for
+				// a configured duration. The duration is randomly selected from a distribution.
+				actInput := MakeSleepInput(params.SleepActivityPerPriority)
+				if actInput == nil {
+					return nil
+				}
+				opts := defaultActivityOpts()
+				opts.Priority = temporal.Priority{
+					PriorityKey: int(actInput.Priority),
+				}
+				actCtx := workflow.WithActivityOptions(ctx, opts)
+				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
+			},
+			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
 				if params.SkipSleep {
 					return nil

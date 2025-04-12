@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -107,7 +108,18 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		if len(pieces) != 2 {
 			return fmt.Errorf("option does not have '='")
 		}
-		scenarioOptions[pieces[0]] = pieces[1]
+		key, value := pieces[0], pieces[1]
+
+		if strings.HasPrefix(value, "@") {
+			filePath := strings.TrimPrefix(value, "@")
+			data, err := os.ReadFile(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to read file %s: %w", filePath, err)
+			}
+			value = string(data)
+		}
+		scenarioOptions[key] = value
+
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(r.logger)

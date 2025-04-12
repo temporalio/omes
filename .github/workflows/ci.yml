@@ -11,7 +11,7 @@ on: # rebuild any PRs and main branch changes
 # TODO: avoid this duplication
 env:
   DOTNET_SDK_VERSION: "1.4.0"
-  GO_SDK_VERSION: "1.32.1"
+  GO_SDK_VERSION: "1.34.0"
   JAVA_SDK_VERSION: "1.27.0"
   TYPESCRIPT_SDK_VERSION: "1.11.6"
   GO_VERSION: "^1.21"
@@ -214,7 +214,7 @@ jobs:
     with:
       do-push: true
       as-latest: true
-      go-version: v1.32.1
+      go-version: v1.34.0
       ts-version: v1.11.6
       java-version: v1.27.0
       py-version: v1.9.0
