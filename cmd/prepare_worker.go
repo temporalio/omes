@@ -120,31 +120,13 @@ func main() {
 }
 
 func (b *workerBuilder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	// If version not provided, try to read it from pyproject.toml
-	version := b.version
-	if version == "" {
-		b, err := os.ReadFile(filepath.Join(baseDir, "pyproject.toml"))
-		if err != nil {
-			return nil, fmt.Errorf("failed reading pyproject.toml: %w", err)
-		}
-		for _, line := range strings.Split(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "temporalio = ") {
-				version = line[strings.Index(line, `"`)+1 : strings.LastIndex(line, `"`)]
-				break
-			}
-		}
-		if version == "" {
-			return nil, fmt.Errorf("version not found in pyproject.toml")
-		}
+	if b.version == "" {
+		return nil, fmt.Errorf("version required")
 	}
-
-	// Build
 	prog, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
-		BaseDir:        baseDir,
-		DirName:        b.dirName,
-		Version:        version,
-		DependencyName: "omes",
+		BaseDir: baseDir,
+		DirName: b.dirName,
+		Version: b.version,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)

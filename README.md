@@ -15,8 +15,7 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
     available for download that you can use with `git apply`
 - [Java](https://openjdk.org/) 8+
 - TypeScript: [Node](https://nodejs.org) 16+
-- [Python](https://www.python.org/) 3.10+
-  - [Poetry](https://python-poetry.org/): `poetry install`
+- Python: [uv](https://docs.astral.sh/uv/)
 - [.NET](https://dotnet.microsoft.com/en-us/download)
 
 And if you're running the fuzzer (see below)
