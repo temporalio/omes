@@ -44,7 +44,6 @@ func MakeSleepInput(distribution throughputstress.SleepActivity[int]) *SleepActi
 	if !ok {
 		return nil
 	}
-	fmt.Println("priority", prio, "sleep", sleep)
 	return &SleepActivityInput{Priority: prio, SleepDuration: sleep}
 }
 
