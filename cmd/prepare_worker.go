@@ -123,28 +123,26 @@ func (b *workerBuilder) buildPython(ctx context.Context, baseDir string) (sdkbui
 	// If version not provided, try to read it from pyproject.toml
 	version := b.version
 	if version == "" {
-		b, err := os.ReadFile(filepath.Join(baseDir, "pyproject.toml"))
+		cmd := exec.CommandContext(ctx, "uv", "tree", "--quiet", "--depth", "0", "--package", "temporalio")
+		cmd.Dir = baseDir
+		out, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("failed reading pyproject.toml: %w", err)
+			return nil, fmt.Errorf("failed running uv tree: %w", err)
 		}
-		for _, line := range strings.Split(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "temporalio = ") {
-				version = line[strings.Index(line, `"`)+1 : strings.LastIndex(line, `"`)]
-				break
-			}
+		outStr := strings.TrimSpace(string(out))
+		if strings.HasPrefix(outStr, "temporalio v") {
+			version = outStr[len("temporalio v"):]
 		}
 		if version == "" {
-			return nil, fmt.Errorf("version not found in pyproject.toml")
+			return nil, fmt.Errorf("version not found in uv tree output")
 		}
 	}
 
 	// Build
 	prog, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
-		BaseDir:        baseDir,
-		DirName:        b.dirName,
-		Version:        version,
-		DependencyName: "omes",
+		BaseDir: baseDir,
+		DirName: b.dirName,
+		Version: version,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
