@@ -27,7 +27,8 @@ type WorkflowParams struct {
 	// The endpoint should be created ahead of time.
 	NexusEndpoint string `json:"nexusEndpoint"`
 
-	// If set, the workflow will run the "Sleep" Activity with the given sleep patterns per priority.
+	// If set, the workflow will run the "Sleep" activity with the given distributions of patterns as priorities;
+	// sleeping for the duration defined in the priority's distribution.
 	SleepActivityPerPriority SleepActivity[int] `json:"sleepActivityPerPriority"`
 }
 

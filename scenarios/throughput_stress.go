@@ -21,13 +21,18 @@ import (
 
 // --option arguments
 const (
-	IterFlag                         = "internal-iterations"
-	IterTimeout                      = "internal-iterations-timeout"
-	SkipSleepFlag                    = "skip-sleep"
-	CANEventFlag                     = "continue-as-new-after-event-count"
-	NexusEndpointFlag                = "nexus-endpoint"
-	WorkflowIDPrefix                 = "workflow-id-prefix"
-	VisibilityVerificationTimeout    = "visibility-count-timeout"
+	IterFlag          = "internal-iterations"
+	IterTimeout       = "internal-iterations-timeout"
+	SkipSleepFlag     = "skip-sleep"
+	CANEventFlag      = "continue-as-new-after-event-count"
+	NexusEndpointFlag = "nexus-endpoint"
+	// WorkflowIDPrefix is the prefix for each run's workflow ID. Use it to ensure that the workflow IDs are unique.
+	WorkflowIDPrefix = "workflow-id-prefix"
+	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
+	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
+	VisibilityVerificationTimeout = "visibility-count-timeout"
+	// SleepActivityPerPriorityJsonFlag is a JSON string that defines the sleep activity's priorities and sleep duration.
+	// See throughputstress.SleepActivity for more details.
 	SleepActivityPerPriorityJsonFlag = "sleep-activity-per-priority-json"
 )
 
