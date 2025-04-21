@@ -13,9 +13,21 @@ import (
 )
 
 type (
-	Weight                   int
-	DistType                 interface{ ~int | ~string | time.Duration }
+	// Distribution is a mapping of values to their relative weights.
+	// It allows randomly selecting values with probability proportional to their weights.
+	//
+	// Example:
+	//   dice := Distribution[int]{1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1} // uniform distribution
+	//   biasedCoin := Distribution[string]{"heads": 7, "tails": 3}    // 70% heads, 30% tails
+	//
+	// Use Sample() to select a random value from the distribution.
 	Distribution[T DistType] map[T]Weight
+	// Weight represents the relative probability of selecting a value from Distribution.
+	// Higher weights increase the likelihood of selection.
+	Weight int
+	// DistType constrains the types that can be used as distribution keys.
+	// This constraint ensures type compatibility with the MarshalJSON and UnmarshalJSON.
+	DistType interface{ ~int | ~string | time.Duration }
 )
 
 func (d Distribution[T]) MarshalJSON() ([]byte, error) {
