@@ -3,6 +3,7 @@ package scenarios
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -25,7 +26,14 @@ const (
 	SkipSleepFlag     = "skip-sleep"
 	CANEventFlag      = "continue-as-new-after-event-count"
 	NexusEndpointFlag = "nexus-endpoint"
-	WorkflowIDPrefix  = "workflow-id-prefix"
+	// WorkflowIDPrefix is the prefix for each run's workflow ID. Use it to ensure that the workflow IDs are unique.
+	WorkflowIDPrefix = "workflow-id-prefix"
+	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
+	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
+	VisibilityVerificationTimeout = "visibility-count-timeout"
+	// SleepActivityPerPriorityJsonFlag is a JSON string that defines the sleep activity's priorities and sleep duration.
+	// See throughputstress.SleepActivity for more details.
+	SleepActivityPerPriorityJsonFlag = "sleep-activity-per-priority-json"
 )
 
 const (
@@ -38,12 +46,34 @@ type tpsExecutor struct {
 }
 
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	// Parse scenario options
+	internalIterations := info.ScenarioOptionInt(IterFlag, 5)
+	internalIterTimeout := info.ScenarioOptionDuration(IterTimeout, time.Minute)
+	continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 120)
+	workflowIDPrefix := cmp.Or(info.ScenarioOptions[WorkflowIDPrefix], defaultWorkflowIDPrefix)
+	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
+	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
+
+	var sleepActivityPerPriority throughputstress.SleepActivity[int]
+	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
+		err := json.Unmarshal([]byte(sleepActivitiesWithPriorityStr), &sleepActivityPerPriority)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s: %w", SleepActivityPerPriorityJsonFlag, err)
+		}
+	}
+
+	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeout], "3m"))
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeout, err)
+	}
+	timeout := time.Duration(1*internalIterations) * internalIterTimeout
+
 	// Make sure the search attribute is registered
 	attribMap := map[string]enums.IndexedValueType{
 		ThroughputStressScenarioIdSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
 	}
 
-	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
+	_, err = info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace:        info.Namespace,
 			SearchAttributes: attribMap,
@@ -82,18 +112,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			MaxConcurrent: 5,
 		},
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			internalIterations := run.ScenarioInfo.ScenarioOptionInt(IterFlag, 5)
-			internalIterTimeout := run.ScenarioInfo.ScenarioOptionDuration(IterTimeout, time.Minute)
-			continueAsNewCount := run.ScenarioInfo.ScenarioOptionInt(CANEventFlag, 120)
-			workflowIDPrefix := cmp.Or(run.ScenarioInfo.ScenarioOptions[WorkflowIDPrefix], defaultWorkflowIDPrefix)
-			// Disabled by default.
-			nexusEndpoint := run.ScenarioInfo.ScenarioOptions[NexusEndpointFlag]
-			skipSleep := run.ScenarioInfo.ScenarioOptionBool(SkipSleepFlag, false)
-			timeout := time.Duration(internalIterations) * internalIterTimeout
-
 			wfID := fmt.Sprintf("%s-%s-%d", workflowIDPrefix, run.RunID, run.Iteration)
 			var result throughputstress.WorkflowOutput
-			err := run.ExecuteAnyWorkflow(ctx,
+			err = run.ExecuteAnyWorkflow(ctx,
 				client.StartWorkflowOptions{
 					ID:                                       wfID,
 					TaskQueue:                                run.TaskQueue(),
@@ -110,6 +131,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					Iterations:                   internalIterations,
 					ContinueAsNewAfterEventCount: continueAsNewCount,
 					NexusEndpoint:                nexusEndpoint,
+					SleepActivityPerPriority:     sleepActivityPerPriority,
 				})
 			// The 1 is for the final workflow run
 			t.workflowCount.Add(uint64(result.TimesContinued + result.ChildrenSpawned + 1))
@@ -133,7 +155,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				ThroughputStressScenarioIdSearchAttribute, info.RunID),
 		},
 		int(totalWorkflowCount),
-		3*time.Minute,
+		visibilityVerificationTimeout,
 	)
 }
 

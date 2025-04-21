@@ -127,11 +127,32 @@ This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
 Publishing images is typically done via CI, using the `push-images` command. See the GHA workflows
 for more.
 
-## Throughput stress and Nexus
+## Throughput stress
 
-The throughput_stress scenario (which is currently only available for Golang) can generate Nexus load if the scenario is
-started with `--option nexus-endpoint=my-nexus-endpoint`. This doesn't work with the `--embedded-server` option, and
-requires the following steps:
+Please note that the throughput_stress scenario is currently only available for Golang.
+
+### Sleep Activity per Priority
+
+The throughput_stress scenario can be configured to map every `SleepActivity` to a priority and
+sleep for a arbitrary amount of time. The configuration is done via a JSON file, which is passed to
+the scenario with the `--option sleep-activity-per-priority-json=@<file>` flag.
+
+Example:
+
+```
+echo '{"patterns_dist":{"1":1, "5":9},"pattern_durations_dist":{"1":{"1s":1},"5":{"1s":1,"5s":4}}}' > sleep.json
+go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-per-priority-json=@sleep.json --run-id default-run-id
+```
+
+This assigns priority `1` with a chance of 1/10 and priority `5` with a chance of 9/10. Activities with
+priority `1` will always sleep for 1 second, while activities with priority `5` will sleep for 1 second
+with a chance of 1/5 and for 5 seconds with a chance of 4/5.
+
+### Nexus
+
+The throughput_stress scenario can generate Nexus load if the scenario is started with `--option nexus-endpoint=my-nexus-endpoint`.
+
+This doesn't work with the `--embedded-server` option, and requires the following steps:
 
 1. Allocate a scenario run-id. This determines the scenario's task queue. (we'll use `default-run-id` in this tutorial).
 1. Start a server with nexus enabled (e.g. `--http-port 7243 --dynamic-config-value system.enableNexus=true` for the
