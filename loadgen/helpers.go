@@ -31,7 +31,7 @@ type (
 )
 
 func (d Distribution[T]) MarshalJSON() ([]byte, error) {
-	res := map[string]string{}
+	res := map[string]Weight{}
 	for value, weight := range d {
 		var valueStr string
 		if v, ok := any(value).(fmt.Stringer); ok {
@@ -39,24 +39,19 @@ func (d Distribution[T]) MarshalJSON() ([]byte, error) {
 		} else {
 			valueStr = fmt.Sprintf("%v", value)
 		}
-		res[valueStr] = fmt.Sprintf("%d", weight)
+		res[valueStr] = weight
 	}
 	return json.Marshal(res)
 }
 
 func (d *Distribution[T]) UnmarshalJSON(data []byte) error {
-	var rawMap map[string]string
+	var rawMap map[string]int
 	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return err
 	}
 
 	result := make(Distribution[T])
-	for valueStr, weightStr := range rawMap {
-		weightVal, err := strconv.Atoi(weightStr)
-		if err != nil {
-			return fmt.Errorf("failed to parse weight '%s': %w", weightStr, err)
-		}
-
+	for valueStr, weight := range rawMap {
 		var value T
 		switch any(value).(type) {
 		case string:
@@ -76,7 +71,7 @@ func (d *Distribution[T]) UnmarshalJSON(data []byte) error {
 		default:
 			return fmt.Errorf("unsupported type %T for Distribution", value)
 		}
-		result[value] = Weight(weightVal)
+		result[value] = Weight(weight)
 	}
 
 	*d = result

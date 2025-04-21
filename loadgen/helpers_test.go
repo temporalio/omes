@@ -10,7 +10,7 @@ import (
 
 func TestDistribution(t *testing.T) {
 	t.Run("String distribution", func(t *testing.T) {
-		jsonData := `{"small":"10", "medium":"20", "large":"70"}`
+		jsonData := `{"small":10, "medium":20, "large":70}`
 		var dist Distribution[string]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
@@ -34,7 +34,7 @@ func TestDistribution(t *testing.T) {
 	})
 
 	t.Run("Int distribution", func(t *testing.T) {
-		jsonData := `{"1":"25", "5":"25", "10":"50"}`
+		jsonData := `{"1":25, "5":25, "10":50}`
 		var dist Distribution[int]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
@@ -59,7 +59,7 @@ func TestDistribution(t *testing.T) {
 	})
 
 	t.Run("Duration distribution", func(t *testing.T) {
-		jsonData := `{"1s":"20","5s":"30","10s":"50"}`
+		jsonData := `{"1s":20, "5s":30, "10s":50}`
 		var dist Distribution[time.Duration]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
@@ -84,17 +84,17 @@ func TestDistribution(t *testing.T) {
 	})
 
 	t.Run("Invalid weight", func(t *testing.T) {
-		jsonData := `{"small":"invalid", "medium":"20"}`
+		jsonData := `{"small":"invalid", "medium":20}`
 		var dist Distribution[string]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to parse weight 'invalid'")
+		assert.Contains(t, err.Error(), "cannot unmarshal string into Go value of type int")
 	})
 
 	t.Run("Invalid int value", func(t *testing.T) {
-		jsonData := `{"invalid":"10", "5":"20"}`
+		jsonData := `{"invalid":10, "5":20}`
 		var dist Distribution[int]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
@@ -104,7 +104,7 @@ func TestDistribution(t *testing.T) {
 	})
 
 	t.Run("Invalid time.Duration value", func(t *testing.T) {
-		jsonData := `{"10":"10"}`
+		jsonData := `{"10": 10}`
 		var dist Distribution[time.Duration]
 
 		err := json.Unmarshal([]byte(jsonData), &dist)
