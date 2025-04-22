@@ -35,7 +35,7 @@ func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 	}
 }
 
-func MakeSleepInput(distribution throughputstress.SleepActivity[int]) *SleepActivityInput {
+func MakeSleepInput(distribution throughputstress.SleepActivity) *SleepActivityInput {
 	prio, ok := distribution.PatternsDist.Sample()
 	if !ok {
 		return nil
@@ -44,7 +44,7 @@ func MakeSleepInput(distribution throughputstress.SleepActivity[int]) *SleepActi
 	if !ok {
 		return nil
 	}
-	return &SleepActivityInput{Priority: prio, SleepDuration: sleep}
+	return &SleepActivityInput{Priority: int(prio), SleepDuration: sleep}
 }
 
 // Payload serves no purpose other than to accept inputs and return outputs of a

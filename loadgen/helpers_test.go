@@ -6,110 +6,262 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestDistribution(t *testing.T) {
-	t.Run("String distribution", func(t *testing.T) {
-		jsonData := `{"small":10, "medium":20, "large":70}`
-		var dist Distribution[string]
+func TestDistributionField(t *testing.T) {
+	t.Run("Discrete Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"discrete","weights":{"1":10,"5":20,"10":70}}`
+			var df DistributionField[int64]
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
-		assert.NoError(t, err)
-		assert.Equal(t, Weight(10), dist["small"])
-		assert.Equal(t, Weight(20), dist["medium"])
-		assert.Equal(t, Weight(70), dist["large"])
-		assert.Len(t, dist, 3)
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
 
-		value, ok := dist.Sample()
-		assert.True(t, ok)
-		assert.Contains(t, []string{"small", "medium", "large"}, value)
+			expected := DistributionField[int64]{
+				distribution: discreteDistribution[int64]{
+					weights: map[int64]int{
+						1:  10,
+						5:  20,
+						10: 70,
+					},
+				},
+				distType: "discrete",
+			}
+			assert.EqualExportedValues(t, expected, df)
 
-		marshaled, err := json.Marshal(dist)
-		assert.NoError(t, err)
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.Contains(t, []int64{1, 5, 10}, value)
 
-		var parsedDist Distribution[string]
-		err = json.Unmarshal(marshaled, &parsedDist)
-		assert.NoError(t, err)
-		assert.Equal(t, dist, parsedDist)
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Duration", func(t *testing.T) {
+			jsonData := `{"type":"discrete","weights":{"1s":10,"5s":20,"10s":70}}`
+			var df DistributionField[time.Duration]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[time.Duration]{
+				distribution: discreteDistribution[time.Duration]{
+					weights: map[time.Duration]int{
+						1 * time.Second:  10,
+						5 * time.Second:  20,
+						10 * time.Second: 70,
+					},
+				},
+				distType: "discrete",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.Contains(t, []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}, value)
+
+			checkJsonRoundtrip(t, err, df)
+		})
 	})
 
-	t.Run("Int distribution", func(t *testing.T) {
-		jsonData := `{"1":25, "5":25, "10":50}`
-		var dist Distribution[int]
+	t.Run("Uniform Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"uniform","min":1,"max":100,"steps":10}`
+			var df DistributionField[int64]
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
 
-		assert.NoError(t, err)
-		assert.Equal(t, Weight(25), dist[1])
-		assert.Equal(t, Weight(25), dist[5])
-		assert.Equal(t, Weight(50), dist[10])
-		assert.Len(t, dist, 3)
+			expected := DistributionField[int64]{
+				distribution: uniformDistribution[int64]{
+					min: 1,
+					max: 100,
+				},
+				distType: "uniform",
+			}
+			assert.EqualExportedValues(t, expected, df)
 
-		value, ok := dist.Sample()
-		assert.True(t, ok)
-		assert.Contains(t, []int{1, 5, 10}, value)
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, int64(1))
+			assert.LessOrEqual(t, value, int64(100))
 
-		marshaled, err := json.Marshal(dist)
-		assert.NoError(t, err)
+			checkJsonRoundtrip(t, err, df)
+		})
 
-		var parsedDist Distribution[int]
-		err = json.Unmarshal(marshaled, &parsedDist)
-		assert.NoError(t, err)
-		assert.Equal(t, dist, parsedDist)
+		t.Run("Duration", func(t *testing.T) {
+			jsonData := `{"type":"uniform","min":"1s","max":"1m"}`
+			var df DistributionField[time.Duration]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[time.Duration]{
+				distribution: uniformDistribution[time.Duration]{
+					min: 1 * time.Second,
+					max: 1 * time.Minute,
+				},
+				distType: "uniform",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, 1*time.Second)
+			assert.LessOrEqual(t, value, 1*time.Minute)
+
+			checkJsonRoundtrip(t, err, df)
+		})
 	})
 
-	t.Run("Duration distribution", func(t *testing.T) {
-		jsonData := `{"1s":20, "5s":30, "10s":50}`
-		var dist Distribution[time.Duration]
+	t.Run("Zipf Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":100}`
+			var df DistributionField[int64]
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+			require.NotNil(t, df)
 
-		assert.NoError(t, err)
-		assert.Equal(t, Weight(20), dist[1*time.Second])
-		assert.Equal(t, Weight(30), dist[5*time.Second])
-		assert.Equal(t, Weight(50), dist[10*time.Second])
-		assert.Len(t, dist, 3)
+			expected := DistributionField[int64]{
+				distribution: zipfDistribution[int64]{
+					s: 1.5,
+					v: 2.0,
+					n: 100,
+				},
+				distType: "zipf",
+			}
+			assert.EqualExportedValues(t, expected, df)
 
-		value, ok := dist.Sample()
-		assert.True(t, ok)
-		assert.True(t, value >= 1*time.Second && value <= 10*time.Second)
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, int64(0))
+			assert.LessOrEqual(t, value, int64(100))
 
-		marshaled, err := json.Marshal(dist)
-		assert.NoError(t, err)
+			checkJsonRoundtrip(t, err, df)
+		})
 
-		var parsedDist Distribution[time.Duration]
-		err = json.Unmarshal(marshaled, &parsedDist)
-		assert.NoError(t, err)
-		assert.Equal(t, dist, parsedDist)
+		t.Run("Duration", func(t *testing.T) {
+			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":50}`
+			var df DistributionField[time.Duration]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[time.Duration]{
+				distribution: zipfDistribution[time.Duration]{
+					s: 1.5,
+					v: 2.0,
+					n: 50,
+				},
+				distType: "zipf",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, time.Duration(0))
+
+			checkJsonRoundtrip(t, err, df)
+		})
 	})
 
-	t.Run("Invalid weight", func(t *testing.T) {
-		jsonData := `{"small":"invalid", "medium":20}`
-		var dist Distribution[string]
+	t.Run("Normal Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"normal","mean":50,"stdDev":1,"min":30,"max":70}`
+			var df DistributionField[int64]
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot unmarshal string into Go value of type int")
+			expected := DistributionField[int64]{
+				distribution: normalDistribution[int64]{
+					mean:   50,
+					stdDev: 10,
+					min:    30,
+					max:    70,
+				},
+				distType: "normal",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, int64(30))
+			assert.LessOrEqual(t, value, int64(70))
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Duration", func(t *testing.T) {
+			jsonData := `{"type":"normal","mean":"20s","stdDev":"1s","min":"1s","max":"60s"}`
+			var df DistributionField[time.Duration]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[time.Duration]{
+				distribution: normalDistribution[time.Duration]{
+					mean:   20 * time.Second,
+					stdDev: 5000.0,
+					min:    1 * time.Second,
+					max:    60 * time.Second,
+				},
+				distType: "normal",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, 1*time.Second)
+			assert.LessOrEqual(t, value, 60*time.Second)
+
+			checkJsonRoundtrip(t, err, df)
+		})
 	})
 
-	t.Run("Invalid int value", func(t *testing.T) {
-		jsonData := `{"invalid":10, "5":20}`
-		var dist Distribution[int]
+	t.Run("Error Cases", func(t *testing.T) {
+		t.Run("Unknown distribution type", func(t *testing.T) {
+			jsonData := `{"type":"unknown"}`
+			var df DistributionField[int64]
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "unknown distribution type: unknown")
+		})
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to parse int value 'invalid'")
+		t.Run("Missing type", func(t *testing.T) {
+			jsonData := `{"mean":50,"stdDev":10}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "missing distribution type")
+		})
+
+		t.Run("Nil distribution", func(t *testing.T) {
+			var df DistributionField[int64]
+			marshaled, err := json.Marshal(df)
+			assert.NoError(t, err)
+			assert.Equal(t, "null", string(marshaled))
+
+			var parsedDF DistributionField[int64]
+			err = json.Unmarshal(marshaled, &parsedDF)
+			assert.NoError(t, err)
+			assert.Nil(t, parsedDF.distribution)
+		})
 	})
+}
 
-	t.Run("Invalid time.Duration value", func(t *testing.T) {
-		jsonData := `{"10": 10}`
-		var dist Distribution[time.Duration]
+func checkJsonRoundtrip[T distValueType](t *testing.T, err error, df DistributionField[T]) {
+	t.Helper()
 
-		err := json.Unmarshal([]byte(jsonData), &dist)
+	marshaled, err := json.Marshal(df)
+	assert.NoError(t, err)
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "missing unit in duration")
-	})
+	var unmarshalled DistributionField[T]
+	err = json.Unmarshal(marshaled, &unmarshalled)
+	assert.NoError(t, err)
+
+	assert.EqualExportedValues(t, df, unmarshalled)
 }
