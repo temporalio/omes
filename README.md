@@ -139,13 +139,15 @@ the scenario with the `--option sleep-activity-per-priority-json=@<file>` flag.
 Example:
 
 ```
-echo '{"patterns_dist":{"1":1, "5":9},"pattern_durations_dist":{"1":{"1s":1},"5":{"1s":1,"5s":4}}}' > sleep.json
+echo '{"patterns_dist": {"type":"discrete", "weights": {"1":1, "5":9}}, "pattern_durations_dist": {"1": {"type":"discrete", "weights": {"1s": 1}}, "5": {"type":"discrete", "weights": {"1s": 1, "5s": 4}}}}' > sleep.json
 go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-per-priority-json=@sleep.json --run-id default-run-id
 ```
 
 This assigns priority `1` with a chance of 1/10 and priority `5` with a chance of 9/10. Activities with
 priority `1` will always sleep for 1 second, while activities with priority `5` will sleep for 1 second
 with a chance of 1/5 and for 5 seconds with a chance of 4/5.
+
+Look for `DistributionField` in the source code to learn more about different kinds of distrbutions.
 
 ### Nexus
 

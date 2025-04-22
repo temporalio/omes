@@ -29,7 +29,7 @@ type WorkflowParams struct {
 
 	// If set, the workflow will run the "Sleep" activity with the given distributions of patterns as priorities;
 	// sleeping for the duration defined in the priority's distribution.
-	SleepActivityPerPriority SleepActivity[int] `json:"sleepActivityPerPriority"`
+	SleepActivityPerPriority SleepActivity `json:"sleepActivityPerPriority"`
 }
 
 type WorkflowOutput struct {
@@ -39,11 +39,11 @@ type WorkflowOutput struct {
 	TimesContinued int `json:"timesContinued"`
 }
 
-type SleepActivity[T loadgen.DistType] struct {
+type SleepActivity struct {
 	// A distribution of sleep patterns. The key is the identifier of the sleep pattern.
 	// The value is the probability of that sleep pattern being chosen.
-	PatternsDist loadgen.Distribution[T] `json:"patterns_dist"`
+	PatternsDist loadgen.DistributionField[int64] `json:"patterns_dist"`
 	// A distribution of sleep durations for each sleep pattern. The key is the identifier
 	// of the sleep pattern. The value is the distribution of sleep durations for that pattern.
-	PatternDurationsDist map[T]loadgen.Distribution[time.Duration] `json:"pattern_durations_dist"`
+	PatternDurationsDist map[int64]loadgen.DistributionField[time.Duration] `json:"pattern_durations_dist"`
 }
