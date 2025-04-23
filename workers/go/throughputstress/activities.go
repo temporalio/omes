@@ -35,7 +35,10 @@ func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 	}
 }
 
-func MakeSleepInput(distribution throughputstress.SleepActivity) *SleepActivityInput {
+func MakeSleepInput(distribution *throughputstress.SleepActivity) *SleepActivityInput {
+	if distribution == nil {
+		return nil
+	}
 	prio, ok := distribution.PatternsDist.Sample()
 	if !ok {
 		return nil
