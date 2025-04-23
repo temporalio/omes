@@ -29,7 +29,7 @@ type WorkflowParams struct {
 
 	// If set, the workflow will run the "Sleep" activity with the given distributions of patterns as priorities;
 	// sleeping for the duration defined in the priority's distribution.
-	SleepActivityPerPriority SleepActivity `json:"sleepActivityPerPriority"`
+	SleepActivityPerPriority *SleepActivity `json:"sleepActivityPerPriority"`
 }
 
 type WorkflowOutput struct {

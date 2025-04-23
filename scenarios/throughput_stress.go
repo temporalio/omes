@@ -54,9 +54,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 
-	var sleepActivityPerPriority throughputstress.SleepActivity
+	var sleepActivityPerPriority *throughputstress.SleepActivity
 	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
-		err := json.Unmarshal([]byte(sleepActivitiesWithPriorityStr), &sleepActivityPerPriority)
+		sleepActivityPerPriority = &throughputstress.SleepActivity{}
+		err := json.Unmarshal([]byte(sleepActivitiesWithPriorityStr), sleepActivityPerPriority)
 		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", SleepActivityPerPriorityJsonFlag, err)
 		}
