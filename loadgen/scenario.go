@@ -95,6 +95,8 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
+	// Optional callback to receive status updates from the scenario.
+	StatusCallback func(any)
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
