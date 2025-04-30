@@ -502,6 +502,6 @@ func VisibilityCountIsEventually(
 			return fmt.Errorf("expected %d workflows in visibility, got %d after waiting %v",
 				expectedCount, visibilityCount.Count, waitAtMost)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }

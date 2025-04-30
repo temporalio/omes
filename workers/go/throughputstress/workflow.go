@@ -104,6 +104,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				// run to the child.
 				attrs := workflow.GetInfo(ctx).SearchAttributes.IndexedFields
 				childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+					WorkflowID: fmt.Sprintf("%s/child-%d", workflow.GetInfo(ctx).WorkflowExecution.ID, output.ChildrenSpawned),
 					SearchAttributes: map[string]interface{}{
 						scenarios.ThroughputStressScenarioIdSearchAttribute: attrs[scenarios.ThroughputStressScenarioIdSearchAttribute],
 					},
