@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
@@ -22,16 +22,13 @@ import (
 const (
 	IterFlag    = "internal-iterations"
 	IterTimeout = "internal-iterations-timeout"
-	// IterResumeAt is the iteration from which to resume a previous run from. If set, it will skip the
-	// run initialization and start the next iteration starting from the given iteration.
-	IterResumeAt      = "internal-iterations-resume-at"
-	SkipSleepFlag     = "skip-sleep"
-	CANEventFlag      = "continue-as-new-after-event-count"
-	NexusEndpointFlag = "nexus-endpoint"
-	// WorkflowIDPrefix is the prefix for each run's workflow ID. Use it to ensure that the workflow IDs are unique.
-	WorkflowIDPrefix = "workflow-id-prefix"
-	// WorkflowCountResumeAt is the number of completed workflows from a previous run that is being resumed.
-	WorkflowCountResumeAt = "workflow-count-resume-at"
+	// IterResumeFromState is the iteration state to resume from. If set, it will skip the
+	// run initialization and start the next iteration immediately where the previous run left off.
+	// The state is emitted by the scenario's StatusCallback.
+	IterResumeFromState = "resume-from-state"
+	SkipSleepFlag       = "skip-sleep"
+	CANEventFlag        = "continue-as-new-after-event-count"
+	NexusEndpointFlag   = "nexus-endpoint"
 	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeout = "visibility-count-timeout"
@@ -42,18 +39,19 @@ const (
 
 const (
 	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
-	defaultWorkflowIDPrefix                   = "throughputStress"
 )
 
-type ThroughputStressScenarioStatusUpdate struct {
+type tpsState struct {
 	// CompletedIteration is the iteration that has been completed.
-	CompletedIteration int
-	// CompletedWorkflows is the total number of workflows that have been completed so far.
-	CompletedWorkflows uint64
+	CompletedIteration int `json:"completedIteration"`
+	// WorkflowCount is the total number of workflows that have been completed so far.
+	WorkflowCount int `json:"workflowCount"`
 }
 
 type tpsExecutor struct {
-	workflowCount atomic.Uint64
+	lock             sync.Mutex
+	state            *tpsState
+	completedIterMap map[int]struct{}
 }
 
 // Run executes the throughput stress scenario.
@@ -61,26 +59,16 @@ type tpsExecutor struct {
 // It executes `throughputStress` workflows in parallel - up to the configured maximum cocurrency limit - and
 // waits for the results. At the end, it verifies that the total number of executed workflows matches Visibility's count.
 //
-// To resume a previous run, set the following options:
-//
-// --option internal-iterations-resume-at=<value>
-// --option workflow-count-resume-at=<value>
-//
-// Note that the caller is responsible for adjusting the scenario's iterations/timeout accordingly.
+// To resume a previous run, capture the state via the StatusCallback and then set `--option resume-from-state=<state>`.
+// Note that the caller is responsible for adjusting the run config's iterations/timeout accordingly.
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	// Parse scenario options
 	internalIterations := info.ScenarioOptionInt(IterFlag, 5)
 	internalIterTimeout := info.ScenarioOptionDuration(IterTimeout, time.Minute)
-	internalIterResumeFrom := info.ScenarioOptionInt(IterResumeAt, 0)
-	_, resumingFromPreviousRun := info.ScenarioOptions[IterResumeAt]
+	resumeFromState, resumingFromPreviousRun := info.ScenarioOptions[IterResumeFromState]
 	continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 120)
-	workflowIDPrefix := cmp.Or(info.ScenarioOptions[WorkflowIDPrefix], defaultWorkflowIDPrefix)
-	workflowCountStartAt := info.ScenarioOptionInt(WorkflowCountResumeAt, 0)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
-	if info.StatusCallback == nil {
-		info.StatusCallback = func(data any) {}
-	}
 
 	var sleepActivityPerPriority *throughputstress.SleepActivity
 	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
@@ -98,14 +86,19 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	timeout := time.Duration(1*internalIterations) * internalIterTimeout
 
 	// Initialize the scenario run.
-	if !resumingFromPreviousRun {
+	var lastCompletedIter int
+	if resumingFromPreviousRun {
+		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %s", resumeFromState))
+		err := json.Unmarshal([]byte(resumeFromState), &t.state)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal scenario's resume state: %w", err)
+		}
+		lastCompletedIter = int(t.state.CompletedIteration)
+	} else {
 		err = t.initFirstRun(ctx, info)
 		if err != nil {
 			return err
 		}
-	} else {
-		info.Logger.Info("Resuming from previous run")
-		t.workflowCount.Add(uint64(workflowCountStartAt))
 	}
 
 	// Start the scenario run.
@@ -115,8 +108,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			MaxConcurrent: 5,
 		},
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			curIteration := internalIterResumeFrom + run.Iteration
-			wfID := fmt.Sprintf("%s/%s/iter-%d", workflowIDPrefix, run.RunID, curIteration)
+			curIteration := lastCompletedIter + run.Iteration
+			wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, curIteration)
 
 			var result throughputstress.WorkflowOutput
 			err = run.ExecuteAnyWorkflow(ctx,
@@ -140,13 +133,16 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				})
 
 			if err == nil {
-				// The 1 is for the final workflow run.
-				curTotal := t.workflowCount.Add(uint64(result.TimesContinued + result.ChildrenSpawned + 1))
+				t.updateState(result, curIteration)
 
-				info.StatusCallback(ThroughputStressScenarioStatusUpdate{
-					CompletedIteration: curIteration,
-					CompletedWorkflows: curTotal,
-				})
+				if info.StatusCallback != nil {
+					stateJson, err := json.Marshal(t.state)
+					if err != nil {
+						info.Logger.Warn("failed to marshal scenario's state: ", err)
+					} else {
+						info.StatusCallback(string(stateJson))
+					}
+				}
 			}
 
 			return err
@@ -158,8 +154,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario, verify reported count from Visibility matches the expected count.
-	totalWorkflowCount := t.workflowCount.Load()
-	info.Logger.Info("Total workflows executed: ", totalWorkflowCount)
+	info.Logger.Info("Total workflows executed: ", t.state.WorkflowCount)
 	return loadgen.VisibilityCountIsEventually(
 		ctx,
 		info.Client,
@@ -168,12 +163,14 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			Query: fmt.Sprintf("%s='%s'",
 				ThroughputStressScenarioIdSearchAttribute, info.RunID),
 		},
-		int(totalWorkflowCount),
+		int(t.state.WorkflowCount),
 		visibilityVerificationTimeout,
 	)
 }
 
 func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInfo) error {
+	info.Logger.Infof("Initialising Search Attribute %s", ThroughputStressScenarioIdSearchAttribute)
+
 	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
@@ -209,7 +206,31 @@ func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInf
 			visibilityCount.Count, info.RunID)
 	}
 
+	if info.StatusCallback != nil {
+		// Init empty state to trigger a resume on a re-run.
+		info.StatusCallback("{}")
+	}
+
 	return nil
+}
+
+func (t *tpsExecutor) updateState(result throughputstress.WorkflowOutput, completedIter int) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	// Update the workflow count. (the 1 is for the final workflow run)
+	t.state.WorkflowCount += result.TimesContinued + result.ChildrenSpawned + 1
+
+	// Update the completed iteration.
+	t.completedIterMap[completedIter] = struct{}{}
+	for {
+		nextCompletedIter := t.state.CompletedIteration + 1
+		if _, ok := t.completedIterMap[nextCompletedIter]; ok {
+			t.state.CompletedIteration = nextCompletedIter
+		} else {
+			break
+		}
+	}
 }
 
 func init() {
@@ -218,7 +239,8 @@ func init() {
 			"Throughput stress scenario. Use --option with '%s', '%s' '%s' to control internal parameters",
 			IterFlag, CANEventFlag, SkipSleepFlag),
 		Executor: &tpsExecutor{
-			workflowCount: atomic.Uint64{},
+			state:            &tpsState{},
+			completedIterMap: map[int]struct{}{},
 		},
 	})
 }
