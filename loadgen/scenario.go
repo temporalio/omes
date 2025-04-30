@@ -95,7 +95,8 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
-	// Optional callback to receive status updates from the scenario.
+	// Optional callback to receive status updates from the scenario. If, when and with what
+	// data (type) it is invoked are specific to the scenario. See `throughputStress` for an example.
 	StatusCallback func(any)
 }
 
