@@ -22,16 +22,16 @@ import (
 const (
 	IterFlag    = "internal-iterations"
 	IterTimeout = "internal-iterations-timeout"
-	// IterResumeFrom is the iteration from which to resume a previous run from. If set, it will skip the
+	// IterResumeAt is the iteration from which to resume a previous run from. If set, it will skip the
 	// run initialization and start the next iteration starting from the given iteration.
-	IterResumeFrom    = "internal-iterations-resume-from"
+	IterResumeAt      = "internal-iterations-resume-at"
 	SkipSleepFlag     = "skip-sleep"
 	CANEventFlag      = "continue-as-new-after-event-count"
 	NexusEndpointFlag = "nexus-endpoint"
 	// WorkflowIDPrefix is the prefix for each run's workflow ID. Use it to ensure that the workflow IDs are unique.
 	WorkflowIDPrefix = "workflow-id-prefix"
-	// WorkflowCountResumeFrom is the number of completed workflows from a previous run that is being resumed.
-	WorkflowCountResumeFrom = "workflow-count-resume-from"
+	// WorkflowCountResumeAt is the number of completed workflows from a previous run that is being resumed.
+	WorkflowCountResumeAt = "workflow-count-resume-at"
 	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeout = "visibility-count-timeout"
@@ -63,19 +63,19 @@ type tpsExecutor struct {
 //
 // To resume a previous run, set the following options:
 //
-// --option internal-iterations-resume-from=<value>
-// --option workflow-count-resume-from=<value>
+// --option internal-iterations-resume-at=<value>
+// --option workflow-count-resume-at=<value>
 //
 // Note that the caller is responsible for adjusting the scenario's iterations/timeout accordingly.
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	// Parse scenario options
 	internalIterations := info.ScenarioOptionInt(IterFlag, 5)
 	internalIterTimeout := info.ScenarioOptionDuration(IterTimeout, time.Minute)
-	internalIterResumeFrom := info.ScenarioOptionInt(IterResumeFrom, 0)
-	_, resumingFromPreviousRun := info.ScenarioOptions[IterResumeFrom]
+	internalIterResumeFrom := info.ScenarioOptionInt(IterResumeAt, 0)
+	_, resumingFromPreviousRun := info.ScenarioOptions[IterResumeAt]
 	continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 120)
 	workflowIDPrefix := cmp.Or(info.ScenarioOptions[WorkflowIDPrefix], defaultWorkflowIDPrefix)
-	workflowCountResume := info.ScenarioOptionInt(WorkflowCountResumeFrom, 0)
+	workflowCountStartAt := info.ScenarioOptionInt(WorkflowCountResumeAt, 0)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 	if info.StatusCallback == nil {
@@ -105,7 +105,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		}
 	} else {
 		info.Logger.Info("Resuming from previous run")
-		t.workflowCount.Add(uint64(workflowCountResume))
+		t.workflowCount.Add(uint64(workflowCountStartAt))
 	}
 
 	// Start the scenario run.
