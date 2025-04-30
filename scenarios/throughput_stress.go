@@ -45,7 +45,7 @@ const (
 	defaultWorkflowIDPrefix                   = "throughputStress"
 )
 
-type tpsStatusUpdate struct {
+type ThroughputStressScenarioStatusUpdate struct {
 	// CompletedIteration is the iteration that has been completed.
 	CompletedIteration int
 	// CompletedWorkflows is the total number of workflows that have been completed so far.
@@ -143,7 +143,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				// The 1 is for the final workflow run.
 				curTotal := t.workflowCount.Add(uint64(result.TimesContinued + result.ChildrenSpawned + 1))
 
-				info.StatusCallback(tpsStatusUpdate{
+				info.StatusCallback(ThroughputStressScenarioStatusUpdate{
 					CompletedIteration: curIteration,
 					CompletedWorkflows: curTotal,
 				})
