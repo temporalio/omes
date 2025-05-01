@@ -12,7 +12,7 @@ import (
 
 var ThroughputStressServiceName = "throughput-stress"
 
-var EchoSyncOperation = temporalnexus.NewSyncOperation("echo-sync", func(ctx context.Context, c client.Client, s string, opts nexus.StartOperationOptions) (string, error) {
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, s string, opts nexus.StartOperationOptions) (string, error) {
 	return s, nil
 })
 
