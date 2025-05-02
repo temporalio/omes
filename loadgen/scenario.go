@@ -29,6 +29,20 @@ type Executor interface {
 	Run(context.Context, ScenarioInfo) error
 }
 
+// Optional interface that can be implemented by an [Executor] to allow it to be resumable.
+type Resumable interface {
+	// LoadState loads a snapshot into the executor's internal state.
+	//
+	// Implementations should pass a reference to a state variable to the loader function and assign to their internal state.
+	// Callers should call this function before invoking the executor's Run method.
+	LoadState(loader func(any) error) error
+	// Snapshot returns a snapshot of the executor's internal state. The returned value must be serializable.
+	//
+	// The serialization format should be supported by the caller of this function.
+	// Callers may call this function periodically to get a snapshot of the executor's state.
+	Snapshot() any
+}
+
 // ExecutorFunc is an [Executor] implementation for a function
 type ExecutorFunc func(context.Context, ScenarioInfo) error
 
@@ -95,9 +109,9 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
-	// Optional callback to receive status updates from the scenario. If, when and with what
-	// data (type) it is invoked are specific to the scenario. See `throughputStress` for an example.
-	StatusCallback func(any)
+	// StartFromIteration is the iteration to start from when resuming a scenario.
+	// This is used to skip iterations that have already been run.
+	StartFromIteration int
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
