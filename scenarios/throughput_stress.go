@@ -167,7 +167,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario, verify reported count from Visibility matches the expected count.
-	info.Logger.Info("Total workflows executed: ", t.state.CompletedIteration)
+	info.Logger.Info("Total workflows executed: ", t.state.WorkflowCount)
 	return loadgen.VisibilityCountIsEventually(
 		ctx,
 		info.Client,

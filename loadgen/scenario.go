@@ -33,7 +33,7 @@ type Executor interface {
 type Resumable interface {
 	// LoadState loads a snapshot into the executor's internal state.
 	//
-	// Implementations should pass a reference to a state variable the loader function and assign to their internal state.
+	// Implementations should pass a reference to a state variable to the loader function and assign to their internal state.
 	// Callers should call this function before invoking the executor's Run method.
 	LoadState(loader func(any) error) error
 	// Snapshot returns a snapshot of the executor's internal state. The returned value must be serializable.
