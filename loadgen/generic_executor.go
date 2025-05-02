@@ -64,6 +64,10 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if run.config.Iterations > 0 && run.config.Duration > 0 {
 		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
 	}
+	if info.StartFromIteration > info.Configuration.Iterations {
+		return nil, fmt.Errorf("invalid scenario: StartFromIteration %d is greater than Iterations %d",
+			info.StartFromIteration, info.Configuration.Iterations)
+	}
 
 	return run, nil
 }
@@ -123,7 +127,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := 0; runErr == nil && durationCtx.Err() == nil &&
+	for i := g.info.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 
 		// If there is a rate limit, enforce it
