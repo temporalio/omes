@@ -261,7 +261,6 @@ func ThroughputStressChild(ctx workflow.Context) error {
 
 func defaultActivityOpts() workflow.ActivityOptions {
 	return workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts: 5,
 		},
@@ -270,7 +269,6 @@ func defaultActivityOpts() workflow.ActivityOptions {
 
 func defaultLocalActivityOpts() workflow.LocalActivityOptions {
 	return workflow.LocalActivityOptions{
-		StartToCloseTimeout: 3 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval: 10 * time.Millisecond,
 			MaximumAttempts: 10,
