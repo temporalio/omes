@@ -40,7 +40,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		return nil, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateActivity, func(ctx workflow.Context) error {
-		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		return workflow.ExecuteActivity(
 			actCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
 	})
@@ -48,7 +48,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		return nil, err
 	}
 	err = workflow.SetUpdateHandler(ctx, UpdateLocalActivity, func(ctx workflow.Context) error {
-		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 		return workflow.ExecuteLocalActivity(
 			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
 	})
@@ -57,7 +57,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 	}
 	for i := params.InitialIteration; i < params.Iterations; i++ {
 		// Repeat the steps as defined by the ancient ritual
-		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		err = workflow.ExecuteActivity(
 			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
 		if err != nil {
@@ -74,7 +74,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			return nil, err
 		}
 
-		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 		err = workflow.ExecuteLocalActivity(
 			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
 		if err != nil {
@@ -93,7 +93,8 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				// run to the child.
 				attrs := workflow.GetInfo(ctx).SearchAttributes.IndexedFields
 				childCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
-					WorkflowID: fmt.Sprintf("%s/child-%d", workflow.GetInfo(ctx).WorkflowExecution.ID, params.ChildrenSpawned),
+					WorkflowExecutionTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
+					WorkflowID:               fmt.Sprintf("%s/child-%d", workflow.GetInfo(ctx).WorkflowExecution.ID, params.ChildrenSpawned),
 					SearchAttributes: map[string]interface{}{
 						scenarios.ThroughputStressScenarioIdSearchAttribute: attrs[scenarios.ThroughputStressScenarioIdSearchAttribute],
 					},
@@ -103,22 +104,22 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				return child.Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(
 					actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(
 					actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 				return workflow.ExecuteLocalActivity(
 					localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 				return workflow.ExecuteLocalActivity(
 					localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
 			},
@@ -126,7 +127,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				// This self-signal activity didn't exist in the original bench-go workflow, but
 				// it was signaled semi-routinely externally. This is slightly more obvious and
 				// introduces receiving signals in the workflow.
-				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts())
+				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 				return workflow.ExecuteLocalActivity(localActCtx, activityStub.SelfSignal, ASignal).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
@@ -136,7 +137,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				if actInput == nil {
 					return nil
 				}
-				opts := defaultActivityOpts()
+				opts := defaultActivityOpts(ctx)
 				opts.Priority = temporal.Priority{
 					PriorityKey: int(actInput.Priority),
 				}
@@ -144,18 +145,18 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				if params.SkipSleep {
 					return nil
 				}
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateSleep).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateActivity).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateLocalActivity).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
@@ -249,7 +250,7 @@ func runEchoNexusOperation(ctx workflow.Context, params *throughputstress.Workfl
 
 func ThroughputStressChild(ctx workflow.Context) error {
 	for i := 0; i < 3; i++ {
-		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts())
+		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		err := workflow.ExecuteActivity(
 			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
 		if err != nil {
@@ -259,16 +260,18 @@ func ThroughputStressChild(ctx workflow.Context) error {
 	return nil
 }
 
-func defaultActivityOpts() workflow.ActivityOptions {
+func defaultActivityOpts(ctx workflow.Context) workflow.ActivityOptions {
 	return workflow.ActivityOptions{
+		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts: 5,
 		},
 	}
 }
 
-func defaultLocalActivityOpts() workflow.LocalActivityOptions {
+func defaultLocalActivityOpts(ctx workflow.Context) workflow.LocalActivityOptions {
 	return workflow.LocalActivityOptions{
+		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval: 10 * time.Millisecond,
 			MaximumAttempts: 10,
