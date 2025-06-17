@@ -12,27 +12,61 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestIterationsAndDuration(t *testing.T) {
-	info := ScenarioInfo{MetricsHandler: client.MetricsNopHandler}
+func TestScenarioConfigValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		info  ScenarioInfo
+		error string
+	}{
+		{
+			name:  "default",
+			info:  ScenarioInfo{Configuration: RunConfiguration{}},
+			error: "",
+		},
+		{
+			name:  "only iterations",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 3}},
+			error: "",
+		},
+		{
+			name:  "start iterations smaller than iterations",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 10, StartFromIteration: 3}},
+			error: "",
+		},
+		{
+			name:  "start iterations larger than iterations",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 3, StartFromIteration: 10}},
+			error: "invalid scenario: StartFromIteration 10 is greater than Iterations 3",
+		},
+		{
+			name:  "only duration",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: time.Hour}},
+			error: "",
+		},
+		{
+			name:  "both duration and iterations",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}},
+			error: "invalid scenario: iterations and duration are mutually exclusive",
+		},
+		{
+			name:  "both duration and start iteration",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: 3 * time.Second, StartFromIteration: 3}},
+			error: "",
+		},
+	}
 
-	var err error
-	{
-		// only iterations
-		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Iterations: 3}}
-		_, err = executor.newRun(info)
-		require.NoError(t, err)
-	}
-	{
-		// only duration
-		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: time.Hour}}
-		_, err = executor.newRun(info)
-		require.NoError(t, err)
-	}
-	{
-		// both
-		executor := &GenericExecutor{DefaultConfiguration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}}
-		_, err = executor.newRun(info)
-		require.ErrorContains(t, err, "invalid scenario: iterations and duration are mutually exclusive")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.info.MetricsHandler = client.MetricsNopHandler
+			executor := &GenericExecutor{DefaultConfiguration: tt.info.Configuration}
+			_, err := executor.newRun(tt.info)
+			if tt.error != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.error)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }
 
@@ -52,6 +86,8 @@ func (i *iterationTracker) track(iteration int) {
 }
 
 func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
+	i.Lock()
+	defer i.Unlock()
 	for iter := 1; iter <= iterations; iter++ {
 		require.Contains(t, i.seen, iter)
 	}

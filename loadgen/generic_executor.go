@@ -61,12 +61,14 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 		run.config.MaxIterationsPerSecond = g.DefaultConfiguration.MaxIterationsPerSecond
 	}
 	run.config.ApplyDefaults()
-	if run.config.Iterations > 0 && run.config.Duration > 0 {
-		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
-	}
-	if info.StartFromIteration > info.Configuration.Iterations {
-		return nil, fmt.Errorf("invalid scenario: StartFromIteration %d is greater than Iterations %d",
-			info.StartFromIteration, info.Configuration.Iterations)
+	if run.config.Iterations > 0 {
+		if run.config.Duration > 0 {
+			return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
+		}
+		if run.config.StartFromIteration > run.config.Iterations {
+			return nil, fmt.Errorf("invalid scenario: StartFromIteration %d is greater than Iterations %d",
+				run.config.StartFromIteration, run.config.Iterations)
+		}
 	}
 
 	return run, nil
@@ -127,7 +129,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := g.info.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
+	for i := g.info.Configuration.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
 
 		// If there is a rate limit, enforce it
