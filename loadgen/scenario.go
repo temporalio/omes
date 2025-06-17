@@ -109,9 +109,6 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
-	// StartFromIteration is the iteration to start from when resuming a scenario.
-	// This is used to skip iterations that have already been run.
-	StartFromIteration int
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -149,6 +146,10 @@ const DefaultMaxConcurrent = 10
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
+	// StartFromIteration is the iteration to start from when resuming a run.
+	// This is used to skip iterations that have already been run.
+	// Default is zero. If Iterations is set, too, must be less than or equal to Iterations.
+	StartFromIteration int
 	// Duration limit of this scenario (mutually exclusive with Iterations). If neither iterations
 	// nor duration is set, default is DefaultIterations. When the Duration is elapsed, no new
 	// iterations will be started, but we will wait for any currently running iterations to

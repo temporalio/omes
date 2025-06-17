@@ -115,7 +115,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Initialize the scenario run.
 	if t.isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %v", t.state))
-		info.StartFromIteration = int(t.state.CompletedIteration) + 1
+		info.Configuration.StartFromIteration = int(t.state.CompletedIteration) + 1
 	} else {
 		err = t.initFirstRun(ctx, info, skipCleanNamespaceCheck)
 		if err != nil {

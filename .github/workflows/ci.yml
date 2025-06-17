@@ -37,7 +37,7 @@ jobs:
       - name: Build exe
         run: go build -o temporal-omes ./cmd
       - name: Test
-        run: go test ./...
+        run: go test -race ./...
       - name: Run local scenario with worker
         run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5 --version v${{ env.GO_SDK_VERSION }}
       - name: Build worker image
