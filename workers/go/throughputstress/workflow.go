@@ -202,7 +202,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		// Possibly continue as new
 		if params.ContinueAsNewAfterEventCount > 0 && workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
 			if i == 0 {
-				return nil, fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
+				// If this is the first iteration, don't ContinueAsNew since the workflow would never complete.
+				workflow.GetLogger(ctx).Info("skipping ContinueAsNew since 1st iteration - will ContinueAsNew next iteration")
+				continue
 			}
 			params.InitialIteration = i
 			params.TimesContinued++

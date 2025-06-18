@@ -21,16 +21,16 @@ import (
 // --option arguments
 const (
 	IterFlag          = "internal-iterations"
-	IterTimeout       = "internal-iterations-timeout"
+	IterTimeoutFlag   = "internal-iterations-timeout"
 	SkipSleepFlag     = "skip-sleep"
 	CANEventFlag      = "continue-as-new-after-event-count"
 	NexusEndpointFlag = "nexus-endpoint"
-	// SkipCleanNamespaceCheck is a flag to skip the check for existing workflows in the namespace.
+	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
 	// This should be set to allow resuming from a previous run.
-	SkipCleanNamespaceCheck = "skip-clean-namespace-check"
-	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
+	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
+	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
-	VisibilityVerificationTimeout = "visibility-count-timeout"
+	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
 	// SleepActivityPerPriorityJsonFlag is a JSON string that defines the sleep activity's priorities and sleep duration.
 	// See throughputstress.SleepActivity for more details.
 	SleepActivityPerPriorityJsonFlag = "sleep-activity-per-priority-json"
@@ -91,11 +91,11 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	// Parse scenario options
 	internalIterations := info.ScenarioOptionInt(IterFlag, 5)
-	internalIterTimeout := info.ScenarioOptionDuration(IterTimeout, time.Minute)
+	internalIterTimeout := info.ScenarioOptionDuration(IterTimeoutFlag, time.Minute)
 	continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 120)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
-	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheck, false)
+	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
 
 	var sleepActivityPerPriority *throughputstress.SleepActivity
 	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
@@ -106,18 +106,27 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		}
 	}
 
-	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeout], "3m"))
+	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeoutFlag], "3m"))
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeout, err)
+		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeoutFlag, err)
 	}
-	timeout := time.Duration(1*internalIterations) * internalIterTimeout
 
-	// Initialize the scenario run.
-	if t.isResuming {
-		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %v", t.state))
-		info.Configuration.StartFromIteration = int(t.state.CompletedIteration) + 1
+	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
+	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
+	if err = t.initSearchAttribute(ctx, info, err); err != nil {
+		return err
+	}
+
+	t.lock.Lock()
+	isResuming := t.isResuming
+	currentState := *t.state
+	t.lock.Unlock()
+
+	if isResuming {
+		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
+		info.Configuration.StartFromIteration = int(currentState.CompletedIteration) + 1
 	} else {
-		err = t.initFirstRun(ctx, info, skipCleanNamespaceCheck)
+		err = t.verifyFirstRun(ctx, info, skipCleanNamespaceCheck)
 		if err != nil {
 			return err
 		}
@@ -138,7 +147,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					ID:                                       wfID,
 					TaskQueue:                                run.TaskQueue(),
 					WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-					WorkflowExecutionTimeout:                 timeout,
+					WorkflowExecutionTimeout:                 internalIterTimeout,
 					WorkflowExecutionErrorWhenAlreadyStarted: false, // To allow resuming from an executor crash.
 					SearchAttributes: map[string]any{
 						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
@@ -181,11 +190,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	)
 }
 
-func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
+func (t *tpsExecutor) initSearchAttribute(ctx context.Context, info loadgen.ScenarioInfo, err error) error {
 	info.Logger.Infof("Initialising Search Attribute %s", ThroughputStressScenarioIdSearchAttribute)
 
-	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
-	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
+	_, err = info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace: info.Namespace,
 			SearchAttributes: map[string]enums.IndexedValueType{
@@ -205,6 +213,10 @@ func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInf
 		info.Logger.Infof("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
 	}
 
+	return nil
+}
+
+func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
 	if skipCleanNamespaceCheck {
 		info.Logger.Info("Skipping check to verify if the namespace is clean")
 		return nil

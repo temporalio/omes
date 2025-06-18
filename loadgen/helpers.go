@@ -489,19 +489,34 @@ func VisibilityCountIsEventually(
 	expectedCount int,
 	waitAtMost time.Duration,
 ) error {
-	deadline := time.Now().Add(waitAtMost)
+	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
+	defer cancel()
+
+	countTicker := time.NewTicker(3 * time.Second)
+	defer countTicker.Stop()
+
+	printTicker := time.NewTicker(30 * time.Second)
+	defer printTicker.Stop()
+
+	var lastVisibilityCount int64
 	for {
-		visibilityCount, err := client.CountWorkflow(ctx, request)
-		if err != nil {
-			return fmt.Errorf("failed to count workflows in visibility: %w", err)
-		}
-		if visibilityCount.Count == int64(expectedCount) {
-			return nil
-		}
-		if time.Now().After(deadline) {
+		select {
+		case <-timeoutCtx.Done():
 			return fmt.Errorf("expected %d workflows in visibility, got %d after waiting %v",
-				expectedCount, visibilityCount.Count, waitAtMost)
+				expectedCount, lastVisibilityCount, waitAtMost)
+
+		case <-printTicker.C:
+			fmt.Printf("current visibility count: %d (expected: %d)\n", lastVisibilityCount, expectedCount)
+
+		case <-countTicker.C:
+			visibilityCount, err := client.CountWorkflow(ctx, request)
+			if err != nil {
+				return fmt.Errorf("failed to count workflows in visibility: %w", err)
+			}
+			lastVisibilityCount = visibilityCount.Count
+			if lastVisibilityCount == int64(expectedCount) {
+				return nil
+			}
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
