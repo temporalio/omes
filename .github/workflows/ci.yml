@@ -212,10 +212,11 @@ jobs:
   push-latest-docker-images:
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     with:
+      # Only images that are built from `main` are tagged as `latest`.
+      # This ensures that internal systems can rely on the latest tag to be stable.
+      as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      as-latest: true
       go-version: v1.34.0
       ts-version: v1.11.6
       java-version: v1.27.0
