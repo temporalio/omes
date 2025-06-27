@@ -130,7 +130,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	startWG.Wait()
 	return loadgen.VisibilityCountIsEventually(
 		ctx,
-		s.Client,
+		s.ScenarioInfo,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: s.Namespace,
 			Query: fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",

@@ -148,6 +148,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				opts.Priority = temporal.Priority{
 					PriorityKey: int(actInput.Priority),
 				}
+				opts.StartToCloseTimeout += actInput.SleepDuration // make sure there's enough time for the sleep
 				actCtx := workflow.WithActivityOptions(ctx, opts)
 				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
 			},
@@ -213,24 +214,19 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		}
 
 		// Possibly continue as new
-		if continueAsNewThreshold := params.ContinueAsNewAfterEventCount; continueAsNewThreshold > 0 {
-			shouldContinueAsNew := workflow.GetInfo(ctx).GetCurrentHistoryLength() >= continueAsNewThreshold
-			if shouldContinueAsNew {
-				if params.InitialIteration == i {
-					// If this is the first iteration on this workflow run, don't ContinueAsNew since the workflow would never complete.
-					workflow.GetLogger(ctx).Info("skipping ContinueAsNew; will ContinueAsNew next iteration")
-					continue
-				}
-				params.InitialIteration = i
-				params.TimesContinued++
-				return nil, workflow.NewContinueAsNewError(ctx, "throughputStress", params)
+		if (i+1)%params.ContinueAsNewAfterIterCount == 0 {
+			if params.InitialIteration == i {
+				// If this is the first iteration on this workflow run, don't ContinueAsNew since the workflow would never complete.
+				workflow.GetLogger(ctx).Info("skipping ContinueAsNew; will ContinueAsNew next iteration")
+				continue
 			}
+			params.InitialIteration = i + 1 // plus one to start at the *next* iteration
+			return nil, workflow.NewContinueAsNewError(ctx, "throughputStress", params)
 		}
 	}
 
 	return &throughputstress.WorkflowOutput{
 		ChildrenSpawned: params.ChildrenSpawned,
-		TimesContinued:  params.TimesContinued,
 	}, nil
 }
 
@@ -277,16 +273,14 @@ func ThroughputStressChild(ctx workflow.Context) error {
 
 func defaultActivityOpts(ctx workflow.Context) workflow.ActivityOptions {
 	return workflow.ActivityOptions{
-		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 5,
-		},
+		StartToCloseTimeout: 1 * time.Minute,
+		RetryPolicy:         &temporal.RetryPolicy{},
 	}
 }
 
 func defaultLocalActivityOpts(ctx workflow.Context) workflow.LocalActivityOptions {
 	return workflow.LocalActivityOptions{
-		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
+		StartToCloseTimeout: 1 * time.Minute,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval: 10 * time.Millisecond,
 			MaximumAttempts: 10,

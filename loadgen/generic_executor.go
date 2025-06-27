@@ -89,11 +89,12 @@ func (g *genericRun) Run(ctx context.Context) error {
 		}
 	}
 
+	// If set, timeout overrides the default context.
 	if g.config.Timeout > 0 {
 		g.logger.Debugf("Will timeout after %v", g.config.Timeout)
 		ctx, cancel = context.WithTimeout(ctx, g.config.Timeout)
+		defer cancel()
 	}
-	defer cancel()
 
 	durationCtx := ctx
 	if g.config.Duration > 0 {
@@ -145,6 +146,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				break
 			}
 		}
+
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
@@ -164,10 +166,11 @@ func (g *genericRun) Run(ctx context.Context) error {
 			}
 		}()
 	}
-	g.logger.Debugf("No longer starting new iterations")
+
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
+	g.logger.Info("Run cooldown: stopped starting new iterations; waiting for running ones to complete")
 	for runErr == nil && currentlyRunning > 0 {
 		waitOne(ctx)
 		if ctx.Err() != nil {
@@ -177,6 +180,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
 	}
-	g.logger.Infof("Run complete in %v", time.Since(startTime))
+	g.logger.Infof("Run completed in %v", time.Since(startTime))
 	return nil
 }

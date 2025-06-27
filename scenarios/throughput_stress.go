@@ -20,17 +20,17 @@ import (
 
 // --option arguments
 const (
-	IterFlag          = "internal-iterations"
-	IterTimeout       = "internal-iterations-timeout"
-	SkipSleepFlag     = "skip-sleep"
-	CANEventFlag      = "continue-as-new-after-event-count"
-	NexusEndpointFlag = "nexus-endpoint"
-	// SkipCleanNamespaceCheck is a flag to skip the check for existing workflows in the namespace.
+	IterFlag                   = "internal-iterations"
+	IterTimeoutFlag            = "internal-iterations-timeout"
+	ContinueAsNewAfterIterFlag = "continue-as-new-after-iterations"
+	SkipSleepFlag              = "skip-sleep"
+	NexusEndpointFlag          = "nexus-endpoint"
+	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
 	// This should be set to allow resuming from a previous run.
-	SkipCleanNamespaceCheck = "skip-clean-namespace-check"
-	// VisibilityVerificationTimeout is the timeout for verifying the total visibility count at the end of the scenario.
+	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
+	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
-	VisibilityVerificationTimeout = "visibility-count-timeout"
+	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
 	// SleepActivityPerPriorityJsonFlag is a JSON string that defines the sleep activity's priorities and sleep duration.
 	// See throughputstress.SleepActivity for more details.
 	SleepActivityPerPriorityJsonFlag = "sleep-activity-per-priority-json"
@@ -41,31 +41,35 @@ const (
 )
 
 type tpsState struct {
-	// CompletedIteration is the iteration that has been completed.
-	CompletedIteration int `json:"completedIteration"`
-	// WorkflowCount is the total number of workflows that have been completed so far.
-	WorkflowCount int `json:"workflowCount"`
+	// CompletedIterations is the number of iteration that have been completed.
+	CompletedIterations int `json:"completedIterations"`
+	// LastCompletedIterationAt is the time when the last iteration was completed. Helpful for debugging.
+	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
 }
 
 type tpsExecutor struct {
 	lock       sync.Mutex
 	state      *tpsState
 	isResuming bool
-	// A map of completed iterations to the number of workflows that have been completed for that iteration.
-	completedIterMap map[int]int
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
+
+func init() {
+	loadgen.MustRegisterScenario(loadgen.Scenario{
+		Description: fmt.Sprintf(
+			"Throughput stress scenario. Use --option with '%s', '%s' '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, SkipSleepFlag),
+		Executor: &tpsExecutor{state: &tpsState{}},
+	})
+}
 
 // Return a snapshot of the current state.
 func (t *tpsExecutor) Snapshot() any {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	return tpsState{
-		CompletedIteration: t.state.CompletedIteration,
-		WorkflowCount:      t.state.WorkflowCount,
-	}
+	return *t.state
 }
 
 // LoadState loads the state from the provided byte slice.
@@ -74,10 +78,13 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	if err := loader(&state); err != nil {
 		return err
 	}
+
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	t.state = &state
 	t.isResuming = true
+
 	return nil
 }
 
@@ -90,12 +97,14 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 // Note that the caller is responsible for adjusting the run config's iterations/timeout accordingly.
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	// Parse scenario options
-	internalIterations := info.ScenarioOptionInt(IterFlag, 5)
-	internalIterTimeout := info.ScenarioOptionDuration(IterTimeout, time.Minute)
-	continueAsNewCount := info.ScenarioOptionInt(CANEventFlag, 120)
+	internalIterations := info.ScenarioOptionInt(IterFlag, 10)
+	// When setting a Duration, wait until the end of the entire run before timing out to avoid aborting in the middle of the run.
+	// Also, add a buffer to account for the time it takes to wait for the last workflows to complete.
+	internalIterTimeout := info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute))
+	continueAsNewAfterIter := info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
-	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheck, false)
+	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
 
 	var sleepActivityPerPriority *throughputstress.SleepActivity
 	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
@@ -106,18 +115,27 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		}
 	}
 
-	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeout], "3m"))
+	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeoutFlag], "3m"))
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeout, err)
+		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeoutFlag, err)
 	}
-	timeout := time.Duration(1*internalIterations) * internalIterTimeout
 
-	// Initialize the scenario run.
-	if t.isResuming {
-		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %v", t.state))
-		info.Configuration.StartFromIteration = int(t.state.CompletedIteration) + 1
+	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
+	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
+	if err = t.initSearchAttribute(ctx, info); err != nil {
+		return err
+	}
+
+	t.lock.Lock()
+	isResuming := t.isResuming
+	currentState := *t.state
+	t.lock.Unlock()
+
+	if isResuming {
+		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
+		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
 	} else {
-		err = t.initFirstRun(ctx, info, skipCleanNamespaceCheck)
+		err = t.verifyFirstRun(ctx, info, skipCleanNamespaceCheck)
 		if err != nil {
 			return err
 		}
@@ -133,13 +151,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, run.Iteration)
 
 			var result throughputstress.WorkflowOutput
-			err := run.ExecuteAnyWorkflow(ctx,
+			if err := run.ExecuteAnyWorkflow(ctx,
 				client.StartWorkflowOptions{
 					ID:                                       wfID,
 					TaskQueue:                                run.TaskQueue(),
 					WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-					WorkflowExecutionTimeout:                 timeout,
-					WorkflowExecutionErrorWhenAlreadyStarted: false, // To allow resuming from an executor crash.
+					WorkflowExecutionTimeout:                 internalIterTimeout,
+					WorkflowExecutionErrorWhenAlreadyStarted: false, // allows resuming from an executor crash
 					SearchAttributes: map[string]any{
 						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
 					},
@@ -147,44 +165,59 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				"throughputStress",
 				&result,
 				throughputstress.WorkflowParams{
-					SkipSleep:                    skipSleep,
-					Iterations:                   internalIterations,
-					ContinueAsNewAfterEventCount: continueAsNewCount,
-					NexusEndpoint:                nexusEndpoint,
-					SleepActivityPerPriority:     sleepActivityPerPriority,
-				})
-			if err != nil {
+					SkipSleep:                   skipSleep,
+					Iterations:                  internalIterations,
+					ContinueAsNewAfterIterCount: continueAsNewAfterIter,
+					NexusEndpoint:               nexusEndpoint,
+					SleepActivityPerPriority:    sleepActivityPerPriority,
+				},
+			); err != nil {
 				return err
 			}
-			// Sum up the workflow count. (the 1 is for the initial workflow run)
-			t.updateState(run.Iteration, result.ChildrenSpawned+result.TimesContinued+1)
+
+			t.updateStateOnIterationCompletion(run.Iteration)
+
 			return nil
 		},
 	}
-	err = genericExec.Run(ctx, info)
-	if err != nil {
+	if err = genericExec.Run(ctx, info); err != nil {
 		return err
 	}
 
+	t.lock.Lock()
+	var completedIterations = t.state.CompletedIterations
+	t.lock.Unlock()
+	info.Logger.Info("Total iterations completed: ", completedIterations)
+
+	completedChildWorkflows := completedIterations * internalIterations
+	info.Logger.Info("Total child workflows: ", completedChildWorkflows)
+
+	var continueAsNewWorkflows int
+	if continueAsNewAfterIter > 0 {
+		continueAsNewWorkflows = int(internalIterations/continueAsNewAfterIter) * completedIterations
+	}
+	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
+
+	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
+	info.Logger.Info("Total workflows completed: ", completedWorkflows)
+
 	// Post-scenario, verify reported count from Visibility matches the expected count.
-	info.Logger.Info("Total workflows executed: ", t.state.WorkflowCount)
 	return loadgen.VisibilityCountIsEventually(
 		ctx,
-		info.Client,
+		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query: fmt.Sprintf("%s='%s'",
 				ThroughputStressScenarioIdSearchAttribute, info.RunID),
 		},
-		t.state.WorkflowCount,
+		completedWorkflows,
 		visibilityVerificationTimeout,
 	)
 }
 
-func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
+func (t *tpsExecutor) initSearchAttribute(ctx context.Context, info loadgen.ScenarioInfo) error {
 	info.Logger.Infof("Initialising Search Attribute %s", ThroughputStressScenarioIdSearchAttribute)
 
-	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace: info.Namespace,
@@ -205,6 +238,10 @@ func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInf
 		info.Logger.Infof("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
 	}
 
+	return nil
+}
+
+func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
 	if skipCleanNamespaceCheck {
 		info.Logger.Info("Skipping check to verify if the namespace is clean")
 		return nil
@@ -227,34 +264,9 @@ func (t *tpsExecutor) initFirstRun(ctx context.Context, info loadgen.ScenarioInf
 	return nil
 }
 
-func (t *tpsExecutor) updateState(completedIter int, completedWorkflowCount int) {
+func (t *tpsExecutor) updateStateOnIterationCompletion(completedIter int) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-
-	// Update the completed iteration.
-	t.completedIterMap[completedIter] = completedWorkflowCount
-	for {
-		nextCompletedIter := t.state.CompletedIteration + 1
-		if count, ok := t.completedIterMap[nextCompletedIter]; ok {
-			t.state.CompletedIteration = nextCompletedIter
-			t.state.WorkflowCount += count
-			// No need to keep the completed iteration in the map.
-			// This is a performance optimization to avoid the map growing indefinitely.
-			delete(t.completedIterMap, nextCompletedIter)
-		} else {
-			break
-		}
-	}
-}
-
-func init() {
-	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s' '%s' to control internal parameters",
-			IterFlag, CANEventFlag, SkipSleepFlag),
-		Executor: &tpsExecutor{
-			state:            &tpsState{},
-			completedIterMap: map[int]int{},
-		},
-	})
+	t.state.CompletedIterations += 1
+	t.state.LastCompletedIterationAt = time.Now()
 }
