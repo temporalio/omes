@@ -18,6 +18,7 @@ const (
 	UpdateActivity      = "activity"
 	UpdateLocalActivity = "localActivity"
 	ASignal             = "someSignal"
+	AQuery              = "myquery"
 )
 
 var activityStub = Activities{}
@@ -27,67 +28,73 @@ var activityStub = Activities{}
 // question the inscrutable ways of the old code.
 func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.WorkflowParams) (*throughputstress.WorkflowOutput, error) {
 	// Establish handlers
-	err := workflow.SetQueryHandler(ctx, "myquery", func() (string, error) {
+	if err := workflow.SetQueryHandler(ctx, AQuery, func() (string, error) {
 		return "hi", nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
-	err = workflow.SetUpdateHandler(ctx, UpdateSleep, func(ctx workflow.Context) error {
+
+	if err := workflow.SetUpdateHandler(ctx, UpdateSleep, func(ctx workflow.Context) error {
 		return workflow.Sleep(ctx, 1*time.Second)
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
-	err = workflow.SetUpdateHandler(ctx, UpdateActivity, func(ctx workflow.Context) error {
+
+	if err := workflow.SetUpdateHandler(ctx, UpdateActivity, func(ctx workflow.Context) error {
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		return workflow.ExecuteActivity(
 			actCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
-	err = workflow.SetUpdateHandler(ctx, UpdateLocalActivity, func(ctx workflow.Context) error {
+
+	if err := workflow.SetUpdateHandler(ctx, UpdateLocalActivity, func(ctx workflow.Context) error {
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 		return workflow.ExecuteLocalActivity(
 			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
+
+	signalChan := workflow.GetSignalChannel(ctx, ASignal)
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for {
+			selector := workflow.NewSelector(ctx)
+			selector.AddReceive(signalChan, func(c workflow.ReceiveChannel, more bool) {
+				c.Receive(ctx, nil)
+			})
+			selector.Select(ctx)
+		}
+	})
+
 	for i := params.InitialIteration; i < params.Iterations; i++ {
 		// Repeat the steps as defined by the ancient ritual
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
-		err = workflow.ExecuteActivity(
-			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
-		if err != nil {
+		if err := workflow.ExecuteActivity(
+			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
-		err = workflow.ExecuteActivity(actCtx, activityStub.SelfQuery, "myquery").Get(ctx, nil)
-		if err != nil {
+		if err := workflow.ExecuteActivity(actCtx, activityStub.SelfQuery, AQuery).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
-		err = workflow.ExecuteActivity(actCtx, activityStub.SelfDescribe).Get(ctx, nil)
-		if err != nil {
+		if err := workflow.ExecuteActivity(actCtx, activityStub.SelfDescribe).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
-		err = workflow.ExecuteLocalActivity(
-			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
-		if err != nil {
+		if err := workflow.ExecuteLocalActivity(
+			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
-		err = workflow.ExecuteLocalActivity(
-			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
-		if err != nil {
+		if err := workflow.ExecuteLocalActivity(
+			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
 		// Do some stuff in parallel
-		err = workflowutils.RunConcurrently(ctx,
+		if err := workflowutils.RunConcurrently(ctx,
 			func(ctx workflow.Context) error {
 				// Make sure we pass through the search attribute that correlates us to a scenario
 				// run to the child.
@@ -141,6 +148,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				opts.Priority = temporal.Priority{
 					PriorityKey: int(actInput.Priority),
 				}
+				opts.StartToCloseTimeout += actInput.SleepDuration // make sure there's enough time for the sleep
 				actCtx := workflow.WithActivityOptions(ctx, opts)
 				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
 			},
@@ -194,34 +202,37 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				}
 				return nil
 			},
-		)
-		if err != nil {
+		); err != nil {
+			return nil, err
+		}
+
+		// Wait for all handlers to finish
+		if err := workflow.Await(ctx, func() bool {
+			return workflow.AllHandlersFinished(ctx)
+		}); err != nil {
 			return nil, err
 		}
 
 		// Possibly continue as new
-		if params.ContinueAsNewAfterEventCount > 0 && workflow.GetInfo(ctx).GetCurrentHistoryLength() >= params.ContinueAsNewAfterEventCount {
-			if i == 0 {
-				return nil, fmt.Errorf("trying to continue as new on first iteration, workflow will never end")
+		if (i+1)%params.ContinueAsNewAfterIterCount == 0 {
+			if params.InitialIteration == i {
+				// If this is the first iteration on this workflow run, don't ContinueAsNew since the workflow would never complete.
+				workflow.GetLogger(ctx).Info("skipping ContinueAsNew; will ContinueAsNew next iteration")
+				continue
 			}
-			params.InitialIteration = i
-			params.TimesContinued++
+			params.InitialIteration = i + 1 // plus one to start at the *next* iteration
 			return nil, workflow.NewContinueAsNewError(ctx, "throughputStress", params)
 		}
 	}
-	// Expect the self signal local activity to be run.
-	signchan := workflow.GetSignalChannel(ctx, ASignal)
-	signchan.Receive(ctx, nil)
 
 	return &throughputstress.WorkflowOutput{
 		ChildrenSpawned: params.ChildrenSpawned,
-		TimesContinued:  params.TimesContinued,
 	}, nil
 }
 
 func nexusClient(ctx workflow.Context, params *throughputstress.WorkflowParams) workflow.NexusClient {
 	if params.NexusEndpoint == "" {
-		workflow.GetLogger(ctx).Info("not running nexus tests, set nexusEndpoint in options to enable these tests")
+		workflow.GetLogger(ctx).Debug("not running nexus tests, set nexusEndpoint in options to enable these tests")
 		return nil
 	}
 	return workflow.NewNexusClient(params.NexusEndpoint, ThroughputStressServiceName)
@@ -262,16 +273,14 @@ func ThroughputStressChild(ctx workflow.Context) error {
 
 func defaultActivityOpts(ctx workflow.Context) workflow.ActivityOptions {
 	return workflow.ActivityOptions{
-		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 5,
-		},
+		StartToCloseTimeout: 1 * time.Minute,
+		RetryPolicy:         &temporal.RetryPolicy{},
 	}
 }
 
 func defaultLocalActivityOpts(ctx workflow.Context) workflow.LocalActivityOptions {
 	return workflow.LocalActivityOptions{
-		StartToCloseTimeout: workflow.GetInfo(ctx).WorkflowExecutionTimeout,
+		StartToCloseTimeout: 1 * time.Minute,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval: 10 * time.Millisecond,
 			MaximumAttempts: 10,

@@ -12,14 +12,11 @@ type WorkflowParams struct {
 	Iterations int `json:"iterations"`
 	// If true, skip sleeps. This makes workflow end to end latency more informative.
 	SkipSleep bool `json:"skipSleep"`
-	// What iteration to start on. If we have continued-as-new, we might be starting at a nonzero
-	// number.
+	// What iteration to start on. If we have continued-as-new, we might be starting at a nonzero number.
 	InitialIteration int `json:"initialIteration"`
-	// If nonzero, we will continue as new after history has grown to be at least this many events.
-	ContinueAsNewAfterEventCount int `json:"continueAsNewAfterEventCount"`
+	// If nonzero, we will continue-as-new after specified iteration.
+	ContinueAsNewAfterIterCount int `json:"continueAsNewAfterIterCount"`
 
-	// Set internally and incremented every time the workflow continues as new.
-	TimesContinued int `json:"timesContinued"`
 	// Set internally and incremented every time the workflow spawns a child.
 	ChildrenSpawned int `json:"childrenSpawned"`
 
@@ -35,8 +32,6 @@ type WorkflowParams struct {
 type WorkflowOutput struct {
 	// The total number of children that were spawned across all continued runs of the workflow.
 	ChildrenSpawned int `json:"childrenSpawned"`
-	// The total number of times the workflow continued as new.
-	TimesContinued int `json:"timesContinued"`
 }
 
 type SleepActivity struct {
