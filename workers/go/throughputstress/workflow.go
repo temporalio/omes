@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
@@ -138,19 +139,29 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				return workflow.ExecuteLocalActivity(localActCtx, activityStub.SelfSignal, ASignal).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				// This activity can simulate different traffic patterns as it will sleep for
-				// a configured duration. The duration is randomly selected from a distribution.
-				actInput := MakeSleepInput(params.SleepActivityPerPriority)
-				if actInput == nil {
+				// This activity simulates custom traffic patterns by generating activities that sleep
+				// for a specified duration, with optional priority and fairness keys.
+				if params.SleepActivities == nil {
 					return nil
 				}
-				opts := defaultActivityOpts(ctx)
-				opts.Priority = temporal.Priority{
-					PriorityKey: int(actInput.Priority),
+				sleepInputs := params.SleepActivities.Sample()
+
+				var sleepFuncs []func(workflow.Context) error
+				for _, actInput := range sleepInputs {
+					sleepFuncs = append(sleepFuncs, func(ctx workflow.Context) error {
+						opts := defaultActivityOpts(ctx)
+						opts.Priority.PriorityKey = int(actInput.PriorityKey)
+						if actInput.FairnessKey != "" {
+							// TODO(fairness): hack until there is a fairness key in the SDK
+							opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%s",
+								actInput.FairnessKey, actInput.FairnessWeight, uuid.New().String())
+						}
+						opts.StartToCloseTimeout += actInput.SleepDuration // make sure there's enough time for the sleep
+						actCtx := workflow.WithActivityOptions(ctx, opts)
+						return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
+					})
 				}
-				opts.StartToCloseTimeout += actInput.SleepDuration // make sure there's enough time for the sleep
-				actCtx := workflow.WithActivityOptions(ctx, opts)
-				return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
+				return workflowutils.RunConcurrently(ctx, sleepFuncs...)
 			},
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))

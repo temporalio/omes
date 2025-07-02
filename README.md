@@ -158,25 +158,22 @@ for more.
 
 ### ThroughputStress (Go only)
 
-#### Sleep Activity per Priority
+#### Sleep Activity
 
-The throughput_stress scenario can be configured to map every "Sleep" activity to a priority and
-sleep for an arbitrary amount of time.
+The throughput_stress scenario can be configured to run "sleep" activities with different configurations.
 
-The configuration is done via a JSON file, which is passed to
-the scenario with the `--option sleep-activity-per-priority-json=@<file>` flag. Example:
+The configuration is done via a JSON file, which is passed to the scenario with the
+`--option sleep-activity-per-priority-json=@<file>` flag. Example:
 
 ```
-echo '{"patterns_dist": {"type":"discrete", "weights": {"1":1, "5":9}}, "pattern_durations_dist": {"1": {"type":"discrete", "weights": {"1s": 1}}, "5": {"type":"discrete", "weights": {"1s": 1, "5s": 4}}}}' > sleep.json
-go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-per-priority-json=@sleep.json --run-id default-run-id
+echo '{"count":{"type":"fixed","value":5},"groups":{"high":{"weight":2,"sleepDuration":{"type":"uniform","min":"2s","max":"4s"}},"low":{"weight":3,"sleepDuration":{"type":"discrete","weights":{"5s":3,"10s":1}}}}}' > sleep.json
+go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
 ```
 
-This assigns priority `1` with a chance of 1/10 and priority `5` with a chance of 9/10. Activities with
-priority `1` will always sleep for 1 second, while activities with priority `5` will sleep for 1 second
-with a chance of 1/5 and for 5 seconds with a chance of 4/5.
+This runs 5 sleep activities per iteration, where "high" has a weight of 2 and sleeps for a random duration between 2-4s,
+and "low" has a weight of 3 and sleeps for either 5s or 10s.
 
-Look for `DistributionField` in the source code to learn more about different kinds of distrbutions.
-
+Look at `DistributionField` to learn more about different kinds of distrbutions.
 
 #### Nexus 
 

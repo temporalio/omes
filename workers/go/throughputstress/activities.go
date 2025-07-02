@@ -21,11 +21,6 @@ type PayloadActivityInput struct {
 	DesiredOutputSize int
 }
 
-type SleepActivityInput struct {
-	Priority      int
-	SleepDuration time.Duration
-}
-
 func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 	inDat := make([]byte, inSize)
 	rand.Read(inDat)
@@ -33,21 +28,6 @@ func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 		IgnoredInputData:  inDat,
 		DesiredOutputSize: outSize,
 	}
-}
-
-func MakeSleepInput(distribution *throughputstress.SleepActivity) *SleepActivityInput {
-	if distribution == nil {
-		return nil
-	}
-	prio, ok := distribution.PatternsDist.Sample()
-	if !ok {
-		return nil
-	}
-	sleep, ok := distribution.PatternDurationsDist[prio].Sample()
-	if !ok {
-		return nil
-	}
-	return &SleepActivityInput{Priority: int(prio), SleepDuration: sleep}
 }
 
 // Payload serves no purpose other than to accept inputs and return outputs of a
@@ -60,7 +40,7 @@ func (a *Activities) Payload(_ context.Context, in *PayloadActivityInput) ([]byt
 }
 
 // Sleep is an activity that sleeps for a specified duration.
-func (a *Activities) Sleep(_ context.Context, in *SleepActivityInput) error {
+func (a *Activities) Sleep(_ context.Context, in *throughputstress.SleepActivityInput) error {
 	time.Sleep(in.SleepDuration)
 	return nil
 }

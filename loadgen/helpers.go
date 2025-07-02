@@ -156,6 +156,13 @@ type discreteDistribution[T distValueType] struct {
 	weights map[T]int
 }
 
+func NewDiscreteDistribution[T distValueType](weights map[T]int) DistributionField[T] {
+	return DistributionField[T]{
+		distribution: discreteDistribution[T]{weights: weights},
+		distType:     "discrete",
+	}
+}
+
 func (d discreteDistribution[T]) GetType() string {
 	return "discrete"
 }
