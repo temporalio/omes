@@ -37,6 +37,32 @@ func TestDistributionField(t *testing.T) {
 			checkJsonRoundtrip(t, err, df)
 		})
 
+		t.Run("Float32", func(t *testing.T) {
+			jsonData := `{"type":"discrete","weights":{"1.5":10,"5.25":20,"10.75":70}}`
+			var df DistributionField[float32]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[float32]{
+				distribution: discreteDistribution[float32]{
+					weights: map[float32]int{
+						1.5:   10,
+						5.25:  20,
+						10.75: 70,
+					},
+				},
+				distType: "discrete",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.Contains(t, []float32{1.5, 5.25, 10.75}, value)
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
 		t.Run("Duration", func(t *testing.T) {
 			jsonData := `{"type":"discrete","weights":{"1s":10,"5s":20,"10s":70}}`
 			var df DistributionField[time.Duration]
@@ -85,6 +111,30 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok)
 			assert.GreaterOrEqual(t, value, int64(1))
 			assert.LessOrEqual(t, value, int64(100))
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Float32", func(t *testing.T) {
+			jsonData := `{"type":"uniform","min":1.5,"max":99.9}`
+			var df DistributionField[float32]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[float32]{
+				distribution: uniformDistribution[float32]{
+					min: 1.5,
+					max: 99.9,
+				},
+				distType: "uniform",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, float32(1.5))
+			assert.LessOrEqual(t, value, float32(99.9))
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -141,6 +191,32 @@ func TestDistributionField(t *testing.T) {
 			checkJsonRoundtrip(t, err, df)
 		})
 
+		t.Run("Float32", func(t *testing.T) {
+			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":100}`
+			var df DistributionField[float32]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+			require.NotNil(t, df)
+
+			expected := DistributionField[float32]{
+				distribution: zipfDistribution[float32]{
+					s: 1.5,
+					v: 2.0,
+					n: 100,
+				},
+				distType: "zipf",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, float32(0))
+			assert.LessOrEqual(t, value, float32(100))
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
 		t.Run("Duration", func(t *testing.T) {
 			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":50}`
 			var df DistributionField[time.Duration]
@@ -193,6 +269,32 @@ func TestDistributionField(t *testing.T) {
 			checkJsonRoundtrip(t, err, df)
 		})
 
+		t.Run("Float32", func(t *testing.T) {
+			jsonData := `{"type":"normal","mean":50.5,"stdDev":10.2,"min":30.1,"max":70.9}`
+			var df DistributionField[float32]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[float32]{
+				distribution: normalDistribution[float32]{
+					mean:   50.5,
+					stdDev: 10.2,
+					min:    30.1,
+					max:    70.9,
+				},
+				distType: "normal",
+			}
+			assert.EqualExportedValues(t, expected, df)
+
+			value, ok := df.Sample()
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, value, float32(30.1))
+			assert.LessOrEqual(t, value, float32(70.9))
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
 		t.Run("Duration", func(t *testing.T) {
 			jsonData := `{"type":"normal","mean":"20s","stdDev":"1s","min":"1s","max":"60s"}`
 			var df DistributionField[time.Duration]
@@ -218,6 +320,33 @@ func TestDistributionField(t *testing.T) {
 
 			checkJsonRoundtrip(t, err, df)
 		})
+	})
+
+	t.Run("Fixed Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"fixed","value":"42"}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			expected := DistributionField[int64]{
+				distribution: fixedDistribution[int64]{
+					value: 42,
+				},
+				distType: "fixed",
+			}
+			assert.Equal(t, expected.distType, df.distType)
+
+			// Test all samples return the same value.
+			for i := 0; i < 10; i++ {
+				v, ok := df.Sample()
+				assert.True(t, ok)
+				assert.Equal(t, int64(42), v)
+			}
+		})
+
+		// no need to test other dist types ...
 	})
 
 	t.Run("Error Cases", func(t *testing.T) {
