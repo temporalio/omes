@@ -107,4 +107,4 @@ jobs:
       - name: 🐳 Docker image tag
         if: inputs.do-push && !github.event.pull_request.head.repo.fork
         run: |
-          echo "::notice title=🐳 Docker image tag for ${{ inputs.lang }}::${{env.SAVED_IMAGE_TAG}}"
+          echo "::notice title=🐳 Docker image tag for temporaliotest/${{ inputs.lang }}::${{env.SAVED_IMAGE_TAG}}"
