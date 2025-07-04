@@ -114,7 +114,7 @@ func (config *SleepActivityConfig) Sample() []SleepActivityInput {
 	indexDist := loadgen.NewDiscreteDistribution(indexWeights)
 
 	activities := make([]SleepActivityInput, 0, count)
-	for i := int64(0); i < count; i++ {
+	for range count {
 		groupIndex, _ := indexDist.Sample()
 		groupConfig := config.Groups[groupIDs[groupIndex]]
 		instance := SleepActivityInput{}
