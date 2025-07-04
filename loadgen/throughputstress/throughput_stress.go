@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/kitchensink"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // WorkflowParams is the single input for the throughput stress workflow.
@@ -63,14 +65,6 @@ type SleepActivityGroupConfig struct {
 	FairnessWeight *loadgen.DistributionField[float32] `json:"fairnessWeight"`
 }
 
-// SleepActivityInput represents the input for a sleep activity.
-type SleepActivityInput struct {
-	SleepDuration  time.Duration `json:"sleepDuration"`
-	PriorityKey    int64         `json:"priorityKey"`
-	FairnessKey    string        `json:"fairnessKey"`
-	FairnessWeight float32       `json:"fairnessWeight"`
-}
-
 func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, error) {
 	if jsonStr == "" {
 		return nil, nil
@@ -97,7 +91,7 @@ func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, 
 }
 
 // Sample generates a list of SleepActivityInput instances based on the SleepActivityConfig.
-func (config *SleepActivityConfig) Sample() []SleepActivityInput {
+func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction {
 	if config == nil {
 		return nil
 	}
@@ -121,41 +115,43 @@ func (config *SleepActivityConfig) Sample() []SleepActivityInput {
 	}
 	indexDist := loadgen.NewDiscreteDistribution(indexWeights)
 
-	activities := make([]SleepActivityInput, 0, count)
+	actions := make([]*kitchensink.ExecuteActivityAction, 0, count)
 	for range count {
 		groupIndex, _ := indexDist.Sample()
 		groupConfig := config.Groups[groupIDs[groupIndex]]
-		instance := SleepActivityInput{}
+		action := &kitchensink.ExecuteActivityAction{}
 
 		// Pick SleepDuration.
 		if duration, ok := groupConfig.SleepDuration.Sample(); ok {
-			instance.SleepDuration = duration
+			action.ActivityType = &kitchensink.ExecuteActivityAction_Delay{
+				Delay: durationpb.New(duration),
+			}
+			action.StartToCloseTimeout = durationpb.New(duration + 5*time.Second)
 		}
 
 		// Optional: PriorityKeys
 		if groupConfig.PriorityKeys != nil {
 			if priorityKey, ok := groupConfig.PriorityKeys.Sample(); ok {
-				instance.PriorityKey = priorityKey
+				action.PriorityKey = priorityKey
 			}
 		}
 
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
 			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(); ok {
-				instance.FairnessKey = fmt.Sprintf("%d", fairnessKey)
-				instance.FairnessWeight = 1.0 // always set default
+				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
+				action.FairnessWeight = 1.0 // always set default
 			}
 		}
 
 		// Optional: FairnessWeight
 		if groupConfig.FairnessWeight != nil {
 			if weight, ok := groupConfig.FairnessWeight.Sample(); ok {
-				instance.FairnessWeight = weight
+				action.FairnessWeight = weight
 			}
 		}
 
-		activities = append(activities, instance)
+		actions = append(actions, action)
 	}
-
-	return activities
+	return actions
 }

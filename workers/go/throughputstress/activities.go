@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/throughputstress"
+	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 )
@@ -40,8 +40,13 @@ func (a *Activities) Payload(_ context.Context, in *PayloadActivityInput) ([]byt
 }
 
 // Sleep is an activity that sleeps for a specified duration.
-func (a *Activities) Sleep(_ context.Context, in *throughputstress.SleepActivityInput) error {
-	time.Sleep(in.SleepDuration)
+func (a *Activities) Sleep(_ context.Context, in *kitchensink.ExecuteActivityAction) error {
+	switch t := in.ActivityType.(type) {
+	case *kitchensink.ExecuteActivityAction_Delay:
+		time.Sleep(t.Delay.AsDuration())
+	default:
+		return fmt.Errorf("unexpected activity type: %T", in.ActivityType)
+	}
 	return nil
 }
 

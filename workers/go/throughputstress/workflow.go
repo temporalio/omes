@@ -150,13 +150,12 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				for _, actInput := range sleepInputs {
 					sleepFuncs = append(sleepFuncs, func(ctx workflow.Context) error {
 						opts := defaultActivityOpts(ctx)
-						opts.Priority.PriorityKey = int(actInput.PriorityKey)
+						opts.Priority.PriorityKey = int(actInput.GetPriorityKey())
 						if actInput.FairnessKey != "" {
 							// TODO(fairness): hack until there is a fairness key in the SDK
 							opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%s",
-								actInput.FairnessKey, actInput.FairnessWeight, uuid.New().String())
+								actInput.GetFairnessKey(), actInput.GetFairnessWeight(), uuid.New().String())
 						}
-						opts.StartToCloseTimeout += actInput.SleepDuration // make sure there's enough time for the sleep
 						actCtx := workflow.WithActivityOptions(ctx, opts)
 						return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
 					})

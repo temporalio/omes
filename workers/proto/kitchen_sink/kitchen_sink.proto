@@ -238,6 +238,10 @@ message ExecuteActivityAction {
     RemoteActivityOptions remote = 12;
   }
   AwaitableChoice awaitable_choice = 13;
+  // TODO: once complete, use commonpb.PriorityKey instead
+  int64 PriorityKey = 15;
+  string FairnessKey = 16;
+  float FairnessWeight = 17;
 }
 
 message ExecuteChildWorkflowAction {

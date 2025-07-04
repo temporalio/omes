@@ -228,6 +228,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			Priority:               commonpb.Priority{},
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
 		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
