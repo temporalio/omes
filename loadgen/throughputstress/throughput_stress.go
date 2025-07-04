@@ -63,6 +63,14 @@ type SleepActivityGroupConfig struct {
 	FairnessWeight *loadgen.DistributionField[float32] `json:"fairnessWeight"`
 }
 
+// SleepActivityInput represents the input for a sleep activity.
+type SleepActivityInput struct {
+	SleepDuration  time.Duration `json:"sleepDuration"`
+	PriorityKey    int64         `json:"priorityKey"`
+	FairnessKey    string        `json:"fairnessKey"`
+	FairnessWeight float32       `json:"fairnessWeight"`
+}
+
 func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, error) {
 	if jsonStr == "" {
 		return nil, nil
@@ -150,12 +158,4 @@ func (config *SleepActivityConfig) Sample() []SleepActivityInput {
 	}
 
 	return activities
-}
-
-// SleepActivityInput represents the input for a sleep activity.
-type SleepActivityInput struct {
-	SleepDuration  time.Duration `json:"sleepDuration"`
-	PriorityKey    int64         `json:"priorityKey"`
-	FairnessKey    string        `json:"fairnessKey"`
-	FairnessWeight float32       `json:"fairnessWeight"`
 }
