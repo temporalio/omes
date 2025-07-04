@@ -1696,9 +1696,10 @@ type ExecuteActivityAction struct {
 	//	*ExecuteActivityAction_Remote
 	Locality        isExecuteActivityAction_Locality `protobuf_oneof:"locality"`
 	AwaitableChoice *AwaitableChoice                 `protobuf:"bytes,13,opt,name=awaitable_choice,json=awaitableChoice,proto3" json:"awaitable_choice,omitempty"`
-	PriorityKey     int64                            `protobuf:"varint,15,opt,name=PriorityKey,proto3" json:"PriorityKey,omitempty"`
-	FairnessKey     string                           `protobuf:"bytes,16,opt,name=FairnessKey,proto3" json:"FairnessKey,omitempty"`
-	FairnessWeight  float32                          `protobuf:"fixed32,17,opt,name=FairnessWeight,proto3" json:"FairnessWeight,omitempty"`
+	// TODO: once complete, use commonpb.PriorityKey instead
+	PriorityKey    int64   `protobuf:"varint,15,opt,name=PriorityKey,proto3" json:"PriorityKey,omitempty"`
+	FairnessKey    string  `protobuf:"bytes,16,opt,name=FairnessKey,proto3" json:"FairnessKey,omitempty"`
+	FairnessWeight float32 `protobuf:"fixed32,17,opt,name=FairnessWeight,proto3" json:"FairnessWeight,omitempty"`
 }
 
 func (x *ExecuteActivityAction) Reset() {

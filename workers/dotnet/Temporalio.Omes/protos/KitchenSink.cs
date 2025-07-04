@@ -6175,6 +6175,9 @@ namespace Temporal.Omes.KitchenSink {
     /// <summary>Field number for the "PriorityKey" field.</summary>
     public const int PriorityKeyFieldNumber = 15;
     private long priorityKey_;
+    /// <summary>
+    /// TODO: once complete, use commonpb.PriorityKey instead
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public long PriorityKey {

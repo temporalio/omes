@@ -21729,6 +21729,10 @@ io.temporal.api.common.v1.Payload defaultValue);
     io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder getAwaitableChoiceOrBuilder();
 
     /**
+     * <pre>
+     * TODO: once complete, use commonpb.PriorityKey instead
+     * </pre>
+     *
      * <code>int64 PriorityKey = 15;</code>
      * @return The priorityKey.
      */
@@ -24244,6 +24248,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
     public static final int PRIORITYKEY_FIELD_NUMBER = 15;
     private long priorityKey_ = 0L;
     /**
+     * <pre>
+     * TODO: once complete, use commonpb.PriorityKey instead
+     * </pre>
+     *
      * <code>int64 PriorityKey = 15;</code>
      * @return The priorityKey.
      */
@@ -27451,6 +27459,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
 
       private long priorityKey_ ;
       /**
+       * <pre>
+       * TODO: once complete, use commonpb.PriorityKey instead
+       * </pre>
+       *
        * <code>int64 PriorityKey = 15;</code>
        * @return The priorityKey.
        */
@@ -27459,6 +27471,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         return priorityKey_;
       }
       /**
+       * <pre>
+       * TODO: once complete, use commonpb.PriorityKey instead
+       * </pre>
+       *
        * <code>int64 PriorityKey = 15;</code>
        * @param value The priorityKey to set.
        * @return This builder for chaining.
@@ -27471,6 +27487,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         return this;
       }
       /**
+       * <pre>
+       * TODO: once complete, use commonpb.PriorityKey instead
+       * </pre>
+       *
        * <code>int64 PriorityKey = 15;</code>
        * @return This builder for chaining.
        */
