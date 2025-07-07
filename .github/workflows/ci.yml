@@ -217,7 +217,7 @@ jobs:
       # This ensures that internal systems can rely on the latest tag to be stable.
       as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      go-version: v1.34.0
+      go-version: v1.35.0
       ts-version: v1.12.1
       java-version: v1.30.1
       py-version: v1.13.0
