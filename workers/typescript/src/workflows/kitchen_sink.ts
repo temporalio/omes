@@ -23,10 +23,12 @@ import {
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
+  decodePriority,
   decompileRetryPolicy,
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
+import { durationConvert, numify } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -39,7 +41,6 @@ import IAwaitableChoice = temporal.omes.kitchen_sink.IAwaitableChoice;
 import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
 import ActivityCancellationType = temporal.omes.kitchen_sink.ActivityCancellationType;
 import IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
-import { durationConvert, numify } from '../proto_help';
 
 const reportStateQuery = defineQuery<IWorkflowState, [Payload]>('report_state');
 const actionsSignal = defineSignal<[DoSignalActions]>('do_actions_signal');
@@ -268,6 +269,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     startToCloseTimeout: durationConvert(execActivity.startToCloseTimeout),
     scheduleToStartTimeout: durationConvert(execActivity.scheduleToStartTimeout),
     retry: decompileRetryPolicy(execActivity.retryPolicy),
+    priority: decodePriority(execActivity.priority),
   };
 
   if (execActivity.isLocal) {

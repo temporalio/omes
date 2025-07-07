@@ -5,6 +5,7 @@ using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
+using Priority = Temporalio.Api.Common.V1.Priority;
 using RetryPolicy = Temporalio.Api.Common.V1.RetryPolicy;
 
 namespace Temporalio.Omes;
@@ -334,6 +335,8 @@ public class KitchenSinkWorkflow
                 ScheduleToStartTimeout = eaa.ScheduleToStartTimeout?.ToTimeSpan(),
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
+                Priority =
+                    eaa.Priority != null ? PriorityFromProto(eaa) : null,
                 RetryPolicy =
                     eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
@@ -353,6 +356,22 @@ public class KitchenSinkWorkflow
             NonRetryableErrorTypes = proto.NonRetryableErrorTypes.Count == 0
                 ? null
                 : proto.NonRetryableErrorTypes
+        };
+    }
+
+    private static Temporalio.Common.Priority PriorityFromProto(ExecuteActivityAction eaa)
+    {
+        if (eaa.FairnessKey != null)
+        {
+            throw new ApplicationFailureException("FairnessKey is not supported yet");
+        }
+        if (eaa.FairnessWeight > 0)
+        {
+            throw new ApplicationFailureException("FairnessWeight is not supported yet");
+        }
+        return new()
+        {
+            PriorityKey = eaa.Priority.PriorityKey
         };
     }
 
