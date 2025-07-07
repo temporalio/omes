@@ -203,7 +203,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
         )
     else:
         if execute_activity.HasField("priority"):
-            throw NotImplementedError("priority is not supported yet")
+            raise NotImplementedError("priority is not supported yet")
 
         activity_task = workflow.start_activity(
             activity=act_type,
