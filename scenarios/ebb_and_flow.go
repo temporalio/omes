@@ -18,8 +18,7 @@ const maxConsecutiveErrors = 5
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Spawns activities to upper bound, drains to lower bound, rinse and repeat. " +
-			"Options: min-activities (default 1), max-activities (default 10), " +
-			"activity-sleep (default 1s). Duration must be set.",
+			"Options: min-activities, max-activities, activity-sleep. Duration must be set.",
 		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 			return (&ebbAndFlow{ScenarioInfo: runOptions}).run(ctx)
 		}),
