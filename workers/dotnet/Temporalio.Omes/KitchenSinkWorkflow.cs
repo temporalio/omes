@@ -365,7 +365,7 @@ public class KitchenSinkWorkflow
         {
             throw new ApplicationFailureException("FairnessKey is not supported yet");
         }
-        if (eaa.FairnessWeight != null)
+        if (eaa.FairnessWeight > 0)
         {
             throw new ApplicationFailureException("FairnessWeight is not supported yet");
         }
