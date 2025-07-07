@@ -336,7 +336,7 @@ public class KitchenSinkWorkflow
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
                 Priority =
-                    eaa.Priority != null ? PriorityFromProto(eaa.Priority) : null,
+                    eaa.Priority != null ? PriorityFromProto(eaa) : null,
                 RetryPolicy =
                     eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
@@ -359,19 +359,19 @@ public class KitchenSinkWorkflow
         };
     }
 
-    private static Temporalio.Common.Priority PriorityFromProto(Priority proto)
+    private static Temporalio.Common.Priority PriorityFromProto(ExecuteActivityAction eaa)
     {
-        if (proto.FairnessKey != null)
+        if (eaa.FairnessKey != null)
         {
             throw new ApplicationFailureException("FairnessKey is not supported yet");
         }
-        if (proto.FairnessWeight != null)
+        if (eaa.FairnessWeight != null)
         {
             throw new ApplicationFailureException("FairnessWeight is not supported yet");
         }
         return new()
         {
-            PriorityKey = proto.PriorityKey
+            PriorityKey = eaa.Priority.PriorityKey
         };
     }
 
