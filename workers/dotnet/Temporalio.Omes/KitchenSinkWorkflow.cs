@@ -336,7 +336,7 @@ public class KitchenSinkWorkflow
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
                 Priority =
-                    eaa.Priority != null ? PriorityFromProto(Priority.Priority) : null
+                    eaa.Priority != null ? PriorityFromProto(Priority.Priority) : null,
                 RetryPolicy =
                     eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
