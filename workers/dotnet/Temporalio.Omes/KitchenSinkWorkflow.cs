@@ -5,6 +5,7 @@ using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
+using Priority = Temporalio.Api.Common.V1.Priority;
 using RetryPolicy = Temporalio.Api.Common.V1.RetryPolicy;
 
 namespace Temporalio.Omes;
@@ -334,6 +335,8 @@ public class KitchenSinkWorkflow
                 ScheduleToStartTimeout = eaa.ScheduleToStartTimeout?.ToTimeSpan(),
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
+                Priority =
+                    eaa.Priority != null ? PriorityFromProto(Priority.Priority) : null
                 RetryPolicy =
                     eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
