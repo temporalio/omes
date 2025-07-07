@@ -1,4 +1,4 @@
-import {temporal} from '../protos/root';
+import { temporal } from '../protos/root';
 import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
@@ -28,7 +28,7 @@ import {
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
-import {durationConvert, numify} from '../proto_help';
+import { durationConvert, numify } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
