@@ -361,10 +361,10 @@ public class KitchenSinkWorkflow
 
     private static Temporalio.Common.Priority PriorityFromProto(Priority proto)
     {
-        if proto.FairnessKey != null {
+        if (proto.FairnessKey != null) {
             throw new ApplicationFailureException("FairnessKey is not supported yet");
         }
-        if proto.FairnessWeight != null {
+        if (proto.FairnessWeight != null {
             throw new ApplicationFailureException("FairnessWeight is not supported yet");
         }
         return new()
