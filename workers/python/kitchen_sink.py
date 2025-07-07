@@ -202,6 +202,9 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             # TODO: cancel type can be in local
         )
     else:
+        if execute_activity.HasField("priority"):
+            throw NotImplementedError("priority is not supported yet")
+
         activity_task = workflow.start_activity(
             activity=act_type,
             args=args,
@@ -216,9 +219,6 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
                 execute_activity, "schedule_to_start_timeout"
             ),
             heartbeat_timeout=timeout_or_none(execute_activity, "heartbeat_timeout"),
-            retry_policy=Priority._from_proto(execute_activity.priority)
-            if execute_activity.HasField("priority")
-            else None,
             retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
             if execute_activity.HasField("retry_policy")
             else None,
