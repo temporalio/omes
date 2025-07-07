@@ -219,7 +219,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             retry_policy=Priority.from_proto(execute_activity.priority)
             if execute_activity.HasField("priority")
             else None,
-            retry_policy=RetryPolicy.from_proto(execute_activity.retry_policy)
+            retry_policy=RetryPolicy._from_proto(execute_activity.retry_policy)
             if execute_activity.HasField("retry_policy")
             else None,
             cancellation_type=convert_act_cancel_type(
