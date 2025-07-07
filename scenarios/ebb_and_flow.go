@@ -60,12 +60,11 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	var draining bool
 	var startWG sync.WaitGroup
 
-	e.Logger.Infof(
-		"Starting ebb and flow scenario: min=%d, max=%d, rate=%d/s, sleep=%v, duration=%v",
-		minActivities, maxActivities, spawnRatePerSec, activitySleep, e.Configuration.Duration,
-	)
+	e.Logger.Infof("Starting ebb and flow scenario: min=%d, max=%d, rate=%d/s, sleep=%v, duration=%v",
+		minActivities, maxActivities, spawnRatePerSec, activitySleep, e.Configuration.Duration)
 
-	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(time.Now()) {
+	startedAt := time.Now()
+	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(startedAt) {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
