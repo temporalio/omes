@@ -220,6 +220,18 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 				waitForCancel = true
 			}
 		}
+
+		var priority temporal.Priority
+		if pk := act.GetPriorityKey(); pk != 0 {
+			priority.PriorityKey = int(pk)
+		}
+		if fk := act.GetFairnessKey(); fk != "" {
+			return fmt.Errorf("fairness key is not supported yet")
+		}
+		if fw := act.GetFairnessWeight(); fw > 0 {
+			return fmt.Errorf("fairness weight is not supported yet")
+		}
+
 		opts := workflow.ActivityOptions{
 			TaskQueue:              act.TaskQueue,
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -228,6 +240,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
 		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
