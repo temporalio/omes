@@ -6,9 +6,6 @@ on: # rebuild any PRs and main branch changes
     branches:
       - main
 
-# When changing these values you must also change the value in the
-# push-latest-docker-images workflow call below.
-# TODO: avoid this duplication
 env:
   DOTNET_SDK_VERSION: "1.7.0"
   GO_SDK_VERSION: "1.35.0"
@@ -217,8 +214,8 @@ jobs:
       # This ensures that internal systems can rely on the latest tag to be stable.
       as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      go-version: "v${{ env.GO_SDK_VERSION }}"
-      ts-version: "v${{ env.TYPESCRIPT_SDK_VERSION }}"
-      java-version: "v${{ env.JAVA_SDK_VERSION }}"
-      py-version: "v${{ env.PYTHON_SDK_VERSION }}"
-      dotnet-version: "v${{ env.DOTNET_SDK_VERSION }}"
+      go-version: "${{ format('v{0}', env.GO_SDK_VERSION) }}"
+      ts-version: "${{ format('v{0}', env.TYPESCRIPT_SDK_VERSION) }}"
+      java-version: "${{ format('v{0}', env.JAVA_SDK_VERSION) }}"
+      py-version: "${{ format('v{0}', env.PYTHON_SDK_VERSION) }}"
+      dotnet-version: "${{ format('v{0}', env.DOTNET_SDK_VERSION) }}"
