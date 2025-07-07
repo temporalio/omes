@@ -3,7 +3,6 @@ package scenarios
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -31,9 +30,9 @@ const (
 	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
-	// SleepActivityPerPriorityJsonFlag is a JSON string that defines the sleep activity's priorities and sleep duration.
-	// See throughputstress.SleepActivity for more details.
-	SleepActivityPerPriorityJsonFlag = "sleep-activity-per-priority-json"
+	// SleepActivityJsonFlag is a JSON string that defines the sleep activity's behavior.
+	// See throughputstress.SleepActivityConfig for details.
+	SleepActivityJsonFlag = "sleep-activity-json"
 )
 
 const (
@@ -106,12 +105,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
 
-	var sleepActivityPerPriority *throughputstress.SleepActivity
-	if sleepActivitiesWithPriorityStr, ok := info.ScenarioOptions[SleepActivityPerPriorityJsonFlag]; ok {
-		sleepActivityPerPriority = &throughputstress.SleepActivity{}
-		err := json.Unmarshal([]byte(sleepActivitiesWithPriorityStr), sleepActivityPerPriority)
+	var sleepActivities *throughputstress.SleepActivityConfig
+	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
+		var err error
+		sleepActivities, err = throughputstress.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
 		if err != nil {
-			return fmt.Errorf("failed to parse %s: %w", SleepActivityPerPriorityJsonFlag, err)
+			return fmt.Errorf("failed to parse %s: %w", SleepActivityJsonFlag, err)
 		}
 	}
 
@@ -169,7 +168,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					Iterations:                  internalIterations,
 					ContinueAsNewAfterIterCount: continueAsNewAfterIter,
 					NexusEndpoint:               nexusEndpoint,
-					SleepActivityPerPriority:    sleepActivityPerPriority,
+					SleepActivities:             sleepActivities,
 				},
 			); err != nil {
 				return err

@@ -8,6 +8,7 @@ import temporalio.workflow
 from temporalio import exceptions, workflow
 from temporalio.api.common.v1 import Payload
 from temporalio.common import (
+    Priority,
     RawValue,
     RetryPolicy,
     SearchAttributeKey,
@@ -201,6 +202,9 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             # TODO: cancel type can be in local
         )
     else:
+        if execute_activity.HasField("priority"):
+            raise NotImplementedError("priority is not supported yet")
+
         activity_task = workflow.start_activity(
             activity=act_type,
             args=args,
