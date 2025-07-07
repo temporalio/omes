@@ -290,9 +290,9 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     }
 
     Priority.Builder prio = Priority.newBuilder();
-    int priorityKey = executeActivity.getPriorityKey();
-    if (priorityKey > 0) {
-      prio.setPriorityKey(priorityKey);
+    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
+    if (priority.getPriorityKey() > 0) {
+      prio.setPriorityKey(priority.getPriorityKey());
     }
     if (executeActivity.getFairnessKey() != "") {
       throw new IllegalArgumentException("FairnessKey is not supported");
