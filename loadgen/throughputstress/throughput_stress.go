@@ -7,6 +7,7 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
+	commonpb "go.temporal.io/api/common/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -119,7 +120,9 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 	for range count {
 		groupIndex, _ := indexDist.Sample()
 		groupConfig := config.Groups[groupIDs[groupIndex]]
-		action := &kitchensink.ExecuteActivityAction{}
+		action := &kitchensink.ExecuteActivityAction{
+			Priority: &commonpb.Priority{},
+		}
 
 		// Pick SleepDuration.
 		if duration, ok := groupConfig.SleepDuration.Sample(); ok {
@@ -132,7 +135,7 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 		// Optional: PriorityKeys
 		if groupConfig.PriorityKeys != nil {
 			if priorityKey, ok := groupConfig.PriorityKeys.Sample(); ok {
-				action.PriorityKey = int32(priorityKey)
+				action.Priority.PriorityKey = int32(priorityKey)
 			}
 		}
 
