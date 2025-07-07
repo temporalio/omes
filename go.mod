@@ -11,12 +11,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	github.com/temporalio/features v0.0.0-20250319190748-8e3cf67a27be
-	go.temporal.io/api v1.46.0
-	go.temporal.io/sdk v1.34.0
+	go.temporal.io/api v1.49.1
+	go.temporal.io/sdk v1.35.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.20.0
-	golang.org/x/sync v0.11.0
-	golang.org/x/sys v0.30.0
+	golang.org/x/sync v0.13.0
+	golang.org/x/sys v0.32.0
 	google.golang.org/protobuf v1.36.5
 )
 
@@ -41,8 +41,8 @@ require (
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
