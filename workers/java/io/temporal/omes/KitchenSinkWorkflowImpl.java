@@ -7,6 +7,7 @@ import io.temporal.activity.LocalActivityOptions;
 import io.temporal.api.common.v1.Payload;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.ParentClosePolicy;
+import io.temporal.common.Priority;
 import io.temporal.common.RetryOptions;
 import io.temporal.common.VersioningIntent;
 import io.temporal.failure.ActivityFailure;
@@ -288,6 +289,18 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       retryOptions.setBackoffCoefficient(backoff);
     }
 
+    Priority.Builder prio = Priority.newBuilder();
+    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
+    if (priority.getPriorityKey() > 0) {
+      prio.setPriorityKey(priority.getPriorityKey());
+    }
+    if (executeActivity.getFairnessKey() != "") {
+      throw new IllegalArgumentException("FairnessKey is not supported");
+    }
+    if (executeActivity.getFairnessWeight() > 0) {
+      throw new IllegalArgumentException("FairnessWeight is not supported");
+    }
+
     if (executeActivity.hasIsLocal()) {
       LocalActivityOptions.Builder builder =
           LocalActivityOptions.newBuilder()
@@ -323,7 +336,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               .setDisableEagerExecution(remoteOptions.getDoNotEagerlyExecute())
               .setVersioningIntent(getVersioningIntent(remoteOptions.getVersioningIntent()))
               .setCancellationType(getActivityCancellationType(remoteOptions.getCancellationType()))
-              .setRetryOptions(retryOptions.build());
+              .setRetryOptions(retryOptions.build())
+              .setPriority(prio.build());
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
         builder.setScheduleToCloseTimeout(
