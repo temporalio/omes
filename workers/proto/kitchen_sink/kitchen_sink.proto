@@ -238,10 +238,10 @@ message ExecuteActivityAction {
     RemoteActivityOptions remote = 12;
   }
   AwaitableChoice awaitable_choice = 13;
+  temporal.api.common.v1.Priority priority = 15;
   // TODO: once complete, use commonpb.PriorityKey instead
-  int32 PriorityKey = 15;
-  string FairnessKey = 16;
-  float FairnessWeight = 17;
+  string fairness_key = 16;
+  float fairness_weight = 17;
 }
 
 message ExecuteChildWorkflowAction {

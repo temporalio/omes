@@ -156,7 +156,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				for _, actInput := range sleepInputs {
 					sleepFuncs = append(sleepFuncs, func(ctx workflow.Context) error {
 						opts := defaultActivityOpts(ctx)
-						opts.Priority.PriorityKey = int(actInput.GetPriorityKey())
+						if actInput.Priority != nil {
+							opts.Priority.PriorityKey = int(actInput.Priority.PriorityKey)
+						}
 						if actInput.FairnessKey != "" {
 							// TODO(fairness): hack until there is a fairness key in the SDK
 							opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%s",
