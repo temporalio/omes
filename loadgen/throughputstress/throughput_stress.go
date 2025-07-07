@@ -132,7 +132,7 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 		// Optional: PriorityKeys
 		if groupConfig.PriorityKeys != nil {
 			if priorityKey, ok := groupConfig.PriorityKeys.Sample(); ok {
-				action.PriorityKey = priorityKey
+				action.PriorityKey = int32(priorityKey)
 			}
 		}
 
