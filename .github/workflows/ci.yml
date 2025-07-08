@@ -206,6 +206,8 @@ jobs:
           path: generator.diff
           if-no-files-found: ignore
 
+  # env cannot be referenced in jobs.<job_id>.with.<with_id>, so we need a job to run before
+  # to append a "v" to the version string
   prepare-for-docker-push:
     runs-on: ubuntu-latest
     outputs:
