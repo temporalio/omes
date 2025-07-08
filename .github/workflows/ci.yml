@@ -206,7 +206,25 @@ jobs:
           path: generator.diff
           if-no-files-found: ignore
 
+  prepare-for-docker-push:
+    runs-on: ubuntu-latest
+    outputs:
+      go-sdk-version: ${{ steps.set-output.outputs.go-sdk-version }}
+      ts-sdk-version: ${{ steps.set-output.outputs.ts-sdk-version }}
+      java-sdk-version: ${{ steps.set-output.outputs.java-sdk-version }}
+      python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
+      dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
+    steps:
+    - name: Set output variables to pass to docker YML
+      id: set-output
+      run: |
+        echo "go-sdk-version=v${{ env.GO_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "ts-sdk-version=v${{ env.TYPESCRIPT_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-latest-docker-images:
+    needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
     with:
@@ -214,8 +232,8 @@ jobs:
       # This ensures that internal systems can rely on the latest tag to be stable.
       as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      go-version: "${{ format('v{0}', env.GO_SDK_VERSION) }}"
-      ts-version: "${{ format('v{0}', env.TYPESCRIPT_SDK_VERSION) }}"
-      java-version: "${{ format('v{0}', env.JAVA_SDK_VERSION) }}"
-      py-version: "${{ format('v{0}', env.PYTHON_SDK_VERSION) }}"
-      dotnet-version: "${{ format('v{0}', env.DOTNET_SDK_VERSION) }}"
+      go-version: ${{ needs.prepare-for-docker-push.outputs.go-sdk-version }}
+      ts-version: ${{ needs.prepare-for-docker-push.outputs.ts-sdk-version }}
+      java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
+      py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
+      dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
