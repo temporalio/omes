@@ -6,9 +6,6 @@ on: # rebuild any PRs and main branch changes
     branches:
       - main
 
-# When changing these values you must also change the value in the
-# push-latest-docker-images workflow call below.
-# TODO: avoid this duplication
 env:
   DOTNET_SDK_VERSION: "1.7.0"
   GO_SDK_VERSION: "1.35.0"
@@ -209,7 +206,27 @@ jobs:
           path: generator.diff
           if-no-files-found: ignore
 
+  # env cannot be referenced in jobs.<job_id>.with.<with_id>, so we need a job to run before
+  # to append a "v" to the version string
+  prepare-for-docker-push:
+    runs-on: ubuntu-latest
+    outputs:
+      go-sdk-version: ${{ steps.set-output.outputs.go-sdk-version }}
+      ts-sdk-version: ${{ steps.set-output.outputs.ts-sdk-version }}
+      java-sdk-version: ${{ steps.set-output.outputs.java-sdk-version }}
+      python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
+      dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
+    steps:
+    - name: Set output variables to pass to docker YML
+      id: set-output
+      run: |
+        echo "go-sdk-version=v${{ env.GO_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "ts-sdk-version=v${{ env.TYPESCRIPT_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+        echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-latest-docker-images:
+    needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
     with:
@@ -217,8 +234,8 @@ jobs:
       # This ensures that internal systems can rely on the latest tag to be stable.
       as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      go-version: v1.35.0
-      ts-version: v1.12.1
-      java-version: v1.30.1
-      py-version: v1.13.0
-      dotnet-version: v1.7.0
+      go-version: ${{ needs.prepare-for-docker-push.outputs.go-sdk-version }}
+      ts-version: ${{ needs.prepare-for-docker-push.outputs.ts-sdk-version }}
+      java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
+      py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
+      dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
