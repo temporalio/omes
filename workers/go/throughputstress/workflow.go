@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
 	"github.com/temporalio/omes/workers/go/workflowutils"
@@ -146,14 +145,14 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 					return nil
 				}
 
-				var sleepInputs []*kitchensink.ExecuteActivityAction
-				genSleepInputs := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
-					return params.SleepActivities.Sample()
+				generateSeed := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
+					return time.Now().UnixNano()
 				})
-				genSleepInputs.Get(&sleepInputs)
+				var random int64
+				generateSeed.Get(&random)
 
 				var sleepFuncs []func(workflow.Context) error
-				for _, actInput := range sleepInputs {
+				for _, actInput := range params.SleepActivities.Sample(random) {
 					sleepFuncs = append(sleepFuncs, func(ctx workflow.Context) error {
 						opts := defaultActivityOpts(ctx)
 						if actInput.Priority != nil {

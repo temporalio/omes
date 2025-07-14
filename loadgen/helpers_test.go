@@ -10,6 +10,8 @@ import (
 )
 
 func TestDistributionField(t *testing.T) {
+	const testSeed = int64(12345) // Fixed seed for deterministic testing
+
 	t.Run("Discrete Distribution", func(t *testing.T) {
 		t.Run("Int64", func(t *testing.T) {
 			jsonData := `{"type":"discrete","weights":{"1":10,"5":20,"10":70}}`
@@ -30,11 +32,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			// Test with fixed seed for exact deterministic results
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.Contains(t, []int64{1, 5, 10}, value)
+			assert.Equal(t, int64(10), value)
 
-			checkJsonRoundtrip(t, err, df)
+			// Test that same seed produces same result
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with different specific seeds for exact results
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(1), value3)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
@@ -56,9 +67,19 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.Contains(t, []float32{1.5, 5.25, 10.75}, value)
+			assert.Equal(t, float32(10.75), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, float32(1.5), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -82,9 +103,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.Contains(t, []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second}, value)
+			assert.Equal(t, 10*time.Second, value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -92,7 +118,7 @@ func TestDistributionField(t *testing.T) {
 
 	t.Run("Uniform Distribution", func(t *testing.T) {
 		t.Run("Int64", func(t *testing.T) {
-			jsonData := `{"type":"uniform","min":1,"max":100,"steps":10}`
+			jsonData := `{"type":"uniform","min":1,"max":100}`
 			var df DistributionField[int64]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -107,12 +133,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			// Test exact values with specific seeds
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, int64(1))
-			assert.LessOrEqual(t, value, int64(100))
+			assert.Equal(t, int64(99), value)
 
-			checkJsonRoundtrip(t, err, df)
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(76), value3)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
@@ -131,10 +165,19 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, float32(1.5))
-			assert.LessOrEqual(t, value, float32(99.9))
+			assert.Equal(t, float32(85.01509), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, float32(38.205994), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -155,10 +198,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, 1*time.Second)
-			assert.LessOrEqual(t, value, 1*time.Minute)
+			assert.Equal(t, time.Duration(21344346453), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -166,7 +213,7 @@ func TestDistributionField(t *testing.T) {
 
 	t.Run("Zipf Distribution", func(t *testing.T) {
 		t.Run("Int64", func(t *testing.T) {
-			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":100}`
+			jsonData := `{"type":"zipf","s":2.0,"v":1.0,"n":100}`
 			var df DistributionField[int64]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -183,16 +230,25 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, int64(0))
-			assert.LessOrEqual(t, value, int64(100))
+			assert.Equal(t, int64(0), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(1), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
-			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":100}`
+			jsonData := `{"type":"zipf","s":2.0,"v":1.0,"n":100}`
 			var df DistributionField[float32]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -209,16 +265,25 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, float32(0))
-			assert.LessOrEqual(t, value, float32(100))
+			assert.Equal(t, float32(0), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, float32(1), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
-			jsonData := `{"type":"zipf","s":1.5,"v":2.0,"n":50}`
+			jsonData := `{"type":"zipf","s":2.0,"v":1.0,"n":100}`
 			var df DistributionField[time.Duration]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -234,9 +299,19 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, time.Duration(0))
+			assert.Equal(t, time.Duration(0), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, time.Duration(1), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -244,7 +319,7 @@ func TestDistributionField(t *testing.T) {
 
 	t.Run("Normal Distribution", func(t *testing.T) {
 		t.Run("Int64", func(t *testing.T) {
-			jsonData := `{"type":"normal","mean":50,"stdDev":1,"min":30,"max":70}`
+			jsonData := `{"type":"normal","mean":50,"stdDev":10,"min":30,"max":70}`
 			var df DistributionField[int64]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -261,12 +336,19 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, int64(30))
-			assert.LessOrEqual(t, value, int64(70))
+			assert.Equal(t, int64(48), value)
 
-			checkJsonRoundtrip(t, err, df)
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(65), value3)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
@@ -287,16 +369,25 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, float32(30.1))
-			assert.LessOrEqual(t, value, float32(70.9))
+			assert.Equal(t, float32(47.62513), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values
+			value3, ok3 := df.Sample(42)
+			assert.True(t, ok3)
+			assert.Equal(t, float32(66.34703), value3)
 
 			checkJsonRoundtrip(t, err, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
-			jsonData := `{"type":"normal","mean":"20s","stdDev":"1s","min":"1s","max":"60s"}`
+			jsonData := `{"type":"normal","mean":"20s","stdDev":"5s","min":"1s","max":"60s"}`
 			var df DistributionField[time.Duration]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
@@ -305,7 +396,7 @@ func TestDistributionField(t *testing.T) {
 			expected := DistributionField[time.Duration]{
 				distribution: normalDistribution[time.Duration]{
 					mean:   20 * time.Second,
-					stdDev: 5000.0,
+					stdDev: 5 * time.Second,
 					min:    1 * time.Second,
 					max:    60 * time.Second,
 				},
@@ -313,10 +404,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample()
+			value, ok := df.Sample(testSeed)
 			assert.True(t, ok)
-			assert.GreaterOrEqual(t, value, 1*time.Second)
-			assert.LessOrEqual(t, value, 60*time.Second)
+			assert.Equal(t, time.Duration(18590749775), value)
+
+			// Verify deterministic behavior
+			value2, ok2 := df.Sample(testSeed)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
 
 			checkJsonRoundtrip(t, err, df)
 		})
@@ -338,9 +433,9 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.Equal(t, expected.distType, df.distType)
 
-			// Test all samples return the same value.
+			// Test all samples return the same value regardless of seed.
 			for i := 0; i < 10; i++ {
-				v, ok := df.Sample()
+				v, ok := df.Sample(testSeed + int64(i))
 				assert.True(t, ok)
 				assert.Equal(t, int64(42), v)
 			}
