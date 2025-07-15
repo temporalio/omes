@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"encoding/json"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -33,17 +34,20 @@ func TestDistributionField(t *testing.T) {
 			assert.EqualExportedValues(t, expected, df)
 
 			// Test with fixed seed for exact deterministic results
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, int64(10), value)
 
 			// Test that same seed produces same result
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with different specific seeds for exact results
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, int64(1), value3)
 		})
@@ -67,17 +71,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, float32(10.75), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1.5), value3)
 
@@ -103,12 +110,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, 10*time.Second, value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
@@ -134,17 +143,20 @@ func TestDistributionField(t *testing.T) {
 			assert.EqualExportedValues(t, expected, df)
 
 			// Test exact values with specific seeds
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, int64(99), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, int64(76), value3)
 		})
@@ -165,17 +177,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, float32(85.01509), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, float32(38.205994), value3)
 
@@ -198,12 +213,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, time.Duration(21344346453), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
@@ -230,17 +247,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, int64(0), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, int64(1), value3)
 
@@ -265,17 +285,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, float32(0), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1), value3)
 
@@ -299,17 +322,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, time.Duration(0), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, time.Duration(1), value3)
 
@@ -336,17 +362,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, int64(48), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, int64(65), value3)
 		})
@@ -369,17 +398,20 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, float32(47.62513), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
 			// Test with other specific seeds for different values
-			value3, ok3 := df.Sample(42)
+			rng3 := rand.New(rand.NewSource(42))
+			value3, ok3 := df.Sample(rng3)
 			assert.True(t, ok3)
 			assert.Equal(t, float32(66.34703), value3)
 
@@ -404,12 +436,14 @@ func TestDistributionField(t *testing.T) {
 			}
 			assert.EqualExportedValues(t, expected, df)
 
-			value, ok := df.Sample(testSeed)
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
 			assert.True(t, ok)
 			assert.Equal(t, time.Duration(18590749775), value)
 
 			// Verify deterministic behavior
-			value2, ok2 := df.Sample(testSeed)
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
@@ -435,7 +469,8 @@ func TestDistributionField(t *testing.T) {
 
 			// Test all samples return the same value regardless of seed.
 			for i := 0; i < 10; i++ {
-				v, ok := df.Sample(testSeed + int64(i))
+				rng := rand.New(rand.NewSource(testSeed + int64(i)))
+				v, ok := df.Sample(rng)
 				assert.True(t, ok)
 				assert.Equal(t, int64(42), v)
 			}

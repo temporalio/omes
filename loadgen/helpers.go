@@ -18,8 +18,8 @@ type distValueType interface {
 }
 
 type distribution[T distValueType] interface {
-	// Sample returns a random value from the distribution using the provided seed.
-	Sample(seed int64) (T, bool)
+	// Sample returns a random value from the distribution using the provided random number generator.
+	Sample(rng *rand.Rand) (T, bool)
 	// GetType returns the distribution type identifier.
 	GetType() string
 	// Validate checks if the distribution is valid.
@@ -127,7 +127,7 @@ func (d fixedDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d fixedDistribution[T]) Sample(_ int64) (T, bool) {
+func (d fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
 	return d.value, true
 }
 
@@ -180,7 +180,7 @@ func (d discreteDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d discreteDistribution[T]) Sample(seed int64) (T, bool) {
+func (d discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	var zero T
 	if len(d.weights) == 0 {
 		return zero, false
@@ -190,8 +190,6 @@ func (d discreteDistribution[T]) Sample(seed int64) (T, bool) {
 			return v, true
 		}
 	}
-
-	rng := rand.New(rand.NewSource(seed))
 
 	keys := make([]T, 0, len(d.weights))
 	for k := range d.weights {
@@ -292,9 +290,7 @@ func (d uniformDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d uniformDistribution[T]) Sample(seed int64) (T, bool) {
-	rng := rand.New(rand.NewSource(seed))
-
+func (d uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.min).(type) {
 	case int64:
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
@@ -375,8 +371,7 @@ func (d zipfDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d zipfDistribution[T]) Sample(seed int64) (T, bool) {
-	rng := rand.New(rand.NewSource(seed))
+func (d zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	zipf := rand.NewZipf(rng, d.s, d.v, d.n)
 	return T(zipf.Uint64()), true
 }
@@ -456,9 +451,7 @@ func (d normalDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d normalDistribution[T]) Sample(seed int64) (T, bool) {
-	rng := rand.New(rand.NewSource(seed))
-
+func (d normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.mean).(type) {
 	case int64:
 		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)

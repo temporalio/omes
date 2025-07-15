@@ -3,6 +3,7 @@ package throughputstress
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"sort"
 	"time"
 
@@ -93,12 +94,12 @@ func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, 
 }
 
 // Sample generates a list of SleepActivityInput instances based on the SleepActivityConfig.
-func (config *SleepActivityConfig) Sample(seed int64) []*kitchensink.ExecuteActivityAction {
+func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.ExecuteActivityAction {
 	if config == nil {
 		return nil
 	}
 
-	count, ok := config.Count.Sample(seed)
+	count, ok := config.Count.Sample(rng)
 	if !ok || count <= 0 {
 		return nil
 	}
@@ -122,14 +123,14 @@ func (config *SleepActivityConfig) Sample(seed int64) []*kitchensink.ExecuteActi
 
 	actions := make([]*kitchensink.ExecuteActivityAction, 0, count)
 	for range count {
-		groupIdx, _ := indexDist.Sample(seed)
+		groupIdx, _ := indexDist.Sample(rng)
 		groupConfig := config.Groups[groupIDs[groupIdx]]
 		action := &kitchensink.ExecuteActivityAction{
 			Priority: &commonpb.Priority{},
 		}
 
 		// Pick SleepDuration.
-		if duration, ok := groupConfig.SleepDuration.Sample(seed); ok {
+		if duration, ok := groupConfig.SleepDuration.Sample(rng); ok {
 			action.ActivityType = &kitchensink.ExecuteActivityAction_Delay{
 				Delay: durationpb.New(duration),
 			}
@@ -138,14 +139,14 @@ func (config *SleepActivityConfig) Sample(seed int64) []*kitchensink.ExecuteActi
 
 		// Optional: PriorityKeys
 		if groupConfig.PriorityKeys != nil {
-			if priorityKey, ok := groupConfig.PriorityKeys.Sample(seed); ok {
+			if priorityKey, ok := groupConfig.PriorityKeys.Sample(rng); ok {
 				action.Priority.PriorityKey = int32(priorityKey)
 			}
 		}
 
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
-			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(seed); ok {
+			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(rng); ok {
 				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
 				action.FairnessWeight = 1.0 // always set default
 			}
@@ -153,7 +154,7 @@ func (config *SleepActivityConfig) Sample(seed int64) []*kitchensink.ExecuteActi
 
 		// Optional: FairnessWeight
 		if groupConfig.FairnessWeight != nil {
-			if weight, ok := groupConfig.FairnessWeight.Sample(seed); ok {
+			if weight, ok := groupConfig.FairnessWeight.Sample(rng); ok {
 				action.FairnessWeight = weight
 			}
 		}

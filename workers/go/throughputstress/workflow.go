@@ -3,6 +3,7 @@ package throughputstress
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -145,14 +146,10 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 					return nil
 				}
 
-				generateSeed := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
-					return time.Now().UnixNano()
-				})
-				var random int64
-				generateSeed.Get(&random)
+				rng := rand.New(rand.NewSource(workflow.Now(ctx).UnixNano()))
 
 				var sleepFuncs []func(workflow.Context) error
-				for _, actInput := range params.SleepActivities.Sample(random) {
+				for _, actInput := range params.SleepActivities.Sample(rng) {
 					sleepFuncs = append(sleepFuncs, func(ctx workflow.Context) error {
 						opts := defaultActivityOpts(ctx)
 						if actInput.Priority != nil {
