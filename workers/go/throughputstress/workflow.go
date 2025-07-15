@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
@@ -157,8 +156,8 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 						}
 						if actInput.FairnessKey != "" {
 							// TODO(fairness): hack until there is a fairness key in the SDK
-							opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%s",
-								actInput.GetFairnessKey(), actInput.GetFairnessWeight(), uuid.New().String())
+							opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%d",
+								actInput.GetFairnessKey(), actInput.GetFairnessWeight(), rng.Uint64())
 						}
 						actCtx := workflow.WithActivityOptions(ctx, opts)
 						return workflow.ExecuteActivity(actCtx, activityStub.Sleep, actInput).Get(ctx, nil)
