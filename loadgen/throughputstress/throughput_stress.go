@@ -3,6 +3,8 @@ package throughputstress
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
@@ -92,12 +94,12 @@ func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, 
 }
 
 // Sample generates a list of SleepActivityInput instances based on the SleepActivityConfig.
-func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction {
+func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.ExecuteActivityAction {
 	if config == nil {
 		return nil
 	}
 
-	count, ok := config.Count.Sample()
+	count, ok := config.Count.Sample(rng)
 	if !ok || count <= 0 {
 		return nil
 	}
@@ -105,27 +107,30 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 		return nil
 	}
 
-	// Create discrete distribution using indices instead of group IDs.
-	i := int64(0)
-	groupIDs := make([]string, len(config.Groups))
-	indexWeights := make(map[int64]int, len(config.Groups))
+	// Index the groups.
+	groupIDs := make([]string, 0, len(config.Groups))
 	for groupID := range config.Groups {
-		groupIDs[i] = groupID
-		indexWeights[i] = max(1, config.Groups[groupID].Weight)
-		i++
+		groupIDs = append(groupIDs, groupID)
+	}
+	sort.Strings(groupIDs)
+
+	// Create discrete distribution of the groups according to their weights.
+	indexWeights := make(map[int64]int, len(config.Groups))
+	for groupIdx, groupID := range groupIDs {
+		indexWeights[int64(groupIdx)] = max(1, config.Groups[groupID].Weight)
 	}
 	indexDist := loadgen.NewDiscreteDistribution(indexWeights)
 
 	actions := make([]*kitchensink.ExecuteActivityAction, 0, count)
 	for range count {
-		groupIndex, _ := indexDist.Sample()
-		groupConfig := config.Groups[groupIDs[groupIndex]]
+		groupIdx, _ := indexDist.Sample(rng)
+		groupConfig := config.Groups[groupIDs[groupIdx]]
 		action := &kitchensink.ExecuteActivityAction{
 			Priority: &commonpb.Priority{},
 		}
 
 		// Pick SleepDuration.
-		if duration, ok := groupConfig.SleepDuration.Sample(); ok {
+		if duration, ok := groupConfig.SleepDuration.Sample(rng); ok {
 			action.ActivityType = &kitchensink.ExecuteActivityAction_Delay{
 				Delay: durationpb.New(duration),
 			}
@@ -134,14 +139,14 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 
 		// Optional: PriorityKeys
 		if groupConfig.PriorityKeys != nil {
-			if priorityKey, ok := groupConfig.PriorityKeys.Sample(); ok {
+			if priorityKey, ok := groupConfig.PriorityKeys.Sample(rng); ok {
 				action.Priority.PriorityKey = int32(priorityKey)
 			}
 		}
 
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
-			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(); ok {
+			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(rng); ok {
 				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
 				action.FairnessWeight = 1.0 // always set default
 			}
@@ -149,7 +154,7 @@ func (config *SleepActivityConfig) Sample() []*kitchensink.ExecuteActivityAction
 
 		// Optional: FairnessWeight
 		if groupConfig.FairnessWeight != nil {
-			if weight, ok := groupConfig.FairnessWeight.Sample(); ok {
+			if weight, ok := groupConfig.FairnessWeight.Sample(rng); ok {
 				action.FairnessWeight = weight
 			}
 		}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"time"
 
@@ -17,8 +18,8 @@ type distValueType interface {
 }
 
 type distribution[T distValueType] interface {
-	// Sample returns a random value from the distribution.
-	Sample() (T, bool)
+	// Sample returns a random value from the distribution using the provided random number generator.
+	Sample(rng *rand.Rand) (T, bool)
 	// GetType returns the distribution type identifier.
 	GetType() string
 	// Validate checks if the distribution is valid.
@@ -126,7 +127,7 @@ func (d fixedDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d fixedDistribution[T]) Sample() (T, bool) {
+func (d fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
 	return d.value, true
 }
 
@@ -179,7 +180,7 @@ func (d discreteDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d discreteDistribution[T]) Sample() (T, bool) {
+func (d discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	var zero T
 	if len(d.weights) == 0 {
 		return zero, false
@@ -190,19 +191,36 @@ func (d discreteDistribution[T]) Sample() (T, bool) {
 		}
 	}
 
-	totalWeight := 0
 	keys := make([]T, 0, len(d.weights))
-	weights := make([]int, 0, len(d.weights))
-	for k, w := range d.weights {
+	for k := range d.weights {
 		keys = append(keys, k)
-		weights = append(weights, w)
-		totalWeight += int(w)
+	}
+	switch any(keys[0]).(type) {
+	case int64:
+		sort.Slice(keys, func(i, j int) bool {
+			return any(keys[i]).(int64) < any(keys[j]).(int64)
+		})
+	case float32:
+		sort.Slice(keys, func(i, j int) bool {
+			return any(keys[i]).(float32) < any(keys[j]).(float32)
+		})
+	case time.Duration:
+		sort.Slice(keys, func(i, j int) bool {
+			return any(keys[i]).(time.Duration) < any(keys[j]).(time.Duration)
+		})
 	}
 
-	r := rand.Intn(totalWeight)
+	totalWeight := 0
+	weights := make([]int, len(keys))
+	for i, k := range keys {
+		weights[i] = d.weights[k]
+		totalWeight += weights[i]
+	}
+
+	r := rng.Intn(totalWeight)
 	cumulativeWeight := 0
 	for i, w := range weights {
-		cumulativeWeight += int(w)
+		cumulativeWeight += w
 		if r < cumulativeWeight {
 			return keys[i], true
 		}
@@ -272,28 +290,28 @@ func (d uniformDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d uniformDistribution[T]) Sample() (T, bool) {
+func (d uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.min).(type) {
 	case int64:
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
 		if maxVal <= minVal {
 			return d.min, true
 		}
-		result := minVal + rand.Int63n(maxVal-minVal+1)
+		result := minVal + rng.Int63n(maxVal-minVal+1)
 		return T(result), true
 	case float32:
 		minVal, maxVal := any(d.min).(float32), any(d.max).(float32)
 		if maxVal <= minVal {
 			return d.min, true
 		}
-		result := minVal + rand.Float32()*(maxVal-minVal)
+		result := minVal + rng.Float32()*(maxVal-minVal)
 		return any(result).(T), true
 	case time.Duration:
 		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
 		if maxVal <= minVal {
 			return d.min, true
 		}
-		result := time.Duration(int64(minVal) + rand.Int63n(int64(maxVal)-int64(minVal)+1))
+		result := time.Duration(int64(minVal) + rng.Int63n(int64(maxVal)-int64(minVal)+1))
 		return T(result), true
 	default:
 		return d.min, true
@@ -353,8 +371,8 @@ func (d zipfDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d zipfDistribution[T]) Sample() (T, bool) {
-	zipf := rand.NewZipf(rand.New(rand.NewSource(time.Now().UnixNano())), d.s, d.v, d.n)
+func (d zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+	zipf := rand.NewZipf(rng, d.s, d.v, d.n)
 	return T(zipf.Uint64()), true
 }
 
@@ -433,13 +451,13 @@ func (d normalDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d normalDistribution[T]) Sample() (T, bool) {
+func (d normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.mean).(type) {
 	case int64:
 		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
 
-		result := mean + int64(float64(stdDev)*rand.NormFloat64())
+		result := mean + int64(float64(stdDev)*rng.NormFloat64())
 		if result < minVal {
 			result = minVal
 		}
@@ -451,7 +469,7 @@ func (d normalDistribution[T]) Sample() (T, bool) {
 		mean, stdDev := any(d.mean).(float32), any(d.stdDev).(float32)
 		minVal, maxVal := any(d.min).(float32), any(d.max).(float32)
 
-		result := mean + float32(float64(stdDev)*rand.NormFloat64())
+		result := mean + float32(float64(stdDev)*rng.NormFloat64())
 		if result < minVal {
 			result = minVal
 		}
@@ -463,7 +481,7 @@ func (d normalDistribution[T]) Sample() (T, bool) {
 		mean, stdDev := any(d.mean).(time.Duration), any(d.stdDev).(time.Duration)
 		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
 
-		result := time.Duration(int64(mean) + int64(float64(stdDev)*rand.NormFloat64()))
+		result := time.Duration(int64(mean) + int64(float64(stdDev)*rng.NormFloat64()))
 		if result < minVal {
 			result = minVal
 		}
