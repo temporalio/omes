@@ -44,6 +44,11 @@ func TestScenarioConfigValidation(t *testing.T) {
 			error: "",
 		},
 		{
+			name:  "negative duration",
+			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: -time.Second}},
+			error: "invalid scenario: Duration cannot be negative",
+		},
+		{
 			name:  "both duration and iterations",
 			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}},
 			error: "invalid scenario: iterations and duration are mutually exclusive",

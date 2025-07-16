@@ -48,6 +48,9 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	}
 
 	// Setup config
+	if run.config.Duration < 0 {
+		return nil, fmt.Errorf("invalid scenario: Duration cannot be negative")
+	}
 	if run.config.Duration == 0 && run.config.Iterations == 0 {
 		run.config.Duration, run.config.Iterations = g.DefaultConfiguration.Duration, g.DefaultConfiguration.Iterations
 	}
