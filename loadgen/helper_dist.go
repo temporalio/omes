@@ -115,6 +115,13 @@ type fixedDistribution[T distValueType] struct {
 	value T
 }
 
+func NewFixedDistribution[T distValueType](value T) DistributionField[T] {
+	return DistributionField[T]{
+		distribution: fixedDistribution[T]{value: value},
+		distType:     "fixed",
+	}
+}
+
 func (d fixedDistribution[T]) GetType() string {
 	return "fixed"
 }
