@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const maxConsecutiveErrors = 5
@@ -20,7 +20,10 @@ func init() {
 		Description: "Spawns activities to upper bound, drains to lower bound, rinse and repeat. " +
 			"Options: min-activities, max-activities, activity-sleep. Duration must be set.",
 		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
-			return (&ebbAndFlow{ScenarioInfo: runOptions}).run(ctx)
+			return (&ebbAndFlow{
+				ScenarioInfo: runOptions,
+				rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
+			}).run(ctx)
 		}),
 	})
 }
@@ -28,16 +31,21 @@ func init() {
 type ebbAndFlow struct {
 	loadgen.ScenarioInfo
 	runningActivities atomic.Int64
+	rng               *rand.Rand
 }
 
 func (e *ebbAndFlow) run(ctx context.Context) error {
-	if e.Configuration.Duration == 0 {
-		return fmt.Errorf("duration required for this scenario")
+	var sleepActivityConfig *loadgen.SleepActivityConfig
+	if sleepActivitiesStr, ok := e.ScenarioOptions[SleepActivityJsonFlag]; ok {
+		var err error
+		sleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s: %w", SleepActivityJsonFlag, err)
+		}
 	}
 
 	minActivities := e.ScenarioOptionInt("min-activities", 5)
 	maxActivities := e.ScenarioOptionInt("max-activities", 25)
-	activitySleep := e.ScenarioOptionDuration("activity-sleep", 10*time.Second)
 	spawnRatePerSec := e.ScenarioOptionInt("spaw-rate-per-sec", 5)
 
 	if minActivities < 1 {
@@ -60,8 +68,8 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	var draining bool
 	var startWG sync.WaitGroup
 
-	e.Logger.Infof("Starting ebb and flow scenario: min=%d, max=%d, rate=%d/s, sleep=%v, duration=%v",
-		minActivities, maxActivities, spawnRatePerSec, activitySleep, e.Configuration.Duration)
+	e.Logger.Infof("Starting ebb and flow scenario: min=%d, max=%d, rate=%d/s, duration=%v",
+		minActivities, maxActivities, spawnRatePerSec, e.Configuration.Duration)
 
 	startedAt := time.Now()
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(startedAt) {
@@ -98,7 +106,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			startWG.Add(1)
 			go func(iteration int) {
 				defer startWG.Done()
-				err := e.spawnWorkflowWithActivities(ctx, iteration, spawnRatePerSec, activitySleep)
+				err := e.spawnWorkflowWithActivities(ctx, iteration, spawnRatePerSec, sleepActivityConfig)
 				select {
 				case errCh <- err:
 				default:
@@ -116,7 +124,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	ctx context.Context,
 	iteration, count int,
-	sleep time.Duration,
+	sleepActivityConfig *loadgen.SleepActivityConfig,
 ) error {
 	e.runningActivities.Add(int64(count))
 	defer e.runningActivities.Add(-int64(count))
@@ -125,21 +133,18 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 		Actions:    []*kitchensink.Action{},
 		Concurrent: true,
 	}
-	delayInSec := int64(sleep.Seconds())
-	for i := 0; i < int(count); i++ {
+
+	// Generate activities using SleepActivityConfig.Sample()
+	activities := sleepActivityConfig.Sample(e.rng)
+	for _, activity := range activities {
+		activity.RetryPolicy = &common.RetryPolicy{
+			MaximumAttempts:    1,
+			BackoffCoefficient: 1.0,
+		}
 		actionSet.Actions = append(actionSet.Actions,
 			&kitchensink.Action{
 				Variant: &kitchensink.Action_ExecActivity{
-					ExecActivity: &kitchensink.ExecuteActivityAction{
-						ActivityType: &kitchensink.ExecuteActivityAction_Delay{
-							Delay: &durationpb.Duration{Seconds: delayInSec},
-						},
-						StartToCloseTimeout: &durationpb.Duration{Seconds: delayInSec * 2},
-						RetryPolicy: &common.RetryPolicy{
-							MaximumAttempts:    1,
-							BackoffCoefficient: 1.0,
-						},
-					},
+					ExecActivity: activity,
 				},
 			})
 	}
