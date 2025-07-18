@@ -14,7 +14,7 @@ import (
 	"go.temporal.io/api/common/v1"
 )
 
-const maxConsecutiveErrors = 5
+const maxConsecutiveErrors = 10
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
@@ -99,6 +99,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			return ctx.Err()
 		case err := <-errCh:
 			if err != nil {
+				e.Logger.Errorf("Failed to spawn workflow: %v", err)
 				consecutiveErrCount++
 				if consecutiveErrCount >= maxConsecutiveErrors {
 					return fmt.Errorf("got %v consecutive errors, most recent: %w", maxConsecutiveErrors, err)
@@ -132,9 +133,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 				startWG.Add(1)
 				go func(iteration, count int) {
 					defer startWG.Done()
-					if err := e.spawnWorkflowWithActivities(ctx, iteration, count, sleepActivityConfig); err != nil {
-						e.Logger.Errorf("Failed to spawn workflow for iteration %d: %v", iteration, err)
-					}
+					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, sleepActivityConfig)
 				}(iter, rate)
 				iter++
 			}
