@@ -17,7 +17,7 @@ import (
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max over frequency period using simple proportional control. " +
-			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval, max-consecutive-errors, max-activities-per-workflow. Duration must be set.",
+			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval, max-consecutive-errors. Duration must be set.",
 		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 			return (&ebbAndFlow{
 				ScenarioInfo: runOptions,
@@ -34,15 +34,10 @@ type ebbAndFlow struct {
 	startTime      time.Time
 	generatedCount atomic.Int64
 	processedCount atomic.Int64
-	startWG        sync.WaitGroup
-	errCh          chan error
-	iter           int
 }
 
 func (e *ebbAndFlow) run(ctx context.Context) error {
 	e.startTime = time.Now()
-	e.errCh = make(chan error, 10000)
-	e.iter = 1
 
 	// Parse and validate scenario options.
 	minBacklog := int64(e.ScenarioOptionInt("min-backlog", 10))
@@ -52,7 +47,6 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	maxRate := e.ScenarioOptionInt("max-rate", 1000)
 	controlInterval := e.ScenarioOptionDuration("control-interval", 100*time.Millisecond)
 	maxConsecutiveErrors := e.ScenarioOptionInt("max-consecutive-errors", 10)
-	batchSize := e.ScenarioOptionInt("max-activities-per-workflow", 1)
 
 	if minBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative")
@@ -62,9 +56,6 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	}
 	if frequency <= 0 {
 		return fmt.Errorf("frequency must be greater than 0")
-	}
-	if batchSize <= 0 {
-		return fmt.Errorf("max-activities-per-workflow must be greater than 0")
 	}
 
 	// Activity config
@@ -89,10 +80,13 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	}
 
 	var consecutiveErrCount int
+	errCh := make(chan error, 10000)
 	ticker := time.NewTicker(controlInterval)
 	defer ticker.Stop()
+	var startWG sync.WaitGroup
+	iter := 1
 
-	e.Logger.Debugf("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, frequency=%v, duration=%v",
+	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, frequency=%v, duration=%v",
 		minBacklog, maxBacklog, frequency, e.Configuration.Duration)
 
 	isDraining := false // true = draining mode, false = growing mode
@@ -102,7 +96,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-e.errCh:
+		case err := <-errCh:
 			if err != nil {
 				e.Logger.Errorf("Failed to spawn workflow: %v", err)
 				consecutiveErrCount++
@@ -135,105 +129,81 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 				backlog, target, rate, generated, processed)
 
 			if rate > 0 {
-				// Generate activities for this iteration
-				fixedDist := loadgen.NewFixedDistribution(int64(rate))
-				config := loadgen.SleepActivityConfig{
-					Count:  &fixedDist,
-					Groups: sleepActivityConfig.Groups,
-				}
-				activities := config.Sample(e.rng)
-
-				e.spawnWorkflows(ctx, activities, batchSize)
-				e.iter++
+				startWG.Add(1)
+				go func(iteration, count int) {
+					defer startWG.Done()
+					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, sleepActivityConfig)
+				}(iter, rate)
+				iter++
 			}
 		}
 	}
 
 	e.Logger.Info("Scenario complete; waiting for all workflows to finish...")
-	e.startWG.Wait()
+	startWG.Wait()
 	return nil
 }
 
-func (e *ebbAndFlow) spawnWorkflows(
+func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	ctx context.Context,
-	activities []*kitchensink.ExecuteActivityAction,
-	batchSize int,
-) {
-	// Batch activities into workflows
-	workflowBatches := make([][]*kitchensink.ExecuteActivityAction, 0)
-	for i := 0; i < len(activities); i += batchSize {
-		end := i + batchSize
-		if end > len(activities) {
-			end = len(activities)
-		}
-		workflowBatches = append(workflowBatches, activities[i:end])
-	}
-
-	// Start one goroutine per batch
-	for batchIndex, batch := range workflowBatches {
-		e.startWG.Add(1)
-		go func(iteration, batchIndex int, batch []*kitchensink.ExecuteActivityAction) {
-			defer e.startWG.Done()
-			e.errCh <- e.spawnWorkflow(ctx, iteration, batchIndex, batch)
-		}(e.iter, batchIndex, batch)
-	}
-}
-
-func (e *ebbAndFlow) spawnWorkflow(
-	ctx context.Context,
-	iteration, batchIndex int,
-	batch []*kitchensink.ExecuteActivityAction,
+	iteration, rate int,
+	template *loadgen.SleepActivityConfig,
 ) error {
-	// Set retry policy for all activities in this batch.
-	for _, activity := range batch {
+	// Override activity count to fixed rate.
+	fixedDist := loadgen.NewFixedDistribution(int64(rate))
+	config := loadgen.SleepActivityConfig{
+		Count:  &fixedDist,
+		Groups: template.Groups,
+	}
+
+	// Generate activities.
+	activities := config.Sample(e.rng)
+
+	// Start one workflow per activity.
+	for i, activity := range activities {
 		activity.RetryPolicy = &common.RetryPolicy{
 			MaximumAttempts:    1,
 			BackoffCoefficient: 1.0,
 		}
-	}
 
-	// Create actions for all activities in this batch.
-	actions := make([]*kitchensink.Action, 0, len(batch)+1)
-	for _, activity := range batch {
-		actions = append(actions, &kitchensink.Action{
-			Variant: &kitchensink.Action_ExecActivity{
-				ExecActivity: activity,
+		// Create action set with single activity.
+		actionSet := &kitchensink.ActionSet{
+			Actions: []*kitchensink.Action{
+				{
+					Variant: &kitchensink.Action_ExecActivity{
+						ExecActivity: activity,
+					},
+				},
+				{
+					Variant: &kitchensink.Action_ReturnResult{
+						ReturnResult: &kitchensink.ReturnResultAction{
+							ReturnThis: &common.Payload{},
+						},
+					},
+				},
 			},
-		})
-	}
+			Concurrent: true,
+		}
 
-	// Add return result action at the end.
-	actions = append(actions, &kitchensink.Action{
-		Variant: &kitchensink.Action_ReturnResult{
-			ReturnResult: &kitchensink.ReturnResultAction{
-				ReturnThis: &common.Payload{},
-			},
-		},
-	})
+		// Start workflow.
+		runID := iteration*10000 + i
+		run := e.NewRun(runID)
+		options := run.DefaultStartWorkflowOptions()
+		options.ID = fmt.Sprintf("%s-%d", options.ID, e.startTime.UnixMilli()) // avoid collision on a restart
+		workflowInput := &kitchensink.WorkflowInput{InitialActions: []*kitchensink.ActionSet{actionSet}}
+		wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
+		if err != nil {
+			return fmt.Errorf("failed to start workflow for iteration %d activity %d: %w", iteration, i, err)
+		}
+		e.generatedCount.Add(1)
 
-	// Create action set with all activities in this batch.
-	actionSet := &kitchensink.ActionSet{
-		Actions:    actions,
-		Concurrent: true,
+		// Wait for workflow completion.
+		err = wf.Get(ctx, nil)
+		if err != nil {
+			e.Logger.Errorf("Workflow failed for iteration %d activity %d: %v", iteration, i, err)
+		}
+		e.processedCount.Add(1)
 	}
-
-	// Start workflow.
-	run := e.NewRun(iteration*10000 + batchIndex)
-	options := run.DefaultStartWorkflowOptions()
-	options.ID = fmt.Sprintf("%s-%d", options.ID, e.startTime.UnixMilli()) // avoid collision on a restart
-	workflowInput := &kitchensink.WorkflowInput{InitialActions: []*kitchensink.ActionSet{actionSet}}
-	wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
-	if err != nil {
-		return fmt.Errorf("failed to start workflow for iteration %d batch %d: %w", iteration, batchIndex, err)
-	}
-	e.generatedCount.Add(1)
-
-	// Wait for workflow completion.
-	err = wf.Get(ctx, nil)
-	if err != nil {
-		e.Logger.Errorf("Workflow failed for iteration %d batch %d: %v", iteration, batchIndex, err)
-	}
-	e.processedCount.Add(1)
 
 	return nil
 }
