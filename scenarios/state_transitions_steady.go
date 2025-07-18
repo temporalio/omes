@@ -128,7 +128,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	s.Logger.Infof("Run complete, ran %v iterations, waiting on all workflows to complete", iter)
 	// First, wait for all starts to have started (they are done in goroutine)
 	startWG.Wait()
-	return loadgen.VisibilityCountIsEventually(
+	return loadgen.MinVisibilityCountEventually(
 		ctx,
 		s.ScenarioInfo,
 		&workflowservice.CountWorkflowExecutionsRequest{
