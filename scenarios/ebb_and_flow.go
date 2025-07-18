@@ -14,7 +14,6 @@ import (
 	"go.temporal.io/api/common/v1"
 )
 
-
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max over frequency period using simple proportional control. " +
@@ -158,8 +157,7 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	}
 
 	// Generate activities.
-	var activities []*kitchensink.ExecuteActivityAction
-	activities = append(activities, config.Sample(e.rng)...)
+	activities := config.Sample(e.rng)
 
 	// Start one workflow per activity.
 	for i, activity := range activities {
