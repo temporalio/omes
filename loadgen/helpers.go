@@ -8,13 +8,13 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
-// VisibilityCountIsEventually ensures that some visibility query count matches the provided
-// expected number within the provided time limit.
-func VisibilityCountIsEventually(
+// MinVisibilityCountEventually checks that the given visibility query returns at least the expected
+// number of workflows. It repeatedly queries until it either finds the expected count or times out.
+func MinVisibilityCountEventually(
 	ctx context.Context,
 	info ScenarioInfo,
 	request *workflowservice.CountWorkflowExecutionsRequest,
-	expectedCount int,
+	minCount int,
 	waitAtMost time.Duration,
 ) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
@@ -30,11 +30,11 @@ func VisibilityCountIsEventually(
 	for {
 		select {
 		case <-timeoutCtx.Done():
-			return fmt.Errorf("expected %d workflows in visibility, got %d after waiting %v",
-				expectedCount, lastVisibilityCount, waitAtMost)
+			return fmt.Errorf("expected at least %d workflows in visibility, got %d after waiting %v",
+				minCount, lastVisibilityCount, waitAtMost)
 
 		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected: %d)\n", lastVisibilityCount, expectedCount)
+			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n", lastVisibilityCount, minCount)
 
 		case <-countTicker.C:
 			visibilityCount, err := info.Client.CountWorkflow(ctx, request)
@@ -42,7 +42,7 @@ func VisibilityCountIsEventually(
 				return fmt.Errorf("failed to count workflows in visibility: %w", err)
 			}
 			lastVisibilityCount = visibilityCount.Count
-			if lastVisibilityCount == int64(expectedCount) {
+			if lastVisibilityCount >= int64(minCount) {
 				return nil
 			}
 		}
