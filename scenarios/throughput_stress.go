@@ -148,64 +148,71 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Start the scenario run.
-	genericExec := &loadgen.GenericExecutor{
-		DefaultConfiguration: loadgen.RunConfiguration{
-			Iterations:    20,
-			MaxConcurrent: 5,
-		},
-		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, run.Iteration)
+	//
+	// However; when resuming, it can happen that there is no more time left to run more iterations. In that case,
+	// we skip the executor run and go straight to the post-scenario verification.
+	if isResuming && info.Configuration.Duration > 0 {
+		genericExec := &loadgen.GenericExecutor{
+			DefaultConfiguration: loadgen.RunConfiguration{
+				Iterations:    20,
+				MaxConcurrent: 5,
+			},
+			Execute: func(ctx context.Context, run *loadgen.Run) error {
+				wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, run.Iteration)
 
-			var execErr error
-			var result throughputstress.WorkflowOutput
-			for attempt := 1; attempt <= maxAttempts; attempt++ {
-				if execErr = run.ExecuteAnyWorkflow(ctx,
-					client.StartWorkflowOptions{
-						ID:                                       wfID,
-						TaskQueue:                                run.TaskQueue(),
-						WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-						WorkflowExecutionTimeout:                 internalIterTimeout,
-						WorkflowExecutionErrorWhenAlreadyStarted: false,
-						SearchAttributes: map[string]any{
-							ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
+				var execErr error
+				var result throughputstress.WorkflowOutput
+				for attempt := 1; attempt <= maxAttempts; attempt++ {
+					if execErr = run.ExecuteAnyWorkflow(ctx,
+						client.StartWorkflowOptions{
+							ID:                                       wfID,
+							TaskQueue:                                run.TaskQueue(),
+							WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+							WorkflowExecutionTimeout:                 internalIterTimeout,
+							WorkflowExecutionErrorWhenAlreadyStarted: false,
+							SearchAttributes: map[string]any{
+								ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
+							},
 						},
-					},
-					"throughputStress",
-					&result,
-					throughputstress.WorkflowParams{
-						SkipSleep:                   skipSleep,
-						Iterations:                  internalIterations,
-						ContinueAsNewAfterIterCount: continueAsNewAfterIter,
-						NexusEndpoint:               nexusEndpoint,
-						SleepActivities:             sleepActivities,
-					},
-				); execErr == nil {
-					break // success!
-				}
+						"throughputStress",
+						&result,
+						throughputstress.WorkflowParams{
+							SkipSleep:                   skipSleep,
+							Iterations:                  internalIterations,
+							ContinueAsNewAfterIterCount: continueAsNewAfterIter,
+							NexusEndpoint:               nexusEndpoint,
+							SleepActivities:             sleepActivities,
+						},
+					); execErr == nil {
+						break // success!
+					}
 
-				if attempt < maxAttempts {
-					backoff := min(maxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
-					select {
-					case <-time.After(backoff):
-						run.ScenarioInfo.Logger.Warnf(
-							"Attempt %d/%d: ExecuteAnyWorkflow for %s failed, backing off %v before next attempt: %v",
-							attempt, maxAttempts, wfID, backoff, execErr)
-					case <-ctx.Done():
-						return fmt.Errorf("context canceled during retries: %w", ctx.Err())
+					if attempt < maxAttempts {
+						backoff := min(maxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
+						select {
+						case <-time.After(backoff):
+							run.ScenarioInfo.Logger.Warnf(
+								"Attempt %d/%d: ExecuteAnyWorkflow for %s failed, backing off %v before next attempt: %v",
+								attempt, maxAttempts, wfID, backoff, execErr)
+						case <-ctx.Done():
+							return fmt.Errorf("context canceled during retries: %w", ctx.Err())
+						}
 					}
 				}
-			}
-			if execErr != nil {
-				return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, maxAttempts, execErr)
-			}
+				if execErr != nil {
+					return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, maxAttempts, execErr)
+				}
 
-			t.updateStateOnIterationCompletion(run.Iteration)
+				t.updateStateOnIterationCompletion(run.Iteration)
 
-			return nil
-		},
-	}
-	if err = genericExec.Run(ctx, info); err != nil {
-		return err
+				return nil
+			},
+		}
+		if err = genericExec.Run(ctx, info); err != nil {
+			return err
+		}
+	} else {
+		info.Logger.Info("Skipping executor run: out of time")
 	}
 
 	t.lock.Lock()
@@ -225,8 +232,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
 	info.Logger.Info("Total workflows completed: ", completedWorkflows)
 
-	// Post-scenario, verify reported count from Visibility matches the expected count.
-	return loadgen.VisibilityCountIsEventually(
+	// Post-scenario: verify that at least one iteration was completed.
+	if completedIterations == 0 {
+		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
+	}
+
+	// Post-scenario: verify reported workflow completion count from Visibility.
+	return loadgen.MinVisibilityCountEventually(
 		ctx,
 		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
