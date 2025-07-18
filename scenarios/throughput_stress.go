@@ -24,10 +24,10 @@ const (
 	ContinueAsNewAfterIterFlag = "continue-as-new-after-iterations"
 	SkipSleepFlag              = "skip-sleep"
 	NexusEndpointFlag          = "nexus-endpoint"
-	// MaxAttemptFlag is a flag to set the maximum number of attempts for starting a workflow.
-	MaxAttemptFlag = "max-attempts"
-	// MaxAttemptBackoffFlag is a flag to set the maximum backoff time between attempts for starting a workflow.
-	MaxAttemptBackoffFlag = "max-attempt-backoff"
+	// MaxStartAttemptFlag is a flag to set the maximum number of attempts for starting a workflow.
+	MaxStartAttemptFlag = "max-start-attempt"
+	// MaxStartAttemptBackoffFlag is a flag to set the maximum backoff time between attempts for starting a workflow.
+	MaxStartAttemptBackoffFlag = "max-start-attempt-backoff"
 	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
 	// This should be set to allow resuming from a previous run.
 	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
@@ -106,8 +106,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Also, add a buffer to account for the time it takes to wait for the last workflows to complete.
 	internalIterTimeout := info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute))
 	continueAsNewAfterIter := info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
-	maxAttempts := info.ScenarioOptionInt(MaxAttemptFlag, 5)
-	maxBackoff := info.ScenarioOptionDuration(MaxAttemptBackoffFlag, 60*time.Second)
+	maxAttempts := info.ScenarioOptionInt(MaxStartAttemptFlag, 5)
+	maxBackoff := info.ScenarioOptionDuration(MaxStartAttemptBackoffFlag, 60*time.Second)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
