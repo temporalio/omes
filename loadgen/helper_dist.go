@@ -79,23 +79,23 @@ func (df *DistributionField[T]) UnmarshalJSON(data []byte) error {
 	case "fixed":
 		var dist fixedDistribution[T]
 		err = json.Unmarshal(data, &dist)
-		df.distribution = dist
+		df.distribution = &dist
 	case "discrete":
 		var dist discreteDistribution[T]
 		err = json.Unmarshal(data, &dist)
-		df.distribution = dist
+		df.distribution = &dist
 	case "uniform":
 		var dist uniformDistribution[T]
 		err = json.Unmarshal(data, &dist)
-		df.distribution = dist
+		df.distribution = &dist
 	case "zipf":
 		var dist zipfDistribution[T]
 		err = json.Unmarshal(data, &dist)
-		df.distribution = dist
+		df.distribution = &dist
 	case "normal":
 		var dist normalDistribution[T]
 		err = json.Unmarshal(data, &dist)
-		df.distribution = dist
+		df.distribution = &dist
 	default:
 		return fmt.Errorf("unknown distribution type: %s", typeInfo.Type)
 	}
@@ -117,25 +117,25 @@ type fixedDistribution[T distValueType] struct {
 
 func NewFixedDistribution[T distValueType](value T) DistributionField[T] {
 	return DistributionField[T]{
-		distribution: fixedDistribution[T]{value: value},
+		distribution: &fixedDistribution[T]{value: value},
 		distType:     "fixed",
 	}
 }
 
-func (d fixedDistribution[T]) GetType() string {
+func (d *fixedDistribution[T]) GetType() string {
 	return "fixed"
 }
 
-func (d fixedDistribution[T]) Validate() error {
+func (d *fixedDistribution[T]) Validate() error {
 	// Fixed distributions are always valid
 	return nil
 }
 
-func (d fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
+func (d *fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
 	return d.value, true
 }
 
-func (d fixedDistribution[T]) MarshalJSON() ([]byte, error) {
+func (d *fixedDistribution[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"type":  d.GetType(),
 		"value": renderToJSON(d.value),
@@ -159,20 +159,28 @@ func (d *fixedDistribution[T]) UnmarshalJSON(data []byte) error {
 
 type discreteDistribution[T distValueType] struct {
 	weights map[T]int
+	cache   *discreteCache[T]
+}
+
+// discreteCache holds pre-computed values for discreteDistribution sampling
+type discreteCache[T distValueType] struct {
+	keys        []T
+	weights     []int
+	totalWeight int
 }
 
 func NewDiscreteDistribution[T distValueType](weights map[T]int) DistributionField[T] {
 	return DistributionField[T]{
-		distribution: discreteDistribution[T]{weights: weights},
+		distribution: &discreteDistribution[T]{weights: weights},
 		distType:     "discrete",
 	}
 }
 
-func (d discreteDistribution[T]) GetType() string {
+func (d *discreteDistribution[T]) GetType() string {
 	return "discrete"
 }
 
-func (d discreteDistribution[T]) Validate() error {
+func (d *discreteDistribution[T]) Validate() error {
 	if len(d.weights) == 0 {
 		return fmt.Errorf("weights map cannot be empty")
 	}
@@ -184,7 +192,7 @@ func (d discreteDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+func (d *discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	var zero T
 	if len(d.weights) == 0 {
 		return zero, false
@@ -195,44 +203,53 @@ func (d discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		}
 	}
 
-	keys := make([]T, 0, len(d.weights))
-	for k := range d.weights {
-		keys = append(keys, k)
-	}
-	switch any(keys[0]).(type) {
-	case int64:
-		sort.Slice(keys, func(i, j int) bool {
-			return any(keys[i]).(int64) < any(keys[j]).(int64)
-		})
-	case float32:
-		sort.Slice(keys, func(i, j int) bool {
-			return any(keys[i]).(float32) < any(keys[j]).(float32)
-		})
-	case time.Duration:
-		sort.Slice(keys, func(i, j int) bool {
-			return any(keys[i]).(time.Duration) < any(keys[j]).(time.Duration)
-		})
+	if d.cache == nil {
+		keys := make([]T, 0, len(d.weights))
+		for k := range d.weights {
+			keys = append(keys, k)
+		}
+		switch any(keys[0]).(type) {
+		case int64:
+			sort.Slice(keys, func(i, j int) bool {
+				return any(keys[i]).(int64) < any(keys[j]).(int64)
+			})
+		case float32:
+			sort.Slice(keys, func(i, j int) bool {
+				return any(keys[i]).(float32) < any(keys[j]).(float32)
+			})
+		case time.Duration:
+			sort.Slice(keys, func(i, j int) bool {
+				return any(keys[i]).(time.Duration) < any(keys[j]).(time.Duration)
+			})
+		}
+
+		totalWeight := 0
+		weights := make([]int, len(keys))
+		for i, k := range keys {
+			weights[i] = d.weights[k]
+			totalWeight += weights[i]
+		}
+
+		d.cache = &discreteCache[T]{
+			keys:        keys,
+			weights:     weights,
+			totalWeight: totalWeight,
+		}
 	}
 
-	totalWeight := 0
-	weights := make([]int, len(keys))
-	for i, k := range keys {
-		weights[i] = d.weights[k]
-		totalWeight += weights[i]
-	}
-
-	r := rng.Intn(totalWeight)
+	// Perform weighted sampling
+	r := rng.Intn(d.cache.totalWeight)
 	cumulativeWeight := 0
-	for i, w := range weights {
+	for i, w := range d.cache.weights {
 		cumulativeWeight += w
 		if r < cumulativeWeight {
-			return keys[i], true
+			return d.cache.keys[i], true
 		}
 	}
 	return zero, false
 }
 
-func (d discreteDistribution[T]) MarshalJSON() ([]byte, error) {
+func (d *discreteDistribution[T]) MarshalJSON() ([]byte, error) {
 	weights := make(map[string]int, len(d.weights))
 	for value, weight := range d.weights {
 		weights[renderToJSON(value)] = weight
@@ -272,11 +289,11 @@ type uniformDistribution[T distValueType] struct {
 	max T
 }
 
-func (d uniformDistribution[T]) GetType() string {
+func (d *uniformDistribution[T]) GetType() string {
 	return "uniform"
 }
 
-func (d uniformDistribution[T]) Validate() error {
+func (d *uniformDistribution[T]) Validate() error {
 	switch any(d.min).(type) {
 	case int64:
 		if any(d.max).(int64) < any(d.min).(int64) {
@@ -294,7 +311,7 @@ func (d uniformDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+func (d *uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.min).(type) {
 	case int64:
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
@@ -322,7 +339,7 @@ func (d uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	}
 }
 
-func (d uniformDistribution[T]) MarshalJSON() ([]byte, error) {
+func (d *uniformDistribution[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"type": d.GetType(),
 		"min":  renderToJSON(d.min),
@@ -358,11 +375,11 @@ type zipfDistribution[T distValueType] struct {
 	n uint64
 }
 
-func (d zipfDistribution[T]) GetType() string {
+func (d *zipfDistribution[T]) GetType() string {
 	return "zipf"
 }
 
-func (d zipfDistribution[T]) Validate() error {
+func (d *zipfDistribution[T]) Validate() error {
 	if d.s <= 1.0 {
 		return fmt.Errorf("zipf distribution requires s > 1.0, got %f", d.s)
 	}
@@ -375,12 +392,12 @@ func (d zipfDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+func (d *zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	zipf := rand.NewZipf(rng, d.s, d.v, d.n)
 	return T(zipf.Uint64()), true
 }
 
-func (d zipfDistribution[T]) MarshalJSON() ([]byte, error) {
+func (d *zipfDistribution[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"type": d.GetType(),
 		"s":    d.s,
@@ -424,11 +441,11 @@ type normalDistribution[T distValueType] struct {
 	max    T
 }
 
-func (d normalDistribution[T]) GetType() string {
+func (d *normalDistribution[T]) GetType() string {
 	return "normal"
 }
 
-func (d normalDistribution[T]) Validate() error {
+func (d *normalDistribution[T]) Validate() error {
 	switch any(d.stdDev).(type) {
 	case int64:
 		if any(d.stdDev).(int64) <= 0 {
@@ -455,7 +472,7 @@ func (d normalDistribution[T]) Validate() error {
 	return nil
 }
 
-func (d normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	switch any(d.mean).(type) {
 	case int64:
 		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)
@@ -498,7 +515,7 @@ func (d normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 	}
 }
 
-func (d normalDistribution[T]) MarshalJSON() ([]byte, error) {
+func (d *normalDistribution[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"type":   d.GetType(),
 		"mean":   renderToJSON(d.mean),

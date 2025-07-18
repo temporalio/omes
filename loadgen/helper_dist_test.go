@@ -22,7 +22,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: discreteDistribution[int64]{
+				distribution: &discreteDistribution[int64]{
 					weights: map[int64]int{
 						1:  10,
 						5:  20,
@@ -60,7 +60,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: discreteDistribution[float32]{
+				distribution: &discreteDistribution[float32]{
 					weights: map[float32]int{
 						1.5:   10,
 						5.25:  20,
@@ -99,7 +99,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: discreteDistribution[time.Duration]{
+				distribution: &discreteDistribution[time.Duration]{
 					weights: map[time.Duration]int{
 						1 * time.Second:  10,
 						5 * time.Second:  20,
@@ -134,7 +134,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: uniformDistribution[int64]{
+				distribution: &uniformDistribution[int64]{
 					min: 1,
 					max: 100,
 				},
@@ -169,7 +169,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: uniformDistribution[float32]{
+				distribution: &uniformDistribution[float32]{
 					min: 1.5,
 					max: 99.9,
 				},
@@ -205,7 +205,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: uniformDistribution[time.Duration]{
+				distribution: &uniformDistribution[time.Duration]{
 					min: 1 * time.Second,
 					max: 1 * time.Minute,
 				},
@@ -238,9 +238,9 @@ func TestDistributionField(t *testing.T) {
 			require.NotNil(t, df)
 
 			expected := DistributionField[int64]{
-				distribution: zipfDistribution[int64]{
-					s: 1.5,
-					v: 2.0,
+				distribution: &zipfDistribution[int64]{
+					s: 2.0,
+					v: 1.0,
 					n: 100,
 				},
 				distType: "zipf",
@@ -276,9 +276,9 @@ func TestDistributionField(t *testing.T) {
 			require.NotNil(t, df)
 
 			expected := DistributionField[float32]{
-				distribution: zipfDistribution[float32]{
-					s: 1.5,
-					v: 2.0,
+				distribution: &zipfDistribution[float32]{
+					s: 2.0,
+					v: 1.0,
 					n: 100,
 				},
 				distType: "zipf",
@@ -313,10 +313,10 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: zipfDistribution[time.Duration]{
-					s: 1.5,
-					v: 2.0,
-					n: 50,
+				distribution: &zipfDistribution[time.Duration]{
+					s: 2.0,
+					v: 1.0,
+					n: 100,
 				},
 				distType: "zipf",
 			}
@@ -352,7 +352,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: normalDistribution[int64]{
+				distribution: &normalDistribution[int64]{
 					mean:   50,
 					stdDev: 10,
 					min:    30,
@@ -388,7 +388,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: normalDistribution[float32]{
+				distribution: &normalDistribution[float32]{
 					mean:   50.5,
 					stdDev: 10.2,
 					min:    30.1,
@@ -426,7 +426,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: normalDistribution[time.Duration]{
+				distribution: &normalDistribution[time.Duration]{
 					mean:   20 * time.Second,
 					stdDev: 5 * time.Second,
 					min:    1 * time.Second,
@@ -460,7 +460,7 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: fixedDistribution[int64]{
+				distribution: &fixedDistribution[int64]{
 					value: 42,
 				},
 				distType: "fixed",
