@@ -263,6 +263,16 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'resources';
     args.push(execActivity.resources);
   }
+  if (execActivity.payload) {
+    actType = 'payload';
+    const bytesToReceive = execActivity.payload.bytesToReceive || 0;
+    const inputData = new Uint8Array(bytesToReceive);
+    for (let i = 0; i < inputData.length; i++) {
+      inputData[i] = i % 256;
+    }
+    args.push(inputData);
+    args.push(execActivity.payload.bytesToReturn);
+  }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),

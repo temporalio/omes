@@ -259,6 +259,15 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     if (executeActivity.hasDelay()) {
       activityType = "delay";
       args.add(executeActivity.getDelay());
+    } else if (executeActivity.hasPayload()) {
+      activityType = "payload";
+      KitchenSink.ExecuteActivityAction.PayloadActivity payload = executeActivity.getPayload();
+      byte[] inputData = new byte[payload.getBytesToReceive()];
+      for (int i = 0; i < inputData.length; i++) {
+        inputData[i] = (byte) (i % 256);
+      }
+      args.add(inputData);
+      args.add(payload.getBytesToReturn());
     } else {
       activityType = "noop";
     }
