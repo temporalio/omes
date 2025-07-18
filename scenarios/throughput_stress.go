@@ -112,10 +112,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
 
-	var sleepActivities *throughputstress.SleepActivityConfig
+	var sleepActivities *loadgen.SleepActivityConfig
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		sleepActivities, err = throughputstress.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		sleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
 		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", SleepActivityJsonFlag, err)
 		}
