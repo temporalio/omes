@@ -151,7 +151,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	//
 	// However; when resuming, it can happen that there is no more time left to run more iterations. In that case,
 	// we skip the executor run and go straight to the post-scenario verification.
-	if isResuming && info.Configuration.Duration > 0 {
+	if isResuming && info.Configuration.Duration <= 0 {
+		info.Logger.Info("Skipping executor run: out of time")
+	} else {
 		genericExec := &loadgen.GenericExecutor{
 			DefaultConfiguration: loadgen.RunConfiguration{
 				Iterations:    20,
@@ -211,8 +213,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		if err = genericExec.Run(ctx, info); err != nil {
 			return err
 		}
-	} else {
-		info.Logger.Info("Skipping executor run: out of time")
 	}
 
 	t.lock.Lock()
