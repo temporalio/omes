@@ -14,12 +14,11 @@ import (
 	"go.temporal.io/api/common/v1"
 )
 
-const maxConsecutiveErrors = 10
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max over frequency period using simple proportional control. " +
-			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval. Duration must be set.",
+			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval, max-consecutive-errors. Duration must be set.",
 		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 			return (&ebbAndFlow{
 				ScenarioInfo: runOptions,
@@ -48,6 +47,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	sleepDuration := e.ScenarioOptionDuration("sleep-duration", 1*time.Millisecond)
 	maxRate := e.ScenarioOptionInt("max-rate", 1000)
 	controlInterval := e.ScenarioOptionDuration("control-interval", 100*time.Millisecond)
+	maxConsecutiveErrors := e.ScenarioOptionInt("max-consecutive-errors", 10)
 
 	if minBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative")
