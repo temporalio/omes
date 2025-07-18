@@ -24,6 +24,10 @@ const (
 	ContinueAsNewAfterIterFlag = "continue-as-new-after-iterations"
 	SkipSleepFlag              = "skip-sleep"
 	NexusEndpointFlag          = "nexus-endpoint"
+	// MaxStartAttemptFlag is a flag to set the maximum number of attempts for starting a workflow.
+	MaxStartAttemptFlag = "max-start-attempt"
+	// MaxStartAttemptBackoffFlag is a flag to set the maximum backoff time between attempts for starting a workflow.
+	MaxStartAttemptBackoffFlag = "max-start-attempt-backoff"
 	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
 	// This should be set to allow resuming from a previous run.
 	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
@@ -36,6 +40,7 @@ const (
 )
 
 const (
+	baseBackoff                               = 1 * time.Second
 	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
 )
 
@@ -101,6 +106,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Also, add a buffer to account for the time it takes to wait for the last workflows to complete.
 	internalIterTimeout := info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute))
 	continueAsNewAfterIter := info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
+	maxAttempts := info.ScenarioOptionInt(MaxStartAttemptFlag, 5)
+	maxBackoff := info.ScenarioOptionDuration(MaxStartAttemptBackoffFlag, 60*time.Second)
 	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
 	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
 	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
@@ -149,29 +156,47 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, run.Iteration)
 
+			var execErr error
 			var result throughputstress.WorkflowOutput
-			if err := run.ExecuteAnyWorkflow(ctx,
-				client.StartWorkflowOptions{
-					ID:                                       wfID,
-					TaskQueue:                                run.TaskQueue(),
-					WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-					WorkflowExecutionTimeout:                 internalIterTimeout,
-					WorkflowExecutionErrorWhenAlreadyStarted: false, // allows resuming from an executor crash
-					SearchAttributes: map[string]any{
-						ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
+			for attempt := 1; attempt <= maxAttempts; attempt++ {
+				if execErr = run.ExecuteAnyWorkflow(ctx,
+					client.StartWorkflowOptions{
+						ID:                                       wfID,
+						TaskQueue:                                run.TaskQueue(),
+						WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+						WorkflowExecutionTimeout:                 internalIterTimeout,
+						WorkflowExecutionErrorWhenAlreadyStarted: false,
+						SearchAttributes: map[string]any{
+							ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
+						},
 					},
-				},
-				"throughputStress",
-				&result,
-				throughputstress.WorkflowParams{
-					SkipSleep:                   skipSleep,
-					Iterations:                  internalIterations,
-					ContinueAsNewAfterIterCount: continueAsNewAfterIter,
-					NexusEndpoint:               nexusEndpoint,
-					SleepActivities:             sleepActivities,
-				},
-			); err != nil {
-				return err
+					"throughputStress",
+					&result,
+					throughputstress.WorkflowParams{
+						SkipSleep:                   skipSleep,
+						Iterations:                  internalIterations,
+						ContinueAsNewAfterIterCount: continueAsNewAfterIter,
+						NexusEndpoint:               nexusEndpoint,
+						SleepActivities:             sleepActivities,
+					},
+				); execErr == nil {
+					break // success!
+				}
+
+				if attempt < maxAttempts {
+					backoff := min(maxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
+					select {
+					case <-time.After(backoff):
+						run.ScenarioInfo.Logger.Warnf(
+							"Attempt %d/%d: ExecuteAnyWorkflow for %s failed, backing off %v before next attempt: %v",
+							attempt, maxAttempts, wfID, backoff, execErr)
+					case <-ctx.Done():
+						return fmt.Errorf("context canceled during retries: %w", ctx.Err())
+					}
+				}
+			}
+			if execErr != nil {
+				return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, maxAttempts, execErr)
 			}
 
 			t.updateStateOnIterationCompletion(run.Iteration)
