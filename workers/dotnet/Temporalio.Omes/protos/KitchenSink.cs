@@ -110,13 +110,13 @@ namespace Temporal.Omes.KitchenSink {
             "cm90b2J1Zi5FbXB0eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIU",
             "CgxtaWxsaXNlY29uZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEo",
             "CzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2lj",
-            "ZSK/CwoVRXhlY3V0ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsy",
+            "ZSK5CwoVRXhlY3V0ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsy",
             "QS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlB",
             "Y3Rpb24uR2VuZXJpY0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29n",
             "bGUucHJvdG9idWYuRHVyYXRpb25IABImCgRub29wGAMgASgLMhYuZ29vZ2xl",
             "LnByb3RvYnVmLkVtcHR5SAASWAoJcmVzb3VyY2VzGA4gASgLMkMudGVtcG9y",
             "YWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJl",
-            "c291cmNlc0FjdGl2aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFs",
+            "c291cmNlc0FjdGl2aXR5SAASVAoHcGF5bG9hZBgTIAEoCzJBLnRlbXBvcmFs",
             "Lm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXls",
             "b2FkQWN0aXZpdHlIABISCgp0YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMY",
             "BSADKAsyPi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0",
@@ -138,100 +138,100 @@ namespace Temporal.Omes.KitchenSink {
             "b24udjEuUGF5bG9hZBqaAQoRUmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2Zv",
             "chgBIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190",
             "b19hbGxvY2F0ZRgCIAEoBBIkChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRp",
-            "b25zGAMgASgNEhgKEGNwdV95aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9h",
-            "ZEFjdGl2aXR5EhgKEGJ5dGVzX3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNf",
-            "dG9fcmV0dXJuGAIgASgFGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkS",
+            "b25zGAMgASgNEhgKEGNwdV95aWVsZF9mb3JfbXMYBCABKA0aPgoPUGF5bG9h",
+            "ZEFjdGl2aXR5EhIKCmlucHV0X2RhdGEYASABKAwSFwoPYnl0ZXNfdG9fcmV0",
+            "dXJuGAIgASgFGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFs",
+            "dWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgB",
+            "Qg8KDWFjdGl2aXR5X3R5cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGls",
+            "ZFdvcmtmbG93QWN0aW9uEhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxv",
+            "d19pZBgDIAEoCRIVCg13b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVl",
+            "dWUYBSABKAkSLgoFaW5wdXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
+            "LnYxLlBheWxvYWQSPQoad29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByAB",
+            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVu",
+            "X3RpbWVvdXQYCCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoV",
+            "d29ya2Zsb3dfdGFza190aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVm",
+            "LkR1cmF0aW9uEkoKE3BhcmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1w",
+            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3",
+            "b3JrZmxvd19pZF9yZXVzZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGku",
+            "ZW51bXMudjEuV29ya2Zsb3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGlj",
+            "eRgNIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kS",
+            "FQoNY3Jvbl9zY2hlZHVsZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVt",
+            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dB",
+            "Y3Rpb24uSGVhZGVyc0VudHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5v",
+            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5N",
+            "ZW1vRW50cnkSZwoRc2VhcmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlv",
+            "bi5TZWFyY2hBdHRyaWJ1dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUY",
+            "EiABKA4yOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtm",
+            "bG93Q2FuY2VsbGF0aW9uVHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEo",
+            "DjIsLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRl",
+            "bnQSRQoQYXdhaXRhYmxlX2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkS",
+            "CwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNv",
+            "bW1vbi52MS5QYXlsb2FkOgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJ",
+            "Ei4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXls",
+            "b2FkOgI4ARpYChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJ",
+            "Ei4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXls",
+            "b2FkOgI4ASIwChJBd2FpdFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0K",
+            "BXZhbHVlGAIgASgJIt8CChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93",
+            "X2lkGAEgASgJEg4KBnJ1bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEo",
+            "CRItCgRhcmdzGAQgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXls",
+            "b2FkEkoKB2hlYWRlcnMYBSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5TZW5kU2lnbmFsQWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFi",
+            "bGVfY2hvaWNlGAYgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "QXdhaXRhYmxlQ2hvaWNlGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkS",
             "LgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxv",
-            "YWQ6AjgBQg8KDWFjdGl2aXR5X3R5cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1",
-            "dGVDaGlsZFdvcmtmbG93QWN0aW9uEhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3",
-            "b3JrZmxvd19pZBgDIAEoCRIVCg13b3JrZmxvd190eXBlGAQgASgJEhIKCnRh",
-            "c2tfcXVldWUYBSABKAkSLgoFaW5wdXQYBiADKAsyHy50ZW1wb3JhbC5hcGku",
-            "Y29tbW9uLnYxLlBheWxvYWQSPQoad29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVv",
-            "dXQYByABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SNwoUd29ya2Zs",
-            "b3dfcnVuX3RpbWVvdXQYCCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRp",
-            "b24SOAoVd29ya2Zsb3dfdGFza190aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnBy",
-            "b3RvYnVmLkR1cmF0aW9uEkoKE3BhcmVudF9jbG9zZV9wb2xpY3kYCiABKA4y",
-            "LS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5QYXJlbnRDbG9zZVBvbGlj",
-            "eRJOChh3b3JrZmxvd19pZF9yZXVzZV9wb2xpY3kYDCABKA4yLC50ZW1wb3Jh",
-            "bC5hcGkuZW51bXMudjEuV29ya2Zsb3dJZFJldXNlUG9saWN5EjkKDHJldHJ5",
-            "X3BvbGljeRgNIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQ",
-            "b2xpY3kSFQoNY3Jvbl9zY2hlZHVsZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygL",
-            "MkMudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29y",
-            "a2Zsb3dBY3Rpb24uSGVhZGVyc0VudHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1w",
-            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0Fj",
-            "dGlvbi5NZW1vRW50cnkSZwoRc2VhcmNoX2F0dHJpYnV0ZXMYESADKAsyTC50",
-            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxv",
-            "d0FjdGlvbi5TZWFyY2hBdHRyaWJ1dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9u",
-            "X3R5cGUYEiABKA4yOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5DaGls",
-            "ZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRJHChF2ZXJzaW9uaW5nX2ludGVu",
-            "dBgTIAEoDjIsLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25p",
-            "bmdJbnRlbnQSRQoQYXdhaXRhYmxlX2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJz",
-            "RW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwu",
-            "YXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpMCglNZW1vRW50cnkSCwoDa2V5",
-            "GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
-            "MS5QYXlsb2FkOgI4ARpYChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5",
-            "GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
-            "MS5QYXlsb2FkOgI4ASIwChJBd2FpdFdvcmtmbG93U3RhdGUSCwoDa2V5GAEg",
-            "ASgJEg0KBXZhbHVlGAIgASgJIt8CChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dv",
-            "cmtmbG93X2lkGAEgASgJEg4KBnJ1bl9pZBgCIAEoCRITCgtzaWduYWxfbmFt",
-            "ZRgDIAEoCRItCgRhcmdzGAQgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
-            "MS5QYXlsb2FkEkoKB2hlYWRlcnMYBSADKAsyOS50ZW1wb3JhbC5vbWVzLmtp",
-            "dGNoZW5fc2luay5TZW5kU2lnbmFsQWN0aW9uLkhlYWRlcnNFbnRyeRJFChBh",
-            "d2FpdGFibGVfY2hvaWNlGAYgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVu",
-            "X3NpbmsuQXdhaXRhYmxlQ2hvaWNlGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkY",
+            "YWQ6AjgBIjsKFENhbmNlbFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lk",
+            "GAEgASgJEg4KBnJ1bl9pZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlv",
+            "bhIQCghwYXRjaF9pZBgBIAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlu",
+            "bmVyX2FjdGlvbhgDIAEoCzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkFjdGlvbiLjAQocVXBzZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFz",
+            "ZWFyY2hfYXR0cmlidXRlcxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
+            "bl9zaW5rLlVwc2VydFNlYXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0",
+            "cmlidXRlc0VudHJ5GlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkY",
             "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBIjsKFENhbmNlbFdvcmtmbG93QWN0aW9uEhMKC3dvcmtm",
-            "bG93X2lkGAEgASgJEg4KBnJ1bl9pZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtl",
-            "ckFjdGlvbhIQCghwYXRjaF9pZBgBIAEoCRISCgpkZXByZWNhdGVkGAIgASgI",
-            "EjgKDGlubmVyX2FjdGlvbhgDIAEoCzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkFjdGlvbiLjAQocVXBzZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlv",
-            "bhJpChFzZWFyY2hfYXR0cmlidXRlcxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMu",
-            "a2l0Y2hlbl9zaW5rLlVwc2VydFNlYXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2Vh",
-            "cmNoQXR0cmlidXRlc0VudHJ5GlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRIL",
+            "LlBheWxvYWQ6AjgBIkcKEFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRf",
+            "bWVtbxgBIAEoCzIcLnRlbXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJS",
+            "ZXR1cm5SZXN1bHRBY3Rpb24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1w",
+            "b3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rp",
+            "b24SMQoHZmFpbHVyZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYx",
+            "LkZhaWx1cmUi3gYKE0NvbnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3df",
+            "dHlwZRgBIAEoCRISCgp0YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgD",
+            "IAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3Jr",
+            "Zmxvd19ydW5fdGltZW91dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJh",
+            "dGlvbhI4ChV3b3JrZmxvd190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUu",
+            "cHJvdG9idWYuRHVyYXRpb24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5",
+            "Ek0KB2hlYWRlcnMYByADKAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5Db250aW51ZUFzTmV3QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hf",
+            "YXR0cmlidXRlcxgIIAMoCzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkNvbnRpbnVlQXNOZXdBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkK",
+            "DHJldHJ5X3BvbGljeRgJIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEu",
+            "UmV0cnlQb2xpY3kSRwoRdmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1w",
+            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1l",
+            "bW9FbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3Jh",
+            "bC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRIL",
             "CgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29t",
-            "bW9uLnYxLlBheWxvYWQ6AjgBIkcKEFVwc2VydE1lbW9BY3Rpb24SMwoNdXBz",
-            "ZXJ0ZWRfbWVtbxgBIAEoCzIcLnRlbXBvcmFsLmFwaS5jb21tb24udjEuTWVt",
-            "byJKChJSZXR1cm5SZXN1bHRBY3Rpb24SNAoLcmV0dXJuX3RoaXMYASABKAsy",
-            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQiRgoRUmV0dXJuRXJy",
-            "b3JBY3Rpb24SMQoHZmFpbHVyZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5mYWls",
-            "dXJlLnYxLkZhaWx1cmUi3gYKE0NvbnRpbnVlQXNOZXdBY3Rpb24SFQoNd29y",
-            "a2Zsb3dfdHlwZRgBIAEoCRISCgp0YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3Vt",
-            "ZW50cxgDIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBI3",
-            "ChR3b3JrZmxvd19ydW5fdGltZW91dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1",
-            "Zi5EdXJhdGlvbhI4ChV3b3JrZmxvd190YXNrX3RpbWVvdXQYBSABKAsyGS5n",
-            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SRwoEbWVtbxgGIAMoCzI5LnRlbXBv",
-            "cmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVt",
-            "b0VudHJ5Ek0KB2hlYWRlcnMYByADKAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5Db250aW51ZUFzTmV3QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFz",
-            "ZWFyY2hfYXR0cmlidXRlcxgIIAMoCzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0Vu",
-            "dHJ5EjkKDHJldHJ5X3BvbGljeRgJIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21t",
-            "b24udjEuUmV0cnlQb2xpY3kSRwoRdmVyc2lvbmluZ19pbnRlbnQYCiABKA4y",
-            "LC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50",
-            "GkwKCU1lbW9FbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50",
-            "ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNF",
-            "bnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5h",
-            "cGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNF",
-            "bnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5h",
-            "cGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBItEBChVSZW1vdGVBY3Rpdml0eU9w",
-            "dGlvbnMSTwoRY2FuY2VsbGF0aW9uX3R5cGUYASABKA4yNC50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5BY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSHgoW",
-            "ZG9fbm90X2VhZ2VybHlfZXhlY3V0ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2lu",
-            "dGVudBgDIAEoDjIsLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNp",
-            "b25pbmdJbnRlbnQqpAEKEVBhcmVudENsb3NlUG9saWN5EiMKH1BBUkVOVF9D",
-            "TE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJFTlRfQ0xPU0VfUE9M",
-            "SUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9QT0xJQ1lfQUJBTkRP",
-            "ThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVTVF9DQU5DRUwQAypA",
-            "ChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVEEAASDgoKQ09NUEFU",
-            "SUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3JrZmxvd0NhbmNlbGxh",
-            "dGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcKE0NISUxEX1dGX1RS",
-            "WV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElPTl9DT01Q",
-            "TEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElPTl9SRVFVRVNU",
-            "RUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSDgoKVFJZX0NBTkNF",
-            "TBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBABEgsKB0FCQU5E",
-            "T04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIuY29tL3RlbXBvcmFs",
-            "aW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90bzM="));
+            "bW9uLnYxLlBheWxvYWQ6AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRIL",
+            "CgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29t",
+            "bW9uLnYxLlBheWxvYWQ6AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMS",
+            "TwoRY2FuY2VsbGF0aW9uX3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5BY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90",
+            "X2VhZ2VybHlfZXhlY3V0ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgD",
+            "IAEoDjIsLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJ",
+            "bnRlbnQqpAEKEVBhcmVudENsb3NlUG9saWN5EiMKH1BBUkVOVF9DTE9TRV9Q",
+            "T0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJFTlRfQ0xPU0VfUE9MSUNZX1RF",
+            "Uk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9QT0xJQ1lfQUJBTkRPThACEiYK",
+            "IlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVTVF9DQU5DRUwQAypAChBWZXJz",
+            "aW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVEEAASDgoKQ09NUEFUSUJMRRAB",
+            "EgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3JrZmxvd0NhbmNlbGxhdGlvblR5",
+            "cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcKE0NISUxEX1dGX1RSWV9DQU5D",
+            "RUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQ",
+            "AhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElPTl9SRVFVRVNURUQQAypY",
+            "ChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSDgoKVFJZX0NBTkNFTBAAEh8K",
+            "G1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBABEgsKB0FCQU5ET04QAkJC",
+            "ChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIuY29tL3RlbXBvcmFsaW8vb21l",
+            "cy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -253,7 +253,7 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.TimerAction), global::Temporal.Omes.KitchenSink.TimerAction.Parser, new[]{ "Milliseconds", "AwaitableChoice" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity.Parser, new[]{ "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity.Parser, new[]{ "BytesToReceive", "BytesToReturn" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity.Parser, new[]{ "InputData", "BytesToReturn" }, null, null, null, null),
             null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction), global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction.Parser, new[]{ "Namespace", "WorkflowId", "WorkflowType", "TaskQueue", "Input", "WorkflowExecutionTimeout", "WorkflowRunTimeout", "WorkflowTaskTimeout", "ParentClosePolicy", "WorkflowIdReusePolicy", "RetryPolicy", "CronSchedule", "Headers", "Memo", "SearchAttributes", "CancellationType", "VersioningIntent", "AwaitableChoice" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitWorkflowState), global::Temporal.Omes.KitchenSink.AwaitWorkflowState.Parser, new[]{ "Key", "Value" }, null, null, null, null),
@@ -6037,7 +6037,7 @@ namespace Temporal.Omes.KitchenSink {
     }
 
     /// <summary>Field number for the "payload" field.</summary>
-    public const int PayloadFieldNumber = 18;
+    public const int PayloadFieldNumber = 19;
     /// <summary>
     /// There must be an activity named `payload` which accepts the PayloadActivity message as input
     /// </summary>
@@ -6242,7 +6242,7 @@ namespace Temporal.Omes.KitchenSink {
       Delay = 2,
       Noop = 3,
       Resources = 14,
-      Payload = 18,
+      Payload = 19,
     }
     private ActivityTypeOneofCase activityTypeCase_ = ActivityTypeOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6425,7 +6425,7 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteFloat(FairnessWeight);
       }
       if (activityTypeCase_ == ActivityTypeOneofCase.Payload) {
-        output.WriteRawTag(146, 1);
+        output.WriteRawTag(154, 1);
         output.WriteMessage(Payload);
       }
       if (_unknownFields != null) {
@@ -6504,7 +6504,7 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteFloat(FairnessWeight);
       }
       if (activityTypeCase_ == ActivityTypeOneofCase.Payload) {
-        output.WriteRawTag(146, 1);
+        output.WriteRawTag(154, 1);
         output.WriteMessage(Payload);
       }
       if (_unknownFields != null) {
@@ -6815,7 +6815,7 @@ namespace Temporal.Omes.KitchenSink {
             FairnessWeight = input.ReadFloat();
             break;
           }
-          case 146: {
+          case 154: {
             global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity();
             if (activityTypeCase_ == ActivityTypeOneofCase.Payload) {
               subBuilder.MergeFrom(Payload);
@@ -6958,7 +6958,7 @@ namespace Temporal.Omes.KitchenSink {
             FairnessWeight = input.ReadFloat();
             break;
           }
-          case 146: {
+          case 154: {
             global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity();
             if (activityTypeCase_ == ActivityTypeOneofCase.Payload) {
               subBuilder.MergeFrom(Payload);
@@ -7538,7 +7538,7 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public PayloadActivity(PayloadActivity other) : this() {
-          bytesToReceive_ = other.bytesToReceive_;
+          inputData_ = other.inputData_;
           bytesToReturn_ = other.bytesToReturn_;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
@@ -7549,15 +7549,15 @@ namespace Temporal.Omes.KitchenSink {
           return new PayloadActivity(this);
         }
 
-        /// <summary>Field number for the "bytes_to_receive" field.</summary>
-        public const int BytesToReceiveFieldNumber = 1;
-        private int bytesToReceive_;
+        /// <summary>Field number for the "input_data" field.</summary>
+        public const int InputDataFieldNumber = 1;
+        private pb::ByteString inputData_ = pb::ByteString.Empty;
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-        public int BytesToReceive {
-          get { return bytesToReceive_; }
+        public pb::ByteString InputData {
+          get { return inputData_; }
           set {
-            bytesToReceive_ = value;
+            inputData_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
           }
         }
 
@@ -7588,7 +7588,7 @@ namespace Temporal.Omes.KitchenSink {
           if (ReferenceEquals(other, this)) {
             return true;
           }
-          if (BytesToReceive != other.BytesToReceive) return false;
+          if (InputData != other.InputData) return false;
           if (BytesToReturn != other.BytesToReturn) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
@@ -7597,7 +7597,7 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override int GetHashCode() {
           int hash = 1;
-          if (BytesToReceive != 0) hash ^= BytesToReceive.GetHashCode();
+          if (InputData.Length != 0) hash ^= InputData.GetHashCode();
           if (BytesToReturn != 0) hash ^= BytesToReturn.GetHashCode();
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
@@ -7617,9 +7617,9 @@ namespace Temporal.Omes.KitchenSink {
         #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
           output.WriteRawMessage(this);
         #else
-          if (BytesToReceive != 0) {
-            output.WriteRawTag(8);
-            output.WriteInt32(BytesToReceive);
+          if (InputData.Length != 0) {
+            output.WriteRawTag(10);
+            output.WriteBytes(InputData);
           }
           if (BytesToReturn != 0) {
             output.WriteRawTag(16);
@@ -7635,9 +7635,9 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-          if (BytesToReceive != 0) {
-            output.WriteRawTag(8);
-            output.WriteInt32(BytesToReceive);
+          if (InputData.Length != 0) {
+            output.WriteRawTag(10);
+            output.WriteBytes(InputData);
           }
           if (BytesToReturn != 0) {
             output.WriteRawTag(16);
@@ -7653,8 +7653,8 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public int CalculateSize() {
           int size = 0;
-          if (BytesToReceive != 0) {
-            size += 1 + pb::CodedOutputStream.ComputeInt32Size(BytesToReceive);
+          if (InputData.Length != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeBytesSize(InputData);
           }
           if (BytesToReturn != 0) {
             size += 1 + pb::CodedOutputStream.ComputeInt32Size(BytesToReturn);
@@ -7671,8 +7671,8 @@ namespace Temporal.Omes.KitchenSink {
           if (other == null) {
             return;
           }
-          if (other.BytesToReceive != 0) {
-            BytesToReceive = other.BytesToReceive;
+          if (other.InputData.Length != 0) {
+            InputData = other.InputData;
           }
           if (other.BytesToReturn != 0) {
             BytesToReturn = other.BytesToReturn;
@@ -7692,8 +7692,8 @@ namespace Temporal.Omes.KitchenSink {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
-              case 8: {
-                BytesToReceive = input.ReadInt32();
+              case 10: {
+                InputData = input.ReadBytes();
                 break;
               }
               case 16: {
@@ -7715,8 +7715,8 @@ namespace Temporal.Omes.KitchenSink {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
-              case 8: {
-                BytesToReceive = input.ReadInt32();
+              case 10: {
+                InputData = input.ReadBytes();
                 break;
               }
               case 16: {

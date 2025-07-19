@@ -125,7 +125,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			target := calculateBacklogTarget(isDraining, cycleStartTime, frequency, minBacklog, maxBacklog)
 			rate := calculateSpawnRate(target, backlog, minBacklog, maxBacklog, maxRate)
 
-			e.Logger.Infof("Backlog: %d, target: %d, rate: %d/s, gen: %d, proc: %d",
+			e.Logger.Debugf("Backlog: %d, target: %d, rate: %d/s, gen: %d, proc: %d",
 				backlog, target, rate, generated, processed)
 
 			if rate > 0 {
