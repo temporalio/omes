@@ -10,14 +10,18 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/kitchensink"
-	"go.temporal.io/api/common/v1"
+	"github.com/temporalio/omes/loadgen/ebbandflow"
+	"go.temporal.io/api/workflowservice/v1"
+)
+
+const (
+	EbbAndFlowScenarioIdSearchAttribute = "EbbAndFlowScenarioId"
 )
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max over frequency period using simple proportional control. " +
-			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval, max-consecutive-errors. Duration must be set.",
+			"Options: min-backlog, max-backlog, frequency, sleep-duration, max-rate, control-interval, max-consecutive-errors, fairness-report-interval, fairness-threshold. Duration must be set.",
 		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 			return (&ebbAndFlow{
 				ScenarioInfo: runOptions,
@@ -31,13 +35,27 @@ type ebbAndFlow struct {
 	loadgen.ScenarioInfo
 	rng *rand.Rand
 
-	startTime      time.Time
-	generatedCount atomic.Int64
-	processedCount atomic.Int64
+	startTime       time.Time
+	generatedCount  atomic.Int64
+	processedCount  atomic.Int64
+	fairnessTracker *ebbandflow.FairnessTracker
 }
 
 func (e *ebbAndFlow) run(ctx context.Context) error {
 	e.startTime = time.Now()
+
+	// Initialize search attribute for visibility tracking
+	err := loadgen.InitSearchAttribute(
+		ctx,
+		e.ScenarioInfo,
+		EbbAndFlowScenarioIdSearchAttribute,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize search attribute %s: %w", EbbAndFlowScenarioIdSearchAttribute, err)
+	}
+
+	// Initialize fairness tracker
+	e.fairnessTracker = ebbandflow.NewFairnessTracker()
 
 	// Parse and validate scenario options.
 	minBacklog := int64(e.ScenarioOptionInt("min-backlog", 10))
@@ -47,6 +65,8 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	maxRate := e.ScenarioOptionInt("max-rate", 1000)
 	controlInterval := e.ScenarioOptionDuration("control-interval", 100*time.Millisecond)
 	maxConsecutiveErrors := e.ScenarioOptionInt("max-consecutive-errors", 10)
+	fairnessReportInterval := e.ScenarioOptionDuration("fairness-report-interval", frequency)
+	fairnessThreshold := e.ScenarioOptionFloat("fairness-threshold", 1.5)
 
 	if minBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative")
@@ -56,6 +76,9 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	}
 	if frequency <= 0 {
 		return fmt.Errorf("frequency must be greater than 0")
+	}
+	if fairnessThreshold <= 1.0 {
+		return fmt.Errorf("fairness-threshold must be greater than 1.0")
 	}
 
 	// Activity config
@@ -83,6 +106,12 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	errCh := make(chan error, 10000)
 	ticker := time.NewTicker(controlInterval)
 	defer ticker.Stop()
+
+	// Setup fairness reporting
+	fairnessTicker := time.NewTicker(fairnessReportInterval)
+	defer fairnessTicker.Stop()
+	go e.fairnessReportLoop(ctx, fairnessTicker, fairnessThreshold)
+
 	var startWG sync.WaitGroup
 	iter := 1
 
@@ -125,7 +154,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			target := calculateBacklogTarget(isDraining, cycleStartTime, frequency, minBacklog, maxBacklog)
 			rate := calculateSpawnRate(target, backlog, minBacklog, maxBacklog, maxRate)
 
-			e.Logger.Infof("Backlog: %d, target: %d, rate: %d/s, gen: %d, proc: %d",
+			e.Logger.Debugf("Backlog: %d, target: %d, rate: %d/s, gen: %d, proc: %d",
 				backlog, target, rate, generated, processed)
 
 			if rate > 0 {
@@ -141,7 +170,26 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 
 	e.Logger.Info("Scenario complete; waiting for all workflows to finish...")
 	startWG.Wait()
-	return nil
+
+	// Post-scenario: verify that at least one iteration was completed.
+	completedWorkflows := int(e.processedCount.Load())
+	if completedWorkflows == 0 {
+		return fmt.Errorf("no workflows completed")
+	}
+
+	// Post-scenario: verify reported workflow completion count from Visibility.
+	visibilityVerificationTimeout := e.ScenarioOptionDuration("visibility-count-timeout", 30*time.Second)
+	return loadgen.MinVisibilityCountEventually(
+		ctx,
+		e.ScenarioInfo,
+		&workflowservice.CountWorkflowExecutionsRequest{
+			Namespace: e.Namespace,
+			Query: fmt.Sprintf("%s='%s'",
+				EbbAndFlowScenarioIdSearchAttribute, e.RunID),
+		},
+		completedWorkflows,
+		visibilityVerificationTimeout,
+	)
 }
 
 func (e *ebbAndFlow) spawnWorkflowWithActivities(
@@ -156,54 +204,39 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 		Groups: template.Groups,
 	}
 
-	// Generate activities.
-	activities := config.Sample(e.rng)
-
-	// Start one workflow per activity.
-	for i, activity := range activities {
-		activity.RetryPolicy = &common.RetryPolicy{
-			MaximumAttempts:    1,
-			BackoffCoefficient: 1.0,
-		}
-
-		// Create action set with single activity.
-		actionSet := &kitchensink.ActionSet{
-			Actions: []*kitchensink.Action{
-				{
-					Variant: &kitchensink.Action_ExecActivity{
-						ExecActivity: activity,
-					},
-				},
-				{
-					Variant: &kitchensink.Action_ReturnResult{
-						ReturnResult: &kitchensink.ReturnResultAction{
-							ReturnThis: &common.Payload{},
-						},
-					},
-				},
-			},
-			Concurrent: true,
-		}
-
-		// Start workflow.
-		runID := iteration*10000 + i
-		run := e.NewRun(runID)
-		options := run.DefaultStartWorkflowOptions()
-		options.ID = fmt.Sprintf("%s-%d", options.ID, e.startTime.UnixMilli()) // avoid collision on a restart
-		workflowInput := &kitchensink.WorkflowInput{InitialActions: []*kitchensink.ActionSet{actionSet}}
-		wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
-		if err != nil {
-			return fmt.Errorf("failed to start workflow for iteration %d activity %d: %w", iteration, i, err)
-		}
-		e.generatedCount.Add(1)
-
-		// Wait for workflow completion.
-		err = wf.Get(ctx, nil)
-		if err != nil {
-			e.Logger.Errorf("Workflow failed for iteration %d activity %d: %v", iteration, i, err)
-		}
-		e.processedCount.Add(1)
+	// Start workflow.
+	runID := iteration * 10000
+	run := e.NewRun(runID)
+	options := run.DefaultStartWorkflowOptions()
+	options.ID = fmt.Sprintf("%s-%d", options.ID, e.startTime.UnixMilli()) // avoid collision on a restart
+	options.SearchAttributes = map[string]interface{}{
+		EbbAndFlowScenarioIdSearchAttribute: e.RunID,
 	}
+
+	workflowInput := &ebbandflow.WorkflowParams{
+		SleepActivities: &config,
+	}
+
+	// Start workflow to track activity timings.
+	wf, err := e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowTrack", workflowInput)
+	if err != nil {
+		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
+	}
+	e.generatedCount.Add(1)
+
+	// Wait for workflow completion and collect results.
+	var result ebbandflow.WorkflowOutput
+	err = wf.Get(ctx, &result)
+	if err != nil {
+		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
+	} else {
+		for _, activityResult := range result.Timings {
+			if activityResult.FairnessKey != "" {
+				e.fairnessTracker.Track(activityResult.FairnessKey, activityResult.ScheduleToStartMS)
+			}
+		}
+	}
+	e.processedCount.Add(1)
 
 	return nil
 }
@@ -246,4 +279,32 @@ func calculateSpawnRate(
 	rate = min(maxRate, rate)                                                     // cap at maximum allowed rate
 	rate = max(0, rate)
 	return rate
+}
+
+// fairnessReportLoop periodically generates fairness reports and starts reporting workflows.
+func (e *ebbAndFlow) fairnessReportLoop(ctx context.Context, ticker *time.Ticker, threshold float64) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// Generate fairness report.
+			report, err := e.fairnessTracker.GetReport(threshold)
+			if err != nil {
+				e.Logger.Errorf("Skipping fairness report: %v", err)
+				continue
+			}
+
+			// Log the report.
+			options := e.NewRun(0).DefaultStartWorkflowOptions()
+			options.ID = fmt.Sprintf("fairness-report-%s-%d", e.RunID, time.Now().UnixMilli())
+			_, err = e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowReport", *report)
+			if err != nil {
+				e.Logger.Errorf("Failed to start fairness report workflow: %v", err)
+			} else {
+				// Clear the data after successfully creating and submitting the report.
+				e.fairnessTracker.Clear()
+			}
+		}
+	}
 }
