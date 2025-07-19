@@ -50,6 +50,44 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, updateErr
 	}
 
+	// Add throughput stress specific update handlers
+	updateSleepErr := workflow.SetUpdateHandler(ctx, "update_sleep", func(ctx workflow.Context) error {
+		return workflow.Sleep(ctx, 1*time.Second)
+	})
+	if updateSleepErr != nil {
+		return nil, updateSleepErr
+	}
+
+	updateActivityErr := workflow.SetUpdateHandler(ctx, "update_activity", func(ctx workflow.Context) error {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 60 * time.Second,
+		})
+		return workflow.ExecuteActivity(actCtx, "noop", []*common.Payload{}).Get(ctx, nil)
+	})
+	if updateActivityErr != nil {
+		return nil, updateActivityErr
+	}
+
+	updateLocalActivityErr := workflow.SetUpdateHandler(ctx, "update_local_activity", func(ctx workflow.Context) error {
+		localActCtx := workflow.WithLocalActivityOptions(ctx, workflow.LocalActivityOptions{
+			StartToCloseTimeout: 60 * time.Second,
+		})
+		return workflow.ExecuteLocalActivity(localActCtx, "noop", []*common.Payload{}).Get(ctx, nil)
+	})
+	if updateLocalActivityErr != nil {
+		return nil, updateLocalActivityErr
+	}
+
+	// Add throughput stress specific signal handler
+	testSignalChan := workflow.GetSignalChannel(ctx, "test_signal")
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		for {
+			var signalData interface{}
+			testSignalChan.Receive(ctx, &signalData)
+			// Just acknowledge the signal, similar to original throughput stress
+		}
+	})
+
 	// Handle initial set
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
@@ -204,11 +242,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		args = append(args, delay.AsDuration())
 	} else if payload := act.GetPayload(); payload != nil {
 		actType = "payload"
-		inputData := make([]byte, payload.BytesToReceive)
-		for i := range inputData {
-			inputData[i] = byte(i % 256)
-		}
-		args = append(args, inputData, payload.BytesToReturn)
+		args = append(args, payload.BytesToReturn)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -240,7 +274,14 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			return fmt.Errorf("fairness weight is not supported yet")
 		}
 
+		// TODO(fairness): hack until there is a fairness key in the SDK
+		var activityID string
+		if h, ok := act.GetHeaders()["ActivityID"]; ok && h.Data != nil {
+			activityID = string(h.Data)
+		}
+
 		opts := workflow.ActivityOptions{
+			ActivityID:             activityID,
 			TaskQueue:              act.TaskQueue,
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
@@ -315,11 +356,12 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 // Noop is used as a no-op activity
-func Noop(_ context.Context, _ []*common.Payload) error {
+func Noop(_ context.Context) error {
 	return nil
 }
 
-func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
+// Payload return a payload of a specified size.
+func Payload(_ context.Context, bytesToReturn int32) ([]byte, error) {
 	output := make([]byte, bytesToReturn)
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
 	rand.Read(output)

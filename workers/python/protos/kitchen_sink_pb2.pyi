@@ -256,12 +256,12 @@ class ExecuteActivityAction(_message.Message):
         cpu_yield_for_ms: int
         def __init__(self, run_for: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
     class PayloadActivity(_message.Message):
-        __slots__ = ("bytes_to_receive", "bytes_to_return")
-        BYTES_TO_RECEIVE_FIELD_NUMBER: _ClassVar[int]
+        __slots__ = ("input_data", "bytes_to_return")
+        INPUT_DATA_FIELD_NUMBER: _ClassVar[int]
         BYTES_TO_RETURN_FIELD_NUMBER: _ClassVar[int]
-        bytes_to_receive: int
+        input_data: bytes
         bytes_to_return: int
-        def __init__(self, bytes_to_receive: _Optional[int] = ..., bytes_to_return: _Optional[int] = ...) -> None: ...
+        def __init__(self, input_data: _Optional[bytes] = ..., bytes_to_return: _Optional[int] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]

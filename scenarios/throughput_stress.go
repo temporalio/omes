@@ -17,6 +17,9 @@ import (
 	"go.temporal.io/sdk/client"
 )
 
+// NOTE: There is a new version of this scenario: throughput_stress_v2.go.
+// Once that is stable and has Nexus support, this scenario can be removed.
+
 // --option arguments
 const (
 	IterFlag                   = "internal-iterations"
