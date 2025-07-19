@@ -7,11 +7,16 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
 )
+
+const KitchenSinkServiceName = "kitchen-sink"
 
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
@@ -190,6 +195,8 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, err
 	} else if action.GetNestedActionSet() != nil {
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
+	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
+		return nil, handleNexusOperation(ctx, nexusOp, ws)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -314,6 +321,44 @@ func withAwaitableChoiceCustom[F workflow.Future](
 	return err
 }
 
+func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
+	client := workflow.NewNexusClient(KitchenSinkServiceName, KitchenSinkServiceName)
+
+	nexusOptions := workflow.NexusOperationOptions{}
+
+	var input interface{}
+	if nexusOp.Input != nil {
+		// For now, assuming the input is a string for simplicity.
+		input = string(nexusOp.Input.Data)
+	}
+
+	var expectedOutput interface{}
+	if nexusOp.ExpectedOutput != nil {
+		// For now, assuming the input is a string for simplicity.
+		expectedOutput = string(nexusOp.ExpectedOutput.Data)
+	}
+
+	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
+		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
+	}, nexusOp.AwaitableChoice,
+		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
+			return fut.GetNexusOperationExecution().Get(ctx, nil)
+		},
+		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
+			if expectedOutput != nil {
+				var result string
+				if err := fut.Get(ctx, &result); err != nil {
+					return err
+				}
+				if expectedOutput != result {
+					return fmt.Errorf("expected output %q, got %q", expectedOutput, result)
+				}
+				return nil
+			}
+			return fut.Get(ctx, nil)
+		})
+}
+
 // Noop is used as a no-op activity
 func Noop(_ context.Context, _ []*common.Payload) error {
 	return nil
@@ -357,3 +402,29 @@ type ReturnOrErr struct {
 	retme *common.Payload
 	err   error
 }
+
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, s string, opts nexus.StartOperationOptions) (string, error) {
+	return s, nil
+})
+
+func EchoWorkflow(ctx workflow.Context, s string) (string, error) {
+	return s, nil
+}
+
+func WaitForCancelWorkflow(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
+	return nil, workflow.Await(ctx, func() bool {
+		return false
+	})
+}
+
+var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", EchoWorkflow, func(ctx context.Context, s string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
+})
+
+var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
+})

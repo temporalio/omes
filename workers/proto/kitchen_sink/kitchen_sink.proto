@@ -158,6 +158,8 @@ message Action {
     ContinueAsNewAction continue_as_new = 13;
 
     ActionSet nested_action_set = 14;
+
+    ExecuteNexusOperation nexus_operation = 15;
   }
 }
 
@@ -431,5 +433,19 @@ enum ActivityCancellationType {
   // Do not request cancellation of the activity and immediately report cancellation to the
   // workflow
   ABANDON = 2;
+}
+
+// Execute a Nexus operation
+message ExecuteNexusOperation {
+  // Operation name to call
+  string operation = 1;
+  // Input payload for the operation
+  temporal.api.common.v1.Payload input = 2;
+  // Headers to send with the operation
+  map<string, string> headers = 3;
+  // How to await on the operation
+  AwaitableChoice awaitable_choice = 4;
+  // Expected output for verification
+  temporal.api.common.v1.Payload expected_output = 5;
 }
 

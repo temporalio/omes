@@ -9,6 +9,7 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"github.com/temporalio/omes/scenarios"
+	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
@@ -181,10 +182,10 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				return workflow.ExecuteActivity(actCtx, activityStub.SelfUpdate, UpdateLocalActivity).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
-				return runEchoNexusOperation(ctx, params, EchoSyncOperation)
+				return runEchoNexusOperation(ctx, params, kitchensink.EchoSyncOperation)
 			},
 			func(ctx workflow.Context) error {
-				return runEchoNexusOperation(ctx, params, EchoAsyncOperation)
+				return runEchoNexusOperation(ctx, params, kitchensink.EchoAsyncOperation)
 			},
 			func(ctx workflow.Context) error {
 				client := nexusClient(ctx, params)
@@ -195,7 +196,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 				defer cancel()
 				fut := client.ExecuteOperation(
 					opCtx,
-					WaitForCancelOperation,
+					kitchensink.WaitForCancelOperation,
 					nil,
 					workflow.NexusOperationOptions{},
 				)
@@ -248,7 +249,7 @@ func nexusClient(ctx workflow.Context, params *throughputstress.WorkflowParams) 
 		workflow.GetLogger(ctx).Debug("not running nexus tests, set nexusEndpoint in options to enable these tests")
 		return nil
 	}
-	return workflow.NewNexusClient(params.NexusEndpoint, ThroughputStressServiceName)
+	return workflow.NewNexusClient(params.NexusEndpoint, kitchensink.KitchenSinkServiceName)
 }
 
 func runEchoNexusOperation(ctx workflow.Context, params *throughputstress.WorkflowParams, operation nexus.OperationReference[string, string]) error {
