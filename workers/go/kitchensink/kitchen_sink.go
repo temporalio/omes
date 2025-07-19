@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -201,6 +202,13 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	if delay := act.GetDelay(); delay != nil {
 		actType = "delay"
 		args = append(args, delay.AsDuration())
+	} else if payload := act.GetPayload(); payload != nil {
+		actType = "payload"
+		inputData := make([]byte, payload.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		args = append(args, inputData, payload.BytesToReturn)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -309,6 +317,13 @@ func withAwaitableChoiceCustom[F workflow.Future](
 // Noop is used as a no-op activity
 func Noop(_ context.Context, _ []*common.Payload) error {
 	return nil
+}
+
+func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
+	output := make([]byte, bytesToReturn)
+	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
+	rand.Read(output)
+	return output, nil
 }
 
 // Delay runs for the provided delay period

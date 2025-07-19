@@ -312,6 +312,17 @@ public class KitchenSinkWorkflow
             actType = "delay";
             args.Add(delay);
         }
+        else if (eaa.Payload is { } payload)
+        {
+            actType = "payload";
+            var inputData = new byte[payload.BytesToReceive];
+            for (int i = 0; i < inputData.Length; i++)
+            {
+                inputData[i] = (byte)(i % 256);
+            }
+            args.Add(inputData);
+            args.Add(payload.BytesToReturn);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -384,5 +395,13 @@ public class KitchenSinkWorkflow
     public static async Task Delay(Google.Protobuf.WellKnownTypes.Duration delayFor)
     {
         await Task.Delay(delayFor.ToTimeSpan());
+    }
+
+    [Activity("payload")]
+    public static byte[] Payload(byte[] inputData, int bytesToReturn)
+    {
+        var output = new byte[bytesToReturn];
+        new Random().NextBytes(output);
+        return output;
     }
 }

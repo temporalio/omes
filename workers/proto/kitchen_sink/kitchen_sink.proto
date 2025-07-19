@@ -202,6 +202,10 @@ message ExecuteActivityAction {
     uint32 cpu_yield_every_n_iterations = 3;
     uint32 cpu_yield_for_ms = 4;
   }
+  message PayloadActivity {
+    int32 bytes_to_receive = 1;
+    int32 bytes_to_return = 2;
+  }
   oneof activity_type {
     GenericActivity generic = 1;
     // There must be an activity named `delay` which accepts some kind of duration and waits
@@ -211,6 +215,8 @@ message ExecuteActivityAction {
     google.protobuf.Empty noop = 3;
     // There must be an activity named `resources` which accepts the ResourcesActivity message as input
     ResourcesActivity resources = 14;
+    // There must be an activity named `payload` which accepts the PayloadActivity message as input
+    PayloadActivity payload = 18;
   }
   // The name of the task queue to place this activity request in
   string task_queue = 4;

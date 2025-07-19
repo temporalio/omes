@@ -24,3 +24,11 @@ export async function resources(input: IResourcesActivity) {
     });
   }
 }
+
+export async function payload(inputData: Uint8Array, bytesToReturn: number): Promise<Uint8Array> {
+  const output = new Uint8Array(bytesToReturn);
+  for (let i = 0; i < bytesToReturn; i++) {
+    output[i] = Math.floor(Math.random() * 256);
+  }
+  return output;
+}

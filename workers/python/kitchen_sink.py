@@ -177,11 +177,18 @@ class KitchenSinkWorkflow:
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
     act_type = "noop"
-    args = []
+    args: list[Any] = []
 
     if execute_activity.HasField("delay"):
         act_type = "delay"
         args.append(execute_activity.delay)
+    elif execute_activity.HasField("payload"):
+        act_type = "payload"
+        input_data = bytes(
+            i % 256 for i in range(execute_activity.payload.bytes_to_receive)
+        )
+        args.append(input_data)
+        args.append(execute_activity.payload.bytes_to_return)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
