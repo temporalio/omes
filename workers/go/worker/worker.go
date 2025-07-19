@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
@@ -57,6 +58,7 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 	tpsActivities := throughputstress.Activities{
 		Client: client,
 	}
+	ebbFlowActivities := ebbandflow.Activities{}
 	service := throughputstress.MustCreateNexusService()
 
 	for _, taskQueue := range taskQueues {
@@ -79,6 +81,9 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterWorkflow(throughputstress.EchoWorkflow)
 			w.RegisterWorkflow(throughputstress.WaitForCancelWorkflow)
 			w.RegisterActivity(&tpsActivities)
+			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
+		w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
+			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
