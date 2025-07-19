@@ -197,6 +197,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       Map<String, Object> memo = new HashMap();
       upsertMemoAction.getUpsertedMemo().getFieldsMap().forEach(memo::put);
       Workflow.upsertMemo(memo);
+    } else if (action.hasNexusOperation()) {
+      throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
     } else {
       throw Workflow.wrap(new IllegalArgumentException("Unrecognized action type"));
     }

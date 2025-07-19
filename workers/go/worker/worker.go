@@ -3,6 +3,7 @@ package worker
 import (
 	"fmt"
 
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/kitchensink"
@@ -57,7 +58,12 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 	tpsActivities := throughputstress.Activities{
 		Client: client,
 	}
-	service := throughputstress.MustCreateNexusService()
+
+	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
+	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
+	if err != nil {
+		panic(fmt.Sprintf("failed to register operations: %v", err))
+	}
 
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
@@ -76,8 +82,8 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
-			w.RegisterWorkflow(throughputstress.EchoWorkflow)
-			w.RegisterWorkflow(throughputstress.WaitForCancelWorkflow)
+			w.RegisterWorkflow(kitchensink.EchoWorkflow)
+			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
 			w.RegisterActivity(&tpsActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())

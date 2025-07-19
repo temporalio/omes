@@ -199,6 +199,8 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       upsertSearchAttributes(searchAttributes);
     } else if (action.nestedActionSet) {
       return await handleActionSet(action.nestedActionSet);
+    } else if (action.nexusOperation) {
+      throw new ApplicationFailure('ExecuteNexusOperation is not supported');
     } else {
       throw new ApplicationFailure('Unknown action ' + JSON.stringify(action));
     }

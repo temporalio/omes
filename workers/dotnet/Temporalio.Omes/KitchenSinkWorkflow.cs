@@ -240,6 +240,10 @@ public class KitchenSinkWorkflow
         {
             return await HandleActionSetAsync(nestedActionSet);
         }
+        else if (action.NexusOperation is { })
+        {
+            throw new ApplicationFailureException("ExecuteNexusOperation is not supported");
+        }
         else
         {
             throw new ApplicationFailureException("Unrecognized action");
