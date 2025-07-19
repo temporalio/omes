@@ -10,6 +10,7 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 ## Prerequisites
 
 - [Go](https://golang.org/) 1.24+
+  - `protoc` + `protoc-gen-go` or Docker for [Kitchen Sink Workflow](#kitchen-sink-workflow)
 - [Java](https://openjdk.org/) 8+
 - TypeScript: [Node](https://nodejs.org) 16+
 - Python: [uv](https://docs.astral.sh/uv/)
