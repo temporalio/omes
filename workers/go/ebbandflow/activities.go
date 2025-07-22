@@ -3,6 +3,7 @@ package ebbandflow
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/ebbandflow"
@@ -46,10 +47,17 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 		"weightAdjustedFairness", fmt.Sprintf("%.3f", report.WeightAdjustedFairness),
 	}
 
-	if report.ViolationSummary == "" {
+	if len(report.Violations) == 0 {
 		logger.Info("Fairness passed", commonFields...)
 	} else {
-		errorFields := append(commonFields, "violationSummary", report.ViolationSummary)
+		// Join violations for logging
+		var violations []string
+		for _, desc := range report.Violations {
+			violations = append(violations, desc)
+		}
+		violationSummary := fmt.Sprintf("%d violations: [%s]", len(violations), strings.Join(violations, "; "))
+		
+		errorFields := append(commonFields, "violationSummary", violationSummary)
 		for i, offender := range report.TopViolators {
 			violatorSummary := fmt.Sprintf("key=%s p95=%.2fms weight=%.1f weightAdjustedP95=%.2fms severity=%.2f",
 				offender.FairnessKey,
@@ -68,8 +76,11 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 	metricsHandler.Gauge("ebbandflow_fairness_atkinson_index").Update(report.AtkinsonIndex)
 	metricsHandler.Gauge("ebbandflow_fairness_weight_adjusted").Update(report.WeightAdjustedFairness)
 	metricsHandler.Gauge("ebbandflow_fairness_key_count").Update(float64(report.KeyCount))
-	if report.ViolationSummary != "" {
-		metricsHandler.Counter("ebbandflow_fairness_violation_total").Inc(1)
+	
+	// Emit one violation metric per validation index with labels
+	for validationIndex := range report.Violations {
+		metricsHandler.WithTags(map[string]string{"validation_index": validationIndex}).
+			Counter("ebbandflow_fairness_violation").Inc(1)
 	}
 
 	return nil

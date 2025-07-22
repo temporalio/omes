@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 )
@@ -27,13 +26,13 @@ type ViolatorReport struct {
 }
 
 type FairnessReport struct {
-	KeyCount               int              `json:"keyCount"`
-	WeightAdjustedFairness float64          `json:"weightAdjustedFairness"`
-	JainsFairnessIndex     float64          `json:"jainsFairnessIndex"`
-	CoefficientOfVariation float64          `json:"coefficientOfVariation"`
-	AtkinsonIndex          float64          `json:"atkinsonIndex"`
-	ViolationSummary       string           `json:"violationSummary"`
-	TopViolators           []ViolatorReport `json:"topViolators"`
+	KeyCount               int               `json:"keyCount"`
+	WeightAdjustedFairness float64           `json:"weightAdjustedFairness"`
+	JainsFairnessIndex     float64           `json:"jainsFairnessIndex"`
+	CoefficientOfVariation float64           `json:"coefficientOfVariation"`
+	AtkinsonIndex          float64           `json:"atkinsonIndex"`
+	Violations             map[string]string `json:"violations"` // key is fairness indicator
+	TopViolators           []ViolatorReport  `json:"topViolators"`
 }
 
 func NewFairnessTracker() *FairnessTracker {
@@ -160,28 +159,26 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 	// Identify top 5 violators
 	topViolators := ft.identifyTopViolators(p95Values, weights, p95Slice, significantDiffThreshold)
 
-	// Create violation summary
-	var violations []string
+	// Create violations map
+	violationMap := make(map[string]string)
 	if weightAdjustedViolation {
-		violations = append(violations, fmt.Sprintf("Weight-adjusted fairness: %.2f > %.2f threshold", weightAdjustedFairness, significantDiffThreshold))
+		desc := fmt.Sprintf("Weight-adjusted fairness: %.2f > %.2f threshold", weightAdjustedFairness, significantDiffThreshold)
+		violationMap["weight_adjusted_fairness"] = desc
 	}
 	if jainsViolation {
-		violations = append(violations, fmt.Sprintf("Jain's fairness index: %.3f < 0.800 threshold", jainsFairnessIndex))
+		desc := fmt.Sprintf("Jain's fairness index: %.3f < 0.800 threshold", jainsFairnessIndex)
+		violationMap["jains_fairness_index"] = desc
 	}
 	if cvViolation {
-		violations = append(violations, fmt.Sprintf("Coefficient of variation: %.3f > 0.500 threshold", coefficientOfVariation))
+		desc := fmt.Sprintf("Coefficient of variation: %.3f > 0.500 threshold", coefficientOfVariation)
+		violationMap["coefficient_of_variation"] = desc
 	}
 	if atkinsonViolation {
-		violations = append(violations, fmt.Sprintf("Atkinson index: %.3f > 0.300 threshold", atkinsonIndex))
+		desc := fmt.Sprintf("Atkinson index: %.3f > 0.300 threshold", atkinsonIndex)
+		violationMap["atkinson_index"] = desc
 	}
 	if latencyEnvelopeViolation {
-		violations = append(violations, latencyEnvelopeDesc)
-	}
-
-	// Combined violation detection
-	var violationSummary string
-	if len(violations) > 0 {
-		violationSummary = fmt.Sprintf("%d violations: [%s]", len(violations), strings.Join(violations, "; "))
+		violationMap["latency_envelope"] = latencyEnvelopeDesc
 	}
 
 	return &FairnessReport{
@@ -190,7 +187,7 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 		JainsFairnessIndex:     jainsFairnessIndex,
 		CoefficientOfVariation: coefficientOfVariation,
 		AtkinsonIndex:          atkinsonIndex,
-		ViolationSummary:       violationSummary,
+		Violations:             violationMap,
 		TopViolators:           topViolators,
 	}, nil
 }
