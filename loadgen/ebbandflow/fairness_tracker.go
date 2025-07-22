@@ -1,6 +1,7 @@
 package ebbandflow
 
 import (
+	"container/heap"
 	"fmt"
 	"math"
 	"sort"
@@ -11,10 +12,30 @@ import (
 // 2.0 means P95 can be up to 2x the P50 before violation.
 const significantDiffThreshold = 2.0
 
+// latencyHeap is a min-heap of float64 values (milliseconds).
+
+type latencyHeap []float64
+
+func (h latencyHeap) Len() int           { return len(h) }
+func (h latencyHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h latencyHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *latencyHeap) Push(x interface{}) {
+	*h = append(*h, x.(float64))
+}
+
+func (h *latencyHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
 type FairnessTracker struct {
 	mu        sync.RWMutex
-	latencies map[string][]time.Duration // fairness key -> list of latencies
-	weights   map[string]float32         // fairness key -> single weight
+	latencies map[string]*latencyHeap // fairness key -> heap of latencies in milliseconds
+	weights   map[string]float32      // fairness key -> single weight
 }
 
 type ViolatorReport struct {
@@ -37,7 +58,7 @@ type FairnessReport struct {
 
 func NewFairnessTracker() *FairnessTracker {
 	return &FairnessTracker{
-		latencies: make(map[string][]time.Duration),
+		latencies: make(map[string]*latencyHeap),
 		weights:   make(map[string]float32),
 	}
 }
@@ -52,44 +73,35 @@ func (ft *FairnessTracker) Track(
 	}
 	ft.mu.Lock()
 	defer ft.mu.Unlock()
-	ft.latencies[fairnessKey] = append(ft.latencies[fairnessKey], scheduleToStartLatency)
-	ft.weights[fairnessKey] = fairnessWeight
-}
 
-// Clear clears all data.
-func (ft *FairnessTracker) Clear() {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-	ft.latencies = make(map[string][]time.Duration)
-	ft.weights = make(map[string]float32) // assume weights never change
+	h, exists := ft.latencies[fairnessKey]
+	if !exists {
+		h = &latencyHeap{}
+		heap.Init(h)
+		ft.latencies[fairnessKey] = h
+	}
+	heap.Push(h, float64(scheduleToStartLatency.Milliseconds()))
+	ft.weights[fairnessKey] = fairnessWeight
 }
 
 // GetReport returns a processed fairness report without clearing the data.
 func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-
+	ft.mu.RLock()
 	if len(ft.latencies) < 2 {
+		ft.mu.RUnlock()
 		return nil, fmt.Errorf("need at least 2 fairness keys, got %d", len(ft.latencies))
 	}
 
-	p95Values := make(map[string]float64)
-	sampleCounts := make(map[string]int)
+	heapData := make(map[string][]float64)
 	weights := make(map[string]float64)
 
-	for key, latencies := range ft.latencies {
-		if len(latencies) == 0 {
+	for key, h := range ft.latencies {
+		if h.Len() == 0 {
 			continue
 		}
-		// Convert durations to float64 milliseconds
-		values := make([]float64, len(latencies))
-		for i, latency := range latencies {
-			values[i] = float64(latency.Milliseconds())
-		}
-		sort.Float64s(values)
-		p95 := calculatePercentile(values, 0.95)
-		p95Values[key] = p95
-		sampleCounts[key] = len(latencies)
+		values := make([]float64, h.Len())
+		copy(values, *h)
+		heapData[key] = values
 
 		// Get the weight for this key
 		if weight, exists := ft.weights[key]; exists {
@@ -97,6 +109,17 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 		} else {
 			weights[key] = 1.0 // default weight
 		}
+	}
+	ft.mu.RUnlock()
+
+	p95Values := make(map[string]float64)
+	sampleCounts := make(map[string]int)
+
+	for key, values := range heapData {
+		sort.Float64s(values)
+		p95 := calculatePercentile(values, 0.95)
+		p95Values[key] = p95
+		sampleCounts[key] = len(values)
 	}
 
 	if len(p95Values) < 2 {
@@ -154,7 +177,7 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 	// Approach 5: Latency Envelope Analysis
 	// Checks if any key has P99/P95 ratio > 3.0, indicating "fat tail" distributions
 	// that suggest intermittent starvation or inconsistent scheduler behavior.
-	latencyEnvelopeViolation, latencyEnvelopeDesc := ft.checkLatencyEnvelopeWithDesc(p95Values, 3.0)
+	latencyEnvelopeViolation, latencyEnvelopeDesc := checkLatencyEnvelopeWithDesc(heapData, 3.0)
 
 	// Identify top 5 violators
 	topViolators := ft.identifyTopViolators(p95Values, weights, p95Slice, significantDiffThreshold)
@@ -389,16 +412,13 @@ func calculateAtkinsonIndex(p95Values map[string]float64, epsilon float64) float
 // checkLatencyEnvelope checks if any key has P99/P95 ratio exceeding threshold
 func (ft *FairnessTracker) checkLatencyEnvelope(p95Values map[string]float64, threshold float64) bool {
 	for key := range p95Values {
-		latencies, exists := ft.latencies[key]
-		if !exists || len(latencies) < 10 { // Need enough samples for P99
+		h, exists := ft.latencies[key]
+		if !exists || h.Len() < 10 { // Need enough samples for P99
 			continue
 		}
 
-		// Convert durations to float64 milliseconds
-		values := make([]float64, len(latencies))
-		for i, latency := range latencies {
-			values[i] = float64(latency.Milliseconds())
-		}
+		values := make([]float64, h.Len())
+		copy(values, *h)
 		sort.Float64s(values)
 
 		p95 := calculatePercentile(values, 0.95)
@@ -412,20 +432,13 @@ func (ft *FairnessTracker) checkLatencyEnvelope(p95Values map[string]float64, th
 }
 
 // checkLatencyEnvelopeWithDesc checks if any key has P99/P95 ratio exceeding threshold and returns descriptive text
-func (ft *FairnessTracker) checkLatencyEnvelopeWithDesc(p95Values map[string]float64, threshold float64) (bool, string) {
-	for key := range p95Values {
-		latencies, exists := ft.latencies[key]
-		if !exists || len(latencies) < 10 { // Need enough samples for P99
+func checkLatencyEnvelopeWithDesc(heapData map[string][]float64, threshold float64) (bool, string) {
+	for key, values := range heapData {
+		if len(values) < 10 { // Need enough samples for P99
 			continue
 		}
 
-		// Convert durations to float64 milliseconds
-		values := make([]float64, len(latencies))
-		for i, latency := range latencies {
-			values[i] = float64(latency.Milliseconds())
-		}
-		sort.Float64s(values)
-
+		// Values are already sorted from GetReport
 		p95 := calculatePercentile(values, 0.95)
 		p99 := calculatePercentile(values, 0.99)
 

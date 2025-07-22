@@ -329,9 +329,6 @@ func (e *ebbAndFlow) fairnessReportLoop(ctx context.Context, ticker *time.Ticker
 			_, err = e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowReport", *report)
 			if err != nil {
 				e.Logger.Errorf("Failed to start fairness report workflow: %v", err)
-			} else {
-				// Clear the data after successfully creating and submitting the report.
-				e.fairnessTracker.Clear()
 			}
 		}
 	}

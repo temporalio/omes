@@ -261,7 +261,7 @@ func TestCheckLatencyEnvelope(t *testing.T) {
 	}
 
 	for _, latency := range keyALatencies {
-		ft.latencies["keyA"] = append(ft.latencies["keyA"], latency)
+		ft.Track("keyA", 1.0, latency)
 	}
 
 	// Add normal distribution for keyB
@@ -279,7 +279,7 @@ func TestCheckLatencyEnvelope(t *testing.T) {
 	}
 
 	for _, latency := range keyBLatencies {
-		ft.latencies["keyB"] = append(ft.latencies["keyB"], latency)
+		ft.Track("keyB", 1.0, latency)
 	}
 
 	p95Values := map[string]float64{
