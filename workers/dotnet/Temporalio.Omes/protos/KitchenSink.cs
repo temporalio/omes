@@ -221,27 +221,26 @@ namespace Temporal.Omes.KitchenSink {
             "c2luay5BY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2Vy",
             "bHlfZXhlY3V0ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIs",
             "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQi",
-            "3AIKFUV4ZWN1dGVOZXh1c09wZXJhdGlvbhIRCglvcGVyYXRpb24YASABKAkS",
-            "LgoFaW5wdXQYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxv",
-            "YWQSTwoHaGVhZGVycxgDIAMoCzI+LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
-            "aW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlvbi5IZWFkZXJzRW50cnkSRQoQYXdh",
-            "aXRhYmxlX2Nob2ljZRgEIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
-            "aW5rLkF3YWl0YWJsZUNob2ljZRI4Cg9leHBlY3RlZF9vdXRwdXQYBSABKAsy",
-            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQaLgoMSGVhZGVyc0Vu",
-            "dHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVu",
-            "dENsb3NlUG9saWN5EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJ",
-            "RUQQABIhCh1QQVJFTlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BB",
-            "UkVOVF9DTE9TRV9QT0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9Q",
-            "T0xJQ1lfUkVRVUVTVF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8K",
-            "C1VOU1BFQ0lGSUVEEAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqi",
-            "AQodQ2hpbGRXb3JrZmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0Zf",
-            "QUJBTkRPThAAEhcKE0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9X",
-            "Rl9XQUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9X",
-            "QUlUX0NBTkNFTExBVElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNl",
-            "bGxhdGlvblR5cGUSDgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFU",
-            "SU9OX0NPTVBMRVRFRBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5v",
-            "bWVzWi5naXRodWIuY29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNo",
-            "ZW5zaW5rYgZwcm90bzM="));
+            "rAIKFUV4ZWN1dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIR",
+            "CglvcGVyYXRpb24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgE",
+            "IAMoCzI+LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1",
+            "c09wZXJhdGlvbi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgF",
+            "IAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNo",
+            "b2ljZRIXCg9leHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5",
+            "EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENs",
+            "b3NlUG9saWN5EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQ",
+            "ABIhCh1QQVJFTlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVO",
+            "VF9DTE9TRV9QT0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJ",
+            "Q1lfUkVRVUVTVF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VO",
+            "U1BFQ0lGSUVEEAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQod",
+            "Q2hpbGRXb3JrZmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJB",
+            "TkRPThAAEhcKE0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9X",
+            "QUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlU",
+            "X0NBTkNFTExBVElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxh",
+            "dGlvblR5cGUSDgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9O",
+            "X0NPTVBMRVRFRBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVz",
+            "Wi5naXRodWIuY29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5z",
+            "aW5rYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -276,7 +275,7 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ReturnErrorAction), global::Temporal.Omes.KitchenSink.ReturnErrorAction.Parser, new[]{ "Failure" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ContinueAsNewAction), global::Temporal.Omes.KitchenSink.ContinueAsNewAction.Parser, new[]{ "WorkflowType", "TaskQueue", "Arguments", "WorkflowRunTimeout", "WorkflowTaskTimeout", "Memo", "Headers", "SearchAttributes", "RetryPolicy", "VersioningIntent" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
           }));
     }
     #endregion
@@ -11411,11 +11410,12 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public ExecuteNexusOperation(ExecuteNexusOperation other) : this() {
+      endpoint_ = other.endpoint_;
       operation_ = other.operation_;
-      input_ = other.input_ != null ? other.input_.Clone() : null;
+      input_ = other.input_;
       headers_ = other.headers_.Clone();
       awaitableChoice_ = other.awaitableChoice_ != null ? other.awaitableChoice_.Clone() : null;
-      expectedOutput_ = other.expectedOutput_ != null ? other.expectedOutput_.Clone() : null;
+      expectedOutput_ = other.expectedOutput_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -11425,8 +11425,20 @@ namespace Temporal.Omes.KitchenSink {
       return new ExecuteNexusOperation(this);
     }
 
+    /// <summary>Field number for the "endpoint" field.</summary>
+    public const int EndpointFieldNumber = 1;
+    private string endpoint_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Endpoint {
+      get { return endpoint_; }
+      set {
+        endpoint_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "operation" field.</summary>
-    public const int OperationFieldNumber = 1;
+    public const int OperationFieldNumber = 2;
     private string operation_ = "";
     /// <summary>
     /// Operation name to call
@@ -11441,24 +11453,24 @@ namespace Temporal.Omes.KitchenSink {
     }
 
     /// <summary>Field number for the "input" field.</summary>
-    public const int InputFieldNumber = 2;
-    private global::Temporalio.Api.Common.V1.Payload input_;
+    public const int InputFieldNumber = 3;
+    private string input_ = "";
     /// <summary>
     /// Input payload for the operation
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Temporalio.Api.Common.V1.Payload Input {
+    public string Input {
       get { return input_; }
       set {
-        input_ = value;
+        input_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
     /// <summary>Field number for the "headers" field.</summary>
-    public const int HeadersFieldNumber = 3;
+    public const int HeadersFieldNumber = 4;
     private static readonly pbc::MapField<string, string>.Codec _map_headers_codec
-        = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 26);
+        = new pbc::MapField<string, string>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForString(18, ""), 34);
     private readonly pbc::MapField<string, string> headers_ = new pbc::MapField<string, string>();
     /// <summary>
     /// Headers to send with the operation
@@ -11470,7 +11482,7 @@ namespace Temporal.Omes.KitchenSink {
     }
 
     /// <summary>Field number for the "awaitable_choice" field.</summary>
-    public const int AwaitableChoiceFieldNumber = 4;
+    public const int AwaitableChoiceFieldNumber = 5;
     private global::Temporal.Omes.KitchenSink.AwaitableChoice awaitableChoice_;
     /// <summary>
     /// How to await on the operation
@@ -11485,17 +11497,17 @@ namespace Temporal.Omes.KitchenSink {
     }
 
     /// <summary>Field number for the "expected_output" field.</summary>
-    public const int ExpectedOutputFieldNumber = 5;
-    private global::Temporalio.Api.Common.V1.Payload expectedOutput_;
+    public const int ExpectedOutputFieldNumber = 6;
+    private string expectedOutput_ = "";
     /// <summary>
     /// Expected output for verification
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Temporalio.Api.Common.V1.Payload ExpectedOutput {
+    public string ExpectedOutput {
       get { return expectedOutput_; }
       set {
-        expectedOutput_ = value;
+        expectedOutput_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -11514,11 +11526,12 @@ namespace Temporal.Omes.KitchenSink {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (Endpoint != other.Endpoint) return false;
       if (Operation != other.Operation) return false;
-      if (!object.Equals(Input, other.Input)) return false;
+      if (Input != other.Input) return false;
       if (!Headers.Equals(other.Headers)) return false;
       if (!object.Equals(AwaitableChoice, other.AwaitableChoice)) return false;
-      if (!object.Equals(ExpectedOutput, other.ExpectedOutput)) return false;
+      if (ExpectedOutput != other.ExpectedOutput) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -11526,11 +11539,12 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (Endpoint.Length != 0) hash ^= Endpoint.GetHashCode();
       if (Operation.Length != 0) hash ^= Operation.GetHashCode();
-      if (input_ != null) hash ^= Input.GetHashCode();
+      if (Input.Length != 0) hash ^= Input.GetHashCode();
       hash ^= Headers.GetHashCode();
       if (awaitableChoice_ != null) hash ^= AwaitableChoice.GetHashCode();
-      if (expectedOutput_ != null) hash ^= ExpectedOutput.GetHashCode();
+      if (ExpectedOutput.Length != 0) hash ^= ExpectedOutput.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -11549,22 +11563,26 @@ namespace Temporal.Omes.KitchenSink {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (Operation.Length != 0) {
+      if (Endpoint.Length != 0) {
         output.WriteRawTag(10);
+        output.WriteString(Endpoint);
+      }
+      if (Operation.Length != 0) {
+        output.WriteRawTag(18);
         output.WriteString(Operation);
       }
-      if (input_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Input);
+      if (Input.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Input);
       }
       headers_.WriteTo(output, _map_headers_codec);
       if (awaitableChoice_ != null) {
-        output.WriteRawTag(34);
+        output.WriteRawTag(42);
         output.WriteMessage(AwaitableChoice);
       }
-      if (expectedOutput_ != null) {
-        output.WriteRawTag(42);
-        output.WriteMessage(ExpectedOutput);
+      if (ExpectedOutput.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ExpectedOutput);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -11576,22 +11594,26 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Operation.Length != 0) {
+      if (Endpoint.Length != 0) {
         output.WriteRawTag(10);
+        output.WriteString(Endpoint);
+      }
+      if (Operation.Length != 0) {
+        output.WriteRawTag(18);
         output.WriteString(Operation);
       }
-      if (input_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Input);
+      if (Input.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Input);
       }
       headers_.WriteTo(ref output, _map_headers_codec);
       if (awaitableChoice_ != null) {
-        output.WriteRawTag(34);
+        output.WriteRawTag(42);
         output.WriteMessage(AwaitableChoice);
       }
-      if (expectedOutput_ != null) {
-        output.WriteRawTag(42);
-        output.WriteMessage(ExpectedOutput);
+      if (ExpectedOutput.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ExpectedOutput);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -11603,18 +11625,21 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (Endpoint.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Endpoint);
+      }
       if (Operation.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Operation);
       }
-      if (input_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Input);
+      if (Input.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
       }
       size += headers_.CalculateSize(_map_headers_codec);
       if (awaitableChoice_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(AwaitableChoice);
       }
-      if (expectedOutput_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ExpectedOutput);
+      if (ExpectedOutput.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedOutput);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -11628,14 +11653,14 @@ namespace Temporal.Omes.KitchenSink {
       if (other == null) {
         return;
       }
+      if (other.Endpoint.Length != 0) {
+        Endpoint = other.Endpoint;
+      }
       if (other.Operation.Length != 0) {
         Operation = other.Operation;
       }
-      if (other.input_ != null) {
-        if (input_ == null) {
-          Input = new global::Temporalio.Api.Common.V1.Payload();
-        }
-        Input.MergeFrom(other.Input);
+      if (other.Input.Length != 0) {
+        Input = other.Input;
       }
       headers_.MergeFrom(other.headers_);
       if (other.awaitableChoice_ != null) {
@@ -11644,11 +11669,8 @@ namespace Temporal.Omes.KitchenSink {
         }
         AwaitableChoice.MergeFrom(other.AwaitableChoice);
       }
-      if (other.expectedOutput_ != null) {
-        if (expectedOutput_ == null) {
-          ExpectedOutput = new global::Temporalio.Api.Common.V1.Payload();
-        }
-        ExpectedOutput.MergeFrom(other.ExpectedOutput);
+      if (other.ExpectedOutput.Length != 0) {
+        ExpectedOutput = other.ExpectedOutput;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -11666,32 +11688,30 @@ namespace Temporal.Omes.KitchenSink {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            Operation = input.ReadString();
+            Endpoint = input.ReadString();
             break;
           }
           case 18: {
-            if (input_ == null) {
-              Input = new global::Temporalio.Api.Common.V1.Payload();
-            }
-            input.ReadMessage(Input);
+            Operation = input.ReadString();
             break;
           }
           case 26: {
-            headers_.AddEntriesFrom(input, _map_headers_codec);
+            Input = input.ReadString();
             break;
           }
           case 34: {
+            headers_.AddEntriesFrom(input, _map_headers_codec);
+            break;
+          }
+          case 42: {
             if (awaitableChoice_ == null) {
               AwaitableChoice = new global::Temporal.Omes.KitchenSink.AwaitableChoice();
             }
             input.ReadMessage(AwaitableChoice);
             break;
           }
-          case 42: {
-            if (expectedOutput_ == null) {
-              ExpectedOutput = new global::Temporalio.Api.Common.V1.Payload();
-            }
-            input.ReadMessage(ExpectedOutput);
+          case 50: {
+            ExpectedOutput = input.ReadString();
             break;
           }
         }
@@ -11710,32 +11730,30 @@ namespace Temporal.Omes.KitchenSink {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            Operation = input.ReadString();
+            Endpoint = input.ReadString();
             break;
           }
           case 18: {
-            if (input_ == null) {
-              Input = new global::Temporalio.Api.Common.V1.Payload();
-            }
-            input.ReadMessage(Input);
+            Operation = input.ReadString();
             break;
           }
           case 26: {
-            headers_.AddEntriesFrom(ref input, _map_headers_codec);
+            Input = input.ReadString();
             break;
           }
           case 34: {
+            headers_.AddEntriesFrom(ref input, _map_headers_codec);
+            break;
+          }
+          case 42: {
             if (awaitableChoice_ == null) {
               AwaitableChoice = new global::Temporal.Omes.KitchenSink.AwaitableChoice();
             }
             input.ReadMessage(AwaitableChoice);
             break;
           }
-          case 42: {
-            if (expectedOutput_ == null) {
-              ExpectedOutput = new global::Temporalio.Api.Common.V1.Payload();
-            }
-            input.ReadMessage(ExpectedOutput);
+          case 50: {
+            ExpectedOutput = input.ReadString();
             break;
           }
         }

@@ -322,36 +322,22 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
-	client := workflow.NewNexusClient(KitchenSinkServiceName, KitchenSinkServiceName)
-
-	nexusOptions := workflow.NexusOperationOptions{}
-
-	var input interface{}
-	if nexusOp.Input != nil {
-		// For now, assuming the input is a string for simplicity.
-		input = string(nexusOp.Input.Data)
-	}
-
-	var expectedOutput interface{}
-	if nexusOp.ExpectedOutput != nil {
-		// For now, assuming the input is a string for simplicity.
-		expectedOutput = string(nexusOp.ExpectedOutput.Data)
-	}
-
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
-		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
+		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
+		nexusOptions := workflow.NexusOperationOptions{}
+		return client.ExecuteOperation(ctx, nexusOp.Operation, nexusOp.Input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
 		},
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
-			if expectedOutput != nil {
+			if expOutput := nexusOp.GetExpectedOutput(); expOutput != "" {
 				var result string
 				if err := fut.Get(ctx, &result); err != nil {
 					return err
 				}
-				if expectedOutput != result {
-					return fmt.Errorf("expected output %q, got %q", expectedOutput, result)
+				if expOutput != result {
+					return fmt.Errorf("expected output %q, got %q", expOutput, result)
 				}
 				return nil
 			}

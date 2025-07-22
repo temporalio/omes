@@ -44724,11 +44724,23 @@ io.temporal.api.common.v1.Payload defaultValue) {
       com.google.protobuf.MessageOrBuilder {
 
     /**
+     * <code>string endpoint = 1;</code>
+     * @return The endpoint.
+     */
+    java.lang.String getEndpoint();
+    /**
+     * <code>string endpoint = 1;</code>
+     * @return The bytes for endpoint.
+     */
+    com.google.protobuf.ByteString
+        getEndpointBytes();
+
+    /**
      * <pre>
      * Operation name to call
      * </pre>
      *
-     * <code>string operation = 1;</code>
+     * <code>string operation = 2;</code>
      * @return The operation.
      */
     java.lang.String getOperation();
@@ -44737,7 +44749,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
      * Operation name to call
      * </pre>
      *
-     * <code>string operation = 1;</code>
+     * <code>string operation = 2;</code>
      * @return The bytes for operation.
      */
     com.google.protobuf.ByteString
@@ -44748,34 +44760,27 @@ io.temporal.api.common.v1.Payload defaultValue) {
      * Input payload for the operation
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
-     * @return Whether the input field is set.
-     */
-    boolean hasInput();
-    /**
-     * <pre>
-     * Input payload for the operation
-     * </pre>
-     *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
+     * <code>string input = 3;</code>
      * @return The input.
      */
-    io.temporal.api.common.v1.Payload getInput();
+    java.lang.String getInput();
     /**
      * <pre>
      * Input payload for the operation
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
+     * <code>string input = 3;</code>
+     * @return The bytes for input.
      */
-    io.temporal.api.common.v1.PayloadOrBuilder getInputOrBuilder();
+    com.google.protobuf.ByteString
+        getInputBytes();
 
     /**
      * <pre>
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     int getHeadersCount();
     /**
@@ -44783,7 +44788,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     boolean containsHeaders(
         java.lang.String key);
@@ -44798,7 +44803,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     java.util.Map<java.lang.String, java.lang.String>
     getHeadersMap();
@@ -44807,7 +44812,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     /* nullable */
 java.lang.String getHeadersOrDefault(
@@ -44819,7 +44824,7 @@ java.lang.String defaultValue);
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     java.lang.String getHeadersOrThrow(
         java.lang.String key);
@@ -44829,7 +44834,7 @@ java.lang.String defaultValue);
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      * @return Whether the awaitableChoice field is set.
      */
     boolean hasAwaitableChoice();
@@ -44838,7 +44843,7 @@ java.lang.String defaultValue);
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      * @return The awaitableChoice.
      */
     io.temporal.omes.KitchenSink.AwaitableChoice getAwaitableChoice();
@@ -44847,7 +44852,7 @@ java.lang.String defaultValue);
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      */
     io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder getAwaitableChoiceOrBuilder();
 
@@ -44856,27 +44861,20 @@ java.lang.String defaultValue);
      * Expected output for verification
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-     * @return Whether the expectedOutput field is set.
-     */
-    boolean hasExpectedOutput();
-    /**
-     * <pre>
-     * Expected output for verification
-     * </pre>
-     *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+     * <code>string expected_output = 6;</code>
      * @return The expectedOutput.
      */
-    io.temporal.api.common.v1.Payload getExpectedOutput();
+    java.lang.String getExpectedOutput();
     /**
      * <pre>
      * Expected output for verification
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+     * <code>string expected_output = 6;</code>
+     * @return The bytes for expectedOutput.
      */
-    io.temporal.api.common.v1.PayloadOrBuilder getExpectedOutputOrBuilder();
+    com.google.protobuf.ByteString
+        getExpectedOutputBytes();
   }
   /**
    * <pre>
@@ -44895,7 +44893,10 @@ java.lang.String defaultValue);
       super(builder);
     }
     private ExecuteNexusOperation() {
+      endpoint_ = "";
       operation_ = "";
+      input_ = "";
+      expectedOutput_ = "";
     }
 
     @java.lang.Override
@@ -44915,7 +44916,7 @@ java.lang.String defaultValue);
     protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
         int number) {
       switch (number) {
-        case 3:
+        case 4:
           return internalGetHeaders();
         default:
           throw new RuntimeException(
@@ -44931,7 +44932,46 @@ java.lang.String defaultValue);
     }
 
     private int bitField0_;
-    public static final int OPERATION_FIELD_NUMBER = 1;
+    public static final int ENDPOINT_FIELD_NUMBER = 1;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object endpoint_ = "";
+    /**
+     * <code>string endpoint = 1;</code>
+     * @return The endpoint.
+     */
+    @java.lang.Override
+    public java.lang.String getEndpoint() {
+      java.lang.Object ref = endpoint_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        endpoint_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string endpoint = 1;</code>
+     * @return The bytes for endpoint.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getEndpointBytes() {
+      java.lang.Object ref = endpoint_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        endpoint_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int OPERATION_FIELD_NUMBER = 2;
     @SuppressWarnings("serial")
     private volatile java.lang.Object operation_ = "";
     /**
@@ -44939,7 +44979,7 @@ java.lang.String defaultValue);
      * Operation name to call
      * </pre>
      *
-     * <code>string operation = 1;</code>
+     * <code>string operation = 2;</code>
      * @return The operation.
      */
     @java.lang.Override
@@ -44960,7 +45000,7 @@ java.lang.String defaultValue);
      * Operation name to call
      * </pre>
      *
-     * <code>string operation = 1;</code>
+     * <code>string operation = 2;</code>
      * @return The bytes for operation.
      */
     @java.lang.Override
@@ -44978,45 +45018,54 @@ java.lang.String defaultValue);
       }
     }
 
-    public static final int INPUT_FIELD_NUMBER = 2;
-    private io.temporal.api.common.v1.Payload input_;
+    public static final int INPUT_FIELD_NUMBER = 3;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object input_ = "";
     /**
      * <pre>
      * Input payload for the operation
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
-     * @return Whether the input field is set.
-     */
-    @java.lang.Override
-    public boolean hasInput() {
-      return ((bitField0_ & 0x00000001) != 0);
-    }
-    /**
-     * <pre>
-     * Input payload for the operation
-     * </pre>
-     *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
+     * <code>string input = 3;</code>
      * @return The input.
      */
     @java.lang.Override
-    public io.temporal.api.common.v1.Payload getInput() {
-      return input_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : input_;
+    public java.lang.String getInput() {
+      java.lang.Object ref = input_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        input_ = s;
+        return s;
+      }
     }
     /**
      * <pre>
      * Input payload for the operation
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload input = 2;</code>
+     * <code>string input = 3;</code>
+     * @return The bytes for input.
      */
     @java.lang.Override
-    public io.temporal.api.common.v1.PayloadOrBuilder getInputOrBuilder() {
-      return input_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : input_;
+    public com.google.protobuf.ByteString
+        getInputBytes() {
+      java.lang.Object ref = input_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        input_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
-    public static final int HEADERS_FIELD_NUMBER = 3;
+    public static final int HEADERS_FIELD_NUMBER = 4;
     private static final class HeadersDefaultEntryHolder {
       static final com.google.protobuf.MapEntry<
           java.lang.String, java.lang.String> defaultEntry =
@@ -45047,7 +45096,7 @@ java.lang.String defaultValue);
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     @java.lang.Override
     public boolean containsHeaders(
@@ -45068,7 +45117,7 @@ java.lang.String defaultValue);
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     @java.lang.Override
     public java.util.Map<java.lang.String, java.lang.String> getHeadersMap() {
@@ -45079,7 +45128,7 @@ java.lang.String defaultValue);
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     @java.lang.Override
     public /* nullable */
@@ -45097,7 +45146,7 @@ java.lang.String defaultValue) {
      * Headers to send with the operation
      * </pre>
      *
-     * <code>map&lt;string, string&gt; headers = 3;</code>
+     * <code>map&lt;string, string&gt; headers = 4;</code>
      */
     @java.lang.Override
     public java.lang.String getHeadersOrThrow(
@@ -45111,26 +45160,26 @@ java.lang.String defaultValue) {
       return map.get(key);
     }
 
-    public static final int AWAITABLE_CHOICE_FIELD_NUMBER = 4;
+    public static final int AWAITABLE_CHOICE_FIELD_NUMBER = 5;
     private io.temporal.omes.KitchenSink.AwaitableChoice awaitableChoice_;
     /**
      * <pre>
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      * @return Whether the awaitableChoice field is set.
      */
     @java.lang.Override
     public boolean hasAwaitableChoice() {
-      return ((bitField0_ & 0x00000002) != 0);
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <pre>
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      * @return The awaitableChoice.
      */
     @java.lang.Override
@@ -45142,49 +45191,58 @@ java.lang.String defaultValue) {
      * How to await on the operation
      * </pre>
      *
-     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+     * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
      */
     @java.lang.Override
     public io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder getAwaitableChoiceOrBuilder() {
       return awaitableChoice_ == null ? io.temporal.omes.KitchenSink.AwaitableChoice.getDefaultInstance() : awaitableChoice_;
     }
 
-    public static final int EXPECTED_OUTPUT_FIELD_NUMBER = 5;
-    private io.temporal.api.common.v1.Payload expectedOutput_;
+    public static final int EXPECTED_OUTPUT_FIELD_NUMBER = 6;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object expectedOutput_ = "";
     /**
      * <pre>
      * Expected output for verification
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-     * @return Whether the expectedOutput field is set.
-     */
-    @java.lang.Override
-    public boolean hasExpectedOutput() {
-      return ((bitField0_ & 0x00000004) != 0);
-    }
-    /**
-     * <pre>
-     * Expected output for verification
-     * </pre>
-     *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+     * <code>string expected_output = 6;</code>
      * @return The expectedOutput.
      */
     @java.lang.Override
-    public io.temporal.api.common.v1.Payload getExpectedOutput() {
-      return expectedOutput_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : expectedOutput_;
+    public java.lang.String getExpectedOutput() {
+      java.lang.Object ref = expectedOutput_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedOutput_ = s;
+        return s;
+      }
     }
     /**
      * <pre>
      * Expected output for verification
      * </pre>
      *
-     * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+     * <code>string expected_output = 6;</code>
+     * @return The bytes for expectedOutput.
      */
     @java.lang.Override
-    public io.temporal.api.common.v1.PayloadOrBuilder getExpectedOutputOrBuilder() {
-      return expectedOutput_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : expectedOutput_;
+    public com.google.protobuf.ByteString
+        getExpectedOutputBytes() {
+      java.lang.Object ref = expectedOutput_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedOutput_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
     }
 
     private byte memoizedIsInitialized = -1;
@@ -45201,23 +45259,26 @@ java.lang.String defaultValue) {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operation_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, operation_);
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(endpoint_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, endpoint_);
       }
-      if (((bitField0_ & 0x00000001) != 0)) {
-        output.writeMessage(2, getInput());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operation_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, operation_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(input_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, input_);
       }
       com.google.protobuf.GeneratedMessageV3
         .serializeStringMapTo(
           output,
           internalGetHeaders(),
           HeadersDefaultEntryHolder.defaultEntry,
-          3);
-      if (((bitField0_ & 0x00000002) != 0)) {
-        output.writeMessage(4, getAwaitableChoice());
+          4);
+      if (((bitField0_ & 0x00000001) != 0)) {
+        output.writeMessage(5, getAwaitableChoice());
       }
-      if (((bitField0_ & 0x00000004) != 0)) {
-        output.writeMessage(5, getExpectedOutput());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(expectedOutput_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 6, expectedOutput_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -45228,12 +45289,14 @@ java.lang.String defaultValue) {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operation_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, operation_);
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(endpoint_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, endpoint_);
       }
-      if (((bitField0_ & 0x00000001) != 0)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getInput());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operation_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, operation_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(input_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, input_);
       }
       for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
            : internalGetHeaders().getMap().entrySet()) {
@@ -45243,15 +45306,14 @@ java.lang.String defaultValue) {
             .setValue(entry.getValue())
             .build();
         size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(3, headers__);
+            .computeMessageSize(4, headers__);
       }
-      if (((bitField0_ & 0x00000002) != 0)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, getAwaitableChoice());
+          .computeMessageSize(5, getAwaitableChoice());
       }
-      if (((bitField0_ & 0x00000004) != 0)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, getExpectedOutput());
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(expectedOutput_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(6, expectedOutput_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -45268,13 +45330,12 @@ java.lang.String defaultValue) {
       }
       io.temporal.omes.KitchenSink.ExecuteNexusOperation other = (io.temporal.omes.KitchenSink.ExecuteNexusOperation) obj;
 
+      if (!getEndpoint()
+          .equals(other.getEndpoint())) return false;
       if (!getOperation()
           .equals(other.getOperation())) return false;
-      if (hasInput() != other.hasInput()) return false;
-      if (hasInput()) {
-        if (!getInput()
-            .equals(other.getInput())) return false;
-      }
+      if (!getInput()
+          .equals(other.getInput())) return false;
       if (!internalGetHeaders().equals(
           other.internalGetHeaders())) return false;
       if (hasAwaitableChoice() != other.hasAwaitableChoice()) return false;
@@ -45282,11 +45343,8 @@ java.lang.String defaultValue) {
         if (!getAwaitableChoice()
             .equals(other.getAwaitableChoice())) return false;
       }
-      if (hasExpectedOutput() != other.hasExpectedOutput()) return false;
-      if (hasExpectedOutput()) {
-        if (!getExpectedOutput()
-            .equals(other.getExpectedOutput())) return false;
-      }
+      if (!getExpectedOutput()
+          .equals(other.getExpectedOutput())) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -45298,12 +45356,12 @@ java.lang.String defaultValue) {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + ENDPOINT_FIELD_NUMBER;
+      hash = (53 * hash) + getEndpoint().hashCode();
       hash = (37 * hash) + OPERATION_FIELD_NUMBER;
       hash = (53 * hash) + getOperation().hashCode();
-      if (hasInput()) {
-        hash = (37 * hash) + INPUT_FIELD_NUMBER;
-        hash = (53 * hash) + getInput().hashCode();
-      }
+      hash = (37 * hash) + INPUT_FIELD_NUMBER;
+      hash = (53 * hash) + getInput().hashCode();
       if (!internalGetHeaders().getMap().isEmpty()) {
         hash = (37 * hash) + HEADERS_FIELD_NUMBER;
         hash = (53 * hash) + internalGetHeaders().hashCode();
@@ -45312,10 +45370,8 @@ java.lang.String defaultValue) {
         hash = (37 * hash) + AWAITABLE_CHOICE_FIELD_NUMBER;
         hash = (53 * hash) + getAwaitableChoice().hashCode();
       }
-      if (hasExpectedOutput()) {
-        hash = (37 * hash) + EXPECTED_OUTPUT_FIELD_NUMBER;
-        hash = (53 * hash) + getExpectedOutput().hashCode();
-      }
+      hash = (37 * hash) + EXPECTED_OUTPUT_FIELD_NUMBER;
+      hash = (53 * hash) + getExpectedOutput().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -45433,7 +45489,7 @@ java.lang.String defaultValue) {
       protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
           int number) {
         switch (number) {
-          case 3:
+          case 4:
             return internalGetHeaders();
           default:
             throw new RuntimeException(
@@ -45444,7 +45500,7 @@ java.lang.String defaultValue) {
       protected com.google.protobuf.MapFieldReflectionAccessor internalGetMutableMapFieldReflection(
           int number) {
         switch (number) {
-          case 3:
+          case 4:
             return internalGetMutableHeaders();
           default:
             throw new RuntimeException(
@@ -45472,32 +45528,23 @@ java.lang.String defaultValue) {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getInputFieldBuilder();
           getAwaitableChoiceFieldBuilder();
-          getExpectedOutputFieldBuilder();
         }
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
+        endpoint_ = "";
         operation_ = "";
-        input_ = null;
-        if (inputBuilder_ != null) {
-          inputBuilder_.dispose();
-          inputBuilder_ = null;
-        }
+        input_ = "";
         internalGetMutableHeaders().clear();
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
           awaitableChoiceBuilder_.dispose();
           awaitableChoiceBuilder_ = null;
         }
-        expectedOutput_ = null;
-        if (expectedOutputBuilder_ != null) {
-          expectedOutputBuilder_.dispose();
-          expectedOutputBuilder_ = null;
-        }
+        expectedOutput_ = "";
         return this;
       }
 
@@ -45532,30 +45579,27 @@ java.lang.String defaultValue) {
       private void buildPartial0(io.temporal.omes.KitchenSink.ExecuteNexusOperation result) {
         int from_bitField0_ = bitField0_;
         if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.endpoint_ = endpoint_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
           result.operation_ = operation_;
         }
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000002) != 0)) {
-          result.input_ = inputBuilder_ == null
-              ? input_
-              : inputBuilder_.build();
-          to_bitField0_ |= 0x00000001;
-        }
         if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.input_ = input_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           result.headers_ = internalGetHeaders();
           result.headers_.makeImmutable();
         }
-        if (((from_bitField0_ & 0x00000008) != 0)) {
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000010) != 0)) {
           result.awaitableChoice_ = awaitableChoiceBuilder_ == null
               ? awaitableChoice_
               : awaitableChoiceBuilder_.build();
-          to_bitField0_ |= 0x00000002;
+          to_bitField0_ |= 0x00000001;
         }
-        if (((from_bitField0_ & 0x00000010) != 0)) {
-          result.expectedOutput_ = expectedOutputBuilder_ == null
-              ? expectedOutput_
-              : expectedOutputBuilder_.build();
-          to_bitField0_ |= 0x00000004;
+        if (((from_bitField0_ & 0x00000020) != 0)) {
+          result.expectedOutput_ = expectedOutput_;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -45604,22 +45648,31 @@ java.lang.String defaultValue) {
 
       public Builder mergeFrom(io.temporal.omes.KitchenSink.ExecuteNexusOperation other) {
         if (other == io.temporal.omes.KitchenSink.ExecuteNexusOperation.getDefaultInstance()) return this;
-        if (!other.getOperation().isEmpty()) {
-          operation_ = other.operation_;
+        if (!other.getEndpoint().isEmpty()) {
+          endpoint_ = other.endpoint_;
           bitField0_ |= 0x00000001;
           onChanged();
         }
-        if (other.hasInput()) {
-          mergeInput(other.getInput());
+        if (!other.getOperation().isEmpty()) {
+          operation_ = other.operation_;
+          bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        if (!other.getInput().isEmpty()) {
+          input_ = other.input_;
+          bitField0_ |= 0x00000004;
+          onChanged();
         }
         internalGetMutableHeaders().mergeFrom(
             other.internalGetHeaders());
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         if (other.hasAwaitableChoice()) {
           mergeAwaitableChoice(other.getAwaitableChoice());
         }
-        if (other.hasExpectedOutput()) {
-          mergeExpectedOutput(other.getExpectedOutput());
+        if (!other.getExpectedOutput().isEmpty()) {
+          expectedOutput_ = other.expectedOutput_;
+          bitField0_ |= 0x00000020;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -45648,40 +45701,41 @@ java.lang.String defaultValue) {
                 done = true;
                 break;
               case 10: {
-                operation_ = input.readStringRequireUtf8();
+                endpoint_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000001;
                 break;
               } // case 10
               case 18: {
-                input.readMessage(
-                    getInputFieldBuilder().getBuilder(),
-                    extensionRegistry);
+                operation_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
               case 26: {
+                input_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 26
+              case 34: {
                 com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
                 headers__ = input.readMessage(
                     HeadersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
                 internalGetMutableHeaders().getMutableMap().put(
                     headers__.getKey(), headers__.getValue());
-                bitField0_ |= 0x00000004;
-                break;
-              } // case 26
-              case 34: {
-                input.readMessage(
-                    getAwaitableChoiceFieldBuilder().getBuilder(),
-                    extensionRegistry);
                 bitField0_ |= 0x00000008;
                 break;
               } // case 34
               case 42: {
                 input.readMessage(
-                    getExpectedOutputFieldBuilder().getBuilder(),
+                    getAwaitableChoiceFieldBuilder().getBuilder(),
                     extensionRegistry);
                 bitField0_ |= 0x00000010;
                 break;
               } // case 42
+              case 50: {
+                expectedOutput_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000020;
+                break;
+              } // case 50
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -45699,13 +45753,85 @@ java.lang.String defaultValue) {
       }
       private int bitField0_;
 
+      private java.lang.Object endpoint_ = "";
+      /**
+       * <code>string endpoint = 1;</code>
+       * @return The endpoint.
+       */
+      public java.lang.String getEndpoint() {
+        java.lang.Object ref = endpoint_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          endpoint_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string endpoint = 1;</code>
+       * @return The bytes for endpoint.
+       */
+      public com.google.protobuf.ByteString
+          getEndpointBytes() {
+        java.lang.Object ref = endpoint_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          endpoint_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string endpoint = 1;</code>
+       * @param value The endpoint to set.
+       * @return This builder for chaining.
+       */
+      public Builder setEndpoint(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        endpoint_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string endpoint = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearEndpoint() {
+        endpoint_ = getDefaultInstance().getEndpoint();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string endpoint = 1;</code>
+       * @param value The bytes for endpoint to set.
+       * @return This builder for chaining.
+       */
+      public Builder setEndpointBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        endpoint_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+
       private java.lang.Object operation_ = "";
       /**
        * <pre>
        * Operation name to call
        * </pre>
        *
-       * <code>string operation = 1;</code>
+       * <code>string operation = 2;</code>
        * @return The operation.
        */
       public java.lang.String getOperation() {
@@ -45725,7 +45851,7 @@ java.lang.String defaultValue) {
        * Operation name to call
        * </pre>
        *
-       * <code>string operation = 1;</code>
+       * <code>string operation = 2;</code>
        * @return The bytes for operation.
        */
       public com.google.protobuf.ByteString
@@ -45746,7 +45872,7 @@ java.lang.String defaultValue) {
        * Operation name to call
        * </pre>
        *
-       * <code>string operation = 1;</code>
+       * <code>string operation = 2;</code>
        * @param value The operation to set.
        * @return This builder for chaining.
        */
@@ -45754,7 +45880,7 @@ java.lang.String defaultValue) {
           java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         operation_ = value;
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
@@ -45763,12 +45889,12 @@ java.lang.String defaultValue) {
        * Operation name to call
        * </pre>
        *
-       * <code>string operation = 1;</code>
+       * <code>string operation = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearOperation() {
         operation_ = getDefaultInstance().getOperation();
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
         return this;
       }
@@ -45777,7 +45903,7 @@ java.lang.String defaultValue) {
        * Operation name to call
        * </pre>
        *
-       * <code>string operation = 1;</code>
+       * <code>string operation = 2;</code>
        * @param value The bytes for operation to set.
        * @return This builder for chaining.
        */
@@ -45786,38 +45912,30 @@ java.lang.String defaultValue) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         operation_ = value;
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
 
-      private io.temporal.api.common.v1.Payload input_;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> inputBuilder_;
+      private java.lang.Object input_ = "";
       /**
        * <pre>
        * Input payload for the operation
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
-       * @return Whether the input field is set.
-       */
-      public boolean hasInput() {
-        return ((bitField0_ & 0x00000002) != 0);
-      }
-      /**
-       * <pre>
-       * Input payload for the operation
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
+       * <code>string input = 3;</code>
        * @return The input.
        */
-      public io.temporal.api.common.v1.Payload getInput() {
-        if (inputBuilder_ == null) {
-          return input_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : input_;
+      public java.lang.String getInput() {
+        java.lang.Object ref = input_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          input_ = s;
+          return s;
         } else {
-          return inputBuilder_.getMessage();
+          return (java.lang.String) ref;
         }
       }
       /**
@@ -45825,36 +45943,36 @@ java.lang.String defaultValue) {
        * Input payload for the operation
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
+       * <code>string input = 3;</code>
+       * @return The bytes for input.
        */
-      public Builder setInput(io.temporal.api.common.v1.Payload value) {
-        if (inputBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          input_ = value;
+      public com.google.protobuf.ByteString
+          getInputBytes() {
+        java.lang.Object ref = input_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          input_ = b;
+          return b;
         } else {
-          inputBuilder_.setMessage(value);
+          return (com.google.protobuf.ByteString) ref;
         }
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return this;
       }
       /**
        * <pre>
        * Input payload for the operation
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
+       * <code>string input = 3;</code>
+       * @param value The input to set.
+       * @return This builder for chaining.
        */
       public Builder setInput(
-          io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (inputBuilder_ == null) {
-          input_ = builderForValue.build();
-        } else {
-          inputBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000002;
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        input_ = value;
+        bitField0_ |= 0x00000004;
         onChanged();
         return this;
       }
@@ -45863,40 +45981,12 @@ java.lang.String defaultValue) {
        * Input payload for the operation
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
-       */
-      public Builder mergeInput(io.temporal.api.common.v1.Payload value) {
-        if (inputBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) != 0) &&
-            input_ != null &&
-            input_ != io.temporal.api.common.v1.Payload.getDefaultInstance()) {
-            getInputBuilder().mergeFrom(value);
-          } else {
-            input_ = value;
-          }
-        } else {
-          inputBuilder_.mergeFrom(value);
-        }
-        if (input_ != null) {
-          bitField0_ |= 0x00000002;
-          onChanged();
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Input payload for the operation
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
+       * <code>string input = 3;</code>
+       * @return This builder for chaining.
        */
       public Builder clearInput() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        input_ = null;
-        if (inputBuilder_ != null) {
-          inputBuilder_.dispose();
-          inputBuilder_ = null;
-        }
+        input_ = getDefaultInstance().getInput();
+        bitField0_ = (bitField0_ & ~0x00000004);
         onChanged();
         return this;
       }
@@ -45905,47 +45995,18 @@ java.lang.String defaultValue) {
        * Input payload for the operation
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
+       * <code>string input = 3;</code>
+       * @param value The bytes for input to set.
+       * @return This builder for chaining.
        */
-      public io.temporal.api.common.v1.Payload.Builder getInputBuilder() {
-        bitField0_ |= 0x00000002;
+      public Builder setInputBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        input_ = value;
+        bitField0_ |= 0x00000004;
         onChanged();
-        return getInputFieldBuilder().getBuilder();
-      }
-      /**
-       * <pre>
-       * Input payload for the operation
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
-       */
-      public io.temporal.api.common.v1.PayloadOrBuilder getInputOrBuilder() {
-        if (inputBuilder_ != null) {
-          return inputBuilder_.getMessageOrBuilder();
-        } else {
-          return input_ == null ?
-              io.temporal.api.common.v1.Payload.getDefaultInstance() : input_;
-        }
-      }
-      /**
-       * <pre>
-       * Input payload for the operation
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload input = 2;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> 
-          getInputFieldBuilder() {
-        if (inputBuilder_ == null) {
-          inputBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder>(
-                  getInput(),
-                  getParentForChildren(),
-                  isClean());
-          input_ = null;
-        }
-        return inputBuilder_;
+        return this;
       }
 
       private com.google.protobuf.MapField<
@@ -45967,7 +46028,7 @@ java.lang.String defaultValue) {
         if (!headers_.isMutable()) {
           headers_ = headers_.copy();
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
         return headers_;
       }
@@ -45979,7 +46040,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       @java.lang.Override
       public boolean containsHeaders(
@@ -46000,7 +46061,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       @java.lang.Override
       public java.util.Map<java.lang.String, java.lang.String> getHeadersMap() {
@@ -46011,7 +46072,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       @java.lang.Override
       public /* nullable */
@@ -46029,7 +46090,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       @java.lang.Override
       public java.lang.String getHeadersOrThrow(
@@ -46043,7 +46104,7 @@ java.lang.String defaultValue) {
         return map.get(key);
       }
       public Builder clearHeaders() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         internalGetMutableHeaders().getMutableMap()
             .clear();
         return this;
@@ -46053,7 +46114,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       public Builder removeHeaders(
           java.lang.String key) {
@@ -46068,7 +46129,7 @@ java.lang.String defaultValue) {
       @java.lang.Deprecated
       public java.util.Map<java.lang.String, java.lang.String>
           getMutableHeaders() {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return internalGetMutableHeaders().getMutableMap();
       }
       /**
@@ -46076,7 +46137,7 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       public Builder putHeaders(
           java.lang.String key,
@@ -46085,7 +46146,7 @@ java.lang.String defaultValue) {
         if (value == null) { throw new NullPointerException("map value"); }
         internalGetMutableHeaders().getMutableMap()
             .put(key, value);
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return this;
       }
       /**
@@ -46093,13 +46154,13 @@ java.lang.String defaultValue) {
        * Headers to send with the operation
        * </pre>
        *
-       * <code>map&lt;string, string&gt; headers = 3;</code>
+       * <code>map&lt;string, string&gt; headers = 4;</code>
        */
       public Builder putAllHeaders(
           java.util.Map<java.lang.String, java.lang.String> values) {
         internalGetMutableHeaders().getMutableMap()
             .putAll(values);
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         return this;
       }
 
@@ -46111,18 +46172,18 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        * @return Whether the awaitableChoice field is set.
        */
       public boolean hasAwaitableChoice() {
-        return ((bitField0_ & 0x00000008) != 0);
+        return ((bitField0_ & 0x00000010) != 0);
       }
       /**
        * <pre>
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        * @return The awaitableChoice.
        */
       public io.temporal.omes.KitchenSink.AwaitableChoice getAwaitableChoice() {
@@ -46137,7 +46198,7 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public Builder setAwaitableChoice(io.temporal.omes.KitchenSink.AwaitableChoice value) {
         if (awaitableChoiceBuilder_ == null) {
@@ -46148,7 +46209,7 @@ java.lang.String defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -46157,7 +46218,7 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public Builder setAwaitableChoice(
           io.temporal.omes.KitchenSink.AwaitableChoice.Builder builderForValue) {
@@ -46166,7 +46227,7 @@ java.lang.String defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -46175,11 +46236,11 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public Builder mergeAwaitableChoice(io.temporal.omes.KitchenSink.AwaitableChoice value) {
         if (awaitableChoiceBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) != 0) &&
+          if (((bitField0_ & 0x00000010) != 0) &&
             awaitableChoice_ != null &&
             awaitableChoice_ != io.temporal.omes.KitchenSink.AwaitableChoice.getDefaultInstance()) {
             getAwaitableChoiceBuilder().mergeFrom(value);
@@ -46190,7 +46251,7 @@ java.lang.String defaultValue) {
           awaitableChoiceBuilder_.mergeFrom(value);
         }
         if (awaitableChoice_ != null) {
-          bitField0_ |= 0x00000008;
+          bitField0_ |= 0x00000010;
           onChanged();
         }
         return this;
@@ -46200,10 +46261,10 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public Builder clearAwaitableChoice() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
           awaitableChoiceBuilder_.dispose();
@@ -46217,10 +46278,10 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public io.temporal.omes.KitchenSink.AwaitableChoice.Builder getAwaitableChoiceBuilder() {
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return getAwaitableChoiceFieldBuilder().getBuilder();
       }
@@ -46229,7 +46290,7 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder getAwaitableChoiceOrBuilder() {
         if (awaitableChoiceBuilder_ != null) {
@@ -46244,7 +46305,7 @@ java.lang.String defaultValue) {
        * How to await on the operation
        * </pre>
        *
-       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 4;</code>
+       * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           io.temporal.omes.KitchenSink.AwaitableChoice, io.temporal.omes.KitchenSink.AwaitableChoice.Builder, io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder> 
@@ -46260,33 +46321,25 @@ java.lang.String defaultValue) {
         return awaitableChoiceBuilder_;
       }
 
-      private io.temporal.api.common.v1.Payload expectedOutput_;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> expectedOutputBuilder_;
+      private java.lang.Object expectedOutput_ = "";
       /**
        * <pre>
        * Expected output for verification
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-       * @return Whether the expectedOutput field is set.
-       */
-      public boolean hasExpectedOutput() {
-        return ((bitField0_ & 0x00000010) != 0);
-      }
-      /**
-       * <pre>
-       * Expected output for verification
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+       * <code>string expected_output = 6;</code>
        * @return The expectedOutput.
        */
-      public io.temporal.api.common.v1.Payload getExpectedOutput() {
-        if (expectedOutputBuilder_ == null) {
-          return expectedOutput_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : expectedOutput_;
+      public java.lang.String getExpectedOutput() {
+        java.lang.Object ref = expectedOutput_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          expectedOutput_ = s;
+          return s;
         } else {
-          return expectedOutputBuilder_.getMessage();
+          return (java.lang.String) ref;
         }
       }
       /**
@@ -46294,36 +46347,36 @@ java.lang.String defaultValue) {
        * Expected output for verification
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+       * <code>string expected_output = 6;</code>
+       * @return The bytes for expectedOutput.
        */
-      public Builder setExpectedOutput(io.temporal.api.common.v1.Payload value) {
-        if (expectedOutputBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          expectedOutput_ = value;
+      public com.google.protobuf.ByteString
+          getExpectedOutputBytes() {
+        java.lang.Object ref = expectedOutput_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          expectedOutput_ = b;
+          return b;
         } else {
-          expectedOutputBuilder_.setMessage(value);
+          return (com.google.protobuf.ByteString) ref;
         }
-        bitField0_ |= 0x00000010;
-        onChanged();
-        return this;
       }
       /**
        * <pre>
        * Expected output for verification
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+       * <code>string expected_output = 6;</code>
+       * @param value The expectedOutput to set.
+       * @return This builder for chaining.
        */
       public Builder setExpectedOutput(
-          io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (expectedOutputBuilder_ == null) {
-          expectedOutput_ = builderForValue.build();
-        } else {
-          expectedOutputBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000010;
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        expectedOutput_ = value;
+        bitField0_ |= 0x00000020;
         onChanged();
         return this;
       }
@@ -46332,40 +46385,12 @@ java.lang.String defaultValue) {
        * Expected output for verification
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-       */
-      public Builder mergeExpectedOutput(io.temporal.api.common.v1.Payload value) {
-        if (expectedOutputBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) != 0) &&
-            expectedOutput_ != null &&
-            expectedOutput_ != io.temporal.api.common.v1.Payload.getDefaultInstance()) {
-            getExpectedOutputBuilder().mergeFrom(value);
-          } else {
-            expectedOutput_ = value;
-          }
-        } else {
-          expectedOutputBuilder_.mergeFrom(value);
-        }
-        if (expectedOutput_ != null) {
-          bitField0_ |= 0x00000010;
-          onChanged();
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Expected output for verification
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+       * <code>string expected_output = 6;</code>
+       * @return This builder for chaining.
        */
       public Builder clearExpectedOutput() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        expectedOutput_ = null;
-        if (expectedOutputBuilder_ != null) {
-          expectedOutputBuilder_.dispose();
-          expectedOutputBuilder_ = null;
-        }
+        expectedOutput_ = getDefaultInstance().getExpectedOutput();
+        bitField0_ = (bitField0_ & ~0x00000020);
         onChanged();
         return this;
       }
@@ -46374,47 +46399,18 @@ java.lang.String defaultValue) {
        * Expected output for verification
        * </pre>
        *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
+       * <code>string expected_output = 6;</code>
+       * @param value The bytes for expectedOutput to set.
+       * @return This builder for chaining.
        */
-      public io.temporal.api.common.v1.Payload.Builder getExpectedOutputBuilder() {
-        bitField0_ |= 0x00000010;
+      public Builder setExpectedOutputBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        expectedOutput_ = value;
+        bitField0_ |= 0x00000020;
         onChanged();
-        return getExpectedOutputFieldBuilder().getBuilder();
-      }
-      /**
-       * <pre>
-       * Expected output for verification
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-       */
-      public io.temporal.api.common.v1.PayloadOrBuilder getExpectedOutputOrBuilder() {
-        if (expectedOutputBuilder_ != null) {
-          return expectedOutputBuilder_.getMessageOrBuilder();
-        } else {
-          return expectedOutput_ == null ?
-              io.temporal.api.common.v1.Payload.getDefaultInstance() : expectedOutput_;
-        }
-      }
-      /**
-       * <pre>
-       * Expected output for verification
-       * </pre>
-       *
-       * <code>.temporal.api.common.v1.Payload expected_output = 5;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> 
-          getExpectedOutputFieldBuilder() {
-        if (expectedOutputBuilder_ == null) {
-          expectedOutputBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder>(
-                  getExpectedOutput(),
-                  getParentForChildren(),
-                  isClean());
-          expectedOutput_ = null;
-        }
-        return expectedOutputBuilder_;
+        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -46930,30 +46926,29 @@ java.lang.String defaultValue) {
       "s.kitchen_sink.ActivityCancellationType\022" +
       "\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021versi" +
       "oning_intent\030\003 \001(\0162,.temporal.omes.kitch" +
-      "en_sink.VersioningIntent\"\334\002\n\025ExecuteNexu" +
-      "sOperation\022\021\n\toperation\030\001 \001(\t\022.\n\005input\030\002" +
-      " \001(\0132\037.temporal.api.common.v1.Payload\022O\n" +
-      "\007headers\030\003 \003(\0132>.temporal.omes.kitchen_s" +
-      "ink.ExecuteNexusOperation.HeadersEntry\022E" +
-      "\n\020awaitable_choice\030\004 \001(\0132+.temporal.omes" +
-      ".kitchen_sink.AwaitableChoice\0228\n\017expecte" +
-      "d_output\030\005 \001(\0132\037.temporal.api.common.v1." +
-      "Payload\032.\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005" +
-      "value\030\002 \001(\t:\0028\001*\244\001\n\021ParentClosePolicy\022#\n" +
-      "\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PA" +
-      "RENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_" +
-      "CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_P" +
-      "OLICY_REQUEST_CANCEL\020\003*@\n\020VersioningInte" +
-      "nt\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007D" +
-      "EFAULT\020\002*\242\001\n\035ChildWorkflowCancellationTy" +
-      "pe\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY" +
-      "_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_" +
-      "COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATIO" +
-      "N_REQUESTED\020\003*X\n\030ActivityCancellationTyp" +
-      "e\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_C" +
-      "OMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.o" +
-      "mesZ.github.com/temporalio/omes/loadgen/" +
-      "kitchensinkb\006proto3"
+      "en_sink.VersioningIntent\"\254\002\n\025ExecuteNexu" +
+      "sOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperatio" +
+      "n\030\002 \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132" +
+      ">.temporal.omes.kitchen_sink.ExecuteNexu" +
+      "sOperation.HeadersEntry\022E\n\020awaitable_cho" +
+      "ice\030\005 \001(\0132+.temporal.omes.kitchen_sink.A" +
+      "waitableChoice\022\027\n\017expected_output\030\006 \001(\t\032" +
+      ".\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 " +
+      "\001(\t:\0028\001*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_" +
+      "CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLO" +
+      "SE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_PO" +
+      "LICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_RE" +
+      "QUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UN" +
+      "SPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002" +
+      "*\242\001\n\035ChildWorkflowCancellationType\022\024\n\020CH" +
+      "ILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020" +
+      "\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETE" +
+      "D\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQUES" +
+      "TED\020\003*X\n\030ActivityCancellationType\022\016\n\nTRY" +
+      "_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED" +
+      "\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.git" +
+      "hub.com/temporalio/omes/loadgen/kitchens" +
+      "inkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -47221,7 +47216,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor,
-        new java.lang.String[] { "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", });
+        new java.lang.String[] { "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", });
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor.getNestedTypes().get(0);
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_fieldAccessorTable = new

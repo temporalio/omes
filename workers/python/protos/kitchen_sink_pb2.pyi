@@ -506,7 +506,7 @@ class RemoteActivityOptions(_message.Message):
     def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
-    __slots__ = ("operation", "input", "headers", "awaitable_choice", "expected_output")
+    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -514,14 +514,16 @@ class ExecuteNexusOperation(_message.Message):
         key: str
         value: str
         def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     OPERATION_FIELD_NUMBER: _ClassVar[int]
     INPUT_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    endpoint: str
     operation: str
-    input: _message_pb2.Payload
+    input: str
     headers: _containers.ScalarMap[str, str]
     awaitable_choice: AwaitableChoice
-    expected_output: _message_pb2.Payload
-    def __init__(self, operation: _Optional[str] = ..., input: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ...) -> None: ...
+    expected_output: str
+    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ...) -> None: ...

@@ -437,15 +437,16 @@ enum ActivityCancellationType {
 
 // Execute a Nexus operation
 message ExecuteNexusOperation {
+  string endpoint = 1;
   // Operation name to call
-  string operation = 1;
+  string operation = 2;
   // Input payload for the operation
-  temporal.api.common.v1.Payload input = 2;
+  string input = 3;
   // Headers to send with the operation
-  map<string, string> headers = 3;
+  map<string, string> headers = 4;
   // How to await on the operation
-  AwaitableChoice awaitable_choice = 4;
+  AwaitableChoice awaitable_choice = 5;
   // Expected output for verification
-  temporal.api.common.v1.Payload expected_output = 5;
+  string expected_output = 6;
 }
 
