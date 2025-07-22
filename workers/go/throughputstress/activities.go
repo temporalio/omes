@@ -32,7 +32,7 @@ func MakePayloadInput(inSize, outSize int) *PayloadActivityInput {
 
 // Payload serves no purpose other than to accept inputs and return outputs of a
 // specific size.
-func (a *Activities) Payload(_ context.Context, in *PayloadActivityInput) ([]byte, error) {
+func (a *Activities) InOutPayload(_ context.Context, in *PayloadActivityInput) ([]byte, error) {
 	output := make([]byte, in.DesiredOutputSize)
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
 	rand.Read(output)

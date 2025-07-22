@@ -45,7 +45,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 	if err := workflow.SetUpdateHandler(ctx, UpdateActivity, func(ctx workflow.Context) error {
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		return workflow.ExecuteActivity(
-			actCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
+			actCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil)
 	}); err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 	if err := workflow.SetUpdateHandler(ctx, UpdateLocalActivity, func(ctx workflow.Context) error {
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 		return workflow.ExecuteLocalActivity(
-			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
+			localActCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil)
 	}); err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 		// Repeat the steps as defined by the ancient ritual
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		if err := workflow.ExecuteActivity(
-			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil); err != nil {
+			actCtx, activityStub.InOutPayload, MakePayloadInput(256, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
@@ -87,11 +87,11 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 
 		localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 		if err := workflow.ExecuteLocalActivity(
-			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
+			localActCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 		if err := workflow.ExecuteLocalActivity(
-			localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
+			localActCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil); err != nil {
 			return nil, err
 		}
 
@@ -115,22 +115,22 @@ func ThroughputStressWorkflow(ctx workflow.Context, params *throughputstress.Wor
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(
-					actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
+					actCtx, activityStub.InOutPayload, MakePayloadInput(256, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
 				actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 				return workflow.ExecuteActivity(
-					actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
+					actCtx, activityStub.InOutPayload, MakePayloadInput(256, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
 				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 				return workflow.ExecuteLocalActivity(
-					localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
+					localActCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
 				localActCtx := workflow.WithLocalActivityOptions(ctx, defaultLocalActivityOpts(ctx))
 				return workflow.ExecuteLocalActivity(
-					localActCtx, activityStub.Payload, MakePayloadInput(0, 256)).Get(ctx, nil)
+					localActCtx, activityStub.InOutPayload, MakePayloadInput(0, 256)).Get(ctx, nil)
 			},
 			func(ctx workflow.Context) error {
 				// This self-signal activity didn't exist in the original bench-go workflow, but
@@ -277,7 +277,7 @@ func ThroughputStressChild(ctx workflow.Context) error {
 	for i := 0; i < 3; i++ {
 		actCtx := workflow.WithActivityOptions(ctx, defaultActivityOpts(ctx))
 		err := workflow.ExecuteActivity(
-			actCtx, activityStub.Payload, MakePayloadInput(256, 256)).Get(ctx, nil)
+			actCtx, activityStub.InOutPayload, MakePayloadInput(256, 256)).Get(ctx, nil)
 		if err != nil {
 			return err
 		}
