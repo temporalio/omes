@@ -169,6 +169,8 @@ class KitchenSinkWorkflow:
             workflow.upsert_search_attributes(updates)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
+        elif action.HasField("nexus_operation"):
+            raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 

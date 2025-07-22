@@ -158,6 +158,8 @@ message Action {
     ContinueAsNewAction continue_as_new = 13;
 
     ActionSet nested_action_set = 14;
+
+    ExecuteNexusOperation nexus_operation = 15;
   }
 }
 
@@ -431,5 +433,20 @@ enum ActivityCancellationType {
   // Do not request cancellation of the activity and immediately report cancellation to the
   // workflow
   ABANDON = 2;
+}
+
+// Execute a Nexus operation
+message ExecuteNexusOperation {
+  string endpoint = 1;
+  // Operation name to call
+  string operation = 2;
+  // Input payload for the operation
+  string input = 3;
+  // Headers to send with the operation
+  map<string, string> headers = 4;
+  // How to await on the operation
+  AwaitableChoice awaitable_choice = 5;
+  // Expected output for verification
+  string expected_output = 6;
 }
 
