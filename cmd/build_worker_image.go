@@ -105,6 +105,7 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 		// including semver build metadata.
 		langTagComponent := lang + "-" + strings.TrimPrefix(b.version, "v")
 		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
+		b.tags = append(b.tags, lang+"-"+omesVersion)
 		if b.tagAsLatest {
 			b.tags = append(b.tags, langTagComponent)
 			b.tags = append(b.tags, lang+"-latest")

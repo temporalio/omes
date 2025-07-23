@@ -6,6 +6,7 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
@@ -58,7 +59,7 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 	tpsActivities := throughputstress.Activities{
 		Client: client,
 	}
-
+	ebbFlowActivities := ebbandflow.Activities{}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
 	if err != nil {
@@ -85,6 +86,9 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
 			w.RegisterActivity(&tpsActivities)
+			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
+			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
+			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
