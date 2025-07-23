@@ -92,9 +92,8 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 		return nil, fmt.Errorf("need at least 2 fairness keys, got %d", len(ft.latencies))
 	}
 
-	heapData := make(map[string][]float64)
-	weights := make(map[string]float64)
-
+	heapData := make(map[string][]float64, len(ft.latencies))
+	weights := make(map[string]float64, len(ft.weights))
 	for key, h := range ft.latencies {
 		if h.Len() == 0 {
 			continue
@@ -112,9 +111,8 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 	}
 	ft.mu.RUnlock()
 
-	p95Values := make(map[string]float64)
-	sampleCounts := make(map[string]int)
-
+	p95Values := make(map[string]float64, len(heapData))
+	sampleCounts := make(map[string]int, len(heapData))
 	for key, values := range heapData {
 		sort.Float64s(values)
 		p95 := calculatePercentile(values, 0.95)
@@ -127,14 +125,16 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 	}
 
 	// Extract P95 values for distribution analysis
-	p95Slice := make([]float64, 0, len(p95Values))
+	p95Slice := make([]float64, len(p95Values))
+	i := 0
 	for _, p95 := range p95Values {
-		p95Slice = append(p95Slice, p95)
+		p95Slice[i] = p95
+		i++
 	}
 	sort.Float64s(p95Slice)
 
 	// Calculate weight-adjusted P95 values for all metrics.
-	weightAdjustedP95s := make(map[string]float64)
+	weightAdjustedP95s := make(map[string]float64, len(p95Values))
 	for key, p95 := range p95Values {
 		if weight := weights[key]; weight > 0 {
 			weightAdjustedP95s[key] = p95 / weight
@@ -324,9 +324,11 @@ func calculateWeightAdjustedFairness(weightAdjustedP95s map[string]float64, thre
 		return 1.0, false
 	}
 
-	weightAdjustedSlice := make([]float64, 0, len(weightAdjustedP95s))
+	i := 0
+	weightAdjustedSlice := make([]float64, len(weightAdjustedP95s))
 	for _, weightAdjustedP95 := range weightAdjustedP95s {
-		weightAdjustedSlice = append(weightAdjustedSlice, weightAdjustedP95)
+		weightAdjustedSlice[i] = weightAdjustedP95
+		i++
 	}
 
 	if len(weightAdjustedSlice) < 2 {
