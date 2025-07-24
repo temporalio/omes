@@ -376,14 +376,7 @@ public class KitchenSinkWorkflow
 
     private static Temporalio.Common.Priority PriorityFromProto(ExecuteActivityAction eaa)
     {
-        if (eaa.FairnessKey != null)
-        {
-            throw new ApplicationFailureException("FairnessKey is not supported yet");
-        }
-        if (eaa.FairnessWeight > 0)
-        {
-            throw new ApplicationFailureException("FairnessWeight is not supported yet");
-        }
+        // TODO: support fairness keys and weights
         return new()
         {
             PriorityKey = eaa.Priority.PriorityKey

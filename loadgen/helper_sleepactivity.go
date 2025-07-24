@@ -118,17 +118,19 @@ func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.Execute
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
 			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(rng); ok {
-				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
-				action.FairnessWeight = 1.0 // always set default
+				action.Priority.FairnessKey = fmt.Sprintf("%d", fairnessKey)
+				action.Priority.FairnessWeight = 1.0 // always set default
 			}
 		}
 
 		// Optional: FairnessWeight
 		if groupConfig.FairnessWeight != nil {
 			if weight, ok := groupConfig.FairnessWeight.Sample(rng); ok {
-				action.FairnessWeight = weight
+				action.Priority.FairnessWeight = weight
 			}
 		}
+
+		// Note: FairnessWeight is not directly supported in v1.Priority, only PriorityKey
 
 		actions = append(actions, action)
 	}

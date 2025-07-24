@@ -301,15 +301,12 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     }
 
     Priority.Builder prio = Priority.newBuilder();
-    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
-    if (priority.getPriorityKey() > 0) {
-      prio.setPriorityKey(priority.getPriorityKey());
-    }
-    if (executeActivity.getFairnessKey() != "") {
-      throw new IllegalArgumentException("FairnessKey is not supported");
-    }
-    if (executeActivity.getFairnessWeight() > 0) {
-      throw new IllegalArgumentException("FairnessWeight is not supported");
+    if (executeActivity.hasPriority()) {
+      io.temporal.api.common.v1.Priority requestedPrio = executeActivity.getPriority();
+      if (requestedPrio.getPriorityKey() > 0) {
+        prio.setPriorityKey(requestedPrio.getPriorityKey());
+      }
+      // TODO: support fairness keys and weights
     }
 
     if (executeActivity.hasIsLocal()) {

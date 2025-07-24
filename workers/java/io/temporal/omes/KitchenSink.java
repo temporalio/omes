@@ -21993,32 +21993,6 @@ io.temporal.api.common.v1.Payload defaultValue);
      */
     io.temporal.api.common.v1.PriorityOrBuilder getPriorityOrBuilder();
 
-    /**
-     * <pre>
-     * TODO: once complete, use commonpb.PriorityKey instead
-     * </pre>
-     *
-     * <code>string fairness_key = 16;</code>
-     * @return The fairnessKey.
-     */
-    java.lang.String getFairnessKey();
-    /**
-     * <pre>
-     * TODO: once complete, use commonpb.PriorityKey instead
-     * </pre>
-     *
-     * <code>string fairness_key = 16;</code>
-     * @return The bytes for fairnessKey.
-     */
-    com.google.protobuf.ByteString
-        getFairnessKeyBytes();
-
-    /**
-     * <code>float fairness_weight = 17;</code>
-     * @return The fairnessWeight.
-     */
-    float getFairnessWeight();
-
     io.temporal.omes.KitchenSink.ExecuteActivityAction.ActivityTypeCase getActivityTypeCase();
 
     io.temporal.omes.KitchenSink.ExecuteActivityAction.LocalityCase getLocalityCase();
@@ -22037,7 +22011,6 @@ io.temporal.api.common.v1.Payload defaultValue);
     }
     private ExecuteActivityAction() {
       taskQueue_ = "";
-      fairnessKey_ = "";
     }
 
     @java.lang.Override
@@ -25127,64 +25100,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
       return priority_ == null ? io.temporal.api.common.v1.Priority.getDefaultInstance() : priority_;
     }
 
-    public static final int FAIRNESS_KEY_FIELD_NUMBER = 16;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object fairnessKey_ = "";
-    /**
-     * <pre>
-     * TODO: once complete, use commonpb.PriorityKey instead
-     * </pre>
-     *
-     * <code>string fairness_key = 16;</code>
-     * @return The fairnessKey.
-     */
-    @java.lang.Override
-    public java.lang.String getFairnessKey() {
-      java.lang.Object ref = fairnessKey_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        fairnessKey_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * TODO: once complete, use commonpb.PriorityKey instead
-     * </pre>
-     *
-     * <code>string fairness_key = 16;</code>
-     * @return The bytes for fairnessKey.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getFairnessKeyBytes() {
-      java.lang.Object ref = fairnessKey_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        fairnessKey_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int FAIRNESS_WEIGHT_FIELD_NUMBER = 17;
-    private float fairnessWeight_ = 0F;
-    /**
-     * <code>float fairness_weight = 17;</code>
-     * @return The fairnessWeight.
-     */
-    @java.lang.Override
-    public float getFairnessWeight() {
-      return fairnessWeight_;
-    }
-
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -25246,12 +25161,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       if (((bitField0_ & 0x00000040) != 0)) {
         output.writeMessage(15, getPriority());
-      }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(fairnessKey_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 16, fairnessKey_);
-      }
-      if (java.lang.Float.floatToRawIntBits(fairnessWeight_) != 0) {
-        output.writeFloat(17, fairnessWeight_);
       }
       if (activityTypeCase_ == 18) {
         output.writeMessage(18, (io.temporal.omes.KitchenSink.ExecuteActivityAction.PayloadActivity) activityType_);
@@ -25330,13 +25239,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(15, getPriority());
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(fairnessKey_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(16, fairnessKey_);
-      }
-      if (java.lang.Float.floatToRawIntBits(fairnessWeight_) != 0) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeFloatSize(17, fairnessWeight_);
-      }
       if (activityTypeCase_ == 18) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(18, (io.temporal.omes.KitchenSink.ExecuteActivityAction.PayloadActivity) activityType_);
@@ -25395,11 +25297,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (!getPriority()
             .equals(other.getPriority())) return false;
       }
-      if (!getFairnessKey()
-          .equals(other.getFairnessKey())) return false;
-      if (java.lang.Float.floatToIntBits(getFairnessWeight())
-          != java.lang.Float.floatToIntBits(
-              other.getFairnessWeight())) return false;
       if (!getActivityTypeCase().equals(other.getActivityTypeCase())) return false;
       switch (activityTypeCase_) {
         case 1:
@@ -25483,11 +25380,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
         hash = (37 * hash) + PRIORITY_FIELD_NUMBER;
         hash = (53 * hash) + getPriority().hashCode();
       }
-      hash = (37 * hash) + FAIRNESS_KEY_FIELD_NUMBER;
-      hash = (53 * hash) + getFairnessKey().hashCode();
-      hash = (37 * hash) + FAIRNESS_WEIGHT_FIELD_NUMBER;
-      hash = (53 * hash) + java.lang.Float.floatToIntBits(
-          getFairnessWeight());
       switch (activityTypeCase_) {
         case 1:
           hash = (37 * hash) + GENERIC_FIELD_NUMBER;
@@ -25747,8 +25639,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
           priorityBuilder_.dispose();
           priorityBuilder_ = null;
         }
-        fairnessKey_ = "";
-        fairnessWeight_ = 0F;
         activityTypeCase_ = 0;
         activityType_ = null;
         localityCase_ = 0;
@@ -25835,12 +25725,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
               ? priority_
               : priorityBuilder_.build();
           to_bitField0_ |= 0x00000040;
-        }
-        if (((from_bitField0_ & 0x00010000) != 0)) {
-          result.fairnessKey_ = fairnessKey_;
-        }
-        if (((from_bitField0_ & 0x00020000) != 0)) {
-          result.fairnessWeight_ = fairnessWeight_;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -25952,14 +25836,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
         }
         if (other.hasPriority()) {
           mergePriority(other.getPriority());
-        }
-        if (!other.getFairnessKey().isEmpty()) {
-          fairnessKey_ = other.fairnessKey_;
-          bitField0_ |= 0x00010000;
-          onChanged();
-        }
-        if (other.getFairnessWeight() != 0F) {
-          setFairnessWeight(other.getFairnessWeight());
         }
         switch (other.getActivityTypeCase()) {
           case GENERIC: {
@@ -26130,16 +26006,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
                 bitField0_ |= 0x00008000;
                 break;
               } // case 122
-              case 130: {
-                fairnessKey_ = input.readStringRequireUtf8();
-                bitField0_ |= 0x00010000;
-                break;
-              } // case 130
-              case 141: {
-                fairnessWeight_ = input.readFloat();
-                bitField0_ |= 0x00020000;
-                break;
-              } // case 141
               case 146: {
                 input.readMessage(
                     getPayloadFieldBuilder().getBuilder(),
@@ -28676,130 +28542,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
           priority_ = null;
         }
         return priorityBuilder_;
-      }
-
-      private java.lang.Object fairnessKey_ = "";
-      /**
-       * <pre>
-       * TODO: once complete, use commonpb.PriorityKey instead
-       * </pre>
-       *
-       * <code>string fairness_key = 16;</code>
-       * @return The fairnessKey.
-       */
-      public java.lang.String getFairnessKey() {
-        java.lang.Object ref = fairnessKey_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          fairnessKey_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <pre>
-       * TODO: once complete, use commonpb.PriorityKey instead
-       * </pre>
-       *
-       * <code>string fairness_key = 16;</code>
-       * @return The bytes for fairnessKey.
-       */
-      public com.google.protobuf.ByteString
-          getFairnessKeyBytes() {
-        java.lang.Object ref = fairnessKey_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          fairnessKey_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * TODO: once complete, use commonpb.PriorityKey instead
-       * </pre>
-       *
-       * <code>string fairness_key = 16;</code>
-       * @param value The fairnessKey to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFairnessKey(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
-        fairnessKey_ = value;
-        bitField0_ |= 0x00010000;
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * TODO: once complete, use commonpb.PriorityKey instead
-       * </pre>
-       *
-       * <code>string fairness_key = 16;</code>
-       * @return This builder for chaining.
-       */
-      public Builder clearFairnessKey() {
-        fairnessKey_ = getDefaultInstance().getFairnessKey();
-        bitField0_ = (bitField0_ & ~0x00010000);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * TODO: once complete, use commonpb.PriorityKey instead
-       * </pre>
-       *
-       * <code>string fairness_key = 16;</code>
-       * @param value The bytes for fairnessKey to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFairnessKeyBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        fairnessKey_ = value;
-        bitField0_ |= 0x00010000;
-        onChanged();
-        return this;
-      }
-
-      private float fairnessWeight_ ;
-      /**
-       * <code>float fairness_weight = 17;</code>
-       * @return The fairnessWeight.
-       */
-      @java.lang.Override
-      public float getFairnessWeight() {
-        return fairnessWeight_;
-      }
-      /**
-       * <code>float fairness_weight = 17;</code>
-       * @param value The fairnessWeight to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFairnessWeight(float value) {
-
-        fairnessWeight_ = value;
-        bitField0_ |= 0x00020000;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>float fairness_weight = 17;</code>
-       * @return This builder for chaining.
-       */
-      public Builder clearFairnessWeight() {
-        bitField0_ = (bitField0_ & ~0x00020000);
-        fairnessWeight_ = 0F;
-        onChanged();
-        return this;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -46803,7 +46545,7 @@ java.lang.String defaultValue) {
       "(\0132\026.google.protobuf.EmptyH\000B\013\n\tconditio" +
       "n\"j\n\013TimerAction\022\024\n\014milliseconds\030\001 \001(\004\022E" +
       "\n\020awaitable_choice\030\002 \001(\0132+.temporal.omes" +
-      ".kitchen_sink.AwaitableChoice\"\277\013\n\025Execut" +
+      ".kitchen_sink.AwaitableChoice\"\220\013\n\025Execut" +
       "eActivityAction\022T\n\007generic\030\001 \001(\0132A.tempo" +
       "ral.omes.kitchen_sink.ExecuteActivityAct" +
       "ion.GenericActivityH\000\022*\n\005delay\030\002 \001(\0132\031.g" +
@@ -46828,127 +46570,126 @@ java.lang.String defaultValue) {
       "en_sink.RemoteActivityOptionsH\001\022E\n\020await" +
       "able_choice\030\r \001(\0132+.temporal.omes.kitche" +
       "n_sink.AwaitableChoice\0222\n\010priority\030\017 \001(\013" +
-      "2 .temporal.api.common.v1.Priority\022\024\n\014fa" +
-      "irness_key\030\020 \001(\t\022\027\n\017fairness_weight\030\021 \001(" +
-      "\002\032S\n\017GenericActivity\022\014\n\004type\030\001 \001(\t\0222\n\tar" +
-      "guments\030\002 \003(\0132\037.temporal.api.common.v1.P" +
-      "ayload\032\232\001\n\021ResourcesActivity\022*\n\007run_for\030" +
-      "\001 \001(\0132\031.google.protobuf.Duration\022\031\n\021byte" +
-      "s_to_allocate\030\002 \001(\004\022$\n\034cpu_yield_every_n" +
-      "_iterations\030\003 \001(\r\022\030\n\020cpu_yield_for_ms\030\004 " +
-      "\001(\r\032D\n\017PayloadActivity\022\030\n\020bytes_to_recei" +
-      "ve\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032O\n\014Hea" +
-      "dersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037." +
-      "temporal.api.common.v1.Payload:\0028\001B\017\n\rac" +
-      "tivity_typeB\n\n\010locality\"\255\n\n\032ExecuteChild" +
-      "WorkflowAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013wor" +
-      "kflow_id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n" +
-      "\ntask_queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.tempo" +
-      "ral.api.common.v1.Payload\022=\n\032workflow_ex" +
-      "ecution_timeout\030\007 \001(\0132\031.google.protobuf." +
-      "Duration\0227\n\024workflow_run_timeout\030\010 \001(\0132\031" +
-      ".google.protobuf.Duration\0228\n\025workflow_ta" +
-      "sk_timeout\030\t \001(\0132\031.google.protobuf.Durat" +
-      "ion\022J\n\023parent_close_policy\030\n \001(\0162-.tempo" +
-      "ral.omes.kitchen_sink.ParentClosePolicy\022" +
-      "N\n\030workflow_id_reuse_policy\030\014 \001(\0162,.temp" +
-      "oral.api.enums.v1.WorkflowIdReusePolicy\022" +
-      "9\n\014retry_policy\030\r \001(\0132#.temporal.api.com" +
-      "mon.v1.RetryPolicy\022\025\n\rcron_schedule\030\016 \001(" +
-      "\t\022T\n\007headers\030\017 \003(\0132C.temporal.omes.kitch" +
-      "en_sink.ExecuteChildWorkflowAction.Heade" +
-      "rsEntry\022N\n\004memo\030\020 \003(\0132@.temporal.omes.ki" +
-      "tchen_sink.ExecuteChildWorkflowAction.Me" +
-      "moEntry\022g\n\021search_attributes\030\021 \003(\0132L.tem" +
-      "poral.omes.kitchen_sink.ExecuteChildWork" +
-      "flowAction.SearchAttributesEntry\022T\n\021canc" +
-      "ellation_type\030\022 \001(\01629.temporal.omes.kitc" +
-      "hen_sink.ChildWorkflowCancellationType\022G" +
-      "\n\021versioning_intent\030\023 \001(\0162,.temporal.ome" +
-      "s.kitchen_sink.VersioningIntent\022E\n\020await" +
-      "able_choice\030\024 \001(\0132+.temporal.omes.kitche" +
-      "n_sink.AwaitableChoice\032O\n\014HeadersEntry\022\013" +
-      "\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.ap" +
-      "i.common.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003" +
-      "key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api." +
-      "common.v1.Payload:\0028\001\032X\n\025SearchAttribute" +
-      "sEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tem" +
-      "poral.api.common.v1.Payload:\0028\001\"0\n\022Await" +
-      "WorkflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(" +
-      "\t\"\337\002\n\020SendSignalAction\022\023\n\013workflow_id\030\001 " +
-      "\001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t" +
-      "\022-\n\004args\030\004 \003(\0132\037.temporal.api.common.v1." +
-      "Payload\022J\n\007headers\030\005 \003(\01329.temporal.omes" +
-      ".kitchen_sink.SendSignalAction.HeadersEn" +
-      "try\022E\n\020awaitable_choice\030\006 \001(\0132+.temporal" +
-      ".omes.kitchen_sink.AwaitableChoice\032O\n\014He" +
+      "2 .temporal.api.common.v1.Priority\032S\n\017Ge" +
+      "nericActivity\022\014\n\004type\030\001 \001(\t\0222\n\targuments" +
+      "\030\002 \003(\0132\037.temporal.api.common.v1.Payload\032" +
+      "\232\001\n\021ResourcesActivity\022*\n\007run_for\030\001 \001(\0132\031" +
+      ".google.protobuf.Duration\022\031\n\021bytes_to_al" +
+      "locate\030\002 \001(\004\022$\n\034cpu_yield_every_n_iterat" +
+      "ions\030\003 \001(\r\022\030\n\020cpu_yield_for_ms\030\004 \001(\r\032D\n\017" +
+      "PayloadActivity\022\030\n\020bytes_to_receive\030\001 \001(" +
+      "\005\022\027\n\017bytes_to_return\030\002 \001(\005\032O\n\014HeadersEnt" +
+      "ry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempora" +
+      "l.api.common.v1.Payload:\0028\001B\017\n\ractivity_" +
+      "typeB\n\n\010locality\"\255\n\n\032ExecuteChildWorkflo" +
+      "wAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_i" +
+      "d\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_q" +
+      "ueue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.api" +
+      ".common.v1.Payload\022=\n\032workflow_execution" +
+      "_timeout\030\007 \001(\0132\031.google.protobuf.Duratio" +
+      "n\0227\n\024workflow_run_timeout\030\010 \001(\0132\031.google" +
+      ".protobuf.Duration\0228\n\025workflow_task_time" +
+      "out\030\t \001(\0132\031.google.protobuf.Duration\022J\n\023" +
+      "parent_close_policy\030\n \001(\0162-.temporal.ome" +
+      "s.kitchen_sink.ParentClosePolicy\022N\n\030work" +
+      "flow_id_reuse_policy\030\014 \001(\0162,.temporal.ap" +
+      "i.enums.v1.WorkflowIdReusePolicy\0229\n\014retr" +
+      "y_policy\030\r \001(\0132#.temporal.api.common.v1." +
+      "RetryPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007he" +
+      "aders\030\017 \003(\0132C.temporal.omes.kitchen_sink" +
+      ".ExecuteChildWorkflowAction.HeadersEntry" +
+      "\022N\n\004memo\030\020 \003(\0132@.temporal.omes.kitchen_s" +
+      "ink.ExecuteChildWorkflowAction.MemoEntry" +
+      "\022g\n\021search_attributes\030\021 \003(\0132L.temporal.o" +
+      "mes.kitchen_sink.ExecuteChildWorkflowAct" +
+      "ion.SearchAttributesEntry\022T\n\021cancellatio" +
+      "n_type\030\022 \001(\01629.temporal.omes.kitchen_sin" +
+      "k.ChildWorkflowCancellationType\022G\n\021versi" +
+      "oning_intent\030\023 \001(\0162,.temporal.omes.kitch" +
+      "en_sink.VersioningIntent\022E\n\020awaitable_ch" +
+      "oice\030\024 \001(\0132+.temporal.omes.kitchen_sink." +
+      "AwaitableChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001" +
+      " \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.commo" +
+      "n.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001" +
+      "(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common." +
+      "v1.Payload:\0028\001\032X\n\025SearchAttributesEntry\022" +
+      "\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.a" +
+      "pi.common.v1.Payload:\0028\001\"0\n\022AwaitWorkflo" +
+      "wState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020S" +
+      "endSignalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006" +
+      "run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004arg" +
+      "s\030\004 \003(\0132\037.temporal.api.common.v1.Payload" +
+      "\022J\n\007headers\030\005 \003(\01329.temporal.omes.kitche" +
+      "n_sink.SendSignalAction.HeadersEntry\022E\n\020" +
+      "awaitable_choice\030\006 \001(\0132+.temporal.omes.k" +
+      "itchen_sink.AwaitableChoice\032O\n\014HeadersEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
+      "al.api.common.v1.Payload:\0028\001\";\n\024CancelWo" +
+      "rkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run" +
+      "_id\030\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010pat" +
+      "ch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inner" +
+      "_action\030\003 \001(\0132\".temporal.omes.kitchen_si" +
+      "nk.Action\"\343\001\n\034UpsertSearchAttributesActi" +
+      "on\022i\n\021search_attributes\030\001 \003(\0132N.temporal" +
+      ".omes.kitchen_sink.UpsertSearchAttribute" +
+      "sAction.SearchAttributesEntry\032X\n\025SearchA" +
+      "ttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001" +
+      "(\0132\037.temporal.api.common.v1.Payload:\0028\001\"" +
+      "G\n\020UpsertMemoAction\0223\n\rupserted_memo\030\001 \001" +
+      "(\0132\034.temporal.api.common.v1.Memo\"J\n\022Retu" +
+      "rnResultAction\0224\n\013return_this\030\001 \001(\0132\037.te" +
+      "mporal.api.common.v1.Payload\"F\n\021ReturnEr" +
+      "rorAction\0221\n\007failure\030\001 \001(\0132 .temporal.ap" +
+      "i.failure.v1.Failure\"\336\006\n\023ContinueAsNewAc" +
+      "tion\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_queu" +
+      "e\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.temporal.ap" +
+      "i.common.v1.Payload\0227\n\024workflow_run_time" +
+      "out\030\004 \001(\0132\031.google.protobuf.Duration\0228\n\025" +
+      "workflow_task_timeout\030\005 \001(\0132\031.google.pro" +
+      "tobuf.Duration\022G\n\004memo\030\006 \003(\01329.temporal." +
+      "omes.kitchen_sink.ContinueAsNewAction.Me" +
+      "moEntry\022M\n\007headers\030\007 \003(\0132<.temporal.omes" +
+      ".kitchen_sink.ContinueAsNewAction.Header" +
+      "sEntry\022`\n\021search_attributes\030\010 \003(\0132E.temp" +
+      "oral.omes.kitchen_sink.ContinueAsNewActi" +
+      "on.SearchAttributesEntry\0229\n\014retry_policy" +
+      "\030\t \001(\0132#.temporal.api.common.v1.RetryPol" +
+      "icy\022G\n\021versioning_intent\030\n \001(\0162,.tempora" +
+      "l.omes.kitchen_sink.VersioningIntent\032L\n\t" +
+      "MemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037." +
+      "temporal.api.common.v1.Payload:\0028\001\032O\n\014He" +
       "adersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
-      ".temporal.api.common.v1.Payload:\0028\001\";\n\024C" +
-      "ancelWorkflowAction\022\023\n\013workflow_id\030\001 \001(\t" +
-      "\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerAction" +
-      "\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228" +
-      "\n\014inner_action\030\003 \001(\0132\".temporal.omes.kit" +
-      "chen_sink.Action\"\343\001\n\034UpsertSearchAttribu" +
-      "tesAction\022i\n\021search_attributes\030\001 \003(\0132N.t" +
-      "emporal.omes.kitchen_sink.UpsertSearchAt" +
-      "tributesAction.SearchAttributesEntry\032X\n\025" +
-      "SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005va" +
-      "lue\030\002 \001(\0132\037.temporal.api.common.v1.Paylo" +
-      "ad:\0028\001\"G\n\020UpsertMemoAction\0223\n\rupserted_m" +
-      "emo\030\001 \001(\0132\034.temporal.api.common.v1.Memo\"" +
-      "J\n\022ReturnResultAction\0224\n\013return_this\030\001 \001" +
-      "(\0132\037.temporal.api.common.v1.Payload\"F\n\021R" +
-      "eturnErrorAction\0221\n\007failure\030\001 \001(\0132 .temp" +
-      "oral.api.failure.v1.Failure\"\336\006\n\023Continue" +
-      "AsNewAction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\nta" +
-      "sk_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.temp" +
-      "oral.api.common.v1.Payload\0227\n\024workflow_r" +
-      "un_timeout\030\004 \001(\0132\031.google.protobuf.Durat" +
-      "ion\0228\n\025workflow_task_timeout\030\005 \001(\0132\031.goo" +
-      "gle.protobuf.Duration\022G\n\004memo\030\006 \003(\01329.te" +
-      "mporal.omes.kitchen_sink.ContinueAsNewAc" +
-      "tion.MemoEntry\022M\n\007headers\030\007 \003(\0132<.tempor" +
-      "al.omes.kitchen_sink.ContinueAsNewAction" +
-      ".HeadersEntry\022`\n\021search_attributes\030\010 \003(\013" +
-      "2E.temporal.omes.kitchen_sink.ContinueAs" +
-      "NewAction.SearchAttributesEntry\0229\n\014retry" +
-      "_policy\030\t \001(\0132#.temporal.api.common.v1.R" +
-      "etryPolicy\022G\n\021versioning_intent\030\n \001(\0162,." +
-      "temporal.omes.kitchen_sink.VersioningInt" +
-      "ent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002" +
-      " \001(\0132\037.temporal.api.common.v1.Payload:\0028" +
-      "\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030" +
-      "\002 \001(\0132\037.temporal.api.common.v1.Payload:\002" +
-      "8\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t" +
-      "\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v1" +
-      ".Payload:\0028\001\"\321\001\n\025RemoteActivityOptions\022O" +
-      "\n\021cancellation_type\030\001 \001(\01624.temporal.ome" +
-      "s.kitchen_sink.ActivityCancellationType\022" +
-      "\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021versi" +
-      "oning_intent\030\003 \001(\0162,.temporal.omes.kitch" +
-      "en_sink.VersioningIntent\"\254\002\n\025ExecuteNexu" +
-      "sOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperatio" +
-      "n\030\002 \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132" +
-      ">.temporal.omes.kitchen_sink.ExecuteNexu" +
-      "sOperation.HeadersEntry\022E\n\020awaitable_cho" +
-      "ice\030\005 \001(\0132+.temporal.omes.kitchen_sink.A" +
-      "waitableChoice\022\027\n\017expected_output\030\006 \001(\t\032" +
-      ".\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 " +
-      "\001(\t:\0028\001*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_" +
-      "CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLO" +
-      "SE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_PO" +
-      "LICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_RE" +
-      "QUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UN" +
-      "SPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002" +
-      "*\242\001\n\035ChildWorkflowCancellationType\022\024\n\020CH" +
-      "ILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020" +
-      "\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETE" +
-      "D\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQUES" +
-      "TED\020\003*X\n\030ActivityCancellationType\022\016\n\nTRY" +
-      "_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED" +
-      "\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.git" +
-      "hub.com/temporalio/omes/loadgen/kitchens" +
-      "inkb\006proto3"
+      ".temporal.api.common.v1.Payload:\0028\001\032X\n\025S" +
+      "earchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005val" +
+      "ue\030\002 \001(\0132\037.temporal.api.common.v1.Payloa" +
+      "d:\0028\001\"\321\001\n\025RemoteActivityOptions\022O\n\021cance" +
+      "llation_type\030\001 \001(\01624.temporal.omes.kitch" +
+      "en_sink.ActivityCancellationType\022\036\n\026do_n" +
+      "ot_eagerly_execute\030\002 \001(\010\022G\n\021versioning_i" +
+      "ntent\030\003 \001(\0162,.temporal.omes.kitchen_sink" +
+      ".VersioningIntent\"\254\002\n\025ExecuteNexusOperat" +
+      "ion\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t" +
+      "\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132>.tempo" +
+      "ral.omes.kitchen_sink.ExecuteNexusOperat" +
+      "ion.HeadersEntry\022E\n\020awaitable_choice\030\005 \001" +
+      "(\0132+.temporal.omes.kitchen_sink.Awaitabl" +
+      "eChoice\022\027\n\017expected_output\030\006 \001(\t\032.\n\014Head" +
+      "ersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001" +
+      "*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_CLOSE_P" +
+      "OLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLI" +
+      "CY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_AB" +
+      "ANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_C" +
+      "ANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFI" +
+      "ED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035Ch" +
+      "ildWorkflowCancellationType\022\024\n\020CHILD_WF_" +
+      "ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CH" +
+      "ILD_WF_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$" +
+      "CHILD_WF_WAIT_CANCELLATION_REQUESTED\020\003*X" +
+      "\n\030ActivityCancellationType\022\016\n\nTRY_CANCEL" +
+      "\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007A" +
+      "BANDON\020\002BB\n\020io.temporal.omesZ.github.com" +
+      "/temporalio/omes/loadgen/kitchensinkb\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -47072,7 +46813,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor,
-        new java.lang.String[] { "Generic", "Delay", "Noop", "Resources", "Payload", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight", "ActivityType", "Locality", });
+        new java.lang.String[] { "Generic", "Delay", "Noop", "Resources", "Payload", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "ActivityType", "Locality", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(0);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_GenericActivity_fieldAccessorTable = new

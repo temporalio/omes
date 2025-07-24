@@ -74,13 +74,6 @@ async function main() {
   mkdirSync(outputDir, { recursive: true });
 
   const protoFiles = glob.sync(resolve(protoBaseDir, '**/*.proto'));
-  const protosMTime = Math.max(...protoFiles.map(mtime));
-  const genMTime = mtime(jsOutputFile);
-
-  if (protosMTime < genMTime) {
-    console.log('Assuming protos are up to date');
-    return;
-  }
 
   await compileProtos(
     resolve(outputDir, 'root.d.ts'),
