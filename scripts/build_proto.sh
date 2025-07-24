@@ -20,8 +20,11 @@ docker build -f "${PROJECT_ROOT}/dockerfiles/proto.Dockerfile" \
 
 echo "Running kitchen-sink-gen build..."
 docker run --rm -v "${PROJECT_ROOT}:/workspace" -w /workspace "${IMAGE_NAME}" bash -c "
+    set -e
+
     cd /workspace/loadgen/kitchen-sink-gen
     cargo build
+
     cd /workspace/workers/typescript
     npm install && npm run proto-gen
 "
