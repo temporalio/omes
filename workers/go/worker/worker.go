@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/kitchensink"
-	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -55,9 +54,6 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string, options cmdoptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
-	tpsActivities := throughputstress.Activities{
-		Client: client,
-	}
 
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
@@ -80,11 +76,8 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
-			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
-			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
-			w.RegisterActivity(&tpsActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()

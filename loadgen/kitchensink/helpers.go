@@ -36,6 +36,22 @@ func NoOpSingleActivityActionSet() *ActionSet {
 	}
 }
 
+func PayloadActivity(inSize, outSize int) *Action {
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: &ExecuteActivityAction{
+				ActivityType: &ExecuteActivityAction_Payload{
+					Payload: &ExecuteActivityAction_PayloadActivity{
+						BytesToReceive: int32(inSize),
+						BytesToReturn:  int32(outSize),
+					},
+				},
+				StartToCloseTimeout: &durationpb.Duration{Seconds: 60},
+			},
+		},
+	}
+}
+
 func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint32, cpuYieldForMs uint32, runForSeconds int64) *Action {
 	return &Action{
 		Variant: &Action_ExecActivity{
