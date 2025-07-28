@@ -123,6 +123,18 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 	return i
 }
 
+func (s *ScenarioInfo) ScenarioOptionFloat(name string, defaultValue float64) float64 {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
 func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
 	v := s.ScenarioOptions[name]
 	return v == "true"

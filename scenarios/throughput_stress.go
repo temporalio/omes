@@ -11,8 +11,6 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/throughputstress"
 	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 )
@@ -128,7 +126,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
-	if err = t.initSearchAttribute(ctx, info); err != nil {
+	if err = loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
 		return err
 	}
 
@@ -249,32 +247,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		completedWorkflows,
 		visibilityVerificationTimeout,
 	)
-}
-
-func (t *tpsExecutor) initSearchAttribute(ctx context.Context, info loadgen.ScenarioInfo) error {
-	info.Logger.Infof("Initialising Search Attribute %s", ThroughputStressScenarioIdSearchAttribute)
-
-	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
-		&operatorservice.AddSearchAttributesRequest{
-			Namespace: info.Namespace,
-			SearchAttributes: map[string]enums.IndexedValueType{
-				ThroughputStressScenarioIdSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
-			},
-		})
-	var deniedErr *serviceerror.PermissionDenied
-	var alreadyErr *serviceerror.AlreadyExists
-	if errors.As(err, &alreadyErr) {
-		info.Logger.Infof("Search Attribute %s already exists", ThroughputStressScenarioIdSearchAttribute)
-	} else if err != nil {
-		info.Logger.Warnf("Failed to add Search Attribute %s: %v", ThroughputStressScenarioIdSearchAttribute, err)
-		if !errors.As(err, &deniedErr) {
-			return err
-		}
-	} else {
-		info.Logger.Infof("Search Attribute %s added", ThroughputStressScenarioIdSearchAttribute)
-	}
-
-	return nil
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
