@@ -1,6 +1,7 @@
 using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
+using Temporalio.Client;
 using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
@@ -327,6 +328,11 @@ public class KitchenSinkWorkflow
             args.Add(inputData);
             args.Add(payload.BytesToReturn);
         }
+        else if (eaa.Client is { } client)
+        {
+            actType = "client";
+            args.Add(client);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -407,5 +413,205 @@ public class KitchenSinkWorkflow
         var output = new byte[bytesToReturn];
         new Random().NextBytes(output);
         return output;
+    }
+
+    [Activity("client")]
+    public static async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
+    {
+        // For now, skip the client activity functionality that requires application context
+        await Task.CompletedTask;
+        throw new NotImplementedException("Client activity not implemented - application context not available in this version");
+    }
+
+    private class ClientActionsExecutor
+    {
+        private readonly ITemporalClient _client;
+        private string? _workflowId;
+        private string? _runId;
+        private string _workflowType = "kitchenSink";
+        private object? _workflowInput;
+
+        public ClientActionsExecutor(ITemporalClient client)
+        {
+            _client = client;
+            _workflowInput = null; // Explicitly assign to avoid warning
+        }
+
+        public async Task ExecuteClientSequenceAsync(ClientSequence clientSeq)
+        {
+            foreach (var actionSet in clientSeq.ActionSets)
+            {
+                await ExecuteClientActionSetAsync(actionSet);
+            }
+        }
+
+        private async Task ExecuteClientActionSetAsync(ClientActionSet actionSet)
+        {
+            if (actionSet.Concurrent)
+            {
+                throw new ArgumentException("Concurrent client actions are not supported in .NET worker");
+            }
+
+            foreach (var action in actionSet.Actions)
+            {
+                await ExecuteClientActionAsync(action);
+            }
+
+            if (actionSet.WaitForCurrentRunToFinishAtEnd)
+            {
+                if (!string.IsNullOrEmpty(_workflowId) && !string.IsNullOrEmpty(_runId))
+                {
+                    var handle = _client.GetWorkflowHandle(_workflowId, _runId);
+                    try
+                    {
+                        await handle.GetResultAsync();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            }
+        }
+
+        private async Task ExecuteClientActionAsync(ClientAction action)
+        {
+            if (action.DoSignal != null)
+            {
+                await ExecuteSignalActionAsync(action.DoSignal);
+            }
+            else if (action.DoUpdate != null)
+            {
+                await ExecuteUpdateActionAsync(action.DoUpdate);
+            }
+            else if (action.DoQuery != null)
+            {
+                await ExecuteQueryActionAsync(action.DoQuery);
+            }
+            else if (action.NestedActions != null)
+            {
+                await ExecuteClientActionSetAsync(action.NestedActions);
+            }
+            else
+            {
+                throw new ArgumentException("Client action must have a recognized variant");
+            }
+        }
+
+        private async Task ExecuteSignalActionAsync(DoSignal signal)
+        {
+            string signalName;
+            object? signalArgs;
+
+            if (signal.DoSignalActions != null)
+            {
+                signalName = "do_actions_signal";
+                signalArgs = signal.DoSignalActions;
+            }
+            else if (signal.Custom != null)
+            {
+                signalName = signal.Custom.Name;
+                signalArgs = signal.Custom.Args.Count > 0 ? signal.Custom.Args : null;
+            }
+            else
+            {
+                throw new ArgumentException("DoSignal must have a recognizable variant");
+            }
+
+            if (signal.WithStart)
+            {
+                var workflowId = _workflowId ?? Guid.NewGuid().ToString();
+                var options = new WorkflowOptions
+                {
+                    Id = workflowId
+                };
+                var handle = await _client.StartWorkflowAsync(_workflowType, new[] { _workflowInput }, options);
+                await handle.SignalAsync(signalName, new[] { signalArgs });
+                _workflowId = handle.Id;
+                _runId = handle.ResultRunId;
+            }
+            else
+            {
+                var handle = _client.GetWorkflowHandle(_workflowId!);
+                await handle.SignalAsync(signalName, new[] { signalArgs });
+            }
+        }
+
+        private async Task ExecuteUpdateActionAsync(DoUpdate update)
+        {
+            string updateName;
+            object? updateArgs;
+
+            if (update.DoActions != null)
+            {
+                updateName = "do_actions_update";
+                updateArgs = update.DoActions;
+            }
+            else if (update.Custom != null)
+            {
+                updateName = update.Custom.Name;
+                updateArgs = update.Custom.Args.Count > 0 ? update.Custom.Args : null;
+            }
+            else
+            {
+                throw new ArgumentException("DoUpdate must have a recognizable variant");
+            }
+
+            try
+            {
+                if (update.WithStart)
+                {
+                    var workflowId = _workflowId ?? Guid.NewGuid().ToString();
+                    var options = new WorkflowOptions
+                    {
+                        Id = workflowId
+                    };
+                    var handle = await _client.StartWorkflowAsync(_workflowType, new[] { _workflowInput }, options);
+                    await handle.ExecuteUpdateAsync(updateName, new[] { updateArgs });
+                    _workflowId = handle.Id;
+                    _runId = handle.ResultRunId;
+                }
+                else
+                {
+                    var handle = _client.GetWorkflowHandle(_workflowId!);
+                    await handle.ExecuteUpdateAsync(updateName, new[] { updateArgs });
+                }
+            }
+            catch (Exception)
+            {
+                if (!update.FailureExpected)
+                {
+                    throw;
+                }
+            }
+        }
+
+        private async Task ExecuteQueryActionAsync(DoQuery query)
+        {
+            try
+            {
+                if (query.ReportState != null)
+                {
+                    var handle = _client.GetWorkflowHandle(_workflowId!);
+                    await handle.QueryAsync<object>("report_state", Array.Empty<object>());
+                }
+                else if (query.Custom != null)
+                {
+                    var handle = _client.GetWorkflowHandle(_workflowId!);
+                    var queryArgs = query.Custom.Args.Count > 0 ? query.Custom.Args.ToArray() : null;
+                    await handle.QueryAsync<object>(query.Custom.Name, queryArgs ?? Array.Empty<object>());
+                }
+                else
+                {
+                    throw new ArgumentException("DoQuery must have a recognizable variant");
+                }
+            }
+            catch (Exception)
+            {
+                if (!query.FailureExpected)
+                {
+                    throw;
+                }
+            }
+        }
     }
 }

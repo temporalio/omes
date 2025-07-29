@@ -1,15 +1,14 @@
-import { Command } from 'commander';
+import {Command} from 'commander';
 import {
   DefaultLogger,
   LogLevel,
-  makeTelemetryFilterString,
   NativeConnection,
   Runtime,
   TelemetryOptions,
   Worker,
   WorkerOptions,
 } from '@temporalio/worker';
-import { TLSConfig } from '@temporalio/client';
+import {Client, TLSConfig} from '@temporalio/client';
 import * as fs from 'fs';
 import * as activities from './activities';
 import winston from 'winston';
@@ -124,6 +123,9 @@ async function run() {
     tls: tlsConfig,
   });
 
+  // Create a client for passing to activities
+  const client = new Client({ connection, namespace: opts.namespace });
+
   // Possibly create multiple workers if we are being asked to use multiple task queues
   const taskQueues = [];
   if (opts.tqSufEnd === 0 || opts.tqSufEnd === undefined) {
@@ -145,6 +147,16 @@ async function run() {
     taskQueue: opts.taskQueue,
     dataConverter: {
       payloadConverterPath: require.resolve('./payload-converter'),
+    },
+    interceptors: {
+      activityInbound: [
+        () => ({
+          async execute(input, next) {
+            (input as any).context = { ...(input as any).context, client };
+            return await next(input);
+          },
+        }),
+      ],
     },
   };
   if (opts.maxActPollers) {

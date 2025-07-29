@@ -18,4 +18,12 @@ public class ActivitiesImpl implements Activities {
     new Random().nextBytes(output);
     return output;
   }
+
+  @Override
+  public void client(
+      io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity clientActivity) {
+    // For now, skip the client activity functionality that requires application context
+    throw new RuntimeException(
+        "Client activity not implemented - application context not available");
+  }
 }

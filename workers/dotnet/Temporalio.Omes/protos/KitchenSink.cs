@@ -111,7 +111,7 @@ namespace Temporal.Omes.KitchenSink {
             "X2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0",
             "eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxtaWxsaXNlY29u",
             "ZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIrLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSK/CwoVRXhlY3V0",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLqDAoVRXhlY3V0",
             "ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50ZW1wb3JhbC5v",
             "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uR2VuZXJp",
             "Y0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
@@ -120,127 +120,131 @@ namespace Temporal.Omes.KitchenSink {
             "aGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJlc291cmNlc0FjdGl2",
             "aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
             "bl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXlsb2FkQWN0aXZpdHlI",
-            "ABISCgp0YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1w",
-            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24u",
-            "SGVhZGVyc0VudHJ5EjwKGXNjaGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiAB",
-            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9f",
-            "c3RhcnRfdGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlv",
-            "bhI5ChZzdGFydF90b19jbG9zZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnBy",
-            "b3RvYnVmLkR1cmF0aW9uEjQKEWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhku",
-            "Z29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEo",
-            "CzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNf",
-            "bG9jYWwYCyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1v",
-            "dGUYDCABKAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVB",
-            "Y3Rpdml0eU9wdGlvbnNIARJFChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisu",
-            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIK",
-            "CHByaW9yaXR5GA8gASgLMiAudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlv",
-            "cml0eRIUCgxmYWlybmVzc19rZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0",
-            "GBEgASgCGlMKD0dlbmVyaWNBY3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFy",
-            "Z3VtZW50cxgCIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9h",
-            "ZBqaAQoRUmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdv",
-            "b2dsZS5wcm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgC",
-            "IAEoBBIkChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgK",
-            "EGNwdV95aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgK",
-            "EGJ5dGVzX3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIg",
-            "ASgFGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiAB",
-            "KAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFj",
-            "dGl2aXR5X3R5cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtm",
-            "bG93QWN0aW9uEhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxvd19pZBgD",
-            "IAEoCRIVCg13b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVldWUYBSAB",
-            "KAkSLgoFaW5wdXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBh",
-            "eWxvYWQSPQoad29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByABKAsyGS5n",
-            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVuX3RpbWVv",
-            "dXQYCCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zs",
-            "b3dfdGFza190aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0",
-            "aW9uEkoKE3BhcmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3b3JrZmxv",
-            "d19pZF9yZXVzZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGkuZW51bXMu",
-            "djEuV29ya2Zsb3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGljeRgNIAEo",
-            "CzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSFQoNY3Jv",
-            "bl9zY2hlZHVsZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVtcG9yYWwu",
-            "b21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24u",
-            "SGVhZGVyc0VudHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5vbWVzLmtp",
-            "dGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5NZW1vRW50",
-            "cnkSZwoRc2VhcmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3JhbC5vbWVz",
-            "LmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5TZWFy",
-            "Y2hBdHRyaWJ1dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUYEiABKA4y",
-            "OS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtmbG93Q2Fu",
-            "Y2VsbGF0aW9uVHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEoDjIsLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQSRQoQ",
-            "YXdhaXRhYmxlX2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkF3YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5",
-            "GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
-            "MS5QYXlsb2FkOgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJEi4KBXZh",
-            "bHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4",
-            "ARpYChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZh",
-            "bHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4",
-            "ASIwChJBd2FpdFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0KBXZhbHVl",
-            "GAIgASgJIt8CChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEg",
-            "ASgJEg4KBnJ1bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEoCRItCgRh",
-            "cmdzGAQgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEkoK",
-            "B2hlYWRlcnMYBSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5T",
-            "ZW5kU2lnbmFsQWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hv",
-            "aWNlGAYgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRh",
-            "YmxlQ2hvaWNlGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFs",
-            "dWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgB",
-            "IjsKFENhbmNlbFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJ",
-            "Eg4KBnJ1bl9pZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlvbhIQCghw",
-            "YXRjaF9pZBgBIAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlubmVyX2Fj",
-            "dGlvbhgDIAEoCzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlv",
-            "biLjAQocVXBzZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFzZWFyY2hf",
-            "YXR0cmlidXRlcxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
-            "LlVwc2VydFNlYXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0cmlidXRl",
-            "c0VudHJ5GlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkS",
-            "LgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxv",
-            "YWQ6AjgBIkcKEFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRfbWVtbxgB",
-            "IAEoCzIcLnRlbXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJSZXR1cm5S",
-            "ZXN1bHRBY3Rpb24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1wb3JhbC5h",
-            "cGkuY29tbW9uLnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rpb24SMQoH",
-            "ZmFpbHVyZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYxLkZhaWx1",
-            "cmUi3gYKE0NvbnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3dfdHlwZRgB",
-            "IAEoCRISCgp0YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgDIAMoCzIf",
-            "LnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3JrZmxvd19y",
-            "dW5fdGltZW91dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4",
-            "ChV3b3JrZmxvd190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9i",
-            "dWYuRHVyYXRpb24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5Ek0KB2hl",
-            "YWRlcnMYByADKAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250",
-            "aW51ZUFzTmV3QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hfYXR0cmli",
-            "dXRlcxgIIAMoCzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRp",
-            "bnVlQXNOZXdBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkKDHJldHJ5",
-            "X3BvbGljeRgJIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQ",
-            "b2xpY3kSRwoRdmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1lbW9FbnRy",
-            "eRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGku",
-            "Y29tbW9uLnYxLlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkY",
+            "ABJSCgZjbGllbnQYEyABKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uQ2xpZW50QWN0aXZpdHlIABISCgp0",
+            "YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1wb3JhbC5v",
+            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uSGVhZGVy",
+            "c0VudHJ5EjwKGXNjaGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiABKAsyGS5n",
+            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9fc3RhcnRf",
+            "dGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI5ChZz",
+            "dGFydF90b19jbG9zZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVm",
+            "LkR1cmF0aW9uEjQKEWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhkuZ29vZ2xl",
+            "LnByb3RvYnVmLkR1cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEoCzIjLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNfbG9jYWwY",
+            "CyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1vdGUYDCAB",
+            "KAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVBY3Rpdml0",
+            "eU9wdGlvbnNIARJFChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisudGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIKCHByaW9y",
+            "aXR5GA8gASgLMiAudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlvcml0eRIU",
+            "CgxmYWlybmVzc19rZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0GBEgASgC",
+            "GlMKD0dlbmVyaWNBY3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFyZ3VtZW50",
+            "cxgCIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBqaAQoR",
+            "UmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdvb2dsZS5w",
+            "cm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgCIAEoBBIk",
+            "ChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgKEGNwdV95",
+            "aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgKEGJ5dGVz",
+            "X3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIgASgFGlUK",
+            "DkNsaWVudEFjdGl2aXR5EkMKD2NsaWVudF9zZXF1ZW5jZRgBIAEoCzIqLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNsaWVudFNlcXVlbmNlGk8KDEhl",
+            "YWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1w",
+            "b3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFjdGl2aXR5X3R5",
+            "cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9u",
+            "EhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxvd19pZBgDIAEoCRIVCg13",
+            "b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVldWUYBSABKAkSLgoFaW5w",
+            "dXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQSPQoa",
+            "d29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByABKAsyGS5nb29nbGUucHJv",
+            "dG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVuX3RpbWVvdXQYCCABKAsy",
+            "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zsb3dfdGFza190",
+            "aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEkoKE3Bh",
+            "cmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3b3JrZmxvd19pZF9yZXVz",
+            "ZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGkuZW51bXMudjEuV29ya2Zs",
+            "b3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGljeRgNIAEoCzIjLnRlbXBv",
+            "cmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSFQoNY3Jvbl9zY2hlZHVs",
+            "ZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uSGVhZGVyc0Vu",
+            "dHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5NZW1vRW50cnkSZwoRc2Vh",
+            "cmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5TZWFyY2hBdHRyaWJ1",
+            "dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUYEiABKA4yOS50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
+            "VHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEoDjIsLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQSRQoQYXdhaXRhYmxl",
+            "X2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3",
+            "YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4K",
+            "BXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2Fk",
+            "OgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
+            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpYChVTZWFy",
+            "Y2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
+            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASIwChJBd2Fp",
+            "dFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJIt8C",
+            "ChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1",
+            "bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEoCRItCgRhcmdzGAQgAygL",
+            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEkoKB2hlYWRlcnMY",
+            "BSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZW5kU2lnbmFs",
+            "QWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNlGAYgASgL",
+            "MisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNl",
+            "Gk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsy",
+            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIjsKFENhbmNl",
+            "bFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1bl9p",
+            "ZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlvbhIQCghwYXRjaF9pZBgB",
+            "IAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlubmVyX2FjdGlvbhgDIAEo",
+            "CzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvbiLjAQocVXBz",
+            "ZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFzZWFyY2hfYXR0cmlidXRl",
+            "cxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNl",
+            "YXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5GlgK",
+            "FVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUY",
+            "AiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIkcK",
+            "EFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRfbWVtbxgBIAEoCzIcLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJSZXR1cm5SZXN1bHRBY3Rp",
+            "b24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
+            "LnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rpb24SMQoHZmFpbHVyZRgB",
+            "IAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYxLkZhaWx1cmUi3gYKE0Nv",
+            "bnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3dfdHlwZRgBIAEoCRISCgp0",
+            "YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgDIAMoCzIfLnRlbXBvcmFs",
+            "LmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3JrZmxvd19ydW5fdGltZW91",
+            "dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4ChV3b3JrZmxv",
+            "d190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRp",
+            "b24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5Ek0KB2hlYWRlcnMYByAD",
+            "KAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250aW51ZUFzTmV3",
+            "QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hfYXR0cmlidXRlcxgIIAMo",
+            "CzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdB",
+            "Y3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkKDHJldHJ5X3BvbGljeRgJ",
+            "IAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSRwoR",
+            "dmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1lbW9FbnRyeRILCgNrZXkY",
             "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkY",
-            "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMSTwoRY2Fu",
-            "Y2VsbGF0aW9uX3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5BY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2Vy",
-            "bHlfZXhlY3V0ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIs",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQi",
-            "rAIKFUV4ZWN1dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIR",
-            "CglvcGVyYXRpb24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgE",
-            "IAMoCzI+LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1",
-            "c09wZXJhdGlvbi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgF",
-            "IAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNo",
-            "b2ljZRIXCg9leHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5",
-            "EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENs",
-            "b3NlUG9saWN5EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQ",
-            "ABIhCh1QQVJFTlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVO",
-            "VF9DTE9TRV9QT0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJ",
-            "Q1lfUkVRVUVTVF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VO",
-            "U1BFQ0lGSUVEEAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQod",
-            "Q2hpbGRXb3JrZmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJB",
-            "TkRPThAAEhcKE0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9X",
-            "QUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlU",
-            "X0NBTkNFTExBVElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxh",
-            "dGlvblR5cGUSDgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9O",
-            "X0NPTVBMRVRFRBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVz",
-            "Wi5naXRodWIuY29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5z",
-            "aW5rYgZwcm90bzM="));
+            "LlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoF",
+            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
+            "AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoF",
+            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
+            "AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMSTwoRY2FuY2VsbGF0aW9u",
+            "X3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rp",
+            "dml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2VybHlfZXhlY3V0",
+            "ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIsLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQirAIKFUV4ZWN1",
+            "dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIRCglvcGVyYXRp",
+            "b24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgEIAMoCzI+LnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlv",
+            "bi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgFIAEoCzIrLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRIXCg9l",
+            "eHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgB",
+            "IAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENsb3NlUG9saWN5",
+            "EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJF",
+            "TlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9Q",
+            "T0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVT",
+            "VF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVE",
+            "EAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3Jr",
+            "Zmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcK",
+            "E0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNF",
+            "TExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExB",
+            "VElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUS",
+            "DgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
+            "RBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIu",
+            "Y29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -260,9 +264,10 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.Action), global::Temporal.Omes.KitchenSink.Action.Parser, new[]{ "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitableChoice), global::Temporal.Omes.KitchenSink.AwaitableChoice.Parser, new[]{ "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted" }, new[]{ "Condition" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.TimerAction), global::Temporal.Omes.KitchenSink.TimerAction.Parser, new[]{ "Milliseconds", "AwaitableChoice" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "Client", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity.Parser, new[]{ "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity.Parser, new[]{ "BytesToReceive", "BytesToReturn" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity.Parser, new[]{ "ClientSequence" }, null, null, null, null),
             null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction), global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction.Parser, new[]{ "Namespace", "WorkflowId", "WorkflowType", "TaskQueue", "Input", "WorkflowExecutionTimeout", "WorkflowRunTimeout", "WorkflowTaskTimeout", "ParentClosePolicy", "WorkflowIdReusePolicy", "RetryPolicy", "CronSchedule", "Headers", "Memo", "SearchAttributes", "CancellationType", "VersioningIntent", "AwaitableChoice" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitWorkflowState), global::Temporal.Omes.KitchenSink.AwaitWorkflowState.Parser, new[]{ "Key", "Value" }, null, null, null, null),
@@ -6021,6 +6026,9 @@ namespace Temporal.Omes.KitchenSink {
         case ActivityTypeOneofCase.Payload:
           Payload = other.Payload.Clone();
           break;
+        case ActivityTypeOneofCase.Client:
+          Client = other.Client.Clone();
+          break;
       }
 
       switch (other.LocalityCase) {
@@ -6111,6 +6119,21 @@ namespace Temporal.Omes.KitchenSink {
       set {
         activityType_ = value;
         activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.Payload;
+      }
+    }
+
+    /// <summary>Field number for the "client" field.</summary>
+    public const int ClientFieldNumber = 19;
+    /// <summary>
+    /// There must be an activity named `client` which accepts the ClientActivity message as input
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity Client {
+      get { return activityTypeCase_ == ActivityTypeOneofCase.Client ? (global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity) activityType_ : null; }
+      set {
+        activityType_ = value;
+        activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.Client;
       }
     }
 
@@ -6306,6 +6329,7 @@ namespace Temporal.Omes.KitchenSink {
       Noop = 3,
       Resources = 14,
       Payload = 18,
+      Client = 19,
     }
     private ActivityTypeOneofCase activityTypeCase_ = ActivityTypeOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6362,6 +6386,7 @@ namespace Temporal.Omes.KitchenSink {
       if (!object.Equals(Noop, other.Noop)) return false;
       if (!object.Equals(Resources, other.Resources)) return false;
       if (!object.Equals(Payload, other.Payload)) return false;
+      if (!object.Equals(Client, other.Client)) return false;
       if (TaskQueue != other.TaskQueue) return false;
       if (!Headers.Equals(other.Headers)) return false;
       if (!object.Equals(ScheduleToCloseTimeout, other.ScheduleToCloseTimeout)) return false;
@@ -6389,6 +6414,7 @@ namespace Temporal.Omes.KitchenSink {
       if (activityTypeCase_ == ActivityTypeOneofCase.Noop) hash ^= Noop.GetHashCode();
       if (activityTypeCase_ == ActivityTypeOneofCase.Resources) hash ^= Resources.GetHashCode();
       if (activityTypeCase_ == ActivityTypeOneofCase.Payload) hash ^= Payload.GetHashCode();
+      if (activityTypeCase_ == ActivityTypeOneofCase.Client) hash ^= Client.GetHashCode();
       if (TaskQueue.Length != 0) hash ^= TaskQueue.GetHashCode();
       hash ^= Headers.GetHashCode();
       if (scheduleToCloseTimeout_ != null) hash ^= ScheduleToCloseTimeout.GetHashCode();
@@ -6491,6 +6517,10 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(146, 1);
         output.WriteMessage(Payload);
       }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(Client);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -6570,6 +6600,10 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(146, 1);
         output.WriteMessage(Payload);
       }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(Client);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -6594,6 +6628,9 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (activityTypeCase_ == ActivityTypeOneofCase.Payload) {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(Payload);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Client);
       }
       if (TaskQueue.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TaskQueue);
@@ -6726,6 +6763,12 @@ namespace Temporal.Omes.KitchenSink {
             Payload = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity();
           }
           Payload.MergeFrom(other.Payload);
+          break;
+        case ActivityTypeOneofCase.Client:
+          if (Client == null) {
+            Client = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity();
+          }
+          Client.MergeFrom(other.Client);
           break;
       }
 
@@ -6887,6 +6930,15 @@ namespace Temporal.Omes.KitchenSink {
             Payload = subBuilder;
             break;
           }
+          case 154: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
+              subBuilder.MergeFrom(Client);
+            }
+            input.ReadMessage(subBuilder);
+            Client = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -7028,6 +7080,15 @@ namespace Temporal.Omes.KitchenSink {
             }
             input.ReadMessage(subBuilder);
             Payload = subBuilder;
+            break;
+          }
+          case 154: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
+              subBuilder.MergeFrom(Client);
+            }
+            input.ReadMessage(subBuilder);
+            Client = subBuilder;
             break;
           }
         }
@@ -7784,6 +7845,205 @@ namespace Temporal.Omes.KitchenSink {
               }
               case 16: {
                 BytesToReturn = input.ReadInt32();
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class ClientActivity : pb::IMessage<ClientActivity>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<ClientActivity> _parser = new pb::MessageParser<ClientActivity>(() => new ClientActivity());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<ClientActivity> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Descriptor.NestedTypes[3]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public ClientActivity() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public ClientActivity(ClientActivity other) : this() {
+          clientSequence_ = other.clientSequence_ != null ? other.clientSequence_.Clone() : null;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public ClientActivity Clone() {
+          return new ClientActivity(this);
+        }
+
+        /// <summary>Field number for the "client_sequence" field.</summary>
+        public const int ClientSequenceFieldNumber = 1;
+        private global::Temporal.Omes.KitchenSink.ClientSequence clientSequence_;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Temporal.Omes.KitchenSink.ClientSequence ClientSequence {
+          get { return clientSequence_; }
+          set {
+            clientSequence_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as ClientActivity);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(ClientActivity other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (!object.Equals(ClientSequence, other.ClientSequence)) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (clientSequence_ != null) hash ^= ClientSequence.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (clientSequence_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(ClientSequence);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (clientSequence_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(ClientSequence);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (clientSequence_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(ClientSequence);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(ClientActivity other) {
+          if (other == null) {
+            return;
+          }
+          if (other.clientSequence_ != null) {
+            if (clientSequence_ == null) {
+              ClientSequence = new global::Temporal.Omes.KitchenSink.ClientSequence();
+            }
+            ClientSequence.MergeFrom(other.ClientSequence);
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 10: {
+                if (clientSequence_ == null) {
+                  ClientSequence = new global::Temporal.Omes.KitchenSink.ClientSequence();
+                }
+                input.ReadMessage(ClientSequence);
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 10: {
+                if (clientSequence_ == null) {
+                  ClientSequence = new global::Temporal.Omes.KitchenSink.ClientSequence();
+                }
+                input.ReadMessage(ClientSequence);
                 break;
               }
             }
