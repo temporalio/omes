@@ -87,7 +87,7 @@ public static class App
     /// </summary>
     /// <param name="args">CLI args.</param>
     /// <returns>Task for completion.</returns>
-    public static Task RunAsync(string[] args) => CreateCommand().InvokeAsync(args);
+    public static Task<int> RunAsync(string[] args) => CreateCommand().InvokeAsync(args);
 
     private static Command CreateCommand()
     {
