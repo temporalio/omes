@@ -238,7 +238,7 @@ class TimerAction(_message.Message):
     def __init__(self, milliseconds: _Optional[int] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class ExecuteActivityAction(_message.Message):
-    __slots__ = ("generic", "delay", "noop", "resources", "payload", "task_queue", "headers", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice", "priority", "fairness_key", "fairness_weight")
+    __slots__ = ("generic", "delay", "noop", "resources", "payload", "client", "task_queue", "headers", "schedule_to_close_timeout", "schedule_to_start_timeout", "start_to_close_timeout", "heartbeat_timeout", "retry_policy", "is_local", "remote", "awaitable_choice", "priority", "fairness_key", "fairness_weight")
     class GenericActivity(_message.Message):
         __slots__ = ("type", "arguments")
         TYPE_FIELD_NUMBER: _ClassVar[int]
@@ -264,6 +264,11 @@ class ExecuteActivityAction(_message.Message):
         bytes_to_receive: int
         bytes_to_return: int
         def __init__(self, bytes_to_receive: _Optional[int] = ..., bytes_to_return: _Optional[int] = ...) -> None: ...
+    class ClientActivity(_message.Message):
+        __slots__ = ("client_sequence",)
+        CLIENT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+        client_sequence: ClientSequence
+        def __init__(self, client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -276,6 +281,7 @@ class ExecuteActivityAction(_message.Message):
     NOOP_FIELD_NUMBER: _ClassVar[int]
     RESOURCES_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    CLIENT_FIELD_NUMBER: _ClassVar[int]
     TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     SCHEDULE_TO_CLOSE_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
@@ -294,6 +300,7 @@ class ExecuteActivityAction(_message.Message):
     noop: _empty_pb2.Empty
     resources: ExecuteActivityAction.ResourcesActivity
     payload: ExecuteActivityAction.PayloadActivity
+    client: ExecuteActivityAction.ClientActivity
     task_queue: str
     headers: _containers.MessageMap[str, _message_pb2.Payload]
     schedule_to_close_timeout: _duration_pb2.Duration
@@ -307,7 +314,7 @@ class ExecuteActivityAction(_message.Message):
     priority: _message_pb2.Priority
     fairness_key: str
     fairness_weight: float
-    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., resources: _Optional[_Union[ExecuteActivityAction.ResourcesActivity, _Mapping]] = ..., payload: _Optional[_Union[ExecuteActivityAction.PayloadActivity, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., priority: _Optional[_Union[_message_pb2.Priority, _Mapping]] = ..., fairness_key: _Optional[str] = ..., fairness_weight: _Optional[float] = ...) -> None: ...
+    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., resources: _Optional[_Union[ExecuteActivityAction.ResourcesActivity, _Mapping]] = ..., payload: _Optional[_Union[ExecuteActivityAction.PayloadActivity, _Mapping]] = ..., client: _Optional[_Union[ExecuteActivityAction.ClientActivity, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., priority: _Optional[_Union[_message_pb2.Priority, _Mapping]] = ..., fairness_key: _Optional[str] = ..., fairness_weight: _Optional[float] = ...) -> None: ...
 
 class ExecuteChildWorkflowAction(_message.Message):
     __slots__ = ("namespace", "workflow_id", "workflow_type", "task_queue", "input", "workflow_execution_timeout", "workflow_run_timeout", "workflow_task_timeout", "parent_close_policy", "workflow_id_reuse_policy", "retry_policy", "cron_schedule", "headers", "memo", "search_attributes", "cancellation_type", "versioning_intent", "awaitable_choice")

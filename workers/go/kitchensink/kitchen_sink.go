@@ -216,6 +216,9 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			inputData[i] = byte(i % 256)
 		}
 		args = append(args, inputData, payload.BytesToReturn)
+	} else if client := act.GetClient(); client != nil {
+		actType = "client"
+		args = append(args, client)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -361,6 +364,17 @@ func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, 
 func Delay(_ context.Context, delayFor time.Duration) error {
 	time.Sleep(delayFor)
 	return nil
+}
+
+type ClientActivities struct {
+	Client client.Client
+}
+
+func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientActivity *kitchensink.ExecuteActivityAction_ClientActivity) error {
+	executor := &kitchensink.ClientActionsExecutor{
+		Client: ca.Client,
+	}
+	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 
 func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
