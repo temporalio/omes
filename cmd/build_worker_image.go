@@ -155,6 +155,8 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 		"--pull",
 		"--file", "dockerfiles/" + lang + ".Dockerfile",
 		"--platform", strings.Join(b.platforms, ","),
+		"--cache-from", "type=gha",
+		"--cache-to", "type=gha,mode=max",
 	}
 	if len(b.platforms) > 1 {
 		if !allowPush {

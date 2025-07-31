@@ -25,11 +25,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Copy CLI build dependencies
+COPY go.mod go.sum ./
+RUN /usr/local/go/bin/go mod download # download dependencies early for caching
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers ./workers
-COPY go.mod go.sum ./
 
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
