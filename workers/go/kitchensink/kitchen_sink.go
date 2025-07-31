@@ -237,14 +237,14 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		}
 
 		var priority temporal.Priority
-		if prio := act.GetPriority(); prio != nil {
-			priority.PriorityKey = int(prio.PriorityKey)
-		}
-		if fk := act.GetFairnessKey(); fk != "" {
-			return fmt.Errorf("fairness key is not supported yet")
-		}
-		if fw := act.GetFairnessWeight(); fw > 0 {
-			return fmt.Errorf("fairness weight is not supported yet")
+		if pri := act.GetPriority(); pri != nil {
+			priority.PriorityKey = int(pri.PriorityKey)
+			if fk := pri.GetFairnessKey(); fk != "" {
+				return fmt.Errorf("fairness key is not supported yet")
+			}
+			if fw := pri.GetFairnessWeight(); fw > 0 {
+				return fmt.Errorf("fairness weight is not supported yet")
+			}
 		}
 
 		opts := workflow.ActivityOptions{

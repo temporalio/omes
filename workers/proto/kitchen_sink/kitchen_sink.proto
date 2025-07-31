@@ -247,9 +247,6 @@ message ExecuteActivityAction {
   }
   AwaitableChoice awaitable_choice = 13;
   temporal.api.common.v1.Priority priority = 15;
-  // TODO: once complete, use commonpb.PriorityKey instead
-  string fairness_key = 16;
-  float fairness_weight = 17;
 }
 
 message ExecuteChildWorkflowAction {
