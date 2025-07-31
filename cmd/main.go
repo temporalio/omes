@@ -15,13 +15,13 @@ func main() {
 	}
 
 	rootCmd.AddCommand(buildWorkerImageCmd())
+	rootCmd.AddCommand(buildPushWorkerImageCmd())
 	rootCmd.AddCommand(cleanupScenarioCmd())
 	rootCmd.AddCommand(listScenariosCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
-	rootCmd.AddCommand(publishImageCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

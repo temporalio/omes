@@ -20,9 +20,26 @@ func buildWorkerImageCmd() *cobra.Command {
 	var b workerImageBuilder
 	cmd := &cobra.Command{
 		Use:   "build-worker-image",
-		Short: "Build an image",
+		Short: "Build a worker image (local only, no push)",
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := b.build(cmd.Context()); err != nil {
+			if err := b.build(cmd.Context(), false); err != nil {
+				b.logger.Fatal(err)
+			}
+		},
+	}
+	b.addCLIFlags(cmd.Flags())
+	cmd.MarkFlagRequired("language")
+	cmd.MarkFlagRequired("version")
+	return cmd
+}
+
+func buildPushWorkerImageCmd() *cobra.Command {
+	var b workerImageBuilder
+	cmd := &cobra.Command{
+		Use:   "build-push-worker-image",
+		Short: "Build and push a worker image",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := b.build(cmd.Context(), true); err != nil {
 				b.logger.Fatal(err)
 			}
 		},
@@ -40,6 +57,7 @@ type workerImageBuilder struct {
 	tagAsLatest    bool
 	platform       string
 	imageName      string
+	repoPrefix     string
 	dryRun         bool
 	saveImage      string
 	tags           []string
@@ -53,8 +71,9 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 		"SDK version to build a worker image for - treated as path if slash present, but must be beneath this dir and at least one tag required")
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
-	fs.StringVar(&b.platform, "platform", "", "Platform for use in docker build --platform")
+	fs.StringVar(&b.platform, "platform", "amd64", "Platform for use in docker build --platform")
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
+	fs.StringVar(&b.repoPrefix, "repo-prefix", "", "Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.")
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
 	fs.StringSliceVar(&b.tags, "image-tag", nil, "Additional tags to add to the image")
 	fs.StringSliceVar(&b.labels, "image-label", nil, "Additional labels to add to the image")
@@ -62,7 +81,7 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	b.loggingOptions.AddCLIFlags(fs)
 }
 
-func (b *workerImageBuilder) build(ctx context.Context) error {
+func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.logger = b.loggingOptions.MustCreateLogger()
 	lang, err := normalizeLangName(b.language)
 	if err != nil {
@@ -130,17 +149,34 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 	b.addLabelIfNotPresent("io.temporal.omes.githash", omesVersion)
 
 	// Prepare docker command args
+	isMultiPlatform := strings.Contains(b.platform, ",")
 	args := []string{
+		"buildx",
 		"build",
 		"--pull",
 		"--file", "dockerfiles/" + lang + ".Dockerfile",
 	}
 	if b.platform != "" {
-		args = append(args, "--platform", b.platform, "--build-arg", "PLATFORM="+b.platform)
+		args = append(args, "--platform", b.platform)
+		if isMultiPlatform {
+			if allowPush {
+				// Multi-platform builds can't be loaded into local Docker, they must be pushed
+				args = append(args, "--push")
+			} else {
+				return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")
+			}
+		} else {
+			// Single-platform builds can be loaded into local Docker
+			args = append(args, "--load")
+		}
+		// Docker buildx automatically provides TARGETARCH for the platform
 	}
 	var imageTagsForPublish []string
 	for _, tag := range b.tags {
 		tagVal := fmt.Sprintf("%s:%s", b.imageName, tag)
+		if b.repoPrefix != "" {
+			tagVal = fmt.Sprintf("%s/%s", b.repoPrefix, tagVal)
+		}
 		args = append(args, "--tag", tagVal)
 		imageTagsForPublish = append(imageTagsForPublish, tagVal)
 	}
@@ -176,12 +212,18 @@ func (b *workerImageBuilder) build(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("writing image tags to github env failed: %s", err)
 		}
-		saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
-		saveCmd.Stdout = os.Stdout
-		saveCmd.Stderr = os.Stderr
-		err = saveCmd.Run()
-		if err != nil {
-			return fmt.Errorf("failed saving image: %w", err)
+		// For multi-platform builds, buildx doesn't load images into local Docker
+		// so we can't save them. Only single-platform builds can be saved.
+		if strings.Contains(b.platform, ",") {
+			b.logger.Warn("Image saving is not supported for multi-platform builds. Skipping save step.")
+		} else {
+			saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
+			saveCmd.Stdout = os.Stdout
+			saveCmd.Stderr = os.Stderr
+			err = saveCmd.Run()
+			if err != nil {
+				return fmt.Errorf("failed saving image: %w", err)
+			}
 		}
 	}
 

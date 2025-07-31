@@ -37,15 +37,59 @@ on:
         type: string
 
 jobs:
-  build-image:
-    name: Build ${{ inputs.lang }} omes docker image
+  publish-artifacts:
+    name: Publish ${{ inputs.lang }} artifacts
     runs-on: ubuntu-latest
-    env:
-      REPO_URL: ${{ github.event.pull_request.head.repo.html_url }}
     steps:
-      - name: Print build information
-        run: 'echo head_ref: "$GITHUB_HEAD_REF", ref: "$GITHUB_REF", triggering sha: ${{ github.sha }}'
+      - name: Checkout omes repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.omes-repo-path }}
+          ref: ${{ inputs.omes-repo-ref || github.head_ref }}
+          submodules: true
+          fetch-depth: 0
 
+      - name: Lint dockerfile
+        run: docker run --rm -i hadolint/hadolint hadolint --ignore DL3029 - < dockerfiles/${{inputs.lang}}.Dockerfile
+
+      - uses: actions/setup-go@v4
+        if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        with:
+          go-version: '^1.20'
+
+      - name: Set up Docker Buildx
+        if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and save image for artifacts
+        if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        run: |
+          go run ./cmd build-worker-image --language ${{ inputs.lang }} \
+          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
+          --save-image /tmp/image.tar \
+          --platform linux/amd64 \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
+          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+
+      - name: Prepare docker artifact
+        if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        run: |
+          echo -n "${{env.SAVED_IMAGE_TAG}}" > /tmp/image_tag
+
+      - name: Upload docker artifacts
+        if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: omes-${{ inputs.lang }}-docker-image
+          path: |
+            /tmp/image.tar
+            /tmp/image_tag
+
+  publish-dockerhub:
+    name: Publish ${{ inputs.lang }} to Docker Hub
+    runs-on: ubuntu-latest
+    if: inputs.do-push && !github.event.pull_request.head.repo.fork
+    steps:
       - name: Checkout omes repo
         uses: actions/checkout@v4
         with:
@@ -68,43 +112,24 @@ jobs:
         with:
           go-version: '^1.20'
 
-      - name: Lint dockerfile
-        run: docker run --rm -i hadolint/hadolint < dockerfiles/${{inputs.lang}}.Dockerfile
-
-      - name: Build docker image
-        run: |
-          go run ./cmd build-worker-image --language ${{ inputs.lang }} \
-          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
-          --save-image /tmp/image.tar \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
-          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
-
-      - name: Prepare docker artifact
-        run: |
-          echo -n "${{env.SAVED_IMAGE_TAG}}" > /tmp/image_tag
-
-      - name: Upload docker artifacts
-        # Access download url at ${{ steps.artifact-upload.outputs.artifact-url }}
-        id: artifact-upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: omes-${{ inputs.lang }}-docker-image
-          path: |
-            /tmp/image.tar
-            /tmp/image_tag
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
-        if: inputs.do-push && !github.event.pull_request.head.repo.fork
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Push image to DockerHub
-        if: inputs.do-push && !github.event.pull_request.head.repo.fork
-        run: go run ./cmd push-images
-
-      - name: 🐳 Docker image tag
-        if: inputs.do-push && !github.event.pull_request.head.repo.fork
+      - name: Build and push to Docker Hub
         run: |
-          echo "::notice title=🐳 Docker image tag for temporaliotest/${{ inputs.lang }}::${{env.SAVED_IMAGE_TAG}}"
+          go run ./cmd build-push-worker-image --language ${{ inputs.lang }} \
+          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
+          --platform linux/amd64,linux/arm64 \
+          --repo-prefix temporaliotest \
+          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
+          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+
+      - name: 🐳 Docker Hub image tag
+        run: |
+          echo "::notice title=🐳 Docker Hub image published for ${{ inputs.lang }}::Check temporaliotest/omes tags"
