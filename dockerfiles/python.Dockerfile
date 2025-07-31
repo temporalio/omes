@@ -1,5 +1,6 @@
 # Build in a full featured container
-FROM python:3.11-bullseye as build
+ARG TARGETARCH
+FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
 
 # Install protobuf compiler
 RUN apt-get update \
@@ -8,9 +9,9 @@ RUN apt-get update \
       protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
 # Get go compiler
-ARG PLATFORM=amd64
-RUN wget -q https://go.dev/dl/go1.21.12.linux-${PLATFORM}.tar.gz \
-    && tar -C /usr/local -xzf go1.21.12.linux-${PLATFORM}.tar.gz
+ARG TARGETARCH
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 # Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
 # in the "build" container (-y is for non-interactive install)
 # hadolint ignore=DL4006
@@ -43,7 +44,7 @@ COPY ${SDK_DIR} ./repo
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
-FROM python:3.11-slim-bullseye
+FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
 
 COPY --from=build /bin/uv /bin/uv
 COPY --from=build /app/temporal-omes /app/temporal-omes
