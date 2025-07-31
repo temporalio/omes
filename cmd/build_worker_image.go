@@ -55,7 +55,7 @@ type workerImageBuilder struct {
 	language       string
 	version        string
 	tagAsLatest    bool
-	platform       string
+	platforms      []string
 	imageName      string
 	repoPrefix     string
 	dryRun         bool
@@ -71,7 +71,7 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 		"SDK version to build a worker image for - treated as path if slash present, but must be beneath this dir and at least one tag required")
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
-	fs.StringVar(&b.platform, "platform", "amd64", "Platform for use in docker build --platform")
+	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
 	fs.StringVar(&b.repoPrefix, "repo-prefix", "", "Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.")
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
@@ -149,27 +149,22 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.addLabelIfNotPresent("io.temporal.omes.githash", omesVersion)
 
 	// Prepare docker command args
-	isMultiPlatform := strings.Contains(b.platform, ",")
 	args := []string{
 		"buildx",
 		"build",
 		"--pull",
 		"--file", "dockerfiles/" + lang + ".Dockerfile",
+		"--platform", strings.Join(b.platforms, ","),
 	}
-	if b.platform != "" {
-		args = append(args, "--platform", b.platform)
-		if isMultiPlatform {
-			if allowPush {
-				// Multi-platform builds can't be loaded into local Docker, they must be pushed
-				args = append(args, "--push")
-			} else {
-				return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")
-			}
-		} else {
-			// Single-platform builds can be loaded into local Docker
-			args = append(args, "--load")
+	if len(b.platforms) > 1 {
+		if !allowPush {
+			return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")
 		}
-		// Docker buildx automatically provides TARGETARCH for the platform
+		// Multi-platform builds can't be loaded into local Docker, they must be pushed
+		args = append(args, "--push")
+	} else {
+		// Single-platform builds can be loaded into local Docker
+		args = append(args, "--load")
 	}
 	var imageTagsForPublish []string
 	for _, tag := range b.tags {
@@ -214,7 +209,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 		}
 		// For multi-platform builds, buildx doesn't load images into local Docker
 		// so we can't save them. Only single-platform builds can be saved.
-		if strings.Contains(b.platform, ",") {
+		if len(b.platforms) > 1 {
 			b.logger.Warn("Image saving is not supported for multi-platform builds. Skipping save step.")
 		} else {
 			saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
