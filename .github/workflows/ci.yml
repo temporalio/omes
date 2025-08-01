@@ -27,7 +27,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Go
         run: ./scripts/install-go.sh
       - name: Lint Go
@@ -48,7 +50,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Tools
         run: |
           ./scripts/install-java.sh
@@ -71,7 +75,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Tools
         run: |
           ./scripts/install-python.sh
@@ -96,7 +102,9 @@ jobs:
         with:
           submodules: 'true'
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Tools
         run: |
           ./scripts/install-node.sh
@@ -121,7 +129,9 @@ jobs:
         with:
           submodules: 'true'
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Tools
         run: |
           ./scripts/install-dotnet.sh
@@ -144,7 +154,9 @@ jobs:
         with:
           submodules: 'true'
       - name: Install mise
-        uses: jdx/mise-action@v2
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: v2025.8.1
       - name: Install Tools
         run: |
           ./scripts/install-rust.sh
