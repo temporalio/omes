@@ -49,13 +49,28 @@ type tpsState struct {
 	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
 }
 
+type tpsConfig struct {
+	InternalIterations            int
+	InternalIterTimeout           time.Duration
+	ContinueAsNewAfterIter        int
+	MaxAttempts                   int
+	MaxBackoff                    time.Duration
+	NexusEndpoint                 string
+	SkipSleep                     bool
+	SkipCleanNamespaceCheck       bool
+	SleepActivities               *loadgen.SleepActivityConfig
+	VisibilityVerificationTimeout time.Duration
+}
+
 type tpsExecutor struct {
 	lock       sync.Mutex
 	state      *tpsState
+	config     *tpsConfig
 	isResuming bool
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
+var _ loadgen.Configurable = (*tpsExecutor)(nil)
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
@@ -66,7 +81,7 @@ func init() {
 	})
 }
 
-// Return a snapshot of the current state.
+// Snapshot returns a snapshot of the current state.
 func (t *tpsExecutor) Snapshot() any {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -90,6 +105,55 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	return nil
 }
 
+func (t *tpsExecutor) Parse(info loadgen.ScenarioInfo) error {
+	config := &tpsConfig{
+		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
+		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
+		SkipSleep:               info.ScenarioOptionBool(SkipSleepFlag, false),
+		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
+	}
+
+	config.InternalIterations = info.ScenarioOptionInt(IterFlag, 10)
+	if config.InternalIterations <= 0 {
+		return fmt.Errorf("internal-iterations must be positive, got %d", config.InternalIterations)
+	}
+
+	config.ContinueAsNewAfterIter = info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
+	if config.ContinueAsNewAfterIter < 0 {
+		return fmt.Errorf("continue-as-new-after-iterations must be non-negative, got %d", config.ContinueAsNewAfterIter)
+	}
+
+	config.MaxAttempts = info.ScenarioOptionInt(MaxStartAttemptFlag, 5)
+	if config.MaxAttempts <= 0 {
+		return fmt.Errorf("max-start-attempt must be positive, got %d", config.MaxAttempts)
+	}
+
+	config.MaxBackoff = info.ScenarioOptionDuration(MaxStartAttemptBackoffFlag, 60*time.Second)
+	if config.MaxBackoff <= 0 {
+		return fmt.Errorf("max-start-attempt-backoff must be positive, got %v", config.MaxBackoff)
+	}
+
+	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
+		var err error
+		config.SleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
+		}
+	}
+
+	var err error
+	config.VisibilityVerificationTimeout, err = time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeoutFlag], "3m"))
+	if err != nil {
+		return fmt.Errorf("invalid %s: %w", VisibilityVerificationTimeoutFlag, err)
+	}
+	if config.VisibilityVerificationTimeout <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
+	}
+
+	t.config = config
+	return nil
+}
+
 // Run executes the throughput stress scenario.
 //
 // It executes `throughputStress` workflows in parallel - up to the configured maximum cocurrency limit - and
@@ -98,35 +162,13 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 // To resume a previous run, capture the state via the StatusCallback and then set `--option resume-from-state=<state>`.
 // Note that the caller is responsible for adjusting the run config's iterations/timeout accordingly.
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	// Parse scenario options
-	internalIterations := info.ScenarioOptionInt(IterFlag, 10)
-	// When setting a Duration, wait until the end of the entire run before timing out to avoid aborting in the middle of the run.
-	// Also, add a buffer to account for the time it takes to wait for the last workflows to complete.
-	internalIterTimeout := info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute))
-	continueAsNewAfterIter := info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
-	maxAttempts := info.ScenarioOptionInt(MaxStartAttemptFlag, 5)
-	maxBackoff := info.ScenarioOptionDuration(MaxStartAttemptBackoffFlag, 60*time.Second)
-	nexusEndpoint := info.ScenarioOptions[NexusEndpointFlag] // disabled by default
-	skipSleep := info.ScenarioOptionBool(SkipSleepFlag, false)
-	skipCleanNamespaceCheck := info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false)
-
-	var sleepActivities *loadgen.SleepActivityConfig
-	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
-		var err error
-		sleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
-		if err != nil {
-			return fmt.Errorf("failed to parse %s: %w", SleepActivityJsonFlag, err)
-		}
-	}
-
-	visibilityVerificationTimeout, err := time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeoutFlag], "3m"))
-	if err != nil {
-		return fmt.Errorf("failed to parse %s: %w", VisibilityVerificationTimeoutFlag, err)
+	if err := t.Parse(info); err != nil {
+		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 
 	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
-	if err = loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
+	if err := loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
 		return err
 	}
 
@@ -139,7 +181,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
 		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
 	} else {
-		err = t.verifyFirstRun(ctx, info, skipCleanNamespaceCheck)
+		err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck)
 		if err != nil {
 			return err
 		}
@@ -162,13 +204,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 				var execErr error
 				var result throughputstress.WorkflowOutput
-				for attempt := 1; attempt <= maxAttempts; attempt++ {
+				for attempt := 1; attempt <= t.config.MaxAttempts; attempt++ {
 					if execErr = run.ExecuteAnyWorkflow(ctx,
 						client.StartWorkflowOptions{
 							ID:                                       wfID,
 							TaskQueue:                                run.TaskQueue(),
 							WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-							WorkflowExecutionTimeout:                 internalIterTimeout,
+							WorkflowExecutionTimeout:                 t.config.InternalIterTimeout,
 							WorkflowExecutionErrorWhenAlreadyStarted: false,
 							SearchAttributes: map[string]any{
 								ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
@@ -177,30 +219,30 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 						"throughputStress",
 						&result,
 						throughputstress.WorkflowParams{
-							SkipSleep:                   skipSleep,
-							Iterations:                  internalIterations,
-							ContinueAsNewAfterIterCount: continueAsNewAfterIter,
-							NexusEndpoint:               nexusEndpoint,
-							SleepActivities:             sleepActivities,
+							SkipSleep:                   t.config.SkipSleep,
+							Iterations:                  t.config.InternalIterations,
+							ContinueAsNewAfterIterCount: t.config.ContinueAsNewAfterIter,
+							NexusEndpoint:               t.config.NexusEndpoint,
+							SleepActivities:             t.config.SleepActivities,
 						},
 					); execErr == nil {
 						break // success!
 					}
 
-					if attempt < maxAttempts {
-						backoff := min(maxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
+					if attempt < t.config.MaxAttempts {
+						backoff := min(t.config.MaxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
 						select {
 						case <-time.After(backoff):
 							run.ScenarioInfo.Logger.Warnf(
 								"Attempt %d/%d: ExecuteAnyWorkflow for %s failed, backing off %v before next attempt: %v",
-								attempt, maxAttempts, wfID, backoff, execErr)
+								attempt, t.config.MaxAttempts, wfID, backoff, execErr)
 						case <-ctx.Done():
 							return fmt.Errorf("context canceled during retries: %w", ctx.Err())
 						}
 					}
 				}
 				if execErr != nil {
-					return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, maxAttempts, execErr)
+					return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, t.config.MaxAttempts, execErr)
 				}
 
 				t.updateStateOnIterationCompletion(run.Iteration)
@@ -208,7 +250,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				return nil
 			},
 		}
-		if err = genericExec.Run(ctx, info); err != nil {
+		if err := genericExec.Run(ctx, info); err != nil {
 			return err
 		}
 	}
@@ -218,12 +260,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	t.lock.Unlock()
 	info.Logger.Info("Total iterations completed: ", completedIterations)
 
-	completedChildWorkflows := completedIterations * internalIterations
+	completedChildWorkflows := completedIterations * t.config.InternalIterations
 	info.Logger.Info("Total child workflows: ", completedChildWorkflows)
 
 	var continueAsNewWorkflows int
-	if continueAsNewAfterIter > 0 {
-		continueAsNewWorkflows = int(internalIterations/continueAsNewAfterIter) * completedIterations
+	if t.config.ContinueAsNewAfterIter > 0 {
+		continueAsNewWorkflows = int(t.config.InternalIterations/t.config.ContinueAsNewAfterIter) * completedIterations
 	}
 	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
 
@@ -245,7 +287,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				ThroughputStressScenarioIdSearchAttribute, info.RunID),
 		},
 		completedWorkflows,
-		visibilityVerificationTimeout,
+		t.config.VisibilityVerificationTimeout,
 	)
 }
 

@@ -43,6 +43,15 @@ type Resumable interface {
 	Snapshot() any
 }
 
+// Optional interface that can be implemented by an [Executor] to make it configurable.
+type Configurable interface {
+	// Parse parses the scenario configuration and sets the executor's internal state.
+	//
+	// Call this method if you want to ensure that all required configuration parameters
+	// are present and valid without actually running the executor.
+	Parse(ScenarioInfo) error
+}
+
 // ExecutorFunc is an [Executor] implementation for a function
 type ExecutorFunc func(context.Context, ScenarioInfo) error
 
@@ -137,6 +146,9 @@ func (s *ScenarioInfo) ScenarioOptionFloat(name string, defaultValue float64) fl
 
 func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
 	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
 	return v == "true"
 }
 
