@@ -19,9 +19,6 @@ echo "Java version: $(java -version 2>&1 | head -n 1)"
 
 cd "$REPO_ROOT/workers/java"
 
-echo "Cleaning Java workspace..."
-./gradlew --no-daemon clean
-
 echo "Applying Java format..."
 ./gradlew --no-daemon spotlessApply
 

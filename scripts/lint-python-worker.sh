@@ -30,8 +30,7 @@ echo "uv version: $(uv --version)"
 
 cd "$REPO_ROOT/workers/python"
 
-echo "Cleaning Python workspace..."
-uv clean
+echo "Checking Python dependencies..."
 uv sync
 
 echo "Applying Python format..."

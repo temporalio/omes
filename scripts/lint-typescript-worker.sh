@@ -25,9 +25,6 @@ echo "npm version: $(npm --version)"
 
 cd "$REPO_ROOT/workers/typescript"
 
-echo "Cleaning TypeScript workspace..."
-npm run clean
-
 npm ci
 npm run build
 

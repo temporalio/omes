@@ -19,9 +19,7 @@ echo "Go version: $(go version)"
 
 cd "$REPO_ROOT/workers/go"
 
-echo "Cleaning Go workspace..."
-go clean
-
+echo "Checking Go modules..."
 go mod tidy
 
 echo "Applying Go format..."

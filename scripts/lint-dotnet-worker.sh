@@ -19,9 +19,6 @@ echo ".NET version: $(dotnet --version)"
 
 cd "$REPO_ROOT/workers/dotnet"
 
-echo "Cleaning .NET workspace..."
-dotnet clean
-
 echo "Applying .NET format..."
 dotnet format
 
