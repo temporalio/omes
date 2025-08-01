@@ -20,6 +20,9 @@ func runScenarioCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-scenario",
 		Short: "Run scenario",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			r.preRun()
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
@@ -35,18 +38,13 @@ func runScenarioCmd() *cobra.Command {
 }
 
 type scenarioRunner struct {
-	scenarioID
 	scenarioRunConfig
+	scenario       cmdoptions.ScenarioID
 	logger         *zap.SugaredLogger
 	connectTimeout time.Duration
 	clientOptions  cmdoptions.ClientOptions
 	metricsOptions cmdoptions.MetricsOptions
 	loggingOptions cmdoptions.LoggingOptions
-}
-
-type scenarioID struct {
-	scenario string
-	runID    string
 }
 
 type scenarioRunConfig struct {
@@ -60,17 +58,12 @@ type scenarioRunConfig struct {
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
-	r.scenarioID.addCLIFlags(fs)
+	r.scenario.AddCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
 	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
 	r.clientOptions.AddCLIFlags(fs)
 	r.metricsOptions.AddCLIFlags(fs, "")
 	r.loggingOptions.AddCLIFlags(fs)
-}
-
-func (r *scenarioID) addCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
-	fs.StringVar(&r.runID, "run-id", "", "Run ID for this run")
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
@@ -88,14 +81,15 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 }
 
+func (r *scenarioRunner) preRun() {
+	r.logger = r.loggingOptions.MustCreateLogger()
+}
+
 func (r *scenarioRunner) run(ctx context.Context) error {
-	if r.logger == nil {
-		r.logger = r.loggingOptions.MustCreateLogger()
-	}
-	scenario := loadgen.GetScenario(r.scenario)
+	scenario := loadgen.GetScenario(r.scenario.Scenario())
 	if scenario == nil {
 		return fmt.Errorf("scenario not found")
-	} else if r.runID == "" {
+	} else if r.scenario.RunID() == "" {
 		return fmt.Errorf("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
@@ -143,8 +137,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	defer client.Close()
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		ScenarioName:   r.scenario,
-		RunID:          r.runID,
+		ScenarioName:   r.scenario.Scenario(),
+		RunID:          r.scenario.RunID(),
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
