@@ -244,6 +244,9 @@ come up in workflows. Input may be saved for regression testing, or hand written
 
 Build by running `scripts/build-kitchensink.sh`.
 
+Test SDK parity by running `go test -v ./loadgen -run TestKitchensinkFeatureParity`.
+Prefix with env variable `SDK=<sdk>` to test a specific SDK only.
+
 ### Scenario Failure
 
 A scenario can only fail if an `Execute` method returns an error, that means the control is fully in the scenario
