@@ -3,6 +3,7 @@
 .mypy_cache
 go.work
 go.work.sum
+mise.toml
 .idea/
 # Ignore Gradle project-specific cache directory
 .gradle
@@ -16,3 +17,6 @@ workers/java/build
 /workers/dotnet/bin/
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
+
+omes-temp-*/
+temporal-omes
