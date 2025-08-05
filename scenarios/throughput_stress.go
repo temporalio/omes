@@ -105,7 +105,7 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	return nil
 }
 
-func (t *tpsExecutor) Parse(info loadgen.ScenarioInfo) error {
+func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
 		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
 		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
@@ -162,7 +162,7 @@ func (t *tpsExecutor) Parse(info loadgen.ScenarioInfo) error {
 // To resume a previous run, capture the state via the StatusCallback and then set `--option resume-from-state=<state>`.
 // Note that the caller is responsible for adjusting the run config's iterations/timeout accordingly.
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	if err := t.Parse(info); err != nil {
+	if err := t.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 

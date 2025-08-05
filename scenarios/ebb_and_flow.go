@@ -59,7 +59,7 @@ type ebbAndFlowExecutor struct {
 
 var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
 
-func (e *ebbAndFlowExecutor) Parse(info loadgen.ScenarioInfo) error {
+func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
 		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
 		MaxRate:                       info.ScenarioOptionInt(MaxRateFlag, 1000),
@@ -110,7 +110,7 @@ func (e *ebbAndFlowExecutor) Parse(info loadgen.ScenarioInfo) error {
 
 // Run executes the ebb and flow scenario.
 func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	if err := e.Parse(info); err != nil {
+	if err := e.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 
