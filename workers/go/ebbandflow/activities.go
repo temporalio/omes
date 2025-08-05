@@ -56,7 +56,7 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 			violations = append(violations, desc)
 		}
 		violationSummary := fmt.Sprintf("%d violations: [%s]", len(violations), strings.Join(violations, "; "))
-		
+
 		errorFields := append(commonFields, "violationSummary", violationSummary)
 		for i, offender := range report.TopViolators {
 			violatorSummary := fmt.Sprintf("key=%s p95=%.2fms weight=%.1f weightAdjustedP95=%.2fms severity=%.2f",
@@ -76,7 +76,7 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 	metricsHandler.Gauge("ebbandflow_fairness_atkinson_index").Update(report.AtkinsonIndex)
 	metricsHandler.Gauge("ebbandflow_fairness_weight_adjusted").Update(report.WeightAdjustedFairness)
 	metricsHandler.Gauge("ebbandflow_fairness_key_count").Update(float64(report.KeyCount))
-	
+
 	// Emit one violation metric per validation index with labels
 	for validationIndex := range report.Violations {
 		metricsHandler.WithTags(map[string]string{"validation_index": validationIndex}).
