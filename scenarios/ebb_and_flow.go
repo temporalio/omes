@@ -39,6 +39,88 @@ const (
 	BacklogLogIntervalFlag = "backlog-log-interval"
 )
 
+type ebbAndFlowConfig struct {
+	MinBacklog                    int64
+	MaxBacklog                    int64
+	PhaseTime                     time.Duration
+	SleepDuration                 time.Duration
+	MaxRate                       int
+	ControlInterval               time.Duration
+	MaxConsecutiveErrors          int
+	FairnessReportInterval        time.Duration
+	BacklogLogInterval            time.Duration
+	VisibilityVerificationTimeout time.Duration
+	SleepActivityConfig           *loadgen.SleepActivityConfig
+}
+
+type ebbAndFlowExecutor struct {
+	config *ebbAndFlowConfig
+}
+
+var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
+
+func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
+	config := &ebbAndFlowConfig{
+		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
+		MaxRate:                       info.ScenarioOptionInt(MaxRateFlag, 1000),
+		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
+		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
+		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
+		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+	}
+
+	config.MinBacklog = int64(info.ScenarioOptionInt(MinBacklogFlag, 0))
+	if config.MinBacklog < 0 {
+		return fmt.Errorf("min-backlog must be non-negative, got %d", config.MinBacklog)
+	}
+
+	config.MaxBacklog = int64(info.ScenarioOptionInt(MaxBacklogFlag, 30))
+	if config.MaxBacklog <= config.MinBacklog {
+		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
+	}
+
+	config.PhaseTime = info.ScenarioOptionDuration(PhaseTimeFlag, 60*time.Second)
+	if config.PhaseTime <= 0 {
+		return fmt.Errorf("phase-time must be greater than 0, got %v", config.PhaseTime)
+	}
+	config.FairnessReportInterval = info.ScenarioOptionDuration(FairnessReportIntervalFlag, config.PhaseTime) // default to phase time
+
+	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
+		var err error
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
+		}
+	}
+	if config.SleepActivityConfig == nil {
+		config.SleepActivityConfig = &loadgen.SleepActivityConfig{}
+	}
+	if len(config.SleepActivityConfig.Groups) == 0 {
+		config.SleepActivityConfig.Groups = map[string]loadgen.SleepActivityGroupConfig{"default": {}}
+	}
+	for name, group := range config.SleepActivityConfig.Groups {
+		fixedDist := loadgen.NewFixedDistribution(config.SleepDuration)
+		group.SleepDuration = &fixedDist
+		config.SleepActivityConfig.Groups[name] = group
+	}
+
+	e.config = config
+	return nil
+}
+
+// Run executes the ebb and flow scenario.
+func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	if err := e.Configure(info); err != nil {
+		return fmt.Errorf("failed to parse scenario configuration: %w", err)
+	}
+
+	return (&ebbAndFlow{
+		ScenarioInfo: info,
+		rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
+		config:       e.config,
+	}).run(ctx)
+}
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max.\n" +
@@ -47,18 +129,14 @@ func init() {
 			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
 			"  fairness-threshold, backlog-log-interval.\n" +
 			"Duration must be set.",
-		Executor: loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
-			return (&ebbAndFlow{
-				ScenarioInfo: runOptions,
-				rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
-			}).run(ctx)
-		}),
+		Executor: &ebbAndFlowExecutor{},
 	})
 }
 
 type ebbAndFlow struct {
 	loadgen.ScenarioInfo
-	rng *rand.Rand
+	rng    *rand.Rand
+	config *ebbAndFlowConfig
 
 	id              string
 	startTime       time.Time
@@ -72,26 +150,10 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.RunID)
 	e.fairnessTracker = ebbandflow.NewFairnessTracker()
 
-	// Parse and validate scenario options.
-	minBacklog := int64(e.ScenarioOptionInt(MinBacklogFlag, 0))
-	maxBacklog := int64(e.ScenarioOptionInt(MaxBacklogFlag, 30))
-	phaseTime := e.ScenarioOptionDuration(PhaseTimeFlag, 60*time.Second)
-	sleepDuration := e.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond)
-	maxRate := e.ScenarioOptionInt(MaxRateFlag, 1000)
-	controlInterval := e.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond)
-	maxConsecutiveErrors := e.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10)
-	fairnessReportInterval := e.ScenarioOptionDuration(FairnessReportIntervalFlag, phaseTime) // default to phase time
-	backlogLogInterval := e.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second)
-	visibilityVerificationTimeout := e.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
-
-	if minBacklog < 0 {
-		return fmt.Errorf("min-backlog must be non-negative")
-	}
-	if maxBacklog <= minBacklog {
-		return fmt.Errorf("max-backlog must be greater than min-backlog")
-	}
-	if phaseTime <= 0 {
-		return fmt.Errorf("phase-time must be greater than 0")
+	// Get parsed configuration
+	config := e.config
+	if config == nil {
+		return fmt.Errorf("configuration not parsed - Parse must be called before run")
 	}
 
 	// Initialize search attribute for visibility tracking
@@ -104,46 +166,25 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 		return fmt.Errorf("failed to initialize search attribute %s: %w", EbbAndFlowScenarioIdSearchAttribute, err)
 	}
 
-	// Activity config
-	var sleepActivityConfig *loadgen.SleepActivityConfig
-	if sleepActivitiesStr, ok := e.ScenarioOptions[SleepActivityJsonFlag]; ok {
-		var err error
-		sleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
-		if err != nil {
-			return fmt.Errorf("failed to parse %s: %w", SleepActivityJsonFlag, err)
-		}
-	}
-	if sleepActivityConfig == nil {
-		sleepActivityConfig = &loadgen.SleepActivityConfig{}
-	}
-	if len(sleepActivityConfig.Groups) == 0 {
-		sleepActivityConfig.Groups = map[string]loadgen.SleepActivityGroupConfig{"default": {}}
-	}
-	for name, group := range sleepActivityConfig.Groups {
-		fixedDist := loadgen.NewFixedDistribution(sleepDuration)
-		group.SleepDuration = &fixedDist
-		sleepActivityConfig.Groups[name] = group
-	}
-
 	var consecutiveErrCount int
 	errCh := make(chan error, 10000)
-	ticker := time.NewTicker(controlInterval)
+	ticker := time.NewTicker(config.ControlInterval)
 	defer ticker.Stop()
 
 	// Setup fairness reporting
-	fairnessTicker := time.NewTicker(fairnessReportInterval)
+	fairnessTicker := time.NewTicker(config.FairnessReportInterval)
 	defer fairnessTicker.Stop()
 	go e.fairnessReportLoop(ctx, fairnessTicker)
 
 	// Setup configurable backlog logging
-	backlogTicker := time.NewTicker(backlogLogInterval)
+	backlogTicker := time.NewTicker(config.BacklogLogInterval)
 	defer backlogTicker.Stop()
 
 	var startWG sync.WaitGroup
 	iter := 1
 
 	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, phase_time=%v, duration=%v",
-		minBacklog, maxBacklog, phaseTime, e.Configuration.Duration)
+		config.MinBacklog, config.MaxBacklog, config.PhaseTime, e.Configuration.Duration)
 
 	var rate int
 	var isDraining bool // true = draining mode, false = growing mode
@@ -158,8 +199,8 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			if err != nil {
 				e.Logger.Errorf("Failed to spawn workflow: %v", err)
 				consecutiveErrCount++
-				if consecutiveErrCount >= maxConsecutiveErrors {
-					return fmt.Errorf("got %v consecutive errors, most recent: %w", maxConsecutiveErrors, err)
+				if consecutiveErrCount >= config.MaxConsecutiveErrors {
+					return fmt.Errorf("got %v consecutive errors, most recent: %w", config.MaxConsecutiveErrors, err)
 				}
 			} else {
 				consecutiveErrCount = 0
@@ -170,24 +211,24 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			backlog = generated - processed
 
 			// Check if we need to switch modes.
-			if isDraining && backlog <= minBacklog {
+			if isDraining && backlog <= config.MinBacklog {
 				e.Logger.Infof("Backlog reached %d, switching to growing mode", backlog)
 				isDraining = false
 				cycleStartTime = time.Now()
-			} else if !isDraining && backlog >= maxBacklog {
+			} else if !isDraining && backlog >= config.MaxBacklog {
 				e.Logger.Infof("Backlog reached %d, switching to draining mode", backlog)
 				isDraining = true
 				cycleStartTime = time.Now()
 			}
 
-			target = calculateBacklogTarget(isDraining, cycleStartTime, phaseTime, minBacklog, maxBacklog)
-			rate = calculateSpawnRate(target, backlog, minBacklog, maxBacklog, maxRate)
+			target = calculateBacklogTarget(isDraining, cycleStartTime, config.PhaseTime, config.MinBacklog, config.MaxBacklog)
+			rate = calculateSpawnRate(target, backlog, config.MinBacklog, config.MaxBacklog, config.MaxRate)
 
 			if rate > 0 {
 				startWG.Add(1)
 				go func(iteration, count int) {
 					defer startWG.Done()
-					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, sleepActivityConfig)
+					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, config.SleepActivityConfig)
 				}(iter, rate)
 				iter++
 			}
@@ -217,7 +258,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 				EbbAndFlowScenarioIdSearchAttribute, e.id),
 		},
 		completedWorkflows,
-		visibilityVerificationTimeout,
+		config.VisibilityVerificationTimeout,
 	)
 }
 
