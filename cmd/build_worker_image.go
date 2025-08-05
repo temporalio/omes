@@ -52,8 +52,6 @@ func buildPushWorkerImageCmd() *cobra.Command {
 
 type workerImageBuilder struct {
 	logger         *zap.SugaredLogger
-	language       string
-	version        string
 	tagAsLatest    bool
 	platforms      []string
 	imageName      string
@@ -63,12 +61,11 @@ type workerImageBuilder struct {
 	tags           []string
 	labels         []string
 	loggingOptions cmdoptions.LoggingOptions
+	sdkOptions     cmdoptions.SdkOptions
 }
 
 func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&b.language, "language", "", "Language to build a worker image for")
-	fs.StringVar(&b.version, "version", "",
-		"SDK version to build a worker image for - treated as path if slash present, but must be beneath this dir and at least one tag required")
+	b.sdkOptions.AddCLIFlags(fs)
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
 	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")
@@ -83,10 +80,8 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 
 func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.logger = b.loggingOptions.MustCreateLogger()
-	lang, err := normalizeLangName(b.language)
-	if err != nil {
-		return err
-	}
+	lang := b.sdkOptions.Language.String()
+	version := b.sdkOptions.Version
 	// At some point we probably want to replace this with a meaningful version of omes itself
 	omesVersion, err := getCurrentCommitSha(ctx)
 	if err != nil {
@@ -94,27 +89,27 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	}
 
 	// Setup args, tags, and labels based on version
-	isPathVersion := strings.ContainsAny(b.version, `/\`)
+	isPathVersion := strings.ContainsAny(version, `/\`)
 	var buildArgs []string
 	if isPathVersion {
 		if len(b.tags) == 0 {
 			return fmt.Errorf("at least one tag required for path version")
-		} else if s, err := os.Stat(b.version); err != nil {
+		} else if s, err := os.Stat(version); err != nil {
 			return fmt.Errorf("invalid path version: %w", err)
 		} else if !s.IsDir() {
 			return fmt.Errorf("invalid path version: must be dir")
-		} else if !filepath.IsLocal(b.version) {
+		} else if !filepath.IsLocal(version) {
 			return fmt.Errorf("invalid path version: must be beneath this dir")
 		}
 		// Dockerfile copies entire version path to ./repo
-		buildArgs = append(buildArgs, "SDK_VERSION=./repo", "SDK_DIR="+b.version)
+		buildArgs = append(buildArgs, "SDK_VERSION=./repo", "SDK_DIR="+version)
 	} else {
-		buildArgs = append(buildArgs, "SDK_VERSION="+b.version)
+		buildArgs = append(buildArgs, "SDK_VERSION="+version)
 		// Add label for version
-		b.addLabelIfNotPresent("io.temporal.sdk.version", b.version)
+		b.addLabelIfNotPresent("io.temporal.sdk.version", version)
 		// Check for valid version
-		versionToCheck := b.version
-		if !strings.HasPrefix(b.version, "v") {
+		versionToCheck := version
+		if !strings.HasPrefix(version, "v") {
 			versionToCheck = "v" + versionToCheck
 		}
 		if semver.Canonical(versionToCheck) == "" {
@@ -122,7 +117,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 		}
 		// Add tag for lang-fullsemver without leading "v". We are intentionally
 		// including semver build metadata.
-		langTagComponent := lang + "-" + strings.TrimPrefix(b.version, "v")
+		langTagComponent := lang + "-" + strings.TrimPrefix(version, "v")
 		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
 		b.tags = append(b.tags, lang+"-"+omesVersion)
 		if b.tagAsLatest {
@@ -145,7 +140,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.addLabelIfNotPresent("org.opencontainers.image.title", "Load testing for "+lang)
 	b.addLabelIfNotPresent("org.opencontainers.image.documentation", "See README at https://github.com/temporalio/omes")
 	b.addLabelIfNotPresent("io.temporal.sdk.name", lang)
-	b.addLabelIfNotPresent("io.temporal.sdk.version", b.version)
+	b.addLabelIfNotPresent("io.temporal.sdk.version", version)
 	b.addLabelIfNotPresent("io.temporal.omes.githash", omesVersion)
 
 	// Prepare docker command args
