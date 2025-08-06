@@ -18,6 +18,22 @@ type specLine struct {
 	Fields  map[string]any
 }
 
+// requireHistoryMatches checks that the list of history events match the expected spec.
+// The expected spec is a string with each line containing an (1) event type, (2) optional
+// JSON literal matching the event attributes and (3) an optional comment.
+//
+// Example:
+//
+//	WorkflowExecutionStarted {"taskQueue":"foo-bar"}
+//	WorkflowTaskScheduled
+//	WorkflowTaskStarted
+//	WorkflowTaskCompleted
+//	TimerStarted {"startToFireTimeout":"1s"}  # TimerStarted event with a 1s timeout
+//	TimerFired
+//	WorkflowTaskScheduled
+//	WorkflowTaskStarted
+//	WorkflowTaskCompleted
+//	WorkflowExecutionCompleted
 func requireHistoryMatches(t *testing.T, actualEvents []*historypb.HistoryEvent, expectedSpec string) {
 	t.Helper()
 
