@@ -86,10 +86,10 @@ func (r *scenarioRunner) preRun() {
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
-	scenario := loadgen.GetScenario(r.scenario.Scenario())
+	scenario := loadgen.GetScenario(r.scenario.Scenario)
 	if scenario == nil {
 		return fmt.Errorf("scenario not found")
-	} else if r.scenario.RunID() == "" {
+	} else if r.scenario.RunID == "" {
 		return fmt.Errorf("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
@@ -114,7 +114,6 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			value = string(data)
 		}
 		scenarioOptions[key] = value
-
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(r.logger)
@@ -137,8 +136,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	defer client.Close()
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		ScenarioName:   r.scenario.Scenario(),
-		RunID:          r.scenario.RunID(),
+		ScenarioName:   r.scenario.Scenario,
+		RunID:          r.scenario.RunID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
@@ -152,7 +151,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
-		RootPath:        rootDir(),
+		RootPath:        repoDir(),
 	}
 	err = scenario.Executor.Run(ctx, scenarioInfo)
 	if err != nil {

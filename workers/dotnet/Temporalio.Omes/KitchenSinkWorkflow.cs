@@ -249,7 +249,6 @@ public class KitchenSinkWorkflow
             throw new ApplicationFailureException("Unrecognized action");
         }
 
-
         return null;
     }
 

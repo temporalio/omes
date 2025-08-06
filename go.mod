@@ -10,8 +10,8 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
-	github.com/temporalio/features v0.0.0-20250319190748-8e3cf67a27be
-	go.temporal.io/api v1.49.1
+	github.com/temporalio/features v0.0.0-20250714172315-c9d352c46b16
+	go.temporal.io/api v1.50.0
 	go.temporal.io/sdk v1.35.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.20.0

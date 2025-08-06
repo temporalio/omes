@@ -176,7 +176,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	for _, arg := range buildArgs {
 		args = append(args, "--build-arg", arg)
 	}
-	args = append(args, rootDir())
+	args = append(args, repoDir())
 	b.logger.Infof("Running: docker %v", strings.Join(args, " "))
 	if b.dryRun {
 		return nil

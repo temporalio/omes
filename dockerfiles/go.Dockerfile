@@ -8,7 +8,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -19,6 +19,9 @@ ARG SDK_VERSION
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
+
+# Copy the worker files
+COPY workers/go ./workers/go
 
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"

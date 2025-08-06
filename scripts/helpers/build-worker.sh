@@ -61,8 +61,14 @@ CONTAINER_ID=$(docker run --rm --detach -i -p 10233:10233 \
     --language "$LANGUAGE" \
     --run-id "$RUN_ID" \
     --embedded-server-address 0.0.0.0:10233)
+docker logs -f "$CONTAINER_ID" &
+LOGS_PID=$!
 
 cleanup() {
+    if [[ -n "${LOGS_PID:-}" ]]; then
+        echo "Stopping Docker logs..."
+        kill "$LOGS_PID" 2>/dev/null || true
+    fi
     if [[ -n "${CONTAINER_ID:-}" ]]; then
         echo "Stopping Docker container..."
         docker stop "$CONTAINER_ID" >/dev/null 2>&1 || true

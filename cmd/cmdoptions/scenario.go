@@ -9,21 +9,13 @@ import (
 )
 
 type ScenarioID struct {
-	scenario string
-	runID    string
+	Scenario string
+	RunID    string
 }
 
 func (r *ScenarioID) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&r.scenario, "scenario", "", "Scenario name to run")
-	fs.StringVar(&r.runID, "run-id", shortRand(), "Run ID for this run")
-}
-
-func (r *ScenarioID) Scenario() string {
-	return r.scenario
-}
-
-func (r *ScenarioID) RunID() string {
-	return r.runID
+	fs.StringVar(&r.Scenario, "scenario", "", "Scenario name to run")
+	fs.StringVar(&r.RunID, "run-id", shortRand(), "Run ID for this run")
 }
 
 func shortRand() string {

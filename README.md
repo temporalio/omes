@@ -243,6 +243,8 @@ to test a wide variety of scenarios without having to imagine all possible edge 
 come up in workflows. Input may be saved for regression testing, or hand written for specific cases.
 
 Build by running `scripts/build-kitchensink.sh`.
+Test by running `go test -v ./loadgen -run TestKitchensink`.
+Prefix with env variable `SDK=<sdk>` to test a specific SDK only.
 
 ### Scenario Failure
 

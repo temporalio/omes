@@ -10,7 +10,7 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  shellcheck:
+  lint-shell:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -22,132 +22,141 @@ jobs:
           format: gcc
           severity: error
 
-  build-lint-test-go:
+  test-omes:
     runs-on: ubuntu-latest
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+      - uses: actions/setup-go@v4
         with:
-          version: ${{ env.MISE_VERSION }}
-      - name: Install Go
-        run: ./scripts/install-go.sh
-      - name: Lint Go
+          go-version-file: 'go.mod'
+      - name: Run tests
         run: |
-          ./scripts/lint-go-worker.sh
-      - name: Check Go formatting
-        run: |
-          git diff --exit-code || (echo "Go worker has uncommitted formatting changes after linting" && exit 1)
-      - name: Build Go worker
-        run: |
-          ./scripts/build-go-worker.sh
+          go test -race ./...
 
-  build-lint-test-java:
+  lint-worker:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            lint: ./scripts/lint-go-worker.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-java-worker.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-python-worker.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-typescript-worker.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-dotnet-worker.sh
+            submodules: true
     steps:
       - name: Print build information
         run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          submodules: ${{ matrix.submodules }}
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
+        run: ${{ matrix.install }}
+      - name: Lint ${{ matrix.sdk }}
+        run: ${{ matrix.lint }}
+      - name: Check formatting
         run: |
-          ./scripts/install-java.sh
-          ./scripts/install-go.sh
-      - name: Lint Java
-        run: |
-          ./scripts/lint-java-worker.sh
-      - name: Check Java formatting
-        run: |
-          git diff --exit-code || (echo "Java worker has uncommitted formatting changes after linting" && exit 1)
-      - name: Build Java worker
-        run: |
-          ./scripts/build-java-worker.sh
+          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)
 
-  build-lint-test-python:
+  build-worker:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            build: ./scripts/build-go-worker.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            build: ./scripts/build-java-worker.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            build: ./scripts/build-python-worker.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            build: ./scripts/build-typescript-worker.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            build: ./scripts/build-dotnet-worker.sh
+            submodules: true
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          submodules: ${{ matrix.submodules }}
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: |
-          ./scripts/install-python.sh
-          ./scripts/install-go.sh
-      - name: Lint Python
-        run: |
-          ./scripts/lint-python-worker.sh
-      - name: Check Python formatting
-        run: |
-          git diff --exit-code || (echo "Python worker has uncommitted formatting changes after linting" && exit 1)
-      - name: Build Python worker
-        run: |
-          ./scripts/build-python-worker.sh
+        run: ${{ matrix.install }}
+      - name: Build ${{ matrix.sdk }} worker
+        run: ${{ matrix.build }}
 
-  build-lint-test-typescript:
+  test-kitchensink:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            submodules: true
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: ${{ matrix.submodules }}
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
+        run: ${{ matrix.install }}
+      - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
-          ./scripts/install-node.sh
-          ./scripts/install-go.sh
-      - name: Lint TypeScript
-        run: |
-          ./scripts/lint-typescript-worker.sh
-      - name: Check TypeScript formatting
-        run: |
-          git diff --exit-code || (echo "TypeScript worker has uncommitted formatting changes after linting" && exit 1)
-      - name: Build TypeScript worker
-        run: |
-          ./scripts/build-typescript-worker.sh
-
-  build-lint-test-dotnet:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          submodules: 'true'
-      - name: Install mise
-        uses: jdx/mise-action@v2.4.4
-        with:
-          version: ${{ env.MISE_VERSION }}
-      - name: Install Tools
-        run: |
-          ./scripts/install-dotnet.sh
-          ./scripts/install-go.sh
-      - name: Lint .NET
-        run: |
-          ./scripts/lint-dotnet-worker.sh
-      - name: Check .NET formatting
-        run: |
-          git diff --exit-code || (echo ".NET worker has uncommitted formatting changes after linting" && exit 1)
-      - name: Build .NET worker
-        run: |
-          ./scripts/build-dotnet-worker.sh
+          SDK=${{ matrix.sdk }} go test -race ./loadgen -run TestKitchensink -v
 
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest

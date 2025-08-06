@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
 )
 
@@ -58,10 +59,11 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 func (r *workerRunner) preRun() {
 	r.builder.preRun()
 	r.Runner.Builder = r.builder.Builder
+	r.TaskQueueName = loadgen.TaskQueueForRun(r.ScenarioID.Scenario, r.ScenarioID.RunID)
 }
 
 func (r *workerRunner) run(ctx context.Context) error {
-	return r.Run(ctx, rootDir())
+	return r.Run(ctx, workers.BaseDir(repoDir(), r.SdkOptions.Language))
 }
 
 func withCancelOnInterrupt(ctx context.Context) (context.Context, context.CancelFunc) {

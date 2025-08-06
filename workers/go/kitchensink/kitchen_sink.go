@@ -346,7 +346,7 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 }
 
 // Noop is used as a no-op activity
-func Noop(_ context.Context, _ []*common.Payload) error {
+func Noop(_ context.Context) error {
 	return nil
 }
 

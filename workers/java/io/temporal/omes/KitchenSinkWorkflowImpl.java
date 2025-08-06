@@ -200,7 +200,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     } else if (action.hasNexusOperation()) {
       throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
     } else {
-      throw Workflow.wrap(new IllegalArgumentException("Unrecognized action type"));
+      throw ApplicationFailure.newNonRetryableFailure("Unrecognized action", "");
     }
     return null;
   }

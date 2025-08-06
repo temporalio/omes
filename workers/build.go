@@ -22,14 +22,14 @@ type Builder struct {
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	if b.DirName == "" {
-		return nil, fmt.Errorf("directory name required")
+		return nil, fmt.Errorf("output directory name required")
 	} else if strings.ContainsAny(b.DirName, `/\`) {
-		return nil, fmt.Errorf("dir name is not a full path, it is a single name")
+		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
-	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language.String(), filepath.Join(baseDir, b.DirName))
 
-	dirPath := filepath.Join(baseDir, b.DirName)
-	if err := os.Mkdir(dirPath, 0755); err != nil && !os.IsExist(err) {
+	buildDir := filepath.Join(baseDir, b.DirName)
+	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
+	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("failed creating directory: %w", err)
 	}
 
@@ -245,4 +245,8 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
 	return prog, nil
+}
+
+func BaseDir(repoDir string, lang cmdoptions.Language) string {
+	return filepath.Join(repoDir, "workers", lang.String())
 }
