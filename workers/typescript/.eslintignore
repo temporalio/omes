@@ -3,3 +3,4 @@ lib
 .eslintrc.js
 src/protos/*
 protogen.js
+omes-temp-*

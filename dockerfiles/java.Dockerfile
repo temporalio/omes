@@ -19,7 +19,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -30,6 +30,9 @@ ARG SDK_VERSION
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
+
+# Copy the worker files
+COPY workers/java ./workers/java
 
 # Build the worker
 ENV GRADLE_USER_HOME="/gradle"

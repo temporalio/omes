@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/workers"
 )
 
 func runScenarioWithWorkerCmd() *cobra.Command {
@@ -54,7 +55,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	workerErrCh := make(chan error, 1)
 	workerStartCh := make(chan struct{})
 	r.OnWorkerStarted = func() { close(workerStartCh) }
-	go func() { workerErrCh <- r.Run(ctx, rootDir()) }()
+	go func() { workerErrCh <- r.Run(ctx, workers.BaseDir(repoDir(), r.SdkOptions.Language)) }()
 	select {
 	case err := <-workerErrCh:
 		return fmt.Errorf("worker did not start: %w", err)

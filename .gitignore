@@ -18,5 +18,7 @@ workers/java/build
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
 
-omes-temp-*/
+workers/*/omes-temp-*/
+workers/*/prepared/
+
 temporal-omes

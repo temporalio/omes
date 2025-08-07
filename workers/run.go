@@ -12,17 +12,9 @@ import (
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/cmdoptions"
-	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )
-
-func sendInterrupt(process *os.Process) error {
-	if runtime.GOOS == "windows" {
-		return process.Kill()
-	}
-	return process.Signal(syscall.SIGINT)
-}
 
 type Runner struct {
 	Builder
@@ -30,6 +22,7 @@ type Runner struct {
 	GracefulShutdownDuration  time.Duration
 	EmbeddedServer            bool
 	EmbeddedServerAddress     string
+	TaskQueueName             string
 	TaskQueueIndexSuffixStart int
 	TaskQueueIndexSuffixEnd   int
 	ScenarioID                cmdoptions.ScenarioID
@@ -40,16 +33,13 @@ type Runner struct {
 	OnWorkerStarted           func()
 }
 
-func (r *Runner) Run(ctx context.Context, rootDir string) error {
-	scenarioName := r.ScenarioID.Scenario()
-	scenario := loadgen.GetScenario(scenarioName)
-	if scenario == nil {
-		return fmt.Errorf("scenario %v not found", scenarioName)
-	}
+func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.TaskQueueIndexSuffixStart > r.TaskQueueIndexSuffixEnd {
 		return fmt.Errorf("cannot have task queue suffix start past end")
 	}
-	baseDir := filepath.Join(rootDir, "workers", r.SdkOptions.Language.String())
+	if r.TaskQueueName == "" {
+		return fmt.Errorf("task queue name is required")
+	}
 
 	// Run an embedded server if requested
 	if r.EmbeddedServer || r.EmbeddedServerAddress != "" {
@@ -128,7 +118,7 @@ func (r *Runner) Run(ctx context.Context, rootDir string) error {
 		// Node also needs module
 		args = append(args, "./tslib/omes.js")
 	}
-	args = append(args, "--task-queue", loadgen.TaskQueueForRun(r.ScenarioID.Scenario(), r.ScenarioID.RunID()))
+	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
@@ -143,6 +133,8 @@ func (r *Runner) Run(ctx context.Context, rootDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
+
 	r.Logger.Infof("Starting worker with command: %v", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
@@ -163,21 +155,36 @@ func (r *Runner) Run(ctx context.Context, rootDir string) error {
 	case <-ctx.Done():
 		// Context cancelled, interrupt worker
 		r.Logger.Infof("Sending interrupt to worker, PID: %v", cmd.Process.Pid)
-		if err := sendInterrupt(cmd.Process); err != nil {
+		if err = sendInterrupt(cmd.Process); err != nil {
 			return fmt.Errorf("failed to send interrupt to worker: %w", err)
 		}
+
 		select {
 		case err = <-errCh:
+			r.Logger.Infof("Worker exited after interrupt: %v", err)
 		case <-time.After(r.GracefulShutdownDuration):
-			if err = cmd.Process.Kill(); err == nil {
-				if err = <-errCh; err == nil {
-					err = fmt.Errorf("worker did not shutdown within graceful timeout")
-				}
+			if err = sendKill(cmd.Process); err != nil {
+				return fmt.Errorf("failed to send kill to worker: %w", err)
 			}
-		}
-		if err != nil {
-			r.Logger.Warnf("Worker failed after interrupt: %v", err)
+			if err = <-errCh; err == nil {
+				err = fmt.Errorf("worker did not shutdown within graceful timeout")
+			}
+			if err != nil {
+				r.Logger.Warnf("Worker exited after kill: %v", err)
+			}
 		}
 		return nil
 	}
+}
+
+func sendInterrupt(process *os.Process) error {
+	if runtime.GOOS == "windows" {
+		return process.Kill()
+	}
+	return process.Signal(syscall.SIGINT)
+}
+
+func sendKill(process *os.Process) error {
+	// shutting down the process group (ie including all child processes)
+	return syscall.Kill(-process.Pid, syscall.SIGKILL)
 }

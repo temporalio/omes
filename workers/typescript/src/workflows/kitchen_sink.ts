@@ -202,7 +202,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.nexusOperation) {
       throw new ApplicationFailure('ExecuteNexusOperation is not supported');
     } else {
-      throw new ApplicationFailure('Unknown action ' + JSON.stringify(action));
+      throw new ApplicationFailure('unrecognized action ' + JSON.stringify(action));
     }
   }
 

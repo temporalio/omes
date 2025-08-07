@@ -15,6 +15,6 @@ source "$SCRIPT_DIR/helpers/check-mise.sh"
 source "$SCRIPT_DIR/helpers/load-versions.sh"
 
 echo "Installing .NET $DOTNET_VERSION..."
-mise use dotnet-core@"$DOTNET_VERSION"
+mise use dotnet@"$DOTNET_VERSION"
 
 echo "✅ .NET $DOTNET_VERSION installed successfully!"

@@ -24,20 +24,25 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
-# Build typescript proto files
-# hadolint ignore=DL3003
-RUN cd workers/typescript && npm install && npm run proto-gen
 
 ARG SDK_VERSION
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
+
+# Copy the worker files
+COPY workers/proto ./workers/proto
+COPY workers/typescript ./workers/typescript
+
+# Build typescript proto files
+# hadolint ignore=DL3003
+RUN cd workers/typescript && npm install && npm run proto-gen
 
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"

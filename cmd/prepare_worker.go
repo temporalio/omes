@@ -19,7 +19,7 @@ func prepareWorkerCmd() *cobra.Command {
 			b.preRun()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			baseDir := filepath.Join(rootDir(), "workers", b.SdkOptions.Language.String())
+			baseDir := workers.BaseDir(repoDir(), b.SdkOptions.Language)
 			if _, err := b.Build(cmd.Context(), baseDir); err != nil {
 				b.Logger.Fatal(err)
 			}
@@ -46,7 +46,7 @@ func (b *workerBuilder) preRun() {
 	b.Logger = b.loggingOptions.MustCreateLogger()
 }
 
-func rootDir() string {
+func repoDir() string {
 	_, currFile, _, _ := runtime.Caller(0)
 	return filepath.Dir(filepath.Dir(currFile))
 }
