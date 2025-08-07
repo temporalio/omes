@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
@@ -304,14 +305,16 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
 	}
 
-	var clientActionsErr error
+	var clientActionsErrPtr atomic.Pointer[error]
 	clientSeq := options.Params.ClientSequence
 	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
 		go func() {
-			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
-			if clientActionsErr != nil {
-				r.Logger.Error("Client actions failed: ", clientActionsErr)
+			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
+			if err != nil {
+				clientActionsErrPtr.Store(&err)
+				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
 				cancel()
+
 				// TODO: Remove or change to "always terminate when exiting early" flag
 				err := r.Client.TerminateWorkflow(
 					ctx, options.StartOptions.ID, "", "client actions failed", nil)
@@ -326,8 +329,8 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 	if executeErr != nil {
 		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}
-	if clientActionsErr != nil {
-		return fmt.Errorf("kitchen sink client actions failed: %w", clientActionsErr)
+	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
+		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
 	}
 	return nil
 }

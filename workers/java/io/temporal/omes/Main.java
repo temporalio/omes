@@ -223,7 +223,7 @@ public class Main implements Runnable {
     for (String taskQueue : taskQueues) {
       Worker worker = workerFactory.newWorker(taskQueue, workerOptions.build());
       worker.registerWorkflowImplementationTypes(KitchenSinkWorkflowImpl.class);
-      worker.registerActivitiesImplementations(new ActivitiesImpl());
+      worker.registerActivitiesImplementations(new ActivitiesImpl(client));
     }
     workerFactory.start();
     CountDownLatch latch = new CountDownLatch(1);

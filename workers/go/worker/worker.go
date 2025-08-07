@@ -60,6 +60,9 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 		Client: client,
 	}
 	ebbFlowActivities := ebbandflow.Activities{}
+	clientActivities := kitchensink.ClientActivities{
+		Client: client,
+	}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
 	if err != nil {
