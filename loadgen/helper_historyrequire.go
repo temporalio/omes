@@ -283,10 +283,6 @@ func looselyEqual(x, y any) bool {
 	return reflect.DeepEqual(x, y)
 }
 
-func formatEventTypeName(event *historypb.HistoryEvent) string {
-	return strings.TrimPrefix(event.GetEventType().String(), "EVENT_TYPE_")
-}
-
 func logHistoryMismatch(t *testing.T, expectedSpec string, actualEvents eventList) {
 	t.Helper()
 

@@ -1,6 +1,7 @@
 using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
+using Temporalio.Client;
 using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
@@ -146,10 +147,8 @@ public class KitchenSinkWorkflow
         }
         else if (action.ExecActivity is { } execActivity)
         {
-            await HandleAwaitableChoiceAsync(
-                LaunchActivity(execActivity, tokenSrc).ContinueWith(_ => true),
-                tokenSrc,
-                execActivity.AwaitableChoice);
+            await LaunchActivity(execActivity, tokenSrc);
+            await HandleAwaitableChoiceAsync(Task.FromResult<object?>(null), tokenSrc, execActivity.AwaitableChoice);
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
@@ -326,6 +325,11 @@ public class KitchenSinkWorkflow
             args.Add(inputData);
             args.Add(payload.BytesToReturn);
         }
+        else if (eaa.Client is { } client)
+        {
+            actType = "client";
+            args.Add(client);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -407,4 +411,26 @@ public class KitchenSinkWorkflow
         new Random().NextBytes(output);
         return output;
     }
+}
+
+public class ClientActivitiesImpl
+{
+    private readonly ITemporalClient _client;
+
+    public ClientActivitiesImpl(ITemporalClient client)
+    {
+        _client = client;
+    }
+
+    [Activity("client")]
+    public async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var taskQueue = activityInfo.TaskQueue;
+
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        await executor.ExecuteClientSequence(clientActivity.ClientSequence);
+    }
+
 }

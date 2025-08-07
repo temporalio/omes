@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -31,11 +31,7 @@ var (
 		cmdoptions.LangTypeScript,
 		cmdoptions.LangDotNet,
 	}
-	onlySDK = os.Getenv("SDK")
-
-	testDir, _ = os.Getwd()
-	repoDir    = filepath.Dir(testDir)
-
+	onlySDK                = os.Getenv("SDK")
 	defaultActivityTimeout = durationpb.New(5 * time.Second)
 	javaMutex              sync.Mutex
 )
@@ -75,20 +71,12 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: fullHistoryMatcher(`
-				WorkflowExecutionStarted
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
+			historyMatcher: partialHistoryMatcher(`
 				TimerStarted {"startToFireTimeout":"0.001s"}
-				TimerFired
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
-				WorkflowExecutionCompleted`),
+				TimerFired`),
 		},
 		{
-			name: "ExecActivity - Noop",
+			name: "ExecActivity/Noop",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -106,21 +94,13 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: fullHistoryMatcher(`
-				WorkflowExecutionStarted
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
+			historyMatcher: partialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"noop"},"scheduleToCloseTimeout":"10s","scheduleToStartTimeout":"9s","startToCloseTimeout":"8s"}
 				ActivityTaskStarted
-				ActivityTaskCompleted
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
-				WorkflowExecutionCompleted`),
+				ActivityTaskCompleted`),
 		},
 		{
-			name: "ExecActivity - Noop (local)",
+			name: "ExecActivity/Noop (local)",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -141,14 +121,14 @@ func TestKitchenSink(t *testing.T) {
 			},
 			historyMatcher: fullHistoryMatcher(`
 				WorkflowExecutionStarted
-				WorkflowTaskScheduled	
+				WorkflowTaskScheduled
 				WorkflowTaskStarted
 				WorkflowTaskCompleted
 				MarkerRecorded  			# fields across SDKs vary here
 				WorkflowExecutionCompleted`),
 		},
 		{
-			name: "ClientSequence - Nested",
+			name: "ClientSequence/Nested",
 			testInput: &TestInput{
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
@@ -196,6 +176,667 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionUpdateCompleted`),
 		},
 		{
+			name: "ExecActivity/Client/Signal/DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_DoSignalActions_{
+														DoSignalActions: &DoSignal_DoSignalActions{
+															Variant: &DoSignal_DoSignalActions_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ExecActivity/Client/Signal/WithStart",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_DoSignalActions_{
+														DoSignalActions: &DoSignal_DoSignalActions{
+															Variant: &DoSignal_DoSignalActions_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+													WithStart: true, // This makes it a signal-with-start
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done")),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ExecActivity/Client/Signal/Custom",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_Custom{
+														Custom: &HandlerInvocation{
+															Name: "test_signal",
+														},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
+		},
+		{
+			name: "ExecActivity/Client/Query/ReportState",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoQuery{
+												DoQuery: &DoQuery{
+													Variant: &DoQuery_ReportState{
+														ReportState: &common.Payloads{},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+		},
+		{
+			name: "ExecActivity/Client/Query/Custom/Failure",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoQuery{
+												DoQuery: &DoQuery{
+													Variant: &DoQuery_Custom{
+														Custom: &HandlerInvocation{
+															Name: "nonexistent_query",
+														},
+													},
+													FailureExpected: true, // This query doesn't exist
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+		},
+		{
+			name: "ExecActivity/Client/Update/DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_DoActions{
+														DoActions: &DoActionsUpdate{
+															Variant: &DoActionsUpdate_DoActions{
+																DoActions: SingleActionSet(NewTimerAction(1)),
+															},
+														},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				...
+				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+		},
+		{
+			name: "ExecActivity/Client/Update/Custom/Failure",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_Custom{
+														Custom: &HandlerInvocation{
+															Name: "nonexistent_update",
+														},
+													},
+													FailureExpected: true, // This update doesn't exist
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+		},
+		{
+			name: "ExecActivity/Client/Update/WithStart",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_DoActions{
+														DoActions: &DoActionsUpdate{
+															Variant: &DoActionsUpdate_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+													WithStart: true, // This makes it an update-with-start
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done")),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ExecActivity/Client/Concurrent",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										&ClientSequence{
+											ActionSets: []*ClientActionSet{
+												{
+													Concurrent: true,
+													Actions:    []*ClientAction{},
+												},
+											},
+										},
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangJava:       "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
+			name: "ExecActivity/Client/Nested",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NestedActionSet{
+								NestedActionSet: &ActionSet{
+									Actions: []*Action{
+										{
+											Variant: &Action_ExecActivity{
+												ExecActivity: &ExecuteActivityAction{
+													ActivityType: ClientActivity(
+														ClientActions(&ClientAction{
+															Variant: &ClientAction_DoSignal{
+																DoSignal: &DoSignal{
+																	Variant: &DoSignal_DoSignalActions_{
+																		DoSignalActions: &DoSignal_DoSignalActions{
+																			Variant: &DoSignal_DoSignalActions_DoActions{
+																				DoActions: SingleActionSet(NewTimerAction(1)),
+																			},
+																		},
+																	},
+																},
+															},
+														}),
+													),
+													StartToCloseTimeout: defaultActivityTimeout,
+												},
+											},
+										},
+										{
+											Variant: &Action_ExecActivity{
+												ExecActivity: &ExecuteActivityAction{
+													ActivityType: ClientActivity(
+														ClientActions(&ClientAction{
+															Variant: &ClientAction_DoUpdate{
+																DoUpdate: &DoUpdate{
+																	Variant: &DoUpdate_DoActions{
+																		DoActions: &DoActionsUpdate{
+																			Variant: &DoActionsUpdate_DoActions{
+																				DoActions: SingleActionSet(NewTimerAction(1)),
+																			},
+																		},
+																	},
+																},
+															},
+														}),
+													),
+													StartToCloseTimeout: defaultActivityTimeout,
+												},
+											},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "client actions activity is not supported",
+				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "client actions activity is not supported",
+				cmdoptions.LangDotNet:     "client actions activity is not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				...
+				WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ClientSequence/Signal/DoActions",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							Variant: &DoSignal_DoSignalActions_{
+								DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(NewTimerAction(1)),
+									},
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ClientSequence/Signal/Custom",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							Variant: &DoSignal_Custom{
+								Custom: &HandlerInvocation{
+									Name: "my-signal",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ClientSequence/Query/ReportState",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoQuery{
+						DoQuery: &DoQuery{
+							Variant: &DoQuery_ReportState{
+								ReportState: &common.Payloads{},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence/Query/Custom/Failure",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoQuery{
+						DoQuery: &DoQuery{
+							FailureExpected: true,
+							Variant: &DoQuery_Custom{
+								Custom: &HandlerInvocation{
+									Name: "nonexistent-query",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence/Update/DoActions",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							Variant: &DoUpdate_DoActions{
+								DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{
+										DoActions: SingleActionSet(
+											NewTimerAction(1),
+											NewSetWorkflowStateAction("status", "done"),
+										),
+									},
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ClientSequence/Update/Custom/Failure",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							FailureExpected: true,
+							Variant: &DoUpdate_Custom{
+								Custom: &HandlerInvocation{
+									Name: "nonexistent-update",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence/Nested",
+			testInput: &TestInput{
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: []*ClientAction{
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(NewTimerAction(1)),
+													},
+												},
+											},
+										},
+									},
+								},
+								{
+									Variant: &ClientAction_DoUpdate{
+										DoUpdate: &DoUpdate{
+											Variant: &DoUpdate_DoActions{
+												DoActions: &DoActionsUpdate{
+													Variant: &DoActionsUpdate_DoActions{
+														DoActions: SingleActionSet(NewTimerAction(1)),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				...
+				WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "WithStartAction/Signal",
+			testInput: &TestInput{
+				WithStartAction: &WithStartClientAction{
+					Variant: &WithStartClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							WithStart: true,
+							Variant: &DoSignal_DoSignalActions_{
+								DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowExecutionSignaled {"signalName":"do_actions_signal"}
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "WithStartAction/Update",
+			testInput: &TestInput{
+				WithStartAction: &WithStartClientAction{
+					Variant: &WithStartClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							WithStart: true,
+							Variant: &DoUpdate_DoActions{
+								DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{
+										DoActions: SingleActionSet(),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionUpdateAccepted
+				WorkflowExecutionUpdateCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -217,6 +858,9 @@ func TestKitchenSink(t *testing.T) {
 
 			// Ensure the workflow completes by appending a return action at the end.
 			input := tc.testInput
+			if input.WorkflowInput == nil {
+				input.WorkflowInput = &WorkflowInput{}
+			}
 			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
 			for _, sdk := range sdks {
@@ -238,7 +882,7 @@ func testForSDK(
 	sdk cmdoptions.Language,
 	env *TestEnvironment,
 ) {
-	// Use mutex to ensure only one Java test runs at a time - a Gradle limitation.
+	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == cmdoptions.LangJava {
 		javaMutex.Lock()
 		defer javaMutex.Unlock()

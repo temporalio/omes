@@ -38,7 +38,9 @@ func (e *ClientActionsExecutor) Start(
 	if err != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
 	}
-	e.runID = e.Handle.GetRunID()
+	if e.Handle != nil { // can be nil if FailureExpected is set
+		e.runID = e.Handle.GetRunID()
+	}
 	return nil
 }
 
@@ -182,6 +184,9 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 
 	if err == nil {
 		err = handle.Get(ctx, nil)
+		if upd.WithStart {
+			run = e.Client.GetWorkflow(ctx, handle.WorkflowID(), handle.RunID())
+		}
 	}
 	if upd.FailureExpected {
 		err = nil

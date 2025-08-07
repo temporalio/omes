@@ -191,6 +191,9 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
         )
         args.append(input_data)
         args.append(execute_activity.payload.bytes_to_return)
+    elif execute_activity.HasField("client"):
+        act_type = "client"
+        args.append(execute_activity.client)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
