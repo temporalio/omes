@@ -10,16 +10,18 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 ## Prerequisites
 
 - [Go](https://golang.org/) 1.24+
-  - `protoc` + `protoc-gen-go` or [mise](https://mise.jdx.dev/) for [Kitchen Sink Workflow](#kitchen-sink-workflow)
 - [Java](https://openjdk.org/) 8+
 - TypeScript: [Node](https://nodejs.org) 16+
 - Python: [uv](https://docs.astral.sh/uv/)
 - [.NET](https://dotnet.microsoft.com/en-us/download)
+- [Buf](https://buf.build/) for [Kitchen Sink Workflow](#kitchen-sink-workflow)
 
 And if you're running the fuzzer (see below)
 - [Rust](https://rustup.rs/)
 
 SDK and tool versions are defined in `versions.env`.
+
+Alternatively, use [mise](https://mise.jdx.dev/) via the `scripts/install-all.sh`.
 
 ## Architecture
 

@@ -1,3 +1,0 @@
-[submodule "workers/proto/api_upstream"]
-	path = workers/proto/api_upstream
-	url = https://github.com/temporalio/api

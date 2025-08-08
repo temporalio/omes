@@ -173,8 +173,7 @@ jobs:
         run: |
           ./scripts/install-rust.sh
           ./scripts/install-go.sh
-          ./scripts/install-protoc.sh
-          ./scripts/install-node.sh
+          ./scripts/install-proto.sh
       - name: Build proto
         run: |
           ./scripts/build-kitchensink.sh

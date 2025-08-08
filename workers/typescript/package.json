@@ -2,10 +2,9 @@
   "name": "omes",
   "version": "0.1.0",
   "scripts": {
-    "build": "npm run proto-gen && tsc --build",
+    "build": "tsc --build",
     "build.watch": "tsc --build --watch",
     "clean": "rm -rf node_modules dist build",
-    "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
     "lint-ci": "eslint . && prettier --check .",
     "format": "prettier --write ."

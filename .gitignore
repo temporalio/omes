@@ -21,4 +21,15 @@ workers/dotnet/Temporalio.Omes.temp.csproj
 workers/*/omes-temp-*/
 workers/*/prepared/
 
+# Generated proto files (exclude all except Go)
+loadgen/kitchen-sink-gen/src/
+workers/python/protos/
+workers/java/com/
+workers/java/io/
+workers/typescript/src/protos/
+workers/dotnet/**/*.cs
+
+# But allow Go proto files to be committed
+!loadgen/kitchensink/*.pb.go
+
 temporal-omes

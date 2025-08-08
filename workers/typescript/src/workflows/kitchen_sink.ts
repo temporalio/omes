@@ -190,10 +190,11 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       for (const [key, value] of Object.entries(
         action.upsertSearchAttributes.searchAttributes ?? {}
       )) {
+        const payload = value as Payload;
         if (key.includes('Keyword')) {
-          searchAttributes[key] = [value.data![0].toString()];
+          searchAttributes[key] = [payload.data![0].toString()];
         } else {
-          searchAttributes[key] = [value.data![0]];
+          searchAttributes[key] = [payload.data![0]];
         }
       }
       upsertSearchAttributes(searchAttributes);
