@@ -5,7 +5,7 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
+        do_signal::{do_signal_actions, DoSignalActions}, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
@@ -435,11 +435,11 @@ impl<'a> Arbitrary<'a> for DoSignal {
             // Half of that in the handler half in main
             if u.ratio(50, 100)? {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)).into(),
+                    DoSignalActions { variant: Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)) },
                 )
             } else {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)).into(),
+                    DoSignalActions { variant: Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)) },
                 )
             }
         } else {
@@ -804,10 +804,9 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
     ClientAction {
         variant: Some(client_action::Variant::DoSignal(DoSignal {
             variant: Some(do_signal::Variant::DoSignalActions(
-                Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
+                DoSignalActions { variant: Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
                     actions,
-                )))
-                .into(),
+                ))) },
             )),
             with_start: false,
         })),

@@ -1,0 +1,8 @@
+version: v1
+name: buf.build/omes/kitchen-sink
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT

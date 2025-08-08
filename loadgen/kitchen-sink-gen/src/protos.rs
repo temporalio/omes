@@ -2,7 +2,7 @@ pub mod temporal {
     pub mod omes {
         #[allow(clippy::all)]
         pub mod kitchen_sink {
-            include!(concat!(env!("OUT_DIR"), "/temporal.omes.kitchen_sink.rs"));
+            include!("temporal.omes.kitchen_sink.rs");
             impl HandlerInvocation {
                 pub fn nonexistent() -> Self {
                     HandlerInvocation {
@@ -18,17 +18,17 @@ pub mod temporal {
     pub mod api {
         pub mod common {
             pub mod v1 {
-                include!(concat!(env!("OUT_DIR"), "/temporal.api.common.v1.rs"));
+                include!("temporal.api.common.v1.rs");
             }
         }
         pub mod enums {
             pub mod v1 {
-                include!(concat!(env!("OUT_DIR"), "/temporal.api.enums.v1.rs"));
+                include!("temporal.api.enums.v1.rs");
             }
         }
         pub mod failure {
             pub mod v1 {
-                include!(concat!(env!("OUT_DIR"), "/temporal.api.failure.v1.rs"));
+                include!("temporal.api.failure.v1.rs");
             }
         }
     }

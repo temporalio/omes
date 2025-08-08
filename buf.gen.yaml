@@ -1,0 +1,32 @@
+version: v1
+plugins:
+  - name: go
+    out: loadgen/kitchensink
+    opt:
+      - paths=source_relative
+      - M=kitchen_sink/kitchen_sink.proto=github.com/temporalio/omes/loadgen/kitchensink
+  - name: python
+    out: ../python/protos
+  - name: pyi
+    out: ../python/protos
+  - name: java
+    out: ../java
+  - name: csharp
+    out: ../dotnet
+  - name: js
+    out: ../typescript/src/protos
+    opt:
+      - import_style=commonjs
+  - name: ts
+    out: ../typescript/src/protos
+  - name: prost
+    out: ../../loadgen/kitchen-sink-gen/src
+    opt:
+      - default_package_filename=_pb
+      - compile_well_known_types=false
+      - retain_enum_prefix=false
+      - type_attribute=.temporal.omes.kitchen_sink.Action.variant=#[derive(::derive_more::From)]
+      - type_attribute=.temporal.omes.kitchen_sink.DoUpdate.variant=#[derive(::derive_more::From)]
+      - type_attribute=.temporal.omes.kitchen_sink.DoActionsUpdate.variant=#[derive(::derive_more::From)]
+      - type_attribute=.temporal.omes.kitchen_sink.DoActionsUpdate=#[derive(::derive_more::From)]
+      - type_attribute=.temporal.omes.kitchen_sink.DoSignal.DoSignalActions=#[derive(::derive_more::From)]

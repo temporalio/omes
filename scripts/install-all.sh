@@ -15,4 +15,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     install-python.sh \
     install-node.sh \
     install-rust.sh \
-    install-protoc.sh
+    install-proto.sh
