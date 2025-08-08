@@ -22,7 +22,7 @@ func init() {
 				args := []string{"generate"}
 				seed, ok := info.ScenarioOptions["seed"]
 				if ok && seed != "" {
-					args = append(args, "--explicit-seed", seed)
+					args = append(args, "--seed", seed)
 				}
 				config, ok := info.ScenarioOptions["config"]
 				if ok && config != "" {
