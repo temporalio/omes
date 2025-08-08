@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,8 @@ type Builder struct {
 	DirName    string
 	SdkOptions cmdoptions.SdkOptions
 	Logger     *zap.SugaredLogger
+	stdout     io.Writer
+	stderr     io.Writer
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -31,6 +34,13 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
 	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("failed creating directory: %w", err)
+	}
+
+	if b.stdout == nil {
+		b.stdout = &logWriter{logger: b.Logger}
+	}
+	if b.stderr == nil {
+		b.stderr = &logWriter{logger: b.Logger}
 	}
 
 	switch b.SdkOptions.Language {
@@ -54,6 +64,8 @@ func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program
 		BaseDir: baseDir,
 		DirName: b.DirName,
 		Version: b.SdkOptions.Version,
+		Stdout:  b.stdout,
+		Stderr:  b.stderr,
 		GoModContents: `module github.com/temporalio/omes-worker
 
 go 1.20
@@ -100,6 +112,8 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 		BaseDir: baseDir,
 		DirName: b.DirName,
 		Version: version,
+		Stdout:  b.stdout,
+		Stderr:  b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
@@ -115,6 +129,8 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 		MainClass:         "io.temporal.omes.Main",
 		HarnessDependency: "io.temporal:omes:0.1.0",
 		Build:             true,
+		Stdout:            b.stdout,
+		Stderr:            b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
@@ -168,6 +184,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		MoreDependencies: map[string]string{
 			"winston": "^3.11.0",
 		},
+		Stdout: b.stdout,
+		Stderr: b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
@@ -240,6 +258,8 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 				<ProjectReference Include="` + omesProjPath + `" />
 			</ItemGroup>
 		</Project>`,
+		Stdout: b.stdout,
+		Stderr: b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)

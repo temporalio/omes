@@ -197,6 +197,9 @@ public static class App
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
             workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
             workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
+            workerOptions.AddActivity(KitchenSinkWorkflow.Payload);
+            var clientActivities = new ClientActivitiesImpl(client);
+            workerOptions.AddActivity(clientActivities.Client);
             var worker = new TemporalWorker(client, workerOptions);
             var workerTask = worker.ExecuteAsync(default);
             workerTasks.Add(workerTask);
