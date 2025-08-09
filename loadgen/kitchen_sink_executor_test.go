@@ -13,14 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
-	"github.com/temporalio/omes/workers"
 	common "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -41,23 +39,9 @@ var (
 	testDir, _ = os.Getwd()
 	repoDir    = filepath.Dir(testDir)
 
-	testStart              = time.Now().Unix()
-	testRunTimeout         = 10 * time.Second
-	workerBuildTimeout     = 1 * time.Minute
-	workerShutdownTimeout  = 5 * time.Second
 	defaultActivityTimeout = durationpb.New(5 * time.Second)
 
-	javaMutex       sync.Mutex
-	workerMutex     sync.RWMutex
-	workerBuildOnce = map[cmdoptions.Language]*sync.Once{
-		cmdoptions.LangGo:         new(sync.Once),
-		cmdoptions.LangJava:       new(sync.Once),
-		cmdoptions.LangPython:     new(sync.Once),
-		cmdoptions.LangTypeScript: new(sync.Once),
-		cmdoptions.LangDotNet:     new(sync.Once),
-	}
-	workerBuildErrs    = map[cmdoptions.Language]error{}
-	workerCleanupFuncs []func()
+	javaMutex sync.Mutex
 )
 
 type testCase struct {
@@ -74,14 +58,7 @@ func TestKitchenSink(t *testing.T) {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
 
-	// Register cleanup of workers builds after test completion.
-	t.Cleanup(func() {
-		workerMutex.Lock()
-		defer workerMutex.Unlock()
-		for _, cleanupFunc := range workerCleanupFuncs {
-			cleanupFunc()
-		}
-	})
+	// Test environment will handle cleanup
 
 	// Start dev server.
 	devServer := startDevServer(t)
@@ -917,116 +894,118 @@ func TestKitchenSink(t *testing.T) {
 				if onlySDK != "" && string(sdk) != onlySDK {
 					continue // not using t.Skip is it's too noisy
 				}
-				t.Run(string(sdk), func(t *testing.T) {
-					t.Parallel()
-
-					// Use mutex to ensure only one Java test runs at a time - a Gradle limitation :-(
-					// Note re-using workers to ensure their logs are not mixed up across tests.
-					if sdk == cmdoptions.LangJava {
-						javaMutex.Lock()
-						defer javaMutex.Unlock()
-					}
-
-					testForSDK(t, tc, sdk, temporalClient, devServerAddr)
-				})
+				
+				testForSDK(t, tc, sdk, temporalClient, devServerAddr)
 			}
 		})
 	}
 }
 
 func testForSDK(
-	t *testing.T,
+	parentT *testing.T,
 	tc testCase,
 	sdk cmdoptions.Language,
 	temporalClient client.Client,
 	devServerAddr string,
 ) {
-	logger := zaptest.NewLogger(t).Sugar()
-	scenarioID := cmdoptions.ScenarioID{
-		Scenario: "kitchenSinkTest",
-		RunID:    fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-	}
-	taskQueueName := TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
+	parentT.Run(string(sdk), func(childT *testing.T) {
+		childT.Parallel()
 
-	// Build worker outside of the test context.
-	executorErr := ensureWorkerBuilt(t, logger, sdk)
-	require.NoErrorf(t, executorErr, "Failed to build worker for SDK %s", sdk)
+		// Use mutex to ensure only one Java test runs at a time - a Gradle limitation
+		if sdk == cmdoptions.LangJava {
+			javaMutex.Lock()
+			defer javaMutex.Unlock()
+		}
 
-	testCtx, testCtxCancel := context.WithTimeout(t.Context(), testRunTimeout)
-	defer testCtxCancel()
+		// Create test environment that handles all worker/devserver complexity
+		env := &TestEnvironment{
+			DevServer:      nil, // Will be set by the helper when needed
+			TemporalClient: temporalClient,
+			Logger:         zaptest.NewLogger(childT).Sugar(),
+			RepoDir:        repoDir,
+		}
 
-	// Start worker.
-	workerCtx, workerCtxCancel := context.WithCancel(testCtx)
-	workerDone := make(chan error, 1)
-	go func() {
-		defer close(workerDone)
-		baseDir := workers.BaseDir(repoDir, sdk)
-		runner := &workers.Runner{
-			Builder: workers.Builder{
-				DirName:    buildDirName(),
-				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-				Logger:     logger.Named(fmt.Sprintf("[%s-worker]", sdk)),
-			},
-			TaskQueueName:            taskQueueName,
-			GracefulShutdownDuration: workerShutdownTimeout,
-			ScenarioID:               scenarioID,
-			ClientOptions: cmdoptions.ClientOptions{
-				Address:   devServerAddr,
-				Namespace: namespace,
+		// Create the executor
+		executor := &KitchenSinkExecutor{
+			TestInput: tc.testInput,
+			DefaultConfiguration: RunConfiguration{
+				Iterations:    1,
+				MaxConcurrent: 1,
 			},
 		}
-		workerDone <- runner.Run(workerCtx, baseDir)
-	}()
 
-	// Run executor.
-	executor := KitchenSinkExecutor{
-		TestInput: tc.testInput,
-		DefaultConfiguration: RunConfiguration{
-			Iterations:    1,
-			MaxConcurrent: 1,
-		},
-	}
-	scenarioInfo := ScenarioInfo{
-		ScenarioName:   scenarioID.Scenario,
-		RunID:          scenarioID.RunID,
-		Logger:         logger.Named("[executor]"),
-		MetricsHandler: client.MetricsNopHandler,
-		Client:         temporalClient,
-		Configuration:  executor.DefaultConfiguration,
-		Namespace:      namespace,
-	}
-	executorErr = executor.Run(testCtx, scenarioInfo)
+		// Setup scenario info
+		scenarioInfo := ScenarioInfo{
+			ScenarioName: "kitchenSinkTest",
+			RunID:        fmt.Sprintf("%s-%d", childT.Name(), time.Now().Unix()),
+			Configuration: executor.DefaultConfiguration,
+		}
 
-	// Wait for worker to stop; otherwise it keeps logging and cause a data race.
-	workerCtxCancel()
-	workerErr := <-workerDone
-	if workerErr != nil {
-		t.Logf("Worker shutdown with error: %v", workerErr)
-	}
+		// Check if feature is expected to be unsupported
+		if expectedErr, expectUnsupported := tc.expectedUnsupportedErrs[sdk]; expectUnsupported {
+			// Test the unsupported feature case
+			testUnsupportedFeature(childT, env, executor, scenarioInfo, sdk, expectedErr, devServerAddr)
+		} else {
+			// Test the supported feature case
+			testSupportedFeature(childT, env, executor, scenarioInfo, tc, sdk, temporalClient, devServerAddr)
+		}
+	})
+}
 
-	// If feature is not supported; check for expected error.
-	if expectedErr, expectUnsupported := tc.expectedUnsupportedErrs[sdk]; expectUnsupported {
-		require.Errorf(t, executorErr,
-			"SDK %s should fail for unsupported feature", sdk)
-		require.NotEmptyf(t, expectedErr,
-			"invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
-		require.Containsf(t, strings.ToLower(executorErr.Error()), expectedErr,
-			"SDK %s error should contain '%s'", sdk, expectedErr)
-		return
+// testUnsupportedFeature tests that unsupported features fail with expected errors
+func testUnsupportedFeature(t *testing.T, env *TestEnvironment, executor *KitchenSinkExecutor, scenarioInfo ScenarioInfo, sdk cmdoptions.Language, expectedErr, devServerAddr string) {
+	// Run test using helper that manages worker/devserver
+	testExecutor := &kitchenSinkTestWrapper{
+		executor:      executor,
+		sdk:           sdk,
+		devServerAddr: devServerAddr,
 	}
 
+	err := env.runExecutorTestWithSDK(t, testExecutor, scenarioInfo, sdk, devServerAddr)
+
+	// Verify it fails with expected error
+	require.Error(t, err, "SDK %s should fail for unsupported feature", sdk)
+	require.NotEmpty(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
+	require.Contains(t, strings.ToLower(err.Error()), expectedErr, "SDK %s error should contain '%s'", sdk, expectedErr)
+}
+
+// testSupportedFeature tests that supported features work correctly and match expected history
+func testSupportedFeature(t *testing.T, env *TestEnvironment, executor *KitchenSinkExecutor, scenarioInfo ScenarioInfo, tc testCase, sdk cmdoptions.Language, temporalClient client.Client, devServerAddr string) {
+	// Run test using helper that manages worker/devserver
+	testExecutor := &kitchenSinkTestWrapper{
+		executor:      executor,
+		sdk:           sdk,
+		devServerAddr: devServerAddr,
+	}
+
+	err := env.runExecutorTestWithSDK(t, testExecutor, scenarioInfo, sdk, devServerAddr)
+	
+	// Get workflow history for verification
+	taskQueueName := TaskQueueForRun(scenarioInfo.ScenarioName, scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, temporalClient)
 
-	if executorErr != nil {
+	if err != nil {
 		if len(historyEvents) > 0 {
-			t.Logf("History events for debugging: \n")
+			t.Logf("History events for debugging:")
 			logHistoryEvents(t, parseEvents(historyEvents))
 		}
-		require.NoError(t, executorErr, "executor failed")
+		require.NoError(t, err, "executor failed")
 	}
+	
 	require.NoError(t, historyErr, "failed to get workflow history")
-	require.NotNilf(t, tc.historyMatcher, "invalid test case", "Test case '%s': historyMatcher must be set", tc.name)
-	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
+	require.NotNil(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
+	require.NoError(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
+}
+
+// kitchenSinkTestWrapper wraps the kitchen sink executor for use with the test helper
+type kitchenSinkTestWrapper struct {
+	executor      *KitchenSinkExecutor
+	sdk           cmdoptions.Language
+	devServerAddr string
+}
+
+func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) error {
+	return w.executor.Run(ctx, info)
 }
 
 func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
@@ -1058,43 +1037,7 @@ func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient clien
 	return historyEvents, nil
 }
 
-func ensureWorkerBuilt(t *testing.T, logger *zap.SugaredLogger, sdk cmdoptions.Language) error {
-	once := workerBuildOnce[sdk]
-	once.Do(func() {
-		baseDir := workers.BaseDir(repoDir, sdk)
-		dirName := buildDirName()
-		buildDir := filepath.Join(baseDir, dirName)
-
-		workerMutex.Lock()
-		workerCleanupFuncs = append(workerCleanupFuncs, func() {
-			if err := os.RemoveAll(buildDir); err != nil {
-				fmt.Printf("Failed to clean up build dir for %s at %s: %v\n", sdk, buildDir, err)
-			}
-		})
-		workerMutex.Unlock()
-
-		builder := workers.Builder{
-			DirName:    dirName,
-			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-			Logger:     logger.Named(fmt.Sprintf("[%s-builder]", sdk)),
-		}
-
-		ctx, cancel := context.WithTimeout(t.Context(), workerBuildTimeout)
-		defer cancel()
-
-		_, err := builder.Build(ctx, baseDir)
-
-		workerMutex.Lock()
-		workerBuildErrs[sdk] = err
-		workerMutex.Unlock()
-	})
-
-	workerMutex.RLock()
-	err := workerBuildErrs[sdk]
-	workerMutex.RUnlock()
-
-	return err
-}
+// ensureWorkerBuilt is now handled by TestEnvironment.ensureWorkerBuilt
 
 func createTemporalClient(t *testing.T, devServerAddr string) client.Client {
 	temporalClient, err := client.Dial(client.Options{
@@ -1114,8 +1057,4 @@ func startDevServer(t *testing.T) *testsuite.DevServer {
 	})
 	require.NoError(t, err, "Failed to get dev server")
 	return server
-}
-
-func buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", testStart)
 }
