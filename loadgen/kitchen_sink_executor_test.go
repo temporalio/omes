@@ -13,8 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
-	"github.com/temporalio/omes/workers"
-	"go.temporal.io/api/common/v1"
+	common "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
@@ -24,6 +23,8 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+const namespace = "default"
 
 var (
 	sdks = []cmdoptions.Language{
@@ -38,81 +39,61 @@ var (
 	testDir, _ = os.Getwd()
 	repoDir    = filepath.Dir(testDir)
 
-	testStart             = time.Now().Unix()
-	testTimeout           = 30 * time.Second
-	workerBuildTimeout    = 1 * time.Minute
-	workerShutdownTimeout = 5 * time.Second
+	defaultActivityTimeout = durationpb.New(5 * time.Second)
 
-	workerMutex     sync.RWMutex
-	workerBuildOnce = map[cmdoptions.Language]*sync.Once{
-		cmdoptions.LangGo:         new(sync.Once),
-		cmdoptions.LangJava:       new(sync.Once),
-		cmdoptions.LangPython:     new(sync.Once),
-		cmdoptions.LangTypeScript: new(sync.Once),
-		cmdoptions.LangDotNet:     new(sync.Once),
-	}
-	workerBuildErrs    = map[cmdoptions.Language]error{}
-	workerCleanupFuncs []func()
+	javaMutex sync.Mutex
 )
 
 type testCase struct {
-	name                 string
-	testInput            *TestInput
-	expectedHistory      string
-	unsupportedSDKs      []cmdoptions.Language
-	expectedErrorMessage string
+	name                    string
+	testInput               *TestInput
+	historyMatcher          HistoryMatcher
+	expectedUnsupportedErrs map[cmdoptions.Language]string
 }
 
-// TestKitchensink tests specific kitchensink features across SDKs.
+// TestKitchenSink tests specific kitchensink features across SDKs.
 // Use the `SDK` environment variable to run only a specific SDK.
-func TestKitchensink(t *testing.T) {
+func TestKitchenSink(t *testing.T) {
 	if os.Getenv("CI") != "" && onlySDK == "" {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
 
-	t.Cleanup(func() {
-		workerMutex.Lock()
-		defer workerMutex.Unlock()
-		for _, cleanupFunc := range workerCleanupFuncs {
-			cleanupFunc()
-		}
-	})
+	// Test environment will handle cleanup
 
 	// Start dev server.
 	devServer := startDevServer(t)
-	defer devServer.Stop()
+	t.Cleanup(func() {
+		devServer.Stop()
+	})
 	devServerAddr := devServer.FrontendHostPort()
 
 	// Create Temporal client.
 	temporalClient := createTemporalClient(t, devServerAddr)
-	defer temporalClient.Close()
+	t.Cleanup(func() {
+		temporalClient.Close()
+	})
 
 	for _, tc := range []testCase{
 		{
 			name: "TimerAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{
-						{
-							Actions: []*Action{
-								{
-									Variant: &Action_Timer{
-										Timer: &TimerAction{
-											Milliseconds: 1,
-											AwaitableChoice: &AwaitableChoice{
-												Condition: &AwaitableChoice_WaitFinish{
-													WaitFinish: &emptypb.Empty{},
-												},
-											},
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_Timer{
+								Timer: &TimerAction{
+									Milliseconds: 1,
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitFinish{
+											WaitFinish: &emptypb.Empty{},
 										},
 									},
 								},
 							},
-						},
-					},
+						}),
 				},
 			},
-			expectedHistory: `
+			historyMatcher: fullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -122,33 +103,28 @@ func TestKitchensink(t *testing.T) {
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
 				WorkflowTaskCompleted
-				WorkflowExecutionCompleted`,
+				WorkflowExecutionCompleted`),
 		},
 		{
 			name: "ExecActivity - Noop",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{
-						{
-							Actions: []*Action{
-								{
-									Variant: &Action_ExecActivity{
-										ExecActivity: &ExecuteActivityAction{
-											ActivityType: &ExecuteActivityAction_Noop{
-												Noop: &emptypb.Empty{},
-											},
-											ScheduleToCloseTimeout: durationpb.New(10 * time.Second),
-											ScheduleToStartTimeout: durationpb.New(9 * time.Second),
-											StartToCloseTimeout:    durationpb.New(8 * time.Second),
-										},
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: &ExecuteActivityAction_Noop{
+										Noop: &emptypb.Empty{},
 									},
+									ScheduleToCloseTimeout: durationpb.New(10 * time.Second),
+									ScheduleToStartTimeout: durationpb.New(9 * time.Second),
+									StartToCloseTimeout:    durationpb.New(8 * time.Second),
 								},
 							},
-						},
-					},
+						}),
 				},
 			},
-			expectedHistory: `
+			historyMatcher: fullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -159,24 +135,648 @@ func TestKitchensink(t *testing.T) {
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
 				WorkflowTaskCompleted
-				WorkflowExecutionCompleted`,
+				WorkflowExecutionCompleted`),
 		},
 		{
 			name: "ExecActivity - Noop (local)",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{
-						{
-							Actions: []*Action{
-								{
-									Variant: &Action_ExecActivity{
-										ExecActivity: &ExecuteActivityAction{
-											ActivityType: &ExecuteActivityAction_Noop{
-												Noop: &emptypb.Empty{},
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: &ExecuteActivityAction_Noop{
+										Noop: &emptypb.Empty{},
+									},
+									Locality: &ExecuteActivityAction_IsLocal{
+										IsLocal: &emptypb.Empty{},
+									},
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				MarkerRecorded  			# fields across SDKs vary here
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ExecActivity - Client - Signal - DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_DoSignalActions_{
+														DoSignalActions: &DoSignal_DoSignalActions{
+															Variant: &DoSignal_DoSignalActions_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+												},
 											},
-											StartToCloseTimeout: durationpb.New(8 * time.Second),
-											Locality: &ExecuteActivityAction_IsLocal{
-												IsLocal: &emptypb.Empty{},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ExecActivity - Client - Signal - WithStart",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_DoSignalActions_{
+														DoSignalActions: &DoSignal_DoSignalActions{
+															Variant: &DoSignal_DoSignalActions_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+													WithStart: true, // This makes it a signal-with-start
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done")),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ExecActivity - Client - Signal - Custom",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoSignal{
+												DoSignal: &DoSignal{
+													Variant: &DoSignal_Custom{
+														Custom: &HandlerInvocation{
+															Name: "test_signal",
+														},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
+		},
+		{
+			name: "ExecActivity - Client - Query - ReportState",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoQuery{
+												DoQuery: &DoQuery{
+													Variant: &DoQuery_ReportState{
+														ReportState: &common.Payloads{},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+		},
+		{
+			name: "ExecActivity - Client - Query - Custom - Failure",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoQuery{
+												DoQuery: &DoQuery{
+													Variant: &DoQuery_Custom{
+														Custom: &HandlerInvocation{
+															Name: "nonexistent_query",
+														},
+													},
+													FailureExpected: true, // This query doesn't exist
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+		},
+		{
+			name: "ExecActivity - Client - Update - DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_DoActions{
+														DoActions: &DoActionsUpdate{
+															Variant: &DoActionsUpdate_DoActions{
+																DoActions: SingleActionSet(NewTimerAction(1)),
+															},
+														},
+													},
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+					),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}
+				TimerStarted
+				TimerFired
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionUpdateCompleted
+				ActivityTaskStarted
+				ActivityTaskCompleted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+		},
+		{
+			name: "ExecActivity - Client - Update - Custom - Failure",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_Custom{
+														Custom: &HandlerInvocation{
+															Name: "nonexistent_update",
+														},
+													},
+													FailureExpected: true, // This update doesn't exist
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+		},
+		{
+			name: "ExecActivity - Client - Update - WithStart",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										ClientActions(&ClientAction{
+											Variant: &ClientAction_DoUpdate{
+												DoUpdate: &DoUpdate{
+													Variant: &DoUpdate_DoActions{
+														DoActions: &DoActionsUpdate{
+															Variant: &DoActionsUpdate_DoActions{
+																DoActions: SingleActionSet(
+																	NewSetWorkflowStateAction("status", "done"),
+																),
+															},
+														},
+													},
+													WithStart: true, // This makes it an update-with-start
+												},
+											},
+										}),
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						},
+						NewAwaitWorkflowStateAction("status", "done")),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ExecActivity - Client - Concurrent",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: ClientActivity(
+										&ClientSequence{
+											ActionSets: []*ClientActionSet{
+												{
+													Concurrent: true,
+													Actions:    []*ClientAction{},
+												},
+											},
+										},
+									),
+									StartToCloseTimeout: defaultActivityTimeout,
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangTypeScript: "concurrent client actions are not supported",
+				cmdoptions.LangDotNet:     "concurrent client actions are not supported",
+				cmdoptions.LangPython:     "concurrent client actions are not supported",
+				cmdoptions.LangJava:       "client actions are not supported",
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ExecActivity - Client - Nested",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NestedActionSet{
+								NestedActionSet: &ActionSet{
+									Actions: []*Action{
+										{
+											Variant: &Action_ExecActivity{
+												ExecActivity: &ExecuteActivityAction{
+													ActivityType: ClientActivity(
+														ClientActions(&ClientAction{
+															Variant: &ClientAction_DoSignal{
+																DoSignal: &DoSignal{
+																	Variant: &DoSignal_DoSignalActions_{
+																		DoSignalActions: &DoSignal_DoSignalActions{
+																			Variant: &DoSignal_DoSignalActions_DoActions{
+																				DoActions: SingleActionSet(NewTimerAction(1)),
+																			},
+																		},
+																	},
+																},
+															},
+														}),
+													),
+													StartToCloseTimeout: defaultActivityTimeout,
+												},
+											},
+										},
+										{
+											Variant: &Action_ExecActivity{
+												ExecActivity: &ExecuteActivityAction{
+													ActivityType: ClientActivity(
+														ClientActions(&ClientAction{
+															Variant: &ClientAction_DoUpdate{
+																DoUpdate: &DoUpdate{
+																	Variant: &DoUpdate_DoActions{
+																		DoActions: &DoActionsUpdate{
+																			Variant: &DoActionsUpdate_DoActions{
+																				DoActions: SingleActionSet(NewTimerAction(1)),
+																			},
+																		},
+																	},
+																},
+															},
+														}),
+													),
+													StartToCloseTimeout: defaultActivityTimeout,
+												},
+											},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "client actions are not supported",
+			},
+			historyMatcher: partialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				...
+				WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ClientSequence - Signal - DoActions",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							Variant: &DoSignal_DoSignalActions_{
+								DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(NewTimerAction(1)),
+									},
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ClientSequence - Signal - Custom",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							Variant: &DoSignal_Custom{
+								Custom: &HandlerInvocation{
+									Name: "my-signal",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ClientSequence - Query - ReportState",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoQuery{
+						DoQuery: &DoQuery{
+							Variant: &DoQuery_ReportState{
+								ReportState: &common.Payloads{},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence - Query - Custom - Failure",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoQuery{
+						DoQuery: &DoQuery{
+							FailureExpected: true,
+							Variant: &DoQuery_Custom{
+								Custom: &HandlerInvocation{
+									Name: "nonexistent-query",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence - Update - DoActions",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							Variant: &DoUpdate_DoActions{
+								DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{
+										DoActions: SingleActionSet(
+											NewTimerAction(1),
+											NewSetWorkflowStateAction("status", "done"),
+										),
+									},
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "ClientSequence - Update - Custom - Failure",
+			testInput: &TestInput{
+				ClientSequence: ClientActions(&ClientAction{
+					Variant: &ClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							FailureExpected: true,
+							Variant: &DoUpdate_Custom{
+								Custom: &HandlerInvocation{
+									Name: "nonexistent-update",
+								},
+							},
+						},
+					},
+				}),
+				WorkflowInput: &WorkflowInput{},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ClientSequence - Nested",
+			testInput: &TestInput{
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: []*ClientAction{
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(NewTimerAction(1)),
+													},
+												},
+											},
+										},
+									},
+								},
+								{
+									Variant: &ClientAction_DoUpdate{
+										DoUpdate: &DoUpdate{
+											Variant: &DoUpdate_DoActions{
+												DoActions: &DoActionsUpdate{
+													Variant: &DoActionsUpdate_DoActions{
+														DoActions: SingleActionSet(NewTimerAction(1)),
+													},
+												},
 											},
 										},
 									},
@@ -185,215 +785,264 @@ func TestKitchensink(t *testing.T) {
 						},
 					},
 				},
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+					),
+				},
 			},
-			expectedHistory: `
+			historyMatcher: partialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				...
+				WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "WithStartAction - Signal",
+			testInput: &TestInput{
+				WithStartAction: &WithStartClientAction{
+					Variant: &WithStartClientAction_DoSignal{
+						DoSignal: &DoSignal{
+							WithStart: true,
+							Variant: &DoSignal_DoSignalActions_{
+								DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(
+											NewSetWorkflowStateAction("status", "done"),
+										),
+									},
+								},
+							},
+						},
+					},
+				},
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowExecutionSignaled {"signalName":"do_actions_signal"}
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava: "context deadline exceeded", // BUG! The SetWorkflowStateAction does not work.
+			},
+		},
+		{
+			name: "WithStartAction - Update",
+			testInput: &TestInput{
+				WithStartAction: &WithStartClientAction{
+					Variant: &WithStartClientAction_DoUpdate{
+						DoUpdate: &DoUpdate{
+							WithStart: true,
+							Variant: &DoUpdate_DoActions{
+								DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{
+										DoActions: SingleActionSet(
+											NewSetWorkflowStateAction("status", "done"),
+										),
+									},
+								},
+							},
+						},
+					},
+				},
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
+				},
+			},
+			historyMatcher: fullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
 				WorkflowTaskCompleted
-				MarkerRecorded  			# fields across SDKs vary here
-				WorkflowExecutionCompleted`,
+				WorkflowExecutionUpdateAccepted
+				WorkflowExecutionUpdateCompleted
+				WorkflowExecutionCompleted`),
 		},
 		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{
-						{
-							Actions: []*Action{
-								{Variant: nil}, // this will be an unrecognized action
-							},
-						},
-					},
+					InitialActions: ListActionSet(
+						&Action{Variant: nil}), // unsupported action
 				},
 			},
-			unsupportedSDKs:      sdks,
-			expectedErrorMessage: "unrecognized action",
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangGo:         "unrecognized action",
+				cmdoptions.LangJava:       "unrecognized action",
+				cmdoptions.LangPython:     "unrecognized action",
+				cmdoptions.LangTypeScript: "unrecognized action",
+				cmdoptions.LangDotNet:     "unrecognized action",
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Ensure the workflow completes by appending a return action at the end.
 			input := tc.testInput
-			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, &ActionSet{
-				Actions: []*Action{
-					{
-						Variant: &Action_ReturnResult{ReturnResult: &ReturnResultAction{ReturnThis: &common.Payload{}}},
-					},
-				},
-			})
+			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
 			for _, sdk := range sdks {
 				if onlySDK != "" && string(sdk) != onlySDK {
 					continue // not using t.Skip is it's too noisy
 				}
-				t.Run(string(sdk), func(t *testing.T) {
-					t.Parallel()
-					testForSDK(t, tc, sdk, temporalClient, devServerAddr)
-				})
+				
+				testForSDK(t, tc, sdk, temporalClient, devServerAddr)
 			}
 		})
 	}
 }
 
 func testForSDK(
-	t *testing.T,
+	parentT *testing.T,
 	tc testCase,
 	sdk cmdoptions.Language,
 	temporalClient client.Client,
 	devServerAddr string,
 ) {
-	scenarioID := cmdoptions.ScenarioID{
-		Scenario: "kitchenSinkTest",
-		RunID:    fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-	}
-	taskQueueName := TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
+	parentT.Run(string(sdk), func(childT *testing.T) {
+		childT.Parallel()
 
-	// Determine if this feature is unsupported for this SDK.
-	var isUnsupported bool
-	var expectedError string
-	for _, unsupportedSDK := range tc.unsupportedSDKs {
-		if unsupportedSDK == sdk {
-			isUnsupported = true
-			expectedError = tc.expectedErrorMessage
-			break
+		// Use mutex to ensure only one Java test runs at a time - a Gradle limitation
+		if sdk == cmdoptions.LangJava {
+			javaMutex.Lock()
+			defer javaMutex.Unlock()
 		}
-	}
 
-	// Build worker outside of the test context.
-	err := ensureWorkerBuilt(t, sdk)
-	require.NoErrorf(t, err, "Failed to build worker for SDK %s", sdk)
+		// Create test environment that handles all worker/devserver complexity
+		env := &TestEnvironment{
+			DevServer:      nil, // Will be set by the helper when needed
+			TemporalClient: temporalClient,
+			Logger:         zaptest.NewLogger(childT).Sugar(),
+			RepoDir:        repoDir,
+		}
 
-	testCtx, testCtxCancel := context.WithTimeout(t.Context(), testTimeout)
-	defer testCtxCancel()
-
-	// Start worker.
-	workerCtx, workerCtxCancel := context.WithCancel(testCtx)
-	workerDone := make(chan error, 1)
-	workerLogger := zaptest.NewLogger(t).Sugar().Named(fmt.Sprintf("[%s-worker]", sdk))
-	go func() {
-		defer close(workerDone)
-		baseDir := workers.BaseDir(repoDir, sdk)
-		runner := &workers.Runner{
-			Builder: workers.Builder{
-				DirName:    buildDirName(),
-				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-				Logger:     workerLogger,
-			},
-			TaskQueueName:            taskQueueName,
-			GracefulShutdownDuration: workerShutdownTimeout,
-			ScenarioID:               scenarioID,
-			ClientOptions: cmdoptions.ClientOptions{
-				Address:   devServerAddr,
-				Namespace: "default",
+		// Create the executor
+		executor := &KitchenSinkExecutor{
+			TestInput: tc.testInput,
+			DefaultConfiguration: RunConfiguration{
+				Iterations:    1,
+				MaxConcurrent: 1,
 			},
 		}
-		workerDone <- runner.Run(workerCtx, baseDir)
-	}()
 
-	// Run executor.
-	executor := KitchenSinkExecutor{
-		TestInput: tc.testInput,
-		DefaultConfiguration: RunConfiguration{
-			Iterations:    1,
-			MaxConcurrent: 1,
-		},
-	}
-	scenarioInfo := ScenarioInfo{
-		ScenarioName:   scenarioID.Scenario,
-		RunID:          scenarioID.RunID,
-		Logger:         zaptest.NewLogger(t).Sugar().Named("[executor]"),
-		MetricsHandler: client.MetricsNopHandler,
-		Client:         temporalClient,
-		Configuration:  executor.DefaultConfiguration,
-		Namespace:      "default",
-	}
-	err = executor.Run(testCtx, scenarioInfo)
-
-	// Wait for worker to stop; otherwise it keeps logging and cause a data race.
-	workerCtxCancel()
-	workerErr := <-workerDone
-	if workerErr != nil {
-		t.Logf("Worker shutdown with error: %v", workerErr)
-	}
-
-	if isUnsupported {
-		// Feature not supported; check for expected error.
-		require.Errorf(t, err, "SDK %s should fail for unsupported feature", sdk)
-		if expectedError != "" {
-			actualErr := strings.ToLower(err.Error())
-			require.Containsf(t, actualErr, expectedError, "SDK %s error should contain '%s'", sdk, tc.expectedErrorMessage)
+		// Setup scenario info
+		scenarioInfo := ScenarioInfo{
+			ScenarioName: "kitchenSinkTest",
+			RunID:        fmt.Sprintf("%s-%d", childT.Name(), time.Now().Unix()),
+			Configuration: executor.DefaultConfiguration,
 		}
-		return
-	}
-	require.NoError(t, err)
 
-	// Feature is supported; check the event history.
-	historyEvents := getWorkflowHistory(t, testCtx, taskQueueName, temporalClient)
-	requireHistoryMatches(t, historyEvents, tc.expectedHistory)
+		// Check if feature is expected to be unsupported
+		if expectedErr, expectUnsupported := tc.expectedUnsupportedErrs[sdk]; expectUnsupported {
+			// Test the unsupported feature case
+			testUnsupportedFeature(childT, env, executor, scenarioInfo, sdk, expectedErr, devServerAddr)
+		} else {
+			// Test the supported feature case
+			testSupportedFeature(childT, env, executor, scenarioInfo, tc, sdk, temporalClient, devServerAddr)
+		}
+	})
 }
 
-func getWorkflowHistory(t *testing.T, ctx context.Context, taskQueueName string, temporalClient client.Client) []*history.HistoryEvent {
-	executions, err := temporalClient.ListWorkflow(ctx,
+// testUnsupportedFeature tests that unsupported features fail with expected errors
+func testUnsupportedFeature(t *testing.T, env *TestEnvironment, executor *KitchenSinkExecutor, scenarioInfo ScenarioInfo, sdk cmdoptions.Language, expectedErr, devServerAddr string) {
+	// Run test using helper that manages worker/devserver
+	testExecutor := &kitchenSinkTestWrapper{
+		executor:      executor,
+		sdk:           sdk,
+		devServerAddr: devServerAddr,
+	}
+
+	err := env.runExecutorTestWithSDK(t, testExecutor, scenarioInfo, sdk, devServerAddr)
+
+	// Verify it fails with expected error
+	require.Error(t, err, "SDK %s should fail for unsupported feature", sdk)
+	require.NotEmpty(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
+	require.Contains(t, strings.ToLower(err.Error()), expectedErr, "SDK %s error should contain '%s'", sdk, expectedErr)
+}
+
+// testSupportedFeature tests that supported features work correctly and match expected history
+func testSupportedFeature(t *testing.T, env *TestEnvironment, executor *KitchenSinkExecutor, scenarioInfo ScenarioInfo, tc testCase, sdk cmdoptions.Language, temporalClient client.Client, devServerAddr string) {
+	// Run test using helper that manages worker/devserver
+	testExecutor := &kitchenSinkTestWrapper{
+		executor:      executor,
+		sdk:           sdk,
+		devServerAddr: devServerAddr,
+	}
+
+	err := env.runExecutorTestWithSDK(t, testExecutor, scenarioInfo, sdk, devServerAddr)
+	
+	// Get workflow history for verification
+	taskQueueName := TaskQueueForRun(scenarioInfo.ScenarioName, scenarioInfo.RunID)
+	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, temporalClient)
+
+	if err != nil {
+		if len(historyEvents) > 0 {
+			t.Logf("History events for debugging:")
+			logHistoryEvents(t, parseEvents(historyEvents))
+		}
+		require.NoError(t, err, "executor failed")
+	}
+	
+	require.NoError(t, historyErr, "failed to get workflow history")
+	require.NotNil(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
+	require.NoError(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
+}
+
+// kitchenSinkTestWrapper wraps the kitchen sink executor for use with the test helper
+type kitchenSinkTestWrapper struct {
+	executor      *KitchenSinkExecutor
+	sdk           cmdoptions.Language
+	devServerAddr string
+}
+
+func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) error {
+	return w.executor.Run(ctx, info)
+}
+
+func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
+	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
-			Namespace: "default",
+			Namespace: namespace,
 			Query:     fmt.Sprintf("TaskQueue = '%s'", taskQueueName),
 		})
-	require.NoError(t, err, "Failed to list workflow executions")
-	require.Len(t, executions.Executions, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workflow executions: %w", err)
+	}
+	if len(executions.Executions) == 0 {
+		return nil, fmt.Errorf("no workflow executions found for task queue %s", taskQueueName)
+	}
+	if len(executions.Executions) > 1 {
+		t.Logf("Warning: found %d workflow executions for task queue %s, using the first one", len(executions.Executions), taskQueueName)
+	}
 
 	execution := executions.Executions[0]
-	historyIter := temporalClient.GetWorkflowHistory(ctx, execution.Execution.WorkflowId, execution.Execution.RunId, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	historyIter := temporalClient.GetWorkflowHistory(t.Context(), execution.Execution.WorkflowId, execution.Execution.RunId, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	var historyEvents []*history.HistoryEvent
 	for historyIter.HasNext() {
 		event, err := historyIter.Next()
-		require.NoError(t, err, "Failed to get next history event")
+		if err != nil {
+			return historyEvents, fmt.Errorf("failed to get next history event: %w", err)
+		}
 		historyEvents = append(historyEvents, event)
 	}
-	return historyEvents
+	return historyEvents, nil
 }
 
-func ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Language) error {
-	once := workerBuildOnce[sdk]
-	once.Do(func() {
-		baseDir := workers.BaseDir(repoDir, sdk)
-		dirName := buildDirName()
-		buildDir := filepath.Join(baseDir, dirName)
-
-		workerMutex.Lock()
-		workerCleanupFuncs = append(workerCleanupFuncs, func() {
-			if err := os.RemoveAll(buildDir); err != nil {
-				fmt.Printf("Failed to clean up build dir for %s at %s: %v\n", sdk, buildDir, err)
-			}
-		})
-		workerMutex.Unlock()
-
-		builder := workers.Builder{
-			DirName:    dirName,
-			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-			Logger:     zaptest.NewLogger(t).Sugar().Named(fmt.Sprintf("[%s-builder]", sdk)),
-		}
-
-		ctx, cancel := context.WithTimeout(t.Context(), workerBuildTimeout)
-		defer cancel()
-
-		_, err := builder.Build(ctx, baseDir)
-
-		workerMutex.Lock()
-		workerBuildErrs[sdk] = err
-		workerMutex.Unlock()
-	})
-
-	workerMutex.RLock()
-	err := workerBuildErrs[sdk]
-	workerMutex.RUnlock()
-
-	return err
-}
+// ensureWorkerBuilt is now handled by TestEnvironment.ensureWorkerBuilt
 
 func createTemporalClient(t *testing.T, devServerAddr string) client.Client {
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  devServerAddr,
-		Namespace: "default",
+		Namespace: namespace,
 	})
 	require.NoError(t, err, "Failed to create Temporal client")
 	return temporalClient
@@ -402,14 +1051,10 @@ func createTemporalClient(t *testing.T, devServerAddr string) client.Client {
 func startDevServer(t *testing.T) *testsuite.DevServer {
 	server, err := testsuite.StartDevServer(t.Context(), testsuite.DevServerOptions{
 		ClientOptions: &client.Options{
-			Namespace: "default",
+			Namespace: namespace,
 		},
 		LogLevel: "error",
 	})
 	require.NoError(t, err, "Failed to get dev server")
 	return server
-}
-
-func buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", testStart)
 }

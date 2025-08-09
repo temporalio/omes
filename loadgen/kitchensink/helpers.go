@@ -1,18 +1,51 @@
 package kitchensink
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"go.temporal.io/api/common/v1"
-	enumspb "go.temporal.io/api/enums/v1"
-	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/workflow"
-	"golang.org/x/sync/errgroup"
+	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// Using human-readable JSON encoding for payloads to aid with debugging.
+var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
+
+type ActionConverter[T any] func(*T) *Action
+
+func SingleActionSet(actions ...*Action) *ActionSet {
+	return &ActionSet{
+		Actions: actions,
+	}
+}
+
+func ListActionSet(actions ...*Action) []*ActionSet {
+	return []*ActionSet{
+		{
+			Actions: actions,
+		},
+	}
+}
+
+func ClientActions(clientActions ...*ClientAction) *ClientSequence {
+	return &ClientSequence{
+		ActionSets: []*ClientActionSet{
+			{
+				Actions: clientActions,
+			},
+		},
+	}
+}
+
+func ClientActivity(clientSequence *ClientSequence) *ExecuteActivityAction_Client {
+	return &ExecuteActivityAction_Client{
+		Client: &ExecuteActivityAction_ClientActivity{
+			ClientSequence: clientSequence,
+		},
+	}
+}
 
 func NoOpSingleActivityActionSet() *ActionSet {
 	return &ActionSet{
@@ -58,179 +91,125 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 	}
 }
 
-type ClientActionsExecutor struct {
-	Client          client.Client
-	WorkflowOptions client.StartWorkflowOptions
-	WorkflowType    string
-	WorkflowInput   *WorkflowInput
-	Handle          client.WorkflowRun
-	runID           string
+func NewEmptyReturnResultAction() *Action {
+	return &Action{
+		Variant: &Action_ReturnResult{
+			ReturnResult: &ReturnResultAction{
+				ReturnThis: &common.Payload{},
+			},
+		},
+	}
 }
 
-func (e *ClientActionsExecutor) Start(
-	ctx context.Context,
-	withStartAction *WithStartClientAction,
-) error {
-	var err error
-	if withStartAction == nil {
-		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
-	} else if sig := withStartAction.GetDoSignal(); sig != nil {
-		e.Handle, err = e.executeSignalAction(ctx, sig)
-	} else if upd := withStartAction.GetDoUpdate(); upd != nil {
-		e.Handle, err = e.executeUpdateAction(ctx, upd)
-	} else {
-		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
+func NewTimerAction(milliseconds uint64) *Action {
+	return &Action{
+		Variant: &Action_Timer{
+			Timer: &TimerAction{
+				Milliseconds: milliseconds,
+			},
+		},
 	}
+}
+
+func NewSetWorkflowStateAction(key, value string) *Action {
+	return &Action{
+		Variant: &Action_SetWorkflowState{
+			SetWorkflowState: &WorkflowState{
+				Kvs: map[string]string{key: value},
+			},
+		},
+	}
+}
+
+func NewAwaitWorkflowStateAction(key, value string) *Action {
+	return &Action{
+		Variant: &Action_AwaitWorkflowState{
+			AwaitWorkflowState: &AwaitWorkflowState{
+				Key:   key,
+				Value: value,
+			},
+		},
+	}
+}
+
+func ConvertToPayload(newInput any) *common.Payload {
+	payload, err := jsonPayloadConverter.ToPayload(newInput)
 	if err != nil {
-		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
+		// this should never happen; but we don't want to swallow the error
+		panic(fmt.Sprintf("failed to convert input %T to payload: %v", newInput, err))
 	}
-	e.runID = e.Handle.GetRunID()
-	return nil
+	return payload
 }
 
-func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clientSeq *ClientSequence) error {
-	for _, actionSet := range clientSeq.ActionSets {
-		if err := e.executeClientActionSet(ctx, actionSet); err != nil {
-			return err
-		}
+func PayloadActivity(inSize, outSize int, converter ActionConverter[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Payload{
+			Payload: &ExecuteActivityAction_PayloadActivity{
+				BytesToReceive: int32(inSize),
+				BytesToReturn:  int32(outSize),
+			},
+		},
 	}
-	return nil
+	return converter(activity)
 }
 
-func (e *ClientActionsExecutor) executeClientActionSet(ctx context.Context, actionSet *ClientActionSet) error {
-	errs, errGroupCtx := errgroup.WithContext(ctx)
-	for _, action := range actionSet.Actions {
-		if actionSet.Concurrent {
-			action := action
-			errs.Go(func() error {
-				err := e.executeClientAction(errGroupCtx, action)
-				if err != nil {
-					return fmt.Errorf("failed to execute concurrent client action %v: %w", action, err)
-				}
-				return nil
-			})
-		} else {
-			if err := e.executeClientAction(ctx, action); err != nil {
-				return fmt.Errorf("failed to execute client action %v: %w", action, err)
-			}
-		}
+func NoopActivity(converter ActionConverter[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Noop{},
 	}
-	if actionSet.Concurrent {
-		if err := errs.Wait(); err != nil {
-			return err
-		}
-		if actionSet.WaitAtEnd != nil {
-			select {
-			case <-time.After(actionSet.WaitAtEnd.AsDuration()):
-			case <-ctx.Done():
-				return fmt.Errorf("context done while waiting for end %w", ctx.Err())
-			}
-		}
-	}
-	if actionSet.GetWaitForCurrentRunToFinishAtEnd() {
-		err := e.Client.GetWorkflow(ctx, e.WorkflowOptions.ID, e.runID).
-			GetWithOptions(ctx, nil, client.WorkflowRunGetOptions{DisableFollowingRuns: true})
-		var canErr *workflow.ContinueAsNewError
-		if err != nil && !errors.As(err, &canErr) {
-			return err
-		}
-		e.runID = e.Client.GetWorkflow(ctx, e.WorkflowOptions.ID, "").GetRunID()
-	}
-	return nil
+	return converter(activity)
 }
 
-// Run a specific client action -
-func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action *ClientAction) error {
-	if action.Variant == nil {
-		return fmt.Errorf("client action variant must be set")
+func DelayActivity(delay time.Duration, converter ActionConverter[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Delay{
+			Delay: durationpb.New(delay),
+		},
 	}
+	return converter(activity)
+}
 
-	var err error
-	if sig := action.GetDoSignal(); sig != nil {
-		_, err = e.executeSignalAction(ctx, sig)
-		return err
-	} else if update := action.GetDoUpdate(); update != nil {
-		_, err = e.executeUpdateAction(ctx, update)
-		return err
-	} else if query := action.GetDoQuery(); query != nil {
-		if query.GetReportState() != nil {
-			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", "report_state", nil)
-		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", handler.Name, handler.Args)
-		} else {
-			return fmt.Errorf("do_query must recognizable variant")
-		}
-		if query.FailureExpected {
-			err = nil
-		}
-		return err
-	} else if action.GetNestedActions() != nil {
-		err = e.executeClientActionSet(ctx, action.GetNestedActions())
-		return err
-	} else {
-		return fmt.Errorf("client action must be set")
+func GenericActivity(activityType string, converter ActionConverter[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Generic{
+			Generic: &ExecuteActivityAction_GenericActivity{
+				Type: activityType,
+			},
+		},
+	}
+	return converter(activity)
+}
+
+// AsRemoteActivityAction configures an activity as remote and converts it to an Action
+func AsRemoteActivityAction(activity *ExecuteActivityAction) *Action {
+	activity.StartToCloseTimeout = &durationpb.Duration{Seconds: 60}
+	activity.Locality = &ExecuteActivityAction_Remote{
+		Remote: &RemoteActivityOptions{},
+	}
+	activity.RetryPolicy = &common.RetryPolicy{
+		MaximumAttempts:    10,
+		BackoffCoefficient: 1.0,
+	}
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: activity,
+		},
 	}
 }
 
-func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {
-	var signalName string
-	var signalArgs any
-	if sigActions := sig.GetDoSignalActions(); sigActions != nil {
-		signalName = "do_actions_signal"
-		signalArgs = sigActions
-	} else if handler := sig.GetCustom(); handler != nil {
-		signalName = handler.Name
-		signalArgs = handler.Args
-	} else {
-		return nil, fmt.Errorf("do_signal must recognizable variant")
+// AsLocalActivityAction configures an activity as local and converts it to an Action
+func AsLocalActivityAction(activity *ExecuteActivityAction) *Action {
+	activity.StartToCloseTimeout = &durationpb.Duration{Seconds: 60}
+	activity.Locality = &ExecuteActivityAction_IsLocal{
+		IsLocal: &emptypb.Empty{},
 	}
-
-	if sig.WithStart {
-		return e.Client.SignalWithStartWorkflow(
-			ctx, e.WorkflowOptions.ID, signalName, signalArgs, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
+	activity.RetryPolicy = &common.RetryPolicy{
+		InitialInterval: durationpb.New(10 * time.Millisecond),
+		MaximumAttempts: 10,
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArgs)
-}
-
-func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
-	var updateOpts client.UpdateWorkflowOptions
-	if actionsUpdate := upd.GetDoActions(); actionsUpdate != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   "do_actions_update",
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{actionsUpdate},
-		}
-	} else if handler := upd.GetCustom(); handler != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   handler.Name,
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{handler.Args},
-		}
-	} else {
-		return nil, fmt.Errorf("do_update must recognizable variant")
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: activity,
+		},
 	}
-
-	var handle client.WorkflowUpdateHandle
-	if upd.WithStart {
-		workflowOpts := e.WorkflowOptions
-		workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
-		op := e.Client.NewWithStartWorkflowOperation(workflowOpts, e.WorkflowType, e.WorkflowInput)
-		handle, err = e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
-			StartWorkflowOperation: op,
-			UpdateOptions:          updateOpts,
-		})
-	} else {
-		handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
-	}
-
-	if err == nil {
-		err = handle.Get(ctx, nil)
-	}
-	if upd.FailureExpected {
-		err = nil
-	}
-	return run, err
 }

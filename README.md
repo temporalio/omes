@@ -177,16 +177,7 @@ Look at `DistributionField` to learn more about different kinds of distrbutions.
 
 #### Nexus 
 
-The throughput_stress scenario can generate Nexus load if the scenario is started with `--option nexus-endpoint=my-nexus-endpoint`.
-
-This doesn't work with the `--embedded-server` option, and requires the following steps:
-
-1. Allocate a scenario run-id. This determines the scenario's task queue. (we'll use `default-run-id` in this tutorial).
-1. Start a server with nexus enabled (e.g. `--http-port 7243 --dynamic-config-value system.enableNexus=true` for the
-   dev server).
-1. Create your namespace ahead of time. Note that the dev server will automatically create the `default` namespace
-   unless specified otherwise.
-1. Create a nexus endpoint:
+The throughput_stress scenario can generate Nexus load if the scenario is started with `--option nexus-endpoint=my-nexus-endpoint`:
 
    ```
    temporal operator nexus endpoint create \
@@ -243,7 +234,7 @@ to test a wide variety of scenarios without having to imagine all possible edge 
 come up in workflows. Input may be saved for regression testing, or hand written for specific cases.
 
 Build by running `scripts/build-kitchensink.sh`.
-Test by running `go test -v ./loadgen -run TestKitchensink`.
+Test by running `go test -v ./loadgen -run TestKitchenSink`.
 Prefix with env variable `SDK=<sdk>` to test a specific SDK only.
 
 ### Scenario Failure
