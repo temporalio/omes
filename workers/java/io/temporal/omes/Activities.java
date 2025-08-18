@@ -14,6 +14,4 @@ public interface Activities {
   @ActivityMethod(name = "payload")
   byte[] payload(byte[] inputData, int bytesToReturn);
 
-  @ActivityMethod(name = "client")
-  void client(io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity clientActivity);
 }

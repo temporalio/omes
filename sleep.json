@@ -1,0 +1,21 @@
+{
+  "count": {
+    "type": "fixed",
+    "value": 1
+  },
+  "groups": {
+    "light": {
+      "weight": 1,
+      "sleepDuration": {
+        "type": "fixed",
+        "value": "1ms"
+      },
+      "fairnessKeys": {
+        "type": "zipf",
+        "s": 3,
+        "v": 1,
+        "n": 1000000
+      }
+    }
+  }
+}

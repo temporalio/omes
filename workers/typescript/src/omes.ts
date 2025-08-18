@@ -2,15 +2,16 @@ import { Command } from 'commander';
 import {
   DefaultLogger,
   LogLevel,
+  makeTelemetryFilterString,
   NativeConnection,
   Runtime,
   TelemetryOptions,
   Worker,
   WorkerOptions,
 } from '@temporalio/worker';
-import { Client, TLSConfig } from '@temporalio/client';
+import { TLSConfig } from '@temporalio/client';
 import * as fs from 'fs';
-import { createActivities } from './activities';
+import * as activities from './activities';
 import winston from 'winston';
 
 async function run() {
@@ -123,13 +124,7 @@ async function run() {
     tls: tlsConfig,
   });
 
-  const client = new Client({
-    connection,
-    namespace: opts.namespace,
-    dataConverter: {
-      payloadConverterPath: require.resolve('./payload-converter'),
-    },
-  });
+  // (Reverted) No per-worker Client creation here; activities do not require a client.
 
   // Possibly create multiple workers if we are being asked to use multiple task queues
   const taskQueues = [];
@@ -144,7 +139,7 @@ async function run() {
     logger.info(`Running TypeScript worker on ${taskQueues.length} task queues`);
   }
 
-  const activities = createActivities(client);
+  // Using statically imported activities (reverted)
 
   const workerArgs: WorkerOptions = {
     connection,

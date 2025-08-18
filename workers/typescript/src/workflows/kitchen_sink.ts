@@ -220,7 +220,9 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     actionsUpdate,
     async (actions) => {
       const rval = await handleActionSet(actions.doActions!);
-      return rval;
+      if (rval) {
+        return rval;
+      }
     },
     {
       validator: (actions) => {
@@ -272,10 +274,6 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     }
     args.push(inputData);
     args.push(execActivity.payload.bytesToReturn);
-  }
-  if (execActivity.client) {
-    actType = 'client';
-    args.push(execActivity.client);
   }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {

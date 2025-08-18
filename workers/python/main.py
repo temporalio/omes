@@ -18,7 +18,6 @@ from temporalio.service import TLSConfig
 from temporalio.worker import Worker
 
 from activities import (
-    create_client_activity,
     delay_activity,
     noop_activity,
     payload_activity,
@@ -192,7 +191,6 @@ async def run():
                 noop_activity,
                 delay_activity,
                 payload_activity,
-                create_client_activity(client),
             ],
             **worker_kwargs,
         )

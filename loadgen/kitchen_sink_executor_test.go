@@ -222,7 +222,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -260,7 +263,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -292,7 +298,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
 		},
@@ -334,7 +343,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 		},
 		{
@@ -378,7 +390,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 		},
 		{
@@ -434,7 +449,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 		},
 		{
@@ -478,7 +496,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 		},
 		{
@@ -515,7 +536,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
@@ -544,10 +568,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangTypeScript: "concurrent client actions are not supported",
-				cmdoptions.LangDotNet:     "concurrent client actions are not supported",
-				cmdoptions.LangPython:     "concurrent client actions are not supported",
-				cmdoptions.LangJava:       "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: fullHistoryMatcher(`
 				WorkflowExecutionStarted
@@ -622,7 +646,10 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions are not supported",
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 			historyMatcher: partialHistoryMatcher(`
 				WorkflowExecutionSignaled
@@ -852,7 +879,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "context deadline exceeded", // BUG! The SetWorkflowStateAction does not work.
+				cmdoptions.LangJava:       "client",
+				cmdoptions.LangPython:     "client",
+				cmdoptions.LangTypeScript: "client",
+				cmdoptions.LangDotNet:     "client",
 			},
 		},
 		{

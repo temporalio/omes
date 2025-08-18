@@ -273,9 +273,6 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
       args.add(inputData);
       args.add(payload.getBytesToReturn());
-    } else if (executeActivity.hasClient()) {
-      activityType = "client";
-      args.add(executeActivity.getClient());
     } else {
       activityType = "noop";
     }
