@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
@@ -109,143 +110,166 @@ func execute(executor *GenericExecutor) error {
 }
 
 func TestRunHappyPathIterations(t *testing.T) {
-	tracker := newIterationTracker()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Iterations: 5},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{Iterations: 5},
+		})
+		require.NoError(t, err)
+		tracker.assertSeen(t, 5)
 	})
-	require.NoError(t, err)
-	tracker.assertSeen(t, 5)
 }
 
 func TestRunFailIterations(t *testing.T) {
-	tracker := newIterationTracker()
-	concurrency := 3
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			// Start this short timer to allow all concurrent routines to be spawned
-			<-time.After(time.Millisecond)
-			if run.Iteration == 2 {
-				return errors.New("deliberate fail from test")
-			}
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		concurrency := 3
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				if run.Iteration == 2 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
+		})
+		require.ErrorContains(t, err, "run finished with error")
+		tracker.assertSeen(t, 2)
 	})
-	require.ErrorContains(t, err, "run finished with error")
-	tracker.assertSeen(t, 2)
 }
 
 func TestRunHappyPathDuration(t *testing.T) {
-	tracker := newIterationTracker()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			time.Sleep(time.Millisecond * 20)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Duration: 100 * time.Millisecond},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				time.Sleep(time.Millisecond * 20)
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{Duration: 100 * time.Millisecond},
+		})
+		require.NoError(t, err)
+		tracker.assertSeen(t, DefaultMaxConcurrent*2)
 	})
-	require.NoError(t, err)
-	tracker.assertSeen(t, DefaultMaxConcurrent*2)
 }
 
 func TestRunFailDuration(t *testing.T) {
-	tracker := newIterationTracker()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			if run.Iteration == 2 {
-				return errors.New("deliberate fail from test")
-			}
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Duration: 200 * time.Millisecond},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				if run.Iteration == 2 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{Duration: 200 * time.Millisecond},
+		})
+		require.ErrorContains(t, err, "run finished with error")
+		tracker.assertSeen(t, 2)
 	})
-	require.ErrorContains(t, err, "run finished with error")
-	tracker.assertSeen(t, 2)
 }
 
 func TestRunDurationWithTimeout(t *testing.T) {
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			time.Sleep(time.Millisecond * 20)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{
-			Duration: 100 * time.Millisecond,
-			Timeout:  10 * time.Millisecond},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				<-ctx.Done()
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{
+				Duration: 100 * time.Millisecond,
+				Timeout:  10 * time.Millisecond,
+			},
+		})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "timed out")
+		tracker.assertSeen(t, 5)
 	})
-	require.Error(t, err)
-	require.ErrorContains(t, err, "timed out")
 }
 
 func TestRunIterationsWithTimeout(t *testing.T) {
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			time.Sleep(time.Millisecond * 20)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{
-			Iterations: 5,
-			Timeout:    10 * time.Millisecond,
-		},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				<-ctx.Done()
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{
+				Iterations: 5,
+				Timeout:    10 * time.Millisecond,
+			},
+		})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "timed out")
+		tracker.assertSeen(t, 2)
 	})
-	require.Error(t, err)
-	require.ErrorContains(t, err, "timed out")
 }
 
 func TestRunDurationWithoutTimeout(t *testing.T) {
-	tracker := newIterationTracker()
-	startTime := time.Now()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			time.Sleep(time.Millisecond * 20)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Duration: 1 * time.Millisecond},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		startTime := time.Now()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				time.Sleep(time.Millisecond * 20)
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{Duration: 1 * time.Millisecond},
+		})
+		require.Equal(t, time.Millisecond*20, time.Since(startTime))
+		require.NoError(t, err)
+		tracker.assertSeen(t, DefaultMaxConcurrent)
 	})
-	require.GreaterOrEqual(t, time.Since(startTime), time.Millisecond*20)
-	require.NoError(t, err)
-	tracker.assertSeen(t, DefaultMaxConcurrent)
 }
 
 func TestRunIterationsWithoutTimeout(t *testing.T) {
-	tracker := newIterationTracker()
-	startTime := time.Now()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			time.Sleep(time.Millisecond * 20)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{Iterations: 5},
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		startTime := time.Now()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				time.Sleep(time.Millisecond * 20)
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{Iterations: 5},
+		})
+		require.Equal(t, time.Millisecond*20, time.Since(startTime))
+		require.NoError(t, err)
+		tracker.assertSeen(t, 5)
 	})
-	require.GreaterOrEqual(t, time.Since(startTime), time.Millisecond*20)
-	require.NoError(t, err)
-	tracker.assertSeen(t, 5)
 }
 
 func TestRunIterationsWithRateLimit(t *testing.T) {
-	startTime := time.Now()
-	tracker := newIterationTracker()
-	err := execute(&GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			tracker.track(run.Iteration)
-			return nil
-		},
-		DefaultConfiguration: RunConfiguration{
-			Iterations:             4,
-			MaxConcurrent:          1,
-			MaxIterationsPerSecond: 4.0,
-		},
+	synctest.Test(t, func(t *testing.T) {
+		startTime := time.Now()
+		tracker := newIterationTracker()
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				return nil
+			},
+			DefaultConfiguration: RunConfiguration{
+				Iterations:             4,
+				MaxConcurrent:          1,
+				MaxIterationsPerSecond: 4.0,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, time.Second, time.Since(startTime))
+		tracker.assertSeen(t, 4)
 	})
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, time.Since(startTime), time.Second)
-	tracker.assertSeen(t, 4)
 }

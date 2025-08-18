@@ -9,7 +9,7 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 ## Prerequisites
 
-- [Go](https://golang.org/) 1.24+
+- [Go](https://golang.org/) 1.25+
   - `protoc` + `protoc-gen-go` or [mise](https://mise.jdx.dev/) for [Kitchen Sink Workflow](#kitchen-sink-workflow)
 - [Java](https://openjdk.org/) 8+
 - TypeScript: [Node](https://nodejs.org) 16+
@@ -134,7 +134,7 @@ go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --ru
 ### Running a specific version of the SDK
 
 The `--version` flag can be used to specify a version of the SDK to use, it accepts either
-a version number lik `v1.24.0` or you can also pass a local path to use a local SDK version.
+a version number like `v1.24.0` or you can also pass a local path to use a local SDK version.
 This is useful while testing unreleased or in-development versions of the SDK.
 
 ```sh
