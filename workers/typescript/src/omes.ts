@@ -124,6 +124,8 @@ async function run() {
     tls: tlsConfig,
   });
 
+  // (Reverted) No per-worker Client creation here; activities do not require a client.
+
   // Possibly create multiple workers if we are being asked to use multiple task queues
   const taskQueues = [];
   if (opts.tqSufEnd === 0 || opts.tqSufEnd === undefined) {
@@ -136,6 +138,8 @@ async function run() {
     }
     logger.info(`Running TypeScript worker on ${taskQueues.length} task queues`);
   }
+
+  // Using statically imported activities (reverted)
 
   const workerArgs: WorkerOptions = {
     connection,

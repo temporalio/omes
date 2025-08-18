@@ -327,6 +327,7 @@ public class KitchenSinkWorkflow
             args.Add(payload.BytesToReturn);
         }
 
+
         if (eaa.IsLocal != null)
         {
             LocalActivityOptions opts = new()

@@ -13,4 +13,5 @@ public interface Activities {
 
   @ActivityMethod(name = "payload")
   byte[] payload(byte[] inputData, int bytesToReturn);
+
 }
