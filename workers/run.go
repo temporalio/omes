@@ -128,13 +128,13 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	args = append(args, r.LoggingOptions.ToFlags()...)
 	args = append(args, r.WorkerOptions.ToFlags()...)
 
-	// Start the command. Do not use the context so we can send interrupt.
 	cmd, err := prog.NewCommand(context.Background(), args...)
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
 
+	// Start the command. Do not use the context so we can send interrupt.
 	r.Logger.Infof("Starting worker with command: %v", cmd.Args)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
