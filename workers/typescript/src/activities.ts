@@ -1,6 +1,10 @@
 import { temporal } from './protos/root';
 import { isMainThread, Worker } from 'node:worker_threads';
+import { activityInfo } from '@temporalio/activity';
+import { Client } from '@temporalio/client';
+import { ClientActionExecutor } from './client-action-executor';
 import IResourcesActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IResourcesActivity;
+import IClientActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IClientActivity;
 
 export { sleep as delay } from '@temporalio/activity';
 
@@ -32,3 +36,25 @@ export async function payload(inputData: Uint8Array, bytesToReturn: number): Pro
   }
   return output;
 }
+
+export const createActivities = (client: Client) => ({
+  noop,
+  resources,
+  payload,
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  delay: require('@temporalio/activity').sleep,
+
+  async client(clientActivity: IClientActivity): Promise<void> {
+    const activityContext = activityInfo();
+    const workflowId = activityContext.workflowExecution.workflowId;
+    const taskQueue = activityContext.taskQueue;
+
+    const executor = new ClientActionExecutor(client, workflowId, taskQueue);
+    try {
+      await executor.executeClientSequence(clientActivity.clientSequence);
+    } catch (error) {
+      console.error('Client activity failed:', error);
+      throw error;
+    }
+  },
+});

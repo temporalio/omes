@@ -19,6 +19,24 @@ func ListActionSet(actions ...*Action) []*ActionSet {
 	}
 }
 
+func ClientActions(clientActions ...*ClientAction) *ClientSequence {
+	return &ClientSequence{
+		ActionSets: []*ClientActionSet{
+			{
+				Actions: clientActions,
+			},
+		},
+	}
+}
+
+func ClientActivity(clientSequence *ClientSequence) *ExecuteActivityAction_Client {
+	return &ExecuteActivityAction_Client{
+		Client: &ExecuteActivityAction_ClientActivity{
+			ClientSequence: clientSequence,
+		},
+	}
+}
+
 func NoOpSingleActivityActionSet() *ActionSet {
 	return &ActionSet{
 		Actions: []*Action{
@@ -78,6 +96,27 @@ func NewTimerAction(milliseconds uint64) *Action {
 		Variant: &Action_Timer{
 			Timer: &TimerAction{
 				Milliseconds: milliseconds,
+			},
+		},
+	}
+}
+
+func NewSetWorkflowStateAction(key, value string) *Action {
+	return &Action{
+		Variant: &Action_SetWorkflowState{
+			SetWorkflowState: &WorkflowState{
+				Kvs: map[string]string{key: value},
+			},
+		},
+	}
+}
+
+func NewAwaitWorkflowStateAction(key, value string) *Action {
+	return &Action{
+		Variant: &Action_AwaitWorkflowState{
+			AwaitWorkflowState: &AwaitWorkflowState{
+				Key:   key,
+				Value: value,
 			},
 		},
 	}

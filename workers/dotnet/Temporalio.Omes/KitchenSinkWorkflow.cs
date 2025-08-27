@@ -1,6 +1,7 @@
 using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
+using Temporalio.Client;
 using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
@@ -139,17 +140,17 @@ public class KitchenSinkWorkflow
         else if (action.Timer is { } timer)
         {
             await HandleAwaitableChoiceAsync(
-                Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)
-                    .ContinueWith(_ => true),
+                ToBool(Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)),
                 tokenSrc,
                 timer.AwaitableChoice);
         }
         else if (action.ExecActivity is { } execActivity)
         {
             await HandleAwaitableChoiceAsync(
-                LaunchActivity(execActivity, tokenSrc).ContinueWith(_ => true),
+                ToBool(LaunchActivity(execActivity, tokenSrc)),
                 tokenSrc,
-                execActivity.AwaitableChoice);
+                execActivity.AwaitableChoice
+            );
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
@@ -326,6 +327,11 @@ public class KitchenSinkWorkflow
             args.Add(inputData);
             args.Add(payload.BytesToReturn);
         }
+        else if (eaa.Client is { } client)
+        {
+            actType = "client";
+            args.Add(client);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -356,6 +362,12 @@ public class KitchenSinkWorkflow
             };
             return Workflow.ExecuteActivityAsync(actType, args, opts);
         }
+    }
+
+    private static async Task<bool> ToBool(Task task)
+    {
+        await task;
+        return true;
     }
 
     // Duped for now, if exposed by SDK use it from there.
@@ -406,5 +418,26 @@ public class KitchenSinkWorkflow
         var output = new byte[bytesToReturn];
         new Random().NextBytes(output);
         return output;
+    }
+}
+
+public class ClientActivitiesImpl
+{
+    private readonly ITemporalClient _client;
+
+    public ClientActivitiesImpl(ITemporalClient client)
+    {
+        _client = client;
+    }
+
+    [Activity("client")]
+    public async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var taskQueue = activityInfo.TaskQueue;
+
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
 }

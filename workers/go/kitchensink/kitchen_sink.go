@@ -10,6 +10,7 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
@@ -17,6 +18,24 @@ import (
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
+
+type ClientActivities struct {
+	Client client.Client
+}
+
+func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientActivity *kitchensink.ExecuteActivityAction_ClientActivity) error {
+	info := activity.GetInfo(ctx)
+	executor := &kitchensink.ClientActionsExecutor{
+		Client: ca.Client,
+		WorkflowOptions: client.StartWorkflowOptions{
+			ID:        info.WorkflowExecution.ID,
+			TaskQueue: info.TaskQueue,
+		},
+		WorkflowType:  "kitchenSink",
+		WorkflowInput: &kitchensink.WorkflowInput{},
+	}
+	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
+}
 
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
@@ -28,6 +47,8 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},
 	}
+
+	// Setup query handler.
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
 		func(input interface{}) (*kitchensink.WorkflowState, error) {
 			return state.workflowState, nil
@@ -36,6 +57,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, queryErr
 	}
 
+	// Setup update handler.
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
 			rval, err = state.handleActionSet(ctx, actions.GetDoActions())
@@ -55,17 +77,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, updateErr
 	}
 
-	// Handle initial set
-	if params != nil && params.InitialActions != nil {
-		for _, actionSet := range params.InitialActions {
-			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
-				return ret, err
-			}
-		}
-	}
-
-	// Handle signal action sets
+	// Setup signal handler.
 	signalActionsChan := workflow.GetSignalChannel(ctx, "do_actions_signal")
 	retOrErrChan := workflow.NewChannel(ctx)
 	workflow.Go(ctx, func(ctx workflow.Context) {
@@ -84,6 +96,17 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			})
 		}
 	})
+
+	// Handle initial set.
+	if params != nil && params.InitialActions != nil {
+		for _, actionSet := range params.InitialActions {
+			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
+				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
+				return ret, err
+			}
+		}
+	}
+
 	for {
 		var retOrErr ReturnOrErr
 		retOrErrChan.Receive(ctx, &retOrErr)
@@ -216,6 +239,9 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			inputData[i] = byte(i % 256)
 		}
 		args = append(args, inputData, payload.BytesToReturn)
+	} else if client := act.GetClient(); client != nil {
+		actType = "client"
+		args = append(args, client)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{

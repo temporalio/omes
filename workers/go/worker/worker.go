@@ -60,6 +60,9 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 		Client: client,
 	}
 	ebbFlowActivities := ebbandflow.Activities{}
+	clientActivities := kitchensink.ClientActivities{
+		Client: client,
+	}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
 	if err != nil {
@@ -81,6 +84,7 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
+			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
 			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)

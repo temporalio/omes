@@ -11,6 +11,7 @@ use crate::protos::temporal::{
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
         TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
         WorkflowInput, WorkflowState,
+        execute_activity_action::{ClientActivity, PayloadActivity},
     },
 };
 use anyhow::Error;
@@ -581,13 +582,28 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         } else {
             execute_activity_action::Locality::IsLocal(())
         };
-        let delay = u.int_in_range(0..=1_000)?;
+        
+        let activity_type_choice = u.int_in_range(1..=100)?;
+        let activity_type = match activity_type_choice {
+            1..=85 => {
+                let delay = u.int_in_range(0..=1_000)?;
+                execute_activity_action::ActivityType::Delay(
+                    Duration::from_millis(delay)
+                        .try_into()
+                        .expect("proto duration works"),
+                )
+            }
+            86..=90 => {
+                execute_activity_action::ActivityType::Payload(u.arbitrary()?)
+            }
+            91..=100 => {
+                execute_activity_action::ActivityType::Client(u.arbitrary()?)
+            }
+            _ => unreachable!(),
+        };
+        
         Ok(Self {
-            activity_type: Some(execute_activity_action::ActivityType::Delay(
-                Duration::from_millis(delay)
-                    .try_into()
-                    .expect("proto duration works"),
-            )),
+            activity_type: Some(activity_type),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
             locality: Some(locality),
             awaitable_choice: Some(u.arbitrary()?),
@@ -690,6 +706,36 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
         })
     }
 }
+
+impl<'a> Arbitrary<'a> for ClientActivity {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let client_sequence = ClientSequence {
+            action_sets: vec![ClientActionSet {
+                actions: vec![u.arbitrary()?],
+                concurrent: false,
+                wait_at_end: None,
+                wait_for_current_run_to_finish_at_end: false,
+            }],
+        };
+        
+        Ok(Self {
+            client_sequence: Some(client_sequence),
+        })
+    }
+}
+
+
+impl<'a> Arbitrary<'a> for PayloadActivity {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let max_payload_size = ARB_CONTEXT.with_borrow(|c| c.config.max_payload_size) as i32;
+        
+        Ok(Self {
+            bytes_to_receive: u.int_in_range(0..=max_payload_size)?,
+            bytes_to_return: u.int_in_range(0..=max_payload_size)?,
+        })
+    }
+}
+
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
