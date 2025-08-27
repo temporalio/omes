@@ -140,15 +140,17 @@ public class KitchenSinkWorkflow
         else if (action.Timer is { } timer)
         {
             await HandleAwaitableChoiceAsync(
-                Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)
-                    .ContinueWith(_ => true),
+                ToBool(Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)),
                 tokenSrc,
                 timer.AwaitableChoice);
         }
         else if (action.ExecActivity is { } execActivity)
         {
-            await LaunchActivity(execActivity, tokenSrc);
-            await HandleAwaitableChoiceAsync(Task.FromResult<object?>(null), tokenSrc, execActivity.AwaitableChoice);
+            await HandleAwaitableChoiceAsync(
+                ToBool(LaunchActivity(execActivity, tokenSrc)),
+                tokenSrc,
+                execActivity.AwaitableChoice
+            );
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
@@ -362,6 +364,12 @@ public class KitchenSinkWorkflow
         }
     }
 
+    private static async Task<bool> ToBool(Task task)
+    {
+        await task;
+        return true;
+    }
+
     // Duped for now, if exposed by SDK use it from there.
     private static Temporalio.Common.RetryPolicy RetryPolicyFromProto(RetryPolicy proto)
     {
@@ -432,5 +440,4 @@ public class ClientActivitiesImpl
         var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
         await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
-
 }
