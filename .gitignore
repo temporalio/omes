@@ -18,6 +18,7 @@ workers/java/build
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
 
+workers/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
 
