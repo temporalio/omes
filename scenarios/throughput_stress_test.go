@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/workers"
 )
 
 func TestThroughputStress(t *testing.T) {
@@ -17,7 +18,7 @@ func TestThroughputStress(t *testing.T) {
 	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
 	taskQueueName := loadgen.TaskQueueForRun(scenarioName, runID)
 
-	env := loadgen.SetupTestEnvironment(t)
+	env := workers.SetupTestEnvironment(t)
 	nexusEndpointName, err := env.CreateNexusEndpoint(t.Context(), taskQueueName)
 	require.NoError(t, err, "Failed to create Nexus endpoint")
 

@@ -1,4 +1,4 @@
-package loadgen
+package workers
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
-	"github.com/temporalio/omes/workers"
+	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
@@ -123,8 +123,8 @@ func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, taskQueueNa
 // RunExecutorTest runs an executor with a specific SDK and server address
 func (env *TestEnvironment) RunExecutorTest(
 	t *testing.T,
-	executor Executor,
-	scenarioInfo ScenarioInfo,
+	executor loadgen.Executor,
+	scenarioInfo loadgen.ScenarioInfo,
 	sdk cmdoptions.Language,
 ) error {
 	env.ensureWorkerBuilt(t, sdk)
@@ -133,7 +133,7 @@ func (env *TestEnvironment) RunExecutorTest(
 		Scenario: scenarioInfo.ScenarioName,
 		RunID:    scenarioInfo.RunID,
 	}
-	taskQueueName := TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
+	taskQueueName := loadgen.TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
 
 	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), testRunTimeout)
 	defer cancelTestCtx()
@@ -174,7 +174,7 @@ func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Langu
 	workerMutex.Unlock()
 
 	once.Do(func() {
-		baseDir := workers.BaseDir(env.repoDir, sdk)
+		baseDir := BaseDir(env.repoDir, sdk)
 		dirName := buildDirName()
 		buildDir := filepath.Join(baseDir, dirName)
 
@@ -186,7 +186,7 @@ func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Langu
 		})
 		workerMutex.Unlock()
 
-		builder := workers.Builder{
+		builder := Builder{
 			DirName:    dirName,
 			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
 			Logger:     env.logger.Named(fmt.Sprintf("%s-builder", sdk)),
@@ -219,9 +219,9 @@ func (env *TestEnvironment) startWorker(
 
 	go func() {
 		defer close(workerDone)
-		baseDir := workers.BaseDir(env.repoDir, sdk)
-		runner := &workers.Runner{
-			Builder: workers.Builder{
+		baseDir := BaseDir(env.repoDir, sdk)
+		runner := &Runner{
+			Builder: Builder{
 				DirName:    buildDirName(),
 				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
 				Logger:     env.logger.Named(fmt.Sprintf("%s-worker", sdk)),
