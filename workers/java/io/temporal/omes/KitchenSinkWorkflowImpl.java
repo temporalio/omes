@@ -217,7 +217,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     CancellationScope scope =
         Workflow.newCancellationScope(
             () -> {
-              ChildWorkflowStub stub = Workflow.newUntypedChildWorkflowStub(childWorkflowType);
+              ChildWorkflowOptions.Builder optionsBuilder =
+                  ChildWorkflowOptions.newBuilder()
+                      .setWorkflowId(executeChildWorkflow.getWorkflowId());
+              ChildWorkflowStub stub =
+                  Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
               Promise result =
                   stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;

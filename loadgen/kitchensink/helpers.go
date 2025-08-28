@@ -1,9 +1,16 @@
 package kitchensink
 
 import (
+	"fmt"
+	"time"
+
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
+
+// Using human-readable JSON encoding for payloads to aid with debugging.
+var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
 
 func SingleActionSet(actions ...*Action) *ActionSet {
 	return &ActionSet{
@@ -91,11 +98,11 @@ func NewEmptyReturnResultAction() *Action {
 	}
 }
 
-func NewTimerAction(milliseconds uint64) *Action {
+func NewTimerAction(t time.Duration) *Action {
 	return &Action{
 		Variant: &Action_Timer{
 			Timer: &TimerAction{
-				Milliseconds: milliseconds,
+				Milliseconds: uint64(t.Milliseconds()),
 			},
 		},
 	}
@@ -120,4 +127,13 @@ func NewAwaitWorkflowStateAction(key, value string) *Action {
 			},
 		},
 	}
+}
+
+func ConvertToPayload(newInput any) *common.Payload {
+	payload, err := jsonPayloadConverter.ToPayload(newInput)
+	if err != nil {
+		// this should never happen; but we don't want to swallow the error
+		panic(fmt.Sprintf("failed to convert input %T to payload: %v", newInput, err))
+	}
+	return payload
 }

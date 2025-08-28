@@ -128,52 +128,31 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
-			name: "ClientSequence/Nested",
+			name: "ExecActivity/ExecChildWorkflow",
 			testInput: &TestInput{
-				ClientSequence: &ClientSequence{
-					ActionSets: []*ClientActionSet{
-						{
-							Actions: []*ClientAction{
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(NewTimerAction(1)),
-													},
-												},
-											},
-										},
-									},
-								},
-								{
-									Variant: &ClientAction_DoUpdate{
-										DoUpdate: &DoUpdate{
-											Variant: &DoUpdate_DoActions{
-												DoActions: &DoActionsUpdate{
-													Variant: &DoActionsUpdate_DoActions{
-														DoActions: SingleActionSet(NewTimerAction(1)),
-													},
-												},
-											},
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecChildWorkflow{
+								ExecChildWorkflow: &ExecuteChildWorkflowAction{
+									WorkflowId:   "my-child",
+									WorkflowType: "kitchenSink",
+									Input: []*common.Payload{
+										ConvertToPayload(&WorkflowInput{
+											InitialActions: ListActionSet(NewTimerAction(1 * time.Millisecond)),
+										})},
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_Abandon{
+											Abandon: &emptypb.Empty{},
 										},
 									},
 								},
 							},
-						},
-					},
-				},
-				WorkflowInput: &WorkflowInput{
-					InitialActions: ListActionSet(
-						NewTimerAction(2000), // timer to keep workflow open long enough for client action
-					),
+						}),
 				},
 			},
 			historyMatcher: partialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				...
-				WorkflowExecutionUpdateCompleted`),
+				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",

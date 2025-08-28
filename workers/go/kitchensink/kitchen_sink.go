@@ -177,8 +177,19 @@ func (ws *KSWorkflowState) handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
+		var searchAttributes map[string]interface{}
+		if child.SearchAttributes != nil {
+			searchAttributes = make(map[string]interface{})
+			for k, v := range child.SearchAttributes {
+				searchAttributes[k] = v
+			}
+		}
+		cCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+			WorkflowID:       child.WorkflowId,
+			SearchAttributes: searchAttributes,
+		})
 		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
-			return workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0])
+			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
 		}, child.AwaitableChoice,
 			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
 				return fut.GetChildWorkflowExecution().Get(ctx, nil)
