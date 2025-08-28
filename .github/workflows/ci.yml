@@ -18,7 +18,7 @@ jobs:
       - name: Run shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: './scripts'
+          scandir: "./scripts"
           format: gcc
           severity: error
 
@@ -29,10 +29,22 @@ jobs:
         uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
       - name: Run tests
         run: |
-          go test -race ./...
+          go test -v -race ./... 2>&1 | \
+            go run github.com/jstemmer/go-junit-report/v2@latest \
+            -set-exit-code -iocopy -out junit-omes.xml
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v5.6.2
+        if: failure()
+        with:
+          report_paths: "junit-omes.xml"
+          check_name: "Omes Test Failures"
+          detailed_summary: true
+          check_annotations: false
+          annotate_only: true
+          skip_annotations: true
 
   lint-worker:
     runs-on: ubuntu-latest
@@ -156,7 +168,19 @@ jobs:
         run: ${{ matrix.install }}
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
-          SDK=${{ matrix.sdk }} go test -race ./loadgen -run TestKitchenSink -v
+          SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
+            go run github.com/jstemmer/go-junit-report/v2@latest \
+            -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
+      - name: Publish Kitchensink Test Results
+        uses: mikepenz/action-junit-report@v5.6.2
+        if: failure()
+        with:
+          report_paths: "junit-kitchensink-${{ matrix.sdk }}.xml"
+          check_name: "Kitchensink Test Failures (${{ matrix.sdk }})"
+          detailed_summary: true
+          check_annotations: false
+          annotate_only: true
+          skip_annotations: true
 
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest
@@ -164,7 +188,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
@@ -202,20 +226,20 @@ jobs:
       python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
       dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
-    - name: Load versions
-      run: |
-        set -a && source versions.env && set +a
-        printenv >> $GITHUB_ENV
-    - name: Set output variables to pass to docker YML
-      id: set-output
-      run: |
-        echo "go-sdk-version=v${{ env.GO_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-        echo "ts-sdk-version=v${{ env.TYPESCRIPT_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-        echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-        echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-        echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set output variables to pass to docker YML
+        id: set-output
+        run: |
+          echo "go-sdk-version=v${{ env.GO_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "ts-sdk-version=v${{ env.TYPESCRIPT_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-latest-docker-images:
     needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
