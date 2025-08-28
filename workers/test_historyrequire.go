@@ -1,4 +1,4 @@
-package loadgen
+package workers
 
 import (
 	"encoding/json"
@@ -63,7 +63,7 @@ type HistoryMatcher interface {
 	Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error
 }
 
-// fullHistoryMatcher checks that the list of history events match the expected spec.
+// FullHistoryMatcher checks that the list of history events match the expected spec.
 // The expected spec is a string with each line containing an (1) event type, (2) optional
 // JSON literal matching the event attributes and (3) an optional comment.
 //
@@ -79,9 +79,9 @@ type HistoryMatcher interface {
 //	WorkflowTaskStarted
 //	WorkflowTaskCompleted
 //	WorkflowExecutionCompleted
-type fullHistoryMatcher string
+type FullHistoryMatcher string
 
-func (m fullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -139,7 +139,7 @@ func (m fullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 	return nil
 }
 
-// partialHistoryMatcher checks that the list of history events contains a subsequence
+// PartialHistoryMatcher checks that the list of history events contains a subsequence
 // that matches the expected spec. The expected spec is a string with each line containing an (1) event type,
 // (2) optional JSON literal matching the event attributes and (3) an optional comment.
 // Use "..." as an event type to skip any number of events.
@@ -149,9 +149,9 @@ func (m fullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 //	WorkflowExecutionStarted {"taskQueue":"foo-bar"}
 //	...
 //	WorkflowExecutionCompleted
-type partialHistoryMatcher string
+type PartialHistoryMatcher string
 
-func (m partialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -303,6 +303,11 @@ func logHistoryMismatch(t *testing.T, expectedSpec string, actualEvents eventLis
 
 	t.Log("ACTUAL:")
 	logHistoryEvents(t, actualEvents)
+}
+
+func LogHistoryEvents(t *testing.T, events []*historypb.HistoryEvent) {
+	t.Helper()
+	logHistoryEvents(t, parseEvents(events))
 }
 
 func logHistoryEvents(t *testing.T, actualEvents eventList) {

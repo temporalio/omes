@@ -1,4 +1,4 @@
-package loadgen
+package loadgen_test
 
 import (
 	"context"
@@ -11,7 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	. "github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
+	. "github.com/temporalio/omes/workers"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -71,7 +73,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				TimerStarted {"startToFireTimeout":"0.001s"}
 				TimerFired`),
 		},
@@ -94,7 +96,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"noop"},"scheduleToCloseTimeout":"10s","scheduleToStartTimeout":"9s","startToCloseTimeout":"8s"}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
@@ -119,7 +121,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -151,7 +153,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
 		},
 		{
@@ -193,7 +195,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangTypeScript: "client actions activity is not supported",
 				cmdoptions.LangDotNet:     "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/WithStart",
@@ -234,7 +236,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangTypeScript: "client actions activity is not supported",
 				cmdoptions.LangDotNet:     "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/Custom",
@@ -269,7 +271,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangTypeScript: "client actions activity is not supported",
 				cmdoptions.LangDotNet:     "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
 		},
 		{
 			name: "ExecActivity/Client/Query/ReportState",
@@ -296,7 +298,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
@@ -335,7 +337,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
@@ -376,7 +378,7 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				...
 				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
@@ -415,7 +417,7 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
@@ -465,7 +467,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangTypeScript: "client actions activity is not supported",
 				cmdoptions.LangDotNet:     "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
 		{
 			name: "ExecActivity/Client/Concurrent",
@@ -497,7 +499,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangPython:     "client actions activity is not supported",
 				cmdoptions.LangJava:       "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
@@ -567,7 +569,7 @@ func TestKitchenSink(t *testing.T) {
 				cmdoptions.LangTypeScript: "client actions activity is not supported",
 				cmdoptions.LangDotNet:     "client actions activity is not supported",
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
 				...
 				WorkflowExecutionUpdateCompleted`),
@@ -594,7 +596,7 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
 			name: "ClientSequence/Signal/Custom",
@@ -616,7 +618,7 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
 			name: "ClientSequence/Query/ReportState",
@@ -632,7 +634,7 @@ func TestKitchenSink(t *testing.T) {
 				}),
 				WorkflowInput: &WorkflowInput{},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -656,7 +658,7 @@ func TestKitchenSink(t *testing.T) {
 				}),
 				WorkflowInput: &WorkflowInput{},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -688,7 +690,7 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
 		{
 			name: "ClientSequence/Update/Custom/Failure",
@@ -707,7 +709,7 @@ func TestKitchenSink(t *testing.T) {
 				}),
 				WorkflowInput: &WorkflowInput{},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -757,7 +759,7 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: partialHistoryMatcher(`
+			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
 				...
 				WorkflowExecutionUpdateCompleted`),
@@ -780,7 +782,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowExecutionSignaled {"signalName":"do_actions_signal"}
 				WorkflowTaskScheduled
@@ -806,7 +808,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: fullHistoryMatcher(`
+			historyMatcher: FullHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
 				WorkflowTaskStarted
@@ -925,7 +927,7 @@ func testSupportedFeature(
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
-			logHistoryEvents(t, parseEvents(historyEvents))
+			LogHistoryEvents(t, historyEvents)
 		}
 	}
 
