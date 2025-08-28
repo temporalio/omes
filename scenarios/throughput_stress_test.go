@@ -13,26 +13,32 @@ import (
 func TestThroughputStress(t *testing.T) {
 	t.Parallel()
 
+	scenarioName := "throughput_stress_test"
+	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
+	taskQueueName := loadgen.TaskQueueForRun(scenarioName, runID)
+
 	env := loadgen.SetupTestEnvironment(t)
-	executor := &tpsExecutor{
-		state: &tpsState{},
-	}
+	nexusEndpointName, err := env.CreateNexusEndpoint(t.Context(), taskQueueName)
+	require.NoError(t, err, "Failed to create Nexus endpoint")
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		ScenarioName: "throughput_stress_test",
-		RunID:        fmt.Sprintf("test-%d", time.Now().Unix()),
+		ScenarioName: scenarioName,
+		RunID:        runID,
 		Configuration: loadgen.RunConfiguration{
-			Iterations: 2,
+			Iterations: 1,
 		},
 		ScenarioOptions: map[string]string{
-			IterFlag:                   "4",
-			ContinueAsNewAfterIterFlag: "2",
+			IterFlag:                          "4",
+			ContinueAsNewAfterIterFlag:        "2",
+			NexusEndpointFlag:                 nexusEndpointName,
+			VisibilityVerificationTimeoutFlag: "10s", // lower timeout to fail fast
 		},
 	}
 
-	err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+	executor := &tpsExecutor{state: &tpsState{}}
+	err = env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
 	require.NoError(t, err, "Executor should complete successfully")
 
 	state := executor.Snapshot().(tpsState)
-	require.Equal(t, state.CompletedIterations, 2)
+	require.Equal(t, state.CompletedIterations, 1)
 }

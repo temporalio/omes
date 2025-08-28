@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers"
+	"go.temporal.io/api/nexus/v1"
+	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 	"go.uber.org/zap"
@@ -94,6 +96,28 @@ func (env *TestEnvironment) cleanup() {
 	for _, cleanupFunc := range workerCleanupFuncs {
 		cleanupFunc()
 	}
+}
+
+func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
+	endpointName := fmt.Sprintf("test-nexus-endpoint-%d", time.Now().Unix())
+	_, err := env.temporalClient.OperatorService().CreateNexusEndpoint(ctx,
+		&operatorservice.CreateNexusEndpointRequest{
+			Spec: &nexus.EndpointSpec{
+				Name: endpointName,
+				Target: &nexus.EndpointTarget{
+					Variant: &nexus.EndpointTarget_Worker_{
+						Worker: &nexus.EndpointTarget_Worker{
+							Namespace: testNamespace,
+							TaskQueue: taskQueueName,
+						},
+					},
+				},
+			},
+		})
+	if err != nil {
+		return "", err
+	}
+	return endpointName, nil
 }
 
 // RunExecutorTest runs an executor with a specific SDK and server address
