@@ -166,7 +166,10 @@ func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Dur
 }
 
 const DefaultIterations = 10
-const DefaultMaxConcurrent = 10
+const DefaultMaxConcurrentIterations = 10
+const DefaultMaxIterationAttempts = 1
+const BaseIterationRetryBackoff = 1 * time.Second
+const MaxIterationRetryBackoff = 60 * time.Second
 
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
@@ -175,6 +178,9 @@ type RunConfiguration struct {
 	// This is used to skip iterations that have already been run.
 	// Default is zero. If Iterations is set, too, must be less than or equal to Iterations.
 	StartFromIteration int
+	// MaxIterationAttempts is the maximum number of attempts to run the scenario.
+	// Default (and minimum) is 1.
+	MaxIterationAttempts int
 	// Duration limit of this scenario (mutually exclusive with Iterations). If neither iterations
 	// nor duration is set, default is DefaultIterations. When the Duration is elapsed, no new
 	// iterations will be started, but we will wait for any currently running iterations to
@@ -195,6 +201,8 @@ type RunConfiguration struct {
 	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
+	// OnCompletion, if set, is invoked after each successful iteration completes.
+	OnCompletion func(context.Context, *Run)
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
@@ -202,7 +210,10 @@ func (r *RunConfiguration) ApplyDefaults() {
 		r.Iterations = DefaultIterations
 	}
 	if r.MaxConcurrent == 0 {
-		r.MaxConcurrent = DefaultMaxConcurrent
+		r.MaxConcurrent = DefaultMaxConcurrentIterations
+	}
+	if r.MaxIterationAttempts == 0 {
+		r.MaxIterationAttempts = DefaultMaxIterationAttempts
 	}
 }
 
@@ -210,9 +221,13 @@ func (r *RunConfiguration) ApplyDefaults() {
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
 	*ScenarioInfo
+
 	// Each run should have a unique iteration.
 	Iteration int
 	Logger    *zap.SugaredLogger
+
+	// tracks how many attempts have been made for this iteration
+	attemptCount int
 }
 
 // NewRun creates a new run.
@@ -279,6 +294,32 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 // DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow info.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
+}
+
+// ShouldRetry handles a failed iteration attempt. It returns true to retry, false to propagate the error.
+func (r *Run) ShouldRetry(ctx context.Context, err error) bool {
+	r.attemptCount++
+
+	// Run out of attempts.
+	if r.attemptCount >= r.Configuration.MaxIterationAttempts {
+		return false
+	}
+
+	// Exponential backoff.
+	backoff := min(MaxIterationRetryBackoff, BaseIterationRetryBackoff*time.Duration(1<<uint(r.attemptCount-1)))
+	timer := time.NewTimer(backoff)
+	defer timer.Stop()
+
+	r.Logger.Warnf(
+		"Attempt %d/%d: execution for %s failed, backing off %v before next attempt: %v",
+		r.attemptCount, r.Configuration.MaxIterationAttempts, r.DefaultStartWorkflowOptions().ID, backoff, err)
+
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 type KitchenSinkWorkflowOptions struct {

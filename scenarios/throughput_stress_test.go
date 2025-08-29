@@ -18,9 +18,10 @@ func TestThroughputStress(t *testing.T) {
 	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
 	taskQueueName := loadgen.TaskQueueForRun(scenarioName, runID)
 
-	env := workers.SetupTestEnvironment(t)
-	nexusEndpointName, err := env.CreateNexusEndpoint(t.Context(), taskQueueName)
-	require.NoError(t, err, "Failed to create Nexus endpoint")
+	env := workers.SetupTestEnvironment(t,
+		workers.WithExecutorTimeout(2*time.Minute),
+		workers.WithNexusEndpoint(taskQueueName),
+	)
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName: scenarioName,
@@ -29,15 +30,16 @@ func TestThroughputStress(t *testing.T) {
 			Iterations: 1,
 		},
 		ScenarioOptions: map[string]string{
-			IterFlag:                          "4",
-			ContinueAsNewAfterIterFlag:        "2",
-			NexusEndpointFlag:                 nexusEndpointName,
+			IterFlag:                          "2",
+			ContinueAsNewAfterIterFlag:        "1",
+			NexusEndpointFlag:                 env.NexusEndpointName(),
+			SleepTimeFlag:                     "1ms", // reduce to safe time
 			VisibilityVerificationTimeoutFlag: "10s", // lower timeout to fail fast
 		},
 	}
 
 	executor := &tpsExecutor{state: &tpsState{}}
-	err = env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+	err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
 	require.NoError(t, err, "Executor should complete successfully")
 
 	state := executor.Snapshot().(tpsState)

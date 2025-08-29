@@ -155,7 +155,7 @@ func TestRunHappyPathDuration(t *testing.T) {
 			DefaultConfiguration: RunConfiguration{Duration: 100 * time.Millisecond},
 		})
 		require.NoError(t, err)
-		tracker.assertSeen(t, DefaultMaxConcurrent*2)
+		tracker.assertSeen(t, DefaultMaxConcurrentIterations*2)
 	})
 }
 
@@ -231,7 +231,7 @@ func TestRunDurationWithoutTimeout(t *testing.T) {
 		})
 		require.Equal(t, time.Millisecond*20, time.Since(startTime))
 		require.NoError(t, err)
-		tracker.assertSeen(t, DefaultMaxConcurrent)
+		tracker.assertSeen(t, DefaultMaxConcurrentIterations)
 	})
 }
 
