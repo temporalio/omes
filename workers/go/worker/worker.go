@@ -8,7 +8,6 @@ import (
 	"github.com/temporalio/omes/cmd/cmdoptions"
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
-	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -56,9 +55,6 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string, options cmdoptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
-	tpsActivities := throughputstress.Activities{
-		Client: client,
-	}
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{
 		Client: client,
@@ -85,11 +81,8 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
-			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
-			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
-			w.RegisterActivity(&tpsActivities)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
 			w.RegisterActivity(&ebbFlowActivities)

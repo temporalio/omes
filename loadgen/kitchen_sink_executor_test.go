@@ -33,9 +33,8 @@ var (
 		cmdoptions.LangTypeScript,
 		cmdoptions.LangDotNet,
 	}
-	onlySDK                = os.Getenv("SDK")
-	defaultActivityTimeout = durationpb.New(5 * time.Second)
-	javaMutex              sync.Mutex
+	onlySDK   = os.Getenv("SDK")
+	javaMutex sync.Mutex
 )
 
 type testCase struct {
@@ -115,7 +114,7 @@ func TestKitchenSink(t *testing.T) {
 									Locality: &ExecuteActivityAction_IsLocal{
 										IsLocal: &emptypb.Empty{},
 									},
-									StartToCloseTimeout: defaultActivityTimeout,
+									StartToCloseTimeout: durationpb.New(5 * time.Second),
 								},
 							},
 						}),
@@ -161,30 +160,24 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoSignal{
-												DoSignal: &DoSignal{
-													Variant: &DoSignal_DoSignalActions_{
-														DoSignalActions: &DoSignal_DoSignalActions{
-															Variant: &DoSignal_DoSignalActions_DoActions{
-																DoActions: SingleActionSet(
-																	NewSetWorkflowStateAction("status", "done"),
-																),
-															},
-														},
-													},
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoSignal{
+									DoSignal: &DoSignal{
+										Variant: &DoSignal_DoSignalActions_{
+											DoSignalActions: &DoSignal_DoSignalActions{
+												Variant: &DoSignal_DoSignalActions_DoActions{
+													DoActions: SingleActionSet(
+														NewSetWorkflowStateAction("status", "done"),
+													),
 												},
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+									},
 								},
-							},
-						},
+							}),
+							DefaultRemoteActivity,
+						),
 						NewAwaitWorkflowStateAction("status", "done"),
 					),
 				},
@@ -202,32 +195,27 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoSignal{
-												DoSignal: &DoSignal{
-													Variant: &DoSignal_DoSignalActions_{
-														DoSignalActions: &DoSignal_DoSignalActions{
-															Variant: &DoSignal_DoSignalActions_DoActions{
-																DoActions: SingleActionSet(
-																	NewSetWorkflowStateAction("status", "done"),
-																),
-															},
-														},
-													},
-													WithStart: true, // This makes it a signal-with-start
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoSignal{
+									DoSignal: &DoSignal{
+										Variant: &DoSignal_DoSignalActions_{
+											DoSignalActions: &DoSignal_DoSignalActions{
+												Variant: &DoSignal_DoSignalActions_DoActions{
+													DoActions: SingleActionSet(
+														NewSetWorkflowStateAction("status", "done"),
+													),
 												},
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+										WithStart: true, // This makes it a signal-with-start
+									},
 								},
-							},
-						},
-						NewAwaitWorkflowStateAction("status", "done")),
+							}),
+							DefaultRemoteActivity,
+						),
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
@@ -243,26 +231,21 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoSignal{
-												DoSignal: &DoSignal{
-													Variant: &DoSignal_Custom{
-														Custom: &HandlerInvocation{
-															Name: "test_signal",
-														},
-													},
-												},
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoSignal{
+									DoSignal: &DoSignal{
+										Variant: &DoSignal_Custom{
+											Custom: &HandlerInvocation{
+												Name: "test_signal",
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+									},
 								},
-							},
-						}),
+							}),
+							DefaultRemoteActivity,
+						),
+					),
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
@@ -278,24 +261,19 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoQuery{
-												DoQuery: &DoQuery{
-													Variant: &DoQuery_ReportState{
-														ReportState: &common.Payloads{},
-													},
-												},
-											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoQuery{
+									DoQuery: &DoQuery{
+										Variant: &DoQuery_ReportState{
+											ReportState: &common.Payloads{},
+										},
+									},
 								},
-							},
-						}),
+							}),
+							DefaultRemoteActivity,
+						),
+					),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
@@ -314,27 +292,22 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoQuery{
-												DoQuery: &DoQuery{
-													Variant: &DoQuery_Custom{
-														Custom: &HandlerInvocation{
-															Name: "nonexistent_query",
-														},
-													},
-													FailureExpected: true, // This query doesn't exist
-												},
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoQuery{
+									DoQuery: &DoQuery{
+										Variant: &DoQuery_Custom{
+											Custom: &HandlerInvocation{
+												Name: "nonexistent_query",
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+										FailureExpected: true, // This query doesn't exist
+									},
 								},
-							},
-						}),
+							}),
+							DefaultRemoteActivity,
+						),
+					),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
@@ -353,28 +326,22 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoUpdate{
-												DoUpdate: &DoUpdate{
-													Variant: &DoUpdate_DoActions{
-														DoActions: &DoActionsUpdate{
-															Variant: &DoActionsUpdate_DoActions{
-																DoActions: SingleActionSet(NewTimerAction(1)),
-															},
-														},
-													},
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoUpdate{
+									DoUpdate: &DoUpdate{
+										Variant: &DoUpdate_DoActions{
+											DoActions: &DoActionsUpdate{
+												Variant: &DoActionsUpdate_DoActions{
+													DoActions: SingleActionSet(NewTimerAction(1)),
 												},
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+									},
 								},
-							},
-						},
+							}),
+							DefaultRemoteActivity,
+						),
 					),
 				},
 			},
@@ -394,27 +361,22 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoUpdate{
-												DoUpdate: &DoUpdate{
-													Variant: &DoUpdate_Custom{
-														Custom: &HandlerInvocation{
-															Name: "nonexistent_update",
-														},
-													},
-													FailureExpected: true, // This update doesn't exist
-												},
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoUpdate{
+									DoUpdate: &DoUpdate{
+										Variant: &DoUpdate_Custom{
+											Custom: &HandlerInvocation{
+												Name: "nonexistent_update",
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+										FailureExpected: true, // This update doesn't exist
+									},
 								},
-							},
-						}),
+							}),
+							DefaultRemoteActivity,
+						),
+					),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
@@ -433,32 +395,27 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										ClientActions(&ClientAction{
-											Variant: &ClientAction_DoUpdate{
-												DoUpdate: &DoUpdate{
-													Variant: &DoUpdate_DoActions{
-														DoActions: &DoActionsUpdate{
-															Variant: &DoActionsUpdate_DoActions{
-																DoActions: SingleActionSet(
-																	NewSetWorkflowStateAction("status", "done"),
-																),
-															},
-														},
-													},
-													WithStart: true, // This makes it an update-with-start
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoUpdate{
+									DoUpdate: &DoUpdate{
+										Variant: &DoUpdate_DoActions{
+											DoActions: &DoActionsUpdate{
+												Variant: &DoActionsUpdate_DoActions{
+													DoActions: SingleActionSet(
+														NewSetWorkflowStateAction("status", "done"),
+													),
 												},
 											},
-										}),
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+										},
+										WithStart: true, // This makes it an update-with-start
+									},
 								},
-							},
-						},
-						NewAwaitWorkflowStateAction("status", "done")),
+							}),
+							DefaultRemoteActivity,
+						),
+						NewAwaitWorkflowStateAction("status", "done"),
+					),
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
@@ -474,23 +431,18 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						&Action{
-							Variant: &Action_ExecActivity{
-								ExecActivity: &ExecuteActivityAction{
-									ActivityType: ClientActivity(
-										&ClientSequence{
-											ActionSets: []*ClientActionSet{
-												{
-													Concurrent: true,
-													Actions:    []*ClientAction{},
-												},
-											},
-										},
-									),
-									StartToCloseTimeout: defaultActivityTimeout,
+						ClientActivity(
+							&ClientSequence{
+								ActionSets: []*ClientActionSet{
+									{
+										Concurrent: true,
+										Actions:    []*ClientAction{},
+									},
 								},
 							},
-						}),
+							DefaultRemoteActivity,
+						),
+					),
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
@@ -513,50 +465,38 @@ func TestKitchenSink(t *testing.T) {
 							Variant: &Action_NestedActionSet{
 								NestedActionSet: &ActionSet{
 									Actions: []*Action{
-										{
-											Variant: &Action_ExecActivity{
-												ExecActivity: &ExecuteActivityAction{
-													ActivityType: ClientActivity(
-														ClientActions(&ClientAction{
-															Variant: &ClientAction_DoSignal{
-																DoSignal: &DoSignal{
-																	Variant: &DoSignal_DoSignalActions_{
-																		DoSignalActions: &DoSignal_DoSignalActions{
-																			Variant: &DoSignal_DoSignalActions_DoActions{
-																				DoActions: SingleActionSet(NewTimerAction(1)),
-																			},
-																		},
-																	},
+										ClientActivity(
+											ClientActions(&ClientAction{
+												Variant: &ClientAction_DoSignal{
+													DoSignal: &DoSignal{
+														Variant: &DoSignal_DoSignalActions_{
+															DoSignalActions: &DoSignal_DoSignalActions{
+																Variant: &DoSignal_DoSignalActions_DoActions{
+																	DoActions: SingleActionSet(NewTimerAction(1)),
 																},
 															},
-														}),
-													),
-													StartToCloseTimeout: defaultActivityTimeout,
+														},
+													},
 												},
-											},
-										},
-										{
-											Variant: &Action_ExecActivity{
-												ExecActivity: &ExecuteActivityAction{
-													ActivityType: ClientActivity(
-														ClientActions(&ClientAction{
-															Variant: &ClientAction_DoUpdate{
-																DoUpdate: &DoUpdate{
-																	Variant: &DoUpdate_DoActions{
-																		DoActions: &DoActionsUpdate{
-																			Variant: &DoActionsUpdate_DoActions{
-																				DoActions: SingleActionSet(NewTimerAction(1)),
-																			},
-																		},
-																	},
+											}),
+											DefaultRemoteActivity,
+										),
+										ClientActivity(
+											ClientActions(&ClientAction{
+												Variant: &ClientAction_DoUpdate{
+													DoUpdate: &DoUpdate{
+														Variant: &DoUpdate_DoActions{
+															DoActions: &DoActionsUpdate{
+																Variant: &DoActionsUpdate_DoActions{
+																	DoActions: SingleActionSet(NewTimerAction(1)),
 																},
 															},
-														}),
-													),
-													StartToCloseTimeout: defaultActivityTimeout,
+														},
+													},
 												},
-											},
-										},
+											}),
+											DefaultRemoteActivity,
+										),
 									},
 								},
 							},

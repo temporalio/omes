@@ -155,17 +155,30 @@ func (g *genericRun) Run(ctx context.Context) error {
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
 		go func() {
+			var err error
 			startTime := time.Now()
-			err := g.executor.Execute(ctx, run)
-			if err != nil {
-				err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-				g.logger.Error(err)
+
+			for {
+				err = g.executor.Execute(ctx, run)
+				if err == nil {
+					break
+				}
+
+				if !run.ShouldRetry(ctx, err) {
+					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
+					g.logger.Error(err)
+					break
+				}
 			}
+
 			select {
 			case <-ctx.Done():
 			case doneCh <- err:
-				// Record/log here, not if it was cut short by context complete
 				g.executeTimer.Record(time.Since(startTime))
+
+				if err == nil && g.config.OnCompletion != nil {
+					g.config.OnCompletion(ctx, run)
+				}
 			}
 		}()
 	}

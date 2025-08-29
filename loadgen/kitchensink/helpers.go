@@ -7,10 +7,13 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Using human-readable JSON encoding for payloads to aid with debugging.
 var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
+
+type ActionFactory[T any] func(*T) *Action
 
 func SingleActionSet(actions ...*Action) *ActionSet {
 	return &ActionSet{
@@ -36,12 +39,15 @@ func ClientActions(clientActions ...*ClientAction) *ClientSequence {
 	}
 }
 
-func ClientActivity(clientSequence *ClientSequence) *ExecuteActivityAction_Client {
-	return &ExecuteActivityAction_Client{
-		Client: &ExecuteActivityAction_ClientActivity{
-			ClientSequence: clientSequence,
+func ClientActivity(clientSeq *ClientSequence, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Client{
+			Client: &ExecuteActivityAction_ClientActivity{
+				ClientSequence: clientSeq,
+			},
 		},
 	}
+	return factory(activity)
 }
 
 func NoOpSingleActivityActionSet() *ActionSet {
@@ -104,6 +110,57 @@ func NewTimerAction(t time.Duration) *Action {
 			Timer: &TimerAction{
 				Milliseconds: uint64(t.Milliseconds()),
 			},
+		},
+	}
+}
+
+func PayloadActivity(inSize, outSize int, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Payload{
+			Payload: &ExecuteActivityAction_PayloadActivity{
+				BytesToReceive: int32(inSize),
+				BytesToReturn:  int32(outSize),
+			},
+		},
+	}
+	return factory(activity)
+}
+
+func GenericActivity(activityType string, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Generic{
+			Generic: &ExecuteActivityAction_GenericActivity{
+				Type: activityType,
+			},
+		},
+	}
+	return factory(activity)
+}
+
+func DefaultRemoteActivity(activity *ExecuteActivityAction) *Action {
+	activity.StartToCloseTimeout = &durationpb.Duration{Seconds: 60}
+	activity.Locality = &ExecuteActivityAction_Remote{
+		Remote: &RemoteActivityOptions{},
+	}
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: activity,
+		},
+	}
+}
+
+func DefaultLocalActivity(activity *ExecuteActivityAction) *Action {
+	activity.StartToCloseTimeout = &durationpb.Duration{Seconds: 60}
+	activity.Locality = &ExecuteActivityAction_IsLocal{
+		IsLocal: &emptypb.Empty{},
+	}
+	activity.RetryPolicy = &common.RetryPolicy{
+		InitialInterval: durationpb.New(10 * time.Millisecond),
+		MaximumAttempts: 10,
+	}
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: activity,
 		},
 	}
 }
