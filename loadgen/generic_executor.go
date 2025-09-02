@@ -165,7 +165,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 					break
 				}
 
-				backoff, retry := run.ShouldRetry(ctx, err)
+				backoff, retry := run.ShouldRetry(err)
 				if retry {
 					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
 					g.logger.Error(err)

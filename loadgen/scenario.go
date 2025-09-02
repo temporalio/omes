@@ -298,7 +298,7 @@ func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 
 // ShouldRetry determines if another attempt should be made. It returns the backoff duration to wait
 // before retrying and a boolean indicating whether a retry should occur.
-func (r *Run) ShouldRetry(ctx context.Context, err error) (time.Duration, bool) {
+func (r *Run) ShouldRetry(err error) (time.Duration, bool) {
 	r.attemptCount++
 	if r.attemptCount >= r.Configuration.MaxIterationAttempts {
 		return 0, false
