@@ -238,6 +238,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
+		// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
 		continueAsNewWorkflows = ((t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter) * completedIterations
 	}
 	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
