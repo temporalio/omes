@@ -296,30 +296,15 @@ func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
 }
 
-// ShouldRetry handles a failed iteration attempt. It returns true to retry, false to propagate the error.
-func (r *Run) ShouldRetry(ctx context.Context, err error) bool {
+// ShouldRetry determines if another attempt should be made. It returns the backoff duration to wait
+// before retrying and a boolean indicating whether a retry should occur.
+func (r *Run) ShouldRetry(ctx context.Context, err error) (time.Duration, bool) {
 	r.attemptCount++
-
-	// Run out of attempts.
 	if r.attemptCount >= r.Configuration.MaxIterationAttempts {
-		return false
+		return 0, false
 	}
-
-	// Exponential backoff.
 	backoff := min(MaxIterationRetryBackoff, BaseIterationRetryBackoff*time.Duration(1<<uint(r.attemptCount-1)))
-	timer := time.NewTimer(backoff)
-	defer timer.Stop()
-
-	r.Logger.Warnf(
-		"Attempt %d/%d: execution for %s failed, backing off %v before next attempt: %v",
-		r.attemptCount, r.Configuration.MaxIterationAttempts, r.DefaultStartWorkflowOptions().ID, backoff, err)
-
-	select {
-	case <-timer.C:
-		return true
-	case <-ctx.Done():
-		return false
-	}
+	return backoff, true
 }
 
 type KitchenSinkWorkflowOptions struct {

@@ -158,16 +158,27 @@ func (g *genericRun) Run(ctx context.Context) error {
 			var err error
 			startTime := time.Now()
 
+		retryLoop:
 			for {
 				err = g.executor.Execute(ctx, run)
 				if err == nil {
 					break
 				}
 
-				if !run.ShouldRetry(ctx, err) {
+				backoff, retry := run.ShouldRetry(ctx, err)
+				if retry {
+					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
+					g.logger.Error(err)
+				} else {
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
 					g.logger.Error(err)
-					break
+					break retryLoop
+				}
+
+				select {
+				case <-time.After(backoff):
+				case <-ctx.Done():
+					break retryLoop // just fall through to next select
 				}
 			}
 
