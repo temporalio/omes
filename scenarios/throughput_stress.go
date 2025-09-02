@@ -5,27 +5,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
+	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/throughputstress"
+	. "github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// --option arguments
 const (
 	IterFlag                   = "internal-iterations"
 	IterTimeoutFlag            = "internal-iterations-timeout"
 	ContinueAsNewAfterIterFlag = "continue-as-new-after-iterations"
-	SkipSleepFlag              = "skip-sleep"
-	NexusEndpointFlag          = "nexus-endpoint"
-	// MaxStartAttemptFlag is a flag to set the maximum number of attempts for starting a workflow.
-	MaxStartAttemptFlag = "max-start-attempt"
-	// MaxStartAttemptBackoffFlag is a flag to set the maximum backoff time between attempts for starting a workflow.
-	MaxStartAttemptBackoffFlag = "max-start-attempt-backoff"
+	// SleepTimeFlag controls the duration used for internal timer-based sleep actions (e.g. signal/update timers).
+	// Default is 1s.
+	SleepTimeFlag     = "sleep-time"
+	NexusEndpointFlag = "nexus-endpoint"
 	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
 	// This should be set to allow resuming from a previous run.
 	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
@@ -38,7 +39,6 @@ const (
 )
 
 const (
-	baseBackoff                               = 1 * time.Second
 	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
 )
 
@@ -53,13 +53,13 @@ type tpsConfig struct {
 	InternalIterations            int
 	InternalIterTimeout           time.Duration
 	ContinueAsNewAfterIter        int
-	MaxAttempts                   int
-	MaxBackoff                    time.Duration
 	NexusEndpoint                 string
-	SkipSleep                     bool
+	SleepTime                     time.Duration
 	SkipCleanNamespaceCheck       bool
 	SleepActivities               *loadgen.SleepActivityConfig
 	VisibilityVerificationTimeout time.Duration
+	ScenarioRunID                 string
+	RngSeed                       int64
 }
 
 type tpsExecutor struct {
@@ -67,6 +67,7 @@ type tpsExecutor struct {
 	state      *tpsState
 	config     *tpsConfig
 	isResuming bool
+	runID      string
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -75,8 +76,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s' '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, SkipSleepFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag),
 		Executor: &tpsExecutor{state: &tpsState{}},
 	})
 }
@@ -109,8 +110,18 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
 		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
 		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
-		SkipSleep:               info.ScenarioOptionBool(SkipSleepFlag, false),
 		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
+		ScenarioRunID:           info.RunID,
+	}
+
+	// Generate random number generator seed based on the run ID.
+	h := fnv.New64a()
+	h.Write([]byte(info.RunID))
+	config.RngSeed = int64(h.Sum64())
+
+	config.SleepTime = info.ScenarioOptionDuration(SleepTimeFlag, 1*time.Second)
+	if config.SleepTime <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", SleepTimeFlag, config.SleepTime)
 	}
 
 	config.InternalIterations = info.ScenarioOptionInt(IterFlag, 10)
@@ -121,16 +132,6 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.ContinueAsNewAfterIter = info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
 	if config.ContinueAsNewAfterIter < 0 {
 		return fmt.Errorf("continue-as-new-after-iterations must be non-negative, got %d", config.ContinueAsNewAfterIter)
-	}
-
-	config.MaxAttempts = info.ScenarioOptionInt(MaxStartAttemptFlag, 5)
-	if config.MaxAttempts <= 0 {
-		return fmt.Errorf("max-start-attempt must be positive, got %d", config.MaxAttempts)
-	}
-
-	config.MaxBackoff = info.ScenarioOptionDuration(MaxStartAttemptBackoffFlag, 60*time.Second)
-	if config.MaxBackoff <= 0 {
-		return fmt.Errorf("max-start-attempt-backoff must be positive, got %v", config.MaxBackoff)
 	}
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
@@ -165,6 +166,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if err := t.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
+	t.runID = info.RunID
 
 	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
@@ -181,76 +183,47 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
 		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
 	} else {
-		err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck)
-		if err != nil {
+		if err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck); err != nil {
 			return err
 		}
 	}
 
+	// Listen to iteration completion events to update the state.
+	info.Configuration.OnCompletion = func(ctx context.Context, run *loadgen.Run) {
+		t.updateStateOnIterationCompletion()
+	}
+
 	// Start the scenario run.
 	//
-	// However; when resuming, it can happen that there is no more time left to run more iterations. In that case,
+	// NOTE: When resuming, it can happen that there is no more time left to run more iterations. In that case,
 	// we skip the executor run and go straight to the post-scenario verification.
 	if isResuming && info.Configuration.Duration <= 0 {
 		info.Logger.Info("Skipping executor run: out of time")
 	} else {
-		genericExec := &loadgen.GenericExecutor{
-			DefaultConfiguration: loadgen.RunConfiguration{
-				Iterations:    20,
-				MaxConcurrent: 5,
+		ksExec := &loadgen.KitchenSinkExecutor{
+			TestInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: []*ActionSet{},
+				},
 			},
-			Execute: func(ctx context.Context, run *loadgen.Run) error {
-				wfID := fmt.Sprintf("throughputStress/%s/iter-%d", run.RunID, run.Iteration)
+			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
+				options.StartOptions.ID = workflowID(run.RunID, run.Iteration)
 
-				var execErr error
-				var result throughputstress.WorkflowOutput
-				for attempt := 1; attempt <= t.config.MaxAttempts; attempt++ {
-					if execErr = run.ExecuteAnyWorkflow(ctx,
-						client.StartWorkflowOptions{
-							ID:                                       wfID,
-							TaskQueue:                                run.TaskQueue(),
-							WorkflowIDReusePolicy:                    enums.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
-							WorkflowExecutionTimeout:                 t.config.InternalIterTimeout,
-							WorkflowExecutionErrorWhenAlreadyStarted: false,
-							SearchAttributes: map[string]any{
-								ThroughputStressScenarioIdSearchAttribute: run.ScenarioInfo.RunID,
-							},
-						},
-						"throughputStress",
-						&result,
-						throughputstress.WorkflowParams{
-							SkipSleep:                   t.config.SkipSleep,
-							Iterations:                  t.config.InternalIterations,
-							ContinueAsNewAfterIterCount: t.config.ContinueAsNewAfterIter,
-							NexusEndpoint:               t.config.NexusEndpoint,
-							SleepActivities:             t.config.SleepActivities,
-						},
-					); execErr == nil {
-						break // success!
-					}
+				// Add search attribute to the workflow options so that it can be used in visibility queries.
+				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
+					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
+				)
 
-					if attempt < t.config.MaxAttempts {
-						backoff := min(t.config.MaxBackoff, baseBackoff*time.Duration(1<<uint(attempt-1)))
-						select {
-						case <-time.After(backoff):
-							run.ScenarioInfo.Logger.Warnf(
-								"Attempt %d/%d: ExecuteAnyWorkflow for %s failed, backing off %v before next attempt: %v",
-								attempt, t.config.MaxAttempts, wfID, backoff, execErr)
-						case <-ctx.Done():
-							return fmt.Errorf("context canceled during retries: %w", ctx.Err())
-						}
-					}
-				}
-				if execErr != nil {
-					return fmt.Errorf("ExecuteAnyWorkflow for %s failed after %d attempts: %w", wfID, t.config.MaxAttempts, execErr)
-				}
-
-				t.updateStateOnIterationCompletion(run.Iteration)
+				// Generate the actions for the workflow.
+				//
+				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
+				// That means these client actions are sent from the activity worker instead of Omes.
+				options.Params.WorkflowInput.InitialActions = t.createActions(run.Iteration)
 
 				return nil
 			},
 		}
-		if err := genericExec.Run(ctx, info); err != nil {
+		if err := ksExec.Run(ctx, info); err != nil {
 			return err
 		}
 	}
@@ -265,7 +238,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
-		continueAsNewWorkflows = int(t.config.InternalIterations/t.config.ContinueAsNewAfterIter) * completedIterations
+		// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
+		continueAsNewWorkflows = ((t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter) * completedIterations
 	}
 	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
 
@@ -278,7 +252,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
-	return loadgen.MinVisibilityCountEventually(
+	if err := loadgen.MinVisibilityCountEventually(
 		ctx,
 		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
@@ -288,7 +262,30 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		},
 		completedWorkflows,
 		t.config.VisibilityVerificationTimeout,
-	)
+	); err != nil {
+		return err
+	}
+
+	// Post-scenario: ensure there are no failed or terminated workflows for this run.
+	for _, status := range []enums.WorkflowExecutionStatus{
+		enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, enums.WORKFLOW_EXECUTION_STATUS_FAILED,
+	} {
+		statusQuery := fmt.Sprintf(
+			"%s='%s' and ExecutionStatus = '%s'",
+			ThroughputStressScenarioIdSearchAttribute, info.RunID, status)
+		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
+			Namespace: info.Namespace,
+			Query:     statusQuery,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to run query %q: %w", statusQuery, err)
+		}
+		if visibilityCount.Count > 0 {
+			return fmt.Errorf("unexpected %d workflows with status %s", visibilityCount.Count, status)
+		}
+	}
+
+	return nil
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
@@ -314,9 +311,292 @@ func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioI
 	return nil
 }
 
-func (t *tpsExecutor) updateStateOnIterationCompletion(completedIter int) {
+func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
+}
+
+func (t *tpsExecutor) createActions(iteration int) []*ActionSet {
+	return []*ActionSet{
+		{
+			Actions:    t.createActionsChunk(iteration, 0, 0, t.config.InternalIterations),
+			Concurrent: false,
+		},
+	}
+}
+
+func (t *tpsExecutor) createActionsChunk(
+	iteration int,
+	childCount int,
+	continueAsNewCounter int,
+	remainingInternalIters int,
+) []*Action {
+	if remainingInternalIters == 0 {
+		return []*Action{}
+	}
+
+	var chunkActions []*Action
+	itersPerChunk := cmp.Or(t.config.ContinueAsNewAfterIter, t.config.InternalIterations) // no CAN? all iters in one chunk
+	isLastChunk := remainingInternalIters <= itersPerChunk
+	itersPerChunk = min(itersPerChunk, remainingInternalIters) // cap chunk size to remaining iterations
+
+	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(iteration)))
+
+	// Create actions for the current chunk
+	for i := 0; i < itersPerChunk; i++ {
+		syncActions := []*Action{
+			PayloadActivity(256, 256, DefaultLocalActivity),
+			PayloadActivity(0, 256, DefaultLocalActivity),
+			PayloadActivity(0, 256, DefaultLocalActivity),
+			// TODO: use local activity: server error log "failed to set query completion state to succeeded
+			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			// TODO: add support to kitchen sink for a client action that calls DescribeWorkflowExecution
+			// ClientActivity(ClientActions(t.createSelfDescribe())),
+		}
+
+		childCount++
+		asyncActions := []*Action{
+			t.createChildWorkflowAction(iteration, childCount),
+			PayloadActivity(256, 256, DefaultRemoteActivity),
+			PayloadActivity(256, 256, DefaultRemoteActivity),
+			PayloadActivity(0, 256, DefaultLocalActivity),
+			PayloadActivity(0, 256, DefaultLocalActivity),
+			GenericActivity("noop", DefaultLocalActivity),
+			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			ClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
+			ClientActivity(ClientActions(t.createSelfUpdateWithTimer()), DefaultRemoteActivity),
+			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
+			// TODO: use local activity: there is an 8s gap in the event history
+			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+		}
+
+		// Add sleep activities, if configured.
+		// It simulates custom traffic patterns by generating activities that sleep
+		// for a specified duration, with optional priority and fairness keys.
+		if t.config.SleepActivities != nil {
+			sleepActivityActions := t.config.SleepActivities.Sample(rng)
+			for _, sleepAction := range sleepActivityActions {
+				asyncActions = append(asyncActions, &Action{
+					Variant: &Action_ExecActivity{
+						ExecActivity: sleepAction,
+					},
+				})
+			}
+		}
+
+		// Add Nexus operations, if configured.
+		if t.config.NexusEndpoint != "" {
+			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
+			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+		}
+
+		chunkActions = append(chunkActions, syncActions...)
+		chunkActions = append(chunkActions, &Action{
+			Variant: &Action_NestedActionSet{
+				NestedActionSet: &ActionSet{
+					Actions:    asyncActions,
+					Concurrent: true,
+				},
+			},
+		})
+	}
+
+	if isLastChunk {
+		// No more iterations remain, add result action to complete workflow.
+		chunkActions = append(chunkActions, &Action{
+			Variant: &Action_ReturnResult{
+				ReturnResult: &ReturnResultAction{
+					ReturnThis: &common.Payload{},
+				},
+			},
+		})
+	} else {
+		// More iterations remain, create nested ContinueAsNew with more actions.
+		chunkActions = append(chunkActions, &Action{
+			Variant: &Action_ContinueAsNew{
+				ContinueAsNew: &ContinueAsNewAction{
+					Arguments: []*common.Payload{
+						ConvertToPayload(&WorkflowInput{
+							InitialActions: []*ActionSet{
+								{
+									Actions: t.createActionsChunk(
+										iteration,
+										childCount,
+										continueAsNewCounter+1,
+										remainingInternalIters-itersPerChunk),
+									Concurrent: false,
+								},
+							},
+						}),
+					},
+				},
+			},
+		})
+	}
+
+	return chunkActions
+}
+
+func (t *tpsExecutor) createChildWorkflowAction(iteration int, childID int) *Action {
+	return &Action{
+		Variant: &Action_ExecChildWorkflow{
+			ExecChildWorkflow: &ExecuteChildWorkflowAction{
+				Input: []*common.Payload{
+					ConvertToPayload(&WorkflowInput{
+						InitialActions: []*ActionSet{
+							{
+								Actions: []*Action{
+									PayloadActivity(256, 256, DefaultRemoteActivity),
+									PayloadActivity(256, 256, DefaultRemoteActivity),
+									PayloadActivity(256, 256, DefaultRemoteActivity),
+									NewEmptyReturnResultAction(),
+								},
+								Concurrent: false,
+							},
+						},
+					}),
+				},
+				WorkflowId: fmt.Sprintf("%s/child-%d", workflowID(t.runID, iteration), childID),
+				SearchAttributes: map[string]*common.Payload{
+					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
+						Metadata: map[string][]byte{"encoding": []byte("json/plain")},
+						Data:     []byte(fmt.Sprintf("%q", t.config.ScenarioRunID)), // quoted to be valid JSON string
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfQuery() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoQuery{
+			DoQuery: &DoQuery{
+				Variant: &DoQuery_ReportState{
+					ReportState: &common.Payloads{},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfSignal() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoSignal{
+			DoSignal: &DoSignal{
+				Variant: &DoSignal_DoSignalActions_{
+					DoSignalActions: &DoSignal_DoSignalActions{
+						Variant: &DoSignal_DoSignalActions_DoActions{
+							DoActions: SingleActionSet(
+								NewTimerAction(t.config.SleepTime),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfUpdateWithTimer() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoUpdate{
+			DoUpdate: &DoUpdate{
+				Variant: &DoUpdate_DoActions{
+					DoActions: &DoActionsUpdate{
+						Variant: &DoActionsUpdate_DoActions{
+							DoActions: SingleActionSet(
+								NewTimerAction(t.config.SleepTime),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfUpdateWithPayload() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoUpdate{
+			DoUpdate: &DoUpdate{
+				Variant: &DoUpdate_DoActions{
+					DoActions: &DoActionsUpdate{
+						Variant: &DoActionsUpdate_DoActions{
+							DoActions: SingleActionSet(
+								PayloadActivity(0, 256, DefaultRemoteActivity),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoUpdate{
+			DoUpdate: &DoUpdate{
+				Variant: &DoUpdate_DoActions{
+					DoActions: &DoActionsUpdate{
+						Variant: &DoActionsUpdate_DoActions{
+							DoActions: SingleActionSet(
+								PayloadActivity(0, 256, DefaultLocalActivity),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{
+			NexusOperation: &ExecuteNexusOperation{
+				Endpoint:       t.config.NexusEndpoint,
+				Operation:      "echo-sync",
+				Input:          "hello",
+				ExpectedOutput: "hello",
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createNexusEchoAsyncAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{
+			NexusOperation: &ExecuteNexusOperation{
+				Endpoint:       t.config.NexusEndpoint,
+				Operation:      "echo-async",
+				Input:          "hello",
+				ExpectedOutput: "hello",
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{
+			NexusOperation: &ExecuteNexusOperation{
+				Endpoint:  t.config.NexusEndpoint,
+				Operation: "wait-for-cancel",
+				Input:     "",
+				AwaitableChoice: &AwaitableChoice{
+					Condition: &AwaitableChoice_CancelAfterStarted{
+						CancelAfterStarted: &emptypb.Empty{},
+					},
+				},
+			},
+		},
+	}
+}
+
+func workflowID(runID string, iteration int) string {
+	return fmt.Sprintf("throughputStress/%s/iter-%d", runID, iteration)
 }

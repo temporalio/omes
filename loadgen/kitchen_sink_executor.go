@@ -28,7 +28,6 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	}
 	// Create generic executor and run it
 	ge := &GenericExecutor{
-		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
 			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)

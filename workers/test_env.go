@@ -22,7 +22,7 @@ import (
 
 const (
 	testNamespace         = "default"
-	testRunTimeout        = 30 * time.Second
+	defaultTestRunTimeout = 30 * time.Second
 	workerBuildTimeout    = 1 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
 )
@@ -35,13 +35,37 @@ var (
 	workerCleanupFuncs []func()
 )
 
+// Functional options configuration
+type testEnvConfig struct {
+	executorTimeout time.Duration
+	nexusTaskQueue  string
+}
+
+type TestEnvOption func(*testEnvConfig)
+
+// WithExecutorTimeout sets a custom timeout for the executor run context.
+func WithExecutorTimeout(d time.Duration) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.executorTimeout = d
+	}
+}
+
+// WithNexusEndpoint instructs the test environment to create a Nexus endpoint.
+func WithNexusEndpoint(taskQueue string) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.nexusTaskQueue = taskQueue
+	}
+}
+
 type TestEnvironment struct {
-	devServer      *testsuite.DevServer
-	temporalClient client.Client
-	logger         *zap.SugaredLogger
-	baseDir        string
-	buildDir       string
-	repoDir        string
+	testEnvConfig
+	devServer         *testsuite.DevServer
+	temporalClient    client.Client
+	logger            *zap.SugaredLogger
+	baseDir           string
+	buildDir          string
+	repoDir           string
+	nexusEndpointName string
 }
 
 func (env *TestEnvironment) TemporalClient() client.Client {
@@ -52,12 +76,28 @@ func (env *TestEnvironment) DevServerAddress() string {
 	return env.devServer.FrontendHostPort()
 }
 
-func SetupTestEnvironment(t *testing.T) *TestEnvironment {
+func (env *TestEnvironment) NexusEndpointName() string {
+	return env.nexusEndpointName
+}
+
+func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+	logger := zaptest.NewLogger(t).Sugar()
+
+	cfg := testEnvConfig{
+		executorTimeout: defaultTestRunTimeout,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	serverLogger := logger.Named("devserver")
 	server, err := testsuite.StartDevServer(t.Context(), testsuite.DevServerOptions{
 		ClientOptions: &client.Options{
 			Namespace: testNamespace,
 		},
 		LogLevel: "error",
+		Stdout:   &logWriter{logger: serverLogger},
+		Stderr:   &logWriter{logger: serverLogger},
 	})
 	require.NoError(t, err, "Failed to start dev server")
 
@@ -69,13 +109,22 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 	testDir, _ := os.Getwd()
 	repoDir := filepath.Dir(testDir)
-	logger := zaptest.NewLogger(t).Sugar()
+
 	env := &TestEnvironment{
+		testEnvConfig:  cfg,
 		devServer:      server,
 		temporalClient: temporalClient,
 		logger:         logger,
 		repoDir:        repoDir,
 	}
+
+	// Optionally create a Nexus endpoint
+	if cfg.nexusTaskQueue != "" {
+		endpointName, err := env.createNexusEndpoint(t.Context(), cfg.nexusTaskQueue)
+		require.NoError(t, err, "Failed to create Nexus endpoint")
+		env.nexusEndpointName = endpointName
+	}
+
 	t.Cleanup(func() {
 		env.cleanup()
 	})
@@ -98,7 +147,7 @@ func (env *TestEnvironment) cleanup() {
 	}
 }
 
-func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
+func (env *TestEnvironment) createNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
 	endpointName := fmt.Sprintf("test-nexus-endpoint-%d", time.Now().Unix())
 	_, err := env.temporalClient.OperatorService().CreateNexusEndpoint(ctx,
 		&operatorservice.CreateNexusEndpointRequest{
@@ -135,7 +184,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	}
 	taskQueueName := loadgen.TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
 
-	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), testRunTimeout)
+	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), env.executorTimeout)
 	defer cancelTestCtx()
 
 	workerDone := env.startWorker(t, sdk, taskQueueName, scenarioID)

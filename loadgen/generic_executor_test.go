@@ -13,69 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestScenarioConfigValidation(t *testing.T) {
-	tests := []struct {
-		name  string
-		info  ScenarioInfo
-		error string
-	}{
-		{
-			name:  "default",
-			info:  ScenarioInfo{Configuration: RunConfiguration{}},
-			error: "",
-		},
-		{
-			name:  "only iterations",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 3}},
-			error: "",
-		},
-		{
-			name:  "start iterations smaller than iterations",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 10, StartFromIteration: 3}},
-			error: "",
-		},
-		{
-			name:  "start iterations larger than iterations",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Iterations: 3, StartFromIteration: 10}},
-			error: "invalid scenario: StartFromIteration 10 is greater than Iterations 3",
-		},
-		{
-			name:  "only duration",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: time.Hour}},
-			error: "",
-		},
-		{
-			name:  "negative duration",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: -time.Second}},
-			error: "invalid scenario: Duration cannot be negative",
-		},
-		{
-			name:  "both duration and iterations",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: 3 * time.Second, Iterations: 3}},
-			error: "invalid scenario: iterations and duration are mutually exclusive",
-		},
-		{
-			name:  "both duration and start iteration",
-			info:  ScenarioInfo{Configuration: RunConfiguration{Duration: 3 * time.Second, StartFromIteration: 3}},
-			error: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.info.MetricsHandler = client.MetricsNopHandler
-			executor := &GenericExecutor{DefaultConfiguration: tt.info.Configuration}
-			_, err := executor.newRun(tt.info)
-			if tt.error != "" {
-				require.Error(t, err)
-				require.ErrorContains(t, err, tt.error)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 type iterationTracker struct {
 	sync.Mutex
 	seen []int
@@ -99,12 +36,13 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 	}
 }
 
-func execute(executor *GenericExecutor) error {
+func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
 	info := ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
+		Configuration:  runConfig,
 	}
 	return executor.Run(context.Background(), info)
 }
@@ -116,9 +54,9 @@ func TestRunHappyPathIterations(t *testing.T) {
 			Execute: func(ctx context.Context, run *Run) error {
 				tracker.track(run.Iteration)
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{Iterations: 5},
-		})
+			}},
+			RunConfiguration{Iterations: 5},
+		)
 		require.NoError(t, err)
 		tracker.assertSeen(t, 5)
 	})
@@ -135,9 +73,9 @@ func TestRunFailIterations(t *testing.T) {
 					return errors.New("deliberate fail from test")
 				}
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
-		})
+			}},
+			RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
+		)
 		require.ErrorContains(t, err, "run finished with error")
 		tracker.assertSeen(t, 2)
 	})
@@ -151,11 +89,11 @@ func TestRunHappyPathDuration(t *testing.T) {
 				tracker.track(run.Iteration)
 				time.Sleep(time.Millisecond * 20)
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{Duration: 100 * time.Millisecond},
-		})
+			}},
+			RunConfiguration{Duration: 100 * time.Millisecond},
+		)
 		require.NoError(t, err)
-		tracker.assertSeen(t, DefaultMaxConcurrent*2)
+		tracker.assertSeen(t, DefaultMaxConcurrentIterations*2)
 	})
 }
 
@@ -169,9 +107,9 @@ func TestRunFailDuration(t *testing.T) {
 					return errors.New("deliberate fail from test")
 				}
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{Duration: 200 * time.Millisecond},
-		})
+			}},
+			RunConfiguration{Duration: 200 * time.Millisecond},
+		)
 		require.ErrorContains(t, err, "run finished with error")
 		tracker.assertSeen(t, 2)
 	})
@@ -185,12 +123,12 @@ func TestRunDurationWithTimeout(t *testing.T) {
 				tracker.track(run.Iteration)
 				<-ctx.Done()
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{
+			}},
+			RunConfiguration{
 				Duration: 100 * time.Millisecond,
 				Timeout:  10 * time.Millisecond,
 			},
-		})
+		)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "timed out")
 		tracker.assertSeen(t, 5)
@@ -205,12 +143,12 @@ func TestRunIterationsWithTimeout(t *testing.T) {
 				tracker.track(run.Iteration)
 				<-ctx.Done()
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{
+			}},
+			RunConfiguration{
 				Iterations: 5,
 				Timeout:    10 * time.Millisecond,
 			},
-		})
+		)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "timed out")
 		tracker.assertSeen(t, 2)
@@ -226,12 +164,12 @@ func TestRunDurationWithoutTimeout(t *testing.T) {
 				tracker.track(run.Iteration)
 				time.Sleep(time.Millisecond * 20)
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{Duration: 1 * time.Millisecond},
-		})
+			}},
+			RunConfiguration{Duration: 1 * time.Millisecond},
+		)
 		require.Equal(t, time.Millisecond*20, time.Since(startTime))
 		require.NoError(t, err)
-		tracker.assertSeen(t, DefaultMaxConcurrent)
+		tracker.assertSeen(t, DefaultMaxConcurrentIterations)
 	})
 }
 
@@ -244,9 +182,9 @@ func TestRunIterationsWithoutTimeout(t *testing.T) {
 				tracker.track(run.Iteration)
 				time.Sleep(time.Millisecond * 20)
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{Iterations: 5},
-		})
+			}},
+			RunConfiguration{Iterations: 5},
+		)
 		require.Equal(t, time.Millisecond*20, time.Since(startTime))
 		require.NoError(t, err)
 		tracker.assertSeen(t, 5)
@@ -261,15 +199,62 @@ func TestRunIterationsWithRateLimit(t *testing.T) {
 			Execute: func(ctx context.Context, run *Run) error {
 				tracker.track(run.Iteration)
 				return nil
-			},
-			DefaultConfiguration: RunConfiguration{
+			}},
+			RunConfiguration{
 				Iterations:             4,
 				MaxConcurrent:          1,
 				MaxIterationsPerSecond: 4.0,
 			},
-		})
+		)
 		require.NoError(t, err)
 		require.Equal(t, time.Second, time.Since(startTime))
 		tracker.assertSeen(t, 4)
+	})
+}
+
+func TestExecutorRetries(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		totalTracker := newIterationTracker()
+		successTracker := newIterationTracker()
+
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				totalTracker.track(run.Iteration)
+				if len(totalTracker.seen) < 3 {
+					return errors.New("transient failure")
+				}
+				successTracker.track(run.Iteration)
+				return nil
+			}},
+			RunConfiguration{
+				Iterations:           1,
+				MaxIterationAttempts: 5,
+			},
+		)
+
+		require.NoError(t, err)
+		require.Equal(t, []int{1, 1, 1}, totalTracker.seen, "expected 3 attempts before success")
+		require.Equal(t, []int{1}, successTracker.seen, "expected 1 success")
+	})
+}
+
+func TestExecutorRetriesLimit(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		totalTracker := newIterationTracker()
+
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				totalTracker.track(run.Iteration)
+				return errors.New("persistent failure")
+			}},
+			RunConfiguration{
+				Iterations:           1,
+				MaxIterationAttempts: 5,
+			},
+		)
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "persistent failure")
+		require.Equal(t, []int{1, 1, 1, 1, 1}, totalTracker.seen, "expected 5 attempts")
 	})
 }
