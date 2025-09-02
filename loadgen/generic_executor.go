@@ -12,12 +12,6 @@ import (
 type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
 	Execute func(context.Context, *Run) error
-	// Default configuration if any.
-	DefaultConfiguration RunConfiguration
-}
-
-func (g *GenericExecutor) GetDefaultConfiguration() RunConfiguration {
-	return g.DefaultConfiguration
 }
 
 type genericRun struct {
@@ -38,43 +32,18 @@ func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 }
 
 func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
-	run := &genericRun{
+	info.Configuration.ApplyDefaults()
+	if err := info.Configuration.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid scenario: %w", err)
+	}
+	return &genericRun{
 		executor: g,
 		info:     info,
 		config:   info.Configuration,
 		logger:   info.Logger,
 		executeTimer: info.MetricsHandler.WithTags(
 			map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram"),
-	}
-
-	// Setup config
-	if run.config.Duration < 0 {
-		return nil, fmt.Errorf("invalid scenario: Duration cannot be negative")
-	}
-	if run.config.Duration == 0 && run.config.Iterations == 0 {
-		run.config.Duration, run.config.Iterations = g.DefaultConfiguration.Duration, g.DefaultConfiguration.Iterations
-	}
-	if run.config.MaxConcurrent == 0 {
-		run.config.MaxConcurrent = g.DefaultConfiguration.MaxConcurrent
-	}
-	if run.config.Timeout == 0 {
-		run.config.Timeout = g.DefaultConfiguration.Timeout
-	}
-	if run.config.MaxIterationsPerSecond == 0 {
-		run.config.MaxIterationsPerSecond = g.DefaultConfiguration.MaxIterationsPerSecond
-	}
-	run.config.ApplyDefaults()
-	if run.config.Iterations > 0 {
-		if run.config.Duration > 0 {
-			return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
-		}
-		if run.config.StartFromIteration > run.config.Iterations {
-			return nil, fmt.Errorf("invalid scenario: StartFromIteration %d is greater than Iterations %d",
-				run.config.StartFromIteration, run.config.Iterations)
-		}
-	}
-
-	return run, nil
+	}, nil
 }
 
 // Run a scenario.

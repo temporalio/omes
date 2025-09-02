@@ -217,6 +217,22 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
+func (r RunConfiguration) Validate() error {
+	if r.Duration < 0 {
+		return fmt.Errorf("Duration cannot be negative")
+	}
+	if r.Iterations > 0 {
+		if r.Duration > 0 {
+			return fmt.Errorf("iterations and duration are mutually exclusive")
+		}
+		if r.StartFromIteration > r.Iterations {
+			return fmt.Errorf("StartFromIteration %d is greater than Iterations %d",
+				r.StartFromIteration, r.Iterations)
+		}
+	}
+	return nil
+}
+
 // Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
