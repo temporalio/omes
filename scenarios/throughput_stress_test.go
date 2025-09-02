@@ -20,8 +20,7 @@ func TestThroughputStress(t *testing.T) {
 
 	env := workers.SetupTestEnvironment(t,
 		workers.WithExecutorTimeout(2*time.Minute),
-		workers.WithNexusEndpoint(taskQueueName),
-	)
+		workers.WithNexusEndpoint(taskQueueName))
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName: scenarioName,
@@ -38,10 +37,24 @@ func TestThroughputStress(t *testing.T) {
 		},
 	}
 
+	t.Log("Start the executor")
+
 	executor := &tpsExecutor{state: &tpsState{}}
 	err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
 	require.NoError(t, err, "Executor should complete successfully")
 
 	state := executor.Snapshot().(tpsState)
 	require.Equal(t, state.CompletedIterations, 1)
+
+	t.Log("Start the executor again, pretending to resume")
+
+	err = executor.LoadState(func(v any) error {
+		s := v.(*tpsState)
+		s.CompletedIterations = state.CompletedIterations
+		return nil
+	})
+	require.NoError(t, err)
+
+	err = env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+	require.NoError(t, err, "Executor should complete successfully again")
 }
