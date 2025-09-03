@@ -73,6 +73,10 @@ public static class App
         name: "--tls-key-path",
         description: "Path to a client key for TLS");
 
+    private static readonly Option<FileInfo?> apiKeyOption = new(
+        name: "--api-key",
+        description: "API key for authentication");
+
     private static readonly Option<string> promAddrOption = new Option<string>(
         name: "--prom-listen-address",
         description: "Prometheus listen address");
@@ -106,6 +110,7 @@ public static class App
         cmd.Add(useTLSOption);
         cmd.Add(clientCertPathOption);
         cmd.Add(clientKeyPathOption);
+        cmd.add(apiKeyOption);
         cmd.Add(promAddrOption);
         cmd.Add(promHandlerPathOption);
         cmd.SetHandler(RunCommandAsync);
@@ -156,7 +161,12 @@ public static class App
                 Runtime = runtime,
                 Namespace = ctx.ParseResult.GetValueForOption(namespaceOption)!,
                 Tls = tls,
-                LoggerFactory = loggerFactory
+                LoggerFactory = loggerFactory,
+                ApiKey = ctx.ParseResult.GetValueForOption(apiKeyOption),
+                RpcMetadata = new Dictionary<string, string>()
+                {
+                    ["temporal-namespace"] = ctx.ParseResult.GetValueForOption(namespaceOption)!,
+                }
             });
 
         // Collect task queues to run workers for
