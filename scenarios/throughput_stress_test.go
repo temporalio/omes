@@ -19,7 +19,7 @@ func TestThroughputStress(t *testing.T) {
 	taskQueueName := loadgen.TaskQueueForRun(scenarioName, runID)
 
 	env := workers.SetupTestEnvironment(t,
-		workers.WithExecutorTimeout(2*time.Minute),
+		workers.WithExecutorTimeout(1*time.Minute),
 		workers.WithNexusEndpoint(taskQueueName))
 
 	scenarioInfo := loadgen.ScenarioInfo{

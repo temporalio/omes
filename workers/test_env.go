@@ -187,7 +187,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), env.executorTimeout)
 	defer cancelTestCtx()
 
-	workerDone := env.startWorker(t, sdk, taskQueueName, scenarioID)
+	workerDone := env.startWorker(testCtx, sdk, taskQueueName, scenarioID)
 
 	// Update scenario info with test environment details
 	scenarioInfo.Logger = env.logger.Named("executor")
@@ -259,7 +259,7 @@ func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Langu
 }
 
 func (env *TestEnvironment) startWorker(
-	t *testing.T,
+	ctx context.Context,
 	sdk cmdoptions.Language,
 	taskQueueName string,
 	scenarioID cmdoptions.ScenarioID,
@@ -283,7 +283,7 @@ func (env *TestEnvironment) startWorker(
 				Namespace: testNamespace,
 			},
 		}
-		workerDone <- runner.Run(t.Context(), baseDir)
+		workerDone <- runner.Run(ctx, baseDir)
 	}()
 
 	return workerDone
