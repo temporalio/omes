@@ -76,7 +76,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 
 	startTime := time.Now()
 	var runErr error
-	doneCh := make(chan error)
+	doneCh := make(chan error, g.config.MaxConcurrent)
 	var currentlyRunning int
 	waitOne := func(contextToWaitOn context.Context) {
 		select {
@@ -125,11 +125,26 @@ func (g *genericRun) Run(ctx context.Context) error {
 		run := g.info.NewRun(i + 1)
 		go func() {
 			var err error
-			startTime := time.Now()
+			iterStart := time.Now()
+
+			defer func() {
+				g.executeTimer.Record(time.Since(iterStart))
+
+				select {
+				case <-ctx.Done():
+				case doneCh <- err:
+					if err == nil && g.config.OnCompletion != nil {
+						g.config.OnCompletion(ctx, run)
+					}
+				}
+			}()
 
 		retryLoop:
 			for {
 				err = g.executor.Execute(ctx, run)
+				if err != nil && g.config.HandleExecuteError != nil {
+					err = g.config.HandleExecuteError(ctx, run, err)
+				}
 				if err == nil {
 					break
 				}
@@ -146,18 +161,9 @@ func (g *genericRun) Run(ctx context.Context) error {
 
 				select {
 				case <-time.After(backoff):
+					// wait for backoff, then try again
 				case <-ctx.Done():
-					break retryLoop // just fall through to next select
-				}
-			}
-
-			select {
-			case <-ctx.Done():
-			case doneCh <- err:
-				g.executeTimer.Record(time.Since(startTime))
-
-				if err == nil && g.config.OnCompletion != nil {
-					g.config.OnCompletion(ctx, run)
+					break retryLoop
 				}
 			}
 		}()
@@ -166,7 +172,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
-	g.logger.Info("Run cooldown: stopped starting new iterations; waiting for running ones to complete")
+	g.logger.Infof("Run cooldown: stopped starting new iterations and waiting for %d iterations to complete",
+		currentlyRunning)
 	for runErr == nil && currentlyRunning > 0 {
 		waitOne(ctx)
 		if ctx.Err() != nil {

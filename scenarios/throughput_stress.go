@@ -14,6 +14,7 @@ import (
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -191,13 +192,27 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Listen to iteration completion events to update the state.
 	info.Configuration.OnCompletion = func(ctx context.Context, run *loadgen.Run) {
 		t.updateStateOnIterationCompletion()
+		info.Logger.Debugf("Completed iteration %d", run.Iteration)
+	}
+
+	// When resuming, it can happen that the workflow for the current iteration already exists since the snapshot
+	// was not up-to-date. In that case, we just skip this iteration and move on.
+	info.Configuration.HandleExecuteError = func(ctx context.Context, run *loadgen.Run, err error) error {
+		if isResuming {
+			var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(err, &alreadyStartedErr) {
+				info.Logger.Warnf("after resume, workflow for iteration %d already exists", run.Iteration)
+				return nil
+			}
+		}
+		return err
 	}
 
 	// Start the scenario run.
 	//
-	// NOTE: When resuming, it can happen that there is no more time left to run more iterations. In that case,
-	// we skip the executor run and go straight to the post-scenario verification.
-	if isResuming && info.Configuration.Duration <= 0 {
+	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
+	// In that case, we skip the executor run and go straight to the post-scenario verification.
+	if isResuming && info.Configuration.Duration <= 0 && info.Configuration.Iterations == 0 {
 		info.Logger.Info("Skipping executor run: out of time")
 	} else {
 		ksExec := &loadgen.KitchenSinkExecutor{
@@ -316,6 +331,7 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
+	fmt.Println("Updating state on iteration completion", t.state.CompletedIterations)
 }
 
 func (t *tpsExecutor) createActions(iteration int) []*ActionSet {
