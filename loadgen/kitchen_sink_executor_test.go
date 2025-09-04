@@ -183,10 +183,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -219,10 +216,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -249,10 +243,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
 		},
@@ -281,10 +272,7 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -315,10 +303,7 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -350,10 +335,7 @@ func TestKitchenSink(t *testing.T) {
 				...
 				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -384,10 +366,7 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -419,10 +398,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
@@ -446,9 +422,9 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
+				cmdoptions.LangTypeScript: "concurrent client actions are not supported",
+				cmdoptions.LangDotNet:     "concurrent client actions are not supported",
+				cmdoptions.LangPython:     "concurrent client actions are not supported",
 				cmdoptions.LangJava:       "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
@@ -504,10 +480,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "client actions activity is not supported",
-				cmdoptions.LangPython:     "client actions activity is not supported",
-				cmdoptions.LangTypeScript: "client actions activity is not supported",
-				cmdoptions.LangDotNet:     "client actions activity is not supported",
+				cmdoptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
@@ -695,7 +668,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
-						NewTimerAction(2000), // timer to keep workflow open long enough for client action
+						NewTimerAction(5000), // timer to keep workflow open long enough for client action
 					),
 				},
 			},
