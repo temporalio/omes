@@ -87,8 +87,7 @@ public class ClientActionsExecutor
             throw new ArgumentException("DoSignal must have a recognizable variant");
         }
 
-        var args = signalArgs == null ? Array.Empty<object>() : (signalArgs is object[] array ? array : new[] { signalArgs });
-
+        var args = NormalizeArgsToArray(signalArgs);
         if (signal.WithStart)
         {
             var options = new WorkflowOptions(id: WorkflowId!, taskQueue: _taskQueue);
@@ -96,7 +95,7 @@ public class ClientActionsExecutor
 
             var handle = await _client.StartWorkflowAsync(
                 _workflowType,
-                _workflowInput == null ? Array.Empty<object>() : new[] { _workflowInput },
+                NormalizeArgsToArray(_workflowInput),
                 options);
 
             WorkflowId = handle.Id;
@@ -130,13 +129,12 @@ public class ClientActionsExecutor
 
         try
         {
-            var args = updateArgs == null ? Array.Empty<object>() : (updateArgs is object[] array ? array : new[] { updateArgs });
-
+            var args = NormalizeArgsToArray(updateArgs);
             if (update.WithStart)
             {
                 var startOperation = WithStartWorkflowOperation.Create(
                     _workflowType,
-                    _workflowInput == null ? Array.Empty<object>() : new[] { _workflowInput },
+                    NormalizeArgsToArray(_workflowInput),
                     new(id: WorkflowId!, taskQueue: _taskQueue)
                     {
                         IdConflictPolicy = WorkflowIdConflictPolicy.UseExisting
@@ -193,5 +191,15 @@ public class ClientActionsExecutor
                 throw;
             }
         }
+    }
+
+    private static object[] NormalizeArgsToArray(object? args)
+    {
+        return args switch
+        {
+            null => Array.Empty<object>(),
+            object[] array => array,
+            _ => new[] { args }
+        };
     }
 }
