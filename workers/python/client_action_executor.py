@@ -1,6 +1,8 @@
 from typing import Any
 
-from temporalio.client import Client
+from temporalio.client import Client, WithStartWorkflowOperation
+from temporalio.common import WorkflowIDConflictPolicy
+from temporalio.exceptions import ApplicationError
 
 from protos.kitchen_sink_pb2 import (
     ClientAction,
@@ -26,8 +28,6 @@ class ClientActionExecutor:
 
     async def _execute_client_action_set(self, action_set: ClientActionSet):
         if action_set.concurrent:
-            from temporalio.exceptions import ApplicationError
-
             raise ApplicationError(
                 "concurrent client actions are not supported", non_retryable=True
             )
@@ -82,9 +82,6 @@ class ClientActionExecutor:
 
         try:
             if update.with_start:
-                from temporalio.client import WithStartWorkflowOperation
-                from temporalio.common import WorkflowIDConflictPolicy
-
                 start_op: WithStartWorkflowOperation = WithStartWorkflowOperation(
                     workflow=self.workflow_type,
                     args=[self.workflow_input],
