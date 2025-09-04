@@ -203,6 +203,8 @@ type RunConfiguration struct {
 	DoNotRegisterSearchAttributes bool
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
+	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
+	HandleExecuteError func(context.Context, *Run, error) error
 }
 
 func (r *RunConfiguration) ApplyDefaults() {

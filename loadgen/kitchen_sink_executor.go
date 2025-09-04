@@ -16,8 +16,6 @@ type KitchenSinkExecutor struct {
 	// Called for each iteration. TestInput is copied entirely into KitchenSinkWorkflowOptions on
 	// each iteration.
 	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
-
-	DefaultConfiguration RunConfiguration
 }
 
 func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
@@ -45,8 +43,4 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		},
 	}
 	return ge.Run(ctx, info)
-}
-
-func (k KitchenSinkExecutor) GetDefaultConfiguration() RunConfiguration {
-	return k.DefaultConfiguration
 }

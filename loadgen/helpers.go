@@ -20,8 +20,6 @@ func InitSearchAttribute(
 	info ScenarioInfo,
 	attributeName string,
 ) error {
-	info.Logger.Infof("Initialising Search Attribute %q", attributeName)
-
 	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
 		&operatorservice.AddSearchAttributesRequest{
 			Namespace: info.Namespace,
@@ -32,9 +30,9 @@ func InitSearchAttribute(
 	var deniedErr *serviceerror.PermissionDenied
 	var alreadyErr *serviceerror.AlreadyExists
 	if errors.As(err, &alreadyErr) {
-		info.Logger.Infof("Search Attribute %q already exists", attributeName)
+		info.Logger.Infof("Search Attribute %q not added: already exists", attributeName)
 	} else if err != nil {
-		info.Logger.Warnf("Failed to add Search Attribute %q: %v", attributeName, err)
+		info.Logger.Warnf("Search Attribute %q not added: %v", attributeName, err)
 		if !errors.As(err, &deniedErr) {
 			return err
 		}
@@ -45,8 +43,6 @@ func InitSearchAttribute(
 	return nil
 }
 
-// MinVisibilityCountEventually checks that the given visibility query returns at least the expected
-// number of workflows. It repeatedly queries until it either finds the expected count or times out.
 func MinVisibilityCountEventually(
 	ctx context.Context,
 	info ScenarioInfo,
@@ -64,24 +60,44 @@ func MinVisibilityCountEventually(
 	defer printTicker.Stop()
 
 	var lastVisibilityCount int64
-	for {
+	done := false
+
+	check := func() error {
+		visibilityCount, err := info.Client.CountWorkflow(timeoutCtx, request)
+		if err != nil {
+			return fmt.Errorf("failed to count workflows in visibility: %w", err)
+		}
+		lastVisibilityCount = visibilityCount.Count
+		if lastVisibilityCount >= int64(minCount) {
+			done = true
+		}
+		return nil
+	}
+
+	// Initial check before entering the loop.
+	if err := check(); err != nil {
+		return err
+	}
+
+	// Loop until we reach the desired count or timeout.
+	for !done {
 		select {
 		case <-timeoutCtx.Done():
-			return fmt.Errorf("expected at least %d workflows in visibility, got %d after waiting %v",
-				minCount, lastVisibilityCount, waitAtMost)
+			return fmt.Errorf(
+				"expected at least %d workflows in visibility, got %d after waiting %v",
+				minCount, lastVisibilityCount, waitAtMost,
+			)
 
 		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n", lastVisibilityCount, minCount)
+			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
+				lastVisibilityCount, minCount)
 
 		case <-countTicker.C:
-			visibilityCount, err := info.Client.CountWorkflow(ctx, request)
-			if err != nil {
-				return fmt.Errorf("failed to count workflows in visibility: %w", err)
-			}
-			lastVisibilityCount = visibilityCount.Count
-			if lastVisibilityCount >= int64(minCount) {
-				return nil
+			if err := check(); err != nil {
+				return err
 			}
 		}
 	}
+
+	return nil
 }
