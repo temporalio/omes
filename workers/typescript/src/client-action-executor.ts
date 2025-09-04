@@ -37,17 +37,6 @@ export class ClientActionExecutor {
     for (const action of actionSet.actions || []) {
       await this.executeClientAction(action);
     }
-
-    if (actionSet.waitForCurrentRunToFinishAtEnd) {
-      if (this.workflowId && this.runId) {
-        const handle = this.client.workflow.getHandle(this.workflowId, this.runId);
-        try {
-          await handle.result();
-        } catch (error) {
-          // Ignore continue-as-new errors
-        }
-      }
-    }
   }
 
   private async executeClientAction(action: IClientAction): Promise<void> {
@@ -150,7 +139,7 @@ export class ClientActionExecutor {
       } else {
         throw new Error('DoQuery must have a recognizable variant');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (!query.failureExpected) {
         throw error;
       }
