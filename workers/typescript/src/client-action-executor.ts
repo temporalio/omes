@@ -148,7 +148,9 @@ export class ClientActionExecutor {
     }
   }
 
-  private async executeSelfDescribeAction(selfDescribe: temporal.omes.kitchen_sink.IDoSelfDescribe): Promise<void> {
+  private async executeSelfDescribeAction(
+    selfDescribe: temporal.omes.kitchen_sink.IDoSelfDescribe
+  ): Promise<void> {
     if (!selfDescribe.doSelfDescribe) {
       throw new Error('do_self_describe must be true');
     }

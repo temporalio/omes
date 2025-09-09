@@ -124,17 +124,19 @@ class ClientActionExecutor:
     async def _execute_self_describe_action(self, self_describe):
         if not self_describe.do_self_describe:
             raise ValueError("do_self_describe must be true")
-        
+
         # Get the current workflow execution details
         try:
             resp = await self.client.workflow_service.describe_workflow_execution(
                 namespace="default",  # TODO: Make this configurable
                 execution={"workflow_id": self.workflow_id, "run_id": ""},
             )
-            
+
             # Log the workflow execution details
             print("Workflow Execution Details:")
-            print(f"  Workflow ID: {resp.workflow_execution_info.execution.workflow_id}")
+            print(
+                f"  Workflow ID: {resp.workflow_execution_info.execution.workflow_id}"
+            )
             print(f"  Run ID: {resp.workflow_execution_info.execution.run_id}")
             print(f"  Type: {resp.workflow_execution_info.type.name}")
             print(f"  Status: {resp.workflow_execution_info.status}")
@@ -143,6 +145,8 @@ class ClientActionExecutor:
                 print(f"  Close Time: {resp.workflow_execution_info.close_time}")
             print(f"  History Length: {resp.workflow_execution_info.history_length}")
             print(f"  Task Queue: {resp.workflow_execution_info.task_queue}")
-            
+
         except Exception as e:
-            raise ApplicationError(f"Failed to describe workflow execution: {e}", non_retryable=True)
+            raise ApplicationError(
+                f"Failed to describe workflow execution: {e}", non_retryable=True
+            )
