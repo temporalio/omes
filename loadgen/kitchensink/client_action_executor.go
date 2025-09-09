@@ -121,6 +121,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			err = nil
 		}
 		return err
+	} else if selfDescribe := action.GetDoSelfDescribe(); selfDescribe != nil {
+		return e.executeSelfDescribeAction(ctx, selfDescribe)
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
@@ -147,6 +149,33 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 			ctx, e.WorkflowOptions.ID, signalName, signalArgs, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
 	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArgs)
+}
+
+func (e *ClientActionsExecutor) executeSelfDescribeAction(ctx context.Context, selfDescribe *DoSelfDescribe) error {
+	if !selfDescribe.DoSelfDescribe {
+		return fmt.Errorf("do_self_describe must be true")
+	}
+
+	// Get the current workflow execution details
+	resp, err := e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+	if err != nil {
+		return fmt.Errorf("failed to describe workflow execution: %w", err)
+	}
+
+	// Log the workflow execution details
+	fmt.Printf("Workflow Execution Details:\n")
+	fmt.Printf("  Workflow ID: %s\n", resp.WorkflowExecutionInfo.Execution.WorkflowId)
+	fmt.Printf("  Run ID: %s\n", resp.WorkflowExecutionInfo.Execution.RunId)
+	fmt.Printf("  Type: %s\n", resp.WorkflowExecutionInfo.Type.Name)
+	fmt.Printf("  Status: %s\n", resp.WorkflowExecutionInfo.Status)
+	fmt.Printf("  Start Time: %v\n", resp.WorkflowExecutionInfo.StartTime)
+	if resp.WorkflowExecutionInfo.CloseTime != nil {
+		fmt.Printf("  Close Time: %v\n", resp.WorkflowExecutionInfo.CloseTime)
+	}
+	fmt.Printf("  History Length: %d\n", resp.WorkflowExecutionInfo.HistoryLength)
+	fmt.Printf("  Task Queue: %s\n", resp.WorkflowExecutionInfo.TaskQueue)
+
+	return nil
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {

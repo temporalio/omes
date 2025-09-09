@@ -57,6 +57,10 @@ public class ClientActionsExecutor
         {
             await ExecuteQueryAction(action.DoQuery);
         }
+        else if (action.DoSelfDescribe != null)
+        {
+            await ExecuteSelfDescribeAction(action.DoSelfDescribe);
+        }
         else if (action.NestedActions != null)
         {
             await ExecuteClientActionSet(action.NestedActions);
@@ -190,6 +194,47 @@ public class ClientActionsExecutor
             {
                 throw;
             }
+        }
+    }
+
+    private async Task ExecuteSelfDescribeAction(DoSelfDescribe selfDescribe)
+    {
+        if (!selfDescribe.DoSelfDescribe_)
+        {
+            throw new ArgumentException("do_self_describe must be true");
+        }
+
+        try
+        {
+            // Get the current workflow execution details
+            var resp = await _client.WorkflowService.DescribeWorkflowExecutionAsync(
+                new Temporalio.Api.WorkflowService.V1.DescribeWorkflowExecutionRequest
+                {
+                    Namespace = "default", // TODO: Make this configurable
+                    Execution = new Temporalio.Api.Common.V1.WorkflowExecution
+                    {
+                        WorkflowId = WorkflowId!,
+                        RunId = _runId, // Empty string means latest run
+                    }
+                });
+
+            // Log the workflow execution details
+            Console.WriteLine("Workflow Execution Details:");
+            Console.WriteLine($"  Workflow ID: {resp.WorkflowExecutionInfo?.Execution?.WorkflowId}");
+            Console.WriteLine($"  Run ID: {resp.WorkflowExecutionInfo?.Execution?.RunId}");
+            Console.WriteLine($"  Type: {resp.WorkflowExecutionInfo?.Type?.Name}");
+            Console.WriteLine($"  Status: {resp.WorkflowExecutionInfo?.Status}");
+            Console.WriteLine($"  Start Time: {resp.WorkflowExecutionInfo?.StartTime}");
+            if (resp.WorkflowExecutionInfo?.CloseTime != null)
+            {
+                Console.WriteLine($"  Close Time: {resp.WorkflowExecutionInfo.CloseTime}");
+            }
+            Console.WriteLine($"  History Length: {resp.WorkflowExecutionInfo?.HistoryLength}");
+            Console.WriteLine($"  Task Queue: {resp.WorkflowExecutionInfo?.TaskQueue}");
+        }
+        catch (Exception ex)
+        {
+            throw new ApplicationFailureException($"Failed to describe workflow execution: {ex.Message}", "DescribeWorkflowExecutionFailed", nonRetryable: true);
         }
     }
 

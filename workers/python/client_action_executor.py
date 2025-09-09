@@ -42,6 +42,8 @@ class ClientActionExecutor:
             await self._execute_update_action(action.do_update)
         elif action.HasField("do_query"):
             await self._execute_query_action(action.do_query)
+        elif action.HasField("do_self_describe"):
+            await self._execute_self_describe_action(action.do_self_describe)
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
         else:
@@ -118,3 +120,29 @@ class ClientActionExecutor:
         except Exception:
             if not query.failure_expected:
                 raise
+
+    async def _execute_self_describe_action(self, self_describe):
+        if not self_describe.do_self_describe:
+            raise ValueError("do_self_describe must be true")
+        
+        # Get the current workflow execution details
+        try:
+            resp = await self.client.workflow_service.describe_workflow_execution(
+                namespace="default",  # TODO: Make this configurable
+                execution={"workflow_id": self.workflow_id, "run_id": ""},
+            )
+            
+            # Log the workflow execution details
+            print("Workflow Execution Details:")
+            print(f"  Workflow ID: {resp.workflow_execution_info.execution.workflow_id}")
+            print(f"  Run ID: {resp.workflow_execution_info.execution.run_id}")
+            print(f"  Type: {resp.workflow_execution_info.type.name}")
+            print(f"  Status: {resp.workflow_execution_info.status}")
+            print(f"  Start Time: {resp.workflow_execution_info.start_time}")
+            if resp.workflow_execution_info.close_time:
+                print(f"  Close Time: {resp.workflow_execution_info.close_time}")
+            print(f"  History Length: {resp.workflow_execution_info.history_length}")
+            print(f"  Task Queue: {resp.workflow_execution_info.task_queue}")
+            
+        except Exception as e:
+            raise ApplicationError(f"Failed to describe workflow execution: {e}", non_retryable=True)

@@ -50,7 +50,8 @@ message ClientAction {
     DoSignal do_signal = 1;
     DoQuery do_query = 2;
     DoUpdate do_update = 3;
-    ClientActionSet nested_actions = 4;
+    DoSelfDescribe do_self_describe = 4;
+    ClientActionSet nested_actions = 5;
   }
 }
 
@@ -118,6 +119,11 @@ message DoActionsUpdate {
 message HandlerInvocation {
   string name = 1;
   repeated temporal.api.common.v1.Payload args = 2;
+}
+
+message DoSelfDescribe {
+  // temporal.api.common.v1.WorkflowExecution workflow_execution = 1;
+  bool do_self_describe = 1;
 }
 
 // Each workflow must maintain an instance of this state

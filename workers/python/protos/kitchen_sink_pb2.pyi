@@ -88,16 +88,18 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")
+    __slots__ = ("do_signal", "do_query", "do_update", "do_self_describe", "nested_actions")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
+    DO_SELF_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
+    do_self_describe: DoSelfDescribe
     nested_actions: ClientActionSet
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., do_self_describe: _Optional[_Union[DoSelfDescribe, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")
@@ -153,6 +155,12 @@ class HandlerInvocation(_message.Message):
     name: str
     args: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
     def __init__(self, name: _Optional[str] = ..., args: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ...) -> None: ...
+
+class DoSelfDescribe(_message.Message):
+    __slots__ = ("do_self_describe",)
+    DO_SELF_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
+    do_self_describe: bool
+    def __init__(self, do_self_describe: bool = ...) -> None: ...
 
 class WorkflowState(_message.Message):
     __slots__ = ("kvs",)

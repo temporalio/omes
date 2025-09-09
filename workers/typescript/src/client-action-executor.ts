@@ -46,6 +46,8 @@ export class ClientActionExecutor {
       await this.executeUpdateAction(action.doUpdate);
     } else if (action.doQuery) {
       await this.executeQueryAction(action.doQuery);
+    } else if (action.doSelfDescribe) {
+      await this.executeSelfDescribeAction(action.doSelfDescribe);
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);
     } else {
@@ -143,6 +145,38 @@ export class ClientActionExecutor {
       if (!query.failureExpected) {
         throw error;
       }
+    }
+  }
+
+  private async executeSelfDescribeAction(selfDescribe: temporal.omes.kitchen_sink.IDoSelfDescribe): Promise<void> {
+    if (!selfDescribe.doSelfDescribe) {
+      throw new Error('do_self_describe must be true');
+    }
+
+    try {
+      // Get the current workflow execution details
+      const resp = await this.client.workflowService.describeWorkflowExecution({
+        namespace: 'default', // TODO: Make this configurable
+        execution: {
+          workflowId: this.workflowId,
+          runId: '', // Empty string means latest run
+        },
+      });
+
+      // Log the workflow execution details
+      console.log('Workflow Execution Details:');
+      console.log(`  Workflow ID: ${resp.workflowExecutionInfo?.execution?.workflowId}`);
+      console.log(`  Run ID: ${resp.workflowExecutionInfo?.execution?.runId}`);
+      console.log(`  Type: ${resp.workflowExecutionInfo?.type?.name}`);
+      console.log(`  Status: ${resp.workflowExecutionInfo?.status}`);
+      console.log(`  Start Time: ${resp.workflowExecutionInfo?.startTime}`);
+      if (resp.workflowExecutionInfo?.closeTime) {
+        console.log(`  Close Time: ${resp.workflowExecutionInfo.closeTime}`);
+      }
+      console.log(`  History Length: ${resp.workflowExecutionInfo?.historyLength}`);
+      console.log(`  Task Queue: ${resp.workflowExecutionInfo?.taskQueue}`);
+    } catch (error) {
+      throw new Error(`Failed to describe workflow execution: ${error}`);
     }
   }
 }
