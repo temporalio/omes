@@ -29,7 +29,6 @@ func runWorkerCmd() *cobra.Command {
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("scenario")
 	cmd.MarkFlagRequired("language")
 	cmd.MarkFlagRequired("run-id")
 	return cmd
