@@ -59,7 +59,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 func (r *workerRunner) preRun() {
 	r.builder.preRun()
 	r.Runner.Builder = r.builder.Builder
-	r.TaskQueueName = loadgen.TaskQueueForRun(r.ScenarioID.Scenario, r.ScenarioID.RunID)
+	r.TaskQueueName = loadgen.TaskQueueForRun(r.ScenarioID.RunID)
 }
 
 func (r *workerRunner) run(ctx context.Context) error {

@@ -291,19 +291,19 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 	return nil
 }
 
-// TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
-func TaskQueueForRun(scenarioName, runID string) string {
-	return fmt.Sprintf("%s:%s", scenarioName, runID)
+// TaskQueueForRun returns the task queue name for the given run ID.
+func TaskQueueForRun(runID string) string {
+	return "omes-" + runID
 }
 
 func (r *Run) TaskQueue() string {
-	return TaskQueueForRun(r.ScenarioName, r.RunID)
+	return TaskQueueForRun(r.RunID)
 }
 
 // DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
+		TaskQueue:                                TaskQueueForRun(r.RunID),
 		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
