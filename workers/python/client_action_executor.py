@@ -1,5 +1,10 @@
 from typing import Any
 
+from temporalio.api.common.v1 import WorkflowExecution
+from temporalio.api.workflowservice.v1 import (
+    DescribeWorkflowExecutionRequest,
+    DescribeWorkflowExecutionResponse,
+)
 from temporalio.client import Client, WithStartWorkflowOperation
 from temporalio.common import WorkflowIDConflictPolicy
 from temporalio.exceptions import ApplicationError
@@ -122,14 +127,25 @@ class ClientActionExecutor:
                 raise
 
     async def _execute_self_describe_action(self, self_describe):
-        if not self_describe.do_self_describe:
-            raise ValueError("do_self_describe must be true")
-
         # Get the current workflow execution details
         try:
-            resp = await self.client.workflow_service.describe_workflow_execution(
-                namespace="default",  # TODO: Make this configurable
-                execution={"workflow_id": self.workflow_id, "run_id": ""},
+            # Use current workflow ID if not specified
+            workflow_id = self_describe.workflow_id
+            if not workflow_id:
+                workflow_id = self.workflow_id
+                
+            # Create the request object
+            request = DescribeWorkflowExecutionRequest(
+                namespace=self_describe.namespace,
+                execution=WorkflowExecution(
+                    workflow_id=workflow_id,
+                    run_id=self_describe.run_id,
+                ),
+            )
+
+            # Call the service method
+            resp: DescribeWorkflowExecutionResponse = (
+                await self.client.workflow_service.describe_workflow_execution(request)
             )
 
             # Log the workflow execution details

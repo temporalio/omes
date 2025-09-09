@@ -199,22 +199,20 @@ public class ClientActionsExecutor
 
     private async Task ExecuteSelfDescribeAction(DoSelfDescribe selfDescribe)
     {
-        if (!selfDescribe.DoSelfDescribe_)
-        {
-            throw new ArgumentException("do_self_describe must be true");
-        }
-
         try
         {
+            // Use current workflow ID if not specified
+            var workflowId = string.IsNullOrEmpty(selfDescribe.WorkflowId) ? WorkflowId : selfDescribe.WorkflowId;
+            
             // Get the current workflow execution details
             var resp = await _client.WorkflowService.DescribeWorkflowExecutionAsync(
                 new Temporalio.Api.WorkflowService.V1.DescribeWorkflowExecutionRequest
                 {
-                    Namespace = "default", // TODO: Make this configurable
+                    Namespace = selfDescribe.Namespace,
                     Execution = new Temporalio.Api.Common.V1.WorkflowExecution
                     {
-                        WorkflowId = WorkflowId!,
-                        RunId = _runId, // Empty string means latest run
+                        WorkflowId = workflowId,
+                        RunId = selfDescribe.RunId,
                     }
                 });
 

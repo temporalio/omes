@@ -152,12 +152,14 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 }
 
 func (e *ClientActionsExecutor) executeSelfDescribeAction(ctx context.Context, selfDescribe *DoSelfDescribe) error {
-	if !selfDescribe.DoSelfDescribe {
-		return fmt.Errorf("do_self_describe must be true")
+	// Use current workflow ID if not specified
+	workflowId := selfDescribe.WorkflowId
+	if workflowId == "" {
+		workflowId = e.WorkflowOptions.ID
 	}
 
 	// Get the current workflow execution details
-	resp, err := e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+	resp, err := e.Client.DescribeWorkflowExecution(ctx, workflowId, selfDescribe.RunId)
 	if err != nil {
 		return fmt.Errorf("failed to describe workflow execution: %w", err)
 	}

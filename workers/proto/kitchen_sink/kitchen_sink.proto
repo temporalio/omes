@@ -122,8 +122,9 @@ message HandlerInvocation {
 }
 
 message DoSelfDescribe {
-  // temporal.api.common.v1.WorkflowExecution workflow_execution = 1;
-  bool do_self_describe = 1;
+  string namespace = 1;
+  string workflow_id = 2;
+  string run_id = 3;
 }
 
 // Each workflow must maintain an instance of this state

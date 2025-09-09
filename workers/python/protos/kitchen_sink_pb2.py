@@ -4,18 +4,15 @@
 # source: kitchen_sink.proto
 # Protobuf Python Version: 5.29.3
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
+
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC,
-    5,
-    29,
-    3,
-    '',
-    'kitchen_sink.proto'
+    _runtime_version.Domain.PUBLIC, 5, 29, 3, "", "kitchen_sink.proto"
 )
 # @@protoc_insertion_point(imports)
 
@@ -24,139 +21,164 @@ _sym_db = _symbol_database.Default()
 
 from google.protobuf import duration_pb2 as google_dot_protobuf_dot_duration__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from temporalio.api.common.v1 import message_pb2 as temporal_dot_api_dot_common_dot_v1_dot_message__pb2
-from temporalio.api.failure.v1 import message_pb2 as temporal_dot_api_dot_failure_dot_v1_dot_message__pb2
-from temporalio.api.enums.v1 import workflow_pb2 as temporal_dot_api_dot_enums_dot_v1_dot_workflow__pb2
+from temporalio.api.common.v1 import (
+    message_pb2 as temporal_dot_api_dot_common_dot_v1_dot_message__pb2,
+)
+from temporalio.api.enums.v1 import (
+    workflow_pb2 as temporal_dot_api_dot_enums_dot_v1_dot_workflow__pb2,
+)
+from temporalio.api.failure.v1 import (
+    message_pb2 as temporal_dot_api_dot_failure_dot_v1_dot_message__pb2,
+)
 
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12kitchen_sink.proto\x12\x1atemporal.omes.kitchen_sink\x1a\x1egoogle/protobuf/duration.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a$temporal/api/common/v1/message.proto\x1a%temporal/api/failure/v1/message.proto\x1a$temporal/api/enums/v1/workflow.proto\"\xe1\x01\n\tTestInput\x12\x41\n\x0eworkflow_input\x18\x01 \x01(\x0b\x32).temporal.omes.kitchen_sink.WorkflowInput\x12\x43\n\x0f\x63lient_sequence\x18\x02 \x01(\x0b\x32*.temporal.omes.kitchen_sink.ClientSequence\x12L\n\x11with_start_action\x18\x03 \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.WithStartClientAction\"R\n\x0e\x43lientSequence\x12@\n\x0b\x61\x63tion_sets\x18\x01 \x03(\x0b\x32+.temporal.omes.kitchen_sink.ClientActionSet\"\xbf\x01\n\x0f\x43lientActionSet\x12\x39\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32(.temporal.omes.kitchen_sink.ClientAction\x12\x12\n\nconcurrent\x18\x02 \x01(\x08\x12.\n\x0bwait_at_end\x18\x03 \x01(\x0b\x32\x19.google.protobuf.Duration\x12-\n%wait_for_current_run_to_finish_at_end\x18\x04 \x01(\x08\"\x98\x01\n\x15WithStartClientAction\x12\x39\n\tdo_signal\x18\x01 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoSignalH\x00\x12\x39\n\tdo_update\x18\x02 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoUpdateH\x00\x42\t\n\x07variant\"\xd7\x02\n\x0c\x43lientAction\x12\x39\n\tdo_signal\x18\x01 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoSignalH\x00\x12\x37\n\x08\x64o_query\x18\x02 \x01(\x0b\x32#.temporal.omes.kitchen_sink.DoQueryH\x00\x12\x39\n\tdo_update\x18\x03 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoUpdateH\x00\x12\x46\n\x10\x64o_self_describe\x18\x04 \x01(\x0b\x32*.temporal.omes.kitchen_sink.DoSelfDescribeH\x00\x12\x45\n\x0enested_actions\x18\x05 \x01(\x0b\x32+.temporal.omes.kitchen_sink.ClientActionSetH\x00\x42\t\n\x07variant\"\xde\x02\n\x08\x44oSignal\x12Q\n\x11\x64o_signal_actions\x18\x01 \x01(\x0b\x32\x34.temporal.omes.kitchen_sink.DoSignal.DoSignalActionsH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x12\n\nwith_start\x18\x03 \x01(\x08\x1a\x9e\x01\n\x0f\x44oSignalActions\x12;\n\ndo_actions\x18\x01 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12\x43\n\x12\x64o_actions_in_main\x18\x02 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x42\t\n\x07variantB\t\n\x07variant\"\xa9\x01\n\x07\x44oQuery\x12\x38\n\x0creport_state\x18\x01 \x01(\x0b\x32 .temporal.api.common.v1.PayloadsH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x18\n\x10\x66\x61ilure_expected\x18\n \x01(\x08\x42\t\n\x07variant\"\xc7\x01\n\x08\x44oUpdate\x12\x41\n\ndo_actions\x18\x01 \x01(\x0b\x32+.temporal.omes.kitchen_sink.DoActionsUpdateH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x12\n\nwith_start\x18\x03 \x01(\x08\x12\x18\n\x10\x66\x61ilure_expected\x18\n \x01(\x08\x42\t\n\x07variant\"\x86\x01\n\x0f\x44oActionsUpdate\x12;\n\ndo_actions\x18\x01 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12+\n\treject_me\x18\x02 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\t\n\x07variant\"P\n\x11HandlerInvocation\x12\x0c\n\x04name\x18\x01 \x01(\t\x12-\n\x04\x61rgs\x18\x02 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\"*\n\x0e\x44oSelfDescribe\x12\x18\n\x10\x64o_self_describe\x18\x01 \x01(\x08\"|\n\rWorkflowState\x12?\n\x03kvs\x18\x01 \x03(\x0b\x32\x32.temporal.omes.kitchen_sink.WorkflowState.KvsEntry\x1a*\n\x08KvsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"O\n\rWorkflowInput\x12>\n\x0finitial_actions\x18\x01 \x03(\x0b\x32%.temporal.omes.kitchen_sink.ActionSet\"T\n\tActionSet\x12\x33\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32\".temporal.omes.kitchen_sink.Action\x12\x12\n\nconcurrent\x18\x02 \x01(\x08\"\xfa\x08\n\x06\x41\x63tion\x12\x38\n\x05timer\x18\x01 \x01(\x0b\x32\'.temporal.omes.kitchen_sink.TimerActionH\x00\x12J\n\rexec_activity\x18\x02 \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.ExecuteActivityActionH\x00\x12U\n\x13\x65xec_child_workflow\x18\x03 \x01(\x0b\x32\x36.temporal.omes.kitchen_sink.ExecuteChildWorkflowActionH\x00\x12N\n\x14\x61wait_workflow_state\x18\x04 \x01(\x0b\x32..temporal.omes.kitchen_sink.AwaitWorkflowStateH\x00\x12\x43\n\x0bsend_signal\x18\x05 \x01(\x0b\x32,.temporal.omes.kitchen_sink.SendSignalActionH\x00\x12K\n\x0f\x63\x61ncel_workflow\x18\x06 \x01(\x0b\x32\x30.temporal.omes.kitchen_sink.CancelWorkflowActionH\x00\x12L\n\x10set_patch_marker\x18\x07 \x01(\x0b\x32\x30.temporal.omes.kitchen_sink.SetPatchMarkerActionH\x00\x12\\\n\x18upsert_search_attributes\x18\x08 \x01(\x0b\x32\x38.temporal.omes.kitchen_sink.UpsertSearchAttributesActionH\x00\x12\x43\n\x0bupsert_memo\x18\t \x01(\x0b\x32,.temporal.omes.kitchen_sink.UpsertMemoActionH\x00\x12G\n\x12set_workflow_state\x18\n \x01(\x0b\x32).temporal.omes.kitchen_sink.WorkflowStateH\x00\x12G\n\rreturn_result\x18\x0b \x01(\x0b\x32..temporal.omes.kitchen_sink.ReturnResultActionH\x00\x12\x45\n\x0creturn_error\x18\x0c \x01(\x0b\x32-.temporal.omes.kitchen_sink.ReturnErrorActionH\x00\x12J\n\x0f\x63ontinue_as_new\x18\r \x01(\x0b\x32/.temporal.omes.kitchen_sink.ContinueAsNewActionH\x00\x12\x42\n\x11nested_action_set\x18\x0e \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12L\n\x0fnexus_operation\x18\x0f \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.ExecuteNexusOperationH\x00\x42\t\n\x07variant\"\xa3\x02\n\x0f\x41waitableChoice\x12-\n\x0bwait_finish\x18\x01 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12)\n\x07\x61\x62\x61ndon\x18\x02 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x37\n\x15\x63\x61ncel_before_started\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x36\n\x14\x63\x61ncel_after_started\x18\x04 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x38\n\x16\x63\x61ncel_after_completed\x18\x05 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\x0b\n\tcondition\"j\n\x0bTimerAction\x12\x14\n\x0cmilliseconds\x18\x01 \x01(\x04\x12\x45\n\x10\x61waitable_choice\x18\x02 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\"\xea\x0c\n\x15\x45xecuteActivityAction\x12T\n\x07generic\x18\x01 \x01(\x0b\x32\x41.temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivityH\x00\x12*\n\x05\x64\x65lay\x18\x02 \x01(\x0b\x32\x19.google.protobuf.DurationH\x00\x12&\n\x04noop\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12X\n\tresources\x18\x0e \x01(\x0b\x32\x43.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivityH\x00\x12T\n\x07payload\x18\x12 \x01(\x0b\x32\x41.temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivityH\x00\x12R\n\x06\x63lient\x18\x13 \x01(\x0b\x32@.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivityH\x00\x12\x12\n\ntask_queue\x18\x04 \x01(\t\x12O\n\x07headers\x18\x05 \x03(\x0b\x32>.temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry\x12<\n\x19schedule_to_close_timeout\x18\x06 \x01(\x0b\x32\x19.google.protobuf.Duration\x12<\n\x19schedule_to_start_timeout\x18\x07 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x39\n\x16start_to_close_timeout\x18\x08 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x34\n\x11heartbeat_timeout\x18\t \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x39\n\x0cretry_policy\x18\n \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12*\n\x08is_local\x18\x0b \x01(\x0b\x32\x16.google.protobuf.EmptyH\x01\x12\x43\n\x06remote\x18\x0c \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.RemoteActivityOptionsH\x01\x12\x45\n\x10\x61waitable_choice\x18\r \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x12\x32\n\x08priority\x18\x0f \x01(\x0b\x32 .temporal.api.common.v1.Priority\x12\x14\n\x0c\x66\x61irness_key\x18\x10 \x01(\t\x12\x17\n\x0f\x66\x61irness_weight\x18\x11 \x01(\x02\x1aS\n\x0fGenericActivity\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x32\n\targuments\x18\x02 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x1a\x9a\x01\n\x11ResourcesActivity\x12*\n\x07run_for\x18\x01 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x19\n\x11\x62ytes_to_allocate\x18\x02 \x01(\x04\x12$\n\x1c\x63pu_yield_every_n_iterations\x18\x03 \x01(\r\x12\x18\n\x10\x63pu_yield_for_ms\x18\x04 \x01(\r\x1a\x44\n\x0fPayloadActivity\x12\x18\n\x10\x62ytes_to_receive\x18\x01 \x01(\x05\x12\x17\n\x0f\x62ytes_to_return\x18\x02 \x01(\x05\x1aU\n\x0e\x43lientActivity\x12\x43\n\x0f\x63lient_sequence\x18\x01 \x01(\x0b\x32*.temporal.omes.kitchen_sink.ClientSequence\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x42\x0f\n\ractivity_typeB\n\n\x08locality\"\xad\n\n\x1a\x45xecuteChildWorkflowAction\x12\x11\n\tnamespace\x18\x02 \x01(\t\x12\x13\n\x0bworkflow_id\x18\x03 \x01(\t\x12\x15\n\rworkflow_type\x18\x04 \x01(\t\x12\x12\n\ntask_queue\x18\x05 \x01(\t\x12.\n\x05input\x18\x06 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12=\n\x1aworkflow_execution_timeout\x18\x07 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x37\n\x14workflow_run_timeout\x18\x08 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x38\n\x15workflow_task_timeout\x18\t \x01(\x0b\x32\x19.google.protobuf.Duration\x12J\n\x13parent_close_policy\x18\n \x01(\x0e\x32-.temporal.omes.kitchen_sink.ParentClosePolicy\x12N\n\x18workflow_id_reuse_policy\x18\x0c \x01(\x0e\x32,.temporal.api.enums.v1.WorkflowIdReusePolicy\x12\x39\n\x0cretry_policy\x18\r \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12\x15\n\rcron_schedule\x18\x0e \x01(\t\x12T\n\x07headers\x18\x0f \x03(\x0b\x32\x43.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry\x12N\n\x04memo\x18\x10 \x03(\x0b\x32@.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry\x12g\n\x11search_attributes\x18\x11 \x03(\x0b\x32L.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry\x12T\n\x11\x63\x61ncellation_type\x18\x12 \x01(\x0e\x32\x39.temporal.omes.kitchen_sink.ChildWorkflowCancellationType\x12G\n\x11versioning_intent\x18\x13 \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent\x12\x45\n\x10\x61waitable_choice\x18\x14 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aL\n\tMemoEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\"0\n\x12\x41waitWorkflowState\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\"\xdf\x02\n\x10SendSignalAction\x12\x13\n\x0bworkflow_id\x18\x01 \x01(\t\x12\x0e\n\x06run_id\x18\x02 \x01(\t\x12\x13\n\x0bsignal_name\x18\x03 \x01(\t\x12-\n\x04\x61rgs\x18\x04 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12J\n\x07headers\x18\x05 \x03(\x0b\x32\x39.temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry\x12\x45\n\x10\x61waitable_choice\x18\x06 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\";\n\x14\x43\x61ncelWorkflowAction\x12\x13\n\x0bworkflow_id\x18\x01 \x01(\t\x12\x0e\n\x06run_id\x18\x02 \x01(\t\"v\n\x14SetPatchMarkerAction\x12\x10\n\x08patch_id\x18\x01 \x01(\t\x12\x12\n\ndeprecated\x18\x02 \x01(\x08\x12\x38\n\x0cinner_action\x18\x03 \x01(\x0b\x32\".temporal.omes.kitchen_sink.Action\"\xe3\x01\n\x1cUpsertSearchAttributesAction\x12i\n\x11search_attributes\x18\x01 \x03(\x0b\x32N.temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\"G\n\x10UpsertMemoAction\x12\x33\n\rupserted_memo\x18\x01 \x01(\x0b\x32\x1c.temporal.api.common.v1.Memo\"J\n\x12ReturnResultAction\x12\x34\n\x0breturn_this\x18\x01 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload\"F\n\x11ReturnErrorAction\x12\x31\n\x07\x66\x61ilure\x18\x01 \x01(\x0b\x32 .temporal.api.failure.v1.Failure\"\xde\x06\n\x13\x43ontinueAsNewAction\x12\x15\n\rworkflow_type\x18\x01 \x01(\t\x12\x12\n\ntask_queue\x18\x02 \x01(\t\x12\x32\n\targuments\x18\x03 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12\x37\n\x14workflow_run_timeout\x18\x04 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x38\n\x15workflow_task_timeout\x18\x05 \x01(\x0b\x32\x19.google.protobuf.Duration\x12G\n\x04memo\x18\x06 \x03(\x0b\x32\x39.temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry\x12M\n\x07headers\x18\x07 \x03(\x0b\x32<.temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry\x12`\n\x11search_attributes\x18\x08 \x03(\x0b\x32\x45.temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry\x12\x39\n\x0cretry_policy\x18\t \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12G\n\x11versioning_intent\x18\n \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent\x1aL\n\tMemoEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\"\xd1\x01\n\x15RemoteActivityOptions\x12O\n\x11\x63\x61ncellation_type\x18\x01 \x01(\x0e\x32\x34.temporal.omes.kitchen_sink.ActivityCancellationType\x12\x1e\n\x16\x64o_not_eagerly_execute\x18\x02 \x01(\x08\x12G\n\x11versioning_intent\x18\x03 \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent\"\xac\x02\n\x15\x45xecuteNexusOperation\x12\x10\n\x08\x65ndpoint\x18\x01 \x01(\t\x12\x11\n\toperation\x18\x02 \x01(\t\x12\r\n\x05input\x18\x03 \x01(\t\x12O\n\x07headers\x18\x04 \x03(\x0b\x32>.temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry\x12\x45\n\x10\x61waitable_choice\x18\x05 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x12\x17\n\x0f\x65xpected_output\x18\x06 \x01(\t\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01*\xa4\x01\n\x11ParentClosePolicy\x12#\n\x1fPARENT_CLOSE_POLICY_UNSPECIFIED\x10\x00\x12!\n\x1dPARENT_CLOSE_POLICY_TERMINATE\x10\x01\x12\x1f\n\x1bPARENT_CLOSE_POLICY_ABANDON\x10\x02\x12&\n\"PARENT_CLOSE_POLICY_REQUEST_CANCEL\x10\x03*@\n\x10VersioningIntent\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0e\n\nCOMPATIBLE\x10\x01\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x02*\xa2\x01\n\x1d\x43hildWorkflowCancellationType\x12\x14\n\x10\x43HILD_WF_ABANDON\x10\x00\x12\x17\n\x13\x43HILD_WF_TRY_CANCEL\x10\x01\x12(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETED\x10\x02\x12(\n$CHILD_WF_WAIT_CANCELLATION_REQUESTED\x10\x03*X\n\x18\x41\x63tivityCancellationType\x12\x0e\n\nTRY_CANCEL\x10\x00\x12\x1f\n\x1bWAIT_CANCELLATION_COMPLETED\x10\x01\x12\x0b\n\x07\x41\x42\x41NDON\x10\x02\x42\x42\n\x10io.temporal.omesZ.github.com/temporalio/omes/loadgen/kitchensinkb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x12kitchen_sink.proto\x12\x1atemporal.omes.kitchen_sink\x1a\x1egoogle/protobuf/duration.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a$temporal/api/common/v1/message.proto\x1a%temporal/api/failure/v1/message.proto\x1a$temporal/api/enums/v1/workflow.proto"\xe1\x01\n\tTestInput\x12\x41\n\x0eworkflow_input\x18\x01 \x01(\x0b\x32).temporal.omes.kitchen_sink.WorkflowInput\x12\x43\n\x0f\x63lient_sequence\x18\x02 \x01(\x0b\x32*.temporal.omes.kitchen_sink.ClientSequence\x12L\n\x11with_start_action\x18\x03 \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.WithStartClientAction"R\n\x0e\x43lientSequence\x12@\n\x0b\x61\x63tion_sets\x18\x01 \x03(\x0b\x32+.temporal.omes.kitchen_sink.ClientActionSet"\xbf\x01\n\x0f\x43lientActionSet\x12\x39\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32(.temporal.omes.kitchen_sink.ClientAction\x12\x12\n\nconcurrent\x18\x02 \x01(\x08\x12.\n\x0bwait_at_end\x18\x03 \x01(\x0b\x32\x19.google.protobuf.Duration\x12-\n%wait_for_current_run_to_finish_at_end\x18\x04 \x01(\x08"\x98\x01\n\x15WithStartClientAction\x12\x39\n\tdo_signal\x18\x01 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoSignalH\x00\x12\x39\n\tdo_update\x18\x02 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoUpdateH\x00\x42\t\n\x07variant"\xd7\x02\n\x0c\x43lientAction\x12\x39\n\tdo_signal\x18\x01 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoSignalH\x00\x12\x37\n\x08\x64o_query\x18\x02 \x01(\x0b\x32#.temporal.omes.kitchen_sink.DoQueryH\x00\x12\x39\n\tdo_update\x18\x03 \x01(\x0b\x32$.temporal.omes.kitchen_sink.DoUpdateH\x00\x12\x46\n\x10\x64o_self_describe\x18\x04 \x01(\x0b\x32*.temporal.omes.kitchen_sink.DoSelfDescribeH\x00\x12\x45\n\x0enested_actions\x18\x05 \x01(\x0b\x32+.temporal.omes.kitchen_sink.ClientActionSetH\x00\x42\t\n\x07variant"\xde\x02\n\x08\x44oSignal\x12Q\n\x11\x64o_signal_actions\x18\x01 \x01(\x0b\x32\x34.temporal.omes.kitchen_sink.DoSignal.DoSignalActionsH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x12\n\nwith_start\x18\x03 \x01(\x08\x1a\x9e\x01\n\x0f\x44oSignalActions\x12;\n\ndo_actions\x18\x01 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12\x43\n\x12\x64o_actions_in_main\x18\x02 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x42\t\n\x07variantB\t\n\x07variant"\xa9\x01\n\x07\x44oQuery\x12\x38\n\x0creport_state\x18\x01 \x01(\x0b\x32 .temporal.api.common.v1.PayloadsH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x18\n\x10\x66\x61ilure_expected\x18\n \x01(\x08\x42\t\n\x07variant"\xc7\x01\n\x08\x44oUpdate\x12\x41\n\ndo_actions\x18\x01 \x01(\x0b\x32+.temporal.omes.kitchen_sink.DoActionsUpdateH\x00\x12?\n\x06\x63ustom\x18\x02 \x01(\x0b\x32-.temporal.omes.kitchen_sink.HandlerInvocationH\x00\x12\x12\n\nwith_start\x18\x03 \x01(\x08\x12\x18\n\x10\x66\x61ilure_expected\x18\n \x01(\x08\x42\t\n\x07variant"\x86\x01\n\x0f\x44oActionsUpdate\x12;\n\ndo_actions\x18\x01 \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12+\n\treject_me\x18\x02 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\t\n\x07variant"P\n\x11HandlerInvocation\x12\x0c\n\x04name\x18\x01 \x01(\t\x12-\n\x04\x61rgs\x18\x02 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload"H\n\x0e\x44oSelfDescribe\x12\x11\n\tnamespace\x18\x01 \x01(\t\x12\x13\n\x0bworkflow_id\x18\x02 \x01(\t\x12\x0e\n\x06run_id\x18\x03 \x01(\t"|\n\rWorkflowState\x12?\n\x03kvs\x18\x01 \x03(\x0b\x32\x32.temporal.omes.kitchen_sink.WorkflowState.KvsEntry\x1a*\n\x08KvsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01"O\n\rWorkflowInput\x12>\n\x0finitial_actions\x18\x01 \x03(\x0b\x32%.temporal.omes.kitchen_sink.ActionSet"T\n\tActionSet\x12\x33\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32".temporal.omes.kitchen_sink.Action\x12\x12\n\nconcurrent\x18\x02 \x01(\x08"\xfa\x08\n\x06\x41\x63tion\x12\x38\n\x05timer\x18\x01 \x01(\x0b\x32\'.temporal.omes.kitchen_sink.TimerActionH\x00\x12J\n\rexec_activity\x18\x02 \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.ExecuteActivityActionH\x00\x12U\n\x13\x65xec_child_workflow\x18\x03 \x01(\x0b\x32\x36.temporal.omes.kitchen_sink.ExecuteChildWorkflowActionH\x00\x12N\n\x14\x61wait_workflow_state\x18\x04 \x01(\x0b\x32..temporal.omes.kitchen_sink.AwaitWorkflowStateH\x00\x12\x43\n\x0bsend_signal\x18\x05 \x01(\x0b\x32,.temporal.omes.kitchen_sink.SendSignalActionH\x00\x12K\n\x0f\x63\x61ncel_workflow\x18\x06 \x01(\x0b\x32\x30.temporal.omes.kitchen_sink.CancelWorkflowActionH\x00\x12L\n\x10set_patch_marker\x18\x07 \x01(\x0b\x32\x30.temporal.omes.kitchen_sink.SetPatchMarkerActionH\x00\x12\\\n\x18upsert_search_attributes\x18\x08 \x01(\x0b\x32\x38.temporal.omes.kitchen_sink.UpsertSearchAttributesActionH\x00\x12\x43\n\x0bupsert_memo\x18\t \x01(\x0b\x32,.temporal.omes.kitchen_sink.UpsertMemoActionH\x00\x12G\n\x12set_workflow_state\x18\n \x01(\x0b\x32).temporal.omes.kitchen_sink.WorkflowStateH\x00\x12G\n\rreturn_result\x18\x0b \x01(\x0b\x32..temporal.omes.kitchen_sink.ReturnResultActionH\x00\x12\x45\n\x0creturn_error\x18\x0c \x01(\x0b\x32-.temporal.omes.kitchen_sink.ReturnErrorActionH\x00\x12J\n\x0f\x63ontinue_as_new\x18\r \x01(\x0b\x32/.temporal.omes.kitchen_sink.ContinueAsNewActionH\x00\x12\x42\n\x11nested_action_set\x18\x0e \x01(\x0b\x32%.temporal.omes.kitchen_sink.ActionSetH\x00\x12L\n\x0fnexus_operation\x18\x0f \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.ExecuteNexusOperationH\x00\x42\t\n\x07variant"\xa3\x02\n\x0f\x41waitableChoice\x12-\n\x0bwait_finish\x18\x01 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12)\n\x07\x61\x62\x61ndon\x18\x02 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x37\n\x15\x63\x61ncel_before_started\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x36\n\x14\x63\x61ncel_after_started\x18\x04 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12\x38\n\x16\x63\x61ncel_after_completed\x18\x05 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x42\x0b\n\tcondition"j\n\x0bTimerAction\x12\x14\n\x0cmilliseconds\x18\x01 \x01(\x04\x12\x45\n\x10\x61waitable_choice\x18\x02 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice"\xea\x0c\n\x15\x45xecuteActivityAction\x12T\n\x07generic\x18\x01 \x01(\x0b\x32\x41.temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivityH\x00\x12*\n\x05\x64\x65lay\x18\x02 \x01(\x0b\x32\x19.google.protobuf.DurationH\x00\x12&\n\x04noop\x18\x03 \x01(\x0b\x32\x16.google.protobuf.EmptyH\x00\x12X\n\tresources\x18\x0e \x01(\x0b\x32\x43.temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivityH\x00\x12T\n\x07payload\x18\x12 \x01(\x0b\x32\x41.temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivityH\x00\x12R\n\x06\x63lient\x18\x13 \x01(\x0b\x32@.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivityH\x00\x12\x12\n\ntask_queue\x18\x04 \x01(\t\x12O\n\x07headers\x18\x05 \x03(\x0b\x32>.temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry\x12<\n\x19schedule_to_close_timeout\x18\x06 \x01(\x0b\x32\x19.google.protobuf.Duration\x12<\n\x19schedule_to_start_timeout\x18\x07 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x39\n\x16start_to_close_timeout\x18\x08 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x34\n\x11heartbeat_timeout\x18\t \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x39\n\x0cretry_policy\x18\n \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12*\n\x08is_local\x18\x0b \x01(\x0b\x32\x16.google.protobuf.EmptyH\x01\x12\x43\n\x06remote\x18\x0c \x01(\x0b\x32\x31.temporal.omes.kitchen_sink.RemoteActivityOptionsH\x01\x12\x45\n\x10\x61waitable_choice\x18\r \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x12\x32\n\x08priority\x18\x0f \x01(\x0b\x32 .temporal.api.common.v1.Priority\x12\x14\n\x0c\x66\x61irness_key\x18\x10 \x01(\t\x12\x17\n\x0f\x66\x61irness_weight\x18\x11 \x01(\x02\x1aS\n\x0fGenericActivity\x12\x0c\n\x04type\x18\x01 \x01(\t\x12\x32\n\targuments\x18\x02 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x1a\x9a\x01\n\x11ResourcesActivity\x12*\n\x07run_for\x18\x01 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x19\n\x11\x62ytes_to_allocate\x18\x02 \x01(\x04\x12$\n\x1c\x63pu_yield_every_n_iterations\x18\x03 \x01(\r\x12\x18\n\x10\x63pu_yield_for_ms\x18\x04 \x01(\r\x1a\x44\n\x0fPayloadActivity\x12\x18\n\x10\x62ytes_to_receive\x18\x01 \x01(\x05\x12\x17\n\x0f\x62ytes_to_return\x18\x02 \x01(\x05\x1aU\n\x0e\x43lientActivity\x12\x43\n\x0f\x63lient_sequence\x18\x01 \x01(\x0b\x32*.temporal.omes.kitchen_sink.ClientSequence\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x42\x0f\n\ractivity_typeB\n\n\x08locality"\xad\n\n\x1a\x45xecuteChildWorkflowAction\x12\x11\n\tnamespace\x18\x02 \x01(\t\x12\x13\n\x0bworkflow_id\x18\x03 \x01(\t\x12\x15\n\rworkflow_type\x18\x04 \x01(\t\x12\x12\n\ntask_queue\x18\x05 \x01(\t\x12.\n\x05input\x18\x06 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12=\n\x1aworkflow_execution_timeout\x18\x07 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x37\n\x14workflow_run_timeout\x18\x08 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x38\n\x15workflow_task_timeout\x18\t \x01(\x0b\x32\x19.google.protobuf.Duration\x12J\n\x13parent_close_policy\x18\n \x01(\x0e\x32-.temporal.omes.kitchen_sink.ParentClosePolicy\x12N\n\x18workflow_id_reuse_policy\x18\x0c \x01(\x0e\x32,.temporal.api.enums.v1.WorkflowIdReusePolicy\x12\x39\n\x0cretry_policy\x18\r \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12\x15\n\rcron_schedule\x18\x0e \x01(\t\x12T\n\x07headers\x18\x0f \x03(\x0b\x32\x43.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry\x12N\n\x04memo\x18\x10 \x03(\x0b\x32@.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry\x12g\n\x11search_attributes\x18\x11 \x03(\x0b\x32L.temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry\x12T\n\x11\x63\x61ncellation_type\x18\x12 \x01(\x0e\x32\x39.temporal.omes.kitchen_sink.ChildWorkflowCancellationType\x12G\n\x11versioning_intent\x18\x13 \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent\x12\x45\n\x10\x61waitable_choice\x18\x14 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aL\n\tMemoEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01"0\n\x12\x41waitWorkflowState\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t"\xdf\x02\n\x10SendSignalAction\x12\x13\n\x0bworkflow_id\x18\x01 \x01(\t\x12\x0e\n\x06run_id\x18\x02 \x01(\t\x12\x13\n\x0bsignal_name\x18\x03 \x01(\t\x12-\n\x04\x61rgs\x18\x04 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12J\n\x07headers\x18\x05 \x03(\x0b\x32\x39.temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry\x12\x45\n\x10\x61waitable_choice\x18\x06 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01";\n\x14\x43\x61ncelWorkflowAction\x12\x13\n\x0bworkflow_id\x18\x01 \x01(\t\x12\x0e\n\x06run_id\x18\x02 \x01(\t"v\n\x14SetPatchMarkerAction\x12\x10\n\x08patch_id\x18\x01 \x01(\t\x12\x12\n\ndeprecated\x18\x02 \x01(\x08\x12\x38\n\x0cinner_action\x18\x03 \x01(\x0b\x32".temporal.omes.kitchen_sink.Action"\xe3\x01\n\x1cUpsertSearchAttributesAction\x12i\n\x11search_attributes\x18\x01 \x03(\x0b\x32N.temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01"G\n\x10UpsertMemoAction\x12\x33\n\rupserted_memo\x18\x01 \x01(\x0b\x32\x1c.temporal.api.common.v1.Memo"J\n\x12ReturnResultAction\x12\x34\n\x0breturn_this\x18\x01 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload"F\n\x11ReturnErrorAction\x12\x31\n\x07\x66\x61ilure\x18\x01 \x01(\x0b\x32 .temporal.api.failure.v1.Failure"\xde\x06\n\x13\x43ontinueAsNewAction\x12\x15\n\rworkflow_type\x18\x01 \x01(\t\x12\x12\n\ntask_queue\x18\x02 \x01(\t\x12\x32\n\targuments\x18\x03 \x03(\x0b\x32\x1f.temporal.api.common.v1.Payload\x12\x37\n\x14workflow_run_timeout\x18\x04 \x01(\x0b\x32\x19.google.protobuf.Duration\x12\x38\n\x15workflow_task_timeout\x18\x05 \x01(\x0b\x32\x19.google.protobuf.Duration\x12G\n\x04memo\x18\x06 \x03(\x0b\x32\x39.temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry\x12M\n\x07headers\x18\x07 \x03(\x0b\x32<.temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry\x12`\n\x11search_attributes\x18\x08 \x03(\x0b\x32\x45.temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry\x12\x39\n\x0cretry_policy\x18\t \x01(\x0b\x32#.temporal.api.common.v1.RetryPolicy\x12G\n\x11versioning_intent\x18\n \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent\x1aL\n\tMemoEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aO\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01\x1aX\n\x15SearchAttributesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12.\n\x05value\x18\x02 \x01(\x0b\x32\x1f.temporal.api.common.v1.Payload:\x02\x38\x01"\xd1\x01\n\x15RemoteActivityOptions\x12O\n\x11\x63\x61ncellation_type\x18\x01 \x01(\x0e\x32\x34.temporal.omes.kitchen_sink.ActivityCancellationType\x12\x1e\n\x16\x64o_not_eagerly_execute\x18\x02 \x01(\x08\x12G\n\x11versioning_intent\x18\x03 \x01(\x0e\x32,.temporal.omes.kitchen_sink.VersioningIntent"\xac\x02\n\x15\x45xecuteNexusOperation\x12\x10\n\x08\x65ndpoint\x18\x01 \x01(\t\x12\x11\n\toperation\x18\x02 \x01(\t\x12\r\n\x05input\x18\x03 \x01(\t\x12O\n\x07headers\x18\x04 \x03(\x0b\x32>.temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry\x12\x45\n\x10\x61waitable_choice\x18\x05 \x01(\x0b\x32+.temporal.omes.kitchen_sink.AwaitableChoice\x12\x17\n\x0f\x65xpected_output\x18\x06 \x01(\t\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01*\xa4\x01\n\x11ParentClosePolicy\x12#\n\x1fPARENT_CLOSE_POLICY_UNSPECIFIED\x10\x00\x12!\n\x1dPARENT_CLOSE_POLICY_TERMINATE\x10\x01\x12\x1f\n\x1bPARENT_CLOSE_POLICY_ABANDON\x10\x02\x12&\n"PARENT_CLOSE_POLICY_REQUEST_CANCEL\x10\x03*@\n\x10VersioningIntent\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0e\n\nCOMPATIBLE\x10\x01\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x02*\xa2\x01\n\x1d\x43hildWorkflowCancellationType\x12\x14\n\x10\x43HILD_WF_ABANDON\x10\x00\x12\x17\n\x13\x43HILD_WF_TRY_CANCEL\x10\x01\x12(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETED\x10\x02\x12(\n$CHILD_WF_WAIT_CANCELLATION_REQUESTED\x10\x03*X\n\x18\x41\x63tivityCancellationType\x12\x0e\n\nTRY_CANCEL\x10\x00\x12\x1f\n\x1bWAIT_CANCELLATION_COMPLETED\x10\x01\x12\x0b\n\x07\x41\x42\x41NDON\x10\x02\x42\x42\n\x10io.temporal.omesZ.github.com/temporalio/omes/loadgen/kitchensinkb\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'kitchen_sink_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "kitchen_sink_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n\020io.temporal.omesZ.github.com/temporalio/omes/loadgen/kitchensink'
-  _globals['_WORKFLOWSTATE_KVSENTRY']._loaded_options = None
-  _globals['_WORKFLOWSTATE_KVSENTRY']._serialized_options = b'8\001'
-  _globals['_EXECUTEACTIVITYACTION_HEADERSENTRY']._loaded_options = None
-  _globals['_EXECUTEACTIVITYACTION_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY']._loaded_options = None
-  _globals['_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_EXECUTECHILDWORKFLOWACTION_MEMOENTRY']._loaded_options = None
-  _globals['_EXECUTECHILDWORKFLOWACTION_MEMOENTRY']._serialized_options = b'8\001'
-  _globals['_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY']._loaded_options = None
-  _globals['_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY']._serialized_options = b'8\001'
-  _globals['_SENDSIGNALACTION_HEADERSENTRY']._loaded_options = None
-  _globals['_SENDSIGNALACTION_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY']._loaded_options = None
-  _globals['_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY']._serialized_options = b'8\001'
-  _globals['_CONTINUEASNEWACTION_MEMOENTRY']._loaded_options = None
-  _globals['_CONTINUEASNEWACTION_MEMOENTRY']._serialized_options = b'8\001'
-  _globals['_CONTINUEASNEWACTION_HEADERSENTRY']._loaded_options = None
-  _globals['_CONTINUEASNEWACTION_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY']._loaded_options = None
-  _globals['_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY']._serialized_options = b'8\001'
-  _globals['_EXECUTENEXUSOPERATION_HEADERSENTRY']._loaded_options = None
-  _globals['_EXECUTENEXUSOPERATION_HEADERSENTRY']._serialized_options = b'8\001'
-  _globals['_PARENTCLOSEPOLICY']._serialized_start=9457
-  _globals['_PARENTCLOSEPOLICY']._serialized_end=9621
-  _globals['_VERSIONINGINTENT']._serialized_start=9623
-  _globals['_VERSIONINGINTENT']._serialized_end=9687
-  _globals['_CHILDWORKFLOWCANCELLATIONTYPE']._serialized_start=9690
-  _globals['_CHILDWORKFLOWCANCELLATIONTYPE']._serialized_end=9852
-  _globals['_ACTIVITYCANCELLATIONTYPE']._serialized_start=9854
-  _globals['_ACTIVITYCANCELLATIONTYPE']._serialized_end=9942
-  _globals['_TESTINPUT']._serialized_start=227
-  _globals['_TESTINPUT']._serialized_end=452
-  _globals['_CLIENTSEQUENCE']._serialized_start=454
-  _globals['_CLIENTSEQUENCE']._serialized_end=536
-  _globals['_CLIENTACTIONSET']._serialized_start=539
-  _globals['_CLIENTACTIONSET']._serialized_end=730
-  _globals['_WITHSTARTCLIENTACTION']._serialized_start=733
-  _globals['_WITHSTARTCLIENTACTION']._serialized_end=885
-  _globals['_CLIENTACTION']._serialized_start=888
-  _globals['_CLIENTACTION']._serialized_end=1231
-  _globals['_DOSIGNAL']._serialized_start=1234
-  _globals['_DOSIGNAL']._serialized_end=1584
-  _globals['_DOSIGNAL_DOSIGNALACTIONS']._serialized_start=1415
-  _globals['_DOSIGNAL_DOSIGNALACTIONS']._serialized_end=1573
-  _globals['_DOQUERY']._serialized_start=1587
-  _globals['_DOQUERY']._serialized_end=1756
-  _globals['_DOUPDATE']._serialized_start=1759
-  _globals['_DOUPDATE']._serialized_end=1958
-  _globals['_DOACTIONSUPDATE']._serialized_start=1961
-  _globals['_DOACTIONSUPDATE']._serialized_end=2095
-  _globals['_HANDLERINVOCATION']._serialized_start=2097
-  _globals['_HANDLERINVOCATION']._serialized_end=2177
-  _globals['_DOSELFDESCRIBE']._serialized_start=2179
-  _globals['_DOSELFDESCRIBE']._serialized_end=2221
-  _globals['_WORKFLOWSTATE']._serialized_start=2223
-  _globals['_WORKFLOWSTATE']._serialized_end=2347
-  _globals['_WORKFLOWSTATE_KVSENTRY']._serialized_start=2305
-  _globals['_WORKFLOWSTATE_KVSENTRY']._serialized_end=2347
-  _globals['_WORKFLOWINPUT']._serialized_start=2349
-  _globals['_WORKFLOWINPUT']._serialized_end=2428
-  _globals['_ACTIONSET']._serialized_start=2430
-  _globals['_ACTIONSET']._serialized_end=2514
-  _globals['_ACTION']._serialized_start=2517
-  _globals['_ACTION']._serialized_end=3663
-  _globals['_AWAITABLECHOICE']._serialized_start=3666
-  _globals['_AWAITABLECHOICE']._serialized_end=3957
-  _globals['_TIMERACTION']._serialized_start=3959
-  _globals['_TIMERACTION']._serialized_end=4065
-  _globals['_EXECUTEACTIVITYACTION']._serialized_start=4068
-  _globals['_EXECUTEACTIVITYACTION']._serialized_end=5710
-  _globals['_EXECUTEACTIVITYACTION_GENERICACTIVITY']._serialized_start=5203
-  _globals['_EXECUTEACTIVITYACTION_GENERICACTIVITY']._serialized_end=5286
-  _globals['_EXECUTEACTIVITYACTION_RESOURCESACTIVITY']._serialized_start=5289
-  _globals['_EXECUTEACTIVITYACTION_RESOURCESACTIVITY']._serialized_end=5443
-  _globals['_EXECUTEACTIVITYACTION_PAYLOADACTIVITY']._serialized_start=5445
-  _globals['_EXECUTEACTIVITYACTION_PAYLOADACTIVITY']._serialized_end=5513
-  _globals['_EXECUTEACTIVITYACTION_CLIENTACTIVITY']._serialized_start=5515
-  _globals['_EXECUTEACTIVITYACTION_CLIENTACTIVITY']._serialized_end=5600
-  _globals['_EXECUTEACTIVITYACTION_HEADERSENTRY']._serialized_start=5602
-  _globals['_EXECUTEACTIVITYACTION_HEADERSENTRY']._serialized_end=5681
-  _globals['_EXECUTECHILDWORKFLOWACTION']._serialized_start=5713
-  _globals['_EXECUTECHILDWORKFLOWACTION']._serialized_end=7038
-  _globals['_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY']._serialized_start=5602
-  _globals['_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY']._serialized_end=5681
-  _globals['_EXECUTECHILDWORKFLOWACTION_MEMOENTRY']._serialized_start=6872
-  _globals['_EXECUTECHILDWORKFLOWACTION_MEMOENTRY']._serialized_end=6948
-  _globals['_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY']._serialized_start=6950
-  _globals['_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY']._serialized_end=7038
-  _globals['_AWAITWORKFLOWSTATE']._serialized_start=7040
-  _globals['_AWAITWORKFLOWSTATE']._serialized_end=7088
-  _globals['_SENDSIGNALACTION']._serialized_start=7091
-  _globals['_SENDSIGNALACTION']._serialized_end=7442
-  _globals['_SENDSIGNALACTION_HEADERSENTRY']._serialized_start=5602
-  _globals['_SENDSIGNALACTION_HEADERSENTRY']._serialized_end=5681
-  _globals['_CANCELWORKFLOWACTION']._serialized_start=7444
-  _globals['_CANCELWORKFLOWACTION']._serialized_end=7503
-  _globals['_SETPATCHMARKERACTION']._serialized_start=7505
-  _globals['_SETPATCHMARKERACTION']._serialized_end=7623
-  _globals['_UPSERTSEARCHATTRIBUTESACTION']._serialized_start=7626
-  _globals['_UPSERTSEARCHATTRIBUTESACTION']._serialized_end=7853
-  _globals['_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY']._serialized_start=6950
-  _globals['_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY']._serialized_end=7038
-  _globals['_UPSERTMEMOACTION']._serialized_start=7855
-  _globals['_UPSERTMEMOACTION']._serialized_end=7926
-  _globals['_RETURNRESULTACTION']._serialized_start=7928
-  _globals['_RETURNRESULTACTION']._serialized_end=8002
-  _globals['_RETURNERRORACTION']._serialized_start=8004
-  _globals['_RETURNERRORACTION']._serialized_end=8074
-  _globals['_CONTINUEASNEWACTION']._serialized_start=8077
-  _globals['_CONTINUEASNEWACTION']._serialized_end=8939
-  _globals['_CONTINUEASNEWACTION_MEMOENTRY']._serialized_start=6872
-  _globals['_CONTINUEASNEWACTION_MEMOENTRY']._serialized_end=6948
-  _globals['_CONTINUEASNEWACTION_HEADERSENTRY']._serialized_start=5602
-  _globals['_CONTINUEASNEWACTION_HEADERSENTRY']._serialized_end=5681
-  _globals['_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY']._serialized_start=6950
-  _globals['_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY']._serialized_end=7038
-  _globals['_REMOTEACTIVITYOPTIONS']._serialized_start=8942
-  _globals['_REMOTEACTIVITYOPTIONS']._serialized_end=9151
-  _globals['_EXECUTENEXUSOPERATION']._serialized_start=9154
-  _globals['_EXECUTENEXUSOPERATION']._serialized_end=9454
-  _globals['_EXECUTENEXUSOPERATION_HEADERSENTRY']._serialized_start=9408
-  _globals['_EXECUTENEXUSOPERATION_HEADERSENTRY']._serialized_end=9454
+    _globals["DESCRIPTOR"]._loaded_options = None
+    _globals[
+        "DESCRIPTOR"
+    ]._serialized_options = (
+        b"\n\020io.temporal.omesZ.github.com/temporalio/omes/loadgen/kitchensink"
+    )
+    _globals["_WORKFLOWSTATE_KVSENTRY"]._loaded_options = None
+    _globals["_WORKFLOWSTATE_KVSENTRY"]._serialized_options = b"8\001"
+    _globals["_EXECUTEACTIVITYACTION_HEADERSENTRY"]._loaded_options = None
+    _globals["_EXECUTEACTIVITYACTION_HEADERSENTRY"]._serialized_options = b"8\001"
+    _globals["_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY"]._loaded_options = None
+    _globals["_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY"]._serialized_options = b"8\001"
+    _globals["_EXECUTECHILDWORKFLOWACTION_MEMOENTRY"]._loaded_options = None
+    _globals["_EXECUTECHILDWORKFLOWACTION_MEMOENTRY"]._serialized_options = b"8\001"
+    _globals["_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY"]._loaded_options = None
+    _globals[
+        "_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_options = b"8\001"
+    _globals["_SENDSIGNALACTION_HEADERSENTRY"]._loaded_options = None
+    _globals["_SENDSIGNALACTION_HEADERSENTRY"]._serialized_options = b"8\001"
+    _globals[
+        "_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY"
+    ]._loaded_options = None
+    _globals[
+        "_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_options = b"8\001"
+    _globals["_CONTINUEASNEWACTION_MEMOENTRY"]._loaded_options = None
+    _globals["_CONTINUEASNEWACTION_MEMOENTRY"]._serialized_options = b"8\001"
+    _globals["_CONTINUEASNEWACTION_HEADERSENTRY"]._loaded_options = None
+    _globals["_CONTINUEASNEWACTION_HEADERSENTRY"]._serialized_options = b"8\001"
+    _globals["_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY"]._loaded_options = None
+    _globals[
+        "_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_options = b"8\001"
+    _globals["_EXECUTENEXUSOPERATION_HEADERSENTRY"]._loaded_options = None
+    _globals["_EXECUTENEXUSOPERATION_HEADERSENTRY"]._serialized_options = b"8\001"
+    _globals["_PARENTCLOSEPOLICY"]._serialized_start = 9487
+    _globals["_PARENTCLOSEPOLICY"]._serialized_end = 9651
+    _globals["_VERSIONINGINTENT"]._serialized_start = 9653
+    _globals["_VERSIONINGINTENT"]._serialized_end = 9717
+    _globals["_CHILDWORKFLOWCANCELLATIONTYPE"]._serialized_start = 9720
+    _globals["_CHILDWORKFLOWCANCELLATIONTYPE"]._serialized_end = 9882
+    _globals["_ACTIVITYCANCELLATIONTYPE"]._serialized_start = 9884
+    _globals["_ACTIVITYCANCELLATIONTYPE"]._serialized_end = 9972
+    _globals["_TESTINPUT"]._serialized_start = 227
+    _globals["_TESTINPUT"]._serialized_end = 452
+    _globals["_CLIENTSEQUENCE"]._serialized_start = 454
+    _globals["_CLIENTSEQUENCE"]._serialized_end = 536
+    _globals["_CLIENTACTIONSET"]._serialized_start = 539
+    _globals["_CLIENTACTIONSET"]._serialized_end = 730
+    _globals["_WITHSTARTCLIENTACTION"]._serialized_start = 733
+    _globals["_WITHSTARTCLIENTACTION"]._serialized_end = 885
+    _globals["_CLIENTACTION"]._serialized_start = 888
+    _globals["_CLIENTACTION"]._serialized_end = 1231
+    _globals["_DOSIGNAL"]._serialized_start = 1234
+    _globals["_DOSIGNAL"]._serialized_end = 1584
+    _globals["_DOSIGNAL_DOSIGNALACTIONS"]._serialized_start = 1415
+    _globals["_DOSIGNAL_DOSIGNALACTIONS"]._serialized_end = 1573
+    _globals["_DOQUERY"]._serialized_start = 1587
+    _globals["_DOQUERY"]._serialized_end = 1756
+    _globals["_DOUPDATE"]._serialized_start = 1759
+    _globals["_DOUPDATE"]._serialized_end = 1958
+    _globals["_DOACTIONSUPDATE"]._serialized_start = 1961
+    _globals["_DOACTIONSUPDATE"]._serialized_end = 2095
+    _globals["_HANDLERINVOCATION"]._serialized_start = 2097
+    _globals["_HANDLERINVOCATION"]._serialized_end = 2177
+    _globals["_DOSELFDESCRIBE"]._serialized_start = 2179
+    _globals["_DOSELFDESCRIBE"]._serialized_end = 2251
+    _globals["_WORKFLOWSTATE"]._serialized_start = 2253
+    _globals["_WORKFLOWSTATE"]._serialized_end = 2377
+    _globals["_WORKFLOWSTATE_KVSENTRY"]._serialized_start = 2335
+    _globals["_WORKFLOWSTATE_KVSENTRY"]._serialized_end = 2377
+    _globals["_WORKFLOWINPUT"]._serialized_start = 2379
+    _globals["_WORKFLOWINPUT"]._serialized_end = 2458
+    _globals["_ACTIONSET"]._serialized_start = 2460
+    _globals["_ACTIONSET"]._serialized_end = 2544
+    _globals["_ACTION"]._serialized_start = 2547
+    _globals["_ACTION"]._serialized_end = 3693
+    _globals["_AWAITABLECHOICE"]._serialized_start = 3696
+    _globals["_AWAITABLECHOICE"]._serialized_end = 3987
+    _globals["_TIMERACTION"]._serialized_start = 3989
+    _globals["_TIMERACTION"]._serialized_end = 4095
+    _globals["_EXECUTEACTIVITYACTION"]._serialized_start = 4098
+    _globals["_EXECUTEACTIVITYACTION"]._serialized_end = 5740
+    _globals["_EXECUTEACTIVITYACTION_GENERICACTIVITY"]._serialized_start = 5233
+    _globals["_EXECUTEACTIVITYACTION_GENERICACTIVITY"]._serialized_end = 5316
+    _globals["_EXECUTEACTIVITYACTION_RESOURCESACTIVITY"]._serialized_start = 5319
+    _globals["_EXECUTEACTIVITYACTION_RESOURCESACTIVITY"]._serialized_end = 5473
+    _globals["_EXECUTEACTIVITYACTION_PAYLOADACTIVITY"]._serialized_start = 5475
+    _globals["_EXECUTEACTIVITYACTION_PAYLOADACTIVITY"]._serialized_end = 5543
+    _globals["_EXECUTEACTIVITYACTION_CLIENTACTIVITY"]._serialized_start = 5545
+    _globals["_EXECUTEACTIVITYACTION_CLIENTACTIVITY"]._serialized_end = 5630
+    _globals["_EXECUTEACTIVITYACTION_HEADERSENTRY"]._serialized_start = 5632
+    _globals["_EXECUTEACTIVITYACTION_HEADERSENTRY"]._serialized_end = 5711
+    _globals["_EXECUTECHILDWORKFLOWACTION"]._serialized_start = 5743
+    _globals["_EXECUTECHILDWORKFLOWACTION"]._serialized_end = 7068
+    _globals["_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY"]._serialized_start = 5632
+    _globals["_EXECUTECHILDWORKFLOWACTION_HEADERSENTRY"]._serialized_end = 5711
+    _globals["_EXECUTECHILDWORKFLOWACTION_MEMOENTRY"]._serialized_start = 6902
+    _globals["_EXECUTECHILDWORKFLOWACTION_MEMOENTRY"]._serialized_end = 6978
+    _globals[
+        "_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_start = 6980
+    _globals["_EXECUTECHILDWORKFLOWACTION_SEARCHATTRIBUTESENTRY"]._serialized_end = 7068
+    _globals["_AWAITWORKFLOWSTATE"]._serialized_start = 7070
+    _globals["_AWAITWORKFLOWSTATE"]._serialized_end = 7118
+    _globals["_SENDSIGNALACTION"]._serialized_start = 7121
+    _globals["_SENDSIGNALACTION"]._serialized_end = 7472
+    _globals["_SENDSIGNALACTION_HEADERSENTRY"]._serialized_start = 5632
+    _globals["_SENDSIGNALACTION_HEADERSENTRY"]._serialized_end = 5711
+    _globals["_CANCELWORKFLOWACTION"]._serialized_start = 7474
+    _globals["_CANCELWORKFLOWACTION"]._serialized_end = 7533
+    _globals["_SETPATCHMARKERACTION"]._serialized_start = 7535
+    _globals["_SETPATCHMARKERACTION"]._serialized_end = 7653
+    _globals["_UPSERTSEARCHATTRIBUTESACTION"]._serialized_start = 7656
+    _globals["_UPSERTSEARCHATTRIBUTESACTION"]._serialized_end = 7883
+    _globals[
+        "_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_start = 6980
+    _globals[
+        "_UPSERTSEARCHATTRIBUTESACTION_SEARCHATTRIBUTESENTRY"
+    ]._serialized_end = 7068
+    _globals["_UPSERTMEMOACTION"]._serialized_start = 7885
+    _globals["_UPSERTMEMOACTION"]._serialized_end = 7956
+    _globals["_RETURNRESULTACTION"]._serialized_start = 7958
+    _globals["_RETURNRESULTACTION"]._serialized_end = 8032
+    _globals["_RETURNERRORACTION"]._serialized_start = 8034
+    _globals["_RETURNERRORACTION"]._serialized_end = 8104
+    _globals["_CONTINUEASNEWACTION"]._serialized_start = 8107
+    _globals["_CONTINUEASNEWACTION"]._serialized_end = 8969
+    _globals["_CONTINUEASNEWACTION_MEMOENTRY"]._serialized_start = 6902
+    _globals["_CONTINUEASNEWACTION_MEMOENTRY"]._serialized_end = 6978
+    _globals["_CONTINUEASNEWACTION_HEADERSENTRY"]._serialized_start = 5632
+    _globals["_CONTINUEASNEWACTION_HEADERSENTRY"]._serialized_end = 5711
+    _globals["_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY"]._serialized_start = 6980
+    _globals["_CONTINUEASNEWACTION_SEARCHATTRIBUTESENTRY"]._serialized_end = 7068
+    _globals["_REMOTEACTIVITYOPTIONS"]._serialized_start = 8972
+    _globals["_REMOTEACTIVITYOPTIONS"]._serialized_end = 9181
+    _globals["_EXECUTENEXUSOPERATION"]._serialized_start = 9184
+    _globals["_EXECUTENEXUSOPERATION"]._serialized_end = 9484
+    _globals["_EXECUTENEXUSOPERATION_HEADERSENTRY"]._serialized_start = 9438
+    _globals["_EXECUTENEXUSOPERATION_HEADERSENTRY"]._serialized_end = 9484
 # @@protoc_insertion_point(module_scope)

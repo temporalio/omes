@@ -151,17 +151,16 @@ export class ClientActionExecutor {
   private async executeSelfDescribeAction(
     selfDescribe: temporal.omes.kitchen_sink.IDoSelfDescribe
   ): Promise<void> {
-    if (!selfDescribe.doSelfDescribe) {
-      throw new Error('do_self_describe must be true');
-    }
-
     try {
+      // Use current workflow ID if not specified
+      const workflowId = selfDescribe.workflowId || this.workflowId;
+      
       // Get the current workflow execution details
       const resp = await this.client.workflowService.describeWorkflowExecution({
-        namespace: 'default', // TODO: Make this configurable
+        namespace: selfDescribe.namespace, 
         execution: {
-          workflowId: this.workflowId,
-          runId: '', // Empty string means latest run
+          workflowId: workflowId,
+          runId: selfDescribe.runId,
         },
       });
 
