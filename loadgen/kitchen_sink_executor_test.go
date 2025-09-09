@@ -784,15 +784,13 @@ func testForSDK(
 
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
-		DefaultConfiguration: RunConfiguration{
+	}
+	scenarioInfo := ScenarioInfo{
+		ScenarioName: "kitchenSinkTest",
+		RunID:        fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
+		Configuration: RunConfiguration{
 			Iterations: 1,
 		},
-	}
-
-	scenarioInfo := ScenarioInfo{
-		ScenarioName:  "kitchenSinkTest",
-		RunID:         fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-		Configuration: executor.DefaultConfiguration,
 	}
 
 	if expectedErr, expectUnsupported := tc.expectedUnsupportedErrs[sdk]; expectUnsupported {
