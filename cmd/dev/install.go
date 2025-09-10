@@ -131,7 +131,7 @@ func installPython(versions map[string]string) error {
 	if err := runCommand("uv", "tool", "install", "poethepoet"); err != nil {
 		return fmt.Errorf("failed to install poethepoet: %v", err)
 	}
-	fmt.Printf("✅ poethepoet installed successfully!\n", version, uvVersion)
+	fmt.Printf("✅ poethepoet installed successfully!\n")
 
 	return nil
 }
@@ -171,7 +171,7 @@ func installProtoc(versions map[string]string) error {
 	if err := runCommand("go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
 		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
 	}
-	fmt.Println("✅ protoc-gen-go installed successfully!")
+	fmt.Printf("✅ protoc-gen-go %s installed successfully!\n", protocGenGoVersion)
 
 	return nil
 }

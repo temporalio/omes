@@ -10,6 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var cleanCommands = map[string][]string{
+	"go":         {"go", "clean"},
+	"java":       {"./gradlew", "clean"},
+	"python":     {"uv", "clean"},
+	"typescript": {"npm", "run", "clean"},
+	"dotnet":     {"dotnet", "clean"},
+}
+
 func cleanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clean [language...]",
@@ -59,19 +67,9 @@ func cleanLanguage(language, rootDir string) error {
 	if !ok {
 		return fmt.Errorf("unsupported language: %s", language)
 	}
-
-	// Special case for Java - check gradlew exists
-	if language == "java" {
-		gradlew := filepath.Join(workerDir, "gradlew")
-		if _, err := os.Stat(gradlew); err != nil {
-			return fmt.Errorf("gradlew not found in %s", workerDir)
-		}
-	}
-
 	return runCommandInDir(workerDir, cleanCmd[0], cleanCmd[1:]...)
 }
 
-// runClean handles cleaning for specific languages or all
 func runClean(languages []string, cleanAll bool) error {
 	rootDir, err := getRootDir()
 	if err != nil {
@@ -105,16 +103,6 @@ func runClean(languages []string, cleanAll bool) error {
 	return nil
 }
 
-// cleanCommands maps languages to their clean commands
-var cleanCommands = map[string][]string{
-	"go":         {"go", "clean"},
-	"java":       {"./gradlew", "clean"},
-	"python":     {"uv", "clean"},
-	"typescript": {"npm", "run", "clean"},
-	"dotnet":     {"dotnet", "clean"},
-}
-
-// removeTempDirs removes temporary directories with omes-temp-* prefix
 func removeTempDirs(workersDir string) error {
 	return filepath.Walk(workersDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

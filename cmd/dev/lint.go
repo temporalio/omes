@@ -84,12 +84,7 @@ func lintWorker(language, rootDir string) error {
 }
 
 func lintGoWorker(workerDir string) error {
-	if err := checkCommand("go"); err != nil {
-		return err
-	}
-
-	fmt.Printf("Go version: ")
-	if err := runCommand("go", "version"); err != nil {
+	if err := validateLanguageTools("go"); err != nil {
 		return err
 	}
 
@@ -118,9 +113,8 @@ func lintGoWorker(workerDir string) error {
 }
 
 func lintJavaWorker(workerDir string) error {
-	gradlew := filepath.Join(workerDir, "gradlew")
-	if _, err := os.Stat(gradlew); err != nil {
-		return fmt.Errorf("gradlew not found in %s", workerDir)
+	if err := validateLanguageTools("java"); err != nil {
+		return err
 	}
 
 	fmt.Println("Running Java linting and tests...")
@@ -134,11 +128,6 @@ func lintJavaWorker(workerDir string) error {
 
 func lintPythonWorker(workerDir string) error {
 	if err := validateLanguageTools("python"); err != nil {
-		return err
-	}
-
-	fmt.Printf("Python version: ")
-	if err := runCommand("python", "--version"); err != nil {
 		return err
 	}
 
@@ -167,7 +156,7 @@ func lintPythonWorker(workerDir string) error {
 }
 
 func lintTypescriptWorker(workerDir string) error {
-	if err := checkCommand("npm"); err != nil {
+	if err := validateLanguageTools("typescript"); err != nil {
 		return err
 	}
 
@@ -186,7 +175,7 @@ func lintTypescriptWorker(workerDir string) error {
 }
 
 func lintDotnetWorker(workerDir string) error {
-	if err := checkCommand("dotnet"); err != nil {
+	if err := validateLanguageTools("dotnet"); err != nil {
 		return err
 	}
 
