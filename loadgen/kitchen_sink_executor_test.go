@@ -833,7 +833,7 @@ func testSupportedFeature(
 	}
 	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
-	taskQueueName := TaskQueueForRun(scenarioInfo.ScenarioName, scenarioInfo.RunID)
+	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
 	if execErr != nil {
 		if len(historyEvents) > 0 {

@@ -134,7 +134,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: s.Namespace,
 			Query: fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
-				loadgen.TaskQueueForRun(s.ScenarioName, s.RunID)),
+				loadgen.TaskQueueForRun(s.RunID)),
 		},
 		0,
 		time.Minute,

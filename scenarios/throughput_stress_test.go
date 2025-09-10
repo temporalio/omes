@@ -16,7 +16,7 @@ func TestThroughputStress(t *testing.T) {
 
 	scenarioName := "throughput_stress_test"
 	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
-	taskQueueName := loadgen.TaskQueueForRun(scenarioName, runID)
+	taskQueueName := loadgen.TaskQueueForRun(runID)
 
 	env := workers.SetupTestEnvironment(t,
 		workers.WithExecutorTimeout(1*time.Minute),

@@ -178,22 +178,17 @@ func (env *TestEnvironment) RunExecutorTest(
 ) error {
 	env.ensureWorkerBuilt(t, sdk)
 
-	scenarioID := cmdoptions.ScenarioID{
-		Scenario: scenarioInfo.ScenarioName,
-		RunID:    scenarioInfo.RunID,
-	}
-	taskQueueName := loadgen.TaskQueueForRun(scenarioID.Scenario, scenarioID.RunID)
-
 	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), env.executorTimeout)
 	defer cancelTestCtx()
-
-	workerDone := env.startWorker(testCtx, sdk, taskQueueName, scenarioID)
 
 	// Update scenario info with test environment details
 	scenarioInfo.Logger = env.logger.Named("executor")
 	scenarioInfo.MetricsHandler = client.MetricsNopHandler
 	scenarioInfo.Client = env.temporalClient
 	scenarioInfo.Namespace = testNamespace
+
+	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
+	workerDone := env.startWorker(testCtx, sdk, taskQueueName, scenarioInfo)
 
 	err := executor.Run(testCtx, scenarioInfo)
 
@@ -262,7 +257,7 @@ func (env *TestEnvironment) startWorker(
 	ctx context.Context,
 	sdk cmdoptions.Language,
 	taskQueueName string,
-	scenarioID cmdoptions.ScenarioID,
+	scenarioInfo loadgen.ScenarioInfo,
 ) <-chan error {
 	workerDone := make(chan error, 1)
 
@@ -277,7 +272,10 @@ func (env *TestEnvironment) startWorker(
 			},
 			TaskQueueName:            taskQueueName,
 			GracefulShutdownDuration: workerShutdownTimeout,
-			ScenarioID:               scenarioID,
+			ScenarioID: cmdoptions.ScenarioID{
+				Scenario: scenarioInfo.ScenarioName,
+				RunID:    scenarioInfo.RunID,
+			},
 			ClientOptions: cmdoptions.ClientOptions{
 				Address:   env.DevServerAddress(),
 				Namespace: testNamespace,
