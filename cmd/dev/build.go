@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -77,12 +78,6 @@ func buildWorker(language, rootDir string, versions map[string]string) error {
 		return err
 	}
 
-	versionCmd := getVersionCommand(language)
-	fmt.Printf("%s version: ", strings.Title(language))
-	if err := runCommand(versionCmd[0], versionCmd[1:]...); err != nil {
-		return err
-	}
-
 	sdkVersion := getSdkVersion(language, versions)
 	fmt.Printf("Building %s worker (SDK %s)...\n", language, sdkVersion)
 
@@ -102,31 +97,11 @@ func buildWorker(language, rootDir string, versions map[string]string) error {
 	return nil
 }
 
-// getVersionCommand returns the command to check version for a given language
-func getVersionCommand(language string) []string {
-	switch language {
-	case "go":
-		return []string{"go", "version"}
-	case "java":
-		return []string{"java", "-version"}
-	case "python":
-		return []string{"python", "--version"}
-	case "typescript":
-		return []string{"node", "--version"}
-	case "dotnet":
-		return []string{"dotnet", "--version"}
-	default:
-		return []string{"echo", "unknown"}
-	}
-}
-
-// buildTemporalOmes builds the temporal-omes binary
 func buildTemporalOmes(rootDir string) error {
 	fmt.Println("Building temporal-omes...")
 	return runCommandInDir(rootDir, "go", "build", "-o", "temporal-omes", "./cmd")
 }
 
-// runWorkerScenario runs a test scenario with the worker
 func runWorkerScenario(rootDir, language, sdkVersion string) error {
 	fmt.Println("Running local scenario with worker...")
 	scenario := "workflow_with_single_noop_activity"
@@ -144,7 +119,6 @@ func runWorkerScenario(rootDir, language, sdkVersion string) error {
 	return runCommandInDir(rootDir, args[0], args[1:]...)
 }
 
-// buildWorkerImage builds the Docker image for the worker
 func buildWorkerImage(rootDir, language, sdkVersion string) error {
 	fmt.Println("Building worker image...")
 	args := []string{
@@ -156,31 +130,14 @@ func buildWorkerImage(rootDir, language, sdkVersion string) error {
 	return runCommandInDir(rootDir, args[0], args[1:]...)
 }
 
-// runBuildKitchensink builds the kitchen-sink proto generator and TypeScript protos
 func runBuildKitchensink() error {
 	if err := validateLanguageTools("rust"); err != nil {
 		return err
 	}
-
 	if err := validateLanguageTools("protoc"); err != nil {
 		return err
 	}
-
-	if err := checkCommand("node"); err != nil {
-		return fmt.Errorf("node is not installed. Please install Node.js first")
-	}
-
-	if err := checkCommand("protoc-gen-go"); err != nil {
-		return fmt.Errorf("protoc-gen-go is not installed or not in PATH. Please run 'dev install protoc' first")
-	}
-
-	fmt.Printf("Cargo version: ")
-	if err := runCommand("cargo", "--version"); err != nil {
-		return err
-	}
-
-	fmt.Printf("Node.js version: ")
-	if err := runCommand("node", "--version"); err != nil {
+	if err := validateLanguageTools("typescript"); err != nil {
 		return err
 	}
 
@@ -193,6 +150,12 @@ func runBuildKitchensink() error {
 
 	fmt.Println("Building kitchen-sink-gen...")
 	kitchenSinkGenDir := filepath.Join(rootDir, "loadgen", "kitchen-sink-gen")
+
+	// Set PROTOC environment variable to use the correct protoc
+	protocPath, _ := getCommandPath("protoc") // already validated earlier
+	os.Setenv("PROTOC", protocPath)
+	fmt.Printf("Setting PROTOC=%s\n", protocPath)
+
 	if err := runCommandInDir(kitchenSinkGenDir, "cargo", "build"); err != nil {
 		return err
 	}

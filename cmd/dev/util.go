@@ -17,17 +17,55 @@ var supportedTools = []string{
 	"dotnet", "go", "java", "node", "npm", "protoc", "python", "rust",
 }
 
-var sdkVersionMap = map[string]string{
-	"go":         "GO_SDK_VERSION",
-	"java":       "JAVA_SDK_VERSION",
-	"python":     "PYTHON_SDK_VERSION",
-	"typescript": "TYPESCRIPT_SDK_VERSION",
-	"dotnet":     "DOTNET_SDK_VERSION",
+var versionVarNames = map[string]string{
+	// Tool versions
+	"go":            "GO_VERSION",
+	"java":          "JAVA_VERSION",
+	"python":        "PYTHON_VERSION",
+	"node":          "NODE_VERSION",
+	"npm":           "", // not tracked
+	"dotnet":        "DOTNET_VERSION",
+	"cargo":         "RUST_TOOLCHAIN",
+	"protoc":        "PROTOC_VERSION",
+	"protoc-gen-go": "PROTOC_GEN_GO_VERSION",
+	"uv":            "UV_VERSION",
+	"poe":           "", // not tracked
+
+	// SDK versions
+	"go-sdk":         "GO_SDK_VERSION",
+	"java-sdk":       "JAVA_SDK_VERSION",
+	"python-sdk":     "PYTHON_SDK_VERSION",
+	"typescript-sdk": "TYPESCRIPT_SDK_VERSION",
+	"dotnet-sdk":     "DOTNET_SDK_VERSION",
+}
+
+var toolDependencies = map[string][]string{
+	"go":         {"go"},
+	"java":       {"java"},
+	"python":     {"python", "uv", "poe"},
+	"typescript": {"node", "npm"},
+	"dotnet":     {"dotnet"},
+	"rust":       {"cargo"},
+	"protoc":     {"protoc", "protoc-gen-go"},
+}
+
+var toolVersionCommands = map[string][]string{
+	"go":            {"go", "version"},
+	"java":          {"java", "-version"},
+	"python":        {"python", "--version"},
+	"node":          {"node", "--version"},
+	"npm":           {"npm", "--version"},
+	"dotnet":        {"dotnet", "--version"},
+	"cargo":         {"cargo", "--version"},
+	"protoc":        {"protoc", "--version"},
+	"protoc-gen-go": {"protoc-gen-go", "--version"},
+	"uv":            {"uv", "--version"},
+	"poe":           {"poe", "--version"},
 }
 
 // getSdkVersion returns the SDK version for a given language
 func getSdkVersion(language string, versions map[string]string) string {
-	if key, ok := sdkVersionMap[language]; ok {
+	if key, ok := versionVarNames[language+"-sdk"]; ok {
 		return versions[key]
 	}
 	return "unknown"
@@ -35,10 +73,15 @@ func getSdkVersion(language string, versions map[string]string) string {
 
 // checkCommand verifies that a command is available in PATH
 func checkCommand(cmd string) error {
-	if _, err := exec.LookPath(cmd); err != nil {
+	if _, err := getCommandPath(cmd); err != nil {
 		return fmt.Errorf("%s is not installed. Please install %s first", cmd, cmd)
 	}
 	return nil
+}
+
+// getCommandPath returns the full path to a command
+func getCommandPath(cmd string) (string, error) {
+	return exec.LookPath(cmd)
 }
 
 // runCommand executes a command and pipes output to stdout/stderr
@@ -56,6 +99,16 @@ func runCommandInDir(dir, name string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// runCommandOutput executes a command and returns its output as a string
+func runCommandOutput(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }
 
 // getRootDir returns the project root directory (current working directory when running go run ./cmd/dev)
@@ -120,66 +173,52 @@ func checkMise() error {
 	return nil
 }
 
-// validatePrerequisites checks if required tools are available before running operations
-func validatePrerequisites(languages []string) error {
-	// Check for mise first if any language is specified
-	if len(languages) > 0 {
-		if _, err := exec.LookPath("mise"); err != nil {
-			fmt.Printf("Warning: mise not found. Some operations may require mise for version management.\n")
-		}
-	}
-
-	// Check language-specific tools
-	for _, lang := range languages {
-		var requiredTools []string
-
-		switch lang {
-		case "go":
-			requiredTools = []string{"go"}
-		case "java":
-			requiredTools = []string{"java"}
-		case "python":
-			requiredTools = []string{"python", "uv"}
-		case "typescript":
-			requiredTools = []string{"node", "npm"}
-		case "dotnet":
-			requiredTools = []string{"dotnet"}
-		}
-
-		for _, tool := range requiredTools {
-			if _, err := exec.LookPath(tool); err != nil {
-				fmt.Printf("Warning: %s not found. %s operations may fail.\n", tool, lang)
-			}
-		}
-	}
-
-	return nil
-}
-
 // validateLanguageTools checks that all required tools for a language are available
+// and prints version and path information for known tools
 func validateLanguageTools(language string) error {
-	var requiredTools []string
+	requiredTools, ok := toolDependencies[language]
+	if !ok {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
 
-	switch language {
-	case "go":
-		requiredTools = []string{"go"}
-	case "java":
-		requiredTools = []string{"java"}
-	case "python":
-		requiredTools = []string{"python", "uv", "poe"}
-	case "typescript":
-		requiredTools = []string{"node", "npm"}
-	case "dotnet":
-		requiredTools = []string{"dotnet"}
-	case "rust":
-		requiredTools = []string{"cargo"}
-	case "protoc":
-		requiredTools = []string{"protoc"}
+	versions, err := loadVersions()
+	if err != nil {
+		return fmt.Errorf("failed to load versions.env: %v", err)
 	}
 
 	for _, tool := range requiredTools {
-		if err := checkCommand(tool); err != nil {
-			return err
+		toolPath, err := getCommandPath(tool)
+		if err != nil {
+			return fmt.Errorf("%s is not installed. Please install %s first", tool, tool)
+		}
+
+		versionCmd, hasVersion := toolVersionCommands[tool]
+		if !hasVersion {
+			return fmt.Errorf("no version command defined for tool: %s", tool)
+		}
+
+		output, err := runCommandOutput(versionCmd[0], versionCmd[1:]...)
+		if err != nil {
+			return fmt.Errorf("failed to get version for %s at %s: %v", tool, toolPath, err)
+		}
+
+		actualVersion := strings.TrimSpace(output)
+
+		envVar, ok := versionVarNames[tool]
+		if !ok {
+			return fmt.Errorf("no version env var defined for tool: %s", tool)
+		}
+
+		fmt.Printf("using %s\n", tool)
+		fmt.Printf("\tpath: %s\n", toolPath)
+		fmt.Printf("\tversion: %s\n", actualVersion)
+
+		if envVar != "" {
+			expectedVersion := versions[envVar]
+			if expectedVersion == "" {
+				return fmt.Errorf("no expected version found for %s (env var: %s)", tool, envVar)
+			}
+			fmt.Printf("\texpected version: %s\n", expectedVersion)
 		}
 	}
 	return nil
