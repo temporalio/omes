@@ -51,7 +51,9 @@ jobs:
           fetch-depth: 0
 
       - name: Lint dockerfile
-        run: docker run --rm -i hadolint/hadolint hadolint --ignore DL3029 - < dockerfiles/${{inputs.lang}}.Dockerfile
+        env:
+          LANG: ${{ inputs.lang }}
+        run: docker run --rm -i hadolint/hadolint hadolint --ignore DL3029 - < "dockerfiles/$LANG.Dockerfile"
 
       - uses: actions/setup-go@v4
         if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
@@ -64,13 +66,18 @@ jobs:
 
       - name: Build and save image for artifacts
         if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
+        env:
+          LANG: ${{ inputs.lang }}
+          SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
+          IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}}
+          TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
         run: |
-          go run ./cmd build-worker-image --language ${{ inputs.lang }} \
-          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
+          go run ./cmd build-worker-image --language "$LANG" \
+          --version "$SDK_VERSION" \
           --save-image /tmp/image.tar \
           --platform linux/amd64 \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
-          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+          $IMAGE_TAG_ARGS \
+          $TAG_LATEST_ARGS
 
       - name: Prepare docker artifact
         if: ${{ !inputs.do-push || github.event.pull_request.head.repo.fork }}
@@ -124,14 +131,21 @@ jobs:
           password: ${{ secrets.DOCKER_PAT }}
 
       - name: Build and push to Docker Hub
+        env:
+          LANG: ${{ inputs.lang }}
+          SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
+          IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}}
+          TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
         run: |
-          go run ./cmd build-push-worker-image --language ${{ inputs.lang }} \
-          --version ${{ inputs.sdk-version || 'checked-out-sdk/' }} \
+          go run ./cmd build-push-worker-image --language "$LANG" \
+          --version "$SDK_VERSION" \
           --platform linux/amd64,linux/arm64 \
           --repo-prefix temporaliotest \
-          ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}} \
-          ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+          $IMAGE_TAG_ARGS \
+          $TAG_LATEST_ARGS
 
       - name: 🐳 Docker Hub image tag
+        env:
+          LANG: ${{ inputs.lang }}
         run: |
-          echo "::notice title=🐳 Docker Hub image published for ${{ inputs.lang }}::Check temporaliotest/omes tags"
+          echo "::notice title=🐳 Docker Hub image published for $LANG::Check temporaliotest/omes tags"
