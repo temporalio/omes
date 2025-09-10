@@ -10,17 +10,6 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  lint-shell:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: "./scripts"
-          format: gcc
-          severity: error
 
   test-omes:
     runs-on: ubuntu-latest
@@ -54,24 +43,19 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            install: ./scripts/install-go.sh
-            lint: ./scripts/lint-go-worker.sh
+            tools: go
             submodules: false
           - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-java-worker.sh
+            tools: java go
             submodules: false
           - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-python-worker.sh
+            tools: python go
             submodules: false
           - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-typescript-worker.sh
+            tools: node go
             submodules: true
           - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-dotnet-worker.sh
+            tools: dotnet go
             submodules: true
     steps:
       - name: Print build information
@@ -85,9 +69,11 @@ jobs:
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: ${{ matrix.install }}
+        run: |
+          go run ./cmd/dev install ${{ matrix.tools }}
       - name: Lint ${{ matrix.sdk }}
-        run: ${{ matrix.lint }}
+        run: |
+          go run ./cmd/dev lint ${{ matrix.sdk }}
       - name: Check formatting
         run: |
           git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)
@@ -100,24 +86,19 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            install: ./scripts/install-go.sh
-            build: ./scripts/build-go-worker.sh
+            tools: go
             submodules: false
           - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
-            build: ./scripts/build-java-worker.sh
+            tools: java go
             submodules: false
           - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
-            build: ./scripts/build-python-worker.sh
+            tools: python go
             submodules: false
           - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
-            build: ./scripts/build-typescript-worker.sh
+            tools: node go
             submodules: true
           - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
-            build: ./scripts/build-dotnet-worker.sh
+            tools: dotnet go
             submodules: true
     steps:
       - name: Checkout repo
@@ -129,9 +110,11 @@ jobs:
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: ${{ matrix.install }}
+        run: |
+          go run ./cmd/dev install ${{ matrix.tools }}
       - name: Build ${{ matrix.sdk }} worker
-        run: ${{ matrix.build }}
+        run: |
+          go run ./cmd/dev build ${{ matrix.sdk }}
 
   test-kitchensink:
     runs-on: ubuntu-latest
@@ -141,19 +124,19 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            install: ./scripts/install-go.sh
+            tools: go
             submodules: false
           - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            tools: java go
             submodules: false
           - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            tools: python go
             submodules: false
           - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            tools: node go
             submodules: true
           - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            tools: dotnet go
             submodules: true
     steps:
       - name: Checkout repo
@@ -165,7 +148,8 @@ jobs:
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: ${{ matrix.install }}
+        run: |
+          go run ./cmd/dev install ${{ matrix.tools }}
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
@@ -195,13 +179,13 @@ jobs:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
         run: |
-          ./scripts/install-rust.sh
-          ./scripts/install-go.sh
-          ./scripts/install-protoc.sh
-          ./scripts/install-node.sh
+          go run ./cmd/dev install rust go protoc node
+      - name: Add Go bin to PATH
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Build proto
         run: |
-          ./scripts/build-kitchensink.sh
+          go run ./cmd/dev build kitchensink
       - name: Check diff
         run: |
           git config --global core.safecrlf false
