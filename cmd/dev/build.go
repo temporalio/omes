@@ -81,49 +81,17 @@ func buildWorker(ctx context.Context, language, rootDir string) error {
 	}
 
 	fmt.Println("Building", language, "worker (SDK", sdkVersion+")...")
-
-	if err := buildTemporalOmes(ctx, rootDir); err != nil {
-		return err
-	}
-
-	if err := runWorkerScenario(ctx, rootDir, language, sdkVersion); err != nil {
-		return err
-	}
-
 	if err := buildWorkerImage(ctx, rootDir, language, sdkVersion); err != nil {
 		return err
 	}
-
 	fmt.Println("✅", language, "worker build completed successfully!")
 	return nil
-}
-
-func buildTemporalOmes(ctx context.Context, rootDir string) error {
-	fmt.Println("Building temporal-omes...")
-	return runCommandInDir(ctx, rootDir, "go", "build", "-o", "temporal-omes", "./cmd")
-}
-
-func runWorkerScenario(ctx context.Context, rootDir, language, sdkVersion string) error {
-	fmt.Println("Running local scenario with worker...")
-	scenario := "workflow_with_single_noop_activity"
-	iterations := "5"
-
-	args := []string{
-		"./temporal-omes", "run-scenario-with-worker",
-		"--scenario", scenario,
-		"--log-level", "debug",
-		"--language", language,
-		"--embedded-server",
-		"--iterations", iterations,
-		"--version", "v" + sdkVersion,
-	}
-	return runCommandInDir(ctx, rootDir, args[0], args[1:]...)
 }
 
 func buildWorkerImage(ctx context.Context, rootDir, language, sdkVersion string) error {
 	fmt.Println("Building worker image...")
 	args := []string{
-		"./temporal-omes", "build-worker-image",
+		"go", "run", "./cmd", "build-worker-image",
 		"--language", language,
 		"--version", "v" + sdkVersion,
 		"--tag-as-latest",

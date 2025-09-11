@@ -114,6 +114,12 @@ jobs:
       - name: Build ${{ matrix.sdk }} worker
         run: |
           go run ./cmd/dev build ${{ matrix.sdk }}
+      - name: Test ${{ matrix.sdk }} worker locally
+        run: |
+          go run ./cmd/dev test ${{ matrix.sdk }} local
+      - name: Test ${{ matrix.sdk }} worker image
+        run: |
+          go run ./cmd/dev test ${{ matrix.sdk }} image
 
   test-kitchensink:
     runs-on: ubuntu-latest

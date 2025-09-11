@@ -14,6 +14,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(buildCmd())
+	rootCmd.AddCommand(testCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(installCmd())
 	rootCmd.AddCommand(checkCmd())

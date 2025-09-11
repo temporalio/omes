@@ -82,14 +82,11 @@ func runCommandInDir(ctx context.Context, dir, name string, args ...string) erro
 	return cmd.Run()
 }
 
-// runCommandOutput executes a command and returns its output as a string
+// runCommandOutput executes a command and returns combined stdout and stderr as a string
 func runCommandOutput(ctx context.Context, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return string(output), nil
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 // getRootDir returns the project's root directory
