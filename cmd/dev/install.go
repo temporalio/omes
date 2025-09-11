@@ -45,32 +45,27 @@ func runInstallTools(ctx context.Context, tools []string) error {
 		return err
 	}
 
-	versions, err := loadVersions()
-	if err != nil {
-		return err
-	}
-
 	fmt.Println("Installing", strings.Join(tools, ", "))
 
 	for _, tool := range tools {
 		var err error
 		switch tool {
 		case "dotnet":
-			err = installDotnet(ctx, versions)
+			err = installDotnet(ctx)
 		case "go":
 			// already installed
 		case "java":
-			err = installJava(ctx, versions)
+			err = installJava(ctx)
 		case "python":
-			err = installPython(ctx, versions)
+			err = installPython(ctx)
 		case "node":
-			err = installNode(ctx, versions)
+			err = installNode(ctx)
 		case "npm":
 			// already installed by node
 		case "rust":
-			err = installRust(ctx, versions)
+			err = installRust(ctx)
 		case "protoc":
-			err = installProtoc(ctx, versions)
+			err = installProtoc(ctx)
 		default:
 			err = fmt.Errorf("unsupported tool: %s", tool)
 		}
@@ -83,39 +78,39 @@ func runInstallTools(ctx context.Context, tools []string) error {
 	return nil
 }
 
-func installDotnet(ctx context.Context, versions map[string]string) error {
-	version := versions["DOTNET_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for dotnet")
+func installDotnet(ctx context.Context) error {
+	version, err := getVersion("dotnet")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "dotnet", version)
 }
 
-func installGo(ctx context.Context, versions map[string]string) error {
-	version := versions["GO_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for go")
+func installGo(ctx context.Context) error {
+	version, err := getVersion("go")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "go", version)
 }
 
-func installJava(ctx context.Context, versions map[string]string) error {
-	version := versions["JAVA_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for java")
+func installJava(ctx context.Context) error {
+	version, err := getVersion("java")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "java", version)
 }
 
-func installPython(ctx context.Context, versions map[string]string) error {
-	version := versions["PYTHON_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for python")
+func installPython(ctx context.Context) error {
+	version, err := getVersion("python")
+	if err != nil {
+		return err
 	}
 
-	uvVersion := versions["UV_VERSION"]
-	if uvVersion == "" {
-		return fmt.Errorf("version not found for uv")
+	uvVersion, err := getVersion("uv")
+	if err != nil {
+		return err
 	}
 
 	if err := installViaMise(ctx, "python", version); err != nil {
@@ -135,26 +130,26 @@ func installPython(ctx context.Context, versions map[string]string) error {
 	return nil
 }
 
-func installNode(ctx context.Context, versions map[string]string) error {
-	version := versions["NODE_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for node")
+func installNode(ctx context.Context) error {
+	version, err := getVersion("node")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "node", version)
 }
 
-func installRust(ctx context.Context, versions map[string]string) error {
-	version := versions["RUST_TOOLCHAIN"]
-	if version == "" {
-		return fmt.Errorf("version not found for rust")
+func installRust(ctx context.Context) error {
+	version, err := getVersion("cargo")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "rust", version)
 }
 
-func installProtoc(ctx context.Context, versions map[string]string) error {
-	version := versions["PROTOC_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for protoc")
+func installProtoc(ctx context.Context) error {
+	version, err := getVersion("protoc")
+	if err != nil {
+		return err
 	}
 
 	if err := installViaMise(ctx, "protoc", version); err != nil {
@@ -163,9 +158,9 @@ func installProtoc(ctx context.Context, versions map[string]string) error {
 
 	// Install Go protoc plugin
 	fmt.Println("Installing Go protoc plugin...")
-	protocGenGoVersion := versions["PROTOC_GEN_GO_VERSION"]
-	if protocGenGoVersion == "" {
-		return fmt.Errorf("version not found for protoc-gen-go")
+	protocGenGoVersion, err := getVersion("protoc-gen-go")
+	if err != nil {
+		return err
 	}
 	if err := runCommand(ctx, "go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
 		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
@@ -175,17 +170,12 @@ func installProtoc(ctx context.Context, versions map[string]string) error {
 	return nil
 }
 
-func installUv(ctx context.Context, versions map[string]string) error {
-	version := versions["UV_VERSION"]
-	if version == "" {
-		return fmt.Errorf("version not found for uv")
+func installUv(ctx context.Context) error {
+	version, err := getVersion("uv")
+	if err != nil {
+		return err
 	}
 	return installViaMise(ctx, "uv", version)
-}
-
-func installNpm(ctx context.Context, versions map[string]string) error {
-	// npm comes with node, so install node
-	return installNode(ctx, versions)
 }
 
 func installViaMise(ctx context.Context, tool, version string) error {

@@ -11,67 +11,55 @@ import (
 	"strings"
 )
 
-var supportedLanguages = []string{
-	"dotnet", "go", "java", "python", "typescript",
-}
-
-var supportedTools = []string{
-	"dotnet", "go", "java", "node", "npm", "protoc", "python", "rust",
-}
-
-// Mappings to versions.env
-var versionVarNames = map[string]string{
-	// Tool versions
-	"go":            "GO_VERSION",
-	"java":          "JAVA_VERSION",
-	"python":        "PYTHON_VERSION",
-	"node":          "NODE_VERSION",
-	"npm":           "", // not tracked
-	"dotnet":        "DOTNET_VERSION",
-	"cargo":         "RUST_TOOLCHAIN",
-	"protoc":        "PROTOC_VERSION",
-	"protoc-gen-go": "PROTOC_GEN_GO_VERSION",
-	"uv":            "UV_VERSION",
-	"poe":           "", // not tracked
-
-	// SDK versions
-	"go-sdk":         "GO_SDK_VERSION",
-	"java-sdk":       "JAVA_SDK_VERSION",
-	"python-sdk":     "PYTHON_SDK_VERSION",
-	"typescript-sdk": "TYPESCRIPT_SDK_VERSION",
-	"dotnet-sdk":     "DOTNET_SDK_VERSION",
-}
-
-var toolDependencies = map[string][]string{
-	"go":         {"go"},
-	"java":       {"java"},
-	"python":     {"python", "uv", "poe"},
-	"typescript": {"node", "npm"},
-	"dotnet":     {"dotnet"},
-	"rust":       {"cargo"},
-	"protoc":     {"protoc", "protoc-gen-go"},
-}
-
-var toolVersionCommands = map[string][]string{
-	"go":            {"go", "version"},
-	"java":          {"java", "-version"},
-	"python":        {"python", "--version"},
-	"node":          {"node", "--version"},
-	"npm":           {"npm", "--version"},
-	"dotnet":        {"dotnet", "--version"},
-	"cargo":         {"cargo", "--version"},
-	"protoc":        {"protoc", "--version"},
-	"protoc-gen-go": {"protoc-gen-go", "--version"},
-	"uv":            {"uv", "--version"},
-	"poe":           {"poe", "--version"},
-}
-
-// getSdkVersion returns the SDK version for a given language
-func getSdkVersion(language string, versions map[string]string) string {
-	if key, ok := versionVarNames[language+"-sdk"]; ok {
-		return versions[key]
+var (
+	supportedLanguages = []string{
+		"dotnet", "go", "java", "python", "typescript",
 	}
-	return "unknown"
+	supportedTools = []string{
+		"dotnet", "go", "java", "node", "npm", "protoc", "python", "rust",
+	}
+	toolDependencies = map[string][]string{
+		"go":         {"go"},
+		"java":       {"java"},
+		"python":     {"python", "uv", "poe"},
+		"typescript": {"node", "npm"},
+		"dotnet":     {"dotnet"},
+		"rust":       {"cargo"},
+		"protoc":     {"protoc", "protoc-gen-go"},
+	}
+	toolVersionCommands = map[string][]string{
+		"go":            {"go", "version"},
+		"java":          {"java", "-version"},
+		"python":        {"python", "--version"},
+		"node":          {"node", "--version"},
+		"npm":           {"npm", "--version"},
+		"dotnet":        {"dotnet", "--version"},
+		"cargo":         {"cargo", "--version"},
+		"protoc":        {"protoc", "--version"},
+		"protoc-gen-go": {"protoc-gen-go", "--version"},
+		"uv":            {"uv", "--version"},
+		"poe":           {"poe", "--version"},
+	}
+	versionsCache map[string]string
+)
+
+// getVersion returns the version for a given tool from versions.env
+func getVersion(tool string) (string, error) {
+	if versionsCache == nil {
+		var err error
+		versionsCache, err = loadVersions()
+		if err != nil {
+			return "", fmt.Errorf("failed to load versions.env: %w", err)
+		}
+	}
+
+	key := strings.ToUpper(strings.ReplaceAll(tool, "-", "_")) + "_VERSION"
+	version := versionsCache[key]
+	if version == "" {
+		return "", fmt.Errorf("version not found for %s (var: %s)", tool, key)
+	}
+
+	return version, nil
 }
 
 // checkCommand verifies that a command is available in PATH
@@ -180,11 +168,6 @@ func validateLanguageTools(ctx context.Context, language string) error {
 		return fmt.Errorf("unsupported language: %s", language)
 	}
 
-	versions, err := loadVersions()
-	if err != nil {
-		return fmt.Errorf("failed to load versions.env: %v", err)
-	}
-
 	for _, tool := range requiredTools {
 		toolPath, err := exec.LookPath(tool)
 		if err != nil {
@@ -203,20 +186,12 @@ func validateLanguageTools(ctx context.Context, language string) error {
 
 		actualVersion := strings.TrimSpace(output)
 
-		envVar, ok := versionVarNames[tool]
-		if !ok {
-			return fmt.Errorf("no version env var defined for tool: %s", tool)
-		}
-
 		fmt.Println("using", tool)
 		fmt.Println("\tpath:", toolPath)
 		fmt.Println("\tversion:", actualVersion)
 
-		if envVar != "" {
-			expectedVersion := versions[envVar]
-			if expectedVersion == "" {
-				return fmt.Errorf("no expected version found for %s (env var: %s)", tool, envVar)
-			}
+		expectedVersion, err := getVersion(tool)
+		if err == nil && expectedVersion != "" {
 			fmt.Println("\texpected version:", expectedVersion)
 		}
 	}

@@ -55,15 +55,10 @@ func runBuildWorkers(ctx context.Context, languages []string) error {
 		return err
 	}
 
-	versions, err := loadVersions()
-	if err != nil {
-		return err
-	}
-
 	fmt.Println("Building", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := buildWorker(ctx, lang, rootDir, versions); err != nil {
+		if err := buildWorker(ctx, lang, rootDir); err != nil {
 			return fmt.Errorf("failed to build %s: %v", lang, err)
 		}
 	}
@@ -71,7 +66,7 @@ func runBuildWorkers(ctx context.Context, languages []string) error {
 	return nil
 }
 
-func buildWorker(ctx context.Context, language, rootDir string, versions map[string]string) error {
+func buildWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("\n===========================================")
 	fmt.Println("Building", language, "worker")
 	fmt.Println("===========================================")
@@ -80,7 +75,11 @@ func buildWorker(ctx context.Context, language, rootDir string, versions map[str
 		return err
 	}
 
-	sdkVersion := getSdkVersion(language, versions)
+	sdkVersion, err := getVersion(language + "-sdk")
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("Building", language, "worker (SDK", sdkVersion+")...")
 
 	if err := buildTemporalOmes(ctx, rootDir); err != nil {
@@ -156,7 +155,7 @@ func runBuildKitchensink(ctx context.Context) error {
 	// Set PROTOC environment variable to use the correct protoc
 	protocPath, _ := exec.LookPath("protoc") // already validated earlier
 	os.Setenv("PROTOC", protocPath)
-	fmt.Println("Setting PROTOC="+protocPath)
+	fmt.Println("Setting PROTOC=" + protocPath)
 
 	if err := runCommandInDir(ctx, kitchenSinkGenDir, "cargo", "build"); err != nil {
 		return err
