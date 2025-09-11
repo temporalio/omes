@@ -62,8 +62,6 @@ func runInstallTools(tools []string) error {
 			err = installJava(versions)
 		case "python":
 			err = installPython(versions)
-		case "uv":
-			// already installed by Python
 		case "node":
 			err = installNode(versions)
 		case "npm":
