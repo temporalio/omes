@@ -19,7 +19,7 @@ var (
 		"dotnet", "go", "java", "node", "protoc", "python", "rust",
 	}
 	toolDependencies = map[string][]string{
-		"python":     {"uv", "poe"},
+		"python":     {"python", "uv", "poe"},
 		"typescript": {"node"},
 		"protoc":     {"protoc-gen-go"},
 	}
@@ -158,9 +158,11 @@ func checkMise() error {
 // checkTool checks that the tool and its dependencies are available;
 // and prints version and path information.
 func checkTool(ctx context.Context, tool string) error {
-	toolsToCheck := []string{tool}
+	var toolsToCheck []string
 	if dependencies, hasDeps := toolDependencies[tool]; hasDeps {
-		toolsToCheck = append(toolsToCheck, dependencies...)
+		toolsToCheck = dependencies
+	} else {
+		toolsToCheck = []string{tool}
 	}
 
 	for _, tool := range toolsToCheck {
