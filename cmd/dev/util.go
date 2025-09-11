@@ -17,6 +17,7 @@ var supportedTools = []string{
 	"dotnet", "go", "java", "node", "npm", "protoc", "python", "rust",
 }
 
+// Mappings to versions.env
 var versionVarNames = map[string]string{
 	// Tool versions
 	"go":            "GO_VERSION",
