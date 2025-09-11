@@ -10,8 +10,7 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-
-  test-omes:
+rename   test-omes:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -35,7 +34,7 @@ jobs:
           annotate_only: true
           skip_annotations: true
 
-  lint-worker:
+  check-worker:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -71,9 +70,9 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Lint ${{ matrix.sdk }}
+      - name: Check ${{ matrix.sdk }}
         run: |
-          go run ./cmd/dev lint ${{ matrix.sdk }}
+          go run ./cmd/dev check ${{ matrix.sdk }}
       - name: Check formatting
         run: |
           git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)

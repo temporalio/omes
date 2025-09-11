@@ -16,7 +16,7 @@ func main() {
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(installCmd())
-	rootCmd.AddCommand(lintCmd())
+	rootCmd.AddCommand(checkCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
