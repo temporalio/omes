@@ -10,7 +10,7 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-rename   test-omes:
+  test-omes:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -75,7 +75,7 @@ rename   test-omes:
           go run ./cmd/dev check ${{ matrix.sdk }}
       - name: Check formatting
         run: |
-          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)
+          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
 
   build-worker:
     runs-on: ubuntu-latest
