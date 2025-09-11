@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,14 +48,14 @@ Examples:
 				languages = args
 			}
 
-			return runClean(languages, cleanAll)
+			return runClean(cmd.Context(), languages, cleanAll)
 		},
 	}
 
 	return cmd
 }
 
-func cleanLanguage(language, rootDir string) error {
+func cleanLanguage(ctx context.Context, language, rootDir string) error {
 	workerDir := filepath.Join(rootDir, "workers", language)
 	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
 		fmt.Println("Warning:", language, "worker directory not found, skipping")
@@ -67,10 +68,10 @@ func cleanLanguage(language, rootDir string) error {
 	if !ok {
 		return fmt.Errorf("unsupported language: %s", language)
 	}
-	return runCommandInDir(workerDir, cleanCmd[0], cleanCmd[1:]...)
+	return runCommandInDir(ctx, workerDir, cleanCmd[0], cleanCmd[1:]...)
 }
 
-func runClean(languages []string, cleanAll bool) error {
+func runClean(ctx context.Context, languages []string, cleanAll bool) error {
 	rootDir, err := getRootDir()
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func runClean(languages []string, cleanAll bool) error {
 	}
 
 	for _, lang := range languages {
-		if err := cleanLanguage(lang, rootDir); err != nil {
+		if err := cleanLanguage(ctx, lang, rootDir); err != nil {
 			if cleanAll {
 				fmt.Printf("Warning: failed to clean %s: %v\n", lang, err)
 			} else {

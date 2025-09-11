@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -82,16 +83,16 @@ func checkCommand(cmd string) error {
 }
 
 // runCommand executes a command and pipes output to stdout/stderr
-func runCommand(name string, args ...string) error {
-	cmd := exec.Command(name, args...)
+func runCommand(ctx context.Context, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 // runCommandInDir executes a command in a specific directory
-func runCommandInDir(dir, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
+func runCommandInDir(ctx context.Context, dir, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -99,8 +100,8 @@ func runCommandInDir(dir, name string, args ...string) error {
 }
 
 // runCommandOutput executes a command and returns its output as a string
-func runCommandOutput(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+func runCommandOutput(ctx context.Context, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -173,7 +174,7 @@ func checkMise() error {
 
 // validateLanguageTools checks that all required tools for a language are available
 // and prints version and path information for known tools
-func validateLanguageTools(language string) error {
+func validateLanguageTools(ctx context.Context, language string) error {
 	requiredTools, ok := toolDependencies[language]
 	if !ok {
 		return fmt.Errorf("unsupported language: %s", language)
@@ -195,7 +196,7 @@ func validateLanguageTools(language string) error {
 			return fmt.Errorf("no version command defined for tool: %s", tool)
 		}
 
-		output, err := runCommandOutput(versionCmd[0], versionCmd[1:]...)
+		output, err := runCommandOutput(ctx, versionCmd[0], versionCmd[1:]...)
 		if err != nil {
 			return fmt.Errorf("failed to get version for %s at %s: %v", tool, toolPath, err)
 		}

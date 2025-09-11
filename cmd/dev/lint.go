@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,12 +36,12 @@ Examples:
 				}
 				languages = args
 			}
-			return runLintWorkers(languages)
+			return runLintWorkers(cmd.Context(), languages)
 		},
 	}
 }
 
-func runLintWorkers(languages []string) error {
+func runLintWorkers(ctx context.Context, languages []string) error {
 	rootDir, err := getRootDir()
 	if err != nil {
 		return err
@@ -49,7 +50,7 @@ func runLintWorkers(languages []string) error {
 	fmt.Println("Linting", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := lintWorker(lang, rootDir); err != nil {
+		if err := lintWorker(ctx, lang, rootDir); err != nil {
 			return fmt.Errorf("failed to lint %s: %v", lang, err)
 		}
 	}
@@ -57,7 +58,7 @@ func runLintWorkers(languages []string) error {
 	return nil
 }
 
-func lintWorker(language, rootDir string) error {
+func lintWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("\n===========================================")
 	fmt.Println("Linting", language, "worker")
 	fmt.Println("===========================================")
@@ -69,42 +70,42 @@ func lintWorker(language, rootDir string) error {
 
 	switch language {
 	case "go":
-		return lintGoWorker(workerDir)
+		return lintGoWorker(ctx, workerDir)
 	case "java":
-		return lintJavaWorker(workerDir)
+		return lintJavaWorker(ctx, workerDir)
 	case "python":
-		return lintPythonWorker(workerDir)
+		return lintPythonWorker(ctx, workerDir)
 	case "typescript":
-		return lintTypescriptWorker(workerDir)
+		return lintTypescriptWorker(ctx, workerDir)
 	case "dotnet":
-		return lintDotnetWorker(workerDir)
+		return lintDotnetWorker(ctx, workerDir)
 	default:
 		return fmt.Errorf("unsupported language: %s", language)
 	}
 }
 
-func lintGoWorker(workerDir string) error {
-	if err := validateLanguageTools("go"); err != nil {
+func lintGoWorker(ctx context.Context, workerDir string) error {
+	if err := validateLanguageTools(ctx, "go"); err != nil {
 		return err
 	}
 
 	fmt.Println("Checking Go modules...")
-	if err := runCommandInDir(workerDir, "go", "mod", "tidy"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "go", "mod", "tidy"); err != nil {
 		return err
 	}
 
 	fmt.Println("Applying Go format...")
-	if err := runCommandInDir(workerDir, "go", "fmt", "./..."); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "go", "fmt", "./..."); err != nil {
 		return err
 	}
 
 	fmt.Println("Running Go tests...")
-	if err := runCommandInDir(workerDir, "go", "test", "-race", "./..."); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "go", "test", "-race", "./..."); err != nil {
 		return err
 	}
 
 	fmt.Println("Building Go worker...")
-	if err := runCommandInDir(workerDir, "go", "build", "./..."); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "go", "build", "./..."); err != nil {
 		return err
 	}
 
@@ -112,13 +113,13 @@ func lintGoWorker(workerDir string) error {
 	return nil
 }
 
-func lintJavaWorker(workerDir string) error {
-	if err := validateLanguageTools("java"); err != nil {
+func lintJavaWorker(ctx context.Context, workerDir string) error {
+	if err := validateLanguageTools(ctx, "java"); err != nil {
 		return err
 	}
 
 	fmt.Println("Running Java linting and tests...")
-	if err := runCommandInDir(workerDir, "./gradlew", "check"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "./gradlew", "check"); err != nil {
 		return err
 	}
 
@@ -126,28 +127,28 @@ func lintJavaWorker(workerDir string) error {
 	return nil
 }
 
-func lintPythonWorker(workerDir string) error {
-	if err := validateLanguageTools("python"); err != nil {
+func lintPythonWorker(ctx context.Context, workerDir string) error {
+	if err := validateLanguageTools(ctx, "python"); err != nil {
 		return err
 	}
 
 	fmt.Print("uv version: ")
-	if err := runCommand("uv", "--version"); err != nil {
+	if err := runCommand(ctx, "uv", "--version"); err != nil {
 		return err
 	}
 
 	fmt.Println("Checking Python dependencies...")
-	if err := runCommandInDir(workerDir, "uv", "sync"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
 		return err
 	}
 
 	fmt.Println("Applying Python format...")
-	if err := runCommandInDir(workerDir, "poe", "format"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "poe", "format"); err != nil {
 		return err
 	}
 
 	fmt.Println("Running Python linting...")
-	if err := runCommandInDir(workerDir, "poe", "lint"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "poe", "lint"); err != nil {
 		return err
 	}
 
@@ -155,18 +156,18 @@ func lintPythonWorker(workerDir string) error {
 	return nil
 }
 
-func lintTypescriptWorker(workerDir string) error {
-	if err := validateLanguageTools("typescript"); err != nil {
+func lintTypescriptWorker(ctx context.Context, workerDir string) error {
+	if err := validateLanguageTools(ctx, "typescript"); err != nil {
 		return err
 	}
 
 	fmt.Println("Installing TypeScript dependencies...")
-	if err := runCommandInDir(workerDir, "npm", "ci"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "npm", "ci"); err != nil {
 		return err
 	}
 
 	fmt.Println("Running TypeScript linting...")
-	if err := runCommandInDir(workerDir, "npm", "run", "lint"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "lint"); err != nil {
 		return err
 	}
 
@@ -174,18 +175,18 @@ func lintTypescriptWorker(workerDir string) error {
 	return nil
 }
 
-func lintDotnetWorker(workerDir string) error {
-	if err := validateLanguageTools("dotnet"); err != nil {
+func lintDotnetWorker(ctx context.Context, workerDir string) error {
+	if err := validateLanguageTools(ctx, "dotnet"); err != nil {
 		return err
 	}
 
 	fmt.Println("Running .NET formatting check...")
-	if err := runCommandInDir(workerDir, "dotnet", "format", "--verify-no-changes"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "format", "--verify-no-changes"); err != nil {
 		return err
 	}
 
 	fmt.Println("Running .NET tests...")
-	if err := runCommandInDir(workerDir, "dotnet", "test"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "test"); err != nil {
 		return err
 	}
 

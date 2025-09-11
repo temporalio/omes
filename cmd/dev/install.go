@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -34,12 +35,12 @@ Examples:
 				}
 				tools = args
 			}
-			return runInstallTools(tools)
+			return runInstallTools(cmd.Context(), tools)
 		},
 	}
 }
 
-func runInstallTools(tools []string) error {
+func runInstallTools(ctx context.Context, tools []string) error {
 	if err := checkMise(); err != nil {
 		return err
 	}
@@ -55,21 +56,21 @@ func runInstallTools(tools []string) error {
 		var err error
 		switch tool {
 		case "dotnet":
-			err = installDotnet(versions)
+			err = installDotnet(ctx, versions)
 		case "go":
 			// already installed
 		case "java":
-			err = installJava(versions)
+			err = installJava(ctx, versions)
 		case "python":
-			err = installPython(versions)
+			err = installPython(ctx, versions)
 		case "node":
-			err = installNode(versions)
+			err = installNode(ctx, versions)
 		case "npm":
-			err = installNpm(versions)
+			err = installNpm(ctx, versions)
 		case "rust":
-			err = installRust(versions)
+			err = installRust(ctx, versions)
 		case "protoc":
-			err = installProtoc(versions)
+			err = installProtoc(ctx, versions)
 		default:
 			err = fmt.Errorf("unsupported tool: %s", tool)
 		}
@@ -82,31 +83,31 @@ func runInstallTools(tools []string) error {
 	return nil
 }
 
-func installDotnet(versions map[string]string) error {
+func installDotnet(ctx context.Context, versions map[string]string) error {
 	version := versions["DOTNET_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for dotnet")
 	}
-	return installViaMise("dotnet", version)
+	return installViaMise(ctx, "dotnet", version)
 }
 
-func installGo(versions map[string]string) error {
+func installGo(ctx context.Context, versions map[string]string) error {
 	version := versions["GO_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for go")
 	}
-	return installViaMise("go", version)
+	return installViaMise(ctx, "go", version)
 }
 
-func installJava(versions map[string]string) error {
+func installJava(ctx context.Context, versions map[string]string) error {
 	version := versions["JAVA_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for java")
 	}
-	return installViaMise("java", version)
+	return installViaMise(ctx, "java", version)
 }
 
-func installPython(versions map[string]string) error {
+func installPython(ctx context.Context, versions map[string]string) error {
 	version := versions["PYTHON_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for python")
@@ -117,16 +118,16 @@ func installPython(versions map[string]string) error {
 		return fmt.Errorf("version not found for uv")
 	}
 
-	if err := installViaMise("python", version); err != nil {
+	if err := installViaMise(ctx, "python", version); err != nil {
 		return err
 	}
 
-	if err := installViaMise("uv", uvVersion); err != nil {
+	if err := installViaMise(ctx, "uv", uvVersion); err != nil {
 		return err
 	}
 
 	fmt.Println("Installing poethepoet...")
-	if err := runCommand("uv", "tool", "install", "poethepoet"); err != nil {
+	if err := runCommand(ctx, "uv", "tool", "install", "poethepoet"); err != nil {
 		return fmt.Errorf("failed to install poethepoet: %v", err)
 	}
 	fmt.Println("✅ poethepoet installed successfully!")
@@ -134,29 +135,29 @@ func installPython(versions map[string]string) error {
 	return nil
 }
 
-func installNode(versions map[string]string) error {
+func installNode(ctx context.Context, versions map[string]string) error {
 	version := versions["NODE_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for node")
 	}
-	return installViaMise("node", version)
+	return installViaMise(ctx, "node", version)
 }
 
-func installRust(versions map[string]string) error {
+func installRust(ctx context.Context, versions map[string]string) error {
 	version := versions["RUST_TOOLCHAIN"]
 	if version == "" {
 		return fmt.Errorf("version not found for rust")
 	}
-	return installViaMise("rust", version)
+	return installViaMise(ctx, "rust", version)
 }
 
-func installProtoc(versions map[string]string) error {
+func installProtoc(ctx context.Context, versions map[string]string) error {
 	version := versions["PROTOC_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for protoc")
 	}
 
-	if err := installViaMise("protoc", version); err != nil {
+	if err := installViaMise(ctx, "protoc", version); err != nil {
 		return err
 	}
 
@@ -166,7 +167,7 @@ func installProtoc(versions map[string]string) error {
 	if protocGenGoVersion == "" {
 		return fmt.Errorf("version not found for protoc-gen-go")
 	}
-	if err := runCommand("go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
+	if err := runCommand(ctx, "go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
 		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
 	}
 	fmt.Println("✅ protoc-gen-go", protocGenGoVersion, "installed successfully!")
@@ -174,23 +175,23 @@ func installProtoc(versions map[string]string) error {
 	return nil
 }
 
-func installUv(versions map[string]string) error {
+func installUv(ctx context.Context, versions map[string]string) error {
 	version := versions["UV_VERSION"]
 	if version == "" {
 		return fmt.Errorf("version not found for uv")
 	}
-	return installViaMise("uv", version)
+	return installViaMise(ctx, "uv", version)
 }
 
-func installNpm(versions map[string]string) error {
+func installNpm(ctx context.Context, versions map[string]string) error {
 	// npm comes with node, so install node
-	return installNode(versions)
+	return installNode(ctx, versions)
 }
 
-func installViaMise(tool, version string) error {
+func installViaMise(ctx context.Context, tool, version string) error {
 	fmt.Println("Installing", tool, version)
 
-	cmd := exec.Command("mise", "use", fmt.Sprintf("%s@%s", tool, version))
+	cmd := exec.CommandContext(ctx, "mise", "use", fmt.Sprintf("%s@%s", tool, version))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("mise command failed: %v\nOutput: %s", err, output)
 	}
