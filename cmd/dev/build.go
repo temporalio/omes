@@ -71,7 +71,7 @@ func buildWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("Building", language, "worker")
 	fmt.Println("===========================================")
 
-	if err := validateLanguageTools(ctx, language); err != nil {
+	if err := checkTool(ctx, language); err != nil {
 		return err
 	}
 
@@ -132,13 +132,13 @@ func buildWorkerImage(ctx context.Context, rootDir, language, sdkVersion string)
 }
 
 func runBuildKitchensink(ctx context.Context) error {
-	if err := validateLanguageTools(ctx, "rust"); err != nil {
+	if err := checkTool(ctx, "cargo"); err != nil {
 		return err
 	}
-	if err := validateLanguageTools(ctx, "protoc"); err != nil {
+	if err := checkTool(ctx, "protoc"); err != nil {
 		return err
 	}
-	if err := validateLanguageTools(ctx, "typescript"); err != nil {
+	if err := checkTool(ctx, "node"); err != nil {
 		return err
 	}
 
