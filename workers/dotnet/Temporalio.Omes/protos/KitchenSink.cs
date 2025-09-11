@@ -43,208 +43,211 @@ namespace Temporal.Omes.KitchenSink {
             "X2VuZBgEIAEoCCKYAQoVV2l0aFN0YXJ0Q2xpZW50QWN0aW9uEjkKCWRvX3Np",
             "Z25hbBgBIAEoCzIkLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkRvU2ln",
             "bmFsSAASOQoJZG9fdXBkYXRlGAIgASgLMiQudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRG9VcGRhdGVIAEIJCgd2YXJpYW50Io8CCgxDbGllbnRBY3Rp",
+            "aGVuX3NpbmsuRG9VcGRhdGVIAEIJCgd2YXJpYW50ItcCCgxDbGllbnRBY3Rp",
             "b24SOQoJZG9fc2lnbmFsGAEgASgLMiQudGVtcG9yYWwub21lcy5raXRjaGVu",
             "X3NpbmsuRG9TaWduYWxIABI3Cghkb19xdWVyeRgCIAEoCzIjLnRlbXBvcmFs",
             "Lm9tZXMua2l0Y2hlbl9zaW5rLkRvUXVlcnlIABI5Cglkb191cGRhdGUYAyAB",
-            "KAsyJC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Eb1VwZGF0ZUgAEkUK",
-            "Dm5lc3RlZF9hY3Rpb25zGAQgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVu",
-            "X3NpbmsuQ2xpZW50QWN0aW9uU2V0SABCCQoHdmFyaWFudCLeAgoIRG9TaWdu",
-            "YWwSUQoRZG9fc2lnbmFsX2FjdGlvbnMYASABKAsyNC50ZW1wb3JhbC5vbWVz",
-            "LmtpdGNoZW5fc2luay5Eb1NpZ25hbC5Eb1NpZ25hbEFjdGlvbnNIABI/CgZj",
-            "dXN0b20YAiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5IYW5k",
-            "bGVySW52b2NhdGlvbkgAEhIKCndpdGhfc3RhcnQYAyABKAgangEKD0RvU2ln",
-            "bmFsQWN0aW9ucxI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9yYWwub21l",
-            "cy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASQwoSZG9fYWN0aW9uc19pbl9t",
-            "YWluGAIgASgLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9u",
-            "U2V0SABCCQoHdmFyaWFudEIJCgd2YXJpYW50IqkBCgdEb1F1ZXJ5EjgKDHJl",
-            "cG9ydF9zdGF0ZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5",
-            "bG9hZHNIABI/CgZjdXN0b20YAiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5IYW5kbGVySW52b2NhdGlvbkgAEhgKEGZhaWx1cmVfZXhwZWN0",
-            "ZWQYCiABKAhCCQoHdmFyaWFudCLHAQoIRG9VcGRhdGUSQQoKZG9fYWN0aW9u",
-            "cxgBIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkRvQWN0aW9u",
-            "c1VwZGF0ZUgAEj8KBmN1c3RvbRgCIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLkhhbmRsZXJJbnZvY2F0aW9uSAASEgoKd2l0aF9zdGFydBgD",
-            "IAEoCBIYChBmYWlsdXJlX2V4cGVjdGVkGAogASgIQgkKB3ZhcmlhbnQihgEK",
-            "D0RvQWN0aW9uc1VwZGF0ZRI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASKwoJcmVqZWN0X21l",
-            "GAIgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SABCCQoHdmFyaWFudCJQ",
-            "ChFIYW5kbGVySW52b2NhdGlvbhIMCgRuYW1lGAEgASgJEi0KBGFyZ3MYAiAD",
-            "KAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQifAoNV29ya2Zs",
-            "b3dTdGF0ZRI/CgNrdnMYASADKAsyMi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5Xb3JrZmxvd1N0YXRlLkt2c0VudHJ5GioKCEt2c0VudHJ5EgsKA2tl",
-            "eRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiTwoNV29ya2Zsb3dJbnB1dBI+",
-            "Cg9pbml0aWFsX2FjdGlvbnMYASADKAsyJS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5BY3Rpb25TZXQiVAoJQWN0aW9uU2V0EjMKB2FjdGlvbnMYASAD",
-            "KAsyIi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb24SEgoKY29u",
-            "Y3VycmVudBgCIAEoCCL6CAoGQWN0aW9uEjgKBXRpbWVyGAEgASgLMicudGVt",
-            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuVGltZXJBY3Rpb25IABJKCg1leGVj",
-            "X2FjdGl2aXR5GAIgASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
-            "RXhlY3V0ZUFjdGl2aXR5QWN0aW9uSAASVQoTZXhlY19jaGlsZF93b3JrZmxv",
-            "dxgDIAEoCzI2LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVD",
-            "aGlsZFdvcmtmbG93QWN0aW9uSAASTgoUYXdhaXRfd29ya2Zsb3dfc3RhdGUY",
-            "BCABKAsyLi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdFdvcmtm",
-            "bG93U3RhdGVIABJDCgtzZW5kX3NpZ25hbBgFIAEoCzIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlNlbmRTaWduYWxBY3Rpb25IABJLCg9jYW5jZWxf",
-            "d29ya2Zsb3cYBiABKAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5D",
-            "YW5jZWxXb3JrZmxvd0FjdGlvbkgAEkwKEHNldF9wYXRjaF9tYXJrZXIYByAB",
-            "KAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZXRQYXRjaE1hcmtl",
-            "ckFjdGlvbkgAElwKGHVwc2VydF9zZWFyY2hfYXR0cmlidXRlcxgIIAEoCzI4",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNlYXJjaEF0dHJp",
-            "YnV0ZXNBY3Rpb25IABJDCgt1cHNlcnRfbWVtbxgJIAEoCzIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydE1lbW9BY3Rpb25IABJHChJzZXRf",
-            "d29ya2Zsb3dfc3RhdGUYCiABKAsyKS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5Xb3JrZmxvd1N0YXRlSAASRwoNcmV0dXJuX3Jlc3VsdBgLIAEoCzIu",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlJldHVyblJlc3VsdEFjdGlv",
-            "bkgAEkUKDHJldHVybl9lcnJvchgMIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLlJldHVybkVycm9yQWN0aW9uSAASSgoPY29udGludWVfYXNf",
-            "bmV3GA0gASgLMi8udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGlu",
-            "dWVBc05ld0FjdGlvbkgAEkIKEW5lc3RlZF9hY3Rpb25fc2V0GA4gASgLMiUu",
-            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASTAoPbmV4",
-            "dXNfb3BlcmF0aW9uGA8gASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
-            "bmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uSABCCQoHdmFyaWFudCKjAgoPQXdh",
-            "aXRhYmxlQ2hvaWNlEi0KC3dhaXRfZmluaXNoGAEgASgLMhYuZ29vZ2xlLnBy",
-            "b3RvYnVmLkVtcHR5SAASKQoHYWJhbmRvbhgCIAEoCzIWLmdvb2dsZS5wcm90",
-            "b2J1Zi5FbXB0eUgAEjcKFWNhbmNlbF9iZWZvcmVfc3RhcnRlZBgDIAEoCzIW",
-            "Lmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEjYKFGNhbmNlbF9hZnRlcl9zdGFy",
-            "dGVkGAQgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASOAoWY2FuY2Vs",
-            "X2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0",
-            "eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxtaWxsaXNlY29u",
-            "ZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIrLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLqDAoVRXhlY3V0",
-            "ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uR2VuZXJp",
-            "Y0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
-            "RHVyYXRpb25IABImCgRub29wGAMgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVt",
-            "cHR5SAASWAoJcmVzb3VyY2VzGA4gASgLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJlc291cmNlc0FjdGl2",
-            "aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXlsb2FkQWN0aXZpdHlI",
-            "ABJSCgZjbGllbnQYEyABKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uQ2xpZW50QWN0aXZpdHlIABISCgp0",
-            "YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uSGVhZGVy",
-            "c0VudHJ5EjwKGXNjaGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiABKAsyGS5n",
-            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9fc3RhcnRf",
-            "dGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI5ChZz",
-            "dGFydF90b19jbG9zZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVm",
-            "LkR1cmF0aW9uEjQKEWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhkuZ29vZ2xl",
-            "LnByb3RvYnVmLkR1cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEoCzIjLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNfbG9jYWwY",
-            "CyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1vdGUYDCAB",
-            "KAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVBY3Rpdml0",
-            "eU9wdGlvbnNIARJFChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIKCHByaW9y",
-            "aXR5GA8gASgLMiAudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlvcml0eRIU",
-            "CgxmYWlybmVzc19rZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0GBEgASgC",
-            "GlMKD0dlbmVyaWNBY3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFyZ3VtZW50",
-            "cxgCIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBqaAQoR",
-            "UmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdvb2dsZS5w",
-            "cm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgCIAEoBBIk",
-            "ChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgKEGNwdV95",
-            "aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgKEGJ5dGVz",
-            "X3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIgASgFGlUK",
-            "DkNsaWVudEFjdGl2aXR5EkMKD2NsaWVudF9zZXF1ZW5jZRgBIAEoCzIqLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNsaWVudFNlcXVlbmNlGk8KDEhl",
-            "YWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1w",
-            "b3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFjdGl2aXR5X3R5",
-            "cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9u",
-            "EhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxvd19pZBgDIAEoCRIVCg13",
-            "b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVldWUYBSABKAkSLgoFaW5w",
-            "dXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQSPQoa",
-            "d29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByABKAsyGS5nb29nbGUucHJv",
-            "dG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVuX3RpbWVvdXQYCCABKAsy",
-            "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zsb3dfdGFza190",
-            "aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEkoKE3Bh",
-            "cmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3b3JrZmxvd19pZF9yZXVz",
-            "ZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGkuZW51bXMudjEuV29ya2Zs",
-            "b3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGljeRgNIAEoCzIjLnRlbXBv",
-            "cmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSFQoNY3Jvbl9zY2hlZHVs",
-            "ZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uSGVhZGVyc0Vu",
-            "dHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5NZW1vRW50cnkSZwoRc2Vh",
-            "cmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5TZWFyY2hBdHRyaWJ1",
-            "dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUYEiABKA4yOS50ZW1wb3Jh",
-            "bC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
-            "VHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEoDjIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQSRQoQYXdhaXRhYmxl",
-            "X2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3",
-            "YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4K",
-            "BXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2Fk",
-            "OgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpYChVTZWFy",
-            "Y2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASIwChJBd2Fp",
-            "dFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJIt8C",
-            "ChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1",
-            "bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEoCRItCgRhcmdzGAQgAygL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEkoKB2hlYWRlcnMY",
-            "BSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZW5kU2lnbmFs",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNlGAYgASgL",
+            "KAsyJC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Eb1VwZGF0ZUgAEkYK",
+            "EGRvX3NlbGZfZGVzY3JpYmUYBCABKAsyKi50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5Eb1NlbGZEZXNjcmliZUgAEkUKDm5lc3RlZF9hY3Rpb25zGAUg",
+            "ASgLMisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ2xpZW50QWN0aW9u",
+            "U2V0SABCCQoHdmFyaWFudCLeAgoIRG9TaWduYWwSUQoRZG9fc2lnbmFsX2Fj",
+            "dGlvbnMYASABKAsyNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Eb1Np",
+            "Z25hbC5Eb1NpZ25hbEFjdGlvbnNIABI/CgZjdXN0b20YAiABKAsyLS50ZW1w",
+            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5IYW5kbGVySW52b2NhdGlvbkgAEhIK",
+            "CndpdGhfc3RhcnQYAyABKAgangEKD0RvU2lnbmFsQWN0aW9ucxI7Cgpkb19h",
+            "Y3Rpb25zGAEgASgLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0",
+            "aW9uU2V0SAASQwoSZG9fYWN0aW9uc19pbl9tYWluGAIgASgLMiUudGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SABCCQoHdmFyaWFudEIJ",
+            "Cgd2YXJpYW50IqkBCgdEb1F1ZXJ5EjgKDHJlcG9ydF9zdGF0ZRgBIAEoCzIg",
+            "LnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZHNIABI/CgZjdXN0b20Y",
+            "AiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5IYW5kbGVySW52",
+            "b2NhdGlvbkgAEhgKEGZhaWx1cmVfZXhwZWN0ZWQYCiABKAhCCQoHdmFyaWFu",
+            "dCLHAQoIRG9VcGRhdGUSQQoKZG9fYWN0aW9ucxgBIAEoCzIrLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkRvQWN0aW9uc1VwZGF0ZUgAEj8KBmN1c3Rv",
+            "bRgCIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkhhbmRsZXJJ",
+            "bnZvY2F0aW9uSAASEgoKd2l0aF9zdGFydBgDIAEoCBIYChBmYWlsdXJlX2V4",
+            "cGVjdGVkGAogASgIQgkKB3ZhcmlhbnQihgEKD0RvQWN0aW9uc1VwZGF0ZRI7",
+            "Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuQWN0aW9uU2V0SAASKwoJcmVqZWN0X21lGAIgASgLMhYuZ29vZ2xlLnBy",
+            "b3RvYnVmLkVtcHR5SABCCQoHdmFyaWFudCJQChFIYW5kbGVySW52b2NhdGlv",
+            "bhIMCgRuYW1lGAEgASgJEi0KBGFyZ3MYAiADKAsyHy50ZW1wb3JhbC5hcGku",
+            "Y29tbW9uLnYxLlBheWxvYWQiSAoORG9TZWxmRGVzY3JpYmUSEQoJbmFtZXNw",
+            "YWNlGAEgASgJEhMKC3dvcmtmbG93X2lkGAIgASgJEg4KBnJ1bl9pZBgDIAEo",
+            "CSJ8Cg1Xb3JrZmxvd1N0YXRlEj8KA2t2cxgBIAMoCzIyLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLldvcmtmbG93U3RhdGUuS3ZzRW50cnkaKgoIS3Zz",
+            "RW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJPCg1Xb3Jr",
+            "Zmxvd0lucHV0Ej4KD2luaXRpYWxfYWN0aW9ucxgBIAMoCzIlLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldCJUCglBY3Rpb25TZXQSMwoH",
+            "YWN0aW9ucxgBIAMoCzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFj",
+            "dGlvbhISCgpjb25jdXJyZW50GAIgASgIIvoICgZBY3Rpb24SOAoFdGltZXIY",
+            "ASABKAsyJy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5UaW1lckFjdGlv",
+            "bkgAEkoKDWV4ZWNfYWN0aXZpdHkYAiABKAsyMS50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb25IABJVChNleGVjX2No",
+            "aWxkX3dvcmtmbG93GAMgASgLMjYudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb25IABJOChRhd2FpdF93b3Jr",
+            "Zmxvd19zdGF0ZRgEIAEoCzIuLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkF3YWl0V29ya2Zsb3dTdGF0ZUgAEkMKC3NlbmRfc2lnbmFsGAUgASgLMiwu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuU2VuZFNpZ25hbEFjdGlvbkgA",
+            "EksKD2NhbmNlbF93b3JrZmxvdxgGIAEoCzIwLnRlbXBvcmFsLm9tZXMua2l0",
+            "Y2hlbl9zaW5rLkNhbmNlbFdvcmtmbG93QWN0aW9uSAASTAoQc2V0X3BhdGNo",
+            "X21hcmtlchgHIAEoCzIwLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlNl",
+            "dFBhdGNoTWFya2VyQWN0aW9uSAASXAoYdXBzZXJ0X3NlYXJjaF9hdHRyaWJ1",
+            "dGVzGAggASgLMjgudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuVXBzZXJ0",
+            "U2VhcmNoQXR0cmlidXRlc0FjdGlvbkgAEkMKC3Vwc2VydF9tZW1vGAkgASgL",
+            "MiwudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuVXBzZXJ0TWVtb0FjdGlv",
+            "bkgAEkcKEnNldF93b3JrZmxvd19zdGF0ZRgKIAEoCzIpLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLldvcmtmbG93U3RhdGVIABJHCg1yZXR1cm5fcmVz",
+            "dWx0GAsgASgLMi4udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuUmV0dXJu",
+            "UmVzdWx0QWN0aW9uSAASRQoMcmV0dXJuX2Vycm9yGAwgASgLMi0udGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuUmV0dXJuRXJyb3JBY3Rpb25IABJKCg9j",
+            "b250aW51ZV9hc19uZXcYDSABKAsyLy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5Db250aW51ZUFzTmV3QWN0aW9uSAASQgoRbmVzdGVkX2FjdGlvbl9z",
+            "ZXQYDiABKAsyJS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb25T",
+            "ZXRIABJMCg9uZXh1c19vcGVyYXRpb24YDyABKAsyMS50ZW1wb3JhbC5vbWVz",
+            "LmtpdGNoZW5fc2luay5FeGVjdXRlTmV4dXNPcGVyYXRpb25IAEIJCgd2YXJp",
+            "YW50IqMCCg9Bd2FpdGFibGVDaG9pY2USLQoLd2FpdF9maW5pc2gYASABKAsy",
+            "Fi5nb29nbGUucHJvdG9idWYuRW1wdHlIABIpCgdhYmFuZG9uGAIgASgLMhYu",
+            "Z29vZ2xlLnByb3RvYnVmLkVtcHR5SAASNwoVY2FuY2VsX2JlZm9yZV9zdGFy",
+            "dGVkGAMgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASNgoUY2FuY2Vs",
+            "X2FmdGVyX3N0YXJ0ZWQYBCABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlI",
+            "ABI4ChZjYW5jZWxfYWZ0ZXJfY29tcGxldGVkGAUgASgLMhYuZ29vZ2xlLnBy",
+            "b3RvYnVmLkVtcHR5SABCCwoJY29uZGl0aW9uImoKC1RpbWVyQWN0aW9uEhQK",
+            "DG1pbGxpc2Vjb25kcxgBIAEoBBJFChBhd2FpdGFibGVfY2hvaWNlGAIgASgL",
             "MisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNl",
-            "Gk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsy",
-            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIjsKFENhbmNl",
-            "bFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1bl9p",
-            "ZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlvbhIQCghwYXRjaF9pZBgB",
-            "IAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlubmVyX2FjdGlvbhgDIAEo",
-            "CzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvbiLjAQocVXBz",
-            "ZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFzZWFyY2hfYXR0cmlidXRl",
-            "cxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNl",
-            "YXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5GlgK",
-            "FVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUY",
-            "AiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIkcK",
-            "EFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRfbWVtbxgBIAEoCzIcLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJSZXR1cm5SZXN1bHRBY3Rp",
-            "b24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
-            "LnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rpb24SMQoHZmFpbHVyZRgB",
-            "IAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYxLkZhaWx1cmUi3gYKE0Nv",
-            "bnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3dfdHlwZRgBIAEoCRISCgp0",
-            "YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgDIAMoCzIfLnRlbXBvcmFs",
-            "LmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3JrZmxvd19ydW5fdGltZW91",
-            "dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4ChV3b3JrZmxv",
-            "d190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRp",
-            "b24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
-            "LkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5Ek0KB2hlYWRlcnMYByAD",
-            "KAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250aW51ZUFzTmV3",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hfYXR0cmlidXRlcxgIIAMo",
-            "CzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdB",
-            "Y3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkKDHJldHJ5X3BvbGljeRgJ",
-            "IAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSRwoR",
-            "dmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1lbW9FbnRyeRILCgNrZXkY",
-            "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoF",
+            "IuoMChVFeGVjdXRlQWN0aXZpdHlBY3Rpb24SVAoHZ2VuZXJpYxgBIAEoCzJB",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFj",
+            "dGlvbi5HZW5lcmljQWN0aXZpdHlIABIqCgVkZWxheRgCIAEoCzIZLmdvb2ds",
+            "ZS5wcm90b2J1Zi5EdXJhdGlvbkgAEiYKBG5vb3AYAyABKAsyFi5nb29nbGUu",
+            "cHJvdG9idWYuRW1wdHlIABJYCglyZXNvdXJjZXMYDiABKAsyQy50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uUmVz",
+            "b3VyY2VzQWN0aXZpdHlIABJUCgdwYXlsb2FkGBIgASgLMkEudGVtcG9yYWwu",
+            "b21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlBheWxv",
+            "YWRBY3Rpdml0eUgAElIKBmNsaWVudBgTIAEoCzJALnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5DbGllbnRBY3Rp",
+            "dml0eUgAEhIKCnRhc2tfcXVldWUYBCABKAkSTwoHaGVhZGVycxgFIAMoCzI+",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFj",
+            "dGlvbi5IZWFkZXJzRW50cnkSPAoZc2NoZWR1bGVfdG9fY2xvc2VfdGltZW91",
+            "dBgGIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI8ChlzY2hlZHVs",
+            "ZV90b19zdGFydF90aW1lb3V0GAcgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1",
+            "cmF0aW9uEjkKFnN0YXJ0X3RvX2Nsb3NlX3RpbWVvdXQYCCABKAsyGS5nb29n",
+            "bGUucHJvdG9idWYuRHVyYXRpb24SNAoRaGVhcnRiZWF0X3RpbWVvdXQYCSAB",
+            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOQoMcmV0cnlfcG9saWN5",
+            "GAogASgLMiMudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5SZXRyeVBvbGljeRIq",
+            "Cghpc19sb2NhbBgLIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgBEkMK",
+            "BnJlbW90ZRgMIAEoCzIxLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlJl",
+            "bW90ZUFjdGl2aXR5T3B0aW9uc0gBEkUKEGF3YWl0YWJsZV9jaG9pY2UYDSAB",
+            "KAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFibGVDaG9p",
+            "Y2USMgoIcHJpb3JpdHkYDyABKAsyIC50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
+            "LlByaW9yaXR5EhQKDGZhaXJuZXNzX2tleRgQIAEoCRIXCg9mYWlybmVzc193",
+            "ZWlnaHQYESABKAIaUwoPR2VuZXJpY0FjdGl2aXR5EgwKBHR5cGUYASABKAkS",
+            "MgoJYXJndW1lbnRzGAIgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Q",
+            "YXlsb2FkGpoBChFSZXNvdXJjZXNBY3Rpdml0eRIqCgdydW5fZm9yGAEgASgL",
+            "MhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEhkKEWJ5dGVzX3RvX2FsbG9j",
+            "YXRlGAIgASgEEiQKHGNwdV95aWVsZF9ldmVyeV9uX2l0ZXJhdGlvbnMYAyAB",
+            "KA0SGAoQY3B1X3lpZWxkX2Zvcl9tcxgEIAEoDRpECg9QYXlsb2FkQWN0aXZp",
+            "dHkSGAoQYnl0ZXNfdG9fcmVjZWl2ZRgBIAEoBRIXCg9ieXRlc190b19yZXR1",
+            "cm4YAiABKAUaVQoOQ2xpZW50QWN0aXZpdHkSQwoPY2xpZW50X3NlcXVlbmNl",
+            "GAEgASgLMioudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ2xpZW50U2Vx",
+            "dWVuY2UaTwoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgC",
+            "IAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAFCDwoN",
+            "YWN0aXZpdHlfdHlwZUIKCghsb2NhbGl0eSKtCgoaRXhlY3V0ZUNoaWxkV29y",
+            "a2Zsb3dBY3Rpb24SEQoJbmFtZXNwYWNlGAIgASgJEhMKC3dvcmtmbG93X2lk",
+            "GAMgASgJEhUKDXdvcmtmbG93X3R5cGUYBCABKAkSEgoKdGFza19xdWV1ZRgF",
+            "IAEoCRIuCgVpbnB1dBgGIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEu",
+            "UGF5bG9hZBI9Chp3b3JrZmxvd19leGVjdXRpb25fdGltZW91dBgHIAEoCzIZ",
+            "Lmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI3ChR3b3JrZmxvd19ydW5fdGlt",
+            "ZW91dBgIIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4ChV3b3Jr",
+            "Zmxvd190YXNrX3RpbWVvdXQYCSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVy",
+            "YXRpb24SSgoTcGFyZW50X2Nsb3NlX3BvbGljeRgKIAEoDjItLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLlBhcmVudENsb3NlUG9saWN5Ek4KGHdvcmtm",
+            "bG93X2lkX3JldXNlX3BvbGljeRgMIAEoDjIsLnRlbXBvcmFsLmFwaS5lbnVt",
+            "cy52MS5Xb3JrZmxvd0lkUmV1c2VQb2xpY3kSOQoMcmV0cnlfcG9saWN5GA0g",
+            "ASgLMiMudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5SZXRyeVBvbGljeRIVCg1j",
+            "cm9uX3NjaGVkdWxlGA4gASgJElQKB2hlYWRlcnMYDyADKAsyQy50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlv",
+            "bi5IZWFkZXJzRW50cnkSTgoEbWVtbxgQIAMoCzJALnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9uLk1lbW9F",
+            "bnRyeRJnChFzZWFyY2hfYXR0cmlidXRlcxgRIAMoCzJMLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9uLlNl",
+            "YXJjaEF0dHJpYnV0ZXNFbnRyeRJUChFjYW5jZWxsYXRpb25fdHlwZRgSIAEo",
+            "DjI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNoaWxkV29ya2Zsb3dD",
+            "YW5jZWxsYXRpb25UeXBlEkcKEXZlcnNpb25pbmdfaW50ZW50GBMgASgOMiwu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuVmVyc2lvbmluZ0ludGVudBJF",
+            "ChBhd2FpdGFibGVfY2hvaWNlGBQgASgLMisudGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlGk8KDEhlYWRlcnNFbnRyeRILCgNr",
+            "ZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
+            "LnYxLlBheWxvYWQ6AjgBGkwKCU1lbW9FbnRyeRILCgNrZXkYASABKAkSLgoF",
             "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
             "AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoF",
             "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
-            "AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMSTwoRY2FuY2VsbGF0aW9u",
-            "X3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rp",
-            "dml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2VybHlfZXhlY3V0",
-            "ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQirAIKFUV4ZWN1",
-            "dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIRCglvcGVyYXRp",
-            "b24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgEIAMoCzI+LnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlv",
-            "bi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgFIAEoCzIrLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRIXCg9l",
-            "eHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgB",
-            "IAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENsb3NlUG9saWN5",
-            "EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJF",
-            "TlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9Q",
-            "T0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVT",
-            "VF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVE",
-            "EAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3Jr",
-            "Zmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcK",
-            "E0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNF",
-            "TExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExB",
-            "VElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUS",
-            "DgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
-            "RBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIu",
-            "Y29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90",
-            "bzM="));
+            "AjgBIjAKEkF3YWl0V29ya2Zsb3dTdGF0ZRILCgNrZXkYASABKAkSDQoFdmFs",
+            "dWUYAiABKAki3wIKEFNlbmRTaWduYWxBY3Rpb24SEwoLd29ya2Zsb3dfaWQY",
+            "ASABKAkSDgoGcnVuX2lkGAIgASgJEhMKC3NpZ25hbF9uYW1lGAMgASgJEi0K",
+            "BGFyZ3MYBCADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQS",
+            "SgoHaGVhZGVycxgFIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LlNlbmRTaWduYWxBY3Rpb24uSGVhZGVyc0VudHJ5EkUKEGF3YWl0YWJsZV9j",
+            "aG9pY2UYBiABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2Fp",
+            "dGFibGVDaG9pY2UaTwoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2",
+            "YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoC",
+            "OAEiOwoUQ2FuY2VsV29ya2Zsb3dBY3Rpb24SEwoLd29ya2Zsb3dfaWQYASAB",
+            "KAkSDgoGcnVuX2lkGAIgASgJInYKFFNldFBhdGNoTWFya2VyQWN0aW9uEhAK",
+            "CHBhdGNoX2lkGAEgASgJEhIKCmRlcHJlY2F0ZWQYAiABKAgSOAoMaW5uZXJf",
+            "YWN0aW9uGAMgASgLMiIudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0",
+            "aW9uIuMBChxVcHNlcnRTZWFyY2hBdHRyaWJ1dGVzQWN0aW9uEmkKEXNlYXJj",
+            "aF9hdHRyaWJ1dGVzGAEgAygLMk4udGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuVXBzZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbi5TZWFyY2hBdHRyaWJ1",
+            "dGVzRW50cnkaWAoVU2VhcmNoQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEo",
+            "CRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5",
+            "bG9hZDoCOAEiRwoQVXBzZXJ0TWVtb0FjdGlvbhIzCg11cHNlcnRlZF9tZW1v",
+            "GAEgASgLMhwudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5NZW1vIkoKElJldHVy",
+            "blJlc3VsdEFjdGlvbhI0CgtyZXR1cm5fdGhpcxgBIAEoCzIfLnRlbXBvcmFs",
+            "LmFwaS5jb21tb24udjEuUGF5bG9hZCJGChFSZXR1cm5FcnJvckFjdGlvbhIx",
+            "CgdmYWlsdXJlGAEgASgLMiAudGVtcG9yYWwuYXBpLmZhaWx1cmUudjEuRmFp",
+            "bHVyZSLeBgoTQ29udGludWVBc05ld0FjdGlvbhIVCg13b3JrZmxvd190eXBl",
+            "GAEgASgJEhIKCnRhc2tfcXVldWUYAiABKAkSMgoJYXJndW1lbnRzGAMgAygL",
+            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEjcKFHdvcmtmbG93",
+            "X3J1bl90aW1lb3V0GAQgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9u",
+            "EjgKFXdvcmtmbG93X3Rhc2tfdGltZW91dBgFIAEoCzIZLmdvb2dsZS5wcm90",
+            "b2J1Zi5EdXJhdGlvbhJHCgRtZW1vGAYgAygLMjkudGVtcG9yYWwub21lcy5r",
+            "aXRjaGVuX3NpbmsuQ29udGludWVBc05ld0FjdGlvbi5NZW1vRW50cnkSTQoH",
+            "aGVhZGVycxgHIAMoCzI8LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNv",
+            "bnRpbnVlQXNOZXdBY3Rpb24uSGVhZGVyc0VudHJ5EmAKEXNlYXJjaF9hdHRy",
+            "aWJ1dGVzGAggAygLMkUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29u",
+            "dGludWVBc05ld0FjdGlvbi5TZWFyY2hBdHRyaWJ1dGVzRW50cnkSOQoMcmV0",
+            "cnlfcG9saWN5GAkgASgLMiMudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5SZXRy",
+            "eVBvbGljeRJHChF2ZXJzaW9uaW5nX2ludGVudBgKIAEoDjIsLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQaTAoJTWVtb0Vu",
+            "dHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFw",
+            "aS5jb21tb24udjEuUGF5bG9hZDoCOAEaTwoMSGVhZGVyc0VudHJ5EgsKA2tl",
+            "eRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24u",
+            "djEuUGF5bG9hZDoCOAEaWAoVU2VhcmNoQXR0cmlidXRlc0VudHJ5EgsKA2tl",
+            "eRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24u",
+            "djEuUGF5bG9hZDoCOAEi0QEKFVJlbW90ZUFjdGl2aXR5T3B0aW9ucxJPChFj",
+            "YW5jZWxsYXRpb25fdHlwZRgBIAEoDjI0LnRlbXBvcmFsLm9tZXMua2l0Y2hl",
+            "bl9zaW5rLkFjdGl2aXR5Q2FuY2VsbGF0aW9uVHlwZRIeChZkb19ub3RfZWFn",
+            "ZXJseV9leGVjdXRlGAIgASgIEkcKEXZlcnNpb25pbmdfaW50ZW50GAMgASgO",
+            "MiwudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuVmVyc2lvbmluZ0ludGVu",
+            "dCKsAgoVRXhlY3V0ZU5leHVzT3BlcmF0aW9uEhAKCGVuZHBvaW50GAEgASgJ",
+            "EhEKCW9wZXJhdGlvbhgCIAEoCRINCgVpbnB1dBgDIAEoCRJPCgdoZWFkZXJz",
+            "GAQgAygLMj4udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZU5l",
+            "eHVzT3BlcmF0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNl",
+            "GAUgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxl",
+            "Q2hvaWNlEhcKD2V4cGVjdGVkX291dHB1dBgGIAEoCRouCgxIZWFkZXJzRW50",
+            "cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASqkAQoRUGFyZW50",
+            "Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQRUNJRklF",
+            "RBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAESHwobUEFS",
+            "RU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NMT1NFX1BP",
+            "TElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRlbnQSDwoL",
+            "VU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVMVBACKqIB",
+            "Ch1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElMRF9XRl9B",
+            "QkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENISUxEX1dG",
+            "X1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxEX1dGX1dB",
+            "SVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5Q2FuY2Vs",
+            "bGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5DRUxMQVRJ",
+            "T05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBvcmFsLm9t",
+            "ZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4va2l0Y2hl",
+            "bnNpbmtiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -252,12 +255,13 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientSequence), global::Temporal.Omes.KitchenSink.ClientSequence.Parser, new[]{ "ActionSets" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientActionSet), global::Temporal.Omes.KitchenSink.ClientActionSet.Parser, new[]{ "Actions", "Concurrent", "WaitAtEnd", "WaitForCurrentRunToFinishAtEnd" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WithStartClientAction), global::Temporal.Omes.KitchenSink.WithStartClientAction.Parser, new[]{ "DoSignal", "DoUpdate" }, new[]{ "Variant" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientAction), global::Temporal.Omes.KitchenSink.ClientAction.Parser, new[]{ "DoSignal", "DoQuery", "DoUpdate", "NestedActions" }, new[]{ "Variant" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientAction), global::Temporal.Omes.KitchenSink.ClientAction.Parser, new[]{ "DoSignal", "DoQuery", "DoUpdate", "DoSelfDescribe", "NestedActions" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal), global::Temporal.Omes.KitchenSink.DoSignal.Parser, new[]{ "DoSignalActions", "Custom", "WithStart" }, new[]{ "Variant" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions), global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions.Parser, new[]{ "DoActions", "DoActionsInMain" }, new[]{ "Variant" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoQuery), global::Temporal.Omes.KitchenSink.DoQuery.Parser, new[]{ "ReportState", "Custom", "FailureExpected" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoUpdate), global::Temporal.Omes.KitchenSink.DoUpdate.Parser, new[]{ "DoActions", "Custom", "WithStart", "FailureExpected" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoActionsUpdate), global::Temporal.Omes.KitchenSink.DoActionsUpdate.Parser, new[]{ "DoActions", "RejectMe" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.HandlerInvocation), global::Temporal.Omes.KitchenSink.HandlerInvocation.Parser, new[]{ "Name", "Args" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSelfDescribe), global::Temporal.Omes.KitchenSink.DoSelfDescribe.Parser, new[]{ "Namespace", "WorkflowId", "RunId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowState), global::Temporal.Omes.KitchenSink.WorkflowState.Parser, new[]{ "Kvs" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowInput), global::Temporal.Omes.KitchenSink.WorkflowInput.Parser, new[]{ "InitialActions" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ActionSet), global::Temporal.Omes.KitchenSink.ActionSet.Parser, new[]{ "Actions", "Concurrent" }, null, null, null, null),
@@ -609,7 +613,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -645,7 +653,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -825,7 +837,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -844,7 +860,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1105,7 +1125,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1139,7 +1163,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1393,7 +1421,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1426,7 +1458,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1500,6 +1536,9 @@ namespace Temporal.Omes.KitchenSink {
         case VariantOneofCase.DoUpdate:
           DoUpdate = other.DoUpdate.Clone();
           break;
+        case VariantOneofCase.DoSelfDescribe:
+          DoSelfDescribe = other.DoSelfDescribe.Clone();
+          break;
         case VariantOneofCase.NestedActions:
           NestedActions = other.NestedActions.Clone();
           break;
@@ -1550,8 +1589,20 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
+    /// <summary>Field number for the "do_self_describe" field.</summary>
+    public const int DoSelfDescribeFieldNumber = 4;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.DoSelfDescribe DoSelfDescribe {
+      get { return variantCase_ == VariantOneofCase.DoSelfDescribe ? (global::Temporal.Omes.KitchenSink.DoSelfDescribe) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.DoSelfDescribe;
+      }
+    }
+
     /// <summary>Field number for the "nested_actions" field.</summary>
-    public const int NestedActionsFieldNumber = 4;
+    public const int NestedActionsFieldNumber = 5;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public global::Temporal.Omes.KitchenSink.ClientActionSet NestedActions {
@@ -1569,7 +1620,8 @@ namespace Temporal.Omes.KitchenSink {
       DoSignal = 1,
       DoQuery = 2,
       DoUpdate = 3,
-      NestedActions = 4,
+      DoSelfDescribe = 4,
+      NestedActions = 5,
     }
     private VariantOneofCase variantCase_ = VariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1603,6 +1655,7 @@ namespace Temporal.Omes.KitchenSink {
       if (!object.Equals(DoSignal, other.DoSignal)) return false;
       if (!object.Equals(DoQuery, other.DoQuery)) return false;
       if (!object.Equals(DoUpdate, other.DoUpdate)) return false;
+      if (!object.Equals(DoSelfDescribe, other.DoSelfDescribe)) return false;
       if (!object.Equals(NestedActions, other.NestedActions)) return false;
       if (VariantCase != other.VariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
@@ -1615,6 +1668,7 @@ namespace Temporal.Omes.KitchenSink {
       if (variantCase_ == VariantOneofCase.DoSignal) hash ^= DoSignal.GetHashCode();
       if (variantCase_ == VariantOneofCase.DoQuery) hash ^= DoQuery.GetHashCode();
       if (variantCase_ == VariantOneofCase.DoUpdate) hash ^= DoUpdate.GetHashCode();
+      if (variantCase_ == VariantOneofCase.DoSelfDescribe) hash ^= DoSelfDescribe.GetHashCode();
       if (variantCase_ == VariantOneofCase.NestedActions) hash ^= NestedActions.GetHashCode();
       hash ^= (int) variantCase_;
       if (_unknownFields != null) {
@@ -1647,8 +1701,12 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(26);
         output.WriteMessage(DoUpdate);
       }
-      if (variantCase_ == VariantOneofCase.NestedActions) {
+      if (variantCase_ == VariantOneofCase.DoSelfDescribe) {
         output.WriteRawTag(34);
+        output.WriteMessage(DoSelfDescribe);
+      }
+      if (variantCase_ == VariantOneofCase.NestedActions) {
+        output.WriteRawTag(42);
         output.WriteMessage(NestedActions);
       }
       if (_unknownFields != null) {
@@ -1673,8 +1731,12 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(26);
         output.WriteMessage(DoUpdate);
       }
-      if (variantCase_ == VariantOneofCase.NestedActions) {
+      if (variantCase_ == VariantOneofCase.DoSelfDescribe) {
         output.WriteRawTag(34);
+        output.WriteMessage(DoSelfDescribe);
+      }
+      if (variantCase_ == VariantOneofCase.NestedActions) {
+        output.WriteRawTag(42);
         output.WriteMessage(NestedActions);
       }
       if (_unknownFields != null) {
@@ -1695,6 +1757,9 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (variantCase_ == VariantOneofCase.DoUpdate) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(DoUpdate);
+      }
+      if (variantCase_ == VariantOneofCase.DoSelfDescribe) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(DoSelfDescribe);
       }
       if (variantCase_ == VariantOneofCase.NestedActions) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(NestedActions);
@@ -1730,6 +1795,12 @@ namespace Temporal.Omes.KitchenSink {
           }
           DoUpdate.MergeFrom(other.DoUpdate);
           break;
+        case VariantOneofCase.DoSelfDescribe:
+          if (DoSelfDescribe == null) {
+            DoSelfDescribe = new global::Temporal.Omes.KitchenSink.DoSelfDescribe();
+          }
+          DoSelfDescribe.MergeFrom(other.DoSelfDescribe);
+          break;
         case VariantOneofCase.NestedActions:
           if (NestedActions == null) {
             NestedActions = new global::Temporal.Omes.KitchenSink.ClientActionSet();
@@ -1749,7 +1820,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1781,6 +1856,15 @@ namespace Temporal.Omes.KitchenSink {
             break;
           }
           case 34: {
+            global::Temporal.Omes.KitchenSink.DoSelfDescribe subBuilder = new global::Temporal.Omes.KitchenSink.DoSelfDescribe();
+            if (variantCase_ == VariantOneofCase.DoSelfDescribe) {
+              subBuilder.MergeFrom(DoSelfDescribe);
+            }
+            input.ReadMessage(subBuilder);
+            DoSelfDescribe = subBuilder;
+            break;
+          }
+          case 42: {
             global::Temporal.Omes.KitchenSink.ClientActionSet subBuilder = new global::Temporal.Omes.KitchenSink.ClientActionSet();
             if (variantCase_ == VariantOneofCase.NestedActions) {
               subBuilder.MergeFrom(NestedActions);
@@ -1800,7 +1884,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1832,6 +1920,15 @@ namespace Temporal.Omes.KitchenSink {
             break;
           }
           case 34: {
+            global::Temporal.Omes.KitchenSink.DoSelfDescribe subBuilder = new global::Temporal.Omes.KitchenSink.DoSelfDescribe();
+            if (variantCase_ == VariantOneofCase.DoSelfDescribe) {
+              subBuilder.MergeFrom(DoSelfDescribe);
+            }
+            input.ReadMessage(subBuilder);
+            DoSelfDescribe = subBuilder;
+            break;
+          }
+          case 42: {
             global::Temporal.Omes.KitchenSink.ClientActionSet subBuilder = new global::Temporal.Omes.KitchenSink.ClientActionSet();
             if (variantCase_ == VariantOneofCase.NestedActions) {
               subBuilder.MergeFrom(NestedActions);
@@ -2110,7 +2207,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2147,7 +2248,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -2416,7 +2521,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -2449,7 +2558,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -2746,7 +2859,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2783,7 +2900,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3111,7 +3232,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3152,7 +3277,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3421,7 +3550,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3454,7 +3587,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3657,7 +3794,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3680,7 +3821,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3690,6 +3835,278 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 18: {
             args_.AddEntriesFrom(ref input, _repeated_args_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DoSelfDescribe : pb::IMessage<DoSelfDescribe>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DoSelfDescribe> _parser = new pb::MessageParser<DoSelfDescribe>(() => new DoSelfDescribe());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DoSelfDescribe> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[10]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DoSelfDescribe() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DoSelfDescribe(DoSelfDescribe other) : this() {
+      namespace_ = other.namespace_;
+      workflowId_ = other.workflowId_;
+      runId_ = other.runId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DoSelfDescribe Clone() {
+      return new DoSelfDescribe(this);
+    }
+
+    /// <summary>Field number for the "namespace" field.</summary>
+    public const int NamespaceFieldNumber = 1;
+    private string namespace_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Namespace {
+      get { return namespace_; }
+      set {
+        namespace_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "workflow_id" field.</summary>
+    public const int WorkflowIdFieldNumber = 2;
+    private string workflowId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowId {
+      get { return workflowId_; }
+      set {
+        workflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "run_id" field.</summary>
+    public const int RunIdFieldNumber = 3;
+    private string runId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RunId {
+      get { return runId_; }
+      set {
+        runId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DoSelfDescribe);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DoSelfDescribe other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Namespace != other.Namespace) return false;
+      if (WorkflowId != other.WorkflowId) return false;
+      if (RunId != other.RunId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Namespace.Length != 0) hash ^= Namespace.GetHashCode();
+      if (WorkflowId.Length != 0) hash ^= WorkflowId.GetHashCode();
+      if (RunId.Length != 0) hash ^= RunId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Namespace.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Namespace);
+      }
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowId);
+      }
+      if (RunId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RunId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Namespace.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Namespace);
+      }
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowId);
+      }
+      if (RunId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RunId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Namespace.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Namespace);
+      }
+      if (WorkflowId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowId);
+      }
+      if (RunId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RunId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DoSelfDescribe other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Namespace.Length != 0) {
+        Namespace = other.Namespace;
+      }
+      if (other.WorkflowId.Length != 0) {
+        WorkflowId = other.WorkflowId;
+      }
+      if (other.RunId.Length != 0) {
+        RunId = other.RunId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Namespace = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RunId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Namespace = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RunId = input.ReadString();
             break;
           }
         }
@@ -3717,7 +4134,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[10]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3847,7 +4264,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3866,7 +4287,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3896,7 +4321,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[11]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4026,7 +4451,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4045,7 +4474,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4083,7 +4516,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[12]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[13]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4242,7 +4675,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4265,7 +4702,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4299,7 +4740,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[14]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4963,7 +5404,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5113,7 +5558,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5280,7 +5729,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[14]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[15]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5612,7 +6061,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5672,7 +6125,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5743,7 +6200,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[15]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[16]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5916,7 +6373,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5942,7 +6403,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5979,7 +6444,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[16]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[17]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6798,7 +7263,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -6950,7 +7419,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -7275,7 +7748,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7298,7 +7775,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -7563,7 +8044,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7597,7 +8082,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -7812,7 +8301,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7835,7 +8328,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8013,7 +8510,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -8035,7 +8536,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8073,7 +8578,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[17]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[18]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -8708,7 +9213,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -8810,7 +9319,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -8926,7 +9439,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[18]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[19]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9096,7 +9609,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9119,7 +9636,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9153,7 +9674,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[19]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[20]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9432,7 +9953,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9474,7 +9999,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9530,7 +10059,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[20]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[21]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9700,7 +10229,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9723,7 +10256,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9761,7 +10298,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[21]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[22]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9976,7 +10513,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10006,7 +10547,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10047,7 +10592,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[22]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[23]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10181,7 +10726,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10200,7 +10749,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10230,7 +10783,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[23]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[24]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10379,7 +10932,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10401,7 +10958,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10434,7 +10995,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[24]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[25]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10578,7 +11139,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10600,7 +11165,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10633,7 +11202,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[25]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[26]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10777,7 +11346,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10799,7 +11372,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10832,7 +11409,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[26]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[27]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11233,7 +11810,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11297,7 +11878,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11372,7 +11957,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[27]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[28]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11582,7 +12167,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11609,7 +12198,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11650,7 +12243,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[28]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[29]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11943,7 +12536,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11985,7 +12582,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
