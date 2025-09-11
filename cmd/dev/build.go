@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -152,7 +153,7 @@ func runBuildKitchensink() error {
 	kitchenSinkGenDir := filepath.Join(rootDir, "loadgen", "kitchen-sink-gen")
 
 	// Set PROTOC environment variable to use the correct protoc
-	protocPath, _ := getCommandPath("protoc") // already validated earlier
+	protocPath, _ := exec.LookPath("protoc") // already validated earlier
 	os.Setenv("PROTOC", protocPath)
 	fmt.Printf("Setting PROTOC=%s\n", protocPath)
 
