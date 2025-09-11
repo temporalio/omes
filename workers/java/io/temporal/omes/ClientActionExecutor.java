@@ -64,22 +64,25 @@ public class ClientActionExecutor {
       if (workflowId.isEmpty()) {
         workflowId = this.workflowId;
       }
-      
-      // Get the current workflow execution details
-      DescribeWorkflowExecutionRequest request = DescribeWorkflowExecutionRequest.newBuilder()
-          .setNamespace(selfDescribe.getNamespace())
-          .setExecution(WorkflowExecution.newBuilder()
-              .setWorkflowId(workflowId)
-              .setRunId(selfDescribe.getRunId())
-              .build())
-          .build();
 
-      DescribeWorkflowExecutionResponse response = serviceStubs.blockingStub()
-          .describeWorkflowExecution(request);
+      // Get the current workflow execution details
+      DescribeWorkflowExecutionRequest request =
+          DescribeWorkflowExecutionRequest.newBuilder()
+              .setNamespace(selfDescribe.getNamespace())
+              .setExecution(
+                  WorkflowExecution.newBuilder()
+                      .setWorkflowId(workflowId)
+                      .setRunId(selfDescribe.getRunId())
+                      .build())
+              .build();
+
+      DescribeWorkflowExecutionResponse response =
+          serviceStubs.blockingStub().describeWorkflowExecution(request);
 
       // Log the workflow execution details
       log.info("Workflow Execution Details:");
-      log.info("  Workflow ID: {}", response.getWorkflowExecutionInfo().getExecution().getWorkflowId());
+      log.info(
+          "  Workflow ID: {}", response.getWorkflowExecutionInfo().getExecution().getWorkflowId());
       log.info("  Run ID: {}", response.getWorkflowExecutionInfo().getExecution().getRunId());
       log.info("  Type: {}", response.getWorkflowExecutionInfo().getType().getName());
       log.info("  Status: {}", response.getWorkflowExecutionInfo().getStatus());
@@ -91,7 +94,8 @@ public class ClientActionExecutor {
       log.info("  Task Queue: {}", response.getWorkflowExecutionInfo().getTaskQueue());
     } catch (Exception e) {
       throw ApplicationFailure.newNonRetryableFailure(
-          "Failed to describe workflow execution: " + e.getMessage(), "DescribeWorkflowExecutionFailed");
+          "Failed to describe workflow execution: " + e.getMessage(),
+          "DescribeWorkflowExecutionFailed");
     }
   }
 }

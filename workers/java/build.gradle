@@ -9,6 +9,9 @@ version '0.1.0'
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
+    }
 }
 
 repositories {
@@ -40,7 +43,7 @@ dependencies {
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.15.2"))
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "com.fasterxml.jackson.core:jackson-core"
-    implementation 'com.google.protobuf:protobuf-java:3.25.0'
+    implementation 'com.google.protobuf:protobuf-java:4.28.0'
 
 }
 
