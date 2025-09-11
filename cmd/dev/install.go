@@ -49,7 +49,7 @@ func runInstallTools(tools []string) error {
 		return err
 	}
 
-	fmt.Printf("Installing %s...\n", strings.Join(tools, ", "))
+	fmt.Println("Installing", strings.Join(tools, ", "))
 
 	for _, tool := range tools {
 		var err error
@@ -129,7 +129,7 @@ func installPython(versions map[string]string) error {
 	if err := runCommand("uv", "tool", "install", "poethepoet"); err != nil {
 		return fmt.Errorf("failed to install poethepoet: %v", err)
 	}
-	fmt.Printf("✅ poethepoet installed successfully!\n")
+	fmt.Println("✅ poethepoet installed successfully!")
 
 	return nil
 }
@@ -169,7 +169,7 @@ func installProtoc(versions map[string]string) error {
 	if err := runCommand("go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
 		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
 	}
-	fmt.Printf("✅ protoc-gen-go %s installed successfully!\n", protocGenGoVersion)
+	fmt.Println("✅ protoc-gen-go", protocGenGoVersion, "installed successfully!")
 
 	return nil
 }
@@ -188,13 +188,13 @@ func installNpm(versions map[string]string) error {
 }
 
 func installViaMise(tool, version string) error {
-	fmt.Printf("Installing %s %s...\n", tool, version)
+	fmt.Println("Installing", tool, version)
 
 	cmd := exec.Command("mise", "use", fmt.Sprintf("%s@%s", tool, version))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("mise command failed: %v\nOutput: %s", err, output)
 	}
 
-	fmt.Printf("✅ %s %s installed successfully!\n", tool, version)
+	fmt.Println("✅", tool, version, "installed successfully!")
 	return nil
 }
