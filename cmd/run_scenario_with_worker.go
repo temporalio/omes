@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/workers"
 )
 
 func runScenarioWithWorkerCmd() *cobra.Command {
@@ -13,11 +15,14 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-scenario-with-worker",
 		Short: "Run a worker and a scenario",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			r.preRun()
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
 			if err := r.run(ctx); err != nil {
-				r.logger.Fatal(err)
+				r.Logger.Fatal(err)
 			}
 		},
 	}
@@ -39,14 +44,18 @@ func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.metricsOptions.AddCLIFlags(fs, "")
 }
 
+func (r *workerWithScenarioRunner) preRun() {
+	r.workerRunner.preRun()
+}
+
 func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	// Start worker and wait on error or started
 	workerErrCh := make(chan error, 1)
 	workerStartCh := make(chan struct{})
-	r.onWorkerStarted = func() { close(workerStartCh) }
-	go func() { workerErrCh <- r.workerRunner.run(ctx) }()
+	r.OnWorkerStarted = func() { close(workerStartCh) }
+	go func() { workerErrCh <- r.Run(ctx, workers.BaseDir(repoDir(), r.SdkOptions.Language)) }()
 	select {
 	case err := <-workerErrCh:
 		return fmt.Errorf("worker did not start: %w", err)
@@ -55,21 +64,19 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 
 	// Run scenario
 	scenarioRunner := scenarioRunner{
-		logger: r.logger,
-		scenarioID: scenarioID{
-			scenario: r.scenario,
-			runID:    r.runID,
-		},
+		logger:   r.Logger,
+		scenario: r.ScenarioID,
 		scenarioRunConfig: scenarioRunConfig{
-			iterations:      r.iterations,
-			duration:        r.duration,
-			maxConcurrent:   r.maxConcurrent,
-			scenarioOptions: r.scenarioOptions,
-			timeout:         r.timeout,
+			iterations:                    r.iterations,
+			duration:                      r.duration,
+			maxConcurrent:                 r.maxConcurrent,
+			maxIterationsPerSecond:        r.maxIterationsPerSecond,
+			scenarioOptions:               r.scenarioOptions,
+			timeout:                       r.timeout,
+			doNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 		},
-		clientOptions:  r.clientOptions,
+		clientOptions:  r.ClientOptions,
 		metricsOptions: r.metricsOptions,
-		loggingOptions: r.loggingOptions,
 	}
 	scenarioErr := scenarioRunner.run(ctx)
 	cancel()

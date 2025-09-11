@@ -3,10 +3,11 @@ package worker
 import (
 	"fmt"
 
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
-	"github.com/temporalio/omes/workers/go/throughputstress"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -54,13 +55,22 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 
 func runWorkers(client client.Client, taskQueues []string, options cmdoptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
-	tpsActivities := throughputstress.Activities{
+	ebbFlowActivities := ebbandflow.Activities{}
+	clientActivities := kitchensink.ClientActivities{
 		Client: client,
 	}
+	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
+	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
+	if err != nil {
+		panic(fmt.Sprintf("failed to register operations: %v", err))
+	}
+
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
 			w := worker.New(client, taskQueue, worker.Options{
+				BuildID:                                options.BuildID,
+				UseBuildIDForVersioning:                options.BuildID != "",
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
 				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
@@ -69,9 +79,14 @@ func runWorkers(client client.Client, taskQueues []string, options cmdoptions.Wo
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
-			w.RegisterWorkflowWithOptions(throughputstress.ThroughputStressWorkflow, workflow.RegisterOptions{Name: "throughputStress"})
-			w.RegisterWorkflow(throughputstress.ThroughputStressChild)
-			w.RegisterActivity(&tpsActivities)
+			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
+			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
+			w.RegisterWorkflow(kitchensink.EchoWorkflow)
+			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
+			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
+			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
+			w.RegisterActivity(&ebbFlowActivities)
+			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
 	}

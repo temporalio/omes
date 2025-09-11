@@ -4,13 +4,38 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
 )
+
+const KitchenSinkServiceName = "kitchen-sink"
+
+type ClientActivities struct {
+	Client client.Client
+}
+
+func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientActivity *kitchensink.ExecuteActivityAction_ClientActivity) error {
+	info := activity.GetInfo(ctx)
+	executor := &kitchensink.ClientActionsExecutor{
+		Client: ca.Client,
+		WorkflowOptions: client.StartWorkflowOptions{
+			ID:        info.WorkflowExecution.ID,
+			TaskQueue: info.TaskQueue,
+		},
+		WorkflowType:  "kitchenSink",
+		WorkflowInput: &kitchensink.WorkflowInput{},
+	}
+	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
+}
 
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
@@ -22,6 +47,8 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},
 	}
+
+	// Setup query handler.
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
 		func(input interface{}) (*kitchensink.WorkflowState, error) {
 			return state.workflowState, nil
@@ -30,6 +57,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, queryErr
 	}
 
+	// Setup update handler.
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
 			rval, err = state.handleActionSet(ctx, actions.GetDoActions())
@@ -49,17 +77,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return nil, updateErr
 	}
 
-	// Handle initial set
-	if params != nil && params.InitialActions != nil {
-		for _, actionSet := range params.InitialActions {
-			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
-				return ret, err
-			}
-		}
-	}
-
-	// Handle signal action sets
+	// Setup signal handler.
 	signalActionsChan := workflow.GetSignalChannel(ctx, "do_actions_signal")
 	retOrErrChan := workflow.NewChannel(ctx)
 	workflow.Go(ctx, func(ctx workflow.Context) {
@@ -78,6 +96,17 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			})
 		}
 	})
+
+	// Handle initial set.
+	if params != nil && params.InitialActions != nil {
+		for _, actionSet := range params.InitialActions {
+			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
+				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
+				return ret, err
+			}
+		}
+	}
+
 	for {
 		var retOrErr ReturnOrErr
 		retOrErrChan.Receive(ctx, &retOrErr)
@@ -148,8 +177,19 @@ func (ws *KSWorkflowState) handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
+		var searchAttributes map[string]interface{}
+		if child.SearchAttributes != nil {
+			searchAttributes = make(map[string]interface{})
+			for k, v := range child.SearchAttributes {
+				searchAttributes[k] = v
+			}
+		}
+		cCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
+			WorkflowID:       child.WorkflowId,
+			SearchAttributes: searchAttributes,
+		})
 		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
-			return workflow.ExecuteChildWorkflow(ctx, childType, child.GetInput()[0])
+			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
 		}, child.AwaitableChoice,
 			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
 				return fut.GetChildWorkflowExecution().Get(ctx, nil)
@@ -189,6 +229,8 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, err
 	} else if action.GetNestedActionSet() != nil {
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
+	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
+		return nil, handleNexusOperation(ctx, nexusOp, ws)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -201,6 +243,16 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	if delay := act.GetDelay(); delay != nil {
 		actType = "delay"
 		args = append(args, delay.AsDuration())
+	} else if payload := act.GetPayload(); payload != nil {
+		actType = "payload"
+		inputData := make([]byte, payload.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		args = append(args, inputData, payload.BytesToReturn)
+	} else if client := act.GetClient(); client != nil {
+		actType = "client"
+		args = append(args, client)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -220,6 +272,18 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 				waitForCancel = true
 			}
 		}
+
+		var priority temporal.Priority
+		if prio := act.GetPriority(); prio != nil {
+			priority.PriorityKey = int(prio.PriorityKey)
+		}
+		if fk := act.GetFairnessKey(); fk != "" {
+			return fmt.Errorf("fairness key is not supported yet")
+		}
+		if fw := act.GetFairnessWeight(); fw > 0 {
+			return fmt.Errorf("fairness weight is not supported yet")
+		}
+
 		opts := workflow.ActivityOptions{
 			TaskQueue:              act.TaskQueue,
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
@@ -228,6 +292,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
 			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
 		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
@@ -293,9 +358,40 @@ func withAwaitableChoiceCustom[F workflow.Future](
 	return err
 }
 
+func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
+	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
+		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
+		nexusOptions := workflow.NexusOperationOptions{}
+		return client.ExecuteOperation(ctx, nexusOp.Operation, nexusOp.Input, nexusOptions)
+	}, nexusOp.AwaitableChoice,
+		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
+			return fut.GetNexusOperationExecution().Get(ctx, nil)
+		},
+		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
+			if expOutput := nexusOp.GetExpectedOutput(); expOutput != "" {
+				var result string
+				if err := fut.Get(ctx, &result); err != nil {
+					return err
+				}
+				if expOutput != result {
+					return fmt.Errorf("expected output %q, got %q", expOutput, result)
+				}
+				return nil
+			}
+			return fut.Get(ctx, nil)
+		})
+}
+
 // Noop is used as a no-op activity
-func Noop(_ context.Context, _ []*common.Payload) error {
+func Noop(_ context.Context) error {
 	return nil
+}
+
+func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
+	output := make([]byte, bytesToReturn)
+	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
+	rand.Read(output)
+	return output, nil
 }
 
 // Delay runs for the provided delay period
@@ -329,3 +425,29 @@ type ReturnOrErr struct {
 	retme *common.Payload
 	err   error
 }
+
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, s string, opts nexus.StartOperationOptions) (string, error) {
+	return s, nil
+})
+
+func EchoWorkflow(ctx workflow.Context, s string) (string, error) {
+	return s, nil
+}
+
+func WaitForCancelWorkflow(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
+	return nil, workflow.Await(ctx, func() bool {
+		return false
+	})
+}
+
+var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", EchoWorkflow, func(ctx context.Context, s string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
+})
+
+var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
+})

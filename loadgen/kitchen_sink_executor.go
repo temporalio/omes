@@ -16,8 +16,6 @@ type KitchenSinkExecutor struct {
 	// Called for each iteration. TestInput is copied entirely into KitchenSinkWorkflowOptions on
 	// each iteration.
 	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
-
-	DefaultConfiguration RunConfiguration
 }
 
 func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
@@ -28,7 +26,6 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	}
 	// Create generic executor and run it
 	ge := &GenericExecutor{
-		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
 			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
@@ -46,8 +43,4 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		},
 	}
 	return ge.Run(ctx, info)
-}
-
-func (k KitchenSinkExecutor) GetDefaultConfiguration() RunConfiguration {
-	return k.DefaultConfiguration
 }

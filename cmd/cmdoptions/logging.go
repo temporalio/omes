@@ -3,6 +3,7 @@ package cmdoptions
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
@@ -24,7 +25,12 @@ var BackupLogger = log.New(os.Stderr, "", 0)
 func (l *LoggingOptions) MustCreateLogger() *zap.SugaredLogger {
 	level, err := zap.ParseAtomicLevel(l.LogLevel)
 	if err != nil {
-		BackupLogger.Fatalf("Invalid log level: %v", err)
+		if strings.ToLower(l.LogLevel) == "trace" {
+			// Zap doesn't know about trace level, but, some of the workers do.
+			level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
+		} else {
+			BackupLogger.Fatalf("Invalid log level: %v", err)
+		}
 	}
 	logger, err := zap.Config{
 		Level:            level,

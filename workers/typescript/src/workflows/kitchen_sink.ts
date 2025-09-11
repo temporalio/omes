@@ -1,4 +1,4 @@
-import { google, temporal } from '../protos/root';
+import { temporal } from '../protos/root';
 import {
   ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
@@ -23,11 +23,12 @@ import {
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
+  decodePriority,
   decompileRetryPolicy,
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
-import Long from 'long';
+import { durationConvert, numify } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -39,7 +40,6 @@ import IPayload = temporal.api.common.v1.IPayload;
 import IAwaitableChoice = temporal.omes.kitchen_sink.IAwaitableChoice;
 import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
 import ActivityCancellationType = temporal.omes.kitchen_sink.ActivityCancellationType;
-import IDuration = google.protobuf.IDuration;
 import IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
 
 const reportStateQuery = defineQuery<IWorkflowState, [Payload]>('report_state');
@@ -75,13 +75,12 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       );
     }
     const allComplete = Promise.all(promises);
-    await Promise.any([allComplete, condition(() => rval !== undefined)]);
+    await Promise.race([allComplete, condition(() => rval !== undefined)]);
 
     return rval;
   }
 
   async function handleAction(action: IAction): Promise<IPayload | null | undefined> {
-    // console.log('Handling an action', action);
     async function handleAwaitableChoice<PR extends Promise<PRR>, PRR>(
       promise: () => PR,
       choice: IAwaitableChoice | null | undefined,
@@ -200,8 +199,10 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       upsertSearchAttributes(searchAttributes);
     } else if (action.nestedActionSet) {
       return await handleActionSet(action.nestedActionSet);
+    } else if (action.nexusOperation) {
+      throw new ApplicationFailure('ExecuteNexusOperation is not supported');
     } else {
-      throw new ApplicationFailure('Unknown action ' + JSON.stringify(action));
+      throw new ApplicationFailure('unrecognized action ' + JSON.stringify(action));
     }
   }
 
@@ -219,9 +220,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     actionsUpdate,
     async (actions) => {
       const rval = await handleActionSet(actions.doActions!);
-      if (rval) {
-        return rval;
-      }
+      return rval;
     },
     {
       validator: (actions) => {
@@ -260,12 +259,31 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'delay';
     args.push(durationConvert(execActivity.delay));
   }
+  if (execActivity.resources) {
+    actType = 'resources';
+    args.push(execActivity.resources);
+  }
+  if (execActivity.payload) {
+    actType = 'payload';
+    const bytesToReceive = execActivity.payload.bytesToReceive || 0;
+    const inputData = new Uint8Array(bytesToReceive);
+    for (let i = 0; i < inputData.length; i++) {
+      inputData[i] = i % 256;
+    }
+    args.push(inputData);
+    args.push(execActivity.payload.bytesToReturn);
+  }
+  if (execActivity.client) {
+    actType = 'client';
+    args.push(execActivity.client);
+  }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),
     startToCloseTimeout: durationConvert(execActivity.startToCloseTimeout),
     scheduleToStartTimeout: durationConvert(execActivity.scheduleToStartTimeout),
     retry: decompileRetryPolicy(execActivity.retryPolicy),
+    priority: decodePriority(execActivity.priority),
   };
 
   if (execActivity.isLocal) {
@@ -289,24 +307,4 @@ function convertCancelType(
   } else if (ct === ActivityCancellationType.ABANDON) {
     return WFActivityCancellationType.ABANDON;
   }
-}
-
-function durationConvert(d: IDuration | null | undefined): number {
-  if (!d) {
-    return 0;
-  }
-  // convert to ms
-  return Math.round(numify(d.seconds) * 1000 + (d.nanos ?? 0) / 1000000);
-}
-
-// I just cannot get protobuf to use Long consistently. For whatever insane reason for child
-// workflows it reverts to using number.
-function numify(n: number | Long | undefined | null): number {
-  if (!n) {
-    return 0;
-  }
-  if (typeof n === 'number') {
-    return n;
-  }
-  return n.toNumber();
 }

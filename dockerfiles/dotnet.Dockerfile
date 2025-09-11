@@ -1,5 +1,6 @@
 # Build in a full featured container
-FROM mcr.microsoft.com/dotnet/sdk:7.0-jammy as build
+ARG TARGETARCH
+FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
 
 # Install protobuf compiler and build tools
 RUN apt-get update \
@@ -8,9 +9,9 @@ RUN apt-get update \
       protobuf-compiler=3.12.4* libprotobuf-dev=3.12.4* build-essential=12.*
 
 # Get go compiler
-ARG PLATFORM=amd64
-RUN wget -q https://go.dev/dl/go1.20.4.linux-${PLATFORM}.tar.gz \
-    && tar -C /usr/local -xzf go1.20.4.linux-${PLATFORM}.tar.gz
+ARG TARGETARCH
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 
 # Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
 # in the "build" container (-y is for non-interactive install)
@@ -25,7 +26,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -37,11 +38,14 @@ ARG SDK_VERSION
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
+# Copy the worker files
+COPY workers/dotnet ./workers/dotnet
+
 # Prepare the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a distroless "run" container
-FROM mcr.microsoft.com/dotnet/sdk:7.0-jammy
+FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/dotnet /app/workers/dotnet

@@ -87,7 +87,7 @@ public static class App
     /// </summary>
     /// <param name="args">CLI args.</param>
     /// <returns>Task for completion.</returns>
-    public static Task RunAsync(string[] args) => CreateCommand().InvokeAsync(args);
+    public static Task<int> RunAsync(string[] args) => CreateCommand().InvokeAsync(args);
 
     private static Command CreateCommand()
     {
@@ -197,6 +197,9 @@ public static class App
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
             workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
             workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
+            workerOptions.AddActivity(KitchenSinkWorkflow.Payload);
+            var clientActivities = new ClientActivitiesImpl(client);
+            workerOptions.AddActivity(clientActivities.Client);
             var worker = new TemporalWorker(client, workerOptions);
             var workerTask = worker.ExecuteAsync(default);
             workerTasks.Add(workerTask);

@@ -17,7 +17,12 @@ from temporalio.runtime import (
 from temporalio.service import TLSConfig
 from temporalio.worker import Worker
 
-from activities import delay_activity, noop_activity
+from activities import (
+    create_client_activity,
+    delay_activity,
+    noop_activity,
+    payload_activity,
+)
 from kitchen_sink import KitchenSinkWorkflow
 
 nameToLevel = {
@@ -183,7 +188,12 @@ async def run():
             client,
             task_queue=task_queue,
             workflows=[KitchenSinkWorkflow],
-            activities=[noop_activity, delay_activity],
+            activities=[
+                noop_activity,
+                delay_activity,
+                payload_activity,
+                create_client_activity(client),
+            ],
             **worker_kwargs,
         )
         for task_queue in task_queues

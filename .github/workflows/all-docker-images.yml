@@ -54,7 +54,6 @@ on:
         type: boolean
         default: false
 
-
 jobs:
   build-go-docker-images:
     if: inputs.go-version

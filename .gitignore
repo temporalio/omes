@@ -3,6 +3,7 @@
 .mypy_cache
 go.work
 go.work.sum
+mise.toml
 .idea/
 # Ignore Gradle project-specific cache directory
 .gradle
@@ -14,3 +15,11 @@ workers/java/build
 /loadgen/kitchen-sink-gen/target/
 /workers/dotnet/obj/
 /workers/dotnet/bin/
+/last_fuzz_run.proto
+workers/dotnet/Temporalio.Omes.temp.csproj
+
+workers/python/**/__pycache__/
+workers/*/omes-temp-*/
+workers/*/prepared/
+
+temporal-omes

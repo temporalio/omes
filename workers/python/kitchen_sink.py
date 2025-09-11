@@ -8,6 +8,7 @@ import temporalio.workflow
 from temporalio import exceptions, workflow
 from temporalio.api.common.v1 import Payload
 from temporalio.common import (
+    Priority,
     RawValue,
     RetryPolicy,
     SearchAttributeKey,
@@ -98,11 +99,12 @@ class KitchenSinkWorkflow:
         should_return_task = asyncio.create_task(
             workflow.wait_condition(lambda: return_value is not None)
         )
-        done, _ = await asyncio.wait(
+        # mypy cannot handle the heterogeneous arguments to `wait`
+        done, _ = await workflow.wait(
             [gather_fut, should_return_task], return_when=asyncio.FIRST_COMPLETED
         )  # type: ignore
         for fut in done:
-            await fut
+            await fut  # type: ignore
         return return_value
 
     async def handle_action(self, action: Action) -> Optional[Payload]:
@@ -167,6 +169,8 @@ class KitchenSinkWorkflow:
             workflow.upsert_search_attributes(updates)
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
+        elif action.HasField("nexus_operation"):
+            raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -175,11 +179,21 @@ class KitchenSinkWorkflow:
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
     act_type = "noop"
-    args = []
+    args: list[Any] = []
 
     if execute_activity.HasField("delay"):
         act_type = "delay"
         args.append(execute_activity.delay)
+    elif execute_activity.HasField("payload"):
+        act_type = "payload"
+        input_data = bytes(
+            i % 256 for i in range(execute_activity.payload.bytes_to_receive)
+        )
+        args.append(input_data)
+        args.append(execute_activity.payload.bytes_to_return)
+    elif execute_activity.HasField("client"):
+        act_type = "client"
+        args.append(execute_activity.client)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
@@ -200,6 +214,9 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             # TODO: cancel type can be in local
         )
     else:
+        if execute_activity.HasField("priority"):
+            raise NotImplementedError("priority is not supported yet")
+
         activity_task = workflow.start_activity(
             activity=act_type,
             args=args,
