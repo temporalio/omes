@@ -15,6 +15,7 @@ import "temporal/api/enums/v1/workflow.proto";
 message TestInput {
   WorkflowInput workflow_input = 1;
   ClientSequence client_sequence = 2;
+  WithStartClientAction with_start_action = 3;
   // Technically worker options should be known as well. We don't have any common format for that
   // and creating one feels overkill to start with. Requiring the harness to print the config at
   // startup seems good enough for now.
@@ -35,6 +36,13 @@ message ClientActionSet {
   // If set, the client should wait for the current run to end before proceeding (IE: the workflow
   // is going to continue-as-new).
   bool wait_for_current_run_to_finish_at_end = 4;
+}
+
+message WithStartClientAction {
+  oneof variant {
+    DoSignal do_signal = 1;
+    DoUpdate do_update = 2;
+  }
 }
 
 message ClientAction {
@@ -65,6 +73,8 @@ message DoSignal {
     // Send an arbitrary signal
     HandlerInvocation custom = 2;
   }
+  // If set, the Signal is a Signal-with-Start.
+  bool with_start = 3;
 }
 
 message DoQuery {
@@ -88,7 +98,8 @@ message DoUpdate {
     // Send an arbitrary update request
     HandlerInvocation custom = 2;
   }
-
+  // If set, the Update is an Update-with-Start.
+  bool with_start = 3;
   // If set, the client should expect the update to fail
   bool failure_expected = 10;
 }
@@ -147,6 +158,8 @@ message Action {
     ContinueAsNewAction continue_as_new = 13;
 
     ActionSet nested_action_set = 14;
+
+    ExecuteNexusOperation nexus_operation = 15;
   }
 }
 
@@ -185,6 +198,19 @@ message ExecuteActivityAction {
     string type = 1;
     repeated temporal.api.common.v1.Payload arguments = 2;
   }
+  message ResourcesActivity {
+    google.protobuf.Duration run_for = 1;
+    uint64 bytes_to_allocate = 2;
+    uint32 cpu_yield_every_n_iterations = 3;
+    uint32 cpu_yield_for_ms = 4;
+  }
+  message PayloadActivity {
+    int32 bytes_to_receive = 1;
+    int32 bytes_to_return = 2;
+  }
+  message ClientActivity {
+      ClientSequence client_sequence = 1;
+  }
   oneof activity_type {
     GenericActivity generic = 1;
     // There must be an activity named `delay` which accepts some kind of duration and waits
@@ -192,6 +218,12 @@ message ExecuteActivityAction {
     google.protobuf.Duration delay = 2;
     // There must be an activity named `noop` which does nothing
     google.protobuf.Empty noop = 3;
+    // There must be an activity named `resources` which accepts the ResourcesActivity message as input
+    ResourcesActivity resources = 14;
+    // There must be an activity named `payload` which accepts the PayloadActivity message as input
+    PayloadActivity payload = 18;
+    // There must be an activity named `client` which accepts the ClientActivity message as input
+    ClientActivity client = 19;
   }
   // The name of the task queue to place this activity request in
   string task_queue = 4;
@@ -219,6 +251,10 @@ message ExecuteActivityAction {
     RemoteActivityOptions remote = 12;
   }
   AwaitableChoice awaitable_choice = 13;
+  temporal.api.common.v1.Priority priority = 15;
+  // TODO: once complete, use commonpb.PriorityKey instead
+  string fairness_key = 16;
+  float fairness_weight = 17;
 }
 
 message ExecuteChildWorkflowAction {
@@ -402,5 +438,20 @@ enum ActivityCancellationType {
   // Do not request cancellation of the activity and immediately report cancellation to the
   // workflow
   ABANDON = 2;
+}
+
+// Execute a Nexus operation
+message ExecuteNexusOperation {
+  string endpoint = 1;
+  // Operation name to call
+  string operation = 2;
+  // Input payload for the operation
+  string input = 3;
+  // Headers to send with the operation
+  map<string, string> headers = 4;
+  // How to await on the operation
+  AwaitableChoice awaitable_choice = 5;
+  // Expected output for verification
+  string expected_output = 6;
 }
 

@@ -3,17 +3,20 @@ package loadgen
 import (
 	"context"
 	"fmt"
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
+
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 type Scenario struct {
@@ -25,6 +28,29 @@ type Scenario struct {
 type Executor interface {
 	// Run the scenario
 	Run(context.Context, ScenarioInfo) error
+}
+
+// Optional interface that can be implemented by an [Executor] to allow it to be resumable.
+type Resumable interface {
+	// LoadState loads a snapshot into the executor's internal state.
+	//
+	// Implementations should pass a reference to a state variable to the loader function and assign to their internal state.
+	// Callers should call this function before invoking the executor's Run method.
+	LoadState(loader func(any) error) error
+	// Snapshot returns a snapshot of the executor's internal state. The returned value must be serializable.
+	//
+	// The serialization format should be supported by the caller of this function.
+	// Callers may call this function periodically to get a snapshot of the executor's state.
+	Snapshot() any
+}
+
+// Optional interface that can be implemented by an [Executor] to make it configurable.
+type Configurable interface {
+	// Configure the executor with the given scenario info.
+	//
+	// Call this method if you want to ensure that all required configuration parameters
+	// are present and valid without actually running the executor.
+	Configure(ScenarioInfo) error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
@@ -107,12 +133,54 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 	return i
 }
 
+func (s *ScenarioInfo) ScenarioOptionFloat(name string, defaultValue float64) float64 {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	return v == "true"
+}
+
+func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
 const DefaultIterations = 10
-const DefaultMaxConcurrent = 10
+const DefaultMaxConcurrentIterations = 10
+const DefaultMaxIterationAttempts = 1
+const BaseIterationRetryBackoff = 1 * time.Second
+const MaxIterationRetryBackoff = 60 * time.Second
 
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
+	// StartFromIteration is the iteration to start from when resuming a run.
+	// This is used to skip iterations that have already been run.
+	// Default is zero. If Iterations is set, too, must be less than or equal to Iterations.
+	StartFromIteration int
+	// MaxIterationAttempts is the maximum number of attempts to run the scenario.
+	// Default (and minimum) is 1.
+	MaxIterationAttempts int
 	// Duration limit of this scenario (mutually exclusive with Iterations). If neither iterations
 	// nor duration is set, default is DefaultIterations. When the Duration is elapsed, no new
 	// iterations will be started, but we will wait for any currently running iterations to
@@ -121,10 +189,22 @@ type RunConfiguration struct {
 	// Maximum number of instances of the Execute method to run concurrently.
 	// Default is DefaultMaxConcurrent.
 	MaxConcurrent int
+	// MaxIterationsPerSecond is the maximum number of iterations to run per second.
+	// Default is zero, meaning unlimited.
+	MaxIterationsPerSecond float64
 	// Timeout is the maximum amount of time we'll wait for the scenario to finish running.
 	// If the timeout is hit any pending executions will be cancelled and the scenario will exit
 	// with an error. The default is unlimited.
 	Timeout time.Duration
+	// Do not register the default search attributes used by scenarios. If the SAs are not registered
+	// by the run, they must be registered by some other method. This is needed because cloud cells
+	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
+	// Default is false.
+	DoNotRegisterSearchAttributes bool
+	// OnCompletion, if set, is invoked after each successful iteration completes.
+	OnCompletion func(context.Context, *Run)
+	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
+	HandleExecuteError func(context.Context, *Run, error) error
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
@@ -132,17 +212,40 @@ func (r *RunConfiguration) ApplyDefaults() {
 		r.Iterations = DefaultIterations
 	}
 	if r.MaxConcurrent == 0 {
-		r.MaxConcurrent = DefaultMaxConcurrent
+		r.MaxConcurrent = DefaultMaxConcurrentIterations
 	}
+	if r.MaxIterationAttempts == 0 {
+		r.MaxIterationAttempts = DefaultMaxIterationAttempts
+	}
+}
+
+func (r RunConfiguration) Validate() error {
+	if r.Duration < 0 {
+		return fmt.Errorf("Duration cannot be negative")
+	}
+	if r.Iterations > 0 {
+		if r.Duration > 0 {
+			return fmt.Errorf("iterations and duration are mutually exclusive")
+		}
+		if r.StartFromIteration > r.Iterations {
+			return fmt.Errorf("StartFromIteration %d is greater than Iterations %d",
+				r.StartFromIteration, r.Iterations)
+		}
+	}
+	return nil
 }
 
 // Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
 	*ScenarioInfo
+
 	// Each run should have a unique iteration.
 	Iteration int
 	Logger    *zap.SugaredLogger
+
+	// tracks how many attempts have been made for this iteration
+	attemptCount int
 }
 
 // NewRun creates a new run.
@@ -154,19 +257,53 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 	}
 }
 
-// TaskQueueForRun returns a default task queue name for the given scenario name and run ID.
-func TaskQueueForRun(scenarioName, runID string) string {
-	return fmt.Sprintf("%s:%s", scenarioName, runID)
+func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
+	if s.Client == nil {
+		// No client in some unit tests. Ideally this would be mocked but no mock operator service
+		// client is readily available.
+		return nil
+	}
+	// Ensure custom search attributes are registered that many scenarios rely on
+	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+		SearchAttributes: map[string]enums.IndexedValueType{
+			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
+			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
+		},
+		Namespace: s.Namespace,
+	})
+	// Throw an error if the attributes could not be registered, but ignore already exists errs
+	alreadyExistsStrings := []string{
+		"already exists",
+		"attributes mapping unavailble",
+	}
+	if err != nil {
+		isAlreadyExistsErr := false
+		for _, s := range alreadyExistsStrings {
+			if strings.Contains(err.Error(), s) {
+				isAlreadyExistsErr = true
+				break
+			}
+		}
+		if !isAlreadyExistsErr {
+			return fmt.Errorf("failed to register search attributes: %w", err)
+		}
+	}
+	return nil
+}
+
+// TaskQueueForRun returns the task queue name for the given run ID.
+func TaskQueueForRun(runID string) string {
+	return "omes-" + runID
 }
 
 func (r *Run) TaskQueue() string {
-	return TaskQueueForRun(r.ScenarioName, r.RunID)
+	return TaskQueueForRun(r.RunID)
 }
 
 // DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                TaskQueueForRun(r.ScenarioName, r.RunID),
+		TaskQueue:                                TaskQueueForRun(r.RunID),
 		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 	}
@@ -175,6 +312,17 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 // DefaultKitchenSinkWorkflowOptions gets the default kitchen sink workflow info.
 func (r *Run) DefaultKitchenSinkWorkflowOptions() KitchenSinkWorkflowOptions {
 	return KitchenSinkWorkflowOptions{StartOptions: r.DefaultStartWorkflowOptions()}
+}
+
+// ShouldRetry determines if another attempt should be made. It returns the backoff duration to wait
+// before retrying and a boolean indicating whether a retry should occur.
+func (r *Run) ShouldRetry(err error) (time.Duration, bool) {
+	r.attemptCount++
+	if r.attemptCount >= r.Configuration.MaxIterationAttempts {
+		return 0, false
+	}
+	backoff := min(MaxIterationRetryBackoff, BaseIterationRetryBackoff*time.Duration(1<<uint(r.attemptCount-1)))
+	return backoff, true
 }
 
 type KitchenSinkWorkflowOptions struct {
@@ -186,44 +334,34 @@ type KitchenSinkWorkflowOptions struct {
 // completion ignoring its result. Concurrently it will perform any client actions specified in
 // kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	// Start the workflow
 	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
-	handle, err := r.Client.ExecuteWorkflow(
-		ctx, options.StartOptions, "kitchenSink", options.Params.WorkflowInput)
-	if err != nil {
-		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
-	}
-
-	// Ensure custom search attributes are registered
-	_, err = r.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
-		},
-		Namespace: r.Namespace,
-	})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return fmt.Errorf("failed to register search attributes: %w", err)
-	}
-
-	clientSeq := options.Params.ClientSequence
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	var clientActionsErr error
+
+	executor := &kitchensink.ClientActionsExecutor{
+		Client:          r.Client,
+		WorkflowOptions: options.StartOptions,
+		WorkflowType:    "kitchenSink",
+		WorkflowInput:   options.Params.GetWorkflowInput(),
+	}
+	startErr := executor.Start(ctx, options.Params.WithStartAction)
+	if startErr != nil {
+		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
+	}
+
+	var clientActionsErrPtr atomic.Pointer[error]
+	clientSeq := options.Params.ClientSequence
 	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
-		executor := &kitchensink.ClientActionsExecutor{
-			Client:     r.Client,
-			WorkflowID: handle.GetID(),
-			RunID:      handle.GetRunID(),
-		}
 		go func() {
-			clientActionsErr = executor.ExecuteClientSequence(cancelCtx, clientSeq)
-			if clientActionsErr != nil {
-				r.Logger.Error("Client actions failed: ", clientActionsErr)
+			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
+			if err != nil {
+				clientActionsErrPtr.Store(&err)
+				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
 				cancel()
+
 				// TODO: Remove or change to "always terminate when exiting early" flag
 				err := r.Client.TerminateWorkflow(
-					ctx, handle.GetID(), "", "client actions failed", nil)
+					ctx, options.StartOptions.ID, "", "client actions failed", nil)
 				if err != nil {
 					return
 				}
@@ -231,12 +369,12 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		}()
 	}
 
-	executeErr := handle.Get(cancelCtx, nil)
+	executeErr := executor.Handle.Get(cancelCtx, nil)
 	if executeErr != nil {
 		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}
-	if clientActionsErr != nil {
-		return fmt.Errorf("kitchen sink client actions failed: %w", clientActionsErr)
+	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
+		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
 	}
 	return nil
 }

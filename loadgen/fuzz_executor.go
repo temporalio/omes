@@ -52,15 +52,15 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		if ok && executable != "" {
 			cmd = exec.CommandContext(ctx, executable, fileOrArgs.Args...)
 		} else {
-			args := []string{"run", "--"}
+			projDir := filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen", "Cargo.toml")
+			args := []string{"run", "--manifest-path", projDir, "--"}
 			args = append(args, fileOrArgs.Args...)
 			cmd = exec.CommandContext(ctx, "cargo", args...)
-			cmd.Dir = filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen")
 		}
 		cmd.Stderr = os.Stderr
 		protoBytes, err := cmd.Output()
 		if err != nil {
-			return fmt.Errorf("failed to run rust generator: %w", err)
+			return fmt.Errorf("failed to run rust generator (%v): %w", cmd, err)
 		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(protoBytes, asTInput)
@@ -71,7 +71,6 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 
 	// Create generic executor and run it
 	ge := &GenericExecutor{
-		DefaultConfiguration: k.DefaultConfiguration,
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
 			// TODO: Iterations

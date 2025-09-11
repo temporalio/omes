@@ -12,12 +12,6 @@ import (
 type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
 	Execute func(context.Context, *Run) error
-	// Default configuration if any.
-	DefaultConfiguration RunConfiguration
-}
-
-func (g *GenericExecutor) GetDefaultConfiguration() RunConfiguration {
-	return g.DefaultConfiguration
 }
 
 type genericRun struct {
@@ -38,31 +32,18 @@ func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 }
 
 func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
-	run := &genericRun{
+	info.Configuration.ApplyDefaults()
+	if err := info.Configuration.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid scenario: %w", err)
+	}
+	return &genericRun{
 		executor: g,
 		info:     info,
 		config:   info.Configuration,
 		logger:   info.Logger,
 		executeTimer: info.MetricsHandler.WithTags(
 			map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram"),
-	}
-
-	// Setup config
-	if run.config.Duration == 0 && run.config.Iterations == 0 {
-		run.config.Duration, run.config.Iterations = g.DefaultConfiguration.Duration, g.DefaultConfiguration.Iterations
-	}
-	if run.config.MaxConcurrent == 0 {
-		run.config.MaxConcurrent = g.DefaultConfiguration.MaxConcurrent
-	}
-	if run.config.Timeout == 0 {
-		run.config.Timeout = g.DefaultConfiguration.Timeout
-	}
-	run.config.ApplyDefaults()
-	if run.config.Iterations > 0 && run.config.Duration > 0 {
-		return nil, fmt.Errorf("invalid scenario: iterations and duration are mutually exclusive")
-	}
-
-	return run, nil
+	}, nil
 }
 
 // Run a scenario.
@@ -71,11 +52,21 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 // iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if !g.info.Configuration.DoNotRegisterSearchAttributes {
+		err := g.info.RegisterDefaultSearchAttributes(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	// If set, timeout overrides the default context.
 	if g.config.Timeout > 0 {
 		g.logger.Debugf("Will timeout after %v", g.config.Timeout)
 		ctx, cancel = context.WithTimeout(ctx, g.config.Timeout)
+		defer cancel()
 	}
-	defer cancel()
 
 	durationCtx := ctx
 	if g.config.Duration > 0 {
@@ -85,21 +76,16 @@ func (g *genericRun) Run(ctx context.Context) error {
 
 	startTime := time.Now()
 	var runErr error
-	doneCh := make(chan error)
+	doneCh := make(chan error, g.config.MaxConcurrent)
 	var currentlyRunning int
-	waitOne := func(respectDuration bool) {
-		durationDone := make(<-chan struct{})
-		if respectDuration {
-			durationDone = durationCtx.Done()
-		}
+	waitOne := func(contextToWaitOn context.Context) {
 		select {
 		case err := <-doneCh:
 			currentlyRunning--
 			if err != nil {
 				runErr = err
 			}
-		case <-ctx.Done():
-		case <-durationDone:
+		case <-contextToWaitOn.Done():
 		}
 	}
 
@@ -109,42 +95,87 @@ func (g *genericRun) Run(ctx context.Context) error {
 		g.logger.Debugf("Will start iterations for %v", g.config.Duration)
 	}
 
+	var rateLimiter <-chan time.Time
+	if g.config.MaxIterationsPerSecond > 0 {
+		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.MaxIterationsPerSecond)
+		rateLimiter = time.Tick(time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond))
+	}
+
 	// Run all until we've gotten an error or reached iteration limit or timeout
-	for i := 0; runErr == nil && durationCtx.Err() == nil && ctx.Err() == nil &&
+	for i := g.info.Configuration.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
+
+		// If there is a rate limit, enforce it
+		if rateLimiter != nil {
+			<-rateLimiter
+		}
+
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
-			waitOne(true)
-			// Exit loop if error
+			waitOne(durationCtx)
+			// Exit loop on first error, or if scenario duration has elapsed
 			if runErr != nil || durationCtx.Err() != nil {
 				break
 			}
 		}
+
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
 		go func() {
-			startTime := time.Now()
-			err := g.executor.Execute(ctx, run)
-			if err != nil {
-				err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-				g.logger.Error(err)
-			}
-			select {
-			case <-ctx.Done():
-			case doneCh <- err:
-				// Record/log here, not if it was cut short by context complete
-				g.executeTimer.Record(time.Since(startTime))
+			var err error
+			iterStart := time.Now()
+
+			defer func() {
+				g.executeTimer.Record(time.Since(iterStart))
+
+				select {
+				case <-ctx.Done():
+				case doneCh <- err:
+					if err == nil && g.config.OnCompletion != nil {
+						g.config.OnCompletion(ctx, run)
+					}
+				}
+			}()
+
+		retryLoop:
+			for {
+				err = g.executor.Execute(ctx, run)
+				if err != nil && g.config.HandleExecuteError != nil {
+					err = g.config.HandleExecuteError(ctx, run, err)
+				}
+				if err == nil {
+					break
+				}
+
+				backoff, retry := run.ShouldRetry(err)
+				if retry {
+					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
+					g.logger.Error(err)
+				} else {
+					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
+					g.logger.Error(err)
+					break retryLoop
+				}
+
+				select {
+				case <-time.After(backoff):
+					// wait for backoff, then try again
+				case <-ctx.Done():
+					break retryLoop
+				}
 			}
 		}()
 	}
-	g.logger.Debugf("No longer starting new iterations")
+
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
+	g.logger.Infof("Run cooldown: stopped starting new iterations and waiting for %d iterations to complete",
+		currentlyRunning)
 	for runErr == nil && currentlyRunning > 0 {
-		waitOne(false)
+		waitOne(ctx)
 		if ctx.Err() != nil {
 			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 		}
@@ -152,6 +183,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
 	}
-	g.logger.Infof("Run complete in %v", time.Since(startTime))
+	g.logger.Infof("Run completed in %v", time.Since(startTime))
 	return nil
 }

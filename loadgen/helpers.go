@@ -2,35 +2,102 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
 )
 
-// VisibilityCountIsEventually ensures that some visibility query count matches the provided
-// expected number within the provided time limit.
-func VisibilityCountIsEventually(
+// InitSearchAttribute ensures that a search attribute is defined in the namespace.
+// It creates the search attribute if it doesn't exist, or verifies it exists if it does.
+// This implementation matches the throughput_stress initSearchAttribute behavior.
+func InitSearchAttribute(
 	ctx context.Context,
-	client client.Client,
+	info ScenarioInfo,
+	attributeName string,
+) error {
+	_, err := info.Client.OperatorService().AddSearchAttributes(ctx,
+		&operatorservice.AddSearchAttributesRequest{
+			Namespace: info.Namespace,
+			SearchAttributes: map[string]enums.IndexedValueType{
+				attributeName: enums.INDEXED_VALUE_TYPE_KEYWORD,
+			},
+		})
+	var deniedErr *serviceerror.PermissionDenied
+	var alreadyErr *serviceerror.AlreadyExists
+	if errors.As(err, &alreadyErr) {
+		info.Logger.Infof("Search Attribute %q not added: already exists", attributeName)
+	} else if err != nil {
+		info.Logger.Warnf("Search Attribute %q not added: %v", attributeName, err)
+		if !errors.As(err, &deniedErr) {
+			return err
+		}
+	} else {
+		info.Logger.Infof("Search Attribute %q added", attributeName)
+	}
+
+	return nil
+}
+
+func MinVisibilityCountEventually(
+	ctx context.Context,
+	info ScenarioInfo,
 	request *workflowservice.CountWorkflowExecutionsRequest,
-	expectedCount int,
+	minCount int,
 	waitAtMost time.Duration,
 ) error {
-	deadline := time.Now().Add(waitAtMost)
-	for {
-		visibilityCount, err := client.CountWorkflow(ctx, request)
+	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
+	defer cancel()
+
+	countTicker := time.NewTicker(3 * time.Second)
+	defer countTicker.Stop()
+
+	printTicker := time.NewTicker(30 * time.Second)
+	defer printTicker.Stop()
+
+	var lastVisibilityCount int64
+	done := false
+
+	check := func() error {
+		visibilityCount, err := info.Client.CountWorkflow(timeoutCtx, request)
 		if err != nil {
 			return fmt.Errorf("failed to count workflows in visibility: %w", err)
 		}
-		if visibilityCount.Count == int64(expectedCount) {
-			return nil
+		lastVisibilityCount = visibilityCount.Count
+		if lastVisibilityCount >= int64(minCount) {
+			done = true
 		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("expected %d workflows in visibility, got %d after waiting %v",
-				expectedCount, visibilityCount.Count, waitAtMost)
-		}
-		time.Sleep(5 * time.Second)
+		return nil
 	}
+
+	// Initial check before entering the loop.
+	if err := check(); err != nil {
+		return err
+	}
+
+	// Loop until we reach the desired count or timeout.
+	for !done {
+		select {
+		case <-timeoutCtx.Done():
+			return fmt.Errorf(
+				"expected at least %d workflows in visibility, got %d after waiting %v",
+				minCount, lastVisibilityCount, waitAtMost,
+			)
+
+		case <-printTicker.C:
+			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
+				lastVisibilityCount, minCount)
+
+		case <-countTicker.C:
+			if err := check(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

@@ -1,7 +1,7 @@
 name: Continuous Integration
 
-## !!NOTE!! Make sure you keep the sdk versions used in the build/test steps consistent with
-##   the versions used when building & pushing the docker images.
+env:
+  MISE_VERSION: v2025.8.1
 
 on: # rebuild any PRs and main branch changes
   pull_request:
@@ -10,150 +10,177 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  build-lint-test-go:
+  lint-shell:
     runs-on: ubuntu-latest
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
-        uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/checkout@v4
+      - name: Run shellcheck
+        uses: ludeeus/action-shellcheck@master
         with:
-          go-version: "^1.20"
-      - name: Build exe
-        run: go build -o temporal-omes ./cmd
-      - name: Test
-        run: go test ./...
-      - name: Run local scenario with worker
-        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language go --embedded-server --iterations 5
-      - name: Build worker image
-        run: ./temporal-omes build-worker-image --language go --version v1.25.2-0.20231129171107-288a04f72145 --tag-as-latest
-      - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:go-1.25.2-0.20231129171107-288a04f72145 --scenario workflow_with_single_noop_activity --log-level debug --language go --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
-      - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+          scandir: "./scripts"
+          format: gcc
+          severity: error
 
-  build-lint-test-java:
+  test-omes:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+      - name: Run tests
+        run: |
+          go test -v -race ./... 2>&1 | \
+            go run github.com/jstemmer/go-junit-report/v2@latest \
+            -set-exit-code -iocopy -out junit-omes.xml
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v5.6.2
+        if: failure()
+        with:
+          report_paths: "junit-omes.xml"
+          check_name: "Omes Test Failures"
+          detailed_summary: true
+          check_annotations: false
+          annotate_only: true
+          skip_annotations: true
+
+  lint-worker:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            lint: ./scripts/lint-go-worker.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-java-worker.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-python-worker.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-typescript-worker.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            lint: ./scripts/lint-dotnet-worker.sh
+            submodules: true
     steps:
       - name: Print build information
         run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Setup Java
-        uses: actions/setup-java@v2
         with:
-          distribution: 'temurin'
-          java-version: '11'
-      - name: Set up Gradle
-        uses: gradle/gradle-build-action@v2
-      - name: Lint Java worker
-        run: cd workers/java && ./gradlew --no-daemon spotlessCheck
-      - name: Setup Go
-        uses: actions/setup-go@v2
+          submodules: ${{ matrix.submodules }}
+      - name: Install mise
+        uses: jdx/mise-action@v2.4.4
         with:
-          go-version: "^1.20"
-      - name: Build exe
-        run: go build -o temporal-omes ./cmd
-      - name: Run local scenario with worker
-        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language java --embedded-server --iterations 5
-      - name: Build worker image
-        run: ./temporal-omes build-worker-image --language java --version 1.22.3 --tag-as-latest
-      - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:java-1.22.3 --scenario workflow_with_single_noop_activity --log-level debug --language java --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
-      - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
-
-  build-lint-test-python:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
-      - name: Checkout repo
-        uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: '3.10'
-      - name: Install Python prequisites
-        run: python -m pip install --upgrade wheel poetry poethepoet
-      - name: Initialize Python worker
-        run: cd workers/python && poetry install --no-root
-      - name: Lint Python worker
-        run: cd workers/python && poe lint
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "^1.20"
-      - name: Build exe
-        run: go build -o temporal-omes ./cmd
-      - name: Run local scenario with worker
-        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language python --embedded-server --iterations 5
-      - name: Build worker image
-        run: ./temporal-omes build-worker-image --language python --version 1.4.0 --tag-as-latest
-      - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:python-1.4.0 --scenario workflow_with_single_noop_activity --log-level debug --language python --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
-      - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
-
-  build-lint-test-typescript:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          submodules: 'true'
-      - name: Setup TypeScript
-        uses: actions/setup-node@v4
-      - name: Initialize TypeScript worker
-        run: cd workers/typescript && npm ci && npm run build
-      - name: Lint TypeScript worker
-        run: cd workers/typescript && npm run lint-ci
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "^1.20"
-      - name: Build exe
-        run: go build -o temporal-omes ./cmd
-      - name: Run local scenario with worker
-        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language ts --embedded-server --iterations 5
-      - name: Build worker image
-        run: ./temporal-omes build-worker-image --language ts --version 1.9.0-rc.0 --tag-as-latest
-      - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:typescript-1.9.0-rc.0 --scenario workflow_with_single_noop_activity --log-level debug --language ts --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
-      - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
-
-  build-lint-test-dotnet:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          submodules: 'true'
-      - name: Setup Dotnet
-        uses: actions/setup-dotnet@v3
+          version: ${{ env.MISE_VERSION }}
+      - name: Install Tools
+        run: ${{ matrix.install }}
+      - name: Lint ${{ matrix.sdk }}
+        run: ${{ matrix.lint }}
       - name: Check formatting
-        run: cd workers/dotnet && dotnet format --verify-no-changes
-      - name: Setup Go
-        uses: actions/setup-go@v2
+        run: |
+          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)
+
+  build-worker:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            build: ./scripts/build-go-worker.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            build: ./scripts/build-java-worker.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            build: ./scripts/build-python-worker.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            build: ./scripts/build-typescript-worker.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            build: ./scripts/build-dotnet-worker.sh
+            submodules: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          go-version: "^1.20"
-      - name: Build exe
-        run: go build -o temporal-omes ./cmd
-      - name: Run local scenario with worker
-        run: ./temporal-omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --log-level debug --language cs --embedded-server --iterations 5
-      - name: Build worker image
-        run: ./temporal-omes build-worker-image --language cs --version 1.0.0 --tag-as-latest
-      - name: Run worker image
-        run: docker run --rm --detach -i -p 10233:10233 omes:dotnet-1.0.0 --scenario workflow_with_single_noop_activity --log-level debug --language cs --run-id {{ github.run_id }} --embedded-server-address 0.0.0.0:10233
-      - name: Run scenario against image
-        run: ./temporal-omes run-scenario --scenario workflow_with_single_noop_activity --log-level debug --server-address 127.0.0.1:10233 --run-id {{ github.run_id }} --connect-timeout 1m --iterations 5
+          submodules: ${{ matrix.submodules }}
+      - name: Install mise
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      - name: Install Tools
+        run: ${{ matrix.install }}
+      - name: Build ${{ matrix.sdk }} worker
+        run: ${{ matrix.build }}
+
+  test-kitchensink:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [go, java, python, typescript, dotnet]
+        include:
+          - sdk: go
+            install: ./scripts/install-go.sh
+            submodules: false
+          - sdk: java
+            install: ./scripts/install-java.sh && ./scripts/install-go.sh
+            submodules: false
+          - sdk: python
+            install: ./scripts/install-python.sh && ./scripts/install-go.sh
+            submodules: false
+          - sdk: typescript
+            install: ./scripts/install-node.sh && ./scripts/install-go.sh
+            submodules: true
+          - sdk: dotnet
+            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
+            submodules: true
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: ${{ matrix.submodules }}
+      - name: Install mise
+        uses: jdx/mise-action@v2.4.4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      - name: Install Tools
+        run: ${{ matrix.install }}
+      - name: Test Kitchensink ${{ matrix.sdk }}
+        run: |
+          SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
+            go run github.com/jstemmer/go-junit-report/v2@latest \
+            -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
+      - name: Publish Kitchensink Test Results
+        uses: mikepenz/action-junit-report@v5.6.2
+        if: failure()
+        with:
+          report_paths: "junit-kitchensink-${{ matrix.sdk }}.xml"
+          check_name: "Kitchensink Test Failures (${{ matrix.sdk }})"
+          detailed_summary: true
+          check_annotations: false
+          annotate_only: true
+          skip_annotations: true
 
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest
@@ -161,39 +188,69 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
-          submodules: 'true'
-      - uses: actions-rs/toolchain@v1
+          submodules: "true"
+      - name: Install mise
+        uses: jdx/mise-action@v2.4.4
         with:
-          profile: minimal
-          toolchain: 1.74.0
-          override: true
-      - name: Install protoc
-        uses: arduino/setup-protoc@v2
-        with:
-          version: '25.1'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: "^1.20"
-      - name: Install protoc-gen-go
-        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-      - name: Build kitchen-sink-gen
-        working-directory: ./loadgen/kitchen-sink-gen
-        run: cargo build
+          version: ${{ env.MISE_VERSION }}
+      - name: Install Tools
+        run: |
+          ./scripts/install-rust.sh
+          ./scripts/install-go.sh
+          ./scripts/install-protoc.sh
+          ./scripts/install-node.sh
+      - name: Build proto
+        run: |
+          ./scripts/build-kitchensink.sh
       - name: Check diff
         run: |
-          [[ -z $(git status --porcelain loadgen/kitchensink/ workers/python/protos/) ]] || (git diff; echo "Protos changed"; false) 1>&2
+          git config --global core.safecrlf false
+          git diff > generator.diff
+          git diff --exit-code
+      - name: Upload generator diff
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generator-diff
+          path: generator.diff
+          if-no-files-found: ignore
 
+  # env cannot be referenced in jobs.<job_id>.with.<with_id>, so we need a job to run before
+  # to append a "v" to the version string
+  prepare-for-docker-push:
+    runs-on: ubuntu-latest
+    outputs:
+      go-sdk-version: ${{ steps.set-output.outputs.go-sdk-version }}
+      ts-sdk-version: ${{ steps.set-output.outputs.ts-sdk-version }}
+      java-sdk-version: ${{ steps.set-output.outputs.java-sdk-version }}
+      python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
+      dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set output variables to pass to docker YML
+        id: set-output
+        run: |
+          echo "go-sdk-version=v${{ env.GO_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "ts-sdk-version=v${{ env.TYPESCRIPT_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-latest-docker-images:
+    needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     with:
+      # Only images that are built from `main` are tagged as `latest`.
+      # This ensures that internal systems can rely on the latest tag to be stable.
+      as-latest: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       do-push: true
-      as-latest: true
-      go-version: 'v1.25.2-0.20231129171107-288a04f72145'
-      ts-version: 'v1.9.0-rc.0'
-      java-version: 'v1.22.3'
-      py-version: 'v1.4.0'
-      dotnet-version: 'v1.0.0'
+      go-version: ${{ needs.prepare-for-docker-push.outputs.go-sdk-version }}
+      ts-version: ${{ needs.prepare-for-docker-push.outputs.ts-sdk-version }}
+      java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
+      py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
+      dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}

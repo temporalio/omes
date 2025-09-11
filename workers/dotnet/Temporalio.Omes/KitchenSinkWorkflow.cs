@@ -1,10 +1,12 @@
 using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
+using Temporalio.Client;
 using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
+using Priority = Temporalio.Api.Common.V1.Priority;
 using RetryPolicy = Temporalio.Api.Common.V1.RetryPolicy;
 
 namespace Temporalio.Omes;
@@ -138,17 +140,17 @@ public class KitchenSinkWorkflow
         else if (action.Timer is { } timer)
         {
             await HandleAwaitableChoiceAsync(
-                Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)
-                    .ContinueWith(_ => true),
+                ToBool(Workflow.DelayAsync((int)timer.Milliseconds, tokenSrc.Token)),
                 tokenSrc,
                 timer.AwaitableChoice);
         }
         else if (action.ExecActivity is { } execActivity)
         {
             await HandleAwaitableChoiceAsync(
-                LaunchActivity(execActivity, tokenSrc).ContinueWith(_ => true),
+                ToBool(LaunchActivity(execActivity, tokenSrc)),
                 tokenSrc,
-                execActivity.AwaitableChoice);
+                execActivity.AwaitableChoice
+            );
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
@@ -239,11 +241,14 @@ public class KitchenSinkWorkflow
         {
             return await HandleActionSetAsync(nestedActionSet);
         }
+        else if (action.NexusOperation is { })
+        {
+            throw new ApplicationFailureException("ExecuteNexusOperation is not supported");
+        }
         else
         {
             throw new ApplicationFailureException("Unrecognized action");
         }
-
 
         return null;
     }
@@ -311,6 +316,22 @@ public class KitchenSinkWorkflow
             actType = "delay";
             args.Add(delay);
         }
+        else if (eaa.Payload is { } payload)
+        {
+            actType = "payload";
+            var inputData = new byte[payload.BytesToReceive];
+            for (int i = 0; i < inputData.Length; i++)
+            {
+                inputData[i] = (byte)(i % 256);
+            }
+            args.Add(inputData);
+            args.Add(payload.BytesToReturn);
+        }
+        else if (eaa.Client is { } client)
+        {
+            actType = "client";
+            args.Add(client);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -334,11 +355,19 @@ public class KitchenSinkWorkflow
                 ScheduleToStartTimeout = eaa.ScheduleToStartTimeout?.ToTimeSpan(),
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
+                Priority =
+                    eaa.Priority != null ? PriorityFromProto(eaa) : null,
                 RetryPolicy =
                     eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
             return Workflow.ExecuteActivityAsync(actType, args, opts);
         }
+    }
+
+    private static async Task<bool> ToBool(Task task)
+    {
+        await task;
+        return true;
     }
 
     // Duped for now, if exposed by SDK use it from there.
@@ -356,6 +385,22 @@ public class KitchenSinkWorkflow
         };
     }
 
+    private static Temporalio.Common.Priority PriorityFromProto(ExecuteActivityAction eaa)
+    {
+        if (eaa.FairnessKey != null)
+        {
+            throw new ApplicationFailureException("FairnessKey is not supported yet");
+        }
+        if (eaa.FairnessWeight > 0)
+        {
+            throw new ApplicationFailureException("FairnessWeight is not supported yet");
+        }
+        return new()
+        {
+            PriorityKey = eaa.Priority.PriorityKey
+        };
+    }
+
     [Activity("noop")]
     public static void Noop()
     {
@@ -365,5 +410,34 @@ public class KitchenSinkWorkflow
     public static async Task Delay(Google.Protobuf.WellKnownTypes.Duration delayFor)
     {
         await Task.Delay(delayFor.ToTimeSpan());
+    }
+
+    [Activity("payload")]
+    public static byte[] Payload(byte[] inputData, int bytesToReturn)
+    {
+        var output = new byte[bytesToReturn];
+        new Random().NextBytes(output);
+        return output;
+    }
+}
+
+public class ClientActivitiesImpl
+{
+    private readonly ITemporalClient _client;
+
+    public ClientActivitiesImpl(ITemporalClient client)
+    {
+        _client = client;
+    }
+
+    [Activity("client")]
+    public async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var taskQueue = activityInfo.TaskQueue;
+
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
 }

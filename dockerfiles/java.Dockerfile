@@ -1,15 +1,17 @@
 # Build in a full featured container
-FROM eclipse-temurin:11 as build
+ARG TARGETARCH
+FROM --platform=linux/$TARGETARCH eclipse-temurin:11-jammy AS build
 
+# Install protobuf compiler
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
       protobuf-compiler=3.12.4* git=1:2.34.1-1ubuntu1
 
 # Get go compiler
-ARG PLATFORM=amd64
-RUN wget -q https://go.dev/dl/go1.20.4.linux-${PLATFORM}.tar.gz \
-    && tar -C /usr/local -xzf go1.20.4.linux-${PLATFORM}.tar.gz
+ARG TARGETARCH
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 
 WORKDIR /app
 
@@ -17,7 +19,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -29,13 +31,16 @@ ARG SDK_VERSION
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
+# Copy the worker files
+COPY workers/java ./workers/java
+
 # Build the worker
 ENV GRADLE_USER_HOME="/gradle"
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up
-FROM eclipse-temurin:11
+FROM --platform=linux/$TARGETARCH eclipse-temurin:11
 ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes

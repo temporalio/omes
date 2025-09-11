@@ -10,4 +10,10 @@ public interface Activities {
 
   @ActivityMethod(name = "delay")
   void delay(com.google.protobuf.Duration d) throws InterruptedException;
+
+  @ActivityMethod(name = "payload")
+  byte[] payload(byte[] inputData, int bytesToReturn);
+
+  @ActivityMethod(name = "client")
+  void client(io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity clientActivity);
 }

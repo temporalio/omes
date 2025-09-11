@@ -40,12 +40,21 @@ type ClientOptions struct {
 	ClientCertPath string
 	// TLS client private key
 	ClientKeyPath string
+	// TLS server name
+	TLSServerName string
 	// Authorization header value
 	AuthHeader string
+	// Disable Host Verification
+	DisableHostVerification bool
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
 func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: c.DisableHostVerification,
+		ServerName:         c.TLSServerName,
+		MinVersion:         tls.VersionTLS13,
+	}
 	if c.ClientCertPath != "" {
 		if c.ClientKeyPath == "" {
 			return nil, errors.New("got TLS cert with no key")
@@ -54,12 +63,13 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to load certs: %s", err)
 		}
-		return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		return tlsConfig, nil
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
 	}
 	if c.EnableTLS {
-		return &tls.Config{}, nil
+		return tlsConfig, nil
 	}
 	return nil, nil
 }
@@ -123,6 +133,8 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
+	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
@@ -143,6 +155,12 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	}
 	if c.ClientKeyPath != "" {
 		flags = append(flags, "--tls-key-path", c.ClientKeyPath)
+	}
+	if c.DisableHostVerification {
+		flags = append(flags, "--disable-tls-host-verification")
+	}
+	if c.TLSServerName != "" {
+		flags = append(flags, "--tls-server-name", c.TLSServerName)
 	}
 	if c.AuthHeader != "" {
 		flags = append(flags, "--auth-header", c.AuthHeader)

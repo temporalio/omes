@@ -5,12 +5,13 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_update, execute_activity_action, Action, ActionSet,
+        do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WorkflowInput,
-        WorkflowState,
+        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
+        WorkflowInput, WorkflowState,
+        execute_activity_action::{ClientActivity, PayloadActivity},
     },
 };
 use anyhow::Error;
@@ -302,10 +303,19 @@ impl<'a> Arbitrary<'a> for TestInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         // We always want a client sequence
         let mut client_sequence: ClientSequence = u.arbitrary()?;
+
+        // Sometimes we want a with-start client action
+        let with_start_action = if u.ratio(80, 100)? {
+            None
+        } else {
+            Some(WithStartClientAction::arbitrary(u)?)
+        };
+
         let mut ti = Self {
             // Input may or may not be present
             workflow_input: u.arbitrary()?,
             client_sequence: None,
+            with_start_action: with_start_action,
         };
 
         // Finally, return at the end
@@ -399,6 +409,26 @@ impl<'a> Arbitrary<'a> for ClientAction {
     }
 }
 
+impl<'a> Arbitrary<'a> for WithStartClientAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let action_kind = u.int_in_range(0..=1)?;
+        let variant = match action_kind {
+            0 => with_start_client_action::Variant::DoSignal({
+                let mut signal_action: DoSignal = u.arbitrary()?;
+                signal_action.with_start = true;
+                signal_action
+            }),
+            1 => with_start_client_action::Variant::DoUpdate({
+                let mut update_action: DoUpdate = u.arbitrary()?;
+                update_action.with_start = true;
+                update_action
+            }),
+            _ => unreachable!(),
+        };
+        Ok(Self { variant: Some(variant) })
+    }
+}
+
 impl<'a> Arbitrary<'a> for DoSignal {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let variant = if u.ratio(95, 100)? {
@@ -419,6 +449,7 @@ impl<'a> Arbitrary<'a> for DoSignal {
         };
         Ok(Self {
             variant: Some(variant),
+            with_start: u.arbitrary()?,
         })
     }
 }
@@ -461,6 +492,7 @@ impl<'a> Arbitrary<'a> for DoUpdate {
         Ok(Self {
             variant: Some(variant),
             failure_expected,
+            with_start: u.arbitrary()?,
         })
     }
 }
@@ -550,13 +582,28 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         } else {
             execute_activity_action::Locality::IsLocal(())
         };
-        let delay = u.int_in_range(0..=1_000)?;
+        
+        let activity_type_choice = u.int_in_range(1..=100)?;
+        let activity_type = match activity_type_choice {
+            1..=85 => {
+                let delay = u.int_in_range(0..=1_000)?;
+                execute_activity_action::ActivityType::Delay(
+                    Duration::from_millis(delay)
+                        .try_into()
+                        .expect("proto duration works"),
+                )
+            }
+            86..=90 => {
+                execute_activity_action::ActivityType::Payload(u.arbitrary()?)
+            }
+            91..=100 => {
+                execute_activity_action::ActivityType::Client(u.arbitrary()?)
+            }
+            _ => unreachable!(),
+        };
+        
         Ok(Self {
-            activity_type: Some(execute_activity_action::ActivityType::Delay(
-                Duration::from_millis(delay)
-                    .try_into()
-                    .expect("proto duration works"),
-            )),
+            activity_type: Some(activity_type),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
             locality: Some(locality),
             awaitable_choice: Some(u.arbitrary()?),
@@ -659,6 +706,36 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
         })
     }
 }
+
+impl<'a> Arbitrary<'a> for ClientActivity {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let client_sequence = ClientSequence {
+            action_sets: vec![ClientActionSet {
+                actions: vec![u.arbitrary()?],
+                concurrent: false,
+                wait_at_end: None,
+                wait_for_current_run_to_finish_at_end: false,
+            }],
+        };
+        
+        Ok(Self {
+            client_sequence: Some(client_sequence),
+        })
+    }
+}
+
+
+impl<'a> Arbitrary<'a> for PayloadActivity {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let max_payload_size = ARB_CONTEXT.with_borrow(|c| c.config.max_payload_size) as i32;
+        
+        Ok(Self {
+            bytes_to_receive: u.int_in_range(0..=max_payload_size)?,
+            bytes_to_return: u.int_in_range(0..=max_payload_size)?,
+        })
+    }
+}
+
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
@@ -778,6 +855,7 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
                 )))
                 .into(),
             )),
+            with_start: false,
         })),
     }
 }
@@ -810,9 +888,9 @@ fn empty_payload() -> Payload {
     Payload {
         metadata: {
             let mut m = HashMap::new();
-            m.insert("encoding".to_string(), "json/plain".into());
+            m.insert("encoding".to_string(), "binary/null".into());
             m
         },
-        data: serde_json::to_vec("").expect("serializes"),
+        data: vec![], // Empty
     }
 }

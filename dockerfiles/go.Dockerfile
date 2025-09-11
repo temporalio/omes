@@ -1,5 +1,6 @@
 # Build in a full featured container
-FROM golang:1.20 as build
+ARG TARGETARCH
+FROM --platform=linux/$TARGETARCH golang:1.25 AS build
 
 WORKDIR /app
 
@@ -7,7 +8,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
-COPY workers ./workers
+COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -19,11 +20,14 @@ ARG SDK_VERSION
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
+# Copy the worker files
+COPY workers/go ./workers/go
+
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
-FROM gcr.io/distroless/static-debian11:nonroot
+FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/go/prepared /app/workers/go/prepared

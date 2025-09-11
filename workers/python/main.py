@@ -3,14 +3,10 @@ import asyncio
 import logging
 import os
 import sys
-import threading
 from typing import List
-from urllib.parse import urlparse
-from wsgiref.simple_server import make_server
 
-from prometheus_client import make_wsgi_app
 from pythonjsonlogger import jsonlogger
-from temporalio.client import Client, TLSConfig
+from temporalio.client import Client
 from temporalio.runtime import (
     LoggingConfig,
     PrometheusConfig,
@@ -18,9 +14,15 @@ from temporalio.runtime import (
     TelemetryConfig,
     TelemetryFilter,
 )
+from temporalio.service import TLSConfig
 from temporalio.worker import Worker
 
-from activities import delay_activity, noop_activity
+from activities import (
+    create_client_activity,
+    delay_activity,
+    noop_activity,
+    payload_activity,
+)
 from kitchen_sink import KitchenSinkWorkflow
 
 nameToLevel = {
@@ -125,22 +127,11 @@ async def run():
     logger.addHandler(logHandler)
     logger.setLevel(nameToLevel[args.log_level.upper()])
 
-    # Configure metrics
-    prometheus = None
-    if args.prom_listen_address:
-        prom_addr = urlparse(args.prom_listen_address)
-        metrics_app = make_wsgi_app()
-        handle_path = args.prom_handler_path
-
-        def prom_app(environ, start_fn):
-            if environ["PATH_INFO"] == handle_path:
-                return metrics_app(environ, start_fn)
-
-        httpd = make_server(prom_addr.hostname, prom_addr.port, prom_app)
-        t = threading.Thread(target=httpd.serve_forever)
-        t.daemon = True
-        t.start()
-        prometheus = PrometheusConfig(bind_address=parser.prom_listen_address)
+    prometheus = (
+        PrometheusConfig(bind_address=args.prom_listen_address)
+        if args.prom_listen_address
+        else None
+    )
 
     new_runtime = Runtime(
         telemetry=TelemetryConfig(
@@ -197,7 +188,12 @@ async def run():
             client,
             task_queue=task_queue,
             workflows=[KitchenSinkWorkflow],
-            activities=[noop_activity, delay_activity],
+            activities=[
+                noop_activity,
+                delay_activity,
+                payload_activity,
+                create_client_activity(client),
+            ],
             **worker_kwargs,
         )
         for task_queue in task_queues

@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/cmdoptions"
@@ -38,17 +39,15 @@ func cleanupScenarioCmd() *cobra.Command {
 
 type scenarioCleaner struct {
 	logger         *zap.SugaredLogger
-	scenario       string
-	runID          string
 	pollInterval   time.Duration
+	scenario       cmdoptions.ScenarioID
 	clientOptions  cmdoptions.ClientOptions
 	metricsOptions cmdoptions.MetricsOptions
 	loggingOptions cmdoptions.LoggingOptions
 }
 
 func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.scenario, "scenario", "", "Scenario name to cleanup")
-	fs.StringVar(&c.runID, "run-id", "", "Run ID for the run")
+	c.scenario.AddCLIFlags(fs)
 	fs.DurationVar(&c.pollInterval, "poll-interval", time.Second, "Interval for polling completion of job")
 	c.clientOptions.AddCLIFlags(fs)
 	c.metricsOptions.AddCLIFlags(fs, "")
@@ -57,18 +56,18 @@ func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {
 
 func (c *scenarioCleaner) run(ctx context.Context) error {
 	c.logger = c.loggingOptions.MustCreateLogger()
-	scenario := loadgen.GetScenario(c.scenario)
+	scenario := loadgen.GetScenario(c.scenario.Scenario)
 	if scenario == nil {
 		return fmt.Errorf("scenario not found")
-	} else if c.runID == "" {
+	} else if c.scenario.RunID == "" {
 		return fmt.Errorf("run ID not found")
 	}
 	metrics := c.metricsOptions.MustCreateMetrics(c.logger)
 	defer metrics.Shutdown(ctx)
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
-	taskQueue := loadgen.TaskQueueForRun(c.scenario, c.runID)
-	jobID := "omes-cleanup-" + taskQueue
+	taskQueue := loadgen.TaskQueueForRun(c.scenario.RunID)
+	jobID := "omes-cleanup-" + taskQueue + "-" + uuid.New().String()
 	username, hostname := "anonymous", "unknown"
 	if user, err := user.Current(); err == nil {
 		username = user.Name

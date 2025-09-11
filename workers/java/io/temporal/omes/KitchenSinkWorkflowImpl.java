@@ -7,6 +7,7 @@ import io.temporal.activity.LocalActivityOptions;
 import io.temporal.api.common.v1.Payload;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.ParentClosePolicy;
+import io.temporal.common.Priority;
 import io.temporal.common.RetryOptions;
 import io.temporal.common.VersioningIntent;
 import io.temporal.failure.ActivityFailure;
@@ -16,7 +17,9 @@ import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
@@ -51,8 +54,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public void doActionsSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
     if (signalActions.hasDoActionsInMain()) {
       signalActionQueue.put(signalActions.getDoActionsInMain());
+    } else if (signalActions.hasDoActions()) {
+      signalActionQueue.put(signalActions.getDoActions());
     } else {
-      handleActionSet(signalActions.getDoActions());
+      throw ApplicationFailure.newNonRetryableFailure(
+          "Signal actions must have a recognizable variant", "");
     }
   }
 
@@ -190,10 +196,14 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
         handleAction(patchMarker.getInnerAction());
       }
     } else if (action.hasUpsertMemo()) {
-      // TODO(https://github.com/temporalio/sdk-java/issues/623) Java does not support upsert memo.
-      log.debug("Java does not support upsert memo");
+      KitchenSink.UpsertMemoAction upsertMemoAction = action.getUpsertMemo();
+      Map<String, Object> memo = new HashMap();
+      upsertMemoAction.getUpsertedMemo().getFieldsMap().forEach(memo::put);
+      Workflow.upsertMemo(memo);
+    } else if (action.hasNexusOperation()) {
+      throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
     } else {
-      throw Workflow.wrap(new IllegalArgumentException("Unrecognized action type"));
+      throw ApplicationFailure.newNonRetryableFailure("Unrecognized action", "");
     }
     return null;
   }
@@ -207,7 +217,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     CancellationScope scope =
         Workflow.newCancellationScope(
             () -> {
-              ChildWorkflowStub stub = Workflow.newUntypedChildWorkflowStub(childWorkflowType);
+              ChildWorkflowOptions.Builder optionsBuilder =
+                  ChildWorkflowOptions.newBuilder()
+                      .setWorkflowId(executeChildWorkflow.getWorkflowId());
+              ChildWorkflowStub stub =
+                  Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
               Promise result =
                   stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;
@@ -254,6 +268,18 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     if (executeActivity.hasDelay()) {
       activityType = "delay";
       args.add(executeActivity.getDelay());
+    } else if (executeActivity.hasPayload()) {
+      activityType = "payload";
+      KitchenSink.ExecuteActivityAction.PayloadActivity payload = executeActivity.getPayload();
+      byte[] inputData = new byte[payload.getBytesToReceive()];
+      for (int i = 0; i < inputData.length; i++) {
+        inputData[i] = (byte) (i % 256);
+      }
+      args.add(inputData);
+      args.add(payload.getBytesToReturn());
+    } else if (executeActivity.hasClient()) {
+      activityType = "client";
+      args.add(executeActivity.getClient());
     } else {
       activityType = "noop";
     }
@@ -282,6 +308,18 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     double backoff = executeActivity.getRetryPolicy().getBackoffCoefficient();
     if (backoff != 0.0) {
       retryOptions.setBackoffCoefficient(backoff);
+    }
+
+    Priority.Builder prio = Priority.newBuilder();
+    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
+    if (priority.getPriorityKey() > 0) {
+      prio.setPriorityKey(priority.getPriorityKey());
+    }
+    if (executeActivity.getFairnessKey() != "") {
+      throw new IllegalArgumentException("FairnessKey is not supported");
+    }
+    if (executeActivity.getFairnessWeight() > 0) {
+      throw new IllegalArgumentException("FairnessWeight is not supported");
     }
 
     if (executeActivity.hasIsLocal()) {
@@ -319,7 +357,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               .setDisableEagerExecution(remoteOptions.getDoNotEagerlyExecute())
               .setVersioningIntent(getVersioningIntent(remoteOptions.getVersioningIntent()))
               .setCancellationType(getActivityCancellationType(remoteOptions.getCancellationType()))
-              .setRetryOptions(retryOptions.build());
+              .setRetryOptions(retryOptions.build())
+              .setPriority(prio.build());
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
         builder.setScheduleToCloseTimeout(
