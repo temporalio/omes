@@ -62,6 +62,8 @@ func runInstallTools(tools []string) error {
 			err = installJava(versions)
 		case "python":
 			err = installPython(versions)
+		case "uv":
+			// already installed by Python
 		case "node":
 			err = installNode(versions)
 		case "npm":
@@ -70,8 +72,6 @@ func runInstallTools(tools []string) error {
 			err = installRust(versions)
 		case "protoc":
 			err = installProtoc(versions)
-		case "uv":
-			err = installUv(versions)
 		default:
 			err = fmt.Errorf("unsupported tool: %s", tool)
 		}
