@@ -159,7 +159,7 @@ export class ClientActionExecutor {
       const resp = await this.client.workflowService.describeWorkflowExecution({
         namespace: selfDescribe.namespace,
         execution: {
-          workflowId: workflowId,
+          workflowId,
           runId: selfDescribe.runId,
         },
       });
