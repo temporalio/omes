@@ -57,7 +57,7 @@ func runInstallTools(tools []string) error {
 		case "dotnet":
 			err = installDotnet(versions)
 		case "go":
-			err = installGo(versions)
+			// already installed
 		case "java":
 			err = installJava(versions)
 		case "python":
