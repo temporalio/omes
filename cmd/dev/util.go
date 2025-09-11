@@ -205,16 +205,16 @@ func validateLanguageTools(language string) error {
 			return fmt.Errorf("no version env var defined for tool: %s", tool)
 		}
 
-		fmt.Printf("using %s\n", tool)
-		fmt.Printf("\tpath: %s\n", toolPath)
-		fmt.Printf("\tversion: %s\n", actualVersion)
+		fmt.Println("using", tool)
+		fmt.Println("\tpath:", toolPath)
+		fmt.Println("\tversion:", actualVersion)
 
 		if envVar != "" {
 			expectedVersion := versions[envVar]
 			if expectedVersion == "" {
 				return fmt.Errorf("no expected version found for %s (env var: %s)", tool, envVar)
 			}
-			fmt.Printf("\texpected version: %s\n", expectedVersion)
+			fmt.Println("\texpected version:", expectedVersion)
 		}
 	}
 	return nil

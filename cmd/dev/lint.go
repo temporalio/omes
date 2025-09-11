@@ -46,7 +46,7 @@ func runLintWorkers(languages []string) error {
 		return err
 	}
 
-	fmt.Printf("Linting %s worker(s)...\n", strings.Join(languages, ", "))
+	fmt.Println("Linting", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
 		if err := lintWorker(lang, rootDir); err != nil {
@@ -58,9 +58,9 @@ func runLintWorkers(languages []string) error {
 }
 
 func lintWorker(language, rootDir string) error {
-	fmt.Printf("\n===========================================\n")
-	fmt.Printf("Linting %s worker\n", language)
-	fmt.Printf("===========================================\n")
+	fmt.Println("\n===========================================")
+	fmt.Println("Linting", language, "worker")
+	fmt.Println("===========================================")
 
 	workerDir := filepath.Join(rootDir, "workers", language)
 	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
@@ -131,7 +131,7 @@ func lintPythonWorker(workerDir string) error {
 		return err
 	}
 
-	fmt.Printf("uv version: ")
+	fmt.Print("uv version: ")
 	if err := runCommand("uv", "--version"); err != nil {
 		return err
 	}

@@ -57,11 +57,11 @@ Examples:
 func cleanLanguage(language, rootDir string) error {
 	workerDir := filepath.Join(rootDir, "workers", language)
 	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
-		fmt.Printf("Warning: %s worker directory not found, skipping\n", language)
+		fmt.Println("Warning:", language, "worker directory not found, skipping")
 		return nil
 	}
 
-	fmt.Printf("Cleaning %s...\n", language)
+	fmt.Println("Cleaning", language)
 
 	cleanCmd, ok := cleanCommands[language]
 	if !ok {
@@ -86,7 +86,7 @@ func runClean(languages []string, cleanAll bool) error {
 			fmt.Printf("Warning: failed to remove temp directories: %v\n", err)
 		}
 	} else {
-		fmt.Printf("Cleaning %s...\n", strings.Join(languages, ", "))
+		fmt.Println("Cleaning", strings.Join(languages, ", "))
 	}
 
 	for _, lang := range languages {
@@ -110,7 +110,7 @@ func removeTempDirs(workersDir string) error {
 		}
 
 		if info.IsDir() && strings.HasPrefix(info.Name(), "omes-temp-") {
-			fmt.Printf("Removing %s\n", path)
+			fmt.Println("Removing", path)
 			if err := os.RemoveAll(path); err != nil {
 				fmt.Printf("Warning: failed to remove %s: %v\n", path, err)
 			}

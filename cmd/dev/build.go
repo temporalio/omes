@@ -59,7 +59,7 @@ func runBuildWorkers(languages []string) error {
 		return err
 	}
 
-	fmt.Printf("Building %s worker(s)...\n", strings.Join(languages, ", "))
+	fmt.Println("Building", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
 		if err := buildWorker(lang, rootDir, versions); err != nil {
@@ -71,16 +71,16 @@ func runBuildWorkers(languages []string) error {
 }
 
 func buildWorker(language, rootDir string, versions map[string]string) error {
-	fmt.Printf("\n===========================================\n")
-	fmt.Printf("Building %s worker\n", language)
-	fmt.Printf("===========================================\n")
+	fmt.Println("\n===========================================")
+	fmt.Println("Building", language, "worker")
+	fmt.Println("===========================================")
 
 	if err := validateLanguageTools(language); err != nil {
 		return err
 	}
 
 	sdkVersion := getSdkVersion(language, versions)
-	fmt.Printf("Building %s worker (SDK %s)...\n", language, sdkVersion)
+	fmt.Println("Building", language, "worker (SDK", sdkVersion+")...")
 
 	if err := buildTemporalOmes(rootDir); err != nil {
 		return err
@@ -94,7 +94,7 @@ func buildWorker(language, rootDir string, versions map[string]string) error {
 		return err
 	}
 
-	fmt.Printf("✅ %s worker build completed successfully!\n", language)
+	fmt.Println("✅", language, "worker build completed successfully!")
 	return nil
 }
 
@@ -155,7 +155,7 @@ func runBuildKitchensink() error {
 	// Set PROTOC environment variable to use the correct protoc
 	protocPath, _ := exec.LookPath("protoc") // already validated earlier
 	os.Setenv("PROTOC", protocPath)
-	fmt.Printf("Setting PROTOC=%s\n", protocPath)
+	fmt.Println("Setting PROTOC="+protocPath)
 
 	if err := runCommandInDir(kitchenSinkGenDir, "cargo", "build"); err != nil {
 		return err
