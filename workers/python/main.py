@@ -92,6 +92,7 @@ async def run():
         "--tls-cert-path", default="", help="Path to client TLS certificate"
     )
     parser.add_argument("--tls-key-path", default="", help="Path to client private key")
+    parser.add_argument("--api-key", help="API key for authentication")
     # Prometheus metric arguments
     parser.add_argument("--prom-listen-address", help="Prometheus listen address")
     parser.add_argument(
@@ -149,6 +150,7 @@ async def run():
         namespace=args.namespace,
         tls=tls_config,
         runtime=new_runtime,
+        api_key=args.api_key,
     )
 
     # Collect task queues to run workers for (if there is a suffix end, we run

@@ -38,6 +38,7 @@ async function run() {
     .option('--tls', 'Enable TLS')
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS')
+    .option('--api-key <apiKiey>', 'API key for authentication')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')
     .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics');
 
@@ -121,6 +122,10 @@ async function run() {
   const connection = await NativeConnection.connect({
     address: opts.serverAddress,
     tls: tlsConfig,
+    apiKey: opts.apiKey,
+    metadata: {
+      'temporal-namespace': opts.namespace,
+    },
   });
 
   const client = new Client({

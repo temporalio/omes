@@ -14,6 +14,8 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
@@ -46,6 +48,8 @@ type ClientOptions struct {
 	AuthHeader string
 	// Disable Host Verification
 	DisableHostVerification bool
+	// API Key
+	APIKey string
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -95,6 +99,23 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 	clientOptions.ConnectionOptions.TLS = tlsCfg
 	clientOptions.Logger = NewZapAdapter(logger.Desugar())
 	clientOptions.MetricsHandler = metrics.NewHandler()
+	if c.APIKey != "" {
+		clientOptions.Credentials = client.NewAPIKeyStaticCredentials(c.APIKey)
+		clientOptions.ConnectionOptions.DialOptions = []grpc.DialOption{
+			grpc.WithUnaryInterceptor(
+				func(ctx context.Context, method string, req any, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+					return invoker(
+						metadata.AppendToOutgoingContext(ctx, "temporal-namespace", c.Namespace),
+						method,
+						req,
+						reply,
+						cc,
+						opts...,
+					)
+				},
+			),
+		}
+	}
 
 	var authHeader string
 	if c.AuthHeader == "" {
@@ -135,6 +156,7 @@ func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
 	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
 	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
+	fs.StringVar(&c.APIKey, "api-key", "", "API key for authentication")
 	fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 }
@@ -161,6 +183,9 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 	}
 	if c.TLSServerName != "" {
 		flags = append(flags, "--tls-server-name", c.TLSServerName)
+	}
+	if c.APIKey != "" {
+		flags = append(flags, "--api-key", c.APIKey)
 	}
 	if c.AuthHeader != "" {
 		flags = append(flags, "--auth-header", c.AuthHeader)
