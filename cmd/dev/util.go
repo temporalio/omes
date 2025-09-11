@@ -73,15 +73,10 @@ func getSdkVersion(language string, versions map[string]string) string {
 
 // checkCommand verifies that a command is available in PATH
 func checkCommand(cmd string) error {
-	if _, err := getCommandPath(cmd); err != nil {
+	if _, err := exec.LookPath(cmd); err != nil {
 		return fmt.Errorf("%s is not installed. Please install %s first", cmd, cmd)
 	}
 	return nil
-}
-
-// getCommandPath returns the full path to a command
-func getCommandPath(cmd string) (string, error) {
-	return exec.LookPath(cmd)
 }
 
 // runCommand executes a command and pipes output to stdout/stderr
@@ -187,7 +182,7 @@ func validateLanguageTools(language string) error {
 	}
 
 	for _, tool := range requiredTools {
-		toolPath, err := getCommandPath(tool)
+		toolPath, err := exec.LookPath(tool)
 		if err != nil {
 			return fmt.Errorf("%s is not installed. Please install %s first", tool, tool)
 		}
