@@ -168,19 +168,19 @@ async def run():
 
     worker_kwargs = {}
     if args.max_concurrent_activity_pollers is not None:
-        worker_kwargs["max_concurrent_activity_task_polls"] = (
-            args.max_concurrent_activity_pollers
-        )
+        worker_kwargs[
+            "max_concurrent_activity_task_polls"
+        ] = args.max_concurrent_activity_pollers
     if args.max_concurrent_workflow_pollers is not None:
-        worker_kwargs["max_concurrent_workflow_task_polls"] = (
-            args.max_concurrent_workflow_pollers
-        )
+        worker_kwargs[
+            "max_concurrent_workflow_task_polls"
+        ] = args.max_concurrent_workflow_pollers
     if args.max_concurrent_activities is not None:
         worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:
-        worker_kwargs["max_concurrent_workflow_tasks"] = (
-            args.max_concurrent_workflow_tasks
-        )
+        worker_kwargs[
+            "max_concurrent_workflow_tasks"
+        ] = args.max_concurrent_workflow_tasks
 
     # Start all workers, throwing on first exception
     workers = [

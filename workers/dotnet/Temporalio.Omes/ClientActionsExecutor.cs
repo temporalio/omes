@@ -203,7 +203,7 @@ public class ClientActionsExecutor
         {
             // Use current workflow ID if not specified
             var workflowId = string.IsNullOrEmpty(selfDescribe.WorkflowId) ? WorkflowId : selfDescribe.WorkflowId;
-            
+
             // Get the current workflow execution details
             var resp = await _client.WorkflowService.DescribeWorkflowExecutionAsync(
                 new Temporalio.Api.WorkflowService.V1.DescribeWorkflowExecutionRequest

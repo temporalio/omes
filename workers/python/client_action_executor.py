@@ -133,7 +133,7 @@ class ClientActionExecutor:
             workflow_id = self_describe.workflow_id
             if not workflow_id:
                 workflow_id = self.workflow_id
-                
+
             # Create the request object
             request = DescribeWorkflowExecutionRequest(
                 namespace=self_describe.namespace,

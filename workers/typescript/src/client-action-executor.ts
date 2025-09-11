@@ -154,10 +154,10 @@ export class ClientActionExecutor {
     try {
       // Use current workflow ID if not specified
       const workflowId = selfDescribe.workflowId || this.workflowId;
-      
+
       // Get the current workflow execution details
       const resp = await this.client.workflowService.describeWorkflowExecution({
-        namespace: selfDescribe.namespace, 
+        namespace: selfDescribe.namespace,
         execution: {
           workflowId: workflowId,
           runId: selfDescribe.runId,
