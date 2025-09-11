@@ -60,8 +60,6 @@ func runInstallTools(ctx context.Context, tools []string) error {
 			err = installPython(ctx)
 		case "node":
 			err = installNode(ctx)
-		case "npm":
-			// already installed by node
 		case "rust":
 			err = installRust(ctx)
 		case "protoc":
