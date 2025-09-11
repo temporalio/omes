@@ -19,13 +19,9 @@ var (
 		"dotnet", "go", "java", "node", "protoc", "python", "rust",
 	}
 	toolDependencies = map[string][]string{
-		"go":         {"go"},
-		"java":       {"java"},
-		"python":     {"python", "uv", "poe"},
+		"python":     {"uv", "poe"},
 		"typescript": {"node"},
-		"dotnet":     {"dotnet"},
-		"rust":       {"cargo"},
-		"protoc":     {"protoc", "protoc-gen-go"},
+		"protoc":     {"protoc-gen-go"},
 	}
 	toolVersionCommands = map[string][]string{
 		"go":            {"go", "version"},
@@ -159,15 +155,15 @@ func checkMise() error {
 	return nil
 }
 
-// validateLanguageTools checks that all required tools for a language are available
-// and prints version and path information for known tools
-func validateLanguageTools(ctx context.Context, language string) error {
-	requiredTools, ok := toolDependencies[language]
-	if !ok {
-		return fmt.Errorf("unsupported language: %s", language)
+// checkTool checks that the tool and its dependencies are available;
+// and prints version and path information.
+func checkTool(ctx context.Context, tool string) error {
+	toolsToCheck := []string{tool}
+	if dependencies, hasDeps := toolDependencies[tool]; hasDeps {
+		toolsToCheck = append(toolsToCheck, dependencies...)
 	}
 
-	for _, tool := range requiredTools {
+	for _, tool := range toolsToCheck {
 		toolPath, err := exec.LookPath(tool)
 		if err != nil {
 			return fmt.Errorf("%s is not installed. Please install %s first", tool, tool)

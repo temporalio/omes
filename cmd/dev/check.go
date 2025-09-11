@@ -85,7 +85,7 @@ func checkWorker(ctx context.Context, language, rootDir string) error {
 }
 
 func checkGoWorker(ctx context.Context, workerDir string) error {
-	if err := validateLanguageTools(ctx, "go"); err != nil {
+	if err := checkTool(ctx, "go"); err != nil {
 		return err
 	}
 
@@ -114,7 +114,7 @@ func checkGoWorker(ctx context.Context, workerDir string) error {
 }
 
 func checkJavaWorker(ctx context.Context, workerDir string) error {
-	if err := validateLanguageTools(ctx, "java"); err != nil {
+	if err := checkTool(ctx, "java"); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func checkJavaWorker(ctx context.Context, workerDir string) error {
 }
 
 func checkPythonWorker(ctx context.Context, workerDir string) error {
-	if err := validateLanguageTools(ctx, "python"); err != nil {
+	if err := checkTool(ctx, "python"); err != nil {
 		return err
 	}
 
@@ -157,7 +157,7 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 }
 
 func checkTypescriptWorker(ctx context.Context, workerDir string) error {
-	if err := validateLanguageTools(ctx, "typescript"); err != nil {
+	if err := checkTool(ctx, "typescript"); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 }
 
 func checkDotnetWorker(ctx context.Context, workerDir string) error {
-	if err := validateLanguageTools(ctx, "dotnet"); err != nil {
+	if err := checkTool(ctx, "dotnet"); err != nil {
 		return err
 	}
 
