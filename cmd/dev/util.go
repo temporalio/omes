@@ -16,13 +16,13 @@ var (
 		"dotnet", "go", "java", "python", "typescript",
 	}
 	supportedTools = []string{
-		"dotnet", "go", "java", "node", "npm", "protoc", "python", "rust",
+		"dotnet", "go", "java", "node", "protoc", "python", "rust",
 	}
 	toolDependencies = map[string][]string{
 		"go":         {"go"},
 		"java":       {"java"},
 		"python":     {"python", "uv", "poe"},
-		"typescript": {"node", "npm"},
+		"typescript": {"node"},
 		"dotnet":     {"dotnet"},
 		"rust":       {"cargo"},
 		"protoc":     {"protoc", "protoc-gen-go"},
@@ -32,7 +32,6 @@ var (
 		"java":          {"java", "-version"},
 		"python":        {"python", "--version"},
 		"node":          {"node", "--version"},
-		"npm":           {"npm", "--version"},
 		"dotnet":        {"dotnet", "--version"},
 		"cargo":         {"cargo", "--version"},
 		"protoc":        {"protoc", "--version"},
