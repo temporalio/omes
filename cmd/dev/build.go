@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ Examples:
   dev build kitchensink              # Build kitchen-sink proto generator`, strings.Join(supportedLanguages, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 && args[0] == "kitchensink" {
-				return runBuildKitchensink()
+				return runBuildKitchensink(cmd.Context())
 			}
 
 			var languages []string
@@ -41,14 +42,14 @@ Examples:
 				}
 				languages = args
 			}
-			return runBuildWorkers(languages)
+			return runBuildWorkers(cmd.Context(), languages)
 		},
 	}
 
 	return cmd
 }
 
-func runBuildWorkers(languages []string) error {
+func runBuildWorkers(ctx context.Context, languages []string) error {
 	rootDir, err := getRootDir()
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func runBuildWorkers(languages []string) error {
 	fmt.Println("Building", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := buildWorker(lang, rootDir, versions); err != nil {
+		if err := buildWorker(ctx, lang, rootDir, versions); err != nil {
 			return fmt.Errorf("failed to build %s: %v", lang, err)
 		}
 	}
@@ -70,27 +71,27 @@ func runBuildWorkers(languages []string) error {
 	return nil
 }
 
-func buildWorker(language, rootDir string, versions map[string]string) error {
+func buildWorker(ctx context.Context, language, rootDir string, versions map[string]string) error {
 	fmt.Println("\n===========================================")
 	fmt.Println("Building", language, "worker")
 	fmt.Println("===========================================")
 
-	if err := validateLanguageTools(language); err != nil {
+	if err := validateLanguageTools(ctx, language); err != nil {
 		return err
 	}
 
 	sdkVersion := getSdkVersion(language, versions)
 	fmt.Println("Building", language, "worker (SDK", sdkVersion+")...")
 
-	if err := buildTemporalOmes(rootDir); err != nil {
+	if err := buildTemporalOmes(ctx, rootDir); err != nil {
 		return err
 	}
 
-	if err := runWorkerScenario(rootDir, language, sdkVersion); err != nil {
+	if err := runWorkerScenario(ctx, rootDir, language, sdkVersion); err != nil {
 		return err
 	}
 
-	if err := buildWorkerImage(rootDir, language, sdkVersion); err != nil {
+	if err := buildWorkerImage(ctx, rootDir, language, sdkVersion); err != nil {
 		return err
 	}
 
@@ -98,12 +99,12 @@ func buildWorker(language, rootDir string, versions map[string]string) error {
 	return nil
 }
 
-func buildTemporalOmes(rootDir string) error {
+func buildTemporalOmes(ctx context.Context, rootDir string) error {
 	fmt.Println("Building temporal-omes...")
-	return runCommandInDir(rootDir, "go", "build", "-o", "temporal-omes", "./cmd")
+	return runCommandInDir(ctx, rootDir, "go", "build", "-o", "temporal-omes", "./cmd")
 }
 
-func runWorkerScenario(rootDir, language, sdkVersion string) error {
+func runWorkerScenario(ctx context.Context, rootDir, language, sdkVersion string) error {
 	fmt.Println("Running local scenario with worker...")
 	scenario := "workflow_with_single_noop_activity"
 	iterations := "5"
@@ -117,10 +118,10 @@ func runWorkerScenario(rootDir, language, sdkVersion string) error {
 		"--iterations", iterations,
 		"--version", "v" + sdkVersion,
 	}
-	return runCommandInDir(rootDir, args[0], args[1:]...)
+	return runCommandInDir(ctx, rootDir, args[0], args[1:]...)
 }
 
-func buildWorkerImage(rootDir, language, sdkVersion string) error {
+func buildWorkerImage(ctx context.Context, rootDir, language, sdkVersion string) error {
 	fmt.Println("Building worker image...")
 	args := []string{
 		"./temporal-omes", "build-worker-image",
@@ -128,17 +129,17 @@ func buildWorkerImage(rootDir, language, sdkVersion string) error {
 		"--version", "v" + sdkVersion,
 		"--tag-as-latest",
 	}
-	return runCommandInDir(rootDir, args[0], args[1:]...)
+	return runCommandInDir(ctx, rootDir, args[0], args[1:]...)
 }
 
-func runBuildKitchensink() error {
-	if err := validateLanguageTools("rust"); err != nil {
+func runBuildKitchensink(ctx context.Context) error {
+	if err := validateLanguageTools(ctx, "rust"); err != nil {
 		return err
 	}
-	if err := validateLanguageTools("protoc"); err != nil {
+	if err := validateLanguageTools(ctx, "protoc"); err != nil {
 		return err
 	}
-	if err := validateLanguageTools("typescript"); err != nil {
+	if err := validateLanguageTools(ctx, "typescript"); err != nil {
 		return err
 	}
 
@@ -157,17 +158,17 @@ func runBuildKitchensink() error {
 	os.Setenv("PROTOC", protocPath)
 	fmt.Println("Setting PROTOC="+protocPath)
 
-	if err := runCommandInDir(kitchenSinkGenDir, "cargo", "build"); err != nil {
+	if err := runCommandInDir(ctx, kitchenSinkGenDir, "cargo", "build"); err != nil {
 		return err
 	}
 
 	fmt.Println("Generating TypeScript protos...")
 	typescriptWorkerDir := filepath.Join(rootDir, "workers", "typescript")
-	if err := runCommandInDir(typescriptWorkerDir, "npm", "install"); err != nil {
+	if err := runCommandInDir(ctx, typescriptWorkerDir, "npm", "install"); err != nil {
 		return err
 	}
 
-	if err := runCommandInDir(typescriptWorkerDir, "npm", "run", "proto-gen"); err != nil {
+	if err := runCommandInDir(ctx, typescriptWorkerDir, "npm", "run", "proto-gen"); err != nil {
 		return err
 	}
 

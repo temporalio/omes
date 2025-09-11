@@ -230,7 +230,7 @@ func (b *workerImageBuilder) addLabelIfNotPresent(key, value string) {
 }
 
 func gitRef(ctx context.Context, gitDir string) (string, error) {
-	cmd := exec.Command("git", "--git-dir", gitDir, "rev-parse", "HEAD")
+	cmd := exec.CommandContext(ctx, "git", "--git-dir", gitDir, "rev-parse", "HEAD")
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
