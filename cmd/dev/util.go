@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -107,27 +108,28 @@ func runCommandOutput(name string, args ...string) (string, error) {
 	return string(output), nil
 }
 
-// getRootDir returns the project root directory (current working directory when running go run ./cmd/dev)
+// getRootDir returns the project's root directory
 func getRootDir() (string, error) {
-	return os.Getwd()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("failed to get source file location")
+	}
+	sourceDir := filepath.Dir(filename) // cmd/dev
+	cmdDir := filepath.Dir(sourceDir)   // cmd
+	rootDir := filepath.Dir(cmdDir)     // project root
+	return rootDir, nil
 }
 
 // loadVersions parses versions.env file and returns a map of version variables
 func loadVersions() (map[string]string, error) {
-	// Find versions.env file by walking up the directory tree
-	dir, err := os.Getwd()
+	rootDir, err := getRootDir()
 	if err != nil {
 		return nil, err
 	}
-
-	for dir != "/" {
-		versionsFile := filepath.Join(dir, "versions.env")
-		if _, err := os.Stat(versionsFile); err == nil {
-			return parseVersionsFile(versionsFile)
-		}
-		dir = filepath.Dir(dir)
+	versionsFile := filepath.Join(rootDir, "versions.env")
+	if _, err := os.Stat(versionsFile); err == nil {
+		return parseVersionsFile(versionsFile)
 	}
-
 	return nil, fmt.Errorf("versions.env not found")
 }
 
