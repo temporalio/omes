@@ -11,19 +11,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func lintCmd() *cobra.Command {
+func checkCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "lint [language...]",
-		Short: "Lint and test worker code for specified language(s)",
-		Long: fmt.Sprintf(`Lint and test worker code for specified language(s)
+		Use:   "check [language...]",
+		Short: "Check worker for specified language(s)",
+		Long: fmt.Sprintf(`Check worker for specified language(s)
 
 Supported languages: %s
 
 Examples:
-  dev lint                           # All languages (default)
-  dev lint all                       # All languages
-  dev lint go                        # Single language
-  dev lint go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev check                           # All languages (default)
+  dev check all                       # All languages
+  dev check go                        # Single language
+  dev check go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var languages []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
@@ -36,31 +36,31 @@ Examples:
 				}
 				languages = args
 			}
-			return runLintWorkers(cmd.Context(), languages)
+			return runCheckWorkers(cmd.Context(), languages)
 		},
 	}
 }
 
-func runLintWorkers(ctx context.Context, languages []string) error {
+func runCheckWorkers(ctx context.Context, languages []string) error {
 	rootDir, err := getRootDir()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Linting", strings.Join(languages, ", "), "worker(s)...")
+	fmt.Println("Checking", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := lintWorker(ctx, lang, rootDir); err != nil {
-			return fmt.Errorf("failed to lint %s: %v", lang, err)
+		if err := checkWorker(ctx, lang, rootDir); err != nil {
+			return fmt.Errorf("failed to check %s: %v", lang, err)
 		}
 	}
 
 	return nil
 }
 
-func lintWorker(ctx context.Context, language, rootDir string) error {
+func checkWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("\n===========================================")
-	fmt.Println("Linting", language, "worker")
+	fmt.Println("Checking", language, "worker")
 	fmt.Println("===========================================")
 
 	workerDir := filepath.Join(rootDir, "workers", language)
@@ -70,21 +70,21 @@ func lintWorker(ctx context.Context, language, rootDir string) error {
 
 	switch language {
 	case "go":
-		return lintGoWorker(ctx, workerDir)
+		return checkGoWorker(ctx, workerDir)
 	case "java":
-		return lintJavaWorker(ctx, workerDir)
+		return checkJavaWorker(ctx, workerDir)
 	case "python":
-		return lintPythonWorker(ctx, workerDir)
+		return checkPythonWorker(ctx, workerDir)
 	case "typescript":
-		return lintTypescriptWorker(ctx, workerDir)
+		return checkTypescriptWorker(ctx, workerDir)
 	case "dotnet":
-		return lintDotnetWorker(ctx, workerDir)
+		return checkDotnetWorker(ctx, workerDir)
 	default:
 		return fmt.Errorf("unsupported language: %s", language)
 	}
 }
 
-func lintGoWorker(ctx context.Context, workerDir string) error {
+func checkGoWorker(ctx context.Context, workerDir string) error {
 	if err := validateLanguageTools(ctx, "go"); err != nil {
 		return err
 	}
@@ -109,11 +109,11 @@ func lintGoWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Go linting completed successfully!")
+	fmt.Println("✅ Go check completed successfully!")
 	return nil
 }
 
-func lintJavaWorker(ctx context.Context, workerDir string) error {
+func checkJavaWorker(ctx context.Context, workerDir string) error {
 	if err := validateLanguageTools(ctx, "java"); err != nil {
 		return err
 	}
@@ -123,11 +123,11 @@ func lintJavaWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Java linting completed successfully!")
+	fmt.Println("✅ Java check completed successfully!")
 	return nil
 }
 
-func lintPythonWorker(ctx context.Context, workerDir string) error {
+func checkPythonWorker(ctx context.Context, workerDir string) error {
 	if err := validateLanguageTools(ctx, "python"); err != nil {
 		return err
 	}
@@ -152,11 +152,11 @@ func lintPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Python linting completed successfully!")
+	fmt.Println("✅ Python check completed successfully!")
 	return nil
 }
 
-func lintTypescriptWorker(ctx context.Context, workerDir string) error {
+func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 	if err := validateLanguageTools(ctx, "typescript"); err != nil {
 		return err
 	}
@@ -171,11 +171,11 @@ func lintTypescriptWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ TypeScript linting completed successfully!")
+	fmt.Println("✅ TypeScript check completed successfully!")
 	return nil
 }
 
-func lintDotnetWorker(ctx context.Context, workerDir string) error {
+func checkDotnetWorker(ctx context.Context, workerDir string) error {
 	if err := validateLanguageTools(ctx, "dotnet"); err != nil {
 		return err
 	}
@@ -190,6 +190,6 @@ func lintDotnetWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ .NET linting completed successfully!")
+	fmt.Println("✅ .NET check completed successfully!")
 	return nil
 }
