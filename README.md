@@ -101,7 +101,7 @@ Notes:
 ### Run a worker for a specific language SDK
 
 ```sh
-go run ./cmd run-worker --scenario workflow_with_single_noop_activity --run-id local-test-run --language go
+go run ./cmd run-worker --run-id local-test-run --language go
 ```
 
 Notes:

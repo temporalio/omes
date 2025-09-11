@@ -1,13 +1,14 @@
 package scenarios
 
 import (
+	"math"
+	"math/rand"
+	"time"
+
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"math"
-	"math/rand"
-	"time"
 )
 
 // This scenario is meant to be adjusted and run manually to evaluate the performance of different
@@ -62,10 +63,6 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Used for testing slot provider performance. Runs activities that consume certain amounts of resources.",
 		Executor: loadgen.KitchenSinkExecutor{
-			DefaultConfiguration: loadgen.RunConfiguration{
-				Iterations:    1,
-				MaxConcurrent: 1,
-			},
 			TestInput: &kitchensink.TestInput{
 				WorkflowInput: &kitchensink.WorkflowInput{
 					InitialActions: []*kitchensink.ActionSet{

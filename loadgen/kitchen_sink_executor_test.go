@@ -811,15 +811,13 @@ func testForSDK(
 
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
-		DefaultConfiguration: RunConfiguration{
+	}
+	scenarioInfo := ScenarioInfo{
+		ScenarioName: "kitchenSinkTest",
+		RunID:        fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
+		Configuration: RunConfiguration{
 			Iterations: 1,
 		},
-	}
-
-	scenarioInfo := ScenarioInfo{
-		ScenarioName:  "kitchenSinkTest",
-		RunID:         fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-		Configuration: executor.DefaultConfiguration,
 	}
 
 	if expectedErr, expectUnsupported := tc.expectedUnsupportedErrs[sdk]; expectUnsupported {
@@ -862,7 +860,7 @@ func testSupportedFeature(
 	}
 	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
-	taskQueueName := TaskQueueForRun(scenarioInfo.ScenarioName, scenarioInfo.RunID)
+	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
 	if execErr != nil {
 		if len(historyEvents) > 0 {
