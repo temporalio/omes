@@ -164,7 +164,7 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 	}
 
 	fmt.Println("Compiling TypeScript worker...")
-	if err := runCommandInDir(ctx, workerDir, "npx", "tsc", "--noEmit"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "typecheck"); err != nil {
 		return err
 	}
 

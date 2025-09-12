@@ -8,7 +8,8 @@
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
     "lint-ci": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit"
   },
   "nodemonConfig": {
     "execMap": {
