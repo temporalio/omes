@@ -139,6 +139,15 @@ func testWorkerImage(ctx context.Context, rootDir, language, sdkVersion, imageTa
 	}
 	err = runCommandInDir(ctx, rootDir, scenarioArgs[0], scenarioArgs[1:]...)
 	if err != nil {
+		// Print Docker logs when scenario fails
+		fmt.Println("\n=== Docker Container Logs ===")
+		if logsOutput, logsErr := runCommandOutput(ctx, "docker", "logs", containerId); logsErr != nil {
+			fmt.Printf("Failed to get container logs: %v\n", logsErr)
+		} else {
+			fmt.Println(logsOutput)
+		}
+		fmt.Println("=== End Docker Container Logs ===\n")
+		
 		return fmt.Errorf("scenario execution failed: %v", err)
 	}
 	return nil
