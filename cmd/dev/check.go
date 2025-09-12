@@ -137,7 +137,7 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Checking Python dependencies...")
+	fmt.Println("Installing Python dependencies...")
 	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
 		return err
 	}
