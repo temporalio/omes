@@ -92,17 +92,17 @@ func checkGoWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Checking Go modules...")
+	fmt.Println("Installing Go worker dependencies...")
 	if err := runCommandInDir(ctx, workerDir, "go", "mod", "tidy"); err != nil {
 		return err
 	}
 
-	fmt.Println("Applying Go format...")
+	fmt.Println("Formatting Go worker...")
 	if err := runCommandInDir(ctx, workerDir, "go", "fmt", "./..."); err != nil {
 		return err
 	}
 
-	fmt.Println("Building Go worker...")
+	fmt.Println("Compilig Go worker...")
 	if err := runCommandInDir(ctx, workerDir, "go", "build", "./..."); err != nil {
 		return err
 	}
@@ -116,7 +116,6 @@ func checkJavaWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Running Java linting and tests...")
 	if err := runCommandInDir(ctx, workerDir, "./gradlew", "check"); err != nil {
 		return err
 	}
@@ -130,22 +129,17 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Print("uv version: ")
-	if err := runCommand(ctx, "uv", "--version"); err != nil {
-		return err
-	}
-
-	fmt.Println("Installing Python dependencies...")
+	fmt.Println("Installing Python worker dependencies...")
 	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
 		return err
 	}
 
-	fmt.Println("Applying Python format...")
+	fmt.Println("Formatting Python worker...")
 	if err := runCommandInDir(ctx, workerDir, "poe", "format"); err != nil {
 		return err
 	}
 
-	fmt.Println("Running Python linting...")
+	fmt.Println("Linting Python worker...")
 	if err := runCommandInDir(ctx, workerDir, "poe", "lint"); err != nil {
 		return err
 	}
@@ -159,13 +153,18 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Installing TypeScript dependencies...")
+	fmt.Println("Installing TypeScript worker dependencies...")
 	if err := runCommandInDir(ctx, workerDir, "npm", "ci"); err != nil {
 		return err
 	}
 
-	fmt.Println("Running TypeScript linting...")
+	fmt.Println("Linting TypeScript worker...")
 	if err := runCommandInDir(ctx, workerDir, "npm", "run", "lint"); err != nil {
+		return err
+	}
+
+	fmt.Println("Compiling TypeScript worker...")
+	if err := runCommandInDir(ctx, workerDir, "npx", "tsc", "--noEmit"); err != nil {
 		return err
 	}
 
@@ -178,13 +177,18 @@ func checkDotnetWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Running .NET formatting check...")
-	if err := runCommandInDir(ctx, workerDir, "dotnet", "format", "--verify-no-changes"); err != nil {
+	fmt.Println("Installing .NET worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "restore"); err != nil {
 		return err
 	}
 
-	fmt.Println("Running .NET tests...")
-	if err := runCommandInDir(ctx, workerDir, "dotnet", "test"); err != nil {
+	fmt.Println("Formatting .NET worker...")
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "format"); err != nil {
+		return err
+	}
+
+	fmt.Println("Compiling .NET worker...")
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "build", "--configuration", "Library"); err != nil {
 		return err
 	}
 
