@@ -68,9 +68,15 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Check ${{ matrix.sdk }}
+      - name: Add Go bin to PATH
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Check ${{ matrix.sdk }} worker
         run: |
           go run ./cmd/dev check ${{ matrix.sdk }}
+      - name: Test ${{ matrix.sdk }} worker
+        run: |
+          go run ./cmd/dev test ${{ matrix.sdk }} local
       - name: Check formatting
         run: |
           git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
@@ -106,15 +112,9 @@ jobs:
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
-      - name: Install Tools
-        run: |
-          go run ./cmd/dev install ${{ matrix.tools }}
       - name: Build ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev build ${{ matrix.sdk }}
-      - name: Test ${{ matrix.sdk }} worker locally
-        run: |
-          go run ./cmd/dev test ${{ matrix.sdk }} local
       - name: Test ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev test ${{ matrix.sdk }} image
