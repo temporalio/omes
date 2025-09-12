@@ -163,6 +163,11 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	// Ensure the kitchensink is built first as the worker won't compile without it.
+	if err := runBuildKitchensink(ctx); err != nil {
+		return err
+	}
+
 	fmt.Println("Compiling TypeScript worker...")
 	if err := runCommandInDir(ctx, workerDir, "npm", "run", "typecheck"); err != nil {
 		return err

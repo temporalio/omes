@@ -71,10 +71,6 @@ func buildWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("Building", language, "worker")
 	fmt.Println("===========================================")
 
-	if err := checkTool(ctx, language); err != nil {
-		return err
-	}
-
 	sdkVersion, err := getVersion(language + "-sdk")
 	if err != nil {
 		return err
@@ -100,6 +96,8 @@ func buildWorkerImage(ctx context.Context, rootDir, language, sdkVersion string)
 }
 
 func runBuildKitchensink(ctx context.Context) error {
+	fmt.Println("Building kitchen-sink proto...")
+
 	if err := checkTool(ctx, "cargo"); err != nil {
 		return err
 	}
@@ -109,8 +107,6 @@ func runBuildKitchensink(ctx context.Context) error {
 	if err := checkTool(ctx, "node"); err != nil {
 		return err
 	}
-
-	fmt.Println("Building kitchen-sink proto...")
 
 	rootDir, err := getRootDir()
 	if err != nil {

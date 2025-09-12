@@ -51,7 +51,7 @@ jobs:
             tools: python go
             submodules: false
           - sdk: typescript
-            tools: node go
+            tools: rust go protoc node
             submodules: true
           - sdk: dotnet
             tools: dotnet go
@@ -92,7 +92,7 @@ jobs:
             tools: python go
             submodules: false
           - sdk: typescript
-            tools: node go
+            tools: rust go protoc node
             submodules: true
           - sdk: dotnet
             tools: dotnet go
@@ -109,7 +109,7 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Build ${{ matrix.sdk }} worker
+      - name: Build ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev build ${{ matrix.sdk }}
       - name: Test ${{ matrix.sdk }} worker locally
