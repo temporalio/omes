@@ -15,7 +15,10 @@ func checkCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check [language...]",
 		Short: "Check worker for specified language(s)",
-		Long: fmt.Sprintf(`Check worker for specified language(s)
+		Long: fmt.Sprintf(`Check worker for specified language(s) by
+  (1) installing dependencies,
+  (2) formatting source code,
+  (3) and compiling (if applicable).
 
 Supported languages: %s
 
