@@ -255,7 +255,7 @@ Use the dev command for development tasks:
 ```sh
 go run ./cmd/dev install             # Install tools (default: all)
 go run ./cmd/dev build               # Build workers (default: all)
-go run ./cmd/dev lint                # Lint workers (default: all)
+go run ./cmd/dev check               # Check workers (default: all)
 go run ./cmd/dev clean               # Clean artifacts (default: all)
 go run ./cmd/dev build kitchensink   # Build kitchen-sink proto
 ```
