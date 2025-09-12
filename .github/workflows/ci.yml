@@ -43,24 +43,19 @@ jobs:
         include:
           - sdk: go
             tools: go
-            submodules: false
           - sdk: java
             tools: java go
-            submodules: false
           - sdk: python
             tools: python go
-            submodules: false
           - sdk: typescript
-            tools: rust go protoc node
-            submodules: true
+            tools: rust go node protoc
           - sdk: dotnet
             tools: dotnet go
-            submodules: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
+          submodules: true
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
@@ -76,7 +71,7 @@ jobs:
           go run ./cmd/dev check ${{ matrix.sdk }}
       - name: Test ${{ matrix.sdk }} worker
         run: |
-          go run ./cmd/dev test ${{ matrix.sdk }} local
+          go run ./cmd/dev test ${{ matrix.sdk }}
       - name: Check formatting
         run: |
           git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
@@ -87,30 +82,15 @@ jobs:
       fail-fast: false
       matrix:
         sdk: [go, java, python, typescript, dotnet]
-        include:
-          - sdk: go
-            submodules: false
-          - sdk: java
-            submodules: false
-          - sdk: python
-            submodules: false
-          - sdk: typescript
-            submodules: true
-          - sdk: dotnet
-            submodules: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
+          submodules: true
       - name: Load versions
         run: |
           set -a && source versions.env && set +a
           printenv >> $GITHUB_ENV
-      - name: Install mise
-        uses: jdx/mise-action@v2.4.4
-        with:
-          version: ${{ env.MISE_VERSION }}
       - name: Set SDK version variable
         run: |
           SDK_VAR_NAME="${{ matrix.sdk }}_SDK_VERSION"
@@ -122,9 +102,29 @@ jobs:
             --language ${{ matrix.sdk }} \
             --version v${{ env.SDK_VERSION }} \
             --tag-as-latest
-      - name: Test ${{ matrix.sdk }} worker image
+      - name: Start ${{ matrix.sdk }} worker image
         run: |
-          go run ./cmd/dev test ${{ matrix.sdk }} image
+          docker run \
+            --rm \
+            -i -p 10233:10233 omes:${{ matrix.sdk }}-latest \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --language ${{ matrix.sdk }} \
+            --run-id ${{ github.run_id }} \
+            --embedded-server-address 0.0.0.0:10233 &
+      - name: Wait for ${{ matrix.sdk }} worker image to start
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
+      - name: Start ${{ matrix.sdk }} worker image
+        run: |
+          go run ./cmd run-scenario \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }} \
+            --connect-timeout 1m \
+            --iterations 5
+        
 
   test-kitchensink:
     runs-on: ubuntu-latest
@@ -135,24 +135,19 @@ jobs:
         include:
           - sdk: go
             tools: go
-            submodules: false
           - sdk: java
             tools: java go
-            submodules: false
           - sdk: python
             tools: python go
-            submodules: false
           - sdk: typescript
             tools: node go
-            submodules: true
           - sdk: dotnet
             tools: dotnet go
-            submodules: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
+          submodules: true
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:

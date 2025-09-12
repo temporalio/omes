@@ -10,54 +10,49 @@ import (
 )
 
 var (
-	defaultImageTag = "latest"
-	testScenario    = "workflow_with_single_noop_activity"
-	testIterations  = "5"
+	testScenario   = "workflow_with_single_noop_activity"
+	testIterations = "5"
 )
 
 func testCmd() *cobra.Command {
-	var imageTag string
-
 	cmd := &cobra.Command{
-		Use:   "test [language] [local|image]",
-		Short: "Test worker for specified language locally or as Docker image",
-		Long: fmt.Sprintf(`Test worker for specified language locally or as Docker image
+		Use:   "test [language...]",
+		Short: "Test worker for specified language(s) locally",
+		Long: fmt.Sprintf(`Test worker for specified language(s) locally
 
 Supported languages: %s
 
 Examples:
-  dev test go local                          # Test Go worker locally
-  dev test go image                          # Test Go worker Docker image (latest tag)
-  dev test go image --image-tag v1.2.3       # Test Go worker Docker image with specific tag
-  dev test python local                      # Test Python worker locally
-  dev test python image --image-tag latest   # Test Python worker Docker image (latest tag)`, strings.Join(supportedLanguages, ", ")),
-		Args: cobra.ExactArgs(2),
+  dev test                           # All languages (default)
+  dev test all                       # All languages
+  dev test go                        # Single language
+  dev test go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			language := args[0]
-			testType := args[1]
-
-			if !slices.Contains(supportedLanguages, language) {
-				return fmt.Errorf("unsupported language: %s", language)
+			var languages []string
+			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
+				languages = supportedLanguages
+			} else {
+				for _, lang := range args {
+					if !slices.Contains(supportedLanguages, lang) {
+						return fmt.Errorf("unsupported language: %s", lang)
+					}
+				}
+				languages = args
 			}
 
-			if testType != "local" && testType != "image" {
-				return fmt.Errorf("test type must be 'local' or 'image', got: %s", testType)
+			for _, language := range languages {
+				if err := runTestWorker(cmd.Context(), language); err != nil {
+					return fmt.Errorf("failed to test %s: %v", language, err)
+				}
 			}
-
-			if imageTag != defaultImageTag && testType != "image" {
-				return fmt.Errorf("--image-tag flag can only be used with 'image' test type")
-			}
-
-			return runTestWorker(cmd.Context(), language, testType, imageTag)
+			return nil
 		},
 	}
-
-	cmd.Flags().StringVar(&imageTag, "image-tag", defaultImageTag, "Docker image tag")
 
 	return cmd
 }
 
-func runTestWorker(ctx context.Context, language, testType, imageTag string) error {
+func runTestWorker(ctx context.Context, language string) error {
 	rootDir, err := getRootDir()
 	if err != nil {
 		return err
@@ -69,20 +64,13 @@ func runTestWorker(ctx context.Context, language, testType, imageTag string) err
 	}
 
 	fmt.Println("\n===========================================")
-	fmt.Println("Testing", language, "worker ("+testType+")")
+	fmt.Println("Testing", language, "worker")
 	fmt.Println("===========================================")
 
-	switch testType {
-	case "local":
-		if err := checkTool(ctx, language); err != nil {
-			return err
-		}
-		return testWorkerLocally(ctx, rootDir, language, sdkVersion)
-	case "image":
-		return testWorkerImage(ctx, rootDir, language, sdkVersion, imageTag)
-	default:
-		return fmt.Errorf("unknown test type: %s", testType)
+	if err := checkTool(ctx, language); err != nil {
+		return err
 	}
+	return testWorkerLocally(ctx, rootDir, language, sdkVersion)
 }
 
 func testWorkerLocally(ctx context.Context, rootDir, language, sdkVersion string) error {
@@ -98,56 +86,4 @@ func testWorkerLocally(ctx context.Context, rootDir, language, sdkVersion string
 	return runCommandInDir(ctx, rootDir, args[0], args[1:]...)
 }
 
-func testWorkerImage(ctx context.Context, rootDir, language, sdkVersion, imageTag string) error {
-	// Start the worker container
-	dockerArgs := []string{
-		"run", "--rm", "--detach", "-i", "-p", "10233:10233",
-		fmt.Sprintf("omes:%s-%s", language, imageTag),
-		"--scenario", testScenario,
-		"--log-level", "debug",
-		"--language", language,
-		"--run-id", fmt.Sprintf("test-%s-%s", language, sdkVersion),
-		"--embedded-server-address", "0.0.0.0:10233",
-	}
-	containerOutput, err := runCommandOutput(ctx, "docker", dockerArgs...)
-	if err != nil {
-		return fmt.Errorf("failed to start worker container: %v\nDocker output: %s", err, containerOutput)
-	}
 
-	containerId := strings.TrimSpace(containerOutput)
-	if containerId == "" {
-		return fmt.Errorf("docker command succeeded but returned empty container ID. Output: %s", containerOutput)
-	}
-	fmt.Println("Started container:", containerId)
-
-	defer func() {
-		fmt.Println("Cleaning up container:", containerId)
-		if killErr := runCommand(context.Background(), "docker", "kill", containerId); killErr != nil {
-			fmt.Printf("Warning: failed to kill container %s: %v\n", containerId, killErr)
-		}
-	}()
-
-	// Run the scenario
-	scenarioArgs := []string{
-		"go", "run", "./cmd", "run-scenario",
-		"--scenario", testScenario,
-		"--log-level", "debug",
-		"--server-address", "127.0.0.1:10233",
-		"--run-id", fmt.Sprintf("test-%s-%s", language, sdkVersion),
-		"--connect-timeout", "1m",
-		"--iterations", testIterations,
-	}
-	err = runCommandInDir(ctx, rootDir, scenarioArgs[0], scenarioArgs[1:]...)
-	if err != nil {
-		fmt.Println("\n=== Docker Container Logs ===")
-		if logsOutput, logsErr := runCommandOutput(ctx, "docker", "logs", containerId); logsErr != nil {
-			fmt.Printf("Failed to get container logs: %v\n", logsErr)
-		} else {
-			fmt.Println(logsOutput)
-		}
-		fmt.Println("=== End Docker Container Logs ===")
-
-		return fmt.Errorf("scenario execution failed: %v", err)
-	}
-	return nil
-}
