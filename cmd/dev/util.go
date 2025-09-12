@@ -101,6 +101,15 @@ func getRootDir() (string, error) {
 	return rootDir, nil
 }
 
+// getWorkerDir returns the worker directory for the given language
+func getWorkerDir(language string) (string, error) {
+	rootDir, err := getRootDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(rootDir, "workers", language), nil
+}
+
 // loadVersions parses versions.env file and returns a map of version variables
 func loadVersions() (map[string]string, error) {
 	rootDir, err := getRootDir()

@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -16,9 +14,8 @@ func checkCmd() *cobra.Command {
 		Use:   "check [language...]",
 		Short: "Check worker for specified language(s)",
 		Long: fmt.Sprintf(`Check worker for specified language(s) by
-  (1) installing dependencies,
-  (2) formatting source code,
-  (3) and compiling (if applicable).
+  (1) formatting source code,
+  (2) and compiling (if applicable).
 
 Supported languages: %s
 
@@ -45,15 +42,10 @@ Examples:
 }
 
 func runCheckWorkers(ctx context.Context, languages []string) error {
-	rootDir, err := getRootDir()
-	if err != nil {
-		return err
-	}
-
 	fmt.Println("Checking", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := checkWorker(ctx, lang, rootDir); err != nil {
+		if err := checkWorker(ctx, lang); err != nil {
 			return fmt.Errorf("failed to check %s: %v", lang, err)
 		}
 	}
@@ -61,14 +53,14 @@ func runCheckWorkers(ctx context.Context, languages []string) error {
 	return nil
 }
 
-func checkWorker(ctx context.Context, language, rootDir string) error {
+func checkWorker(ctx context.Context, language string) error {
 	fmt.Println("\n===========================================")
 	fmt.Println("Checking", language, "worker")
 	fmt.Println("===========================================")
 
-	workerDir := filepath.Join(rootDir, "workers", language)
-	if _, err := os.Stat(workerDir); err != nil {
-		return fmt.Errorf("worker directory not found: %s", workerDir)
+	workerDir, err := getWorkerDir(language)
+	if err != nil {
+		return err
 	}
 
 	switch language {
@@ -89,11 +81,6 @@ func checkWorker(ctx context.Context, language, rootDir string) error {
 
 func checkGoWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "go"); err != nil {
-		return err
-	}
-
-	fmt.Println("Installing Go worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "go", "mod", "tidy"); err != nil {
 		return err
 	}
 
@@ -129,11 +116,6 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Installing Python worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
-		return err
-	}
-
 	fmt.Println("Formatting Python worker...")
 	if err := runCommandInDir(ctx, workerDir, "poe", "format"); err != nil {
 		return err
@@ -150,11 +132,6 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 
 func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "typescript"); err != nil {
-		return err
-	}
-
-	fmt.Println("Installing TypeScript worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "npm", "ci"); err != nil {
 		return err
 	}
 
@@ -179,11 +156,6 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 
 func checkDotnetWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "dotnet"); err != nil {
-		return err
-	}
-
-	fmt.Println("Installing .NET worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "dotnet", "restore"); err != nil {
 		return err
 	}
 
