@@ -67,7 +67,7 @@ func checkWorker(ctx context.Context, language, rootDir string) error {
 	fmt.Println("===========================================")
 
 	workerDir := filepath.Join(rootDir, "workers", language)
-	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
+	if _, err := os.Stat(workerDir); err != nil {
 		return fmt.Errorf("worker directory not found: %s", workerDir)
 	}
 
