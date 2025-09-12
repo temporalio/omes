@@ -89,19 +89,14 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            tools: go
             submodules: false
           - sdk: java
-            tools: java go
             submodules: false
           - sdk: python
-            tools: python go
             submodules: false
           - sdk: typescript
-            tools: rust go protoc node
             submodules: true
           - sdk: dotnet
-            tools: dotnet go
             submodules: true
     steps:
       - name: Checkout repo
@@ -116,12 +111,17 @@ jobs:
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
+      - name: Set SDK version variable
+        run: |
+          SDK_VAR_NAME="${{ matrix.sdk }}_SDK_VERSION"
+          SDK_VAR_NAME=$(echo "$SDK_VAR_NAME" | tr '[:lower:]' '[:upper:]')
+          echo "SDK_VERSION=${!SDK_VAR_NAME}" >> $GITHUB_ENV
       - name: Build ${{ matrix.sdk }} worker image
         run: |
-          go run ./cmd install build-worker-image \
-              --language ${{ matrix.sdk }} \
-              --version v${{ env[format('{0}_SDK_VERSION', upper(matrix.sdk))] }} \
-              --tag-as-latest
+          go run ./cmd build-worker-image \
+            --language ${{ matrix.sdk }} \
+            --version v${{ env.SDK_VERSION }} \
+            --tag-as-latest
       - name: Test ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev test ${{ matrix.sdk }} image
@@ -195,7 +195,7 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Build proto
         run: |
-          go run ./cmd/dev build kitchensink
+          go run ./cmd/dev build-proto
       - name: Check diff
         run: |
           git config --global core.safecrlf false

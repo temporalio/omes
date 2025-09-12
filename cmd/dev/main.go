@@ -13,7 +13,7 @@ func main() {
 		Short: "Development tools for Omes",
 	}
 
-	rootCmd.AddCommand(buildCmd())
+	rootCmd.AddCommand(buildProtoCmd())
 	rootCmd.AddCommand(testCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(installCmd())
