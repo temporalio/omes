@@ -57,8 +57,6 @@ jobs:
             tools: dotnet go
             submodules: true
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
