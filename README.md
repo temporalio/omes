@@ -253,11 +253,11 @@ workflow that waits for a signal for a configurable amount of time.
 Use the dev command for development tasks:
 
 ```sh
-go run ./cmd/dev install             # Install tools (default: all)
-go run ./cmd/dev build               # Build workers (default: all)
-go run ./cmd/dev check               # Check workers (default: all)
-go run ./cmd/dev clean               # Clean artifacts (default: all)
-go run ./cmd/dev build kitchensink   # Build kitchen-sink proto
+go run ./cmd/dev install       # Install tools (default: all)
+go run ./cmd/dev build         # Build workers (default: all)
+go run ./cmd/dev check         # Check workers (default: all)
+go run ./cmd/dev clean         # Clean artifacts (default: all)
+go run ./cmd/dev build-proto   # Build kitchen-sink proto
 ```
 
 Or target specific languages: `go run ./cmd/dev build go java python`
