@@ -53,7 +53,7 @@ func runInstallTools(ctx context.Context, tools []string) error {
 		case "dotnet":
 			err = installDotnet(ctx)
 		case "go":
-			// already installed
+			err = installGo(ctx)
 		case "java":
 			err = installJava(ctx)
 		case "python":
@@ -81,15 +81,35 @@ func installDotnet(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "dotnet", version)
-}
+	if err := installViaMise(ctx, "dotnet", version); err != nil {
+		return err
+	}
 
-func installGo(ctx context.Context) error {
-	version, err := getVersion("go")
+	workerDir, err := getWorkerDir("dotnet")
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "go", version)
+	fmt.Println("Installing .NET worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "dotnet", "restore"); err != nil {
+		return err
+	}
+	fmt.Println("✅ .NET worker dependencies installed successfully!")
+
+	return nil
+}
+
+func installGo(ctx context.Context) error {
+	workerDir, err := getWorkerDir("go")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing Go worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "go", "mod", "tidy"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Go worker dependencies installed successfully!")
+
+	return nil
 }
 
 func installJava(ctx context.Context) error {
@@ -97,7 +117,21 @@ func installJava(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "java", version)
+	if err := installViaMise(ctx, "java", version); err != nil {
+		return err
+	}
+
+	workerDir, err := getWorkerDir("java")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing Java worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "./gradlew", "build", "--dry-run"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Java worker dependencies installed successfully!")
+
+	return nil
 }
 
 func installPython(ctx context.Context) error {
@@ -125,6 +159,16 @@ func installPython(ctx context.Context) error {
 	}
 	fmt.Println("✅ poethepoet installed successfully!")
 
+	workerDir, err := getWorkerDir("python")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing Python worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Python worker dependencies installed successfully!")
+
 	return nil
 }
 
@@ -133,7 +177,21 @@ func installNode(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "node", version)
+	if err := installViaMise(ctx, "node", version); err != nil {
+		return err
+	}
+
+	workerDir, err := getWorkerDir("typescript")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing TypeScript worker dependencies...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "ci"); err != nil {
+		return err
+	}
+	fmt.Println("✅ TypeScript worker dependencies installed successfully!")
+
+	return nil
 }
 
 func installRust(ctx context.Context) error {
