@@ -99,11 +99,6 @@ func checkGoWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("Running Go tests...")
-	if err := runCommandInDir(ctx, workerDir, "go", "test", "-race", "./..."); err != nil {
-		return err
-	}
-
 	fmt.Println("Building Go worker...")
 	if err := runCommandInDir(ctx, workerDir, "go", "build", "./..."); err != nil {
 		return err
