@@ -244,22 +244,30 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	t.lock.Lock()
-	var completedIterations = t.state.CompletedIterations
+	completedIterations := t.state.CompletedIterations
 	t.lock.Unlock()
-	info.Logger.Info("Total iterations completed: ", completedIterations)
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
-	info.Logger.Info("Total child workflows: ", completedChildWorkflows)
 
+	var continueAsNewPerIter int
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
 		// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
-		continueAsNewWorkflows = ((t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter) * completedIterations
+		continueAsNewPerIter = (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
-	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
 
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
-	info.Logger.Info("Total workflows completed: ", completedWorkflows)
+
+	info.Logger.Info(fmt.Sprintf(`Scenario completion summary:
+  Total iterations completed: %d
+  Total child workflows: %d (%d per iteration)
+  Total continue-as-new workflows: %d (%d per iteration)
+  Total workflows completed: %d`,
+		completedIterations,
+		completedChildWorkflows, t.config.InternalIterations,
+		continueAsNewWorkflows, continueAsNewPerIter,
+		completedWorkflows))
 
 	// Post-scenario: verify that at least one iteration was completed.
 	if completedIterations == 0 {
