@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,9 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 const (
@@ -25,14 +28,6 @@ const (
 	defaultTestRunTimeout = 30 * time.Second
 	workerBuildTimeout    = 1 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
-)
-
-var (
-	testStart          = time.Now().Unix()
-	workerMutex        sync.RWMutex
-	workerBuildOnce    = map[cmdoptions.Language]*sync.Once{}
-	workerBuildErrs    = map[cmdoptions.Language]error{}
-	workerCleanupFuncs []func()
 )
 
 // Functional options configuration
@@ -57,15 +52,23 @@ func WithNexusEndpoint(taskQueue string) TestEnvOption {
 	}
 }
 
+type TestResult struct {
+	ObservedLogs *observer.ObservedLogs
+}
+
 type TestEnvironment struct {
 	testEnvConfig
-	devServer         *testsuite.DevServer
-	temporalClient    client.Client
-	logger            *zap.SugaredLogger
-	baseDir           string
-	buildDir          string
-	repoDir           string
-	nexusEndpointName string
+	createdAt          time.Time
+	devServer          *testsuite.DevServer
+	temporalClient     client.Client
+	baseDir            string
+	buildDir           string
+	repoDir            string
+	nexusEndpointName  string
+	workerMutex        sync.RWMutex
+	workerBuildOnce    map[cmdoptions.Language]*sync.Once
+	workerBuildErrs    map[cmdoptions.Language]error
+	workerCleanupFuncs []func()
 }
 
 func (env *TestEnvironment) TemporalClient() client.Client {
@@ -81,8 +84,6 @@ func (env *TestEnvironment) NexusEndpointName() string {
 }
 
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
-	logger := zaptest.NewLogger(t).Sugar()
-
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
 	}
@@ -90,7 +91,8 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		opt(&cfg)
 	}
 
-	serverLogger := logger.Named("devserver")
+	testLogger := zaptest.NewLogger(t)
+	serverLogger := testLogger.Named("devserver").Sugar()
 	server, err := testsuite.StartDevServer(t.Context(), testsuite.DevServerOptions{
 		ClientOptions: &client.Options{
 			Namespace: testNamespace,
@@ -111,11 +113,13 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	repoDir := filepath.Dir(testDir)
 
 	env := &TestEnvironment{
-		testEnvConfig:  cfg,
-		devServer:      server,
-		temporalClient: temporalClient,
-		logger:         logger,
-		repoDir:        repoDir,
+		testEnvConfig:   cfg,
+		devServer:       server,
+		temporalClient:  temporalClient,
+		repoDir:         repoDir,
+		createdAt:       time.Now(),
+		workerBuildOnce: map[cmdoptions.Language]*sync.Once{},
+		workerBuildErrs: map[cmdoptions.Language]error{},
 	}
 
 	// Optionally create a Nexus endpoint
@@ -140,9 +144,9 @@ func (env *TestEnvironment) cleanup() {
 		env.devServer.Stop()
 	}
 
-	workerMutex.Lock()
-	defer workerMutex.Unlock()
-	for _, cleanupFunc := range workerCleanupFuncs {
+	env.workerMutex.Lock()
+	defer env.workerMutex.Unlock()
+	for _, cleanupFunc := range env.workerCleanupFuncs {
 		cleanupFunc()
 	}
 }
@@ -175,65 +179,74 @@ func (env *TestEnvironment) RunExecutorTest(
 	executor loadgen.Executor,
 	scenarioInfo loadgen.ScenarioInfo,
 	sdk cmdoptions.Language,
-) error {
-	env.ensureWorkerBuilt(t, sdk)
+) (TestResult, error) {
+	testLogger := zaptest.NewLogger(t).Core()
+	observeLogger, observedLogs := observer.New(zap.DebugLevel)
+	logger := zap.New(zapcore.NewTee(testLogger, observeLogger)).Sugar()
+
+	env.ensureWorkerBuilt(t, logger, sdk)
 
 	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), env.executorTimeout)
 	defer cancelTestCtx()
 
 	// Update scenario info with test environment details
-	scenarioInfo.Logger = env.logger.Named("executor")
+	scenarioInfo.Logger = logger.Named("executor")
 	scenarioInfo.MetricsHandler = client.MetricsNopHandler
 	scenarioInfo.Client = env.temporalClient
 	scenarioInfo.Namespace = testNamespace
 
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
-	workerDone := env.startWorker(testCtx, sdk, taskQueueName, scenarioInfo)
+	workerDone := env.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
 
-	err := executor.Run(testCtx, scenarioInfo)
+	execErr := executor.Run(testCtx, scenarioInfo)
 
 	// Trigger worker shutdown.
 	cancelTestCtx()
 
 	// Wait for worker shutdown.
+	var workerErr error
 	select {
-	case workerErr := <-workerDone:
+	case workerErr = <-workerDone:
 		if workerErr != nil {
 			t.Logf("Worker shutdown with error: %v", workerErr)
 		}
 	case <-time.After(2 * workerShutdownTimeout):
-		t.Logf("Worker shutdown timed out, continuing...")
+		workerErr = fmt.Errorf("timed out waiting for worker shutdown")
 	}
 
-	return err
+	return TestResult{ObservedLogs: observedLogs}, errors.Join(execErr, workerErr)
 }
 
-func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Language) {
-	workerMutex.Lock()
-	once, exists := workerBuildOnce[sdk]
+func (env *TestEnvironment) ensureWorkerBuilt(
+	t *testing.T,
+	logger *zap.SugaredLogger,
+	sdk cmdoptions.Language,
+) {
+	env.workerMutex.Lock()
+	once, exists := env.workerBuildOnce[sdk]
 	if !exists {
 		once = new(sync.Once)
-		workerBuildOnce[sdk] = once
+		env.workerBuildOnce[sdk] = once
 	}
-	workerMutex.Unlock()
+	env.workerMutex.Unlock()
 
 	once.Do(func() {
 		baseDir := BaseDir(env.repoDir, sdk)
-		dirName := buildDirName()
+		dirName := env.buildDirName()
 		buildDir := filepath.Join(baseDir, dirName)
 
-		workerMutex.Lock()
-		workerCleanupFuncs = append(workerCleanupFuncs, func() {
+		env.workerMutex.Lock()
+		env.workerCleanupFuncs = append(env.workerCleanupFuncs, func() {
 			if err := os.RemoveAll(buildDir); err != nil {
 				fmt.Printf("Failed to clean up build dir for %s at %s: %v\n", sdk, buildDir, err)
 			}
 		})
-		workerMutex.Unlock()
+		env.workerMutex.Unlock()
 
 		builder := Builder{
 			DirName:    dirName,
 			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-			Logger:     env.logger.Named(fmt.Sprintf("%s-builder", sdk)),
+			Logger:     logger.Named(fmt.Sprintf("%s-builder", sdk)),
 		}
 
 		buildCtx, buildCancel := context.WithTimeout(t.Context(), workerBuildTimeout)
@@ -241,20 +254,21 @@ func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Langu
 
 		_, err := builder.Build(buildCtx, baseDir)
 
-		workerMutex.Lock()
-		workerBuildErrs[sdk] = err
-		workerMutex.Unlock()
+		env.workerMutex.Lock()
+		env.workerBuildErrs[sdk] = err
+		env.workerMutex.Unlock()
 	})
 
-	workerMutex.RLock()
-	err := workerBuildErrs[sdk]
-	workerMutex.RUnlock()
+	env.workerMutex.RLock()
+	err := env.workerBuildErrs[sdk]
+	env.workerMutex.RUnlock()
 
 	require.NoError(t, err, "Failed to build worker for SDK %s", sdk)
 }
 
 func (env *TestEnvironment) startWorker(
 	ctx context.Context,
+	logger *zap.SugaredLogger,
 	sdk cmdoptions.Language,
 	taskQueueName string,
 	scenarioInfo loadgen.ScenarioInfo,
@@ -266,9 +280,9 @@ func (env *TestEnvironment) startWorker(
 		baseDir := BaseDir(env.repoDir, sdk)
 		runner := &Runner{
 			Builder: Builder{
-				DirName:    buildDirName(),
+				DirName:    env.buildDirName(),
 				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-				Logger:     env.logger.Named(fmt.Sprintf("%s-worker", sdk)),
+				Logger:     logger.Named(fmt.Sprintf("%s-worker-builder", sdk)),
 			},
 			TaskQueueName:            taskQueueName,
 			GracefulShutdownDuration: workerShutdownTimeout,
@@ -280,6 +294,9 @@ func (env *TestEnvironment) startWorker(
 				Address:   env.DevServerAddress(),
 				Namespace: testNamespace,
 			},
+			LoggingOptions: cmdoptions.LoggingOptions{
+				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
+			},
 		}
 		workerDone <- runner.Run(ctx, baseDir)
 	}()
@@ -287,6 +304,6 @@ func (env *TestEnvironment) startWorker(
 	return workerDone
 }
 
-func buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", testStart)
+func (env *TestEnvironment) buildDirName() string {
+	return fmt.Sprintf("omes-temp-%d", env.createdAt.UnixMilli())
 }

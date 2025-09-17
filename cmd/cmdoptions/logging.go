@@ -16,6 +16,8 @@ type LoggingOptions struct {
 	LogLevel string
 	// Log encoding (console json)
 	LogEncoding string
+	// Prepared logger to use instead of creating a new one from options. Progamatic use only.
+	PreparedLogger *zap.SugaredLogger
 }
 
 // BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`).
@@ -23,6 +25,11 @@ var BackupLogger = log.New(os.Stderr, "", 0)
 
 // MustCreateLogger sets up a zap logger or panics on error.
 func (l *LoggingOptions) MustCreateLogger() *zap.SugaredLogger {
+	// If PreparedLogger is specified, return it instead of creating a new one.
+	if l.PreparedLogger != nil {
+		return l.PreparedLogger
+	}
+
 	level, err := zap.ParseAtomicLevel(l.LogLevel)
 	if err != nil {
 		if strings.ToLower(l.LogLevel) == "trace" {
