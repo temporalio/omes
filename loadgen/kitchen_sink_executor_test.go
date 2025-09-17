@@ -512,6 +512,134 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
+			name: "ClientSequence/Signal/Deduplication",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					// ExpectedSignalIds:   []int32{1, 2, 3},
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("signals_complete", "true"),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: []*ClientAction{
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													SignalId: 1,
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(
+															NewSetWorkflowStateAction("signal_1", "received"),
+														),
+													},
+												},
+											},
+										},
+									},
+								},
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													SignalId: 2,
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(
+															NewSetWorkflowStateAction("signal_1", "received"),
+														),
+													},
+												},
+											},
+										},
+									},
+								},
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													SignalId: 3,
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(
+															NewSetWorkflowStateAction("signal_1", "received"),
+														),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/MissingSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					// ExpectedSignalIds:   []int32{1, 2, 3},
+					InitialActions: ListActionSet(
+NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: []*ClientAction{
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													SignalId: 1,
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(
+															NewSetWorkflowStateAction("signal_1", "received"),
+														),
+													},
+												},
+											},
+										},
+									},
+								},
+								{
+									Variant: &ClientAction_DoSignal{
+										DoSignal: &DoSignal{
+											Variant: &DoSignal_DoSignalActions_{
+												DoSignalActions: &DoSignal_DoSignalActions{
+													SignalId: 3,
+													Variant: &DoSignal_DoSignalActions_DoActions{
+														DoActions: SingleActionSet(
+															NewSetWorkflowStateAction("signal_1", "received"),
+														),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+		},
+		{
 			name: "ClientSequence/Signal/Custom",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{

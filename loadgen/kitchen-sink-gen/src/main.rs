@@ -5,7 +5,7 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
+        do_signal::do_signal_actions, do_signal::DoSignalActions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
@@ -335,7 +335,7 @@ impl<'a> Arbitrary<'a> for WorkflowInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_initial_actions);
         let initial_actions = vec_of_size(u, num_actions)?;
-        Ok(Self { initial_actions })
+        Ok(Self { initial_actions, expected_signal_count: 0 })
     }
 }
 
@@ -362,6 +362,7 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
                         initial_actions: vec![mk_action_set([action::Variant::SetWorkflowState(
                             ARB_CONTEXT.with_borrow(|c| c.cur_workflow_state.clone()),
                         )])],
+                        expected_signal_count: 0,
                     },
                     "temporal.omes.kitchen_sink.WorkflowInput",
                 )],
@@ -436,11 +437,17 @@ impl<'a> Arbitrary<'a> for DoSignal {
             // Half of that in the handler half in main
             if u.ratio(50, 100)? {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)).into(),
+                    DoSignalActions {
+                        signal_id: u.arbitrary()?,
+                        variant: Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)),
+                    }
                 )
             } else {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)).into(),
+                    DoSignalActions {
+                        signal_id: u.arbitrary()?,
+                        variant: Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)),
+                    }
                 )
             }
         } else {
@@ -631,6 +638,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
                 ],
                 concurrent: false,
             }],
+            expected_signal_count: 0,
         };
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {
@@ -850,10 +858,12 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
     ClientAction {
         variant: Some(client_action::Variant::DoSignal(DoSignal {
             variant: Some(do_signal::Variant::DoSignalActions(
-                Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
-                    actions,
-                )))
-                .into(),
+                DoSignalActions {
+                    signal_id: 0, // Default signal_id for client actions
+                    variant: Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
+                        actions,
+                    ))),
+                }
             )),
             with_start: false,
         })),

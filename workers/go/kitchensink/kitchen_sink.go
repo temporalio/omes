@@ -39,13 +39,19 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
+
+	// signal de-duplication fields
+	expectedSignalCount int32
+	expectedSignalIDs   map[int32]interface{}
+	receivedSignalIDs   map[int32]interface{}
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
-		workflowState: &kitchensink.WorkflowState{},
+		workflowState:       &kitchensink.WorkflowState{},
+		expectedSignalCount: 0,
 	}
 
 	// Setup query handler.
@@ -94,6 +100,14 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
 				}
 			})
+			receivedID := sigActions.GetSignalId()
+			if receivedID != 0 {
+				state.receivedSignalIDs[receivedID] = struct{}{}
+				err := state.handleSignal(ctx, receivedID, actionSet)
+				if err != nil {
+					workflow.GetLogger(ctx).Error("error handling signal", "error", err)
+				}
+			}
 		}
 	})
 
@@ -235,6 +249,33 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, fmt.Errorf("unrecognized action")
 	}
 	return nil, nil
+}
+
+func (ws *KSWorkflowState) handleSignal(ctx workflow.Context, signalID int32, actionset *kitchensink.ActionSet) error {
+	if _, ok := ws.expectedSignalIDs[signalID]; !ok {
+		return fmt.Errorf("signal ID %d not expected", signalID)
+	}
+
+	if _, ok := ws.receivedSignalIDs[signalID]; ok {
+		return nil
+	}
+
+	ws.receivedSignalIDs[signalID] = nil
+	_, err := ws.handleActionSet(ctx, actionset)
+	return err
+}
+
+func (ws *KSWorkflowState) validateSignalCompletion(ctx workflow.Context) error {
+	if len(ws.receivedSignalIDs) != len(ws.expectedSignalIDs) {
+		missing := []int32{}
+		for id := range ws.expectedSignalIDs {
+			if _, ok := ws.receivedSignalIDs[id]; !ok {
+				missing = append(missing, id)
+			}
+		}
+		return fmt.Errorf("expected %d signals, got %d, missing %v", len(ws.expectedSignalIDs), len(ws.receivedSignalIDs), missing)
+	}
+	return nil
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
