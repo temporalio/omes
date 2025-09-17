@@ -79,7 +79,7 @@ func init() {
 		Description: fmt.Sprintf(
 			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
 			IterFlag, ContinueAsNewAfterIterFlag),
-		Executor: &tpsExecutor{state: &tpsState{}},
+		ExecutorFn: func() loadgen.Executor { return &tpsExecutor{state: &tpsState{}} },
 	})
 }
 
