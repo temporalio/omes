@@ -129,7 +129,7 @@ func init() {
 			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
 			"  fairness-threshold, backlog-log-interval.\n" +
 			"Duration must be set.",
-		Executor: &ebbAndFlowExecutor{},
+		ExecutorFn: func() loadgen.Executor { return &ebbAndFlowExecutor{} },
 	})
 }
 
