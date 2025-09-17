@@ -549,7 +549,7 @@ func TestKitchenSink(t *testing.T) {
 													SignalId: 2,
 													Variant: &DoSignal_DoSignalActions_DoActions{
 														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_1", "received"),
+															NewSetWorkflowStateAction("signal_2", "received"),
 														),
 													},
 												},
@@ -565,7 +565,7 @@ func TestKitchenSink(t *testing.T) {
 													SignalId: 3,
 													Variant: &DoSignal_DoSignalActions_DoActions{
 														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_1", "received"),
+															NewSetWorkflowStateAction("signal_3", "received"),
 														),
 													},
 												},
@@ -635,7 +635,6 @@ NewTimerAction(1000),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
 		},

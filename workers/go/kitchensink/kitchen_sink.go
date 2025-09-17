@@ -52,6 +52,15 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	state := KSWorkflowState{
 		workflowState:       &kitchensink.WorkflowState{},
 		expectedSignalCount: 0,
+		expectedSignalIDs:   make(map[int32]interface{}),
+		receivedSignalIDs:   make(map[int32]interface{}),
+	}
+
+	if params != nil {
+		state.expectedSignalCount = params.ExpectedSignalCount
+		for i := int32(1); i <= state.expectedSignalCount; i++ {
+			state.expectedSignalIDs[i] = nil
+		}
 	}
 
 	// Setup query handler.
@@ -94,19 +103,28 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			if actionSet == nil {
 				actionSet = sigActions.GetDoActions()
 			}
-			workflow.Go(ctx, func(ctx workflow.Context) {
-				ret, err := state.handleActionSet(ctx, actionSet)
-				if ret != nil || err != nil {
-					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
-				}
-			})
+
 			receivedID := sigActions.GetSignalId()
 			if receivedID != 0 {
-				state.receivedSignalIDs[receivedID] = struct{}{}
 				err := state.handleSignal(ctx, receivedID, actionSet)
 				if err != nil {
 					workflow.GetLogger(ctx).Error("error handling signal", "error", err)
+					retOrErrChan.Send(ctx, ReturnOrErr{nil, err})
+					return
 				}
+
+				// Check if all expected signals have been received
+				if state.expectedSignalCount > 0 && len(state.receivedSignalIDs) == int(state.expectedSignalCount) {
+					state.workflowState.Kvs["signals_complete"] = "true"
+					workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
+				}
+			} else {
+				workflow.Go(ctx, func(ctx workflow.Context) {
+					ret, err := state.handleActionSet(ctx, actionSet)
+					if ret != nil || err != nil {
+						retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
+					}
+				})
 			}
 		}
 	})
@@ -260,7 +278,8 @@ func (ws *KSWorkflowState) handleSignal(ctx workflow.Context, signalID int32, ac
 		return nil
 	}
 
-	ws.receivedSignalIDs[signalID] = nil
+	ws.receivedSignalIDs[signalID] = struct{}{}
+
 	_, err := ws.handleActionSet(ctx, actionset)
 	return err
 }
