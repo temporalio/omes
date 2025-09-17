@@ -43,7 +43,6 @@ type KSWorkflowState struct {
 	// signal de-duplication fields
 	expectedSignalCount int32
 	expectedSignalIDs   map[int32]interface{}
-	receivedSignalIDs   map[int32]interface{}
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
@@ -53,7 +52,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		workflowState:       &kitchensink.WorkflowState{},
 		expectedSignalCount: 0,
 		expectedSignalIDs:   make(map[int32]interface{}),
-		receivedSignalIDs:   make(map[int32]interface{}),
 	}
 
 	if params != nil {
@@ -114,9 +112,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				}
 
 				// Check if all expected signals have been received
-				if state.expectedSignalCount > 0 && len(state.receivedSignalIDs) == int(state.expectedSignalCount) {
-					state.workflowState.Kvs["signals_complete"] = "true"
-					workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
+				if state.expectedSignalCount > 0 {
+					if err := state.validateSignalCompletion(ctx); err != nil {
+						state.workflowState.Kvs["signals_complete"] = "true"
+						workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
+					}
 				}
 			} else {
 				workflow.Go(ctx, func(ctx workflow.Context) {
@@ -274,25 +274,19 @@ func (ws *KSWorkflowState) handleSignal(ctx workflow.Context, signalID int32, ac
 		return fmt.Errorf("signal ID %d not expected", signalID)
 	}
 
-	if _, ok := ws.receivedSignalIDs[signalID]; ok {
-		return nil
-	}
-
-	ws.receivedSignalIDs[signalID] = struct{}{}
+	delete(ws.expectedSignalIDs, signalID)
 
 	_, err := ws.handleActionSet(ctx, actionset)
 	return err
 }
 
 func (ws *KSWorkflowState) validateSignalCompletion(ctx workflow.Context) error {
-	if len(ws.receivedSignalIDs) != len(ws.expectedSignalIDs) {
+	if len(ws.expectedSignalIDs) != int(ws.expectedSignalCount) {
 		missing := []int32{}
 		for id := range ws.expectedSignalIDs {
-			if _, ok := ws.receivedSignalIDs[id]; !ok {
-				missing = append(missing, id)
-			}
+			missing = append(missing, id)
 		}
-		return fmt.Errorf("expected %d signals, got %d, missing %v", len(ws.expectedSignalIDs), len(ws.receivedSignalIDs), missing)
+		return fmt.Errorf("expected %d signals, got %d, missing %v", ws.expectedSignalCount, len(ws.expectedSignalIDs), missing)
 	}
 	return nil
 }

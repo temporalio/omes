@@ -587,7 +587,7 @@ func TestKitchenSink(t *testing.T) {
 			name: "ClientSequence/Signal/Deduplication/MissingSignal",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					ExpectedSignalCount: 3,
+					ExpectedSignalCount: 2,
 					// ExpectedSignalIds:   []int32{1, 2, 3},
 					InitialActions: ListActionSet(
 NewTimerAction(1000),
@@ -621,7 +621,7 @@ NewTimerAction(1000),
 													SignalId: 3,
 													Variant: &DoSignal_DoSignalActions_DoActions{
 														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_1", "received"),
+															NewSetWorkflowStateAction("signal_3", "received"),
 														),
 													},
 												},
