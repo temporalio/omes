@@ -15,7 +15,7 @@ namespace Temporalio.Omes;
 public class KitchenSinkWorkflow
 {
     private readonly Queue<ActionSet> actionSetQueue = new();
-    
+
     // signal de-duplication fields
     private int expectedSignalCount = 0;
     private readonly HashSet<int> expectedSignalIds = new();
@@ -25,7 +25,7 @@ public class KitchenSinkWorkflow
     {
         await HandleSignalAsync(doSignals);
     }
-    
+
     private async Task HandleSignalAsync(DoSignal.Types.DoSignalActions signalActions)
     {
         int receivedId = signalActions.SignalId;
@@ -36,9 +36,9 @@ public class KitchenSinkWorkflow
             {
                 throw new ApplicationFailureException($"signal ID {receivedId} not expected");
             }
-            
+
             expectedSignalIds.Remove(receivedId);
-            
+
             // Get the action set to execute
             ActionSet actionSet;
             if (signalActions.DoActionsInMain is { } inMain)
@@ -53,9 +53,9 @@ public class KitchenSinkWorkflow
             {
                 throw new ApplicationFailureException("Signal actions must have a recognizable variant");
             }
-            
+
             await HandleActionSetAsync(actionSet);
-            
+
             // Check if all expected signals have been received
             if (expectedSignalCount > 0)
             {
@@ -86,7 +86,7 @@ public class KitchenSinkWorkflow
             }
         }
     }
-    
+
     private void ValidateSignalCompletion()
     {
         if (expectedSignalIds.Count > 0)
@@ -133,7 +133,7 @@ public class KitchenSinkWorkflow
                 expectedSignalIds.Add(i);
             }
         }
-        
+
         // Run all initial input actions
         if (workflowInput?.InitialActions is { } actions)
         {

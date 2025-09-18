@@ -49,7 +49,7 @@ const actionsUpdate = defineUpdate<IPayload | undefined, [DoActionsUpdate]>('do_
 export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPayload | undefined> {
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
-  
+
   // signal de-duplication fields
   let expectedSignalCount = 0;
   const expectedSignalIds = new Set<number>();
@@ -217,9 +217,9 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       if (!expectedSignalIds.has(receivedId)) {
         throw new ApplicationFailure(`signal ID ${receivedId} not expected`);
       }
-      
+
       expectedSignalIds.delete(receivedId);
-      
+
       // Get the action set to execute
       let actionSet: IActionSet;
       if (actions.doActionsInMain) {
@@ -229,16 +229,16 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       } else {
         throw new ApplicationFailure('Actions signal received with no actions!');
       }
-      
+
       await handleActionSet(actionSet);
-      
+
       // Check if all expected signals have been received
       if (expectedSignalCount > 0) {
         try {
           validateSignalCompletion();
           workflowState = WorkflowState.create({
             ...workflowState,
-            kvs: { ...workflowState.kvs, signals_complete: 'true' }
+            kvs: { ...workflowState.kvs, signals_complete: 'true' },
           });
           console.log('all expected signals received, completing workflow');
         } catch (e) {
@@ -256,12 +256,14 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       }
     }
   }
-  
+
   function validateSignalCompletion(): void {
     if (expectedSignalIds.size > 0) {
       const missing = Array.from(expectedSignalIds).join(', ');
       throw new Error(
-        `expected ${expectedSignalCount} signals, got ${expectedSignalCount - expectedSignalIds.size}, missing ${missing}`
+        `expected ${expectedSignalCount} signals, got ${
+          expectedSignalCount - expectedSignalIds.size
+        }, missing ${missing}`
       );
     }
   }
@@ -292,7 +294,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       expectedSignalIds.add(i);
     }
   }
-  
+
   // Run all initial input actions
   if (input?.initialActions) {
     for (const actionSet of input.initialActions) {

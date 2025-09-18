@@ -33,7 +33,7 @@ from protos.kitchen_sink_pb2 import (
 class KitchenSinkWorkflow:
     action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
     workflow_state = WorkflowState()
-    
+
     # signal de-duplication fields
     expected_signal_count: int = 0
     expected_signal_ids: set[int] = set()
@@ -44,24 +44,28 @@ class KitchenSinkWorkflow:
         if received_id != 0:
             # Handle signal with ID for deduplication
             if received_id not in self.expected_signal_ids:
-                raise exceptions.ApplicationError(f"signal ID {received_id} not expected")
-            
+                raise exceptions.ApplicationError(
+                    f"signal ID {received_id} not expected"
+                )
+
             self.expected_signal_ids.discard(received_id)
-            
+
             # Get the action set to execute
             if signal_actions.HasField("do_actions_in_main"):
                 action_set = signal_actions.do_actions_in_main
             else:
                 action_set = signal_actions.do_actions
-            
+
             await self.handle_action_set(action_set)
-            
+
             # Check if all expected signals have been received
             if self.expected_signal_count > 0:
                 try:
                     self.validate_signal_completion()
                     self.workflow_state.kvs["signals_complete"] = "true"
-                    workflow.logger.info("all expected signals received, completing workflow")
+                    workflow.logger.info(
+                        "all expected signals received, completing workflow"
+                    )
                 except Exception as e:
                     workflow.logger.error(f"signal validation error: {e}")
         else:
