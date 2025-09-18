@@ -17,7 +17,8 @@ func listScenariosCmd() *cobra.Command {
 			var descs []string
 			for name, scen := range loadgen.GetScenarios() {
 				var defaultConfigDesc string
-				if iface, _ := scen.Executor.(loadgen.HasDefaultConfiguration); iface != nil {
+				executor := scen.ExecutorFn()
+				if iface, _ := executor.(loadgen.HasDefaultConfiguration); iface != nil {
 					config := iface.GetDefaultConfiguration()
 					config.ApplyDefaults()
 					defaultConfigDesc = "\n    Default configuration:"
