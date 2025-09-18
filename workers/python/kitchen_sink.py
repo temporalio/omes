@@ -37,17 +37,37 @@ class KitchenSinkWorkflow:
     # signal de-duplication fields
     expected_signal_count: int = 0
     expected_signal_ids: set[int] = set()
+    received_signal_ids: set[int] = set()
+    early_signals: list[DoSignal.DoSignalActions] = []
 
     @workflow.signal
     async def do_actions_signal(self, signal_actions: DoSignal.DoSignalActions) -> None:
         received_id = signal_actions.signal_id
         if received_id != 0:
             # Handle signal with ID for deduplication
+            # If we haven't initialized yet (expected_signal_count is 0), queue the signal for later processing
+            # This can happen if signals arrive before the run method initializes the expected signals
+            if self.expected_signal_count == 0:
+                workflow.logger.info(
+                    f"Signal ID {received_id} received before workflow initialization, queuing for later"
+                )
+                self.early_signals.append(signal_actions)
+                return
+
             if received_id not in self.expected_signal_ids:
                 raise exceptions.ApplicationError(
-                    f"signal ID {received_id} not expected"
+                    f"signal ID {received_id} not expected, expecting {list(self.expected_signal_ids)}"
                 )
 
+            # Check for duplicate signals
+            if received_id in self.received_signal_ids:
+                workflow.logger.info(
+                    f"Duplicate signal ID {received_id} received, ignoring"
+                )
+                return
+
+            # Mark signal as received
+            self.received_signal_ids.add(received_id)
             self.expected_signal_ids.discard(received_id)
 
             # Get the action set to execute
@@ -100,6 +120,11 @@ class KitchenSinkWorkflow:
         if input and input.expected_signal_count > 0:
             self.expected_signal_count = input.expected_signal_count
             self.expected_signal_ids = set(range(1, input.expected_signal_count + 1))
+
+        # Process any early signals that arrived before initialization
+        for early_signal in self.early_signals:
+            await self.do_actions_signal(early_signal)
+        self.early_signals.clear()
 
         # Run all initial input actions
         if input and input.initial_actions:
@@ -219,8 +244,9 @@ class KitchenSinkWorkflow:
         """Validate that all expected signals have been received."""
         if len(self.expected_signal_ids) > 0:
             missing = list(self.expected_signal_ids)
+            received = list(self.received_signal_ids)
             raise exceptions.ApplicationError(
-                f"expected {self.expected_signal_count} signals, got {self.expected_signal_count - len(self.expected_signal_ids)}, missing {missing}"
+                f"expected {self.expected_signal_count} signals, got {self.expected_signal_count - len(self.expected_signal_ids)}, missing {missing}, received {received}"
             )
 
 

@@ -216,7 +216,11 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     if (receivedId !== 0) {
       // Handle signal with ID for deduplication
       if (!expectedSignalIds.has(receivedId)) {
-        throw new ApplicationFailure(`signal ID ${receivedId} not expected, expecting ${Array.from(expectedSignalIds).join(', ')}`);
+        throw new ApplicationFailure(
+          `signal ID ${receivedId} not expected, expecting ${Array.from(expectedSignalIds).join(
+            ', '
+          )}`
+        );
       }
 
       // Check for duplicate signals
@@ -279,7 +283,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   }
 
   setHandler(reportStateQuery, (_) => workflowState);
-  
+
   // Initialize expected signal tracking BEFORE setting up signal handlers
   if (input?.expectedSignalCount && input.expectedSignalCount > 0) {
     expectedSignalCount = input.expectedSignalCount;
