@@ -40,7 +40,7 @@ func InitSearchAttribute(
 		info.Logger.Infof("Search Attribute %q added", attributeName)
 	}
 
-	// Since adding a search attribute is eventually consistent, we verify it exists before proceeding.
+	// Since there is a cache for search attributes, we verify it exists before proceeding.
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		listResp, err := info.Client.OperatorService().ListSearchAttributes(ctx,
