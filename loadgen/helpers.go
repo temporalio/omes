@@ -40,7 +40,28 @@ func InitSearchAttribute(
 		info.Logger.Infof("Search Attribute %q added", attributeName)
 	}
 
-	return nil
+	// Since adding a search attribute is eventually consistent, we verify it exists before proceeding.
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		listResp, err := info.Client.OperatorService().ListSearchAttributes(ctx,
+			&operatorservice.ListSearchAttributesRequest{
+				Namespace: info.Namespace,
+			})
+
+		if err == nil {
+			if customAttrs := listResp.GetCustomAttributes(); customAttrs != nil {
+				if _, exists := customAttrs[attributeName]; exists {
+					info.Logger.Infof("Search Attribute %q verified", attributeName)
+					return nil
+				}
+			}
+		} else {
+			info.Logger.Warnf("Failed to list search attributes: %v", err)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("could not find Search Attribute %q", attributeName)
 }
 
 func MinVisibilityCountEventually(
