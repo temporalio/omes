@@ -135,6 +135,11 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	fmt.Println("Formatting TypeScript worker...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "format"); err != nil {
+		return err
+	}
+
 	fmt.Println("Linting TypeScript worker...")
 	if err := runCommandInDir(ctx, workerDir, "npm", "run", "lint"); err != nil {
 		return err
