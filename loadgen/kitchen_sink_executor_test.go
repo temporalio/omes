@@ -731,6 +731,33 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
+			name: "ExecActivity/Client/DoSelfDescribe",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(
+								&ClientAction{
+									Variant: &ClientAction_DoSelfDescribe{
+										DoSelfDescribe: &DoSelfDescribe{
+											Namespace:  "default",
+											WorkflowId: "", // Empty string means current workflow
+											RunId:      "", // Empty string means latest run
+										},
+									},
+								},
+							),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
