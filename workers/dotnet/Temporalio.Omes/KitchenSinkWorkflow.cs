@@ -62,9 +62,15 @@ public class KitchenSinkWorkflow
                 try
                 {
                     ValidateSignalCompletion();
-                    var kvs = CurrentWorkflowState.Kvs.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    kvs["signals_complete"] = "true";
-                    CurrentWorkflowState = CurrentWorkflowState with { Kvs = kvs };
+                    var newState = new WorkflowState();
+                    // Copy existing KVS entries
+                    foreach (var kvp in CurrentWorkflowState.Kvs)
+                    {
+                        newState.Kvs[kvp.Key] = kvp.Value;
+                    }
+                    // Add the signals_complete flag
+                    newState.Kvs["signals_complete"] = "true";
+                    CurrentWorkflowState = newState;
                     Workflow.Logger.LogInformation("all expected signals received, completing workflow");
                 }
                 catch (Exception e)

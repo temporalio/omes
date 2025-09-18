@@ -53,6 +53,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   // signal de-duplication fields
   let expectedSignalCount = 0;
   const expectedSignalIds = new Set<number>();
+  const receivedSignalIds = new Set<number>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
     let rval: IPayload | undefined;
@@ -215,9 +216,17 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     if (receivedId !== 0) {
       // Handle signal with ID for deduplication
       if (!expectedSignalIds.has(receivedId)) {
-        throw new ApplicationFailure(`signal ID ${receivedId} not expected`);
+        throw new ApplicationFailure(`signal ID ${receivedId} not expected, expecting ${Array.from(expectedSignalIds).join(', ')}`);
       }
 
+      // Check for duplicate signals
+      if (receivedSignalIds.has(receivedId)) {
+        console.log(`Duplicate signal ID ${receivedId} received, ignoring`);
+        return;
+      }
+
+      // Mark signal as received
+      receivedSignalIds.add(receivedId);
       expectedSignalIds.delete(receivedId);
 
       // Get the action set to execute
@@ -260,15 +269,25 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   function validateSignalCompletion(): void {
     if (expectedSignalIds.size > 0) {
       const missing = Array.from(expectedSignalIds).join(', ');
+      const received = Array.from(receivedSignalIds).join(', ');
       throw new Error(
         `expected ${expectedSignalCount} signals, got ${
           expectedSignalCount - expectedSignalIds.size
-        }, missing ${missing}`
+        }, missing ${missing}, received ${received}`
       );
     }
   }
 
   setHandler(reportStateQuery, (_) => workflowState);
+  
+  // Initialize expected signal tracking BEFORE setting up signal handlers
+  if (input?.expectedSignalCount && input.expectedSignalCount > 0) {
+    expectedSignalCount = input.expectedSignalCount;
+    for (let i = 1; i <= expectedSignalCount; i++) {
+      expectedSignalIds.add(i);
+    }
+  }
+
   setHandler(actionsSignal, async (actions) => {
     await handleSignal(actions);
   });
@@ -286,14 +305,6 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       },
     }
   );
-
-  // Initialize expected signal tracking
-  if (input?.expectedSignalCount && input.expectedSignalCount > 0) {
-    expectedSignalCount = input.expectedSignalCount;
-    for (let i = 1; i <= expectedSignalCount; i++) {
-      expectedSignalIds.add(i);
-    }
-  }
 
   // Run all initial input actions
   if (input?.initialActions) {

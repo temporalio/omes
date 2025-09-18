@@ -250,7 +250,10 @@ func (env *TestEnvironment) ensureWorkerBuilt(t *testing.T, sdk cmdoptions.Langu
 	err := workerBuildErrs[sdk]
 	workerMutex.RUnlock()
 
-	require.NoError(t, err, "Failed to build worker for SDK %s", sdk)
+	if err != nil {
+		t.Logf("Failed to build worker for SDK %s: %v", sdk, err)
+		require.NoError(t, err, "Failed to build worker for SDK %s", sdk)
+	}
 }
 
 func (env *TestEnvironment) startWorker(
