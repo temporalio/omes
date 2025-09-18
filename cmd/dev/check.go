@@ -103,6 +103,11 @@ func checkJavaWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	fmt.Println("Formatting Java worker...")
+	if err := runCommandInDir(ctx, workerDir, "./gradlew", "spotlessApply"); err != nil {
+		return err
+	}
+
 	if err := runCommandInDir(ctx, workerDir, "./gradlew", "check"); err != nil {
 		return err
 	}
