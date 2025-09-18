@@ -65,6 +65,9 @@ message DoSignal {
       // they will then be run.
       ActionSet do_actions_in_main = 2;
     }
+
+    // The id of the signal to send. This is used to track the signal and ensure that the worker properly deduplicates signals.
+    int32 signal_id = 3;
   }
   oneof variant {
     // A signal handler must exist named `do_actions_signal` which is responsible for handling the
@@ -127,6 +130,9 @@ message WorkflowState {
 
 message WorkflowInput {
   repeated ActionSet initial_actions = 1;
+
+  // Number of signals the client will send to the workflow
+  int32 expected_signal_count = 2;
 }
 
 // A set of actions to execute concurrently or sequentially. It is necessary to be able to represent
