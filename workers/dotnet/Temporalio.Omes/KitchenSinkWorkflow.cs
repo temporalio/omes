@@ -19,6 +19,8 @@ public class KitchenSinkWorkflow
     // signal de-duplication fields
     private int expectedSignalCount = 0;
     private readonly HashSet<int> expectedSignalIds = new();
+    private readonly HashSet<int> receivedSignalIds = new();
+    private readonly List<DoSignal.Types.DoSignalActions> earlySignals = new();
 
     [WorkflowSignal("do_actions_signal")]
     public async Task DoActionsSignalAsync(DoSignal.Types.DoSignalActions doSignals)
@@ -32,11 +34,28 @@ public class KitchenSinkWorkflow
         if (receivedId != 0)
         {
             // Handle signal with ID for deduplication
-            if (!expectedSignalIds.Contains(receivedId))
+            // If we haven't initialized yet (expectedSignalCount is 0), queue the signal for later processing
+            if (expectedSignalCount == 0)
             {
-                throw new ApplicationFailureException($"signal ID {receivedId} not expected");
+                Workflow.Logger.LogInformation("Signal ID {SignalId} received before workflow initialization, queuing for later", receivedId);
+                earlySignals.Add(signalActions);
+                return;
             }
 
+            if (!expectedSignalIds.Contains(receivedId))
+            {
+                throw new ApplicationFailureException($"signal ID {receivedId} not expected, expecting [{string.Join(", ", expectedSignalIds)}]");
+            }
+
+            // Check for duplicate signals
+            if (receivedSignalIds.Contains(receivedId))
+            {
+                Workflow.Logger.LogInformation("Duplicate signal ID {SignalId} received, ignoring", receivedId);
+                return;
+            }
+
+            // Mark signal as received
+            receivedSignalIds.Add(receivedId);
             expectedSignalIds.Remove(receivedId);
 
             // Get the action set to execute
@@ -98,8 +117,9 @@ public class KitchenSinkWorkflow
         if (expectedSignalIds.Count > 0)
         {
             var missing = string.Join(", ", expectedSignalIds);
+            var received = string.Join(", ", receivedSignalIds);
             throw new ApplicationFailureException(
-                $"expected {expectedSignalCount} signals, got {expectedSignalCount - expectedSignalIds.Count}, missing {missing}");
+                $"expected {expectedSignalCount} signals, got {expectedSignalCount - expectedSignalIds.Count}, missing {missing}, received {received}");
         }
     }
 
@@ -140,6 +160,13 @@ public class KitchenSinkWorkflow
             }
         }
 
+        // Process any early signals that arrived before initialization
+        foreach (var earlySignal in earlySignals)
+        {
+            await HandleSignalAsync(earlySignal);
+        }
+        earlySignals.Clear();
+
         // Run all initial input actions
         if (workflowInput?.InitialActions is { } actions)
         {
@@ -148,7 +175,7 @@ public class KitchenSinkWorkflow
                 var returnMe = await HandleActionSetAsync(actionSet);
                 if (returnMe != null)
                 {
-                    return null;
+                    return returnMe;
                 }
             }
         }

@@ -27,10 +27,12 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public static final Logger log = Workflow.getLogger(KitchenSinkWorkflowImpl.class);
   KitchenSink.WorkflowState state = KitchenSink.WorkflowState.getDefaultInstance();
   WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(1_000);
-  
+
   // signal de-duplication fields
   int expectedSignalCount = 0;
   Map<Integer, Object> expectedSignalIds = new HashMap<>();
+  Map<Integer, Object> receivedSignalIds = new HashMap<>();
+  List<KitchenSink.DoSignal.DoSignalActions> earlySignals = new ArrayList<>();
 
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
@@ -41,7 +43,13 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
         expectedSignalIds.put(i, null);
       }
     }
-    
+
+    // Process any early signals that arrived before initialization
+    for (KitchenSink.DoSignal.DoSignalActions earlySignal : earlySignals) {
+      handleSignal(earlySignal);
+    }
+    earlySignals.clear();
+
     // Run all initial input actions
     if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
@@ -66,18 +74,38 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public void doActionsSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
     handleSignal(signalActions);
   }
-  
+
   private void handleSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
     int receivedId = signalActions.getSignalId();
     if (receivedId != 0) {
       // Handle signal with ID for deduplication
+      // If we haven't initialized yet (expectedSignalCount is 0), queue the signal for later
+      // processing
+      if (expectedSignalCount == 0) {
+        log.info(
+            "Signal ID "
+                + receivedId
+                + " received before workflow initialization, queuing for later");
+        earlySignals.add(signalActions);
+        return;
+      }
+
       if (!expectedSignalIds.containsKey(receivedId)) {
         throw ApplicationFailure.newNonRetryableFailure(
-            "signal ID " + receivedId + " not expected", "");
+            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds.keySet(),
+            "");
       }
-      
+
+      // Check for duplicate signals
+      if (receivedSignalIds.containsKey(receivedId)) {
+        log.info("Duplicate signal ID " + receivedId + " received, ignoring");
+        return;
+      }
+
+      // Mark signal as received
+      receivedSignalIds.put(receivedId, null);
       expectedSignalIds.remove(receivedId);
-      
+
       // Get the action set to execute
       KitchenSink.ActionSet actionSet;
       if (signalActions.hasDoActionsInMain()) {
@@ -88,9 +116,9 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
         throw ApplicationFailure.newNonRetryableFailure(
             "Signal actions must have a recognizable variant", "");
       }
-      
+
       Payload result = handleActionSet(actionSet);
-      
+
       // Check if all expected signals have been received
       if (expectedSignalCount > 0) {
         try {
@@ -113,13 +141,20 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
     }
   }
-  
+
   private void validateSignalCompletion() {
     if (expectedSignalIds.size() > 0) {
       List<Integer> missing = new ArrayList<>(expectedSignalIds.keySet());
+      List<Integer> received = new ArrayList<>(receivedSignalIds.keySet());
       throw new RuntimeException(
-          "expected " + expectedSignalCount + " signals, got " + 
-          (expectedSignalCount - expectedSignalIds.size()) + ", missing " + missing);
+          "expected "
+              + expectedSignalCount
+              + " signals, got "
+              + (expectedSignalCount - expectedSignalIds.size())
+              + ", missing "
+              + missing
+              + ", received "
+              + received);
     }
   }
 
