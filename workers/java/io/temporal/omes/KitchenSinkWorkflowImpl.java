@@ -27,9 +27,21 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public static final Logger log = Workflow.getLogger(KitchenSinkWorkflowImpl.class);
   KitchenSink.WorkflowState state = KitchenSink.WorkflowState.getDefaultInstance();
   WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(1_000);
+  
+  // signal de-duplication fields
+  int expectedSignalCount = 0;
+  Map<Integer, Object> expectedSignalIds = new HashMap<>();
 
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
+    // Initialize expected signal tracking
+    if (input != null && input.getExpectedSignalCount() > 0) {
+      expectedSignalCount = input.getExpectedSignalCount();
+      for (int i = 1; i <= expectedSignalCount; i++) {
+        expectedSignalIds.put(i, null);
+      }
+    }
+    
     // Run all initial input actions
     if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
@@ -52,13 +64,62 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
   @Override
   public void doActionsSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
-    if (signalActions.hasDoActionsInMain()) {
-      signalActionQueue.put(signalActions.getDoActionsInMain());
-    } else if (signalActions.hasDoActions()) {
-      signalActionQueue.put(signalActions.getDoActions());
+    handleSignal(signalActions);
+  }
+  
+  private void handleSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
+    int receivedId = signalActions.getSignalId();
+    if (receivedId != 0) {
+      // Handle signal with ID for deduplication
+      if (!expectedSignalIds.containsKey(receivedId)) {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "signal ID " + receivedId + " not expected", "");
+      }
+      
+      expectedSignalIds.remove(receivedId);
+      
+      // Get the action set to execute
+      KitchenSink.ActionSet actionSet;
+      if (signalActions.hasDoActionsInMain()) {
+        actionSet = signalActions.getDoActionsInMain();
+      } else if (signalActions.hasDoActions()) {
+        actionSet = signalActions.getDoActions();
+      } else {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "Signal actions must have a recognizable variant", "");
+      }
+      
+      Payload result = handleActionSet(actionSet);
+      
+      // Check if all expected signals have been received
+      if (expectedSignalCount > 0) {
+        try {
+          validateSignalCompletion();
+          state = state.toBuilder().putKvs("signals_complete", "true").build();
+          log.info("all expected signals received, completing workflow");
+        } catch (Exception e) {
+          log.error("signal validation error: " + e.getMessage());
+        }
+      }
     } else {
-      throw ApplicationFailure.newNonRetryableFailure(
-          "Signal actions must have a recognizable variant", "");
+      // Handle signal without ID (legacy behavior)
+      if (signalActions.hasDoActionsInMain()) {
+        signalActionQueue.put(signalActions.getDoActionsInMain());
+      } else if (signalActions.hasDoActions()) {
+        signalActionQueue.put(signalActions.getDoActions());
+      } else {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "Signal actions must have a recognizable variant", "");
+      }
+    }
+  }
+  
+  private void validateSignalCompletion() {
+    if (expectedSignalIds.size() > 0) {
+      List<Integer> missing = new ArrayList<>(expectedSignalIds.keySet());
+      throw new RuntimeException(
+          "expected " + expectedSignalCount + " signals, got " + 
+          (expectedSignalCount - expectedSignalIds.size()) + ", missing " + missing);
     }
   }
 

@@ -515,8 +515,7 @@ func TestKitchenSink(t *testing.T) {
 			name: "ClientSequence/Signal/Deduplication",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					ExpectedSignalCount: 3,
-					// ExpectedSignalIds:   []int32{1, 2, 3},
+					ExpectedSignalCount: 10,
 					InitialActions: ListActionSet(
 						NewAwaitWorkflowStateAction("signals_complete", "true"),
 					),
@@ -524,61 +523,19 @@ func TestKitchenSink(t *testing.T) {
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: []*ClientAction{
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													SignalId: 1,
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_1", "received"),
-														),
-													},
-												},
-											},
-										},
-									},
-								},
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													SignalId: 2,
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_2", "received"),
-														),
-													},
-												},
-											},
-										},
-									},
-								},
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													SignalId: 3,
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_3", "received"),
-														),
-													},
-												},
-											},
-										},
-									},
-								},
-							},
+							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
 						},
 					},
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
@@ -587,49 +544,15 @@ func TestKitchenSink(t *testing.T) {
 			name: "ClientSequence/Signal/Deduplication/MissingSignal",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					ExpectedSignalCount: 2,
-					// ExpectedSignalIds:   []int32{1, 2, 3},
+					ExpectedSignalCount: 3,
 					InitialActions: ListActionSet(
-NewTimerAction(1000),
+						NewTimerAction(1000),
 					),
 				},
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: []*ClientAction{
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													SignalId: 1,
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_1", "received"),
-														),
-													},
-												},
-											},
-										},
-									},
-								},
-								{
-									Variant: &ClientAction_DoSignal{
-										DoSignal: &DoSignal{
-											Variant: &DoSignal_DoSignalActions_{
-												DoSignalActions: &DoSignal_DoSignalActions{
-													SignalId: 3,
-													Variant: &DoSignal_DoSignalActions_DoActions{
-														DoActions: SingleActionSet(
-															NewSetWorkflowStateAction("signal_3", "received"),
-														),
-													},
-												},
-											},
-										},
-									},
-								},
-							},
+							Actions: NewSignalActionsWithIDs(1, 3),
 						},
 					},
 				},

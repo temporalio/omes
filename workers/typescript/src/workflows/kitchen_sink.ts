@@ -49,6 +49,10 @@ const actionsUpdate = defineUpdate<IPayload | undefined, [DoActionsUpdate]>('do_
 export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPayload | undefined> {
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
+  
+  // signal de-duplication fields
+  let expectedSignalCount = 0;
+  const expectedSignalIds = new Set<number>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
     let rval: IPayload | undefined;
@@ -206,15 +210,65 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     }
   }
 
+  async function handleSignal(actions: DoSignalActions): Promise<void> {
+    const receivedId = actions.signalId;
+    if (receivedId !== 0) {
+      // Handle signal with ID for deduplication
+      if (!expectedSignalIds.has(receivedId)) {
+        throw new ApplicationFailure(`signal ID ${receivedId} not expected`);
+      }
+      
+      expectedSignalIds.delete(receivedId);
+      
+      // Get the action set to execute
+      let actionSet: IActionSet;
+      if (actions.doActionsInMain) {
+        actionSet = actions.doActionsInMain;
+      } else if (actions.doActions) {
+        actionSet = actions.doActions;
+      } else {
+        throw new ApplicationFailure('Actions signal received with no actions!');
+      }
+      
+      await handleActionSet(actionSet);
+      
+      // Check if all expected signals have been received
+      if (expectedSignalCount > 0) {
+        try {
+          validateSignalCompletion();
+          workflowState = WorkflowState.create({
+            ...workflowState,
+            kvs: { ...workflowState.kvs, signals_complete: 'true' }
+          });
+          console.log('all expected signals received, completing workflow');
+        } catch (e) {
+          console.error('signal validation error:', e);
+        }
+      }
+    } else {
+      // Handle signal without ID (legacy behavior)
+      if (actions.doActionsInMain) {
+        actionsQueue.unshift(actions.doActionsInMain);
+      } else if (actions.doActions) {
+        await handleActionSet(actions.doActions);
+      } else {
+        throw new ApplicationFailure('Actions signal received with no actions!');
+      }
+    }
+  }
+  
+  function validateSignalCompletion(): void {
+    if (expectedSignalIds.size > 0) {
+      const missing = Array.from(expectedSignalIds).join(', ');
+      throw new Error(
+        `expected ${expectedSignalCount} signals, got ${expectedSignalCount - expectedSignalIds.size}, missing ${missing}`
+      );
+    }
+  }
+
   setHandler(reportStateQuery, (_) => workflowState);
   setHandler(actionsSignal, async (actions) => {
-    if (actions.doActionsInMain) {
-      actionsQueue.unshift(actions.doActionsInMain);
-    } else if (actions.doActions) {
-      await handleActionSet(actions.doActions);
-    } else {
-      throw new ApplicationFailure('Actions signal received with no actions!');
-    }
+    await handleSignal(actions);
   });
   setHandler(
     actionsUpdate,
@@ -231,6 +285,14 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     }
   );
 
+  // Initialize expected signal tracking
+  if (input?.expectedSignalCount && input.expectedSignalCount > 0) {
+    expectedSignalCount = input.expectedSignalCount;
+    for (let i = 1; i <= expectedSignalCount; i++) {
+      expectedSignalIds.add(i);
+    }
+  }
+  
   // Run all initial input actions
   if (input?.initialActions) {
     for (const actionSet of input.initialActions) {
