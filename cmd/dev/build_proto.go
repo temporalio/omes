@@ -53,9 +53,6 @@ func runBuildKitchensink(ctx context.Context) error {
 
 	fmt.Println("Generating TypeScript protos...")
 	typescriptWorkerDir := filepath.Join(rootDir, "workers", "typescript")
-	if err := runCommandInDir(ctx, typescriptWorkerDir, "npm", "install"); err != nil {
-		return err
-	}
 
 	if err := runCommandInDir(ctx, typescriptWorkerDir, "npm", "run", "proto-gen"); err != nil {
 		return err
