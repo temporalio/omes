@@ -2,9 +2,17 @@ name: Build docker images
 on:
   workflow_call:
     inputs:
-      lang:
-        description: SDK language to build the container for
+      build-command:
+        description: Build command to run (e.g., 'build-worker-image' or 'build-cli-image')
         required: true
+        type: string
+      push-command:
+        description: Push command to run (e.g., 'build-push-worker-image' or 'build-push-cli-image')
+        required: true
+        type: string
+      lang:
+        description: SDK language to build the container for (only for worker images)
+        required: false
         type: string
       sdk-repo-ref:
         description: Git ref of SDK repo to use to build (overrides "sdk-version")
@@ -15,7 +23,7 @@ on:
         required: false
         type: string
       sdk-version:
-        description: Version of SDK to use (ignored if "sdk-repo-ref" is provided)
+        description: Version of SDK to use (ignored if "sdk-repo-ref" is provided, not used for CLI images)
         required: false
         type: string
       docker-tag-ext:
@@ -38,7 +46,7 @@ on:
 
 jobs:
   publish-dockerhub:
-    name: Publish ${{ inputs.lang }} to Docker Hub
+    name: Publish ${{ inputs.lang || 'CLI' }} to Docker Hub
     runs-on: ubuntu-latest
     if: inputs.do-push && !github.event.pull_request.head.repo.fork
     timeout-minutes: 30
@@ -80,11 +88,14 @@ jobs:
           SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
           IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}}
           TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+          LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
+          VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}
         run: |
-          go run ./cmd build-push-worker-image --language "$LANG" \
-          --version "$SDK_VERSION" \
+          go run ./cmd ${{ inputs.push-command }} \
           --platform linux/amd64,linux/arm64 \
           --repo-prefix temporaliotest \
+          $LANG_ARGS \
+          $VERSION_ARGS \
           $IMAGE_TAG_ARGS \
           $TAG_LATEST_ARGS
 
@@ -92,4 +103,4 @@ jobs:
         env:
           LANG: ${{ inputs.lang }}
         run: |
-          echo "::notice title=🐳 Docker Hub image published for $LANG::Check temporaliotest/omes tags"
+          echo "::notice title=🐳 Docker Hub image published for ${{ inputs.lang || 'CLI' }}::Check temporaliotest/omes tags"
