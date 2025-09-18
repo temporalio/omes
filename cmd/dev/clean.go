@@ -57,9 +57,8 @@ Examples:
 
 func cleanLanguage(ctx context.Context, language, rootDir string) error {
 	workerDir := filepath.Join(rootDir, "workers", language)
-	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
-		fmt.Println("Warning:", language, "worker directory not found, skipping")
-		return nil
+	if _, err := os.Stat(workerDir); err != nil {
+		return fmt.Errorf("worker directory does not exist: %s", workerDir)
 	}
 
 	fmt.Println("Cleaning", language)
