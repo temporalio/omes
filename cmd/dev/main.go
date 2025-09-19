@@ -14,6 +14,10 @@ func main() {
 	}
 
 	rootCmd.AddCommand(buildProtoCmd())
+	rootCmd.AddCommand(buildWorkerImageCmd())
+	rootCmd.AddCommand(buildPushWorkerImageCmd())
+	rootCmd.AddCommand(buildCliImageCmd())
+	rootCmd.AddCommand(buildPushCliImageCmd())
 	rootCmd.AddCommand(testCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(installCmd())

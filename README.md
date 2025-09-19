@@ -146,7 +146,7 @@ go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activ
 For example, to build a go worker image using v1.24.0 of the Temporal Go SDK:
 
 ```sh
-go run ./cmd build-worker-image --language go --version v1.24.0
+go run ./cmd/dev build-worker-image --language go --version v1.24.0
 ```
 
 This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.

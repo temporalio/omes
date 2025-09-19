@@ -200,3 +200,8 @@ func checkTool(ctx context.Context, tool string) error {
 	}
 	return nil
 }
+
+func repoDir() string {
+	_, currFile, _, _ := runtime.Caller(0)
+	return filepath.Dir(filepath.Dir(filepath.Dir(currFile)))
+}
