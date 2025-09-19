@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -259,15 +260,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
 
-	info.Logger.Info(fmt.Sprintf(`Scenario completion summary:
-  Total iterations completed: %d
-  Total child workflows: %d (%d per iteration)
-  Total continue-as-new workflows: %d (%d per iteration)
-  Total workflows completed: %d`,
-		completedIterations,
-		completedChildWorkflows, t.config.InternalIterations,
-		continueAsNewWorkflows, continueAsNewPerIter,
-		completedWorkflows))
+	var sb strings.Builder
+	sb.WriteString("[Scenario completion summary] ")
+	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
+	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
+	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
+	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
+	info.Logger.Info(sb.String())
 
 	// Post-scenario: verify that at least one iteration was completed.
 	if completedIterations == 0 {
