@@ -60,6 +60,8 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
+      build-command: build-worker-image
+      push-command: build-push-worker-image
       lang: go
       sdk-version: ${{ inputs.go-version }}
       do-push: ${{ inputs.do-push }}
@@ -70,6 +72,8 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
+      build-command: build-worker-image
+      push-command: build-push-worker-image
       lang: python
       sdk-version: ${{ inputs.py-version }}
       do-push: ${{ inputs.do-push }}
@@ -80,6 +84,8 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
+      build-command: build-worker-image
+      push-command: build-push-worker-image
       lang: java
       sdk-version: ${{ inputs.java-version }}
       do-push: ${{ inputs.do-push }}
@@ -90,6 +96,8 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
+      build-command: build-worker-image
+      push-command: build-push-worker-image
       lang: typescript
       sdk-version: ${{ inputs.ts-version }}
       do-push: ${{ inputs.do-push }}
@@ -100,7 +108,18 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
+      build-command: build-worker-image
+      push-command: build-push-worker-image
       lang: dotnet
       sdk-version: ${{ inputs.dotnet-version }}
+      do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
+
+  build-cli-docker-images:
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      build-command: build-cli-image
+      push-command: build-push-cli-image
       do-push: ${{ inputs.do-push }}
       as-latest: ${{ inputs.as-latest }}

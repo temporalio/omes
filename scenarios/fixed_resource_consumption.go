@@ -62,58 +62,60 @@ func parallelRandomDelays(
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Used for testing slot provider performance. Runs activities that consume certain amounts of resources.",
-		Executor: loadgen.KitchenSinkExecutor{
-			TestInput: &kitchensink.TestInput{
-				WorkflowInput: &kitchensink.WorkflowInput{
-					InitialActions: []*kitchensink.ActionSet{
-						// Add a short warm up so metrics can get emitted
-						{
-							Actions: []*kitchensink.Action{
-								{
-									Variant: &kitchensink.Action_ExecActivity{
-										ExecActivity: &kitchensink.ExecuteActivityAction{
-											ActivityType: &kitchensink.ExecuteActivityAction_Delay{
-												Delay: durationpb.New(time.Second * 2),
+		ExecutorFn: func() loadgen.Executor {
+			return loadgen.KitchenSinkExecutor{
+				TestInput: &kitchensink.TestInput{
+					WorkflowInput: &kitchensink.WorkflowInput{
+						InitialActions: []*kitchensink.ActionSet{
+							// Add a short warm up so metrics can get emitted
+							{
+								Actions: []*kitchensink.Action{
+									{
+										Variant: &kitchensink.Action_ExecActivity{
+											ExecActivity: &kitchensink.ExecuteActivityAction{
+												ActivityType: &kitchensink.ExecuteActivityAction_Delay{
+													Delay: durationpb.New(time.Second * 2),
+												},
+												StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
 											},
-											StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
 										},
 									},
 								},
 							},
-						},
 
-						// Essentially not bound. Hard to get node to actually use this memory.
-						parallelResourcesActions(6, int(math.Pow(10, 9)), 10_000_000, 5, 30),
+							// Essentially not bound. Hard to get node to actually use this memory.
+							parallelResourcesActions(6, int(math.Pow(10, 9)), 10_000_000, 5, 30),
 
-						// This section ends up being quite CPU bound.
-						parallelResourcesActions(300, int(math.Pow(10, 8)), 1_000_000, 2, 5),
+							// This section ends up being quite CPU bound.
+							parallelResourcesActions(300, int(math.Pow(10, 8)), 1_000_000, 2, 5),
 
-						// An IO bound scenario where the activities aren't doing much work and
-						// mostly waiting
-						parallelRandomDelays(1000, time.Millisecond*100, time.Second*5),
+							// An IO bound scenario where the activities aren't doing much work and
+							// mostly waiting
+							parallelRandomDelays(1000, time.Millisecond*100, time.Second*5),
 
-						// Add a short delay before finishing so metrics can get emitted
-						{
-							Actions: []*kitchensink.Action{
-								{
-									Variant: &kitchensink.Action_ExecActivity{
-										ExecActivity: &kitchensink.ExecuteActivityAction{
-											ActivityType: &kitchensink.ExecuteActivityAction_Delay{
-												Delay: durationpb.New(time.Second * 5),
+							// Add a short delay before finishing so metrics can get emitted
+							{
+								Actions: []*kitchensink.Action{
+									{
+										Variant: &kitchensink.Action_ExecActivity{
+											ExecActivity: &kitchensink.ExecuteActivityAction{
+												ActivityType: &kitchensink.ExecuteActivityAction_Delay{
+													Delay: durationpb.New(time.Second * 5),
+												},
+												StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
 											},
-											StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
 										},
 									},
 								},
 							},
-						},
-						{
-							Actions: []*kitchensink.Action{
+							{
+								Actions: []*kitchensink.Action{
 
-								{
-									Variant: &kitchensink.Action_ReturnResult{
-										ReturnResult: &kitchensink.ReturnResultAction{
-											ReturnThis: &common.Payload{},
+									{
+										Variant: &kitchensink.Action_ReturnResult{
+											ReturnResult: &kitchensink.ReturnResultAction{
+												ReturnThis: &common.Payload{},
+											},
 										},
 									},
 								},
@@ -121,7 +123,7 @@ func init() {
 						},
 					},
 				},
-			},
+			}
 		},
 	})
 }

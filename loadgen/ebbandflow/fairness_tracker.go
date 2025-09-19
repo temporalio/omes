@@ -7,6 +7,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"golang.org/x/exp/maps"
 )
 
 // 2.0 means P95 can be up to 2x the P50 before violation.
@@ -125,12 +127,7 @@ func (ft *FairnessTracker) GetReport() (*FairnessReport, error) {
 	}
 
 	// Extract P95 values for distribution analysis
-	p95Slice := make([]float64, len(p95Values))
-	i := 0
-	for _, p95 := range p95Values {
-		p95Slice[i] = p95
-		i++
-	}
+	p95Slice := maps.Values(p95Values)
 	sort.Float64s(p95Slice)
 
 	// Calculate weight-adjusted P95 values for all metrics.
