@@ -21,7 +21,7 @@ import (
 
 type Scenario struct {
 	Description string
-	Executor    Executor
+	ExecutorFn  func() Executor
 }
 
 // Executor for a scenario.
