@@ -55,8 +55,8 @@ Examples:
 	return cmd
 }
 
-func cleanLanguage(ctx context.Context, language, rootDir string) error {
-	workerDir := filepath.Join(rootDir, "workers", language)
+func cleanLanguage(ctx context.Context, language, repoDir string) error {
+	workerDir := filepath.Join(repoDir, "workers", language)
 	if _, err := os.Stat(workerDir); err != nil {
 		return fmt.Errorf("worker directory does not exist: %s", workerDir)
 	}
@@ -71,7 +71,7 @@ func cleanLanguage(ctx context.Context, language, rootDir string) error {
 }
 
 func runClean(ctx context.Context, languages []string, cleanAll bool) error {
-	rootDir, err := getRootDir()
+	repoDir, err := getRepoDir()
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func runClean(ctx context.Context, languages []string, cleanAll bool) error {
 
 		// Remove omes-temp-* directories
 		fmt.Println("Removing omes-temp-* directories...")
-		workersDir := filepath.Join(rootDir, "workers")
+		workersDir := filepath.Join(repoDir, "workers")
 		if err := removeTempDirs(workersDir); err != nil {
 			fmt.Printf("Warning: failed to remove temp directories: %v\n", err)
 		}
@@ -90,7 +90,7 @@ func runClean(ctx context.Context, languages []string, cleanAll bool) error {
 	}
 
 	for _, lang := range languages {
-		if err := cleanLanguage(ctx, lang, rootDir); err != nil {
+		if err := cleanLanguage(ctx, lang, repoDir); err != nil {
 			if cleanAll {
 				fmt.Printf("Warning: failed to clean %s: %v\n", lang, err)
 			} else {

@@ -87,20 +87,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Load versions
-        run: |
-          set -a && source versions.env && set +a
-          printenv >> $GITHUB_ENV
-      - name: Set SDK version variable
-        run: |
-          SDK_VAR_NAME="${{ matrix.sdk }}_SDK_VERSION"
-          SDK_VAR_NAME=$(echo "$SDK_VAR_NAME" | tr '[:lower:]' '[:upper:]')
-          echo "SDK_VERSION=${!SDK_VAR_NAME}" >> $GITHUB_ENV
       - name: Build ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev build-worker-image \
             --language ${{ matrix.sdk }} \
-            --version v${{ env.SDK_VERSION }} \
             --tag-as-latest
       - name: Start ${{ matrix.sdk }} worker image
         run: |

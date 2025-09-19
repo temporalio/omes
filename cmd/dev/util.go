@@ -48,7 +48,7 @@ func getVersion(tool string) (string, error) {
 		}
 	}
 
-	key := strings.ToUpper(strings.ReplaceAll(tool, "-", "_")) + "_VERSION"
+	key := strings.ToLower(strings.ReplaceAll(strings.ToLower(tool), "-", "_")) + "_version"
 	version := versionsCache[key]
 	if version == "" {
 		return "", fmt.Errorf("version not found for %s (var: %s)", tool, key)
@@ -89,34 +89,34 @@ func runCommandOutput(ctx context.Context, name string, args ...string) (string,
 	return string(output), err
 }
 
-// getRootDir returns the project's root directory
-func getRootDir() (string, error) {
+// getRepoDir returns the project's root directory
+func getRepoDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		return "", fmt.Errorf("failed to get source file location")
 	}
 	sourceDir := filepath.Dir(filename) // cmd/dev
 	cmdDir := filepath.Dir(sourceDir)   // cmd
-	rootDir := filepath.Dir(cmdDir)     // project root
-	return rootDir, nil
+	repoDir := filepath.Dir(cmdDir)     // project root
+	return repoDir, nil
 }
 
 // getWorkerDir returns the worker directory for the given language
 func getWorkerDir(language string) (string, error) {
-	rootDir, err := getRootDir()
+	repoDir, err := getRepoDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(rootDir, "workers", language), nil
+	return filepath.Join(repoDir, "workers", language), nil
 }
 
 // loadVersions parses versions.env file and returns a map of version variables
 func loadVersions() (map[string]string, error) {
-	rootDir, err := getRootDir()
+	repoDir, err := getRepoDir()
 	if err != nil {
 		return nil, err
 	}
-	versionsFile := filepath.Join(rootDir, "versions.env")
+	versionsFile := filepath.Join(repoDir, "versions.env")
 	if _, err := os.Stat(versionsFile); err == nil {
 		return parseVersionsFile(versionsFile)
 	}
@@ -145,7 +145,7 @@ func parseVersionsFile(filename string) (map[string]string, error) {
 			continue
 		}
 
-		key := strings.TrimSpace(parts[0])
+		key := strings.ToLower(strings.TrimSpace(parts[0]))
 		value := strings.TrimSpace(parts[1])
 		versions[key] = value
 	}
@@ -199,9 +199,4 @@ func checkTool(ctx context.Context, tool string) error {
 		}
 	}
 	return nil
-}
-
-func repoDir() string {
-	_, currFile, _, _ := runtime.Caller(0)
-	return filepath.Dir(filepath.Dir(filepath.Dir(currFile)))
 }

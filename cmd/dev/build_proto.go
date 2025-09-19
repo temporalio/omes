@@ -34,13 +34,13 @@ func runBuildKitchensink(ctx context.Context) error {
 		return err
 	}
 
-	rootDir, err := getRootDir()
+	repoDir, err := getRepoDir()
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("Building kitchen-sink-gen...")
-	kitchenSinkGenDir := filepath.Join(rootDir, "loadgen", "kitchen-sink-gen")
+	kitchenSinkGenDir := filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
 
 	// Set PROTOC environment variable to use the correct protoc
 	protocPath, _ := exec.LookPath("protoc") // already validated earlier
@@ -52,7 +52,7 @@ func runBuildKitchensink(ctx context.Context) error {
 	}
 
 	fmt.Println("Generating TypeScript protos...")
-	typescriptWorkerDir := filepath.Join(rootDir, "workers", "typescript")
+	typescriptWorkerDir := filepath.Join(repoDir, "workers", "typescript")
 
 	if err := runCommandInDir(ctx, typescriptWorkerDir, "npm", "run", "proto-gen"); err != nil {
 		return err

@@ -150,9 +150,10 @@ go run ./cmd/dev build-worker-image --language go --version v1.24.0
 ```
 
 This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
+If version is not specified, the SDK version specified in `versions.env` will be used.
 
-Publishing images is typically done via CI, using the `push-images` command. See the GHA workflows
-for more.
+Publishing images is done via CI, using the `build-push-worker-image` command.
+See the GHA workflows for more information.
 
 ## Specific Scenarios
 

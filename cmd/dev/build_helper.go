@@ -117,13 +117,17 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 }
 
 func (b *baseImageBuilder) executeDockerBuild(ctx context.Context, args []string, imageTagsForPublish []string) error {
-	args = append(args, repoDir())
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return fmt.Errorf("failed to get root directory: %w", err)
+	}
+	args = append(args, repoDir)
 	b.logger.Infof("Running: docker %v", strings.Join(args, " "))
 	if b.dryRun {
 		return nil
 	}
 
-	err := writeGitHubEnv("BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
+	err = writeGitHubEnv("BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
 	if err != nil {
 		return fmt.Errorf("writing image tags to github env failed: %s", err)
 	}

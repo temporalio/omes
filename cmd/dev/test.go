@@ -53,7 +53,7 @@ Examples:
 }
 
 func runTestWorker(ctx context.Context, language string) error {
-	rootDir, err := getRootDir()
+	repoDir, err := getRepoDir()
 	if err != nil {
 		return err
 	}
@@ -70,10 +70,10 @@ func runTestWorker(ctx context.Context, language string) error {
 	if err := checkTool(ctx, language); err != nil {
 		return err
 	}
-	return testWorkerLocally(ctx, rootDir, language, sdkVersion)
+	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
 }
 
-func testWorkerLocally(ctx context.Context, rootDir, language, sdkVersion string) error {
+func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string) error {
 	args := []string{
 		"go", "run", "./cmd", "run-scenario-with-worker",
 		"--scenario", testScenario,
@@ -83,7 +83,7 @@ func testWorkerLocally(ctx context.Context, rootDir, language, sdkVersion string
 		"--iterations", testIterations,
 		"--version", "v" + sdkVersion,
 	}
-	return runCommandInDir(ctx, rootDir, args[0], args[1:]...)
+	return runCommandInDir(ctx, repoDir, args[0], args[1:]...)
 }
 
 
