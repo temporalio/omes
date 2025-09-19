@@ -6,7 +6,7 @@ FROM --platform=linux/$TARGETARCH eclipse-temurin:11-jammy AS build
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.12.4* git=1:2.34.1-1ubuntu1 unzip=6.0-26ubuntu3*
+      protobuf-compiler=3.12.4* git=1:2.34.1-1ubuntu1
 
 # Get go compiler
 ARG TARGETARCH
