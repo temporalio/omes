@@ -215,6 +215,28 @@ jobs:
           path: generator.diff
           if-no-files-found: ignore
 
+  build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build CLI image
+        run: |
+          go run ./cmd build-cli-image
+      - name: Test CLI image
+        run: |
+          IMAGE_TAG=$(echo "$BUILT_IMAGE_TAGS" | cut -d';' -f1)
+          docker run --rm --pull never $IMAGE_TAG --help
+          docker run --rm --pull never $IMAGE_TAG list-scenarios
+          docker run --rm --pull never --entrypoint /app/kitchen-sink-gen $IMAGE_TAG --help
+
   # env cannot be referenced in jobs.<job_id>.with.<with_id>, so we need a job to run before
   # to append a "v" to the version string
   prepare-for-docker-push:
@@ -240,7 +262,7 @@ jobs:
           echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-  push-latest-docker-images:
+  push-docker-images:
     needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
