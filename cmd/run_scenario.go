@@ -156,7 +156,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir(),
 	}
-	err = scenario.Executor.Run(ctx, scenarioInfo)
+	executor := scenario.ExecutorFn()
+	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
