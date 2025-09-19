@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -58,17 +57,14 @@ type TestResult struct {
 
 type TestEnvironment struct {
 	testEnvConfig
-	createdAt          time.Time
-	devServer          *testsuite.DevServer
-	temporalClient     client.Client
-	baseDir            string
-	buildDir           string
-	repoDir            string
-	nexusEndpointName  string
-	workerMutex        sync.RWMutex
-	workerBuildOnce    map[cmdoptions.Language]*sync.Once
-	workerBuildErrs    map[cmdoptions.Language]error
-	workerCleanupFuncs []func()
+	createdAt         time.Time
+	devServer         *testsuite.DevServer
+	temporalClient    client.Client
+	baseDir           string
+	buildDir          string
+	repoDir           string
+	nexusEndpointName string
+	workerPool        *workerPool
 }
 
 func (env *TestEnvironment) TemporalClient() client.Client {
@@ -113,14 +109,13 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	repoDir := filepath.Dir(testDir)
 
 	env := &TestEnvironment{
-		testEnvConfig:   cfg,
-		devServer:       server,
-		temporalClient:  temporalClient,
-		repoDir:         repoDir,
-		createdAt:       time.Now(),
-		workerBuildOnce: map[cmdoptions.Language]*sync.Once{},
-		workerBuildErrs: map[cmdoptions.Language]error{},
+		testEnvConfig:  cfg,
+		devServer:      server,
+		temporalClient: temporalClient,
+		repoDir:        repoDir,
+		createdAt:      time.Now(),
 	}
+	env.workerPool = NewWorkerPool(env)
 
 	// Optionally create a Nexus endpoint
 	if cfg.nexusTaskQueue != "" {
@@ -143,12 +138,7 @@ func (env *TestEnvironment) cleanup() {
 	if env.devServer != nil {
 		env.devServer.Stop()
 	}
-
-	env.workerMutex.Lock()
-	defer env.workerMutex.Unlock()
-	for _, cleanupFunc := range env.workerCleanupFuncs {
-		cleanupFunc()
-	}
+	env.workerPool.cleanup()
 }
 
 func (env *TestEnvironment) createNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
@@ -184,7 +174,11 @@ func (env *TestEnvironment) RunExecutorTest(
 	observeLogger, observedLogs := observer.New(zap.DebugLevel)
 	logger := zap.New(zapcore.NewTee(testLogger, observeLogger)).Sugar()
 
-	env.ensureWorkerBuilt(t, logger, sdk)
+	err := env.workerPool.ensureWorkerBuilt(t, logger, sdk)
+	if err != nil {
+		return TestResult{ObservedLogs: observedLogs},
+			fmt.Errorf("Failed to build worker for SDK %s: %w", sdk, err)
+	}
 
 	testCtx, cancelTestCtx := context.WithTimeout(t.Context(), env.executorTimeout)
 	defer cancelTestCtx()
@@ -196,7 +190,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Namespace = testNamespace
 
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
-	workerDone := env.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
+	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
 
 	execErr := executor.Run(testCtx, scenarioInfo)
 
@@ -206,7 +200,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	// Wait for worker shutdown.
 	var workerErr error
 	select {
-	case workerErr = <-workerDone:
+	case workerErr = <-workerShutdownCh:
 		if workerErr != nil {
 			t.Logf("Worker shutdown with error: %v", workerErr)
 		}
@@ -214,94 +208,8 @@ func (env *TestEnvironment) RunExecutorTest(
 		workerErr = fmt.Errorf("timed out waiting for worker shutdown")
 	}
 
-	return TestResult{ObservedLogs: observedLogs}, errors.Join(execErr, workerErr)
-}
-
-func (env *TestEnvironment) ensureWorkerBuilt(
-	t *testing.T,
-	logger *zap.SugaredLogger,
-	sdk cmdoptions.Language,
-) {
-	env.workerMutex.Lock()
-	once, exists := env.workerBuildOnce[sdk]
-	if !exists {
-		once = new(sync.Once)
-		env.workerBuildOnce[sdk] = once
-	}
-	env.workerMutex.Unlock()
-
-	once.Do(func() {
-		baseDir := BaseDir(env.repoDir, sdk)
-		dirName := env.buildDirName()
-		buildDir := filepath.Join(baseDir, dirName)
-
-		env.workerMutex.Lock()
-		env.workerCleanupFuncs = append(env.workerCleanupFuncs, func() {
-			if err := os.RemoveAll(buildDir); err != nil {
-				fmt.Printf("Failed to clean up build dir for %s at %s: %v\n", sdk, buildDir, err)
-			}
-		})
-		env.workerMutex.Unlock()
-
-		builder := Builder{
-			DirName:    dirName,
-			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-			Logger:     logger.Named(fmt.Sprintf("%s-builder", sdk)),
-		}
-
-		buildCtx, buildCancel := context.WithTimeout(t.Context(), workerBuildTimeout)
-		defer buildCancel()
-
-		_, err := builder.Build(buildCtx, baseDir)
-
-		env.workerMutex.Lock()
-		env.workerBuildErrs[sdk] = err
-		env.workerMutex.Unlock()
-	})
-
-	env.workerMutex.RLock()
-	err := env.workerBuildErrs[sdk]
-	env.workerMutex.RUnlock()
-
-	require.NoError(t, err, "Failed to build worker for SDK %s", sdk)
-}
-
-func (env *TestEnvironment) startWorker(
-	ctx context.Context,
-	logger *zap.SugaredLogger,
-	sdk cmdoptions.Language,
-	taskQueueName string,
-	scenarioInfo loadgen.ScenarioInfo,
-) <-chan error {
-	workerDone := make(chan error, 1)
-
-	go func() {
-		defer close(workerDone)
-		baseDir := BaseDir(env.repoDir, sdk)
-		runner := &Runner{
-			Builder: Builder{
-				DirName:    env.buildDirName(),
-				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
-				Logger:     logger.Named(fmt.Sprintf("%s-worker-builder", sdk)),
-			},
-			TaskQueueName:            taskQueueName,
-			GracefulShutdownDuration: workerShutdownTimeout,
-			ScenarioID: cmdoptions.ScenarioID{
-				Scenario: scenarioInfo.ScenarioName,
-				RunID:    scenarioInfo.RunID,
-			},
-			ClientOptions: cmdoptions.ClientOptions{
-				Address:   env.DevServerAddress(),
-				Namespace: testNamespace,
-			},
-			LoggingOptions: cmdoptions.LoggingOptions{
-				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
-			},
-		}
-		workerDone <- runner.Run(ctx, baseDir)
-	}()
-
-	return workerDone
+	return TestResult{ObservedLogs: observedLogs},
+		errors.Join(execErr, workerErr)
 }
 
 func (env *TestEnvironment) buildDirName() string {
