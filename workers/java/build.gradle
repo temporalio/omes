@@ -25,6 +25,8 @@ spotless {
     }
 }
 
+compileJava.dependsOn spotlessJava
+
 dependencies {
     implementation 'ch.qos.logback:logback-classic:1.2.13'
     implementation 'com.google.guava:guava:31.0.1-jre'
@@ -41,7 +43,6 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "com.fasterxml.jackson.core:jackson-core"
     implementation 'com.google.protobuf:protobuf-java:3.25.0'
-
 }
 
 sourceSets {

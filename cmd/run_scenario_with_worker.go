@@ -55,7 +55,14 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	workerErrCh := make(chan error, 1)
 	workerStartCh := make(chan struct{})
 	r.OnWorkerStarted = func() { close(workerStartCh) }
-	go func() { workerErrCh <- r.Run(ctx, workers.BaseDir(repoDir(), r.SdkOptions.Language)) }()
+	go func() {
+		repoDir, err := getRepoDir()
+		if err != nil {
+			workerErrCh <- fmt.Errorf("failed to get root directory: %w", err)
+			return
+		}
+		workerErrCh <- r.Run(ctx, workers.BaseDir(repoDir, r.SdkOptions.Language))
+	}()
 	select {
 	case err := <-workerErrCh:
 		return fmt.Errorf("worker did not start: %w", err)
@@ -93,3 +100,4 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	}
 	return nil
 }
+

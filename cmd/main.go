@@ -14,10 +14,6 @@ func main() {
 		Short: "A load generator for Temporal",
 	}
 
-	rootCmd.AddCommand(buildWorkerImageCmd())
-	rootCmd.AddCommand(buildPushWorkerImageCmd())
-	rootCmd.AddCommand(buildCliImageCmd())
-	rootCmd.AddCommand(buildPushCliImageCmd())
 	rootCmd.AddCommand(cleanupScenarioCmd())
 	rootCmd.AddCommand(listScenariosCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())

@@ -91,7 +91,7 @@ jobs:
           LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
           VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}
         run: |
-          go run ./cmd ${{ inputs.push-command }} \
+          go run ./cmd/dev ${{ inputs.push-command }} \
           --platform linux/amd64,linux/arm64 \
           --repo-prefix temporaliotest \
           $LANG_ARGS \

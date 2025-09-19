@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"time"
@@ -62,8 +63,13 @@ func (r *workerRunner) preRun() {
 }
 
 func (r *workerRunner) run(ctx context.Context) error {
-	return r.Run(ctx, workers.BaseDir(repoDir(), r.SdkOptions.Language))
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return fmt.Errorf("failed to get root directory: %w", err)
+	}
+	return r.Run(ctx, workers.BaseDir(repoDir, r.SdkOptions.Language))
 }
+
 
 func withCancelOnInterrupt(ctx context.Context) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(ctx)
