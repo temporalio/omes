@@ -14,7 +14,6 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
@@ -289,25 +288,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	for _, status := range []enums.WorkflowExecutionStatus{
-		enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, enums.WORKFLOW_EXECUTION_STATUS_FAILED,
-	} {
-		statusQuery := fmt.Sprintf(
-			"%s='%s' and ExecutionStatus = '%s'",
-			ThroughputStressScenarioIdSearchAttribute, info.RunID, status)
-		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query:     statusQuery,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to run query %q: %w", statusQuery, err)
-		}
-		if visibilityCount.Count > 0 {
-			return fmt.Errorf("unexpected %d workflows with status %s", visibilityCount.Count, status)
-		}
-	}
-
-	return nil
+	return loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID)
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
@@ -338,7 +319,6 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
-	fmt.Println("Updating state on iteration completion", t.state.CompletedIterations)
 }
 
 func (t *tpsExecutor) createActions(iteration int) []*ActionSet {

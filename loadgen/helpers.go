@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
@@ -99,5 +100,35 @@ func MinVisibilityCountEventually(
 		}
 	}
 
+	return nil
+}
+
+// VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
+func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string) error {
+	var errors []string
+
+	for _, status := range []enums.WorkflowExecutionStatus{
+		enums.WORKFLOW_EXECUTION_STATUS_TERMINATED,
+		enums.WORKFLOW_EXECUTION_STATUS_FAILED,
+	} {
+		statusQuery := fmt.Sprintf(
+			"%s='%s' and ExecutionStatus = '%s'",
+			searchAttribute, runID, status)
+		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
+			Namespace: info.Namespace,
+			Query:     statusQuery,
+		})
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("failed to run query %q: %v", statusQuery, err))
+			continue
+		}
+		if visibilityCount.Count > 0 {
+			errors = append(errors, fmt.Sprintf("unexpected %d workflows with status %s", visibilityCount.Count, status))
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("workflow verification failed: %s", strings.Join(errors, "; "))
+	}
 	return nil
 }
