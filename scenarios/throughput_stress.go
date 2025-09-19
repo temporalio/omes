@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -244,22 +245,28 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	t.lock.Lock()
-	var completedIterations = t.state.CompletedIterations
+	completedIterations := t.state.CompletedIterations
 	t.lock.Unlock()
-	info.Logger.Info("Total iterations completed: ", completedIterations)
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
-	info.Logger.Info("Total child workflows: ", completedChildWorkflows)
 
+	var continueAsNewPerIter int
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
 		// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
-		continueAsNewWorkflows = ((t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter) * completedIterations
+		continueAsNewPerIter = (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
-	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
 
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
-	info.Logger.Info("Total workflows completed: ", completedWorkflows)
+
+	var sb strings.Builder
+	sb.WriteString("[Scenario completion summary] ")
+	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
+	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
+	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
+	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
+	info.Logger.Info(sb.String())
 
 	// Post-scenario: verify that at least one iteration was completed.
 	if completedIterations == 0 {
