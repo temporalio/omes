@@ -35,9 +35,9 @@ func TestThroughputStress(t *testing.T) {
 		},
 	}
 
-	executor := &tpsExecutor{state: &tpsState{}}
-
 	t.Run("Run executor", func(t *testing.T) {
+		executor := newThroughputStressExecutor()
+
 		_, err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
@@ -46,6 +46,8 @@ func TestThroughputStress(t *testing.T) {
 	})
 
 	t.Run("Run executor again, resuming from middle", func(t *testing.T) {
+		executor := newThroughputStressExecutor()
+
 		err := executor.LoadState(func(v any) error {
 			s := v.(*tpsState)
 			s.CompletedIterations = 0 // execution will start from iteration 1
@@ -58,6 +60,8 @@ func TestThroughputStress(t *testing.T) {
 	})
 
 	t.Run("Run executor again, resuming from end", func(t *testing.T) {
+		executor := newThroughputStressExecutor()
+
 		err := executor.LoadState(func(v any) error {
 			s := v.(*tpsState)
 			s.CompletedIterations = s.CompletedIterations
