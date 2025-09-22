@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +23,7 @@ type baseImageBuilder struct {
 	saveImage      string
 	tags           []string
 	labels         []string
-	loggingOptions cmdoptions.LoggingOptions
+	loggingOptions clioptions.LoggingOptions
 }
 
 func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {

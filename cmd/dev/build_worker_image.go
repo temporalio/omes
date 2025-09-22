@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"golang.org/x/mod/semver"
 )
 
@@ -47,7 +47,7 @@ func buildPushWorkerImageCmd() *cobra.Command {
 
 type workerImageBuilder struct {
 	baseImageBuilder
-	sdkOptions cmdoptions.SdkOptions
+	sdkOptions clioptions.SdkOptions
 }
 
 func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {

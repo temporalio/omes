@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -69,7 +69,6 @@ func (r *workerRunner) run(ctx context.Context) error {
 	}
 	return r.Run(ctx, workers.BaseDir(repoDir, r.SdkOptions.Language))
 }
-
 
 func withCancelOnInterrupt(ctx context.Context) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(ctx)

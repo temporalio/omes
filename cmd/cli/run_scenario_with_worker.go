@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers"
 )
 
@@ -35,7 +35,7 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 type workerWithScenarioRunner struct {
 	workerRunner
 	scenarioRunConfig
-	metricsOptions cmdoptions.MetricsOptions
+	metricsOptions clioptions.MetricsOptions
 }
 
 func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -100,4 +100,3 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	}
 	return nil
 }
-

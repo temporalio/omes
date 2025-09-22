@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/batch/v1"
 	"go.temporal.io/api/enums/v1"
@@ -40,10 +40,10 @@ func cleanupScenarioCmd() *cobra.Command {
 type scenarioCleaner struct {
 	logger         *zap.SugaredLogger
 	pollInterval   time.Duration
-	scenario       cmdoptions.ScenarioID
-	clientOptions  cmdoptions.ClientOptions
-	metricsOptions cmdoptions.MetricsOptions
-	loggingOptions cmdoptions.LoggingOptions
+	scenario       clioptions.ScenarioID
+	clientOptions  clioptions.ClientOptions
+	metricsOptions clioptions.MetricsOptions
+	loggingOptions clioptions.LoggingOptions
 }
 
 func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {

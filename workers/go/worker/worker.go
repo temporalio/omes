@@ -5,7 +5,7 @@ import (
 
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/spf13/cobra"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"go.temporal.io/sdk/activity"
@@ -21,10 +21,10 @@ type App struct {
 	taskQueueIndexSuffixStart int
 	taskQueueIndexSuffixEnd   int
 
-	loggingOptions cmdoptions.LoggingOptions
-	clientOptions  cmdoptions.ClientOptions
-	metricsOptions cmdoptions.MetricsOptions
-	workerOptions  cmdoptions.WorkerOptions
+	loggingOptions clioptions.LoggingOptions
+	clientOptions  clioptions.ClientOptions
+	metricsOptions clioptions.MetricsOptions
+	workerOptions  clioptions.WorkerOptions
 }
 
 func (a *App) Run(cmd *cobra.Command, args []string) {
@@ -53,7 +53,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
-func runWorkers(client client.Client, taskQueues []string, options cmdoptions.WorkerOptions) error {
+func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{
@@ -127,7 +127,7 @@ func Main() {
 		if app.logger != nil {
 			app.logger.Fatal(err)
 		} else {
-			cmdoptions.BackupLogger.Fatal(err)
+			clioptions.BackupLogger.Fatal(err)
 		}
 	}
 }
