@@ -359,8 +359,7 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, 256, DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
-			// TODO: add support to kitchen sink for a client action that calls DescribeWorkflowExecution
-			// ClientActivity(ClientActions(t.createSelfDescribe())),
+			ClientActivity(ClientActions(t.createSelfDescribe(iteration)), DefaultRemoteActivity),
 		}
 
 		childCount++
@@ -484,6 +483,18 @@ func (t *tpsExecutor) createSelfQuery() *ClientAction {
 				Variant: &DoQuery_ReportState{
 					ReportState: &common.Payloads{},
 				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfDescribe(iteration int) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoSelfDescribe{
+			DoSelfDescribe: &DoSelfDescribe{
+				Namespace:  "default",
+				WorkflowId: workflowID(t.runID, iteration),
+				RunId:      t.runID,
 			},
 		},
 	}
