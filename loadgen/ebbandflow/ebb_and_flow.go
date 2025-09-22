@@ -15,7 +15,7 @@ type WorkflowOutput struct {
 }
 
 type ActivityTiming struct {
-	FairnessKey       string        `json:"fairnessKey"`
-	FairnessWeight    float32       `json:"fairnessWeight"`
-	ScheduleToStartMS time.Duration `json:"scheduleToStartMS"`
+	FairnessKey     string        `json:"k"`
+	FairnessWeight  float32       `json:"w"`
+	ScheduleToStart time.Duration `json:"d"`
 }

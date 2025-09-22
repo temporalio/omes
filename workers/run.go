@@ -85,7 +85,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 		// Build
 		if prog, err = r.Build(ctx, baseDir); err != nil {
-			return err
+			return fmt.Errorf("failed building worker: %w", err)
 		}
 	} else {
 		var err error
@@ -133,6 +133,12 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
+
+	// Direct logging output to provided logger, if available.
+	if r.LoggingOptions.PreparedLogger != nil {
+		cmd.Stdout = &logWriter{logger: r.LoggingOptions.PreparedLogger}
+		cmd.Stderr = &logWriter{logger: r.LoggingOptions.PreparedLogger}
+	}
 
 	// Start the command. Do not use the context so we can send interrupt.
 	r.Logger.Infof("Starting worker with command: %v", cmd.Args)

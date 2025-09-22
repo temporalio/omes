@@ -16,6 +16,8 @@ func main() {
 
 	rootCmd.AddCommand(buildWorkerImageCmd())
 	rootCmd.AddCommand(buildPushWorkerImageCmd())
+	rootCmd.AddCommand(buildCliImageCmd())
+	rootCmd.AddCommand(buildPushCliImageCmd())
 	rootCmd.AddCommand(cleanupScenarioCmd())
 	rootCmd.AddCommand(listScenariosCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())

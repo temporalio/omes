@@ -48,7 +48,7 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 	}
 
 	if len(report.Violations) == 0 {
-		logger.Info("Fairness passed", commonFields...)
+		logger.Info("Fairness status: passed", commonFields...)
 	} else {
 		// Join violations for logging
 		var violations []string
@@ -67,7 +67,7 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 				offender.ViolationSeverity)
 			errorFields = append(errorFields, fmt.Sprintf("topViolator%d", i+1), violatorSummary)
 		}
-		logger.Error("Fairness violation", errorFields...)
+		logger.Error("Fairness status: violated", errorFields...)
 	}
 
 	// Emit metrics.

@@ -862,7 +862,7 @@ func testUnsupportedFeature(
 		executor: executor,
 		sdk:      sdk,
 	}
-	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
 	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
@@ -881,7 +881,7 @@ func testSupportedFeature(
 		executor: executor,
 		sdk:      sdk,
 	}
-	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
