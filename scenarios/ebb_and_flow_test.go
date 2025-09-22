@@ -67,7 +67,7 @@ func TestEbbAndFlow(t *testing.T) {
 	var state ebbAndFlowState
 
 	t.Run("Run executor", func(t *testing.T) {
-		executor := &ebbAndFlowExecutor{}
+		executor := newEbbAndFlowExecutor()
 
 		res, err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
@@ -80,7 +80,7 @@ func TestEbbAndFlow(t *testing.T) {
 	})
 
 	t.Run("Run executor again, resuming from previous state", func(t *testing.T) {
-		executor := &ebbAndFlowExecutor{}
+		executor := newEbbAndFlowExecutor()
 
 		// Load previous state
 		previouState := state
@@ -104,7 +104,7 @@ func TestEbbAndFlow(t *testing.T) {
 	})
 
 	t.Run("Run executor again, resuming from previous state but without any time left", func(t *testing.T) {
-		executor := &ebbAndFlowExecutor{}
+		executor := newEbbAndFlowExecutor()
 
 		// Load previous state
 		err := executor.LoadState(func(v any) error {

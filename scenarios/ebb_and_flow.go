@@ -85,8 +85,12 @@ func init() {
 			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
 			"  fairness-threshold, backlog-log-interval.\n" +
 			"Duration must be set.",
-		ExecutorFn: func() loadgen.Executor { return &ebbAndFlowExecutor{} },
+		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
 	})
+}
+
+func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
+	return &ebbAndFlowExecutor{state: &ebbAndFlowState{}}
 }
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
@@ -143,12 +147,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	if err := e.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
-
-	e.stateLock.Lock()
-	if e.state == nil {
-		e.state = &ebbAndFlowState{}
-	}
-	e.stateLock.Unlock()
 
 	e.ScenarioInfo = info
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.RunID)
