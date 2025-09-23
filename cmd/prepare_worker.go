@@ -1,8 +1,7 @@
 package main
 
 import (
-	"path/filepath"
-	"runtime"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -19,7 +18,11 @@ func prepareWorkerCmd() *cobra.Command {
 			b.preRun()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			baseDir := workers.BaseDir(repoDir(), b.SdkOptions.Language)
+			repoDir, err := getRepoDir()
+			if err != nil {
+				b.Logger.Fatal(fmt.Errorf("failed to get root directory: %w", err))
+			}
+			baseDir := workers.BaseDir(repoDir, b.SdkOptions.Language)
 			if _, err := b.Build(cmd.Context(), baseDir); err != nil {
 				b.Logger.Fatal(err)
 			}
@@ -44,9 +47,4 @@ func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
 
 func (b *workerBuilder) preRun() {
 	b.Logger = b.loggingOptions.MustCreateLogger()
-}
-
-func repoDir() string {
-	_, currFile, _, _ := runtime.Caller(0)
-	return filepath.Dir(filepath.Dir(currFile))
 }

@@ -137,6 +137,11 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 	defer client.Close()
 
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return fmt.Errorf("failed to get root directory: %w", err)
+	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
@@ -154,7 +159,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
-		RootPath:        repoDir(),
+		RootPath:        repoDir,
 	}
 	executor := scenario.ExecutorFn()
 	err = executor.Run(ctx, scenarioInfo)
@@ -163,3 +168,4 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 	return nil
 }
+
