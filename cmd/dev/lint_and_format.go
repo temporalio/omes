@@ -9,21 +9,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func checkCmd() *cobra.Command {
+func lintAndFormatCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "check [language...]",
-		Short: "Check worker for specified language(s)",
-		Long: fmt.Sprintf(`Check worker for specified language(s) by
-  (1) formatting source code,
-  (2) and compiling (if applicable).
+		Use:   "lint-and-format [language...]",
+		Short: "Lint-and-format worker for specified language(s)",
+		Long: fmt.Sprintf(`Lint and format worker for specified language(s)
 
 Supported languages: %s
 
 Examples:
-  dev check                           # All languages (default)
-  dev check all                       # All languages
-  dev check go                        # Single language
-  dev check go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev lint-and-format                    # All languages (default)
+  dev lint-and-format all                # All languages
+  dev lint-and-format go                 # Single language
+  dev lint-and-format go java python     # Multiple languages`, strings.Join(supportedLanguages, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var languages []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
@@ -36,26 +34,26 @@ Examples:
 				}
 				languages = args
 			}
-			return runCheckWorkers(cmd.Context(), languages)
+			return runLintAndFormatWorkers(cmd.Context(), languages)
 		},
 	}
 }
 
-func runCheckWorkers(ctx context.Context, languages []string) error {
-	fmt.Println("Checking", strings.Join(languages, ", "), "worker(s)...")
+func runLintAndFormatWorkers(ctx context.Context, languages []string) error {
+	fmt.Println("Linting and formatting", strings.Join(languages, ", "), "worker(s)...")
 
 	for _, lang := range languages {
-		if err := checkWorker(ctx, lang); err != nil {
-			return fmt.Errorf("failed to check %s: %v", lang, err)
+		if err := lintAndFormatWorker(ctx, lang); err != nil {
+			return fmt.Errorf("failed to lint-and-format %s: %v", lang, err)
 		}
 	}
 
 	return nil
 }
 
-func checkWorker(ctx context.Context, language string) error {
+func lintAndFormatWorker(ctx context.Context, language string) error {
 	fmt.Println("\n===========================================")
-	fmt.Println("Checking", language, "worker")
+	fmt.Println("Linting and formatting", language, "worker")
 	fmt.Println("===========================================")
 
 	workerDir, err := getWorkerDir(language)
@@ -65,21 +63,21 @@ func checkWorker(ctx context.Context, language string) error {
 
 	switch language {
 	case "go":
-		return checkGoWorker(ctx, workerDir)
+		return lintAndFormatGoWorker(ctx, workerDir)
 	case "java":
-		return checkJavaWorker(ctx, workerDir)
+		return lintAndFormatJavaWorker(ctx, workerDir)
 	case "python":
-		return checkPythonWorker(ctx, workerDir)
+		return lintAndFormatPythonWorker(ctx, workerDir)
 	case "typescript":
-		return checkTypescriptWorker(ctx, workerDir)
+		return lintAndFormatTypescriptWorker(ctx, workerDir)
 	case "dotnet":
-		return checkDotnetWorker(ctx, workerDir)
+		return lintAndFormatDotnetWorker(ctx, workerDir)
 	default:
 		return fmt.Errorf("unsupported language: %s", language)
 	}
 }
 
-func checkGoWorker(ctx context.Context, workerDir string) error {
+func lintAndFormatGoWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "go"); err != nil {
 		return err
 	}
@@ -94,11 +92,11 @@ func checkGoWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Go check completed successfully!")
+	fmt.Println("✅ Go lint-and-format completed successfully!")
 	return nil
 }
 
-func checkJavaWorker(ctx context.Context, workerDir string) error {
+func lintAndFormatJavaWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "java"); err != nil {
 		return err
 	}
@@ -112,11 +110,11 @@ func checkJavaWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Java check completed successfully!")
+	fmt.Println("✅ Java lint-and-format completed successfully!")
 	return nil
 }
 
-func checkPythonWorker(ctx context.Context, workerDir string) error {
+func lintAndFormatPythonWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "python"); err != nil {
 		return err
 	}
@@ -131,11 +129,11 @@ func checkPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ Python check completed successfully!")
+	fmt.Println("✅ Python lint-and-format completed successfully!")
 	return nil
 }
 
-func checkTypescriptWorker(ctx context.Context, workerDir string) error {
+func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "typescript"); err != nil {
 		return err
 	}
@@ -160,11 +158,11 @@ func checkTypescriptWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ TypeScript check completed successfully!")
+	fmt.Println("✅ TypeScript lint-and-format completed successfully!")
 	return nil
 }
 
-func checkDotnetWorker(ctx context.Context, workerDir string) error {
+func lintAndFormatDotnetWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "dotnet"); err != nil {
 		return err
 	}
@@ -179,6 +177,6 @@ func checkDotnetWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
-	fmt.Println("✅ .NET check completed successfully!")
+	fmt.Println("✅ .NET lint-and-format completed successfully!")
 	return nil
 }

@@ -66,15 +66,15 @@ jobs:
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: Check ${{ matrix.sdk }} worker
+      - name: Lint and format ${{ matrix.sdk }} worker
         run: |
-          go run ./cmd/dev check ${{ matrix.sdk }}
-      - name: Test ${{ matrix.sdk }} worker
-        run: |
-          go run ./cmd/dev test ${{ matrix.sdk }}
+          go run ./cmd/dev lint-and-format ${{ matrix.sdk }}
       - name: Check formatting
         run: |
           git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
+      - name: Test ${{ matrix.sdk }} worker
+        run: |
+          go run ./cmd/dev test ${{ matrix.sdk }}
 
   build-worker:
     runs-on: ubuntu-latest

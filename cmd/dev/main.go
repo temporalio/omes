@@ -21,7 +21,7 @@ func main() {
 	rootCmd.AddCommand(testCmd())
 	rootCmd.AddCommand(cleanCmd())
 	rootCmd.AddCommand(installCmd())
-	rootCmd.AddCommand(checkCmd())
+	rootCmd.AddCommand(lintAndFormatCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
