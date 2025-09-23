@@ -136,7 +136,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       const newInput = WorkflowInput.fromObject({
         ...WorkflowInput.toObject(action.continueAsNew.arguments![0] as any),
         expectedSignalIds: Array.from(expectedSignalIds),
-        receivedSignalIds: Array.from(receivedSignalIds)
+        receivedSignalIds: Array.from(receivedSignalIds),
       });
       await continueAsNew(newInput);
     } else if (action.timer) {
@@ -219,7 +219,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
 
   async function handleSignal(actions: DoSignalActions): Promise<void> {
     const receivedId = actions.signalId;
-    
+
     // Handle signal without ID (legacy behavior)
     if (receivedId === 0) {
       if (actions.doActionsInMain) {

@@ -104,8 +104,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
       if (!expectedSignalIds.contains(receivedId)) {
         throw ApplicationFailure.newNonRetryableFailure(
-            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds,
-            "");
+            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds, "");
       }
 
       // Check for duplicate signals
@@ -249,10 +248,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
       // Create new input with current de-duplication state
       KitchenSink.WorkflowInput originalInput = continueAsNew.getArgumentsList().get(0);
-      KitchenSink.WorkflowInput newInput = originalInput.toBuilder()
-          .addAllExpectedSignalIds(expectedSignalIds)
-          .addAllReceivedSignalIds(receivedSignalIds)
-          .build();
+      KitchenSink.WorkflowInput newInput =
+          originalInput.toBuilder()
+              .addAllExpectedSignalIds(expectedSignalIds)
+              .addAllReceivedSignalIds(receivedSignalIds)
+              .build();
       Workflow.continueAsNew(newInput);
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
