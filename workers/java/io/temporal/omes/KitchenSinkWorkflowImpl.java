@@ -247,7 +247,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     } else if (action.hasContinueAsNew()) {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
       // Create new input with current de-duplication state
-      KitchenSink.WorkflowInput originalInput = continueAsNew.getArgumentsList().get(0);
+      Payload originalPayload = continueAsNew.getArgumentsList().get(0);
+      KitchenSink.WorkflowInput originalInput = KitchenSink.WorkflowInput.parseFrom(originalPayload.getData());
       KitchenSink.WorkflowInput newInput =
           originalInput.toBuilder()
               .addAllExpectedSignalIds(expectedSignalIds)
