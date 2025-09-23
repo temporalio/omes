@@ -335,7 +335,12 @@ impl<'a> Arbitrary<'a> for WorkflowInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_initial_actions);
         let initial_actions = vec_of_size(u, num_actions)?;
-        Ok(Self { initial_actions, expected_signal_count: 0 })
+        Ok(Self { 
+            initial_actions, 
+            expected_signal_count: 0,
+            expected_signal_ids: vec![],
+            received_signal_ids: vec![]
+        })
     }
 }
 
@@ -363,6 +368,8 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
                             ARB_CONTEXT.with_borrow(|c| c.cur_workflow_state.clone()),
                         )])],
                         expected_signal_count: 0,
+                        expected_signal_ids: vec![],
+                        received_signal_ids: vec![]
                     },
                     "temporal.omes.kitchen_sink.WorkflowInput",
                 )],
@@ -639,6 +646,8 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
                 concurrent: false,
             }],
             expected_signal_count: 0,
+            expected_signal_ids: vec![],
+            received_signal_ids: vec![]
         };
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {

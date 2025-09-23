@@ -170,12 +170,16 @@ class WorkflowState(_message.Message):
     def __init__(self, kvs: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class WorkflowInput(_message.Message):
-    __slots__ = ("initial_actions", "expected_signal_count")
+    __slots__ = ("initial_actions", "expected_signal_count", "expected_signal_ids", "received_signal_ids")
     INITIAL_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_SIGNAL_COUNT_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_SIGNAL_IDS_FIELD_NUMBER: _ClassVar[int]
+    RECEIVED_SIGNAL_IDS_FIELD_NUMBER: _ClassVar[int]
     initial_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
     expected_signal_count: int
-    def __init__(self, initial_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., expected_signal_count: _Optional[int] = ...) -> None: ...
+    expected_signal_ids: _containers.RepeatedScalarFieldContainer[int]
+    received_signal_ids: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, initial_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., expected_signal_count: _Optional[int] = ..., expected_signal_ids: _Optional[_Iterable[int]] = ..., received_signal_ids: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class ActionSet(_message.Message):
     __slots__ = ("actions", "concurrent")

@@ -18,8 +18,10 @@ import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
@@ -30,8 +32,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
   // signal de-duplication fields
   int expectedSignalCount = 0;
-  Map<Integer, Object> expectedSignalIds = new HashMap<>();
-  Map<Integer, Object> receivedSignalIds = new HashMap<>();
+  Set<Integer> expectedSignalIds = new HashSet<>();
+  Set<Integer> receivedSignalIds = new HashSet<>();
   List<KitchenSink.DoSignal.DoSignalActions> earlySignals = new ArrayList<>();
 
   @Override
@@ -40,7 +42,17 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     if (input != null && input.getExpectedSignalCount() > 0) {
       expectedSignalCount = input.getExpectedSignalCount();
       for (int i = 1; i <= expectedSignalCount; i++) {
-        expectedSignalIds.put(i, null);
+        expectedSignalIds.add(i);
+      }
+    }
+
+    // Restore de-duplication state from input (used when continuing as new)
+    if (input != null) {
+      if (!input.getExpectedSignalIdsList().isEmpty()) {
+        expectedSignalIds.addAll(input.getExpectedSignalIdsList());
+      }
+      if (!input.getReceivedSignalIdsList().isEmpty()) {
+        receivedSignalIds.addAll(input.getReceivedSignalIdsList());
       }
     }
 
@@ -90,20 +102,20 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
         return;
       }
 
-      if (!expectedSignalIds.containsKey(receivedId)) {
+      if (!expectedSignalIds.contains(receivedId)) {
         throw ApplicationFailure.newNonRetryableFailure(
-            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds.keySet(),
+            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds,
             "");
       }
 
       // Check for duplicate signals
-      if (receivedSignalIds.containsKey(receivedId)) {
+      if (receivedSignalIds.contains(receivedId)) {
         log.info("Duplicate signal ID " + receivedId + " received, ignoring");
         return;
       }
 
       // Mark signal as received
-      receivedSignalIds.put(receivedId, null);
+      receivedSignalIds.add(receivedId);
       expectedSignalIds.remove(receivedId);
 
       // Get the action set to execute
@@ -144,8 +156,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
   private void validateSignalCompletion() {
     if (expectedSignalIds.size() > 0) {
-      List<Integer> missing = new ArrayList<>(expectedSignalIds.keySet());
-      List<Integer> received = new ArrayList<>(receivedSignalIds.keySet());
+      List<Integer> missing = new ArrayList<>(expectedSignalIds);
+      List<Integer> received = new ArrayList<>(receivedSignalIds);
       throw new RuntimeException(
           "expected "
               + expectedSignalCount
@@ -235,7 +247,13 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       throw ApplicationFailure.newFailure(error.getFailure().getMessage(), "");
     } else if (action.hasContinueAsNew()) {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
-      Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
+      // Create new input with current de-duplication state
+      KitchenSink.WorkflowInput originalInput = continueAsNew.getArgumentsList().get(0);
+      KitchenSink.WorkflowInput newInput = originalInput.toBuilder()
+          .addAllExpectedSignalIds(expectedSignalIds)
+          .addAllReceivedSignalIds(receivedSignalIds)
+          .build();
+      Workflow.continueAsNew(newInput);
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
       CancellationScope scope =

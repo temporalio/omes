@@ -133,6 +133,10 @@ message WorkflowInput {
 
   // Number of signals the client will send to the workflow
   int32 expected_signal_count = 2;
+
+  // Signal de-duplication state (used when continuing as new)
+  repeated int32 expected_signal_ids = 3;
+  repeated int32 received_signal_ids = 4;
 }
 
 // A set of actions to execute concurrently or sequentially. It is necessary to be able to represent
