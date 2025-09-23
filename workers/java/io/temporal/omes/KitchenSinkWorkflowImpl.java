@@ -248,13 +248,17 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
       // Create new input with current de-duplication state
       Payload originalPayload = continueAsNew.getArgumentsList().get(0);
-      KitchenSink.WorkflowInput originalInput = KitchenSink.WorkflowInput.parseFrom(originalPayload.getData());
-      KitchenSink.WorkflowInput newInput =
-          originalInput.toBuilder()
-              .addAllExpectedSignalIds(expectedSignalIds)
-              .addAllReceivedSignalIds(receivedSignalIds)
-              .build();
-      Workflow.continueAsNew(newInput);
+      try {
+        KitchenSink.WorkflowInput originalInput = KitchenSink.WorkflowInput.parseFrom(originalPayload.getData());
+        KitchenSink.WorkflowInput newInput =
+            originalInput.toBuilder()
+                .addAllExpectedSignalIds(expectedSignalIds)
+                .addAllReceivedSignalIds(receivedSignalIds)
+                .build();
+        Workflow.continueAsNew(newInput);
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw ApplicationFailure.newNonRetryableFailure("Failed to parse WorkflowInput from Payload: " + e.getMessage(), "");
+      }
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
       CancellationScope scope =
