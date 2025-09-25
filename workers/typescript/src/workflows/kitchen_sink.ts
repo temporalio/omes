@@ -50,11 +50,6 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
 
-  // signal de-duplication fields
-  let expectedSignalCount = 0;
-  const expectedSignalIds = new Set<number>();
-  const receivedSignalIds = new Set<number>();
-
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
     let rval: IPayload | undefined;
 
@@ -132,13 +127,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.returnError) {
       throw new ApplicationFailure(action.returnError.failure?.message);
     } else if (action.continueAsNew) {
-      // Create new input with current de-duplication state
-      const newInput = WorkflowInput.fromObject({
-        ...WorkflowInput.toObject(action.continueAsNew.arguments![0] as any),
-        expectedSignalIds: Array.from(expectedSignalIds),
-        receivedSignalIds: Array.from(receivedSignalIds),
-      });
-      await continueAsNew(newInput);
+      await continueAsNew(action.continueAsNew.arguments![0]);
     } else if (action.timer) {
       const ms = numify(action.timer.milliseconds);
       const sleeper = () => sleep(ms);
@@ -217,96 +206,15 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     }
   }
 
-  async function handleSignal(actions: DoSignalActions): Promise<void> {
-    const receivedId = actions.signalId;
-
-    // Handle signal without ID (legacy behavior)
-    if (receivedId === 0) {
-      if (actions.doActionsInMain) {
-        actionsQueue.unshift(actions.doActionsInMain);
-        return;
-      }
-      if (actions.doActions) {
-        await handleActionSet(actions.doActions);
-        return;
-      }
-      throw new ApplicationFailure('Actions signal received with no actions!');
-    }
-
-    // Handle signal with ID for deduplication
-    // Check for duplicate signals
-    if (receivedSignalIds.has(receivedId)) {
-      console.log(`Duplicate signal ID ${receivedId} received, ignoring`);
-      return;
-    }
-
-    // Mark signal as received
-    receivedSignalIds.add(receivedId);
-    expectedSignalIds.delete(receivedId);
-
-    // Get the action set to execute
-    let actionSet: IActionSet;
+  setHandler(reportStateQuery, (_) => workflowState);
+  setHandler(actionsSignal, async (actions) => {
     if (actions.doActionsInMain) {
-      actionSet = actions.doActionsInMain;
+      actionsQueue.unshift(actions.doActionsInMain);
     } else if (actions.doActions) {
-      actionSet = actions.doActions;
+      await handleActionSet(actions.doActions);
     } else {
       throw new ApplicationFailure('Actions signal received with no actions!');
     }
-
-    await handleActionSet(actionSet);
-
-    // Check if all expected signals have been received
-    if (expectedSignalCount > 0) {
-      try {
-        validateSignalCompletion();
-        workflowState = WorkflowState.create({
-          ...workflowState,
-          kvs: { ...workflowState.kvs, signals_complete: 'true' },
-        });
-        console.log('all expected signals received, completing workflow');
-      } catch (e) {
-        console.error('signal validation error:', e);
-      }
-    }
-  }
-
-  function validateSignalCompletion(): void {
-    if (expectedSignalIds.size > 0) {
-      const missing = Array.from(expectedSignalIds).join(', ');
-      const received = Array.from(receivedSignalIds).join(', ');
-      throw new Error(
-        `expected ${expectedSignalCount} signals, got ${
-          expectedSignalCount - expectedSignalIds.size
-        }, missing ${missing}, received ${received}`
-      );
-    }
-  }
-
-  setHandler(reportStateQuery, (_) => workflowState);
-
-  // Initialize expected signal tracking BEFORE setting up signal handlers
-  if (input?.expectedSignalCount && input.expectedSignalCount > 0) {
-    expectedSignalCount = input.expectedSignalCount;
-    for (let i = 1; i <= expectedSignalCount; i++) {
-      expectedSignalIds.add(i);
-    }
-  }
-
-  // Restore de-duplication state from input (used when continuing as new)
-  if (input?.expectedSignalIds) {
-    for (const id of input.expectedSignalIds) {
-      expectedSignalIds.add(id);
-    }
-  }
-  if (input?.receivedSignalIds) {
-    for (const id of input.receivedSignalIds) {
-      receivedSignalIds.add(id);
-    }
-  }
-
-  setHandler(actionsSignal, async (actions) => {
-    await handleSignal(actions);
   });
   setHandler(
     actionsUpdate,

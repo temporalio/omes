@@ -16,110 +16,16 @@ public class KitchenSinkWorkflow
 {
     private readonly Queue<ActionSet> actionSetQueue = new();
 
-    // signal de-duplication fields
-    private int expectedSignalCount = 0;
-    private readonly HashSet<int> expectedSignalIds = new();
-    private readonly HashSet<int> receivedSignalIds = new();
-    private readonly List<DoSignal.Types.DoSignalActions> earlySignals = new();
-
     [WorkflowSignal("do_actions_signal")]
     public async Task DoActionsSignalAsync(DoSignal.Types.DoSignalActions doSignals)
     {
-        await HandleSignalAsync(doSignals);
-    }
-
-    private async Task HandleSignalAsync(DoSignal.Types.DoSignalActions signalActions)
-    {
-        int receivedId = signalActions.SignalId;
-        if (receivedId != 0)
+        if (doSignals.DoActionsInMain is { } inMain)
         {
-            // Handle signal with ID for deduplication
-            // If we haven't initialized yet (expectedSignalCount is 0), queue the signal for later processing
-            if (expectedSignalCount == 0)
-            {
-                Workflow.Logger.LogInformation("Signal ID {SignalId} received before workflow initialization, queuing for later", receivedId);
-                earlySignals.Add(signalActions);
-                return;
-            }
-
-            if (!expectedSignalIds.Contains(receivedId))
-            {
-                throw new ApplicationFailureException($"signal ID {receivedId} not expected, expecting [{string.Join(", ", expectedSignalIds)}]");
-            }
-
-            // Check for duplicate signals
-            if (receivedSignalIds.Contains(receivedId))
-            {
-                Workflow.Logger.LogInformation("Duplicate signal ID {SignalId} received, ignoring", receivedId);
-                return;
-            }
-
-            // Mark signal as received
-            receivedSignalIds.Add(receivedId);
-            expectedSignalIds.Remove(receivedId);
-
-            // Get the action set to execute
-            ActionSet actionSet;
-            if (signalActions.DoActionsInMain is { } inMain)
-            {
-                actionSet = inMain;
-            }
-            else if (signalActions.DoActions is { } doActions)
-            {
-                actionSet = doActions;
-            }
-            else
-            {
-                throw new ApplicationFailureException("Signal actions must have a recognizable variant");
-            }
-
-            await HandleActionSetAsync(actionSet);
-
-            // Check if all expected signals have been received
-            if (expectedSignalCount > 0)
-            {
-                try
-                {
-                    ValidateSignalCompletion();
-                    var newState = new WorkflowState();
-                    // Copy existing KVS entries
-                    foreach (var kvp in CurrentWorkflowState.Kvs)
-                    {
-                        newState.Kvs[kvp.Key] = kvp.Value;
-                    }
-                    // Add the signals_complete flag
-                    newState.Kvs["signals_complete"] = "true";
-                    CurrentWorkflowState = newState;
-                    Workflow.Logger.LogInformation("all expected signals received, completing workflow");
-                }
-                catch (Exception e)
-                {
-                    Workflow.Logger.LogError("signal validation error: {Error}", e.Message);
-                }
-            }
+            actionSetQueue.Enqueue(inMain);
         }
         else
         {
-            // Handle signal without ID (legacy behavior)
-            if (signalActions.DoActionsInMain is { } inMain)
-            {
-                actionSetQueue.Enqueue(inMain);
-            }
-            else
-            {
-                await HandleActionSetAsync(signalActions.DoActions);
-            }
-        }
-    }
-
-    private void ValidateSignalCompletion()
-    {
-        if (expectedSignalIds.Count > 0)
-        {
-            var missing = string.Join(", ", expectedSignalIds);
-            var received = string.Join(", ", receivedSignalIds);
-            throw new ApplicationFailureException(
-                $"expected {expectedSignalCount} signals, got {expectedSignalCount - expectedSignalIds.Count}, missing {missing}, received {received}");
+            await HandleActionSetAsync(doSignals.DoActions);
         }
     }
 
@@ -150,23 +56,6 @@ public class KitchenSinkWorkflow
     [WorkflowRun]
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
     {
-        // Initialize expected signal tracking
-        if (workflowInput?.ExpectedSignalCount > 0)
-        {
-            expectedSignalCount = workflowInput.ExpectedSignalCount;
-            for (int i = 1; i <= expectedSignalCount; i++)
-            {
-                expectedSignalIds.Add(i);
-            }
-        }
-
-        // Process any early signals that arrived before initialization
-        foreach (var earlySignal in earlySignals)
-        {
-            await HandleSignalAsync(earlySignal);
-        }
-        earlySignals.Clear();
-
         // Run all initial input actions
         if (workflowInput?.InitialActions is { } actions)
         {
@@ -175,7 +64,7 @@ public class KitchenSinkWorkflow
                 var returnMe = await HandleActionSetAsync(actionSet);
                 if (returnMe != null)
                 {
-                    return returnMe;
+                    return null;
                 }
             }
         }

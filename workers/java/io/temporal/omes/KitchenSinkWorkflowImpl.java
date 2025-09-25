@@ -18,10 +18,8 @@ import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import org.slf4j.Logger;
 
@@ -30,38 +28,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   KitchenSink.WorkflowState state = KitchenSink.WorkflowState.getDefaultInstance();
   WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(1_000);
 
-  // signal de-duplication fields
-  int expectedSignalCount = 0;
-  Set<Integer> expectedSignalIds = new HashSet<>();
-  Set<Integer> receivedSignalIds = new HashSet<>();
-  List<KitchenSink.DoSignal.DoSignalActions> earlySignals = new ArrayList<>();
-
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
-    // Initialize expected signal tracking
-    if (input != null && input.getExpectedSignalCount() > 0) {
-      expectedSignalCount = input.getExpectedSignalCount();
-      for (int i = 1; i <= expectedSignalCount; i++) {
-        expectedSignalIds.add(i);
-      }
-    }
-
-    // Restore de-duplication state from input (used when continuing as new)
-    if (input != null) {
-      if (!input.getExpectedSignalIdsList().isEmpty()) {
-        expectedSignalIds.addAll(input.getExpectedSignalIdsList());
-      }
-      if (!input.getReceivedSignalIdsList().isEmpty()) {
-        receivedSignalIds.addAll(input.getReceivedSignalIdsList());
-      }
-    }
-
-    // Process any early signals that arrived before initialization
-    for (KitchenSink.DoSignal.DoSignalActions earlySignal : earlySignals) {
-      handleSignal(earlySignal);
-    }
-    earlySignals.clear();
-
     // Run all initial input actions
     if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
@@ -84,88 +52,13 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
   @Override
   public void doActionsSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
-    handleSignal(signalActions);
-  }
-
-  private void handleSignal(KitchenSink.DoSignal.DoSignalActions signalActions) {
-    int receivedId = signalActions.getSignalId();
-    if (receivedId != 0) {
-      // Handle signal with ID for deduplication
-      // If we haven't initialized yet (expectedSignalCount is 0), queue the signal for later
-      // processing
-      if (expectedSignalCount == 0) {
-        log.info(
-            "Signal ID "
-                + receivedId
-                + " received before workflow initialization, queuing for later");
-        earlySignals.add(signalActions);
-        return;
-      }
-
-      if (!expectedSignalIds.contains(receivedId)) {
-        throw ApplicationFailure.newNonRetryableFailure(
-            "signal ID " + receivedId + " not expected, expecting " + expectedSignalIds, "");
-      }
-
-      // Check for duplicate signals
-      if (receivedSignalIds.contains(receivedId)) {
-        log.info("Duplicate signal ID " + receivedId + " received, ignoring");
-        return;
-      }
-
-      // Mark signal as received
-      receivedSignalIds.add(receivedId);
-      expectedSignalIds.remove(receivedId);
-
-      // Get the action set to execute
-      KitchenSink.ActionSet actionSet;
-      if (signalActions.hasDoActionsInMain()) {
-        actionSet = signalActions.getDoActionsInMain();
-      } else if (signalActions.hasDoActions()) {
-        actionSet = signalActions.getDoActions();
-      } else {
-        throw ApplicationFailure.newNonRetryableFailure(
-            "Signal actions must have a recognizable variant", "");
-      }
-
-      Payload result = handleActionSet(actionSet);
-
-      // Check if all expected signals have been received
-      if (expectedSignalCount > 0) {
-        try {
-          validateSignalCompletion();
-          state = state.toBuilder().putKvs("signals_complete", "true").build();
-          log.info("all expected signals received, completing workflow");
-        } catch (Exception e) {
-          log.error("signal validation error: " + e.getMessage());
-        }
-      }
+    if (signalActions.hasDoActionsInMain()) {
+      signalActionQueue.put(signalActions.getDoActionsInMain());
+    } else if (signalActions.hasDoActions()) {
+      signalActionQueue.put(signalActions.getDoActions());
     } else {
-      // Handle signal without ID (legacy behavior)
-      if (signalActions.hasDoActionsInMain()) {
-        signalActionQueue.put(signalActions.getDoActionsInMain());
-      } else if (signalActions.hasDoActions()) {
-        signalActionQueue.put(signalActions.getDoActions());
-      } else {
-        throw ApplicationFailure.newNonRetryableFailure(
-            "Signal actions must have a recognizable variant", "");
-      }
-    }
-  }
-
-  private void validateSignalCompletion() {
-    if (!expectedSignalIds.isEmpty()) {
-      List<Integer> missing = new ArrayList<>(expectedSignalIds);
-      List<Integer> received = new ArrayList<>(receivedSignalIds);
-      throw new RuntimeException(
-          "expected "
-              + expectedSignalCount
-              + " signals, got "
-              + (expectedSignalCount - expectedSignalIds.size())
-              + ", missing "
-              + missing
-              + ", received "
-              + received);
+      throw ApplicationFailure.newNonRetryableFailure(
+          "Signal actions must have a recognizable variant", "");
     }
   }
 
@@ -246,19 +139,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       throw ApplicationFailure.newFailure(error.getFailure().getMessage(), "");
     } else if (action.hasContinueAsNew()) {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
-      // Create new input with current de-duplication state
-      Payload originalPayload = continueAsNew.getArgumentsList().get(0);
-      try {
-        KitchenSink.WorkflowInput originalInput = KitchenSink.WorkflowInput.parseFrom(originalPayload.getData());
-        KitchenSink.WorkflowInput newInput =
-            originalInput.toBuilder()
-                .addAllExpectedSignalIds(expectedSignalIds)
-                .addAllReceivedSignalIds(receivedSignalIds)
-                .build();
-        Workflow.continueAsNew(newInput);
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw ApplicationFailure.newNonRetryableFailure("Failed to parse WorkflowInput from Payload: " + e.getMessage(), "");
-      }
+      Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
       CancellationScope scope =
@@ -276,7 +157,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       KitchenSink.ExecuteChildWorkflowAction childWorkflow = action.getExecChildWorkflow();
       launchChildWorkflow(childWorkflow);
     } else if (action.hasSetWorkflowState()) {
-      state = action.getSetWorkflowState();
+      KitchenSink.WorkflowState workflowState = action.getSetWorkflowState();
+      state = workflowState;
     } else if (action.hasAwaitWorkflowState()) {
       KitchenSink.AwaitWorkflowState awaitWorkflowState = action.getAwaitWorkflowState();
       Workflow.await(
@@ -298,7 +180,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       CancellationScope scope =
           Workflow.newCancellationScope(
               () -> {
-                Promise<Void> promise =
+                Promise promise =
                     Async.procedure(
                         stub::signal, sendSignal.getSignalName(), sendSignal.getArgsList());
                 handlePromise(promise, sendSignal.getAwaitableChoice());
@@ -315,7 +197,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
     } else if (action.hasUpsertMemo()) {
       KitchenSink.UpsertMemoAction upsertMemoAction = action.getUpsertMemo();
-        Map<String, Object> memo = new HashMap<>(upsertMemoAction.getUpsertedMemo().getFieldsMap());
+      Map<String, Object> memo = new HashMap();
+      upsertMemoAction.getUpsertedMemo().getFieldsMap().forEach(memo::put);
       Workflow.upsertMemo(memo);
     } else if (action.hasNexusOperation()) {
       throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
@@ -339,7 +222,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                       .setWorkflowId(executeChildWorkflow.getWorkflowId());
               ChildWorkflowStub stub =
                   Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
-              Promise<Payload> result =
+              Promise result =
                   stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;
               switch (executeChildWorkflow.getAwaitableChoice().getConditionCase()) {
@@ -427,12 +310,12 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       retryOptions.setBackoffCoefficient(backoff);
     }
 
-    Priority.Builder priority = Priority.newBuilder();
-    io.temporal.api.common.v1.Priority priorityPB = executeActivity.getPriority();
-    if (priorityPB.getPriorityKey() > 0) {
-      priority.setPriorityKey(priorityPB.getPriorityKey());
+    Priority.Builder prio = Priority.newBuilder();
+    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
+    if (priority.getPriorityKey() > 0) {
+      prio.setPriorityKey(priority.getPriorityKey());
     }
-    if (!executeActivity.getFairnessKey().isEmpty()) {
+    if (executeActivity.getFairnessKey() != "") {
       throw new IllegalArgumentException("FairnessKey is not supported");
     }
     if (executeActivity.getFairnessWeight() > 0) {
@@ -475,7 +358,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               .setVersioningIntent(getVersioningIntent(remoteOptions.getVersioningIntent()))
               .setCancellationType(getActivityCancellationType(remoteOptions.getCancellationType()))
               .setRetryOptions(retryOptions.build())
-              .setPriority(priority.build());
+              .setPriority(prio.build());
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
         builder.setScheduleToCloseTimeout(
@@ -483,7 +366,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
 
       String taskQueue = executeActivity.getTaskQueue();
-      if (!taskQueue.isEmpty()) {
+      if (taskQueue != null && !taskQueue.isEmpty()) {
         builder.setTaskQueue(taskQueue);
       }
 

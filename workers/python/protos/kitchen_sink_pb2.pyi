@@ -102,14 +102,12 @@ class ClientAction(_message.Message):
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")
     class DoSignalActions(_message.Message):
-        __slots__ = ("do_actions", "do_actions_in_main", "signal_id")
+        __slots__ = ("do_actions", "do_actions_in_main")
         DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
         DO_ACTIONS_IN_MAIN_FIELD_NUMBER: _ClassVar[int]
-        SIGNAL_ID_FIELD_NUMBER: _ClassVar[int]
         do_actions: ActionSet
         do_actions_in_main: ActionSet
-        signal_id: int
-        def __init__(self, do_actions: _Optional[_Union[ActionSet, _Mapping]] = ..., do_actions_in_main: _Optional[_Union[ActionSet, _Mapping]] = ..., signal_id: _Optional[int] = ...) -> None: ...
+        def __init__(self, do_actions: _Optional[_Union[ActionSet, _Mapping]] = ..., do_actions_in_main: _Optional[_Union[ActionSet, _Mapping]] = ...) -> None: ...
     DO_SIGNAL_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
     WITH_START_FIELD_NUMBER: _ClassVar[int]
@@ -170,16 +168,10 @@ class WorkflowState(_message.Message):
     def __init__(self, kvs: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class WorkflowInput(_message.Message):
-    __slots__ = ("initial_actions", "expected_signal_count", "expected_signal_ids", "received_signal_ids")
+    __slots__ = ("initial_actions",)
     INITIAL_ACTIONS_FIELD_NUMBER: _ClassVar[int]
-    EXPECTED_SIGNAL_COUNT_FIELD_NUMBER: _ClassVar[int]
-    EXPECTED_SIGNAL_IDS_FIELD_NUMBER: _ClassVar[int]
-    RECEIVED_SIGNAL_IDS_FIELD_NUMBER: _ClassVar[int]
     initial_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    expected_signal_count: int
-    expected_signal_ids: _containers.RepeatedScalarFieldContainer[int]
-    received_signal_ids: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, initial_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., expected_signal_count: _Optional[int] = ..., expected_signal_ids: _Optional[_Iterable[int]] = ..., received_signal_ids: _Optional[_Iterable[int]] = ...) -> None: ...
+    def __init__(self, initial_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
 
 class ActionSet(_message.Message):
     __slots__ = ("actions", "concurrent")
