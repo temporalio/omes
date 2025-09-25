@@ -154,7 +154,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   }
 
   private void validateSignalCompletion() {
-    if (expectedSignalIds.size() > 0) {
+    if (!expectedSignalIds.isEmpty()) {
       List<Integer> missing = new ArrayList<>(expectedSignalIds);
       List<Integer> received = new ArrayList<>(receivedSignalIds);
       throw new RuntimeException(
@@ -276,8 +276,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       KitchenSink.ExecuteChildWorkflowAction childWorkflow = action.getExecChildWorkflow();
       launchChildWorkflow(childWorkflow);
     } else if (action.hasSetWorkflowState()) {
-      KitchenSink.WorkflowState workflowState = action.getSetWorkflowState();
-      state = workflowState;
+      state = action.getSetWorkflowState();
     } else if (action.hasAwaitWorkflowState()) {
       KitchenSink.AwaitWorkflowState awaitWorkflowState = action.getAwaitWorkflowState();
       Workflow.await(
@@ -299,7 +298,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       CancellationScope scope =
           Workflow.newCancellationScope(
               () -> {
-                Promise promise =
+                Promise<Void> promise =
                     Async.procedure(
                         stub::signal, sendSignal.getSignalName(), sendSignal.getArgsList());
                 handlePromise(promise, sendSignal.getAwaitableChoice());
@@ -316,8 +315,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
     } else if (action.hasUpsertMemo()) {
       KitchenSink.UpsertMemoAction upsertMemoAction = action.getUpsertMemo();
-      Map<String, Object> memo = new HashMap();
-      upsertMemoAction.getUpsertedMemo().getFieldsMap().forEach(memo::put);
+        Map<String, Object> memo = new HashMap<>(upsertMemoAction.getUpsertedMemo().getFieldsMap());
       Workflow.upsertMemo(memo);
     } else if (action.hasNexusOperation()) {
       throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
@@ -341,7 +339,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                       .setWorkflowId(executeChildWorkflow.getWorkflowId());
               ChildWorkflowStub stub =
                   Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
-              Promise result =
+              Promise<Payload> result =
                   stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;
               switch (executeChildWorkflow.getAwaitableChoice().getConditionCase()) {
@@ -429,12 +427,12 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       retryOptions.setBackoffCoefficient(backoff);
     }
 
-    Priority.Builder prio = Priority.newBuilder();
-    io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
-    if (priority.getPriorityKey() > 0) {
-      prio.setPriorityKey(priority.getPriorityKey());
+    Priority.Builder priority = Priority.newBuilder();
+    io.temporal.api.common.v1.Priority priorityPB = executeActivity.getPriority();
+    if (priorityPB.getPriorityKey() > 0) {
+      priority.setPriorityKey(priorityPB.getPriorityKey());
     }
-    if (executeActivity.getFairnessKey() != "") {
+    if (!executeActivity.getFairnessKey().isEmpty()) {
       throw new IllegalArgumentException("FairnessKey is not supported");
     }
     if (executeActivity.getFairnessWeight() > 0) {
@@ -477,7 +475,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               .setVersioningIntent(getVersioningIntent(remoteOptions.getVersioningIntent()))
               .setCancellationType(getActivityCancellationType(remoteOptions.getCancellationType()))
               .setRetryOptions(retryOptions.build())
-              .setPriority(prio.build());
+              .setPriority(priority.build());
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
         builder.setScheduleToCloseTimeout(
@@ -485,7 +483,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       }
 
       String taskQueue = executeActivity.getTaskQueue();
-      if (taskQueue != null && !taskQueue.isEmpty()) {
+      if (!taskQueue.isEmpty()) {
         builder.setTaskQueue(taskQueue);
       }
 
