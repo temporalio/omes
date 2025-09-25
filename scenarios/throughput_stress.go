@@ -79,8 +79,12 @@ func init() {
 		Description: fmt.Sprintf(
 			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
 			IterFlag, ContinueAsNewAfterIterFlag),
-		ExecutorFn: func() loadgen.Executor { return &tpsExecutor{state: &tpsState{}} },
+		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
+}
+
+func newThroughputStressExecutor() *tpsExecutor {
+	return &tpsExecutor{state: &tpsState{}}
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -355,8 +359,6 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, 256, DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
-			// TODO: add support to kitchen sink for a client action that calls DescribeWorkflowExecution
-			// ClientActivity(ClientActions(t.createSelfDescribe())),
 		}
 
 		childCount++
