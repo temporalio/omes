@@ -540,10 +540,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
 			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "not implemented",
+				cmdoptions.LangJava:       "context deadline exceeded",
 				cmdoptions.LangPython:     "context deadline exceeded",
-				cmdoptions.LangTypeScript: "not implemented",
-				cmdoptions.LangDotNet:     "not implemented",
+				cmdoptions.LangTypeScript: "context deadline exceeded",
+				cmdoptions.LangDotNet:     "context deadline exceeded",
 			},
 		},
 		{
