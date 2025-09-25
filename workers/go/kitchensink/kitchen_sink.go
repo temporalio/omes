@@ -103,29 +103,31 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			}
 
 			receivedID := sigActions.GetSignalId()
+
+			// Handle signal deduplication if signal ID is provided
 			if receivedID != 0 {
-				err := state.handleSignal(ctx, receivedID, actionSet)
+				err := state.handleSignalDeduplication(receivedID)
 				if err != nil {
-					workflow.GetLogger(ctx).Error("error handling signal", "error", err)
+					workflow.GetLogger(ctx).Error("error handling signal deduplication", "error", err)
 					retOrErrChan.Send(ctx, ReturnOrErr{nil, err})
 					return
 				}
-
-				// Check if all expected signals have been received
-				if state.expectedSignalCount > 0 {
-					if err := state.validateSignalCompletion(ctx); err != nil {
-						state.workflowState.Kvs["signals_complete"] = "true"
-						workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
-					}
-				}
-			} else {
-				workflow.Go(ctx, func(ctx workflow.Context) {
-					ret, err := state.handleActionSet(ctx, actionSet)
-					if ret != nil || err != nil {
-						retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
-					}
-				})
 			}
+
+			// Execute action set in goroutine for consistent handling
+			workflow.Go(ctx, func(ctx workflow.Context) {
+				ret, err := state.handleActionSet(ctx, actionSet)
+				if ret != nil || err != nil {
+					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
+					return
+				}
+
+				// Check if all expected signals have been received (only for signals with IDs)
+				if receivedID != 0 && state.validateSignalCompletion() {
+					state.workflowState.Kvs["signals_complete"] = "true"
+					workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
+				}
+			})
 		}
 	})
 
@@ -269,26 +271,23 @@ func (ws *KSWorkflowState) handleAction(
 	return nil, nil
 }
 
-func (ws *KSWorkflowState) handleSignal(ctx workflow.Context, signalID int32, actionset *kitchensink.ActionSet) error {
+func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) error {
 	if _, ok := ws.expectedSignalIDs[signalID]; !ok {
 		return fmt.Errorf("signal ID %d not expected", signalID)
 	}
 
 	delete(ws.expectedSignalIDs, signalID)
 
-	_, err := ws.handleActionSet(ctx, actionset)
-	return err
+	return nil
 }
 
-func (ws *KSWorkflowState) validateSignalCompletion(ctx workflow.Context) error {
-	if len(ws.expectedSignalIDs) != int(ws.expectedSignalCount) {
-		missing := []int32{}
-		for id := range ws.expectedSignalIDs {
-			missing = append(missing, id)
-		}
-		return fmt.Errorf("expected %d signals, got %d, missing %v", ws.expectedSignalCount, len(ws.expectedSignalIDs), missing)
+func (ws *KSWorkflowState) validateSignalCompletion() bool {
+	if ws.expectedSignalCount == 0 {
+		return true
 	}
-	return nil
+
+	// All signals have been received when the map is empty
+	return len(ws.expectedSignalIDs) == 0
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
