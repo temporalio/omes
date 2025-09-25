@@ -539,6 +539,12 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[cmdoptions.Language]string{
+				cmdoptions.LangJava:       "not implemented",
+				cmdoptions.LangPython:     "context deadline exceeded",
+				cmdoptions.LangTypeScript: "not implemented",
+				cmdoptions.LangDotNet:     "not implemented",
+			},
 		},
 		{
 			name: "ClientSequence/Signal/Deduplication/MissingSignal",
