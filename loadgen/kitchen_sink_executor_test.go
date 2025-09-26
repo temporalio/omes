@@ -539,11 +539,11 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava:       "context deadline exceeded",
-				cmdoptions.LangPython:     "context deadline exceeded",
-				cmdoptions.LangTypeScript: "context deadline exceeded",
-				cmdoptions.LangDotNet:     "context deadline exceeded",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "context deadline exceeded",
+				clioptions.LangPython:     "context deadline exceeded",
+				clioptions.LangTypeScript: "context deadline exceeded",
+				clioptions.LangDotNet:     "context deadline exceeded",
 			},
 		},
 		{
