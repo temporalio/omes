@@ -39,13 +39,26 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
+
+	// signal de-duplication fields
+	expectedSignalCount int32
+	expectedSignalIDs   map[int32]interface{}
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
-		workflowState: &kitchensink.WorkflowState{},
+		workflowState:       &kitchensink.WorkflowState{},
+		expectedSignalCount: 0,
+		expectedSignalIDs:   make(map[int32]interface{}),
+	}
+
+	if params != nil {
+		state.expectedSignalCount = params.ExpectedSignalCount
+		for i := int32(1); i <= state.expectedSignalCount; i++ {
+			state.expectedSignalIDs[i] = nil
+		}
 	}
 
 	// Setup query handler.
@@ -88,10 +101,31 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			if actionSet == nil {
 				actionSet = sigActions.GetDoActions()
 			}
+
+			receivedID := sigActions.GetSignalId()
+
+			// Handle signal deduplication if signal ID is provided
+			if receivedID != 0 {
+				err := state.handleSignalDeduplication(receivedID)
+				if err != nil {
+					workflow.GetLogger(ctx).Error("error handling signal deduplication", "error", err)
+					retOrErrChan.Send(ctx, ReturnOrErr{nil, err})
+					return
+				}
+			}
+
+			// Execute action set in goroutine for consistent handling
 			workflow.Go(ctx, func(ctx workflow.Context) {
 				ret, err := state.handleActionSet(ctx, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
+					return
+				}
+
+				// Check if all expected signals have been received (only for signals with IDs)
+				if receivedID != 0 && state.validateSignalCompletion() {
+					state.workflowState.Kvs["signals_complete"] = "true"
+					workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
 				}
 			})
 		}
@@ -204,7 +238,24 @@ func (ws *KSWorkflowState) handleAction(
 			return ws.handleAction(ctx, patch.GetInnerAction())
 		}
 	} else if setWfState := action.GetSetWorkflowState(); setWfState != nil {
+		// Preserve special keys that should not be overwritten
+		preservedKeys := []string{"signals_complete"}
+		preservedValues := make(map[string]string)
+		for _, key := range preservedKeys {
+			if val, exists := ws.workflowState.Kvs[key]; exists {
+				preservedValues[key] = val
+			}
+		}
+
 		ws.workflowState = setWfState
+
+		// Restore preserved keys
+		if ws.workflowState.Kvs == nil {
+			ws.workflowState.Kvs = make(map[string]string)
+		}
+		for key, val := range preservedValues {
+			ws.workflowState.Kvs[key] = val
+		}
 	} else if awaitState := action.GetAwaitWorkflowState(); awaitState != nil {
 		err := workflow.Await(ctx, func() bool {
 			if val, ok := ws.workflowState.Kvs[awaitState.Key]; ok {
@@ -235,6 +286,25 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, fmt.Errorf("unrecognized action")
 	}
 	return nil, nil
+}
+
+func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) error {
+	if _, ok := ws.expectedSignalIDs[signalID]; !ok {
+		return fmt.Errorf("signal ID %d not expected", signalID)
+	}
+
+	delete(ws.expectedSignalIDs, signalID)
+
+	return nil
+}
+
+func (ws *KSWorkflowState) validateSignalCompletion() bool {
+	if ws.expectedSignalCount == 0 {
+		return true
+	}
+
+	// All signals have been received when the map is empty
+	return len(ws.expectedSignalIDs) == 0
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {

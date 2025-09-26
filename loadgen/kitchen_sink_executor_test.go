@@ -512,6 +512,62 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
+			name: "ClientSequence/Signal/Deduplication",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 10,
+					InitialActions: ListActionSet(
+						NewAwaitWorkflowStateAction("signals_complete", "true"),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "context deadline exceeded",
+				clioptions.LangPython:     "context deadline exceeded",
+				clioptions.LangTypeScript: "context deadline exceeded",
+				clioptions.LangDotNet:     "context deadline exceeded",
+			},
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/MissingSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					InitialActions: ListActionSet(
+						NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: NewSignalActionsWithIDs(1, 3),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+		},
+		{
 			name: "ClientSequence/Signal/Custom",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{

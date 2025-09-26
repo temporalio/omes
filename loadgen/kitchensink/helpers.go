@@ -2,6 +2,7 @@ package kitchensink
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"go.temporal.io/api/common/v1"
@@ -184,6 +185,35 @@ func NewAwaitWorkflowStateAction(key, value string) *Action {
 			},
 		},
 	}
+}
+
+func NewSignalActionsWithIDs(ids ...int32) []*ClientAction {
+	actions := make([]*ClientAction, len(ids))
+	for i, id := range ids {
+		actions[i] = &ClientAction{
+			Variant: &ClientAction_DoSignal{
+				DoSignal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{
+						DoSignalActions: &DoSignal_DoSignalActions{
+							SignalId: id,
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(
+									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", id), "received"),
+								),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	// randomize the order of the actions
+	rand.Shuffle(len(actions), func(i, j int) {
+		actions[i], actions[j] = actions[j], actions[i]
+	})
+
+	return actions
 }
 
 func ConvertToPayload(newInput any) *common.Payload {
