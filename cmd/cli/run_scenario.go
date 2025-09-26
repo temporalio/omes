@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -39,12 +39,12 @@ func runScenarioCmd() *cobra.Command {
 
 type scenarioRunner struct {
 	scenarioRunConfig
-	scenario       cmdoptions.ScenarioID
+	scenario       clioptions.ScenarioID
 	logger         *zap.SugaredLogger
 	connectTimeout time.Duration
-	clientOptions  cmdoptions.ClientOptions
-	metricsOptions cmdoptions.MetricsOptions
-	loggingOptions cmdoptions.LoggingOptions
+	clientOptions  clioptions.ClientOptions
+	metricsOptions clioptions.MetricsOptions
+	loggingOptions clioptions.LoggingOptions
 }
 
 type scenarioRunConfig struct {
@@ -168,4 +168,3 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 	return nil
 }
-

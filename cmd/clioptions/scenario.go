@@ -1,4 +1,4 @@
-package cmdoptions
+package clioptions
 
 import (
 	"encoding/base32"

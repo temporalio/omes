@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -11,7 +11,8 @@ func getRepoDir() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("failed to get source file location")
 	}
-	cmdDir := filepath.Dir(filename) // cmd
+	cliDir := filepath.Dir(filename) // cli
+	cmdDir := filepath.Dir(cliDir)   // cmd
 	repoDir := filepath.Dir(cmdDir)  // project root
 	return repoDir, nil
 }

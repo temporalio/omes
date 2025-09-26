@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )
@@ -25,11 +25,11 @@ type Runner struct {
 	TaskQueueName             string
 	TaskQueueIndexSuffixStart int
 	TaskQueueIndexSuffixEnd   int
-	ScenarioID                cmdoptions.ScenarioID
-	ClientOptions             cmdoptions.ClientOptions
-	MetricsOptions            cmdoptions.MetricsOptions
-	WorkerOptions             cmdoptions.WorkerOptions
-	LoggingOptions            cmdoptions.LoggingOptions
+	ScenarioID                clioptions.ScenarioID
+	ClientOptions             clioptions.ClientOptions
+	MetricsOptions            clioptions.MetricsOptions
+	WorkerOptions             clioptions.WorkerOptions
+	LoggingOptions            clioptions.LoggingOptions
 	OnWorkerStarted           func()
 }
 
@@ -91,15 +91,15 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		var err error
 		loadDir := filepath.Join(baseDir, r.DirName)
 		switch r.SdkOptions.Language {
-		case cmdoptions.LangGo:
+		case clioptions.LangGo:
 			prog, err = sdkbuild.GoProgramFromDir(loadDir)
-		case cmdoptions.LangPython:
+		case clioptions.LangPython:
 			prog, err = sdkbuild.PythonProgramFromDir(loadDir)
-		case cmdoptions.LangJava:
+		case clioptions.LangJava:
 			prog, err = sdkbuild.JavaProgramFromDir(loadDir)
-		case cmdoptions.LangTypeScript:
+		case clioptions.LangTypeScript:
 			prog, err = sdkbuild.TypeScriptProgramFromDir(loadDir)
-		case cmdoptions.LangDotNet:
+		case clioptions.LangDotNet:
 			prog, err = sdkbuild.DotNetProgramFromDir(loadDir)
 		default:
 			return fmt.Errorf("unrecognized language %v", r.SdkOptions.Language)
@@ -111,10 +111,10 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
-	if r.SdkOptions.Language == cmdoptions.LangPython {
+	if r.SdkOptions.Language == clioptions.LangPython {
 		// Python needs module name first
 		args = append(args, "main")
-	} else if r.SdkOptions.Language == cmdoptions.LangTypeScript {
+	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
 		// Node also needs module
 		args = append(args, "./tslib/omes.js")
 	}

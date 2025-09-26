@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.uber.org/zap"
 )
@@ -17,16 +17,16 @@ type workerPool struct {
 	env *TestEnvironment
 
 	mutex        sync.RWMutex
-	buildOnce    map[cmdoptions.Language]*sync.Once
-	buildErrs    map[cmdoptions.Language]error
+	buildOnce    map[clioptions.Language]*sync.Once
+	buildErrs    map[clioptions.Language]error
 	cleanupFuncs []func()
 }
 
 func NewWorkerPool(env *TestEnvironment) *workerPool {
 	return &workerPool{
 		env:       env,
-		buildOnce: make(map[cmdoptions.Language]*sync.Once),
-		buildErrs: make(map[cmdoptions.Language]error),
+		buildOnce: make(map[clioptions.Language]*sync.Once),
+		buildErrs: make(map[clioptions.Language]error),
 	}
 }
 
@@ -41,7 +41,7 @@ func (w *workerPool) cleanup() {
 func (w *workerPool) ensureWorkerBuilt(
 	t *testing.T,
 	logger *zap.SugaredLogger,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 ) error {
 	w.mutex.Lock()
 	once, exists := w.buildOnce[sdk]
@@ -65,7 +65,7 @@ func (w *workerPool) ensureWorkerBuilt(
 
 		builder := Builder{
 			DirName:    w.env.buildDirName(),
-			SdkOptions: cmdoptions.SdkOptions{Language: sdk},
+			SdkOptions: clioptions.SdkOptions{Language: sdk},
 			Logger:     logger.Named(fmt.Sprintf("%s-builder", sdk)),
 		}
 
@@ -89,7 +89,7 @@ func (w *workerPool) ensureWorkerBuilt(
 func (w *workerPool) startWorker(
 	ctx context.Context,
 	logger *zap.SugaredLogger,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 	taskQueueName string,
 	scenarioInfo loadgen.ScenarioInfo,
 ) <-chan error {
@@ -101,20 +101,20 @@ func (w *workerPool) startWorker(
 		runner := &Runner{
 			Builder: Builder{
 				DirName:    w.env.buildDirName(),
-				SdkOptions: cmdoptions.SdkOptions{Language: sdk},
+				SdkOptions: clioptions.SdkOptions{Language: sdk},
 				Logger:     logger.Named(fmt.Sprintf("%s-worker-builder", sdk)),
 			},
 			TaskQueueName:            taskQueueName,
 			GracefulShutdownDuration: workerShutdownTimeout,
-			ScenarioID: cmdoptions.ScenarioID{
+			ScenarioID: clioptions.ScenarioID{
 				Scenario: scenarioInfo.ScenarioName,
 				RunID:    scenarioInfo.RunID,
 			},
-			ClientOptions: cmdoptions.ClientOptions{
+			ClientOptions: clioptions.ClientOptions{
 				Address:   w.env.DevServerAddress(),
 				Namespace: testNamespace,
 			},
-			LoggingOptions: cmdoptions.LoggingOptions{
+			LoggingOptions: clioptions.LoggingOptions{
 				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
 			},
 		}

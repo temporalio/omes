@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
 )
@@ -69,7 +69,7 @@ func TestEbbAndFlow(t *testing.T) {
 	t.Run("Run executor", func(t *testing.T) {
 		executor := newEbbAndFlowExecutor()
 
-		res, err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+		res, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
@@ -93,7 +93,7 @@ func TestEbbAndFlow(t *testing.T) {
 
 		resumeScenarioInfo := scenarioInfo
 
-		res, err := env.RunExecutorTest(t, executor, resumeScenarioInfo, cmdoptions.LangGo)
+		res, err := env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
@@ -117,7 +117,7 @@ func TestEbbAndFlow(t *testing.T) {
 		resumeScenarioInfo := scenarioInfo
 		resumeScenarioInfo.Configuration.Duration = 0 // ie no more time left
 
-		_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, cmdoptions.LangGo)
+		_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 	})
 }

@@ -1,11 +1,11 @@
-package main
+package cli
 
 import (
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers"
 )
 
@@ -36,7 +36,7 @@ func prepareWorkerCmd() *cobra.Command {
 
 type workerBuilder struct {
 	workers.Builder
-	loggingOptions cmdoptions.LoggingOptions
+	loggingOptions clioptions.LoggingOptions
 }
 
 func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
