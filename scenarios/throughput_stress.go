@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
@@ -79,8 +79,12 @@ func init() {
 		Description: fmt.Sprintf(
 			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
 			IterFlag, ContinueAsNewAfterIterFlag),
-		Executor: &tpsExecutor{state: &tpsState{}},
+		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
+}
+
+func newThroughputStressExecutor() *tpsExecutor {
+	return &tpsExecutor{state: &tpsState{}}
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -244,22 +248,28 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	t.lock.Lock()
-	var completedIterations = t.state.CompletedIterations
+	completedIterations := t.state.CompletedIterations
 	t.lock.Unlock()
-	info.Logger.Info("Total iterations completed: ", completedIterations)
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
-	info.Logger.Info("Total child workflows: ", completedChildWorkflows)
 
+	var continueAsNewPerIter int
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
 		// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
-		continueAsNewWorkflows = ((t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter) * completedIterations
+		continueAsNewPerIter = (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
-	info.Logger.Info("Total continue-as-new workflows: ", continueAsNewWorkflows)
 
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
-	info.Logger.Info("Total workflows completed: ", completedWorkflows)
+
+	var sb strings.Builder
+	sb.WriteString("[Scenario completion summary] ")
+	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
+	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
+	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
+	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
+	info.Logger.Info(sb.String())
 
 	// Post-scenario: verify that at least one iteration was completed.
 	if completedIterations == 0 {
@@ -282,25 +292,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	for _, status := range []enums.WorkflowExecutionStatus{
-		enums.WORKFLOW_EXECUTION_STATUS_TERMINATED, enums.WORKFLOW_EXECUTION_STATUS_FAILED,
-	} {
-		statusQuery := fmt.Sprintf(
-			"%s='%s' and ExecutionStatus = '%s'",
-			ThroughputStressScenarioIdSearchAttribute, info.RunID, status)
-		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query:     statusQuery,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to run query %q: %w", statusQuery, err)
-		}
-		if visibilityCount.Count > 0 {
-			return fmt.Errorf("unexpected %d workflows with status %s", visibilityCount.Count, status)
-		}
-	}
-
-	return nil
+	return loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID)
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
@@ -331,7 +323,6 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
-	fmt.Println("Updating state on iteration completion", t.state.CompletedIterations)
 }
 
 func (t *tpsExecutor) createActions(iteration int) []*ActionSet {
@@ -368,8 +359,6 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, 256, DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
-			// TODO: add support to kitchen sink for a client action that calls DescribeWorkflowExecution
-			// ClientActivity(ClientActions(t.createSelfDescribe())),
 		}
 
 		childCount++

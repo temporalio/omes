@@ -62,9 +62,9 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 			scheduleToStartMS := activityResult.ActualStartTime.Sub(activityResult.ScheduledTime)
 
 			result := ebbandflow.ActivityTiming{
-				FairnessKey:       fairnessKey,
-				FairnessWeight:    fairnessWeight,
-				ScheduleToStartMS: scheduleToStartMS,
+				FairnessKey:     fairnessKey,
+				FairnessWeight:  fairnessWeight,
+				ScheduleToStart: scheduleToStartMS,
 			}
 
 			// Thread-safe append to results

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	. "github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	. "github.com/temporalio/omes/workers"
@@ -26,12 +26,12 @@ import (
 const namespace = "default"
 
 var (
-	sdks = []cmdoptions.Language{
-		cmdoptions.LangGo,
-		cmdoptions.LangJava,
-		cmdoptions.LangPython,
-		cmdoptions.LangTypeScript,
-		cmdoptions.LangDotNet,
+	sdks = []clioptions.Language{
+		clioptions.LangGo,
+		clioptions.LangJava,
+		clioptions.LangPython,
+		clioptions.LangTypeScript,
+		clioptions.LangDotNet,
 	}
 	onlySDK   = os.Getenv("SDK")
 	javaMutex sync.Mutex
@@ -41,7 +41,7 @@ type testCase struct {
 	name                    string
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
-	expectedUnsupportedErrs map[cmdoptions.Language]string
+	expectedUnsupportedErrs map[clioptions.Language]string
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -182,8 +182,8 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -215,8 +215,8 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
@@ -242,8 +242,8 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
 		},
@@ -271,8 +271,8 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -302,8 +302,8 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -334,8 +334,8 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				...
 				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -365,8 +365,8 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 		},
 		{
@@ -397,8 +397,8 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
@@ -421,11 +421,11 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangTypeScript: "concurrent client actions are not supported",
-				cmdoptions.LangDotNet:     "concurrent client actions are not supported",
-				cmdoptions.LangPython:     "concurrent client actions are not supported",
-				cmdoptions.LangJava:       "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangTypeScript: "concurrent client actions are not supported",
+				clioptions.LangDotNet:     "concurrent client actions are not supported",
+				clioptions.LangPython:     "concurrent client actions are not supported",
+				clioptions.LangJava:       "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
@@ -479,8 +479,8 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangJava: "client actions activity is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
@@ -738,12 +738,12 @@ func TestKitchenSink(t *testing.T) {
 						&Action{Variant: nil}), // unsupported action
 				},
 			},
-			expectedUnsupportedErrs: map[cmdoptions.Language]string{
-				cmdoptions.LangGo:         "unrecognized action",
-				cmdoptions.LangJava:       "unrecognized action",
-				cmdoptions.LangPython:     "unrecognized action",
-				cmdoptions.LangTypeScript: "unrecognized action",
-				cmdoptions.LangDotNet:     "unrecognized action",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangGo:         "unrecognized action",
+				clioptions.LangJava:       "unrecognized action",
+				clioptions.LangPython:     "unrecognized action",
+				clioptions.LangTypeScript: "unrecognized action",
+				clioptions.LangDotNet:     "unrecognized action",
 			},
 		},
 	} {
@@ -773,11 +773,11 @@ func TestKitchenSink(t *testing.T) {
 func testForSDK(
 	t *testing.T,
 	tc testCase,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 	env *TestEnvironment,
 ) {
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
-	if sdk == cmdoptions.LangJava {
+	if sdk == clioptions.LangJava {
 		javaMutex.Lock()
 		defer javaMutex.Unlock()
 	}
@@ -805,14 +805,14 @@ func testUnsupportedFeature(
 	env *TestEnvironment,
 	executor *KitchenSinkExecutor,
 	scenarioInfo ScenarioInfo,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 	expectedErr string,
 ) {
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
 	}
-	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
 	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
@@ -825,13 +825,13 @@ func testSupportedFeature(
 	executor *KitchenSinkExecutor,
 	scenarioInfo ScenarioInfo,
 	tc testCase,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 ) {
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
 	}
-	execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
@@ -850,7 +850,7 @@ func testSupportedFeature(
 
 type kitchenSinkTestWrapper struct {
 	executor *KitchenSinkExecutor
-	sdk      cmdoptions.Language
+	sdk      clioptions.Language
 }
 
 func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) error {

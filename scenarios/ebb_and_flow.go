@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -53,11 +54,44 @@ type ebbAndFlowConfig struct {
 	SleepActivityConfig           *loadgen.SleepActivityConfig
 }
 
+type ebbAndFlowState struct {
+	// TotalCompletedWorkflows tracks the total number of completed workflows across
+	// all restarts. It is used to verify workflow counts after the scenario completes.
+	TotalCompletedWorkflows int64 `json:"totalCompletedWorkflows"`
+}
+
 type ebbAndFlowExecutor struct {
-	config *ebbAndFlowConfig
+	loadgen.ScenarioInfo
+	config             *ebbAndFlowConfig
+	rng                *rand.Rand
+	id                 string
+	isResuming         bool
+	startTime          time.Time
+	startedWorkflows   atomic.Int64
+	completedWorkflows atomic.Int64
+	fairnessTracker    *ebbandflow.FairnessTracker
+	stateLock          sync.Mutex
+	state              *ebbAndFlowState
 }
 
 var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
+var _ loadgen.Resumable = (*ebbAndFlowExecutor)(nil)
+
+func init() {
+	loadgen.MustRegisterScenario(loadgen.Scenario{
+		Description: "Oscillates backlog between min and max.\n" +
+			"Options:\n" +
+			"  min-backlog, max-backlog, phase-time, sleep-duration, max-rate,\n" +
+			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
+			"  fairness-threshold, backlog-log-interval.\n" +
+			"Duration must be set.",
+		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
+	})
+}
+
+func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
+	return &ebbAndFlowExecutor{state: &ebbAndFlowState{}}
+}
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
@@ -114,40 +148,10 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 
-	return (&ebbAndFlow{
-		ScenarioInfo: info,
-		rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
-		config:       e.config,
-	}).run(ctx)
-}
-
-func init() {
-	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Oscillates backlog between min and max.\n" +
-			"Options:\n" +
-			"  min-backlog, max-backlog, phase-time, sleep-duration, max-rate,\n" +
-			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
-			"  fairness-threshold, backlog-log-interval.\n" +
-			"Duration must be set.",
-		Executor: &ebbAndFlowExecutor{},
-	})
-}
-
-type ebbAndFlow struct {
-	loadgen.ScenarioInfo
-	rng    *rand.Rand
-	config *ebbAndFlowConfig
-
-	id              string
-	startTime       time.Time
-	generatedCount  atomic.Int64
-	processedCount  atomic.Int64
-	fairnessTracker *ebbandflow.FairnessTracker
-}
-
-func (e *ebbAndFlow) run(ctx context.Context) error {
-	e.startTime = time.Now()
+	e.ScenarioInfo = info
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.RunID)
+	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	e.startTime = time.Now()
 	e.fairnessTracker = ebbandflow.NewFairnessTracker()
 
 	// Get parsed configuration
@@ -188,7 +192,7 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 
 	var rate int
 	var isDraining bool // true = draining mode, false = growing mode
-	var generated, processed, backlog, target int64
+	var started, completed, backlog, target int64
 	cycleStartTime := e.startTime
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
@@ -206,9 +210,9 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 				consecutiveErrCount = 0
 			}
 		case <-ticker.C:
-			generated = e.generatedCount.Load()
-			processed = e.processedCount.Load()
-			backlog = generated - processed
+			started = e.startedWorkflows.Load()
+			completed = e.completedWorkflows.Load()
+			backlog = started - completed
 
 			// Check if we need to switch modes.
 			if isDraining && backlog <= config.MinBacklog {
@@ -233,8 +237,8 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 				iter++
 			}
 		case <-backlogTicker.C:
-			e.Logger.Infof("Backlog: %d, target: %d, rate: %d/s, gen: %d, proc: %d",
-				backlog, target, rate, generated, processed)
+			e.Logger.Debugf("Backlog: %d, target: %d, rate: %d/s, started: %d, completed: %d",
+				backlog, target, rate, started, completed)
 		}
 	}
 
@@ -242,14 +246,17 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 	startWG.Wait()
 	e.Logger.Info("Verifying scenario completion...")
 
-	// Post-scenario: verify that at least one iteration was completed.
-	completedWorkflows := int(e.processedCount.Load())
-	if completedWorkflows == 0 {
-		return fmt.Errorf("no workflows completed")
+	e.stateLock.Lock()
+	totalCompletedWorkflows := int(e.state.TotalCompletedWorkflows)
+	e.stateLock.Unlock()
+
+	// Post-scenario: verify that at least one workflow was completed.
+	if totalCompletedWorkflows == 0 {
+		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
 	}
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
-	return loadgen.MinVisibilityCountEventually(
+	if err := loadgen.MinVisibilityCountEventually(
 		ctx,
 		e.ScenarioInfo,
 		&workflowservice.CountWorkflowExecutionsRequest{
@@ -257,12 +264,41 @@ func (e *ebbAndFlow) run(ctx context.Context) error {
 			Query: fmt.Sprintf("%s='%s'",
 				EbbAndFlowScenarioIdSearchAttribute, e.id),
 		},
-		completedWorkflows,
+		totalCompletedWorkflows,
 		config.VisibilityVerificationTimeout,
-	)
+	); err != nil {
+		return err
+	}
+
+	// Post-scenario: ensure there are no failed or terminated workflows for this run.
+	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, EbbAndFlowScenarioIdSearchAttribute, e.ScenarioInfo.RunID)
 }
 
-func (e *ebbAndFlow) spawnWorkflowWithActivities(
+// Snapshot returns a snapshot of the current state.
+func (e *ebbAndFlowExecutor) Snapshot() any {
+	e.stateLock.Lock()
+	defer e.stateLock.Unlock()
+
+	return *e.state
+}
+
+// LoadState loads the state from the provided loader function.
+func (e *ebbAndFlowExecutor) LoadState(loader func(any) error) error {
+	var state ebbAndFlowState
+	if err := loader(&state); err != nil {
+		return err
+	}
+
+	e.stateLock.Lock()
+	defer e.stateLock.Unlock()
+
+	e.state = &state
+	e.isResuming = true
+
+	return nil
+}
+
+func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	ctx context.Context,
 	iteration, rate int,
 	template *loadgen.SleepActivityConfig,
@@ -277,7 +313,8 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	// Start workflow.
 	run := e.NewRun(iteration)
 	options := run.DefaultStartWorkflowOptions()
-	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration) // avoid collision on a restart
+	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
+	options.WorkflowExecutionErrorWhenAlreadyStarted = false
 	options.SearchAttributes = map[string]interface{}{
 		EbbAndFlowScenarioIdSearchAttribute: e.id,
 	}
@@ -291,7 +328,7 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	if err != nil {
 		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
 	}
-	e.generatedCount.Add(1)
+	e.startedWorkflows.Add(1)
 
 	// Wait for workflow completion and collect results.
 	var result ebbandflow.WorkflowOutput
@@ -301,13 +338,26 @@ func (e *ebbAndFlow) spawnWorkflowWithActivities(
 	} else {
 		for _, activityResult := range result.Timings {
 			if activityResult.FairnessKey != "" {
-				e.fairnessTracker.Track(activityResult.FairnessKey, activityResult.FairnessWeight, activityResult.ScheduleToStartMS)
+				e.fairnessTracker.Track(
+					activityResult.FairnessKey,
+					activityResult.FairnessWeight,
+					activityResult.ScheduleToStart,
+				)
 			}
 		}
 	}
-	e.processedCount.Add(1)
+	e.completedWorkflows.Add(1)
+	e.incrementTotalCompletedWorkflow()
 
 	return nil
+}
+
+func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
+	e.stateLock.Lock()
+	if e.state != nil {
+		e.state.TotalCompletedWorkflows++
+	}
+	e.stateLock.Unlock()
 }
 
 func calculateBacklogTarget(
@@ -351,7 +401,7 @@ func calculateSpawnRate(
 }
 
 // fairnessReportLoop periodically generates fairness reports and starts reporting workflows.
-func (e *ebbAndFlow) fairnessReportLoop(ctx context.Context, ticker *time.Ticker) {
+func (e *ebbAndFlowExecutor) fairnessReportLoop(ctx context.Context, ticker *time.Ticker) {
 	for {
 		select {
 		case <-ctx.Done():

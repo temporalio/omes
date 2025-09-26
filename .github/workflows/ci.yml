@@ -10,18 +10,6 @@ on: # rebuild any PRs and main branch changes
       - main
 
 jobs:
-  lint-shell:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-      - name: Run shellcheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: "./scripts"
-          format: gcc
-          severity: error
-
   test-omes:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +34,7 @@ jobs:
           annotate_only: true
           skip_annotations: true
 
-  lint-worker:
+  check-worker:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -54,43 +42,39 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            install: ./scripts/install-go.sh
-            lint: ./scripts/lint-go-worker.sh
-            submodules: false
+            tools: go
           - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-java-worker.sh
-            submodules: false
+            tools: java go
           - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-python-worker.sh
-            submodules: false
+            tools: python go
           - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-typescript-worker.sh
-            submodules: true
+            tools: rust go node protoc
           - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
-            lint: ./scripts/lint-dotnet-worker.sh
-            submodules: true
+            tools: dotnet go
     steps:
-      - name: Print build information
-        run: "echo head_ref: ${{ github.head_ref }}, ref: ${{ github.ref }}"
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
+          submodules: true
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: ${{ matrix.install }}
-      - name: Lint ${{ matrix.sdk }}
-        run: ${{ matrix.lint }}
+        run: |
+          go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Add Go bin to PATH
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Lint and format ${{ matrix.sdk }} worker
+        run: |
+          go run ./cmd/dev lint-and-format ${{ matrix.sdk }}
       - name: Check formatting
         run: |
-          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes after linting" && exit 1)
+          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
+      - name: Test ${{ matrix.sdk }} worker
+        run: |
+          go run ./cmd/dev test ${{ matrix.sdk }}
 
   build-worker:
     runs-on: ubuntu-latest
@@ -98,40 +82,39 @@ jobs:
       fail-fast: false
       matrix:
         sdk: [go, java, python, typescript, dotnet]
-        include:
-          - sdk: go
-            install: ./scripts/install-go.sh
-            build: ./scripts/build-go-worker.sh
-            submodules: false
-          - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
-            build: ./scripts/build-java-worker.sh
-            submodules: false
-          - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
-            build: ./scripts/build-python-worker.sh
-            submodules: false
-          - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
-            build: ./scripts/build-typescript-worker.sh
-            submodules: true
-          - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
-            build: ./scripts/build-dotnet-worker.sh
-            submodules: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
-      - name: Install mise
-        uses: jdx/mise-action@v2.4.4
-        with:
-          version: ${{ env.MISE_VERSION }}
-      - name: Install Tools
-        run: ${{ matrix.install }}
-      - name: Build ${{ matrix.sdk }} worker
-        run: ${{ matrix.build }}
+          submodules: true
+      - name: Build ${{ matrix.sdk }} worker image
+        run: |
+          go run ./cmd/dev build-worker-image \
+            --language ${{ matrix.sdk }} \
+            --tag-as-latest
+      - name: Start ${{ matrix.sdk }} worker image
+        run: |
+          docker run \
+            --rm \
+            -i -p 10233:10233 omes:${{ matrix.sdk }}-latest \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --language ${{ matrix.sdk }} \
+            --run-id ${{ github.run_id }} \
+            --embedded-server-address 0.0.0.0:10233 &
+      - name: Wait for ${{ matrix.sdk }} worker image to start
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
+      - name: Start ${{ matrix.sdk }} worker image
+        run: |
+          go run ./cmd run-scenario \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }} \
+            --connect-timeout 1m \
+            --iterations 5
+        
 
   test-kitchensink:
     runs-on: ubuntu-latest
@@ -141,31 +124,27 @@ jobs:
         sdk: [go, java, python, typescript, dotnet]
         include:
           - sdk: go
-            install: ./scripts/install-go.sh
-            submodules: false
+            tools: go
           - sdk: java
-            install: ./scripts/install-java.sh && ./scripts/install-go.sh
-            submodules: false
+            tools: java go
           - sdk: python
-            install: ./scripts/install-python.sh && ./scripts/install-go.sh
-            submodules: false
+            tools: python go
           - sdk: typescript
-            install: ./scripts/install-node.sh && ./scripts/install-go.sh
-            submodules: true
+            tools: node go
           - sdk: dotnet
-            install: ./scripts/install-dotnet.sh && ./scripts/install-go.sh
-            submodules: true
+            tools: dotnet go
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          submodules: ${{ matrix.submodules }}
+          submodules: true
       - name: Install mise
         uses: jdx/mise-action@v2.4.4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
-        run: ${{ matrix.install }}
+        run: |
+          go run ./cmd/dev install ${{ matrix.tools }}
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
@@ -195,13 +174,13 @@ jobs:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
         run: |
-          ./scripts/install-rust.sh
-          ./scripts/install-go.sh
-          ./scripts/install-protoc.sh
-          ./scripts/install-node.sh
+          go run ./cmd/dev install rust go protoc node
+      - name: Add Go bin to PATH
+        run: |
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Build proto
         run: |
-          ./scripts/build-kitchensink.sh
+          go run ./cmd/dev build-proto
       - name: Check diff
         run: |
           git config --global core.safecrlf false
@@ -214,6 +193,28 @@ jobs:
           name: generator-diff
           path: generator.diff
           if-no-files-found: ignore
+
+  build-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build CLI image
+        run: |
+          go run ./cmd/dev build-cli-image
+      - name: Test CLI image
+        run: |
+          IMAGE_TAG=$(echo "$BUILT_IMAGE_TAGS" | cut -d';' -f1)
+          docker run --rm --pull never $IMAGE_TAG --help
+          docker run --rm --pull never $IMAGE_TAG list-scenarios
+          docker run --rm --pull never --entrypoint /app/kitchen-sink-gen $IMAGE_TAG --help
 
   # env cannot be referenced in jobs.<job_id>.with.<with_id>, so we need a job to run before
   # to append a "v" to the version string
@@ -240,7 +241,7 @@ jobs:
           echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
-  push-latest-docker-images:
+  push-docker-images:
     needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
     secrets: inherit
