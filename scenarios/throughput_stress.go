@@ -69,6 +69,7 @@ type tpsExecutor struct {
 	config     *tpsConfig
 	isResuming bool
 	runID      string
+	rng        *rand.Rand
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -157,6 +158,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	t.config = config
+	t.rng = rand.New(rand.NewSource(config.RngSeed))
 	return nil
 }
 
@@ -232,6 +234,22 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
 					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
 				)
+
+				// Start some workflows via Update-with-Start.
+				if t.maybeWithStart(0.5) {
+					options.Params.WithStartAction = &WithStartClientAction{
+						Variant: &WithStartClientAction_DoUpdate{
+							DoUpdate: &DoUpdate{
+								Variant: &DoUpdate_DoActions{
+									DoActions: &DoActionsUpdate{
+										Variant: &DoActionsUpdate_DoActions{},
+									},
+								},
+								WithStart: true,
+							},
+						},
+					}
+				}
 
 				// Generate the actions for the workflow.
 				//
@@ -518,6 +536,7 @@ func (t *tpsExecutor) createSelfUpdateWithTimer() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -536,6 +555,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayload() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -554,6 +574,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -604,4 +625,10 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 
 func workflowID(runID string, iteration int) string {
 	return fmt.Sprintf("throughputStress/%s/iter-%d", runID, iteration)
+}
+
+func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.rng.Float64() <= likelihood
 }
