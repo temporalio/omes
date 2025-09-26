@@ -69,7 +69,7 @@ var registeredScenarios = make(map[string]*Scenario)
 
 // MustRegisterScenario registers a scenario in the global static registry.
 // Panics if registration fails.
-// The file name of the caller is be used as the scenario name.
+// The file name of the caller is used as the scenario name.
 func MustRegisterScenario(scenario Scenario) {
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {

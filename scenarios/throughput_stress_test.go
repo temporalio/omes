@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
 )
@@ -38,7 +38,7 @@ func TestThroughputStress(t *testing.T) {
 	t.Run("Run executor", func(t *testing.T) {
 		executor := newThroughputStressExecutor()
 
-		_, err := env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+		_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state := executor.Snapshot().(tpsState)
@@ -55,7 +55,7 @@ func TestThroughputStress(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+		_, err = env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully when resuming from middle")
 	})
 
@@ -69,7 +69,7 @@ func TestThroughputStress(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = env.RunExecutorTest(t, executor, scenarioInfo, cmdoptions.LangGo)
+		_, err = env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully when resuming from end")
 	})
 }

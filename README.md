@@ -65,11 +65,19 @@ For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios
 ```go
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Each iteration executes a single workflow with a noop activity.",
-		Executor: loadgen.KitchenSinkExecutor{
-			WorkflowParams: kitchensink.NewWorkflowParams(kitchensink.NopActionExecuteActivity),
-		},
-	})
+        Description: "Each iteration executes a single workflow with a noop activity.",
+        ExecutorFn: func() loadgen.Executor {
+            return loadgen.KitchenSinkExecutor{
+                TestInput: &kitchensink.TestInput{
+                    WorkflowInput: &kitchensink.WorkflowInput{
+                        InitialActions: []*kitchensink.ActionSet{
+                            kitchensink.NoOpSingleActivityActionSet(),
+                        },
+                    },
+                },
+            }
+        },
+    })
 }
 ```
 

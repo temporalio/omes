@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"go.uber.org/zap"
 )
 
 type Builder struct {
 	DirName    string
-	SdkOptions cmdoptions.SdkOptions
+	SdkOptions clioptions.SdkOptions
 	Logger     *zap.SugaredLogger
 	stdout     io.Writer
 	stderr     io.Writer
@@ -44,15 +44,15 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	}
 
 	switch b.SdkOptions.Language {
-	case cmdoptions.LangGo:
+	case clioptions.LangGo:
 		return b.buildGo(ctx, baseDir)
-	case cmdoptions.LangPython:
+	case clioptions.LangPython:
 		return b.buildPython(ctx, baseDir)
-	case cmdoptions.LangJava:
+	case clioptions.LangJava:
 		return b.buildJava(ctx, baseDir)
-	case cmdoptions.LangTypeScript:
+	case clioptions.LangTypeScript:
 		return b.buildTypeScript(ctx, baseDir)
-	case cmdoptions.LangDotNet:
+	case clioptions.LangDotNet:
 		return b.buildDotNet(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", b.SdkOptions.Language)
@@ -267,6 +267,6 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 	return prog, nil
 }
 
-func BaseDir(repoDir string, lang cmdoptions.Language) string {
+func BaseDir(repoDir string, lang clioptions.Language) string {
 	return filepath.Join(repoDir, "workers", lang.String())
 }

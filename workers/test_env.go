@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/cmdoptions"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -168,7 +168,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	t *testing.T,
 	executor loadgen.Executor,
 	scenarioInfo loadgen.ScenarioInfo,
-	sdk cmdoptions.Language,
+	sdk clioptions.Language,
 ) (TestResult, error) {
 	testLogger := zaptest.NewLogger(t).Core()
 	observeLogger, observedLogs := observer.New(zap.DebugLevel)
