@@ -92,11 +92,16 @@ jobs:
           go run ./cmd/dev build-worker-image \
             --language ${{ matrix.sdk }} \
             --tag-as-latest
+      - name: Resolve temporal.download IP
+        run: echo "TEMPORAL_IP=$(dig +short temporal.download | head -n1)" >> $GITHUB_ENV
       - name: Start ${{ matrix.sdk }} worker image
         run: |
           docker run \
             --rm \
-            -i -p 10233:10233 omes:${{ matrix.sdk }}-latest \
+            -i -p 10233:10233 \
+            --network none \
+            --add-host temporal.download:${{ env.TEMPORAL_IP }} \
+            omes:${{ matrix.sdk }}-latest \
             --scenario workflow_with_single_noop_activity \
             --log-level debug \
             --language ${{ matrix.sdk }} \
@@ -114,7 +119,6 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
-        
 
   test-kitchensink:
     runs-on: ubuntu-latest
