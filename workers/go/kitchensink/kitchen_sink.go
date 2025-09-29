@@ -122,11 +122,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 					return
 				}
 
-				// Check if all expected signals have been received (only for signals with IDs)
-				if receivedID != 0 && state.validateSignalCompletion() {
-					state.workflowState.Kvs["signals_complete"] = "true"
-					workflow.GetLogger(ctx).Info("all expected signals received, completing workflow")
-				}
 			})
 		}
 	})
@@ -238,24 +233,7 @@ func (ws *KSWorkflowState) handleAction(
 			return ws.handleAction(ctx, patch.GetInnerAction())
 		}
 	} else if setWfState := action.GetSetWorkflowState(); setWfState != nil {
-		// Preserve special keys that should not be overwritten
-		preservedKeys := []string{"signals_complete"}
-		preservedValues := make(map[string]string)
-		for _, key := range preservedKeys {
-			if val, exists := ws.workflowState.Kvs[key]; exists {
-				preservedValues[key] = val
-			}
-		}
-
 		ws.workflowState = setWfState
-
-		// Restore preserved keys
-		if ws.workflowState.Kvs == nil {
-			ws.workflowState.Kvs = make(map[string]string)
-		}
-		for key, val := range preservedValues {
-			ws.workflowState.Kvs[key] = val
-		}
 	} else if awaitState := action.GetAwaitWorkflowState(); awaitState != nil {
 		err := workflow.Await(ctx, func() bool {
 			if val, ok := ws.workflowState.Kvs[awaitState.Key]; ok {

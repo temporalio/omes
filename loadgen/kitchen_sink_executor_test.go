@@ -517,7 +517,7 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowInput: &WorkflowInput{
 					ExpectedSignalCount: 10,
 					InitialActions: ListActionSet(
-						NewAwaitWorkflowStateAction("signals_complete", "true"),
+						NewTimerAction(2000),
 					),
 				},
 				ClientSequence: &ClientSequence{
