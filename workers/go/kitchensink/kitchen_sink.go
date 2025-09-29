@@ -42,7 +42,7 @@ type KSWorkflowState struct {
 
 	// signal de-duplication fields
 	expectedSignalCount int32
-	expectedSignalIDs   map[int32]interface{}
+	expectedSignalIDs   map[int32]struct{}
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
