@@ -2,7 +2,6 @@ package kitchensink
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"time"
 
 	"go.temporal.io/api/common/v1"
@@ -187,18 +186,18 @@ func NewAwaitWorkflowStateAction(key, value string) *Action {
 	}
 }
 
-func NewSignalActionsWithIDs(ids ...int32) []*ClientAction {
-	actions := make([]*ClientAction, len(ids))
-	for i, id := range ids {
+func NewSignalActionsWithIDs(ids int32) []*ClientAction {
+	actions := make([]*ClientAction, ids)
+	for i := range ids {
 		actions[i] = &ClientAction{
 			Variant: &ClientAction_DoSignal{
 				DoSignal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{
 						DoSignalActions: &DoSignal_DoSignalActions{
-							SignalId: id,
+							SignalId: i + 1, // Use 1-based indexing as per protobuf definition
 							Variant: &DoSignal_DoSignalActions_DoActions{
 								DoActions: SingleActionSet(
-									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", id), "received"),
+									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", i), "received"),
 								),
 							},
 						},
@@ -207,12 +206,6 @@ func NewSignalActionsWithIDs(ids ...int32) []*ClientAction {
 			},
 		}
 	}
-
-	// randomize the order of the actions
-	rand.Shuffle(len(actions), func(i, j int) {
-		actions[i], actions[j] = actions[j], actions[i]
-	})
-
 	return actions
 }
 

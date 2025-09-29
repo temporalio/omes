@@ -523,7 +523,7 @@ func TestKitchenSink(t *testing.T) {
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+							Actions: NewSignalActionsWithIDs(10),
 						},
 					},
 				},
@@ -558,7 +558,7 @@ func TestKitchenSink(t *testing.T) {
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: NewSignalActionsWithIDs(1, 3),
+							Actions: NewSignalActionsWithIDs(2), // Only send 2 signals, expect 3 and WF should fail
 						},
 					},
 				},

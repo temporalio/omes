@@ -51,13 +51,13 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	state := KSWorkflowState{
 		workflowState:       &kitchensink.WorkflowState{},
 		expectedSignalCount: 0,
-		expectedSignalIDs:   make(map[int32]interface{}),
+		expectedSignalIDs:   make(map[int32]struct{}),
 	}
 
 	if params != nil {
 		state.expectedSignalCount = params.ExpectedSignalCount
 		for i := int32(1); i <= state.expectedSignalCount; i++ {
-			state.expectedSignalIDs[i] = nil
+			state.expectedSignalIDs[i] = struct{}{}
 		}
 	}
 

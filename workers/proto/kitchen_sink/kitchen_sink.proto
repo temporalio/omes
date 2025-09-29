@@ -66,7 +66,7 @@ message DoSignal {
       ActionSet do_actions_in_main = 2;
     }
 
-    // The id of the signal to send. This is used to track the signal and ensure that the worker properly deduplicates signals.
+    // The id of the signal to send (1-based indexing). This is used to track the signal and ensure that the worker properly deduplicates signals.
     int32 signal_id = 3;
   }
   oneof variant {
@@ -134,7 +134,7 @@ message WorkflowInput {
   // Number of signals the client will send to the workflow
   int32 expected_signal_count = 2;
 
-  // Signal de-duplication state (used when continuing as new)
+  // Signal de-duplication state (used when continuing as new). Signal IDs use 1-based indexing.
   repeated int32 expected_signal_ids = 3;
   repeated int32 received_signal_ids = 4;
 }
