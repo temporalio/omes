@@ -50,6 +50,10 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
 
+  if (input && input.expectedSignalCount && input.expectedSignalCount > 0) {
+    throw new ApplicationFailure('signal deduplication not implemented');
+  }
+
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
     let rval: IPayload | undefined;
 
