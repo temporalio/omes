@@ -1,12 +1,13 @@
 # Build in a full featured container
 ARG TARGETARCH
+FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
 FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
 
 # Install protobuf compiler
 RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive \
+    && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
 # Get go compiler
 ARG TARGETARCH
@@ -20,7 +21,7 @@ RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
 ENV PATH="$PATH:/root/.cargo/bin"
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
@@ -46,10 +47,15 @@ COPY workers/python ./workers/python
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
+# Download the worker dependencies for offline use
+WORKDIR /app/workers/python/prepared
+RUN uv lock && uv sync --frozen
+ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
+
 # Copy the CLI and built worker to a distroless "run" container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
 
-COPY --from=build /bin/uv /bin/uv
+COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/python /app/workers/python
 
