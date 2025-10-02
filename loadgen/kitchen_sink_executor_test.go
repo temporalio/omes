@@ -540,10 +540,10 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava:       "context deadline exceeded",
-				clioptions.LangPython:     "context deadline exceeded",
-				clioptions.LangTypeScript: "context deadline exceeded",
-				clioptions.LangDotNet:     "context deadline exceeded",
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
 			},
 		},
 		{
@@ -566,6 +566,12 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
 		},
 		{
 			name: "ClientSequence/Signal/Custom",

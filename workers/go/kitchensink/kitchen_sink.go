@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -15,6 +16,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/protobuf/proto"
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
@@ -43,6 +45,7 @@ type KSWorkflowState struct {
 	// signal de-duplication fields
 	expectedSignalCount int32
 	expectedSignalIDs   map[int32]struct{}
+	receivedSignalIDs   []int32
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
@@ -52,13 +55,27 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		workflowState:       &kitchensink.WorkflowState{},
 		expectedSignalCount: 0,
 		expectedSignalIDs:   make(map[int32]struct{}),
+		receivedSignalIDs:   []int32{},
 	}
 
 	if params != nil {
 		state.expectedSignalCount = params.ExpectedSignalCount
-		for i := int32(1); i <= state.expectedSignalCount; i++ {
-			state.expectedSignalIDs[i] = struct{}{}
+
+		// Initialize from the array-based approach if present (for continue-as-new)
+		if len(params.ExpectedSignalIds) > 0 {
+			// Use the explicit expected signal IDs
+			for _, id := range params.ExpectedSignalIds {
+				state.expectedSignalIDs[id] = struct{}{}
+			}
+		} else {
+			// Fallback to count-based approach (initial workflow)
+			for i := int32(1); i <= state.expectedSignalCount; i++ {
+				state.expectedSignalIDs[i] = struct{}{}
+			}
 		}
+
+		// Track already received signals (for continue-as-new deduplication)
+		state.receivedSignalIDs = append([]int32{}, params.ReceivedSignalIds...)
 	}
 
 	// Setup query handler.
@@ -73,11 +90,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	// Setup update handler.
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
-			rval, err = state.handleActionSet(ctx, actions.GetDoActions())
-			if rval == nil {
-				rval = &state.workflowState
+			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
+			if payload != nil {
+				return payload, err
 			}
-			return rval, err
+			return state.workflowState, err
 		}, workflow.UpdateHandlerOptions{
 			Validator: func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) error {
 				if actions.GetRejectMe() != nil {
@@ -106,6 +123,12 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 			// Handle signal deduplication if signal ID is provided
 			if receivedID != 0 {
+				// Check if signal was already received (deduplication)
+				if state.isSignalAlreadyReceived(receivedID) {
+					workflow.GetLogger(ctx).Debug("Signal already received, skipping", "signalID", receivedID)
+					continue
+				}
+
 				err := state.handleSignalDeduplication(receivedID)
 				if err != nil {
 					workflow.GetLogger(ctx).Error("error handling signal deduplication", "error", err)
@@ -187,8 +210,9 @@ func (ws *KSWorkflowState) handleAction(
 	} else if re := action.GetReturnError(); re != nil {
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
-		// Use string arg to avoid the SDK trying to convert payload to input type
-		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
+		// Create new workflow input preserving signal deduplication state
+		newInput := ws.createContinueAsNewInput(can.GetArguments()[0])
+		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", newInput)
 	} else if timer := action.GetTimer(); timer != nil {
 		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)
@@ -272,8 +296,58 @@ func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) error {
 	}
 
 	delete(ws.expectedSignalIDs, signalID)
+	ws.receivedSignalIDs = append(ws.receivedSignalIDs, signalID)
 
 	return nil
+}
+
+// isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
+func (ws *KSWorkflowState) isSignalAlreadyReceived(signalID int32) bool {
+	return slices.Contains(ws.receivedSignalIDs, signalID)
+}
+
+// createContinueAsNewInput creates a new WorkflowInput for continue-as-new that preserves
+// signal deduplication state by tracking received and expected signal IDs
+func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload) *common.Payload {
+	// If no signal deduplication is active, just return the original argument
+	if ws.expectedSignalCount == 0 && len(ws.expectedSignalIDs) == 0 {
+		return originalArg
+	}
+
+	var originalInput kitchensink.WorkflowInput
+	if originalArg != nil && originalArg.Data != nil {
+		if err := proto.Unmarshal(originalArg.Data, &originalInput); err != nil {
+			// If unmarshaling fails, just return the original argument
+			return originalArg
+		}
+	}
+
+	// Create lists of remaining expected signal IDs
+	expectedSignalIds := make([]int32, 0, len(ws.expectedSignalIDs))
+	for signalID := range ws.expectedSignalIDs {
+		expectedSignalIds = append(expectedSignalIds, signalID)
+	}
+
+	// Create new input preserving original data but updating signal state
+	newInput := &kitchensink.WorkflowInput{
+		InitialActions:      originalInput.InitialActions,
+		ExpectedSignalCount: ws.expectedSignalCount,
+		ExpectedSignalIds:   expectedSignalIds,
+		ReceivedSignalIds:   append([]int32{}, ws.receivedSignalIDs...),
+	}
+
+	data, err := proto.Marshal(newInput)
+	if err != nil {
+		// Fallback to original argument if marshaling fails
+		return originalArg
+	}
+
+	return &common.Payload{
+		Metadata: map[string][]byte{
+			"encoding": []byte("binary/protobuf"),
+		},
+		Data: data,
+	}
 }
 
 func (ws *KSWorkflowState) validateSignalCompletion() bool {
