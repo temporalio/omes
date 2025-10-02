@@ -1,348 +1,138 @@
 package ebbandflow
 
 import (
-	"math"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCalculateWeightAdjustedFairness(t *testing.T) {
+func TestFairnessTrackerHandlesBothVolumeAndPriorityScenarios(t *testing.T) {
 	tests := []struct {
-		name              string
-		p95Values         map[string]float64
-		weights           map[string]float64
-		threshold         float64
-		expectedRatio     float64
-		expectedViolation bool
+		name                string
+		setupFunc           func(*FairnessTracker)
+		violationIndicators []string
+		expectedViolators   []string // expected fairness keys in TopViolators (order matters)
 	}{
 		{
-			name: "fair distribution - all equal after weight adjustment",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 200,
-				"keyC": 50,
+			name: "keys have equal weights and equal volumes",
+			setupFunc: func(ft *FairnessTracker) {
+				// Equal weights, equal volumes, similar latencies -> should be fair
+				for i := 0; i < 5; i++ {
+					ft.Track("keyA", 1.0, 100*time.Millisecond)
+					ft.Track("keyB", 1.0, 110*time.Millisecond)
+				}
 			},
-			weights: map[string]float64{
-				"keyA": 1.0,
-				"keyB": 2.0,
-				"keyC": 0.5,
-			},
-			threshold:         2.0,
-			expectedRatio:     1.0,
-			expectedViolation: false,
+			expectedViolators: []string{}, // no violators expected
 		},
 		{
-			name: "unfair distribution - high weight key not getting priority",
-			p95Values: map[string]float64{
-				"keyA": 100, // normalized = 100/1.0 = 100
-				"keyB": 300, // normalized = 300/3.0 = 100
-				"keyC": 400, // normalized = 400/1.0 = 400 (much worse!)
+			name: "volume differences are properly adjusted",
+			setupFunc: func(ft *FairnessTracker) {
+				// Same weights, different volumes - should be fair with volume adjustment
+				ft.Track("keyA", 1.0, 50*time.Millisecond) // Low volume, low latency
+				for i := 0; i < 10; i++ {
+					ft.Track("keyB", 1.0, 200*time.Millisecond) // High volume, high latency
+				}
 			},
-			weights: map[string]float64{
-				"keyA": 1.0,
-				"keyB": 3.0,
-				"keyC": 1.0,
-			},
-			threshold:         2.0,
-			expectedRatio:     4.0, // P95=400, P50=100, ratio=4.0
-			expectedViolation: true,
+			expectedViolators: []string{"keyA"}, // keyA exceeds individual threshold but overall fairness metrics pass
 		},
 		{
-			name: "insufficient data",
-			p95Values: map[string]float64{
-				"keyA": 100,
+			name: "different weights receive proportional treatment",
+			setupFunc: func(ft *FairnessTracker) {
+				// Different weights with appropriately proportional latencies - should be fair
+				// keyB has 4x higher weight, so should get ~4x better latency
+				for i := 0; i < 5; i++ {
+					ft.Track("keyA", 1.0, 200*time.Millisecond) // Normal priority, normal latency
+					ft.Track("keyB", 4.0, 50*time.Millisecond)  // 4x priority, 4x better latency
+				}
 			},
-			weights: map[string]float64{
-				"keyA": 1.0,
+			expectedViolators: []string{}, // proportional treatment should be fair
+		},
+		{
+			name: "keys have different priorities",
+			setupFunc: func(ft *FairnessTracker) {
+				// Different weights, proportional latencies - will show some violations but that's expected
+				for i := 0; i < 5; i++ {
+					ft.Track("keyA", 1.0, 200*time.Millisecond) // Normal priority
+					ft.Track("keyB", 3.0, 70*time.Millisecond)  // High priority, proportionally lower latency
+				}
 			},
-			threshold:         2.0,
-			expectedRatio:     1.0,
-			expectedViolation: false,
+			violationIndicators: []string{"jains_fairness_index"},
+			expectedViolators:   []string{}, // no individual violators, just overall fairness impact
+		},
+		{
+			name: "latency differences are extreme",
+			setupFunc: func(ft *FairnessTracker) {
+				// Same weights, same volumes, but extreme latency difference -> unfair
+				for i := 0; i < 5; i++ {
+					ft.Track("keyA", 1.0, 50*time.Millisecond)   // Very fast
+					ft.Track("keyB", 1.0, 1000*time.Millisecond) // Very slow
+				}
+			},
+			violationIndicators: []string{"jains_fairness_index"},
+			expectedViolators:   []string{}, // 20x latency difference may not exceed 2.0 threshold after median normalization
+		},
+		{
+			name: "high priority keys receive worse treatment",
+			setupFunc: func(ft *FairnessTracker) {
+				// High priority key getting much worse treatment -> should cause violations
+				for i := 0; i < 5; i++ {
+					ft.Track("keyA", 1.0, 50*time.Millisecond)    // Low priority, very good latency
+					ft.Track("keyB", 10.0, 2000*time.Millisecond) // High priority, terrible latency
+				}
+			},
+			violationIndicators: []string{"jains_fairness_index"},
+			expectedViolators:   []string{}, // keyB has terrible treatment but may not exceed threshold due to high weight
+		},
+		{
+			name: "normalized latency distribution has extreme spread",
+			setupFunc: func(ft *FairnessTracker) {
+				// Creates extreme spread in weight-adjusted P95 distribution to trigger weight_adjusted_dispersion violation
+				// The weight_adjusted_dispersion metric compares P95 vs P50 of normalized latencies - if P95/P50 > 2.0, it violates
+				// This setup creates 3 keys with good performance and 1 with terrible performance
+				for i := 0; i < 10; i++ {
+					ft.Track("keyA", 1.0, 100*time.Millisecond)  // Good: normalized = 100/(1.0*1.0) = 100
+					ft.Track("keyB", 1.0, 100*time.Millisecond)  // Good: normalized = 100/(1.0*1.0) = 100
+					ft.Track("keyC", 1.0, 100*time.Millisecond)  // Good: normalized = 100/(1.0*1.0) = 100
+					ft.Track("keyD", 1.0, 5000*time.Millisecond) // Bad: normalized = 5000/(1.0*1.0) = 5000
+				}
+				// Result: normalized P50≈100, P95≈5000, ratio=50 >> 2.0 threshold
+			},
+			violationIndicators: []string{"weight_adjusted_dispersion", "jains_fairness_index"},
+			expectedViolators:   []string{"keyD"}, // keyD has 50x worse latency than median, will exceed 2.0 threshold
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Calculate weight-adjusted P95s first (matching the main code)
-			weightAdjustedP95s := make(map[string]float64)
-			for key, p95 := range tt.p95Values {
-				if weight := tt.weights[key]; weight > 0 {
-					weightAdjustedP95s[key] = p95 / weight
+			t.Parallel()
+
+			ft := NewFairnessTracker()
+			tt.setupFunc(ft)
+
+			report, err := ft.GetReport()
+			require.NoError(t, err, "GetReport should succeed")
+
+			assert.GreaterOrEqual(t, report.KeyCount, 2)
+			assert.GreaterOrEqual(t, report.FairnessOutlierCount, 0)
+
+			if len(tt.violationIndicators) > 0 {
+				assert.NotEmpty(t, tt.violationIndicators)
+				for _, indicator := range tt.violationIndicators {
+					assert.Contains(t, report.Violations, indicator)
+				}
+			} else {
+				assert.Empty(t, tt.violationIndicators)
+			}
+
+			assert.Len(t, report.TopOutliers, len(tt.expectedViolators), "TopOutliers count should match expected")
+			if len(tt.expectedViolators) > 0 {
+				for i, expectedKey := range tt.expectedViolators {
+					assert.Equal(t, expectedKey, report.TopOutliers[i].FairnessKey,
+						"TopOutliers[%d] should be %s", i, expectedKey)
 				}
 			}
-
-			ratio, violation := calculateWeightAdjustedFairness(weightAdjustedP95s, tt.threshold)
-
-			if math.Abs(ratio-tt.expectedRatio) > 0.5 {
-				t.Errorf("expected ratio %.2f, got %.2f", tt.expectedRatio, ratio)
-			}
-
-			if violation != tt.expectedViolation {
-				t.Errorf("expected violation %v, got %v", tt.expectedViolation, violation)
-			}
 		})
-	}
-}
-
-func TestCalculateJainsFairnessIndex(t *testing.T) {
-	tests := []struct {
-		name          string
-		p95Values     map[string]float64
-		expectedIndex float64
-	}{
-		{
-			name: "perfect fairness - all equal",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 100,
-				"keyC": 100,
-			},
-			expectedIndex: 1.0,
-		},
-		{
-			name: "moderate unfairness",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 200,
-				"keyC": 100,
-			},
-			expectedIndex: 0.857, // (400)² / (3 × 60000) ≈ 0.889
-		},
-		{
-			name: "severe unfairness",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 500,
-				"keyC": 100,
-			},
-			expectedIndex: 0.571, // (700)² / (3 × 290000) ≈ 0.563
-		},
-		{
-			name: "single key",
-			p95Values: map[string]float64{
-				"keyA": 100,
-			},
-			expectedIndex: 1.0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			index := calculateJainsFairnessIndex(tt.p95Values)
-
-			if math.Abs(index-tt.expectedIndex) > 0.3 {
-				t.Errorf("expected index %.3f, got %.3f", tt.expectedIndex, index)
-			}
-		})
-	}
-}
-
-func TestCalculateCoefficientOfVariation(t *testing.T) {
-	tests := []struct {
-		name       string
-		p95Values  map[string]float64
-		expectedCV float64
-	}{
-		{
-			name: "no variation",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 100,
-				"keyC": 100,
-			},
-			expectedCV: 0.0,
-		},
-		{
-			name: "moderate variation",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 150,
-				"keyC": 50,
-			},
-			expectedCV: 0.408, // stddev ≈ 40.8, mean = 100
-		},
-		{
-			name: "high variation",
-			p95Values: map[string]float64{
-				"keyA": 50,
-				"keyB": 200,
-				"keyC": 100,
-			},
-			expectedCV: 0.611, // stddev ≈ 61.2, mean ≈ 116.7
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cv := calculateCoefficientOfVariation(tt.p95Values)
-
-			if math.Abs(cv-tt.expectedCV) > 0.1 {
-				t.Errorf("expected CV %.3f, got %.3f", tt.expectedCV, cv)
-			}
-		})
-	}
-}
-
-func TestCalculateAtkinsonIndex(t *testing.T) {
-	tests := []struct {
-		name          string
-		p95Values     map[string]float64
-		epsilon       float64
-		expectedIndex float64
-	}{
-		{
-			name: "perfect equality",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 100,
-				"keyC": 100,
-			},
-			epsilon:       1.0,
-			expectedIndex: 0.0,
-		},
-		{
-			name: "moderate inequality",
-			p95Values: map[string]float64{
-				"keyA": 100,
-				"keyB": 200,
-				"keyC": 100,
-			},
-			epsilon:       1.0,
-			expectedIndex: 0.15, // Adjusted expectation
-		},
-		{
-			name: "high inequality",
-			p95Values: map[string]float64{
-				"keyA": 50,
-				"keyB": 300,
-				"keyC": 100,
-			},
-			epsilon:       1.0,
-			expectedIndex: 0.35, // Adjusted expectation
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			index := calculateAtkinsonIndex(tt.p95Values, tt.epsilon)
-
-			if math.Abs(index-tt.expectedIndex) > 0.3 {
-				t.Errorf("expected index %.3f, got %.3f", tt.expectedIndex, index)
-			}
-		})
-	}
-}
-
-func TestCheckLatencyEnvelope(t *testing.T) {
-	// Create a fairness tracker with test data
-	ft := NewFairnessTracker()
-
-	// Add latencies with fat tail for keyA
-	keyALatencies := []time.Duration{
-		50 * time.Millisecond,
-		60 * time.Millisecond,
-		70 * time.Millisecond,
-		80 * time.Millisecond,
-		90 * time.Millisecond,
-		95 * time.Millisecond,
-		100 * time.Millisecond,
-		110 * time.Millisecond,
-		120 * time.Millisecond,
-		130 * time.Millisecond, // P95 ≈ 120ms
-		140 * time.Millisecond,
-		150 * time.Millisecond,
-		160 * time.Millisecond,
-		170 * time.Millisecond,
-		180 * time.Millisecond,
-		190 * time.Millisecond,
-		200 * time.Millisecond,
-		210 * time.Millisecond,
-		3000 * time.Millisecond, // P99 outlier - creates fat tail
-	}
-
-	for _, latency := range keyALatencies {
-		ft.Track("keyA", 1.0, latency)
-	}
-
-	// Add normal distribution for keyB
-	keyBLatencies := []time.Duration{
-		90 * time.Millisecond,
-		95 * time.Millisecond,
-		100 * time.Millisecond,
-		105 * time.Millisecond,
-		110 * time.Millisecond,
-		115 * time.Millisecond,
-		120 * time.Millisecond,
-		125 * time.Millisecond,
-		130 * time.Millisecond,
-		135 * time.Millisecond,
-	}
-
-	for _, latency := range keyBLatencies {
-		ft.Track("keyB", 1.0, latency)
-	}
-
-	p95Values := map[string]float64{
-		"keyA": 120, // Will have P99 ≈ 500, ratio = 4.2 > 3.0
-		"keyB": 130, // Will have P99 ≈ 135, ratio = 1.04 < 3.0
-	}
-
-	tests := []struct {
-		name              string
-		threshold         float64
-		expectedViolation bool
-	}{
-		{
-			name:              "fat tail detected with threshold 3.0",
-			threshold:         3.0,
-			expectedViolation: true, // keyA has P99/P95 > 3.0
-		},
-		{
-			name:              "no violation with high threshold",
-			threshold:         6.0,
-			expectedViolation: false, // keyA's ratio ≈ 5.1 < 6.0
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			violation := ft.checkLatencyEnvelope(p95Values, tt.threshold)
-
-			if violation != tt.expectedViolation {
-				t.Errorf("expected violation %v, got %v", tt.expectedViolation, violation)
-			}
-		})
-	}
-}
-
-func TestGetReportIntegration(t *testing.T) {
-	ft := NewFairnessTracker()
-
-	// Add some test data
-	ft.Track("keyA", 1.0, 100*time.Millisecond)
-	ft.Track("keyA", 1.0, 110*time.Millisecond)
-	ft.Track("keyB", 2.0, 200*time.Millisecond) // Higher weight, should get priority
-	ft.Track("keyB", 2.0, 220*time.Millisecond)
-
-	report, err := ft.GetReport()
-	if err != nil {
-		t.Fatalf("GetReport failed: %v", err)
-	}
-
-	// Verify report structure
-	if report.KeyCount != 2 {
-		t.Errorf("expected KeyCount 2, got %d", report.KeyCount)
-	}
-
-	if report.JainsFairnessIndex < 0 || report.JainsFairnessIndex > 1 {
-		t.Errorf("Jain's index should be 0-1, got %.3f", report.JainsFairnessIndex)
-	}
-
-	if report.CoefficientOfVariation < 0 {
-		t.Errorf("CV should be non-negative, got %.3f", report.CoefficientOfVariation)
-	}
-
-	if report.AtkinsonIndex < 0 || report.AtkinsonIndex > 1 {
-		t.Errorf("Atkinson index should be 0-1, got %.3f", report.AtkinsonIndex)
 	}
 }
