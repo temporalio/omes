@@ -42,9 +42,7 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 	commonFields := []any{
 		"keyCount", report.KeyCount,
 		"jainsFairnessIndex", fmt.Sprintf("%.3f", report.JainsFairnessIndex),
-		"coefficientOfVariation", fmt.Sprintf("%.3f", report.CoefficientOfVariation),
-		"atkinsonIndex", fmt.Sprintf("%.3f", report.AtkinsonIndex),
-		"weightAdjustedFairness", fmt.Sprintf("%.3f", report.WeightAdjustedFairness),
+		"fairnessOutlierCount", report.FairnessOutlierCount,
 	}
 
 	if len(report.Violations) == 0 {
@@ -58,23 +56,21 @@ func (a Activities) ProcessFairnessReport(ctx context.Context, report ebbandflow
 		violationSummary := fmt.Sprintf("%d violations: [%s]", len(violations), strings.Join(violations, "; "))
 
 		errorFields := append(commonFields, "violationSummary", violationSummary)
-		for i, offender := range report.TopViolators {
-			violatorSummary := fmt.Sprintf("key=%s p95=%.2fms weight=%.1f weightAdjustedP95=%.2fms severity=%.2f",
-				offender.FairnessKey,
-				offender.P95,
-				offender.Weight,
-				offender.WeightAdjustedP95,
-				offender.ViolationSeverity)
-			errorFields = append(errorFields, fmt.Sprintf("topViolator%d", i+1), violatorSummary)
+		for i, outlier := range report.TopOutliers {
+			outlierSummary := fmt.Sprintf("key=%s p95=%.2fms weight=%.1f weightAdjustedP95=%.2fms severity=%.2f",
+				outlier.FairnessKey,
+				outlier.P95,
+				outlier.Weight,
+				outlier.WeightAdjustedP95,
+				outlier.OutlierSeverity)
+			errorFields = append(errorFields, fmt.Sprintf("topOutlier%d", i+1), outlierSummary)
 		}
 		logger.Error("Fairness status: violated", errorFields...)
 	}
 
 	// Emit metrics.
 	metricsHandler.Gauge("ebbandflow_fairness_jains_index").Update(report.JainsFairnessIndex)
-	metricsHandler.Gauge("ebbandflow_fairness_coefficient_variation").Update(report.CoefficientOfVariation)
-	metricsHandler.Gauge("ebbandflow_fairness_atkinson_index").Update(report.AtkinsonIndex)
-	metricsHandler.Gauge("ebbandflow_fairness_weight_adjusted").Update(report.WeightAdjustedFairness)
+	metricsHandler.Gauge("ebbandflow_fairness_outlier_count").Update(float64(report.FairnessOutlierCount))
 	metricsHandler.Gauge("ebbandflow_fairness_key_count").Update(float64(report.KeyCount))
 
 	// Emit one violation metric per validation index with labels
