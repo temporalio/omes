@@ -194,7 +194,7 @@ func NewSignalActionsWithIDs(ids int32) []*ClientAction {
 				DoSignal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{
 						DoSignalActions: &DoSignal_DoSignalActions{
-							SignalId: i + 1, // Use 1-based indexing as per protobuf definition
+							SignalId: i + 1, 
 							Variant: &DoSignal_DoSignalActions_DoActions{
 								DoActions: SingleActionSet(
 									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", i), "received"),

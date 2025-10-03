@@ -123,7 +123,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 			// Handle signal deduplication if signal ID is provided
 			if receivedID != 0 {
-				// Check if signal was already received (deduplication)
 				if state.isSignalAlreadyReceived(receivedID) {
 					workflow.GetLogger(ctx).Debug("Signal already received, skipping", "signalID", receivedID)
 					continue
@@ -137,14 +136,12 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				}
 			}
 
-			// Execute action set in goroutine for consistent handling
 			workflow.Go(ctx, func(ctx workflow.Context) {
 				ret, err := state.handleActionSet(ctx, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
 					return
 				}
-
 			})
 		}
 	})
@@ -309,7 +306,6 @@ func (ws *KSWorkflowState) isSignalAlreadyReceived(signalID int32) bool {
 // createContinueAsNewInput creates a new WorkflowInput for continue-as-new that preserves
 // signal deduplication state by tracking received and expected signal IDs
 func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload) *common.Payload {
-	// If no signal deduplication is active, just return the original argument
 	if ws.expectedSignalCount == 0 && len(ws.expectedSignalIDs) == 0 {
 		return originalArg
 	}
@@ -322,7 +318,6 @@ func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload)
 		}
 	}
 
-	// Create lists of remaining expected signal IDs
 	expectedSignalIds := make([]int32, 0, len(ws.expectedSignalIDs))
 	for signalID := range ws.expectedSignalIDs {
 		expectedSignalIds = append(expectedSignalIds, signalID)
@@ -338,7 +333,6 @@ func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload)
 
 	data, err := proto.Marshal(newInput)
 	if err != nil {
-		// Fallback to original argument if marshaling fails
 		return originalArg
 	}
 
@@ -348,15 +342,6 @@ func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload)
 		},
 		Data: data,
 	}
-}
-
-func (ws *KSWorkflowState) validateSignalCompletion() bool {
-	if ws.expectedSignalCount == 0 {
-		return true
-	}
-
-	// All signals have been received when the map is empty
-	return len(ws.expectedSignalIDs) == 0
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
