@@ -56,6 +56,11 @@ public class KitchenSinkWorkflow
     [WorkflowRun]
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
     {
+        if (workflowInput?.ExpectedSignalCount > 0)
+        {
+            throw new ApplicationFailureException("signal deduplication not implemented");
+        }
+
         // Run all initial input actions
         if (workflowInput?.InitialActions is { } actions)
         {

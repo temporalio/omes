@@ -62,6 +62,11 @@ class KitchenSinkWorkflow:
     async def run(self, input: Optional[WorkflowInput] = None) -> Payload:
         workflow.logger.debug("Started kitchen sink workflow")
 
+        if input and input.expected_signal_count > 0:
+            raise exceptions.ApplicationError(
+                "signal deduplication not implemented", non_retryable=True
+            )
+
         # Run all initial input actions
         if input and input.initial_actions:
             for action_set in input.initial_actions:
