@@ -4,12 +4,12 @@ on:
     inputs:
       build-command:
         description: Build command to run (e.g., 'build-worker-image' or 'build-cli-image')
-        required: true
         type: string
+        default: "build-worker-image"
       push-command:
         description: Push command to run (e.g., 'build-push-worker-image' or 'build-push-cli-image')
-        required: true
         type: string
+        default: "build-push-worker-image"
       lang:
         description: SDK language to build the container for (only for worker images)
         required: false
