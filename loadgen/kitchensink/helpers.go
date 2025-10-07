@@ -186,6 +186,29 @@ func NewAwaitWorkflowStateAction(key, value string) *Action {
 	}
 }
 
+func NewSignalActionsWithIDs(ids int32) []*ClientAction {
+	actions := make([]*ClientAction, ids)
+	for i := range ids {
+		actions[i] = &ClientAction{
+			Variant: &ClientAction_DoSignal{
+				DoSignal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{
+						DoSignalActions: &DoSignal_DoSignalActions{
+							SignalId: i + 1, 
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(
+									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", i), "received"),
+								),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	return actions
+}
+
 func ConvertToPayload(newInput any) *common.Payload {
 	payload, err := jsonPayloadConverter.ToPayload(newInput)
 	if err != nil {
