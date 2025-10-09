@@ -109,7 +109,6 @@ jobs:
     uses: ./.github/workflows/docker-images.yml
     secrets: inherit
     with:
-      build-command: build-cli-image
       push-command: build-push-cli-image
       do-push: ${{ inputs.do-push }}
       as-latest: ${{ inputs.as-latest }}
