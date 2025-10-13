@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -92,7 +93,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	info.Logger.Info(fmt.Sprintf("Creating %d schedules with %d actions each",
 		e.config.ScheduleCount, e.config.ActionsPerSchedule))
 
-	// Pre-allocate the schedules slice to avoid concurrent append issues
+	// Pre-allocate the schedules slice - each iteration writes to its own index
 	e.schedulesCreated = make([]string, info.Configuration.Iterations)
 
 	ksExec := &loadgen.KitchenSinkExecutor{
@@ -104,7 +105,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
-			// Store in pre-allocated slice at the iteration index (lock-free)
+			// Store at iteration index (lock-free: each goroutine writes to its own index)
 			e.schedulesCreated[run.Iteration] = scheduleID
 
 			// The workflow will execute a CreateScheduleActivity to create the schedule
@@ -156,13 +157,23 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 
 	info.Logger.Info(fmt.Sprintf("Created %d schedules, waiting for them to complete", len(e.schedulesCreated)))
 
-	// Wait for all schedules to complete
+	// Wait for all schedules to complete concurrently using errgroup
 	completionTimeout := 5 * time.Minute
+	g, gctx := errgroup.WithContext(ctx)
+
 	for _, scheduleID := range e.schedulesCreated {
-		info.Logger.Infof("Waiting for schedule %s to complete", scheduleID)
-		if err := loadgen.WaitForScheduleCompletion(ctx, info.Client, scheduleID, completionTimeout); err != nil {
-			return fmt.Errorf("failed waiting for schedule %s to complete: %w", scheduleID, err)
-		}
+		scheduleID := scheduleID // capture loop variable
+		g.Go(func() error {
+			info.Logger.Infof("Waiting for schedule %s to complete", scheduleID)
+			if err := loadgen.WaitForScheduleCompletion(gctx, info.Client, scheduleID, completionTimeout); err != nil {
+				return fmt.Errorf("failed waiting for schedule %s to complete: %w", scheduleID, err)
+			}
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	info.Logger.Info("All schedules completed")
