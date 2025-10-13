@@ -92,6 +92,9 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	info.Logger.Info(fmt.Sprintf("Creating %d schedules with %d actions each",
 		e.config.ScheduleCount, e.config.ActionsPerSchedule))
 
+	// Pre-allocate the schedules slice to avoid concurrent append issues
+	e.schedulesCreated = make([]string, info.Configuration.Iterations)
+
 	ksExec := &loadgen.KitchenSinkExecutor{
 		TestInput: &kitchensink.TestInput{
 			WorkflowInput: &kitchensink.WorkflowInput{
@@ -101,7 +104,8 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
-			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
+			// Store in pre-allocated slice at the iteration index (lock-free)
+			e.schedulesCreated[run.Iteration] = scheduleID
 
 			// The workflow will execute a CreateScheduleActivity to create the schedule
 			options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
