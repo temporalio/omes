@@ -1,5 +1,3 @@
-import datetime
-
 from google.protobuf import duration_pb2 as _duration_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from temporalio.api.common.v1 import message_pb2 as _message_pb2
@@ -9,8 +7,7 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from collections.abc import Iterable as _Iterable, Mapping as _Mapping
-from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -80,7 +77,7 @@ class ClientActionSet(_message.Message):
     concurrent: bool
     wait_at_end: _duration_pb2.Duration
     wait_for_current_run_to_finish_at_end: bool
-    def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: _Optional[bool] = ..., wait_at_end: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., wait_for_current_run_to_finish_at_end: _Optional[bool] = ...) -> None: ...
+    def __init__(self, actions: _Optional[_Iterable[_Union[ClientAction, _Mapping]]] = ..., concurrent: bool = ..., wait_at_end: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., wait_for_current_run_to_finish_at_end: bool = ...) -> None: ...
 
 class WithStartClientAction(_message.Message):
     __slots__ = ("do_signal", "do_update")
@@ -117,7 +114,7 @@ class DoSignal(_message.Message):
     do_signal_actions: DoSignal.DoSignalActions
     custom: HandlerInvocation
     with_start: bool
-    def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: _Optional[bool] = ...) -> None: ...
+    def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ...) -> None: ...
 
 class DoQuery(_message.Message):
     __slots__ = ("report_state", "custom", "failure_expected")
@@ -127,7 +124,7 @@ class DoQuery(_message.Message):
     report_state: _message_pb2.Payloads
     custom: HandlerInvocation
     failure_expected: bool
-    def __init__(self, report_state: _Optional[_Union[_message_pb2.Payloads, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., failure_expected: _Optional[bool] = ...) -> None: ...
+    def __init__(self, report_state: _Optional[_Union[_message_pb2.Payloads, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., failure_expected: bool = ...) -> None: ...
 
 class DoUpdate(_message.Message):
     __slots__ = ("do_actions", "custom", "with_start", "failure_expected")
@@ -139,7 +136,7 @@ class DoUpdate(_message.Message):
     custom: HandlerInvocation
     with_start: bool
     failure_expected: bool
-    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: _Optional[bool] = ..., failure_expected: _Optional[bool] = ...) -> None: ...
+    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ..., failure_expected: bool = ...) -> None: ...
 
 class DoActionsUpdate(_message.Message):
     __slots__ = ("do_actions", "reject_me")
@@ -182,7 +179,7 @@ class ActionSet(_message.Message):
     CONCURRENT_FIELD_NUMBER: _ClassVar[int]
     actions: _containers.RepeatedCompositeFieldContainer[Action]
     concurrent: bool
-    def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., concurrent: _Optional[bool] = ...) -> None: ...
+    def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., concurrent: bool = ...) -> None: ...
 
 class ScheduleSpec(_message.Message):
     __slots__ = ("cron_expressions", "jitter")
@@ -190,7 +187,7 @@ class ScheduleSpec(_message.Message):
     JITTER_FIELD_NUMBER: _ClassVar[int]
     cron_expressions: _containers.RepeatedScalarFieldContainer[str]
     jitter: _duration_pb2.Duration
-    def __init__(self, cron_expressions: _Optional[_Iterable[str]] = ..., jitter: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+    def __init__(self, cron_expressions: _Optional[_Iterable[str]] = ..., jitter: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
 
 class ScheduleAction(_message.Message):
     __slots__ = ("workflow_id", "workflow_type", "task_queue", "arguments", "workflow_execution_timeout", "workflow_task_timeout", "retry_policy")
@@ -208,7 +205,7 @@ class ScheduleAction(_message.Message):
     workflow_execution_timeout: _duration_pb2.Duration
     workflow_task_timeout: _duration_pb2.Duration
     retry_policy: _message_pb2.RetryPolicy
-    def __init__(self, workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_execution_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ...) -> None: ...
+    def __init__(self, workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_execution_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ...) -> None: ...
 
 class SchedulePolicies(_message.Message):
     __slots__ = ("remaining_actions", "trigger_immediately", "catchup_window")
@@ -218,7 +215,7 @@ class SchedulePolicies(_message.Message):
     remaining_actions: int
     trigger_immediately: bool
     catchup_window: _duration_pb2.Duration
-    def __init__(self, remaining_actions: _Optional[int] = ..., trigger_immediately: _Optional[bool] = ..., catchup_window: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+    def __init__(self, remaining_actions: _Optional[int] = ..., trigger_immediately: bool = ..., catchup_window: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
 
 class ScheduleBackfill(_message.Message):
     __slots__ = ("start_timestamp", "end_timestamp")
@@ -345,7 +342,7 @@ class ExecuteActivityAction(_message.Message):
         bytes_to_allocate: int
         cpu_yield_every_n_iterations: int
         cpu_yield_for_ms: int
-        def __init__(self, run_for: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
+        def __init__(self, run_for: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., bytes_to_allocate: _Optional[int] = ..., cpu_yield_every_n_iterations: _Optional[int] = ..., cpu_yield_for_ms: _Optional[int] = ...) -> None: ...
     class PayloadActivity(_message.Message):
         __slots__ = ("bytes_to_receive", "bytes_to_return")
         BYTES_TO_RECEIVE_FIELD_NUMBER: _ClassVar[int]
@@ -403,7 +400,7 @@ class ExecuteActivityAction(_message.Message):
     priority: _message_pb2.Priority
     fairness_key: str
     fairness_weight: float
-    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., resources: _Optional[_Union[ExecuteActivityAction.ResourcesActivity, _Mapping]] = ..., payload: _Optional[_Union[ExecuteActivityAction.PayloadActivity, _Mapping]] = ..., client: _Optional[_Union[ExecuteActivityAction.ClientActivity, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., priority: _Optional[_Union[_message_pb2.Priority, _Mapping]] = ..., fairness_key: _Optional[str] = ..., fairness_weight: _Optional[float] = ...) -> None: ...
+    def __init__(self, generic: _Optional[_Union[ExecuteActivityAction.GenericActivity, _Mapping]] = ..., delay: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., noop: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., resources: _Optional[_Union[ExecuteActivityAction.ResourcesActivity, _Mapping]] = ..., payload: _Optional[_Union[ExecuteActivityAction.PayloadActivity, _Mapping]] = ..., client: _Optional[_Union[ExecuteActivityAction.ClientActivity, _Mapping]] = ..., task_queue: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., schedule_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., schedule_to_start_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., start_to_close_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., is_local: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., remote: _Optional[_Union[RemoteActivityOptions, _Mapping]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., priority: _Optional[_Union[_message_pb2.Priority, _Mapping]] = ..., fairness_key: _Optional[str] = ..., fairness_weight: _Optional[float] = ...) -> None: ...
 
 class ExecuteChildWorkflowAction(_message.Message):
     __slots__ = ("namespace", "workflow_id", "workflow_type", "task_queue", "input", "workflow_execution_timeout", "workflow_run_timeout", "workflow_task_timeout", "parent_close_policy", "workflow_id_reuse_policy", "retry_policy", "cron_schedule", "headers", "memo", "search_attributes", "cancellation_type", "versioning_intent", "awaitable_choice")
@@ -464,7 +461,7 @@ class ExecuteChildWorkflowAction(_message.Message):
     cancellation_type: ChildWorkflowCancellationType
     versioning_intent: VersioningIntent
     awaitable_choice: AwaitableChoice
-    def __init__(self, namespace: _Optional[str] = ..., workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., input: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_execution_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., workflow_run_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., parent_close_policy: _Optional[_Union[ParentClosePolicy, str]] = ..., workflow_id_reuse_policy: _Optional[_Union[_workflow_pb2.WorkflowIdReusePolicy, str]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., cron_schedule: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., memo: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., cancellation_type: _Optional[_Union[ChildWorkflowCancellationType, str]] = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
+    def __init__(self, namespace: _Optional[str] = ..., workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., input: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_execution_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_run_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., parent_close_policy: _Optional[_Union[ParentClosePolicy, str]] = ..., workflow_id_reuse_policy: _Optional[_Union[_workflow_pb2.WorkflowIdReusePolicy, str]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., cron_schedule: _Optional[str] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., memo: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., cancellation_type: _Optional[_Union[ChildWorkflowCancellationType, str]] = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class AwaitWorkflowState(_message.Message):
     __slots__ = ("key", "value")
@@ -513,7 +510,7 @@ class SetPatchMarkerAction(_message.Message):
     patch_id: str
     deprecated: bool
     inner_action: Action
-    def __init__(self, patch_id: _Optional[str] = ..., deprecated: _Optional[bool] = ..., inner_action: _Optional[_Union[Action, _Mapping]] = ...) -> None: ...
+    def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ..., inner_action: _Optional[_Union[Action, _Mapping]] = ...) -> None: ...
 
 class UpsertSearchAttributesAction(_message.Message):
     __slots__ = ("search_attributes",)
@@ -589,7 +586,7 @@ class ContinueAsNewAction(_message.Message):
     search_attributes: _containers.MessageMap[str, _message_pb2.Payload]
     retry_policy: _message_pb2.RetryPolicy
     versioning_intent: VersioningIntent
-    def __init__(self, workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_run_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[datetime.timedelta, _duration_pb2.Duration, _Mapping]] = ..., memo: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
+    def __init__(self, workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_run_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., memo: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class RemoteActivityOptions(_message.Message):
     __slots__ = ("cancellation_type", "do_not_eagerly_execute", "versioning_intent")
@@ -599,7 +596,7 @@ class RemoteActivityOptions(_message.Message):
     cancellation_type: ActivityCancellationType
     do_not_eagerly_execute: bool
     versioning_intent: VersioningIntent
-    def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: _Optional[bool] = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
+    def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
     __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output")
