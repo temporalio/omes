@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
@@ -29,6 +30,7 @@ type scheduleStressConfig struct {
 
 type scheduleStressExecutor struct {
 	config           *scheduleStressConfig
+	mu               sync.Mutex
 	schedulesCreated []string
 }
 
@@ -93,9 +95,6 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	info.Logger.Info(fmt.Sprintf("Creating %d schedules with %d actions each",
 		e.config.ScheduleCount, e.config.ActionsPerSchedule))
 
-	// Pre-allocate the schedules slice - each iteration writes to its own index
-	e.schedulesCreated = make([]string, info.Configuration.Iterations)
-
 	ksExec := &loadgen.KitchenSinkExecutor{
 		TestInput: &kitchensink.TestInput{
 			WorkflowInput: &kitchensink.WorkflowInput{
@@ -105,8 +104,10 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
-			// Store at iteration index (lock-free: each goroutine writes to its own index)
-			e.schedulesCreated[run.Iteration] = scheduleID
+			// Thread-safe append to track created schedules
+			e.mu.Lock()
+			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
+			e.mu.Unlock()
 
 			// The workflow will execute a CreateScheduleActivity to create the schedule
 			options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
