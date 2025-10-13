@@ -140,6 +140,54 @@ message ActionSet {
   bool concurrent = 2;
 }
 
+// Schedule-related messages
+message ScheduleSpec {
+  repeated string cron_expressions = 1;
+  google.protobuf.Duration jitter = 2;
+}
+
+message ScheduleAction {
+  string workflow_id = 1;
+  string workflow_type = 2;
+  string task_queue = 3;
+  repeated temporal.api.common.v1.Payload arguments = 4;
+  google.protobuf.Duration workflow_execution_timeout = 5;
+  google.protobuf.Duration workflow_task_timeout = 6;
+  temporal.api.common.v1.RetryPolicy retry_policy = 7;
+}
+
+message SchedulePolicies {
+  int64 remaining_actions = 1;
+  bool trigger_immediately = 2;
+  google.protobuf.Duration catchup_window = 3;
+}
+
+message ScheduleBackfill {
+  int64 start_timestamp = 1;
+  int64 end_timestamp = 2;
+}
+
+message CreateScheduleAction {
+  string schedule_id = 1;
+  ScheduleSpec spec = 2;
+  ScheduleAction action = 3;
+  SchedulePolicies policies = 4;
+  repeated ScheduleBackfill backfill = 5;
+}
+
+message DescribeScheduleAction {
+  string schedule_id = 1;
+}
+
+message UpdateScheduleAction {
+  string schedule_id = 1;
+  ScheduleSpec spec = 2;
+}
+
+message DeleteScheduleAction {
+  string schedule_id = 1;
+}
+
 message Action {
   oneof variant {
     TimerAction timer = 1;
@@ -160,6 +208,11 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
+
+    CreateScheduleAction create_schedule = 16;
+    DescribeScheduleAction describe_schedule = 17;
+    UpdateScheduleAction update_schedule = 18;
+    DeleteScheduleAction delete_schedule = 19;
   }
 }
 

@@ -77,174 +77,204 @@ namespace Temporal.Omes.KitchenSink {
             "Cg9pbml0aWFsX2FjdGlvbnMYASADKAsyJS50ZW1wb3JhbC5vbWVzLmtpdGNo",
             "ZW5fc2luay5BY3Rpb25TZXQiVAoJQWN0aW9uU2V0EjMKB2FjdGlvbnMYASAD",
             "KAsyIi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb24SEgoKY29u",
-            "Y3VycmVudBgCIAEoCCL6CAoGQWN0aW9uEjgKBXRpbWVyGAEgASgLMicudGVt",
-            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuVGltZXJBY3Rpb25IABJKCg1leGVj",
-            "X2FjdGl2aXR5GAIgASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
-            "RXhlY3V0ZUFjdGl2aXR5QWN0aW9uSAASVQoTZXhlY19jaGlsZF93b3JrZmxv",
-            "dxgDIAEoCzI2LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVD",
-            "aGlsZFdvcmtmbG93QWN0aW9uSAASTgoUYXdhaXRfd29ya2Zsb3dfc3RhdGUY",
-            "BCABKAsyLi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdFdvcmtm",
-            "bG93U3RhdGVIABJDCgtzZW5kX3NpZ25hbBgFIAEoCzIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlNlbmRTaWduYWxBY3Rpb25IABJLCg9jYW5jZWxf",
-            "d29ya2Zsb3cYBiABKAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5D",
-            "YW5jZWxXb3JrZmxvd0FjdGlvbkgAEkwKEHNldF9wYXRjaF9tYXJrZXIYByAB",
-            "KAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZXRQYXRjaE1hcmtl",
-            "ckFjdGlvbkgAElwKGHVwc2VydF9zZWFyY2hfYXR0cmlidXRlcxgIIAEoCzI4",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNlYXJjaEF0dHJp",
-            "YnV0ZXNBY3Rpb25IABJDCgt1cHNlcnRfbWVtbxgJIAEoCzIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydE1lbW9BY3Rpb25IABJHChJzZXRf",
-            "d29ya2Zsb3dfc3RhdGUYCiABKAsyKS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5Xb3JrZmxvd1N0YXRlSAASRwoNcmV0dXJuX3Jlc3VsdBgLIAEoCzIu",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlJldHVyblJlc3VsdEFjdGlv",
-            "bkgAEkUKDHJldHVybl9lcnJvchgMIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLlJldHVybkVycm9yQWN0aW9uSAASSgoPY29udGludWVfYXNf",
-            "bmV3GA0gASgLMi8udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGlu",
-            "dWVBc05ld0FjdGlvbkgAEkIKEW5lc3RlZF9hY3Rpb25fc2V0GA4gASgLMiUu",
-            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASTAoPbmV4",
-            "dXNfb3BlcmF0aW9uGA8gASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
-            "bmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uSABCCQoHdmFyaWFudCKjAgoPQXdh",
-            "aXRhYmxlQ2hvaWNlEi0KC3dhaXRfZmluaXNoGAEgASgLMhYuZ29vZ2xlLnBy",
-            "b3RvYnVmLkVtcHR5SAASKQoHYWJhbmRvbhgCIAEoCzIWLmdvb2dsZS5wcm90",
-            "b2J1Zi5FbXB0eUgAEjcKFWNhbmNlbF9iZWZvcmVfc3RhcnRlZBgDIAEoCzIW",
-            "Lmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEjYKFGNhbmNlbF9hZnRlcl9zdGFy",
-            "dGVkGAQgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASOAoWY2FuY2Vs",
-            "X2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0",
-            "eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxtaWxsaXNlY29u",
-            "ZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIrLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLqDAoVRXhlY3V0",
-            "ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uR2VuZXJp",
-            "Y0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
-            "RHVyYXRpb25IABImCgRub29wGAMgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVt",
-            "cHR5SAASWAoJcmVzb3VyY2VzGA4gASgLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJlc291cmNlc0FjdGl2",
-            "aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXlsb2FkQWN0aXZpdHlI",
-            "ABJSCgZjbGllbnQYEyABKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uQ2xpZW50QWN0aXZpdHlIABISCgp0",
-            "YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uSGVhZGVy",
-            "c0VudHJ5EjwKGXNjaGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiABKAsyGS5n",
-            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9fc3RhcnRf",
-            "dGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI5ChZz",
-            "dGFydF90b19jbG9zZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVm",
-            "LkR1cmF0aW9uEjQKEWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhkuZ29vZ2xl",
-            "LnByb3RvYnVmLkR1cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEoCzIjLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNfbG9jYWwY",
-            "CyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1vdGUYDCAB",
-            "KAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVBY3Rpdml0",
-            "eU9wdGlvbnNIARJFChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIKCHByaW9y",
-            "aXR5GA8gASgLMiAudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlvcml0eRIU",
-            "CgxmYWlybmVzc19rZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0GBEgASgC",
-            "GlMKD0dlbmVyaWNBY3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFyZ3VtZW50",
-            "cxgCIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBqaAQoR",
-            "UmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdvb2dsZS5w",
-            "cm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgCIAEoBBIk",
-            "ChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgKEGNwdV95",
-            "aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgKEGJ5dGVz",
-            "X3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIgASgFGlUK",
-            "DkNsaWVudEFjdGl2aXR5EkMKD2NsaWVudF9zZXF1ZW5jZRgBIAEoCzIqLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNsaWVudFNlcXVlbmNlGk8KDEhl",
-            "YWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1w",
-            "b3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFjdGl2aXR5X3R5",
-            "cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9u",
-            "EhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxvd19pZBgDIAEoCRIVCg13",
-            "b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVldWUYBSABKAkSLgoFaW5w",
-            "dXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQSPQoa",
-            "d29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByABKAsyGS5nb29nbGUucHJv",
-            "dG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVuX3RpbWVvdXQYCCABKAsy",
+            "Y3VycmVudBgCIAEoCCJTCgxTY2hlZHVsZVNwZWMSGAoQY3Jvbl9leHByZXNz",
+            "aW9ucxgBIAMoCRIpCgZqaXR0ZXIYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
+            "RHVyYXRpb24iuAIKDlNjaGVkdWxlQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEg",
+            "ASgJEhUKDXdvcmtmbG93X3R5cGUYAiABKAkSEgoKdGFza19xdWV1ZRgDIAEo",
+            "CRIyCglhcmd1bWVudHMYBCADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
+            "LlBheWxvYWQSPQoad29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYBSABKAsy",
             "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zsb3dfdGFza190",
-            "aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEkoKE3Bh",
-            "cmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3b3JrZmxvd19pZF9yZXVz",
-            "ZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGkuZW51bXMudjEuV29ya2Zs",
-            "b3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGljeRgNIAEoCzIjLnRlbXBv",
-            "cmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSFQoNY3Jvbl9zY2hlZHVs",
-            "ZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uSGVhZGVyc0Vu",
-            "dHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5NZW1vRW50cnkSZwoRc2Vh",
-            "cmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5TZWFyY2hBdHRyaWJ1",
-            "dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUYEiABKA4yOS50ZW1wb3Jh",
-            "bC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
-            "VHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEoDjIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQSRQoQYXdhaXRhYmxl",
-            "X2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3",
-            "YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4K",
-            "BXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2Fk",
-            "OgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpYChVTZWFy",
+            "aW1lb3V0GAYgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEjkKDHJl",
+            "dHJ5X3BvbGljeRgHIAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0",
+            "cnlQb2xpY3kifQoQU2NoZWR1bGVQb2xpY2llcxIZChFyZW1haW5pbmdfYWN0",
+            "aW9ucxgBIAEoAxIbChN0cmlnZ2VyX2ltbWVkaWF0ZWx5GAIgASgIEjEKDmNh",
+            "dGNodXBfd2luZG93GAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9u",
+            "IkIKEFNjaGVkdWxlQmFja2ZpbGwSFwoPc3RhcnRfdGltZXN0YW1wGAEgASgD",
+            "EhUKDWVuZF90aW1lc3RhbXAYAiABKAMinwIKFENyZWF0ZVNjaGVkdWxlQWN0",
+            "aW9uEhMKC3NjaGVkdWxlX2lkGAEgASgJEjYKBHNwZWMYAiABKAsyKC50ZW1w",
+            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5TY2hlZHVsZVNwZWMSOgoGYWN0aW9u",
+            "GAMgASgLMioudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuU2NoZWR1bGVB",
+            "Y3Rpb24SPgoIcG9saWNpZXMYBCABKAsyLC50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5TY2hlZHVsZVBvbGljaWVzEj4KCGJhY2tmaWxsGAUgAygLMiwu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuU2NoZWR1bGVCYWNrZmlsbCIt",
+            "ChZEZXNjcmliZVNjaGVkdWxlQWN0aW9uEhMKC3NjaGVkdWxlX2lkGAEgASgJ",
+            "ImMKFFVwZGF0ZVNjaGVkdWxlQWN0aW9uEhMKC3NjaGVkdWxlX2lkGAEgASgJ",
+            "EjYKBHNwZWMYAiABKAsyKC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5T",
+            "Y2hlZHVsZVNwZWMiKwoURGVsZXRlU2NoZWR1bGVBY3Rpb24SEwoLc2NoZWR1",
+            "bGVfaWQYASABKAkisgsKBkFjdGlvbhI4CgV0aW1lchgBIAEoCzInLnRlbXBv",
+            "cmFsLm9tZXMua2l0Y2hlbl9zaW5rLlRpbWVyQWN0aW9uSAASSgoNZXhlY19h",
+            "Y3Rpdml0eRgCIAEoCzIxLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4",
+            "ZWN1dGVBY3Rpdml0eUFjdGlvbkgAElUKE2V4ZWNfY2hpbGRfd29ya2Zsb3cY",
+            "AyABKAsyNi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQ2hp",
+            "bGRXb3JrZmxvd0FjdGlvbkgAEk4KFGF3YWl0X3dvcmtmbG93X3N0YXRlGAQg",
+            "ASgLMi4udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRXb3JrZmxv",
+            "d1N0YXRlSAASQwoLc2VuZF9zaWduYWwYBSABKAsyLC50ZW1wb3JhbC5vbWVz",
+            "LmtpdGNoZW5fc2luay5TZW5kU2lnbmFsQWN0aW9uSAASSwoPY2FuY2VsX3dv",
+            "cmtmbG93GAYgASgLMjAudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ2Fu",
+            "Y2VsV29ya2Zsb3dBY3Rpb25IABJMChBzZXRfcGF0Y2hfbWFya2VyGAcgASgL",
+            "MjAudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuU2V0UGF0Y2hNYXJrZXJB",
+            "Y3Rpb25IABJcChh1cHNlcnRfc2VhcmNoX2F0dHJpYnV0ZXMYCCABKAsyOC50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5VcHNlcnRTZWFyY2hBdHRyaWJ1",
+            "dGVzQWN0aW9uSAASQwoLdXBzZXJ0X21lbW8YCSABKAsyLC50ZW1wb3JhbC5v",
+            "bWVzLmtpdGNoZW5fc2luay5VcHNlcnRNZW1vQWN0aW9uSAASRwoSc2V0X3dv",
+            "cmtmbG93X3N0YXRlGAogASgLMikudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuV29ya2Zsb3dTdGF0ZUgAEkcKDXJldHVybl9yZXN1bHQYCyABKAsyLi50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZXR1cm5SZXN1bHRBY3Rpb25I",
+            "ABJFCgxyZXR1cm5fZXJyb3IYDCABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5SZXR1cm5FcnJvckFjdGlvbkgAEkoKD2NvbnRpbnVlX2FzX25l",
+            "dxgNIAEoCzIvLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVl",
+            "QXNOZXdBY3Rpb25IABJCChFuZXN0ZWRfYWN0aW9uX3NldBgOIAEoCzIlLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldEgAEkwKD25leHVz",
+            "X29wZXJhdGlvbhgPIAEoCzIxLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkV4ZWN1dGVOZXh1c09wZXJhdGlvbkgAEksKD2NyZWF0ZV9zY2hlZHVsZRgQ",
+            "IAEoCzIwLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNyZWF0ZVNjaGVk",
+            "dWxlQWN0aW9uSAASTwoRZGVzY3JpYmVfc2NoZWR1bGUYESABKAsyMi50ZW1w",
+            "b3JhbC5vbWVzLmtpdGNoZW5fc2luay5EZXNjcmliZVNjaGVkdWxlQWN0aW9u",
+            "SAASSwoPdXBkYXRlX3NjaGVkdWxlGBIgASgLMjAudGVtcG9yYWwub21lcy5r",
+            "aXRjaGVuX3NpbmsuVXBkYXRlU2NoZWR1bGVBY3Rpb25IABJLCg9kZWxldGVf",
+            "c2NoZWR1bGUYEyABKAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5E",
+            "ZWxldGVTY2hlZHVsZUFjdGlvbkgAQgkKB3ZhcmlhbnQiowIKD0F3YWl0YWJs",
+            "ZUNob2ljZRItCgt3YWl0X2ZpbmlzaBgBIAEoCzIWLmdvb2dsZS5wcm90b2J1",
+            "Zi5FbXB0eUgAEikKB2FiYW5kb24YAiABKAsyFi5nb29nbGUucHJvdG9idWYu",
+            "RW1wdHlIABI3ChVjYW5jZWxfYmVmb3JlX3N0YXJ0ZWQYAyABKAsyFi5nb29n",
+            "bGUucHJvdG9idWYuRW1wdHlIABI2ChRjYW5jZWxfYWZ0ZXJfc3RhcnRlZBgE",
+            "IAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEjgKFmNhbmNlbF9hZnRl",
+            "cl9jb21wbGV0ZWQYBSABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIAEIL",
+            "Cgljb25kaXRpb24iagoLVGltZXJBY3Rpb24SFAoMbWlsbGlzZWNvbmRzGAEg",
+            "ASgEEkUKEGF3YWl0YWJsZV9jaG9pY2UYAiABKAsyKy50ZW1wb3JhbC5vbWVz",
+            "LmtpdGNoZW5fc2luay5Bd2FpdGFibGVDaG9pY2Ui6gwKFUV4ZWN1dGVBY3Rp",
+            "dml0eUFjdGlvbhJUCgdnZW5lcmljGAEgASgLMkEudGVtcG9yYWwub21lcy5r",
+            "aXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLkdlbmVyaWNBY3Rp",
+            "dml0eUgAEioKBWRlbGF5GAIgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0",
+            "aW9uSAASJgoEbm9vcBgDIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgA",
+            "ElgKCXJlc291cmNlcxgOIAEoCzJDLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
+            "aW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5SZXNvdXJjZXNBY3Rpdml0eUgA",
+            "ElQKB3BheWxvYWQYEiABKAsyQS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uUGF5bG9hZEFjdGl2aXR5SAASUgoG",
+            "Y2xpZW50GBMgASgLMkAudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhl",
+            "Y3V0ZUFjdGl2aXR5QWN0aW9uLkNsaWVudEFjdGl2aXR5SAASEgoKdGFza19x",
+            "dWV1ZRgEIAEoCRJPCgdoZWFkZXJzGAUgAygLMj4udGVtcG9yYWwub21lcy5r",
+            "aXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLkhlYWRlcnNFbnRy",
+            "eRI8ChlzY2hlZHVsZV90b19jbG9zZV90aW1lb3V0GAYgASgLMhkuZ29vZ2xl",
+            "LnByb3RvYnVmLkR1cmF0aW9uEjwKGXNjaGVkdWxlX3RvX3N0YXJ0X3RpbWVv",
+            "dXQYByABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOQoWc3RhcnRf",
+            "dG9fY2xvc2VfdGltZW91dBgIIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJh",
+            "dGlvbhI0ChFoZWFydGJlYXRfdGltZW91dBgJIAEoCzIZLmdvb2dsZS5wcm90",
+            "b2J1Zi5EdXJhdGlvbhI5CgxyZXRyeV9wb2xpY3kYCiABKAsyIy50ZW1wb3Jh",
+            "bC5hcGkuY29tbW9uLnYxLlJldHJ5UG9saWN5EioKCGlzX2xvY2FsGAsgASgL",
+            "MhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAESQwoGcmVtb3RlGAwgASgLMjEu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuUmVtb3RlQWN0aXZpdHlPcHRp",
+            "b25zSAESRQoQYXdhaXRhYmxlX2Nob2ljZRgNIAEoCzIrLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRIyCghwcmlvcml0eRgP",
+            "IAEoCzIgLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUHJpb3JpdHkSFAoMZmFp",
+            "cm5lc3Nfa2V5GBAgASgJEhcKD2ZhaXJuZXNzX3dlaWdodBgRIAEoAhpTCg9H",
+            "ZW5lcmljQWN0aXZpdHkSDAoEdHlwZRgBIAEoCRIyCglhcmd1bWVudHMYAiAD",
+            "KAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQamgEKEVJlc291",
+            "cmNlc0FjdGl2aXR5EioKB3J1bl9mb3IYASABKAsyGS5nb29nbGUucHJvdG9i",
+            "dWYuRHVyYXRpb24SGQoRYnl0ZXNfdG9fYWxsb2NhdGUYAiABKAQSJAocY3B1",
+            "X3lpZWxkX2V2ZXJ5X25faXRlcmF0aW9ucxgDIAEoDRIYChBjcHVfeWllbGRf",
+            "Zm9yX21zGAQgASgNGkQKD1BheWxvYWRBY3Rpdml0eRIYChBieXRlc190b19y",
+            "ZWNlaXZlGAEgASgFEhcKD2J5dGVzX3RvX3JldHVybhgCIAEoBRpVCg5DbGll",
+            "bnRBY3Rpdml0eRJDCg9jbGllbnRfc2VxdWVuY2UYASABKAsyKi50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5DbGllbnRTZXF1ZW5jZRpPCgxIZWFkZXJz",
+            "RW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwu",
+            "YXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4AUIPCg1hY3Rpdml0eV90eXBlQgoK",
+            "CGxvY2FsaXR5Iq0KChpFeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbhIRCglu",
+            "YW1lc3BhY2UYAiABKAkSEwoLd29ya2Zsb3dfaWQYAyABKAkSFQoNd29ya2Zs",
+            "b3dfdHlwZRgEIAEoCRISCgp0YXNrX3F1ZXVlGAUgASgJEi4KBWlucHV0GAYg",
+            "AygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEj0KGndvcmtm",
+            "bG93X2V4ZWN1dGlvbl90aW1lb3V0GAcgASgLMhkuZ29vZ2xlLnByb3RvYnVm",
+            "LkR1cmF0aW9uEjcKFHdvcmtmbG93X3J1bl90aW1lb3V0GAggASgLMhkuZ29v",
+            "Z2xlLnByb3RvYnVmLkR1cmF0aW9uEjgKFXdvcmtmbG93X3Rhc2tfdGltZW91",
+            "dBgJIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhJKChNwYXJlbnRf",
+            "Y2xvc2VfcG9saWN5GAogASgOMi0udGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuUGFyZW50Q2xvc2VQb2xpY3kSTgoYd29ya2Zsb3dfaWRfcmV1c2VfcG9s",
+            "aWN5GAwgASgOMiwudGVtcG9yYWwuYXBpLmVudW1zLnYxLldvcmtmbG93SWRS",
+            "ZXVzZVBvbGljeRI5CgxyZXRyeV9wb2xpY3kYDSABKAsyIy50ZW1wb3JhbC5h",
+            "cGkuY29tbW9uLnYxLlJldHJ5UG9saWN5EhUKDWNyb25fc2NoZWR1bGUYDiAB",
+            "KAkSVAoHaGVhZGVycxgPIAMoCzJDLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
+            "aW5rLkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9uLkhlYWRlcnNFbnRyeRJO",
+            "CgRtZW1vGBAgAygLMkAudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhl",
+            "Y3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uTWVtb0VudHJ5EmcKEXNlYXJjaF9h",
+            "dHRyaWJ1dGVzGBEgAygLMkwudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "RXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0Vu",
+            "dHJ5ElQKEWNhbmNlbGxhdGlvbl90eXBlGBIgASgOMjkudGVtcG9yYWwub21l",
+            "cy5raXRjaGVuX3NpbmsuQ2hpbGRXb3JrZmxvd0NhbmNlbGxhdGlvblR5cGUS",
+            "RwoRdmVyc2lvbmluZ19pbnRlbnQYEyABKA4yLC50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50EkUKEGF3YWl0YWJsZV9jaG9p",
+            "Y2UYFCABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFi",
+            "bGVDaG9pY2UaTwoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1",
+            "ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEa",
+            "TAoJTWVtb0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEaWAoVU2VhcmNoQXR0",
+            "cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEiMAoSQXdhaXRXb3Jr",
+            "Zmxvd1N0YXRlEgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCSLfAgoQU2Vu",
+            "ZFNpZ25hbEFjdGlvbhITCgt3b3JrZmxvd19pZBgBIAEoCRIOCgZydW5faWQY",
+            "AiABKAkSEwoLc2lnbmFsX25hbWUYAyABKAkSLQoEYXJncxgEIAMoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBJKCgdoZWFkZXJzGAUgAygL",
+            "MjkudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuU2VuZFNpZ25hbEFjdGlv",
+            "bi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgGIAEoCzIrLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRpPCgxI",
+            "ZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVt",
+            "cG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASI7ChRDYW5jZWxXb3Jr",
+            "Zmxvd0FjdGlvbhITCgt3b3JrZmxvd19pZBgBIAEoCRIOCgZydW5faWQYAiAB",
+            "KAkidgoUU2V0UGF0Y2hNYXJrZXJBY3Rpb24SEAoIcGF0Y2hfaWQYASABKAkS",
+            "EgoKZGVwcmVjYXRlZBgCIAEoCBI4Cgxpbm5lcl9hY3Rpb24YAyABKAsyIi50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb24i4wEKHFVwc2VydFNl",
+            "YXJjaEF0dHJpYnV0ZXNBY3Rpb24SaQoRc2VhcmNoX2F0dHJpYnV0ZXMYASAD",
+            "KAsyTi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5VcHNlcnRTZWFyY2hB",
+            "dHRyaWJ1dGVzQWN0aW9uLlNlYXJjaEF0dHJpYnV0ZXNFbnRyeRpYChVTZWFy",
             "Y2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASIwChJBd2Fp",
-            "dFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJIt8C",
-            "ChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1",
-            "bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEoCRItCgRhcmdzGAQgAygL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEkoKB2hlYWRlcnMY",
-            "BSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZW5kU2lnbmFs",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNlGAYgASgL",
-            "MisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNl",
-            "Gk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsy",
-            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIjsKFENhbmNl",
-            "bFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1bl9p",
-            "ZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlvbhIQCghwYXRjaF9pZBgB",
-            "IAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlubmVyX2FjdGlvbhgDIAEo",
-            "CzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvbiLjAQocVXBz",
-            "ZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFzZWFyY2hfYXR0cmlidXRl",
-            "cxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNl",
-            "YXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5GlgK",
-            "FVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUY",
-            "AiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIkcK",
-            "EFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRfbWVtbxgBIAEoCzIcLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJSZXR1cm5SZXN1bHRBY3Rp",
-            "b24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
-            "LnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rpb24SMQoHZmFpbHVyZRgB",
-            "IAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYxLkZhaWx1cmUi3gYKE0Nv",
-            "bnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3dfdHlwZRgBIAEoCRISCgp0",
-            "YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgDIAMoCzIfLnRlbXBvcmFs",
-            "LmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3JrZmxvd19ydW5fdGltZW91",
-            "dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4ChV3b3JrZmxv",
-            "d190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRp",
-            "b24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
-            "LkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5Ek0KB2hlYWRlcnMYByAD",
-            "KAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250aW51ZUFzTmV3",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hfYXR0cmlidXRlcxgIIAMo",
-            "CzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdB",
-            "Y3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkKDHJldHJ5X3BvbGljeRgJ",
-            "IAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSRwoR",
-            "dmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1lbW9FbnRyeRILCgNrZXkY",
-            "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoF",
-            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
-            "AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoF",
-            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
-            "AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMSTwoRY2FuY2VsbGF0aW9u",
-            "X3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rp",
-            "dml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2VybHlfZXhlY3V0",
-            "ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQirAIKFUV4ZWN1",
-            "dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIRCglvcGVyYXRp",
-            "b24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgEIAMoCzI+LnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlv",
-            "bi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgFIAEoCzIrLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRIXCg9l",
-            "eHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgB",
-            "IAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENsb3NlUG9saWN5",
-            "EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJF",
-            "TlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9Q",
-            "T0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVT",
-            "VF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVE",
-            "EAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3Jr",
-            "Zmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcK",
-            "E0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNF",
-            "TExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExB",
-            "VElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUS",
-            "DgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
-            "RBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIu",
-            "Y29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90",
-            "bzM="));
+            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASJHChBVcHNl",
+            "cnRNZW1vQWN0aW9uEjMKDXVwc2VydGVkX21lbW8YASABKAsyHC50ZW1wb3Jh",
+            "bC5hcGkuY29tbW9uLnYxLk1lbW8iSgoSUmV0dXJuUmVzdWx0QWN0aW9uEjQK",
+            "C3JldHVybl90aGlzGAEgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Q",
+            "YXlsb2FkIkYKEVJldHVybkVycm9yQWN0aW9uEjEKB2ZhaWx1cmUYASABKAsy",
+            "IC50ZW1wb3JhbC5hcGkuZmFpbHVyZS52MS5GYWlsdXJlIt4GChNDb250aW51",
+            "ZUFzTmV3QWN0aW9uEhUKDXdvcmtmbG93X3R5cGUYASABKAkSEgoKdGFza19x",
+            "dWV1ZRgCIAEoCRIyCglhcmd1bWVudHMYAyADKAsyHy50ZW1wb3JhbC5hcGku",
+            "Y29tbW9uLnYxLlBheWxvYWQSNwoUd29ya2Zsb3dfcnVuX3RpbWVvdXQYBCAB",
+            "KAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zsb3dfdGFz",
+            "a190aW1lb3V0GAUgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEkcK",
+            "BG1lbW8YBiADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250",
+            "aW51ZUFzTmV3QWN0aW9uLk1lbW9FbnRyeRJNCgdoZWFkZXJzGAcgAygLMjwu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGludWVBc05ld0FjdGlv",
+            "bi5IZWFkZXJzRW50cnkSYAoRc2VhcmNoX2F0dHJpYnV0ZXMYCCADKAsyRS50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250aW51ZUFzTmV3QWN0aW9u",
+            "LlNlYXJjaEF0dHJpYnV0ZXNFbnRyeRI5CgxyZXRyeV9wb2xpY3kYCSABKAsy",
+            "Iy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlJldHJ5UG9saWN5EkcKEXZlcnNp",
+            "b25pbmdfaW50ZW50GAogASgOMiwudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuVmVyc2lvbmluZ0ludGVudBpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJ",
+            "Ei4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXls",
+            "b2FkOgI4ARpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVl",
+            "GAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpY",
+            "ChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVl",
+            "GAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASLR",
+            "AQoVUmVtb3RlQWN0aXZpdHlPcHRpb25zEk8KEWNhbmNlbGxhdGlvbl90eXBl",
+            "GAEgASgOMjQudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aXZpdHlD",
+            "YW5jZWxsYXRpb25UeXBlEh4KFmRvX25vdF9lYWdlcmx5X2V4ZWN1dGUYAiAB",
+            "KAgSRwoRdmVyc2lvbmluZ19pbnRlbnQYAyABKA4yLC50ZW1wb3JhbC5vbWVz",
+            "LmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50IqwCChVFeGVjdXRlTmV4",
+            "dXNPcGVyYXRpb24SEAoIZW5kcG9pbnQYASABKAkSEQoJb3BlcmF0aW9uGAIg",
+            "ASgJEg0KBWlucHV0GAMgASgJEk8KB2hlYWRlcnMYBCADKAsyPi50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlTmV4dXNPcGVyYXRpb24uSGVh",
+            "ZGVyc0VudHJ5EkUKEGF3YWl0YWJsZV9jaG9pY2UYBSABKAsyKy50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFibGVDaG9pY2USFwoPZXhwZWN0",
+            "ZWRfb3V0cHV0GAYgASgJGi4KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkS",
+            "DQoFdmFsdWUYAiABKAk6AjgBKqQBChFQYXJlbnRDbG9zZVBvbGljeRIjCh9Q",
+            "QVJFTlRfQ0xPU0VfUE9MSUNZX1VOU1BFQ0lGSUVEEAASIQodUEFSRU5UX0NM",
+            "T1NFX1BPTElDWV9URVJNSU5BVEUQARIfChtQQVJFTlRfQ0xPU0VfUE9MSUNZ",
+            "X0FCQU5ET04QAhImCiJQQVJFTlRfQ0xPU0VfUE9MSUNZX1JFUVVFU1RfQ0FO",
+            "Q0VMEAMqQAoQVmVyc2lvbmluZ0ludGVudBIPCgtVTlNQRUNJRklFRBAAEg4K",
+            "CkNPTVBBVElCTEUQARILCgdERUZBVUxUEAIqogEKHUNoaWxkV29ya2Zsb3dD",
+            "YW5jZWxsYXRpb25UeXBlEhQKEENISUxEX1dGX0FCQU5ET04QABIXChNDSElM",
+            "RF9XRl9UUllfQ0FOQ0VMEAESKAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxMQVRJ",
+            "T05fQ09NUExFVEVEEAISKAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxMQVRJT05f",
+            "UkVRVUVTVEVEEAMqWAoYQWN0aXZpdHlDYW5jZWxsYXRpb25UeXBlEg4KClRS",
+            "WV9DQU5DRUwQABIfChtXQUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQARIL",
+            "CgdBQkFORE9OEAJCQgoQaW8udGVtcG9yYWwub21lc1ouZ2l0aHViLmNvbS90",
+            "ZW1wb3JhbGlvL29tZXMvbG9hZGdlbi9raXRjaGVuc2lua2IGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -261,7 +291,15 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowState), global::Temporal.Omes.KitchenSink.WorkflowState.Parser, new[]{ "Kvs" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowInput), global::Temporal.Omes.KitchenSink.WorkflowInput.Parser, new[]{ "InitialActions" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ActionSet), global::Temporal.Omes.KitchenSink.ActionSet.Parser, new[]{ "Actions", "Concurrent" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.Action), global::Temporal.Omes.KitchenSink.Action.Parser, new[]{ "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation" }, new[]{ "Variant" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ScheduleSpec), global::Temporal.Omes.KitchenSink.ScheduleSpec.Parser, new[]{ "CronExpressions", "Jitter" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ScheduleAction), global::Temporal.Omes.KitchenSink.ScheduleAction.Parser, new[]{ "WorkflowId", "WorkflowType", "TaskQueue", "Arguments", "WorkflowExecutionTimeout", "WorkflowTaskTimeout", "RetryPolicy" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.SchedulePolicies), global::Temporal.Omes.KitchenSink.SchedulePolicies.Parser, new[]{ "RemainingActions", "TriggerImmediately", "CatchupWindow" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ScheduleBackfill), global::Temporal.Omes.KitchenSink.ScheduleBackfill.Parser, new[]{ "StartTimestamp", "EndTimestamp" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.CreateScheduleAction), global::Temporal.Omes.KitchenSink.CreateScheduleAction.Parser, new[]{ "ScheduleId", "Spec", "Action", "Policies", "Backfill" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DescribeScheduleAction), global::Temporal.Omes.KitchenSink.DescribeScheduleAction.Parser, new[]{ "ScheduleId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.UpdateScheduleAction), global::Temporal.Omes.KitchenSink.UpdateScheduleAction.Parser, new[]{ "ScheduleId", "Spec" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DeleteScheduleAction), global::Temporal.Omes.KitchenSink.DeleteScheduleAction.Parser, new[]{ "ScheduleId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.Action), global::Temporal.Omes.KitchenSink.Action.Parser, new[]{ "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation", "CreateSchedule", "DescribeSchedule", "UpdateSchedule", "DeleteSchedule" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitableChoice), global::Temporal.Omes.KitchenSink.AwaitableChoice.Parser, new[]{ "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted" }, new[]{ "Condition" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.TimerAction), global::Temporal.Omes.KitchenSink.TimerAction.Parser, new[]{ "Milliseconds", "AwaitableChoice" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "Client", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
@@ -609,7 +647,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -645,7 +687,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -825,7 +871,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -844,7 +894,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1105,7 +1159,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1139,7 +1197,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1393,7 +1455,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1426,7 +1492,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1749,7 +1819,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1800,7 +1874,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -2110,7 +2188,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2147,7 +2229,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -2416,7 +2502,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -2449,7 +2539,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -2746,7 +2840,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2783,7 +2881,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3111,7 +3213,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3152,7 +3258,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3421,7 +3531,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3454,7 +3568,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3657,7 +3775,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3680,7 +3802,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3847,7 +3973,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3866,7 +3996,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4026,7 +4160,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4045,7 +4183,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4242,7 +4384,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4265,7 +4411,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4275,6 +4425,2196 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 16: {
             Concurrent = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Schedule-related messages
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ScheduleSpec : pb::IMessage<ScheduleSpec>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ScheduleSpec> _parser = new pb::MessageParser<ScheduleSpec>(() => new ScheduleSpec());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ScheduleSpec> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleSpec() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleSpec(ScheduleSpec other) : this() {
+      cronExpressions_ = other.cronExpressions_.Clone();
+      jitter_ = other.jitter_ != null ? other.jitter_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleSpec Clone() {
+      return new ScheduleSpec(this);
+    }
+
+    /// <summary>Field number for the "cron_expressions" field.</summary>
+    public const int CronExpressionsFieldNumber = 1;
+    private static readonly pb::FieldCodec<string> _repeated_cronExpressions_codec
+        = pb::FieldCodec.ForString(10);
+    private readonly pbc::RepeatedField<string> cronExpressions_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> CronExpressions {
+      get { return cronExpressions_; }
+    }
+
+    /// <summary>Field number for the "jitter" field.</summary>
+    public const int JitterFieldNumber = 2;
+    private global::Google.Protobuf.WellKnownTypes.Duration jitter_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Duration Jitter {
+      get { return jitter_; }
+      set {
+        jitter_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ScheduleSpec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ScheduleSpec other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!cronExpressions_.Equals(other.cronExpressions_)) return false;
+      if (!object.Equals(Jitter, other.Jitter)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= cronExpressions_.GetHashCode();
+      if (jitter_ != null) hash ^= Jitter.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      cronExpressions_.WriteTo(output, _repeated_cronExpressions_codec);
+      if (jitter_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Jitter);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      cronExpressions_.WriteTo(ref output, _repeated_cronExpressions_codec);
+      if (jitter_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Jitter);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      size += cronExpressions_.CalculateSize(_repeated_cronExpressions_codec);
+      if (jitter_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Jitter);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ScheduleSpec other) {
+      if (other == null) {
+        return;
+      }
+      cronExpressions_.Add(other.cronExpressions_);
+      if (other.jitter_ != null) {
+        if (jitter_ == null) {
+          Jitter = new global::Google.Protobuf.WellKnownTypes.Duration();
+        }
+        Jitter.MergeFrom(other.Jitter);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            cronExpressions_.AddEntriesFrom(input, _repeated_cronExpressions_codec);
+            break;
+          }
+          case 18: {
+            if (jitter_ == null) {
+              Jitter = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(Jitter);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            cronExpressions_.AddEntriesFrom(ref input, _repeated_cronExpressions_codec);
+            break;
+          }
+          case 18: {
+            if (jitter_ == null) {
+              Jitter = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(Jitter);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ScheduleAction : pb::IMessage<ScheduleAction>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ScheduleAction> _parser = new pb::MessageParser<ScheduleAction>(() => new ScheduleAction());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ScheduleAction> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleAction() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleAction(ScheduleAction other) : this() {
+      workflowId_ = other.workflowId_;
+      workflowType_ = other.workflowType_;
+      taskQueue_ = other.taskQueue_;
+      arguments_ = other.arguments_.Clone();
+      workflowExecutionTimeout_ = other.workflowExecutionTimeout_ != null ? other.workflowExecutionTimeout_.Clone() : null;
+      workflowTaskTimeout_ = other.workflowTaskTimeout_ != null ? other.workflowTaskTimeout_.Clone() : null;
+      retryPolicy_ = other.retryPolicy_ != null ? other.retryPolicy_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleAction Clone() {
+      return new ScheduleAction(this);
+    }
+
+    /// <summary>Field number for the "workflow_id" field.</summary>
+    public const int WorkflowIdFieldNumber = 1;
+    private string workflowId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowId {
+      get { return workflowId_; }
+      set {
+        workflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "workflow_type" field.</summary>
+    public const int WorkflowTypeFieldNumber = 2;
+    private string workflowType_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowType {
+      get { return workflowType_; }
+      set {
+        workflowType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "task_queue" field.</summary>
+    public const int TaskQueueFieldNumber = 3;
+    private string taskQueue_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TaskQueue {
+      get { return taskQueue_; }
+      set {
+        taskQueue_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "arguments" field.</summary>
+    public const int ArgumentsFieldNumber = 4;
+    private static readonly pb::FieldCodec<global::Temporalio.Api.Common.V1.Payload> _repeated_arguments_codec
+        = pb::FieldCodec.ForMessage(34, global::Temporalio.Api.Common.V1.Payload.Parser);
+    private readonly pbc::RepeatedField<global::Temporalio.Api.Common.V1.Payload> arguments_ = new pbc::RepeatedField<global::Temporalio.Api.Common.V1.Payload>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Temporalio.Api.Common.V1.Payload> Arguments {
+      get { return arguments_; }
+    }
+
+    /// <summary>Field number for the "workflow_execution_timeout" field.</summary>
+    public const int WorkflowExecutionTimeoutFieldNumber = 5;
+    private global::Google.Protobuf.WellKnownTypes.Duration workflowExecutionTimeout_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Duration WorkflowExecutionTimeout {
+      get { return workflowExecutionTimeout_; }
+      set {
+        workflowExecutionTimeout_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "workflow_task_timeout" field.</summary>
+    public const int WorkflowTaskTimeoutFieldNumber = 6;
+    private global::Google.Protobuf.WellKnownTypes.Duration workflowTaskTimeout_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Duration WorkflowTaskTimeout {
+      get { return workflowTaskTimeout_; }
+      set {
+        workflowTaskTimeout_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "retry_policy" field.</summary>
+    public const int RetryPolicyFieldNumber = 7;
+    private global::Temporalio.Api.Common.V1.RetryPolicy retryPolicy_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporalio.Api.Common.V1.RetryPolicy RetryPolicy {
+      get { return retryPolicy_; }
+      set {
+        retryPolicy_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ScheduleAction);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ScheduleAction other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (WorkflowId != other.WorkflowId) return false;
+      if (WorkflowType != other.WorkflowType) return false;
+      if (TaskQueue != other.TaskQueue) return false;
+      if(!arguments_.Equals(other.arguments_)) return false;
+      if (!object.Equals(WorkflowExecutionTimeout, other.WorkflowExecutionTimeout)) return false;
+      if (!object.Equals(WorkflowTaskTimeout, other.WorkflowTaskTimeout)) return false;
+      if (!object.Equals(RetryPolicy, other.RetryPolicy)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (WorkflowId.Length != 0) hash ^= WorkflowId.GetHashCode();
+      if (WorkflowType.Length != 0) hash ^= WorkflowType.GetHashCode();
+      if (TaskQueue.Length != 0) hash ^= TaskQueue.GetHashCode();
+      hash ^= arguments_.GetHashCode();
+      if (workflowExecutionTimeout_ != null) hash ^= WorkflowExecutionTimeout.GetHashCode();
+      if (workflowTaskTimeout_ != null) hash ^= WorkflowTaskTimeout.GetHashCode();
+      if (retryPolicy_ != null) hash ^= RetryPolicy.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (WorkflowType.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowType);
+      }
+      if (TaskQueue.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TaskQueue);
+      }
+      arguments_.WriteTo(output, _repeated_arguments_codec);
+      if (workflowExecutionTimeout_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(WorkflowExecutionTimeout);
+      }
+      if (workflowTaskTimeout_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(WorkflowTaskTimeout);
+      }
+      if (retryPolicy_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(RetryPolicy);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (WorkflowType.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(WorkflowType);
+      }
+      if (TaskQueue.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TaskQueue);
+      }
+      arguments_.WriteTo(ref output, _repeated_arguments_codec);
+      if (workflowExecutionTimeout_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(WorkflowExecutionTimeout);
+      }
+      if (workflowTaskTimeout_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(WorkflowTaskTimeout);
+      }
+      if (retryPolicy_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(RetryPolicy);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (WorkflowId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowId);
+      }
+      if (WorkflowType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowType);
+      }
+      if (TaskQueue.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TaskQueue);
+      }
+      size += arguments_.CalculateSize(_repeated_arguments_codec);
+      if (workflowExecutionTimeout_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WorkflowExecutionTimeout);
+      }
+      if (workflowTaskTimeout_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WorkflowTaskTimeout);
+      }
+      if (retryPolicy_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(RetryPolicy);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ScheduleAction other) {
+      if (other == null) {
+        return;
+      }
+      if (other.WorkflowId.Length != 0) {
+        WorkflowId = other.WorkflowId;
+      }
+      if (other.WorkflowType.Length != 0) {
+        WorkflowType = other.WorkflowType;
+      }
+      if (other.TaskQueue.Length != 0) {
+        TaskQueue = other.TaskQueue;
+      }
+      arguments_.Add(other.arguments_);
+      if (other.workflowExecutionTimeout_ != null) {
+        if (workflowExecutionTimeout_ == null) {
+          WorkflowExecutionTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+        }
+        WorkflowExecutionTimeout.MergeFrom(other.WorkflowExecutionTimeout);
+      }
+      if (other.workflowTaskTimeout_ != null) {
+        if (workflowTaskTimeout_ == null) {
+          WorkflowTaskTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+        }
+        WorkflowTaskTimeout.MergeFrom(other.WorkflowTaskTimeout);
+      }
+      if (other.retryPolicy_ != null) {
+        if (retryPolicy_ == null) {
+          RetryPolicy = new global::Temporalio.Api.Common.V1.RetryPolicy();
+        }
+        RetryPolicy.MergeFrom(other.RetryPolicy);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowType = input.ReadString();
+            break;
+          }
+          case 26: {
+            TaskQueue = input.ReadString();
+            break;
+          }
+          case 34: {
+            arguments_.AddEntriesFrom(input, _repeated_arguments_codec);
+            break;
+          }
+          case 42: {
+            if (workflowExecutionTimeout_ == null) {
+              WorkflowExecutionTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(WorkflowExecutionTimeout);
+            break;
+          }
+          case 50: {
+            if (workflowTaskTimeout_ == null) {
+              WorkflowTaskTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(WorkflowTaskTimeout);
+            break;
+          }
+          case 58: {
+            if (retryPolicy_ == null) {
+              RetryPolicy = new global::Temporalio.Api.Common.V1.RetryPolicy();
+            }
+            input.ReadMessage(RetryPolicy);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 18: {
+            WorkflowType = input.ReadString();
+            break;
+          }
+          case 26: {
+            TaskQueue = input.ReadString();
+            break;
+          }
+          case 34: {
+            arguments_.AddEntriesFrom(ref input, _repeated_arguments_codec);
+            break;
+          }
+          case 42: {
+            if (workflowExecutionTimeout_ == null) {
+              WorkflowExecutionTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(WorkflowExecutionTimeout);
+            break;
+          }
+          case 50: {
+            if (workflowTaskTimeout_ == null) {
+              WorkflowTaskTimeout = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(WorkflowTaskTimeout);
+            break;
+          }
+          case 58: {
+            if (retryPolicy_ == null) {
+              RetryPolicy = new global::Temporalio.Api.Common.V1.RetryPolicy();
+            }
+            input.ReadMessage(RetryPolicy);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class SchedulePolicies : pb::IMessage<SchedulePolicies>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<SchedulePolicies> _parser = new pb::MessageParser<SchedulePolicies>(() => new SchedulePolicies());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<SchedulePolicies> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[15]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SchedulePolicies() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SchedulePolicies(SchedulePolicies other) : this() {
+      remainingActions_ = other.remainingActions_;
+      triggerImmediately_ = other.triggerImmediately_;
+      catchupWindow_ = other.catchupWindow_ != null ? other.catchupWindow_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SchedulePolicies Clone() {
+      return new SchedulePolicies(this);
+    }
+
+    /// <summary>Field number for the "remaining_actions" field.</summary>
+    public const int RemainingActionsFieldNumber = 1;
+    private long remainingActions_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long RemainingActions {
+      get { return remainingActions_; }
+      set {
+        remainingActions_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "trigger_immediately" field.</summary>
+    public const int TriggerImmediatelyFieldNumber = 2;
+    private bool triggerImmediately_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool TriggerImmediately {
+      get { return triggerImmediately_; }
+      set {
+        triggerImmediately_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "catchup_window" field.</summary>
+    public const int CatchupWindowFieldNumber = 3;
+    private global::Google.Protobuf.WellKnownTypes.Duration catchupWindow_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Duration CatchupWindow {
+      get { return catchupWindow_; }
+      set {
+        catchupWindow_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as SchedulePolicies);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(SchedulePolicies other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (RemainingActions != other.RemainingActions) return false;
+      if (TriggerImmediately != other.TriggerImmediately) return false;
+      if (!object.Equals(CatchupWindow, other.CatchupWindow)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (RemainingActions != 0L) hash ^= RemainingActions.GetHashCode();
+      if (TriggerImmediately != false) hash ^= TriggerImmediately.GetHashCode();
+      if (catchupWindow_ != null) hash ^= CatchupWindow.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (RemainingActions != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(RemainingActions);
+      }
+      if (TriggerImmediately != false) {
+        output.WriteRawTag(16);
+        output.WriteBool(TriggerImmediately);
+      }
+      if (catchupWindow_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(CatchupWindow);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (RemainingActions != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(RemainingActions);
+      }
+      if (TriggerImmediately != false) {
+        output.WriteRawTag(16);
+        output.WriteBool(TriggerImmediately);
+      }
+      if (catchupWindow_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(CatchupWindow);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (RemainingActions != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(RemainingActions);
+      }
+      if (TriggerImmediately != false) {
+        size += 1 + 1;
+      }
+      if (catchupWindow_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(CatchupWindow);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(SchedulePolicies other) {
+      if (other == null) {
+        return;
+      }
+      if (other.RemainingActions != 0L) {
+        RemainingActions = other.RemainingActions;
+      }
+      if (other.TriggerImmediately != false) {
+        TriggerImmediately = other.TriggerImmediately;
+      }
+      if (other.catchupWindow_ != null) {
+        if (catchupWindow_ == null) {
+          CatchupWindow = new global::Google.Protobuf.WellKnownTypes.Duration();
+        }
+        CatchupWindow.MergeFrom(other.CatchupWindow);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            RemainingActions = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            TriggerImmediately = input.ReadBool();
+            break;
+          }
+          case 26: {
+            if (catchupWindow_ == null) {
+              CatchupWindow = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(CatchupWindow);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            RemainingActions = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            TriggerImmediately = input.ReadBool();
+            break;
+          }
+          case 26: {
+            if (catchupWindow_ == null) {
+              CatchupWindow = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            input.ReadMessage(CatchupWindow);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ScheduleBackfill : pb::IMessage<ScheduleBackfill>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ScheduleBackfill> _parser = new pb::MessageParser<ScheduleBackfill>(() => new ScheduleBackfill());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ScheduleBackfill> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[16]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleBackfill() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleBackfill(ScheduleBackfill other) : this() {
+      startTimestamp_ = other.startTimestamp_;
+      endTimestamp_ = other.endTimestamp_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ScheduleBackfill Clone() {
+      return new ScheduleBackfill(this);
+    }
+
+    /// <summary>Field number for the "start_timestamp" field.</summary>
+    public const int StartTimestampFieldNumber = 1;
+    private long startTimestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long StartTimestamp {
+      get { return startTimestamp_; }
+      set {
+        startTimestamp_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "end_timestamp" field.</summary>
+    public const int EndTimestampFieldNumber = 2;
+    private long endTimestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long EndTimestamp {
+      get { return endTimestamp_; }
+      set {
+        endTimestamp_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ScheduleBackfill);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ScheduleBackfill other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (StartTimestamp != other.StartTimestamp) return false;
+      if (EndTimestamp != other.EndTimestamp) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (StartTimestamp != 0L) hash ^= StartTimestamp.GetHashCode();
+      if (EndTimestamp != 0L) hash ^= EndTimestamp.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (StartTimestamp != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(StartTimestamp);
+      }
+      if (EndTimestamp != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(EndTimestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (StartTimestamp != 0L) {
+        output.WriteRawTag(8);
+        output.WriteInt64(StartTimestamp);
+      }
+      if (EndTimestamp != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(EndTimestamp);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (StartTimestamp != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(StartTimestamp);
+      }
+      if (EndTimestamp != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(EndTimestamp);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ScheduleBackfill other) {
+      if (other == null) {
+        return;
+      }
+      if (other.StartTimestamp != 0L) {
+        StartTimestamp = other.StartTimestamp;
+      }
+      if (other.EndTimestamp != 0L) {
+        EndTimestamp = other.EndTimestamp;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            StartTimestamp = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            EndTimestamp = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            StartTimestamp = input.ReadInt64();
+            break;
+          }
+          case 16: {
+            EndTimestamp = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class CreateScheduleAction : pb::IMessage<CreateScheduleAction>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<CreateScheduleAction> _parser = new pb::MessageParser<CreateScheduleAction>(() => new CreateScheduleAction());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<CreateScheduleAction> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[17]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CreateScheduleAction() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CreateScheduleAction(CreateScheduleAction other) : this() {
+      scheduleId_ = other.scheduleId_;
+      spec_ = other.spec_ != null ? other.spec_.Clone() : null;
+      action_ = other.action_ != null ? other.action_.Clone() : null;
+      policies_ = other.policies_ != null ? other.policies_.Clone() : null;
+      backfill_ = other.backfill_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CreateScheduleAction Clone() {
+      return new CreateScheduleAction(this);
+    }
+
+    /// <summary>Field number for the "schedule_id" field.</summary>
+    public const int ScheduleIdFieldNumber = 1;
+    private string scheduleId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScheduleId {
+      get { return scheduleId_; }
+      set {
+        scheduleId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "spec" field.</summary>
+    public const int SpecFieldNumber = 2;
+    private global::Temporal.Omes.KitchenSink.ScheduleSpec spec_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ScheduleSpec Spec {
+      get { return spec_; }
+      set {
+        spec_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "action" field.</summary>
+    public const int ActionFieldNumber = 3;
+    private global::Temporal.Omes.KitchenSink.ScheduleAction action_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ScheduleAction Action {
+      get { return action_; }
+      set {
+        action_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "policies" field.</summary>
+    public const int PoliciesFieldNumber = 4;
+    private global::Temporal.Omes.KitchenSink.SchedulePolicies policies_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.SchedulePolicies Policies {
+      get { return policies_; }
+      set {
+        policies_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "backfill" field.</summary>
+    public const int BackfillFieldNumber = 5;
+    private static readonly pb::FieldCodec<global::Temporal.Omes.KitchenSink.ScheduleBackfill> _repeated_backfill_codec
+        = pb::FieldCodec.ForMessage(42, global::Temporal.Omes.KitchenSink.ScheduleBackfill.Parser);
+    private readonly pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ScheduleBackfill> backfill_ = new pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ScheduleBackfill>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ScheduleBackfill> Backfill {
+      get { return backfill_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as CreateScheduleAction);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(CreateScheduleAction other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ScheduleId != other.ScheduleId) return false;
+      if (!object.Equals(Spec, other.Spec)) return false;
+      if (!object.Equals(Action, other.Action)) return false;
+      if (!object.Equals(Policies, other.Policies)) return false;
+      if(!backfill_.Equals(other.backfill_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ScheduleId.Length != 0) hash ^= ScheduleId.GetHashCode();
+      if (spec_ != null) hash ^= Spec.GetHashCode();
+      if (action_ != null) hash ^= Action.GetHashCode();
+      if (policies_ != null) hash ^= Policies.GetHashCode();
+      hash ^= backfill_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (spec_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Spec);
+      }
+      if (action_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Action);
+      }
+      if (policies_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Policies);
+      }
+      backfill_.WriteTo(output, _repeated_backfill_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (spec_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Spec);
+      }
+      if (action_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Action);
+      }
+      if (policies_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Policies);
+      }
+      backfill_.WriteTo(ref output, _repeated_backfill_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ScheduleId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScheduleId);
+      }
+      if (spec_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Spec);
+      }
+      if (action_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Action);
+      }
+      if (policies_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Policies);
+      }
+      size += backfill_.CalculateSize(_repeated_backfill_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(CreateScheduleAction other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ScheduleId.Length != 0) {
+        ScheduleId = other.ScheduleId;
+      }
+      if (other.spec_ != null) {
+        if (spec_ == null) {
+          Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+        }
+        Spec.MergeFrom(other.Spec);
+      }
+      if (other.action_ != null) {
+        if (action_ == null) {
+          Action = new global::Temporal.Omes.KitchenSink.ScheduleAction();
+        }
+        Action.MergeFrom(other.Action);
+      }
+      if (other.policies_ != null) {
+        if (policies_ == null) {
+          Policies = new global::Temporal.Omes.KitchenSink.SchedulePolicies();
+        }
+        Policies.MergeFrom(other.Policies);
+      }
+      backfill_.Add(other.backfill_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (spec_ == null) {
+              Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+            }
+            input.ReadMessage(Spec);
+            break;
+          }
+          case 26: {
+            if (action_ == null) {
+              Action = new global::Temporal.Omes.KitchenSink.ScheduleAction();
+            }
+            input.ReadMessage(Action);
+            break;
+          }
+          case 34: {
+            if (policies_ == null) {
+              Policies = new global::Temporal.Omes.KitchenSink.SchedulePolicies();
+            }
+            input.ReadMessage(Policies);
+            break;
+          }
+          case 42: {
+            backfill_.AddEntriesFrom(input, _repeated_backfill_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (spec_ == null) {
+              Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+            }
+            input.ReadMessage(Spec);
+            break;
+          }
+          case 26: {
+            if (action_ == null) {
+              Action = new global::Temporal.Omes.KitchenSink.ScheduleAction();
+            }
+            input.ReadMessage(Action);
+            break;
+          }
+          case 34: {
+            if (policies_ == null) {
+              Policies = new global::Temporal.Omes.KitchenSink.SchedulePolicies();
+            }
+            input.ReadMessage(Policies);
+            break;
+          }
+          case 42: {
+            backfill_.AddEntriesFrom(ref input, _repeated_backfill_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DescribeScheduleAction : pb::IMessage<DescribeScheduleAction>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DescribeScheduleAction> _parser = new pb::MessageParser<DescribeScheduleAction>(() => new DescribeScheduleAction());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DescribeScheduleAction> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[18]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DescribeScheduleAction() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DescribeScheduleAction(DescribeScheduleAction other) : this() {
+      scheduleId_ = other.scheduleId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DescribeScheduleAction Clone() {
+      return new DescribeScheduleAction(this);
+    }
+
+    /// <summary>Field number for the "schedule_id" field.</summary>
+    public const int ScheduleIdFieldNumber = 1;
+    private string scheduleId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScheduleId {
+      get { return scheduleId_; }
+      set {
+        scheduleId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DescribeScheduleAction);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DescribeScheduleAction other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ScheduleId != other.ScheduleId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ScheduleId.Length != 0) hash ^= ScheduleId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ScheduleId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DescribeScheduleAction other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ScheduleId.Length != 0) {
+        ScheduleId = other.ScheduleId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class UpdateScheduleAction : pb::IMessage<UpdateScheduleAction>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<UpdateScheduleAction> _parser = new pb::MessageParser<UpdateScheduleAction>(() => new UpdateScheduleAction());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<UpdateScheduleAction> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[19]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public UpdateScheduleAction() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public UpdateScheduleAction(UpdateScheduleAction other) : this() {
+      scheduleId_ = other.scheduleId_;
+      spec_ = other.spec_ != null ? other.spec_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public UpdateScheduleAction Clone() {
+      return new UpdateScheduleAction(this);
+    }
+
+    /// <summary>Field number for the "schedule_id" field.</summary>
+    public const int ScheduleIdFieldNumber = 1;
+    private string scheduleId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScheduleId {
+      get { return scheduleId_; }
+      set {
+        scheduleId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "spec" field.</summary>
+    public const int SpecFieldNumber = 2;
+    private global::Temporal.Omes.KitchenSink.ScheduleSpec spec_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ScheduleSpec Spec {
+      get { return spec_; }
+      set {
+        spec_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as UpdateScheduleAction);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(UpdateScheduleAction other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ScheduleId != other.ScheduleId) return false;
+      if (!object.Equals(Spec, other.Spec)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ScheduleId.Length != 0) hash ^= ScheduleId.GetHashCode();
+      if (spec_ != null) hash ^= Spec.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (spec_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Spec);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (spec_ != null) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Spec);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ScheduleId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScheduleId);
+      }
+      if (spec_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Spec);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(UpdateScheduleAction other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ScheduleId.Length != 0) {
+        ScheduleId = other.ScheduleId;
+      }
+      if (other.spec_ != null) {
+        if (spec_ == null) {
+          Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+        }
+        Spec.MergeFrom(other.Spec);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (spec_ == null) {
+              Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+            }
+            input.ReadMessage(Spec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+          case 18: {
+            if (spec_ == null) {
+              Spec = new global::Temporal.Omes.KitchenSink.ScheduleSpec();
+            }
+            input.ReadMessage(Spec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DeleteScheduleAction : pb::IMessage<DeleteScheduleAction>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DeleteScheduleAction> _parser = new pb::MessageParser<DeleteScheduleAction>(() => new DeleteScheduleAction());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DeleteScheduleAction> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[20]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeleteScheduleAction() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeleteScheduleAction(DeleteScheduleAction other) : this() {
+      scheduleId_ = other.scheduleId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeleteScheduleAction Clone() {
+      return new DeleteScheduleAction(this);
+    }
+
+    /// <summary>Field number for the "schedule_id" field.</summary>
+    public const int ScheduleIdFieldNumber = 1;
+    private string scheduleId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ScheduleId {
+      get { return scheduleId_; }
+      set {
+        scheduleId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DeleteScheduleAction);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DeleteScheduleAction other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ScheduleId != other.ScheduleId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ScheduleId.Length != 0) hash ^= ScheduleId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ScheduleId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ScheduleId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ScheduleId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DeleteScheduleAction other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ScheduleId.Length != 0) {
+        ScheduleId = other.ScheduleId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ScheduleId = input.ReadString();
             break;
           }
         }
@@ -4299,7 +6639,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[21]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4364,6 +6704,18 @@ namespace Temporal.Omes.KitchenSink {
           break;
         case VariantOneofCase.NexusOperation:
           NexusOperation = other.NexusOperation.Clone();
+          break;
+        case VariantOneofCase.CreateSchedule:
+          CreateSchedule = other.CreateSchedule.Clone();
+          break;
+        case VariantOneofCase.DescribeSchedule:
+          DescribeSchedule = other.DescribeSchedule.Clone();
+          break;
+        case VariantOneofCase.UpdateSchedule:
+          UpdateSchedule = other.UpdateSchedule.Clone();
+          break;
+        case VariantOneofCase.DeleteSchedule:
+          DeleteSchedule = other.DeleteSchedule.Clone();
           break;
       }
 
@@ -4556,6 +6908,54 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
+    /// <summary>Field number for the "create_schedule" field.</summary>
+    public const int CreateScheduleFieldNumber = 16;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.CreateScheduleAction CreateSchedule {
+      get { return variantCase_ == VariantOneofCase.CreateSchedule ? (global::Temporal.Omes.KitchenSink.CreateScheduleAction) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.CreateSchedule;
+      }
+    }
+
+    /// <summary>Field number for the "describe_schedule" field.</summary>
+    public const int DescribeScheduleFieldNumber = 17;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.DescribeScheduleAction DescribeSchedule {
+      get { return variantCase_ == VariantOneofCase.DescribeSchedule ? (global::Temporal.Omes.KitchenSink.DescribeScheduleAction) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.DescribeSchedule;
+      }
+    }
+
+    /// <summary>Field number for the "update_schedule" field.</summary>
+    public const int UpdateScheduleFieldNumber = 18;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.UpdateScheduleAction UpdateSchedule {
+      get { return variantCase_ == VariantOneofCase.UpdateSchedule ? (global::Temporal.Omes.KitchenSink.UpdateScheduleAction) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.UpdateSchedule;
+      }
+    }
+
+    /// <summary>Field number for the "delete_schedule" field.</summary>
+    public const int DeleteScheduleFieldNumber = 19;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.DeleteScheduleAction DeleteSchedule {
+      get { return variantCase_ == VariantOneofCase.DeleteSchedule ? (global::Temporal.Omes.KitchenSink.DeleteScheduleAction) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.DeleteSchedule;
+      }
+    }
+
     private object variant_;
     /// <summary>Enum of possible cases for the "variant" oneof.</summary>
     public enum VariantOneofCase {
@@ -4575,6 +6975,10 @@ namespace Temporal.Omes.KitchenSink {
       ContinueAsNew = 13,
       NestedActionSet = 14,
       NexusOperation = 15,
+      CreateSchedule = 16,
+      DescribeSchedule = 17,
+      UpdateSchedule = 18,
+      DeleteSchedule = 19,
     }
     private VariantOneofCase variantCase_ = VariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4620,6 +7024,10 @@ namespace Temporal.Omes.KitchenSink {
       if (!object.Equals(ContinueAsNew, other.ContinueAsNew)) return false;
       if (!object.Equals(NestedActionSet, other.NestedActionSet)) return false;
       if (!object.Equals(NexusOperation, other.NexusOperation)) return false;
+      if (!object.Equals(CreateSchedule, other.CreateSchedule)) return false;
+      if (!object.Equals(DescribeSchedule, other.DescribeSchedule)) return false;
+      if (!object.Equals(UpdateSchedule, other.UpdateSchedule)) return false;
+      if (!object.Equals(DeleteSchedule, other.DeleteSchedule)) return false;
       if (VariantCase != other.VariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -4643,6 +7051,10 @@ namespace Temporal.Omes.KitchenSink {
       if (variantCase_ == VariantOneofCase.ContinueAsNew) hash ^= ContinueAsNew.GetHashCode();
       if (variantCase_ == VariantOneofCase.NestedActionSet) hash ^= NestedActionSet.GetHashCode();
       if (variantCase_ == VariantOneofCase.NexusOperation) hash ^= NexusOperation.GetHashCode();
+      if (variantCase_ == VariantOneofCase.CreateSchedule) hash ^= CreateSchedule.GetHashCode();
+      if (variantCase_ == VariantOneofCase.DescribeSchedule) hash ^= DescribeSchedule.GetHashCode();
+      if (variantCase_ == VariantOneofCase.UpdateSchedule) hash ^= UpdateSchedule.GetHashCode();
+      if (variantCase_ == VariantOneofCase.DeleteSchedule) hash ^= DeleteSchedule.GetHashCode();
       hash ^= (int) variantCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -4722,6 +7134,22 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(122);
         output.WriteMessage(NexusOperation);
       }
+      if (variantCase_ == VariantOneofCase.CreateSchedule) {
+        output.WriteRawTag(130, 1);
+        output.WriteMessage(CreateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DescribeSchedule) {
+        output.WriteRawTag(138, 1);
+        output.WriteMessage(DescribeSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.UpdateSchedule) {
+        output.WriteRawTag(146, 1);
+        output.WriteMessage(UpdateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DeleteSchedule) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(DeleteSchedule);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4792,6 +7220,22 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(122);
         output.WriteMessage(NexusOperation);
       }
+      if (variantCase_ == VariantOneofCase.CreateSchedule) {
+        output.WriteRawTag(130, 1);
+        output.WriteMessage(CreateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DescribeSchedule) {
+        output.WriteRawTag(138, 1);
+        output.WriteMessage(DescribeSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.UpdateSchedule) {
+        output.WriteRawTag(146, 1);
+        output.WriteMessage(UpdateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DeleteSchedule) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(DeleteSchedule);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4846,6 +7290,18 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (variantCase_ == VariantOneofCase.NexusOperation) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(NexusOperation);
+      }
+      if (variantCase_ == VariantOneofCase.CreateSchedule) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(CreateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DescribeSchedule) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(DescribeSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.UpdateSchedule) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(UpdateSchedule);
+      }
+      if (variantCase_ == VariantOneofCase.DeleteSchedule) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(DeleteSchedule);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -4950,6 +7406,30 @@ namespace Temporal.Omes.KitchenSink {
           }
           NexusOperation.MergeFrom(other.NexusOperation);
           break;
+        case VariantOneofCase.CreateSchedule:
+          if (CreateSchedule == null) {
+            CreateSchedule = new global::Temporal.Omes.KitchenSink.CreateScheduleAction();
+          }
+          CreateSchedule.MergeFrom(other.CreateSchedule);
+          break;
+        case VariantOneofCase.DescribeSchedule:
+          if (DescribeSchedule == null) {
+            DescribeSchedule = new global::Temporal.Omes.KitchenSink.DescribeScheduleAction();
+          }
+          DescribeSchedule.MergeFrom(other.DescribeSchedule);
+          break;
+        case VariantOneofCase.UpdateSchedule:
+          if (UpdateSchedule == null) {
+            UpdateSchedule = new global::Temporal.Omes.KitchenSink.UpdateScheduleAction();
+          }
+          UpdateSchedule.MergeFrom(other.UpdateSchedule);
+          break;
+        case VariantOneofCase.DeleteSchedule:
+          if (DeleteSchedule == null) {
+            DeleteSchedule = new global::Temporal.Omes.KitchenSink.DeleteScheduleAction();
+          }
+          DeleteSchedule.MergeFrom(other.DeleteSchedule);
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
@@ -4963,7 +7443,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5102,6 +7586,42 @@ namespace Temporal.Omes.KitchenSink {
             NexusOperation = subBuilder;
             break;
           }
+          case 130: {
+            global::Temporal.Omes.KitchenSink.CreateScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.CreateScheduleAction();
+            if (variantCase_ == VariantOneofCase.CreateSchedule) {
+              subBuilder.MergeFrom(CreateSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            CreateSchedule = subBuilder;
+            break;
+          }
+          case 138: {
+            global::Temporal.Omes.KitchenSink.DescribeScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.DescribeScheduleAction();
+            if (variantCase_ == VariantOneofCase.DescribeSchedule) {
+              subBuilder.MergeFrom(DescribeSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            DescribeSchedule = subBuilder;
+            break;
+          }
+          case 146: {
+            global::Temporal.Omes.KitchenSink.UpdateScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.UpdateScheduleAction();
+            if (variantCase_ == VariantOneofCase.UpdateSchedule) {
+              subBuilder.MergeFrom(UpdateSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            UpdateSchedule = subBuilder;
+            break;
+          }
+          case 154: {
+            global::Temporal.Omes.KitchenSink.DeleteScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.DeleteScheduleAction();
+            if (variantCase_ == VariantOneofCase.DeleteSchedule) {
+              subBuilder.MergeFrom(DeleteSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            DeleteSchedule = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -5113,7 +7633,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5252,6 +7776,42 @@ namespace Temporal.Omes.KitchenSink {
             NexusOperation = subBuilder;
             break;
           }
+          case 130: {
+            global::Temporal.Omes.KitchenSink.CreateScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.CreateScheduleAction();
+            if (variantCase_ == VariantOneofCase.CreateSchedule) {
+              subBuilder.MergeFrom(CreateSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            CreateSchedule = subBuilder;
+            break;
+          }
+          case 138: {
+            global::Temporal.Omes.KitchenSink.DescribeScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.DescribeScheduleAction();
+            if (variantCase_ == VariantOneofCase.DescribeSchedule) {
+              subBuilder.MergeFrom(DescribeSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            DescribeSchedule = subBuilder;
+            break;
+          }
+          case 146: {
+            global::Temporal.Omes.KitchenSink.UpdateScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.UpdateScheduleAction();
+            if (variantCase_ == VariantOneofCase.UpdateSchedule) {
+              subBuilder.MergeFrom(UpdateSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            UpdateSchedule = subBuilder;
+            break;
+          }
+          case 154: {
+            global::Temporal.Omes.KitchenSink.DeleteScheduleAction subBuilder = new global::Temporal.Omes.KitchenSink.DeleteScheduleAction();
+            if (variantCase_ == VariantOneofCase.DeleteSchedule) {
+              subBuilder.MergeFrom(DeleteSchedule);
+            }
+            input.ReadMessage(subBuilder);
+            DeleteSchedule = subBuilder;
+            break;
+          }
         }
       }
     }
@@ -5280,7 +7840,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[14]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[22]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5612,7 +8172,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5672,7 +8236,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5743,7 +8311,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[15]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[23]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -5916,7 +8484,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5942,7 +8514,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5979,7 +8555,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[16]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[24]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6798,7 +9374,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -6950,7 +9530,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -7275,7 +9859,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7298,7 +9886,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -7563,7 +10155,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7597,7 +10193,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -7812,7 +10412,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7835,7 +10439,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8013,7 +10621,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -8035,7 +10647,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8073,7 +10689,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[17]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[25]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -8708,7 +11324,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -8810,7 +11430,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -8926,7 +11550,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[18]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[26]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9096,7 +11720,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9119,7 +11747,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9153,7 +11785,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[19]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[27]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9432,7 +12064,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9474,7 +12110,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9530,7 +12170,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[20]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[28]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9700,7 +12340,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9723,7 +12367,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -9761,7 +12409,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[21]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[29]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9976,7 +12624,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10006,7 +12658,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10047,7 +12703,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[22]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[30]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10181,7 +12837,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10200,7 +12860,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10230,7 +12894,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[23]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[31]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10379,7 +13043,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10401,7 +13069,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10434,7 +13106,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[24]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[32]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10578,7 +13250,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10600,7 +13276,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10633,7 +13313,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[25]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[33]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10777,7 +13457,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10799,7 +13483,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10832,7 +13520,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[26]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[34]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11233,7 +13921,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11297,7 +13989,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11372,7 +14068,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[27]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[35]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11582,7 +14278,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11609,7 +14309,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11650,7 +14354,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[28]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[36]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11943,7 +14647,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11985,7 +14693,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;

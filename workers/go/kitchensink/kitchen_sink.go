@@ -37,6 +37,74 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 
+// Schedule-related activities
+
+func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
+	scheduleAction := client.ScheduleWorkflowAction{
+		ID:                  action.Action.WorkflowId,
+		Workflow:            action.Action.WorkflowType,
+		TaskQueue:           action.Action.TaskQueue,
+		Args:                convertPayloadsToInterfaces(action.Action.Arguments),
+		WorkflowRunTimeout:  action.Action.WorkflowExecutionTimeout.AsDuration(),
+		WorkflowTaskTimeout: action.Action.WorkflowTaskTimeout.AsDuration(),
+		RetryPolicy:         convertFromPBRetryPolicy(action.Action.RetryPolicy),
+	}
+
+	scheduleSpec := client.ScheduleSpec{}
+	if action.Spec != nil {
+		scheduleSpec.CronExpressions = action.Spec.CronExpressions
+		if action.Spec.Jitter != nil {
+			scheduleSpec.Jitter = action.Spec.Jitter.AsDuration()
+		}
+	}
+
+	scheduleOptions := client.ScheduleOptions{
+		ID:     action.ScheduleId,
+		Action: &scheduleAction,
+		Spec:   scheduleSpec,
+	}
+
+	if action.Policies != nil {
+		scheduleOptions.RemainingActions = int(action.Policies.RemainingActions)
+		scheduleOptions.TriggerImmediately = action.Policies.TriggerImmediately
+		if action.Policies.CatchupWindow != nil {
+			scheduleOptions.CatchupWindow = action.Policies.CatchupWindow.AsDuration()
+		}
+	}
+
+	if len(action.Backfill) > 0 {
+		backfills := make([]client.ScheduleBackfill, len(action.Backfill))
+		for i, bf := range action.Backfill {
+			backfills[i] = client.ScheduleBackfill{
+				Start: time.Unix(bf.StartTimestamp, 0),
+				End:   time.Unix(bf.EndTimestamp, 0),
+			}
+		}
+		scheduleOptions.ScheduleBackfill = backfills
+	}
+
+	_, err := ca.Client.ScheduleClient().Create(ctx, scheduleOptions)
+	return err
+}
+
+func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {
+	handle := ca.Client.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	return handle.Describe(ctx)
+}
+
+func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
+	handle := ca.Client.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	return handle.Delete(ctx)
+}
+
+func convertPayloadsToInterfaces(payloads []*common.Payload) []interface{} {
+	result := make([]interface{}, len(payloads))
+	for i, p := range payloads {
+		result[i] = p
+	}
+	return result
+}
+
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
 }
@@ -231,6 +299,21 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if createSchedule := action.GetCreateSchedule(); createSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "CreateScheduleActivity", createSchedule).Get(ctx, nil)
+	} else if describeSchedule := action.GetDescribeSchedule(); describeSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "DescribeScheduleActivity", describeSchedule).Get(ctx, nil)
+	} else if deleteSchedule := action.GetDeleteSchedule(); deleteSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "DeleteScheduleActivity", deleteSchedule).Get(ctx, nil)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
