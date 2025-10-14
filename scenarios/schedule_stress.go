@@ -30,9 +30,7 @@ type scheduleStressConfig struct {
 }
 
 type scheduleStressExecutor struct {
-	config           *scheduleStressConfig
-	mu               sync.Mutex
-	schedulesCreated []string
+	config *scheduleStressConfig
 }
 
 var _ loadgen.Configurable = (*scheduleStressExecutor)(nil)
@@ -85,16 +83,35 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		return err
 	}
 
-	// Ensure cleanup happens on exit
-	defer func() {
-		if err := e.cleanup(context.Background(), info); err != nil {
-			info.Logger.Error("Failed to cleanup schedules: %w", err)
-		}
-	}()
-
 	// Each iteration creates a schedule that will trigger the configured number of workflow executions
 	info.Logger.Info(fmt.Sprintf("Creating %d schedules with %d actions each",
 		e.config.ScheduleCount, e.config.ActionsPerSchedule))
+
+	// Track created schedules for cleanup and waiting
+	var schedulesCreated []string
+	var schedulesMu sync.Mutex
+
+	// Cleanup all schedules on exit
+	defer func() {
+		schedulesMu.Lock()
+		schedules := make([]string, len(schedulesCreated))
+		copy(schedules, schedulesCreated)
+		schedulesMu.Unlock()
+
+		if len(schedules) == 0 {
+			return
+		}
+
+		info.Logger.Info(fmt.Sprintf("Cleaning up %d schedules", len(schedules)))
+		for _, scheduleID := range schedules {
+			handle := info.Client.ScheduleClient().GetHandle(context.Background(), scheduleID)
+			if err := handle.Delete(context.Background()); err != nil {
+				info.Logger.Error(fmt.Sprintf("Failed to delete schedule %s: %v", scheduleID, err))
+			} else {
+				info.Logger.Info(fmt.Sprintf("Deleted schedule %s", scheduleID))
+			}
+		}
+	}()
 
 	ksExec := &loadgen.KitchenSinkExecutor{
 		TestInput: &kitchensink.TestInput{
@@ -105,11 +122,10 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
-			info.Logger.Info(fmt.Sprintf("Preparing workflow for iteration %d with schedule ID: %s", run.Iteration, scheduleID))
 			// Thread-safe append to track created schedules
-			e.mu.Lock()
-			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
-			e.mu.Unlock()
+			schedulesMu.Lock()
+			schedulesCreated = append(schedulesCreated, scheduleID)
+			schedulesMu.Unlock()
 
 			// Create workflow input for scheduled workflows with a return action that returns a non-nil payload
 			// This is necessary because the kitchen sink workflow enters an infinite signal loop
@@ -190,13 +206,18 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		return fmt.Errorf("failed to create schedules: %w", err)
 	}
 
-	info.Logger.Info(fmt.Sprintf("Kitchen sink executor finished. Created %d schedules, waiting for them to complete", len(e.schedulesCreated)))
+	schedulesMu.Lock()
+	schedules := make([]string, len(schedulesCreated))
+	copy(schedules, schedulesCreated)
+	schedulesMu.Unlock()
+
+	info.Logger.Info(fmt.Sprintf("Kitchen sink executor finished. Created %d schedules, waiting for them to complete", len(schedules)))
 
 	// Wait for all schedules to complete concurrently using errgroup
 	completionTimeout := 5 * time.Minute
 	g, gctx := errgroup.WithContext(ctx)
 
-	for _, scheduleID := range e.schedulesCreated {
+	for _, scheduleID := range schedules {
 		scheduleID := scheduleID // capture loop variable
 		g.Go(func() error {
 			info.Logger.Infof("Waiting for schedule %s to complete", scheduleID)
@@ -233,24 +254,5 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	}
 
 	info.Logger.Info("Schedule stress scenario completed successfully")
-	return nil
-}
-
-func (e *scheduleStressExecutor) cleanup(ctx context.Context, info loadgen.ScenarioInfo) error {
-	if len(e.schedulesCreated) == 0 {
-		return nil
-	}
-
-	info.Logger.Info(fmt.Sprintf("Cleaning up %d schedules", len(e.schedulesCreated)))
-
-	for _, scheduleID := range e.schedulesCreated {
-		handle := info.Client.ScheduleClient().GetHandle(ctx, scheduleID)
-		if err := handle.Delete(ctx); err != nil {
-			info.Logger.Error(fmt.Sprintf("Failed to delete schedule %s: %v", scheduleID, err))
-		} else {
-			info.Logger.Info(fmt.Sprintf("Deleted schedule %s", scheduleID))
-		}
-	}
-
 	return nil
 }
