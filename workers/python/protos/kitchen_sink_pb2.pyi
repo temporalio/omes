@@ -190,22 +190,20 @@ class ScheduleSpec(_message.Message):
     def __init__(self, cron_expressions: _Optional[_Iterable[str]] = ..., jitter: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
 
 class ScheduleAction(_message.Message):
-    __slots__ = ("workflow_id", "workflow_type", "task_queue", "arguments", "workflow_execution_timeout", "workflow_task_timeout", "retry_policy")
+    __slots__ = ("workflow_id", "workflow_type", "task_queue", "workflow_execution_timeout", "workflow_task_timeout", "retry_policy")
     WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
     WORKFLOW_TYPE_FIELD_NUMBER: _ClassVar[int]
     TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
-    ARGUMENTS_FIELD_NUMBER: _ClassVar[int]
     WORKFLOW_EXECUTION_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
     WORKFLOW_TASK_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
     RETRY_POLICY_FIELD_NUMBER: _ClassVar[int]
     workflow_id: str
     workflow_type: str
     task_queue: str
-    arguments: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
     workflow_execution_timeout: _duration_pb2.Duration
     workflow_task_timeout: _duration_pb2.Duration
     retry_policy: _message_pb2.RetryPolicy
-    def __init__(self, workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., arguments: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., workflow_execution_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ...) -> None: ...
+    def __init__(self, workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., workflow_execution_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ...) -> None: ...
 
 class SchedulePolicies(_message.Message):
     __slots__ = ("remaining_actions", "trigger_immediately", "catchup_window")

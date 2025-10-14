@@ -10,7 +10,6 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/converter"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -145,36 +144,8 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
 			e.mu.Unlock()
 
-			// Create workflow input for scheduled workflows with a return action that returns a non-nil payload
-			// This is necessary because the kitchen sink workflow enters an infinite signal loop
-			// if initial actions return (nil, nil)
-			emptyPayload := &common.Payload{
-				Data: []byte("{}"),
-			}
-			scheduledWorkflowInput := &kitchensink.WorkflowInput{
-				InitialActions: []*kitchensink.ActionSet{
-					{
-						Actions: []*kitchensink.Action{
-							{
-								Variant: &kitchensink.Action_ReturnResult{
-									ReturnResult: &kitchensink.ReturnResultAction{
-										ReturnThis: emptyPayload,
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			// Encode the workflow input as a payload using the default data converter
-			dc := converter.GetDefaultDataConverter()
-			scheduledWorkflowPayload, err := dc.ToPayload(scheduledWorkflowInput)
-			if err != nil {
-				return fmt.Errorf("failed to encode scheduled workflow input: %w", err)
-			}
-
 			// The workflow will execute a CreateScheduleActivity to create the schedule
+			// Note: We pass empty arguments to the scheduled workflow
 			options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
 				{
 					Actions: []*kitchensink.Action{
@@ -190,7 +161,6 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 										WorkflowId:               fmt.Sprintf("scheduled-workflow-%s-%d", run.RunID, run.Iteration),
 										WorkflowType:             "kitchenSink",
 										TaskQueue:                run.TaskQueue(),
-										Arguments:                []*common.Payload{scheduledWorkflowPayload},
 										WorkflowExecutionTimeout: durationpb.New(30 * time.Second),
 										WorkflowTaskTimeout:      durationpb.New(10 * time.Second),
 									},
@@ -205,7 +175,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 						{
 							Variant: &kitchensink.Action_ReturnResult{
 								ReturnResult: &kitchensink.ReturnResultAction{
-									ReturnThis: emptyPayload,
+									ReturnThis: &common.Payload{Data: []byte("{}")},
 								},
 							},
 						},

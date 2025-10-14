@@ -150,10 +150,9 @@ message ScheduleAction {
   string workflow_id = 1;
   string workflow_type = 2;
   string task_queue = 3;
-  repeated temporal.api.common.v1.Payload arguments = 4;
-  google.protobuf.Duration workflow_execution_timeout = 5;
-  google.protobuf.Duration workflow_task_timeout = 6;
-  temporal.api.common.v1.RetryPolicy retry_policy = 7;
+  google.protobuf.Duration workflow_execution_timeout = 4;
+  google.protobuf.Duration workflow_task_timeout = 5;
+  temporal.api.common.v1.RetryPolicy retry_policy = 6;
 }
 
 message SchedulePolicies {

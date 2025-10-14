@@ -44,7 +44,7 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		ID:                  action.Action.WorkflowId,
 		Workflow:            action.Action.WorkflowType,
 		TaskQueue:           action.Action.TaskQueue,
-		Args:                convertPayloadsToInterfaces(action.Action.Arguments),
+		Args:                []interface{}{},
 		WorkflowRunTimeout:  action.Action.WorkflowExecutionTimeout.AsDuration(),
 		WorkflowTaskTimeout: action.Action.WorkflowTaskTimeout.AsDuration(),
 		RetryPolicy:         convertFromPBRetryPolicy(action.Action.RetryPolicy),
@@ -95,14 +95,6 @@ func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action
 func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
 	handle := ca.Client.ScheduleClient().GetHandle(ctx, action.ScheduleId)
 	return handle.Delete(ctx)
-}
-
-func convertPayloadsToInterfaces(payloads []*common.Payload) []interface{} {
-	result := make([]interface{}, len(payloads))
-	for i, p := range payloads {
-		result[i] = p
-	}
-	return result
 }
 
 type KSWorkflowState struct {

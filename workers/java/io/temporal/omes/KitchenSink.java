@@ -16002,71 +16002,47 @@ java.lang.String defaultValue) {
         getTaskQueueBytes();
 
     /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    java.util.List<io.temporal.api.common.v1.Payload> 
-        getArgumentsList();
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    io.temporal.api.common.v1.Payload getArguments(int index);
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    int getArgumentsCount();
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-        getArgumentsOrBuilderList();
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    io.temporal.api.common.v1.PayloadOrBuilder getArgumentsOrBuilder(
-        int index);
-
-    /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      * @return Whether the workflowExecutionTimeout field is set.
      */
     boolean hasWorkflowExecutionTimeout();
     /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      * @return The workflowExecutionTimeout.
      */
     com.google.protobuf.Duration getWorkflowExecutionTimeout();
     /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      */
     com.google.protobuf.DurationOrBuilder getWorkflowExecutionTimeoutOrBuilder();
 
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      * @return Whether the workflowTaskTimeout field is set.
      */
     boolean hasWorkflowTaskTimeout();
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      * @return The workflowTaskTimeout.
      */
     com.google.protobuf.Duration getWorkflowTaskTimeout();
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      */
     com.google.protobuf.DurationOrBuilder getWorkflowTaskTimeoutOrBuilder();
 
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      * @return Whether the retryPolicy field is set.
      */
     boolean hasRetryPolicy();
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      * @return The retryPolicy.
      */
     io.temporal.api.common.v1.RetryPolicy getRetryPolicy();
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      */
     io.temporal.api.common.v1.RetryPolicyOrBuilder getRetryPolicyOrBuilder();
   }
@@ -16086,7 +16062,6 @@ java.lang.String defaultValue) {
       workflowId_ = "";
       workflowType_ = "";
       taskQueue_ = "";
-      arguments_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -16227,51 +16202,10 @@ java.lang.String defaultValue) {
       }
     }
 
-    public static final int ARGUMENTS_FIELD_NUMBER = 4;
-    @SuppressWarnings("serial")
-    private java.util.List<io.temporal.api.common.v1.Payload> arguments_;
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    @java.lang.Override
-    public java.util.List<io.temporal.api.common.v1.Payload> getArgumentsList() {
-      return arguments_;
-    }
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    @java.lang.Override
-    public java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-        getArgumentsOrBuilderList() {
-      return arguments_;
-    }
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    @java.lang.Override
-    public int getArgumentsCount() {
-      return arguments_.size();
-    }
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    @java.lang.Override
-    public io.temporal.api.common.v1.Payload getArguments(int index) {
-      return arguments_.get(index);
-    }
-    /**
-     * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-     */
-    @java.lang.Override
-    public io.temporal.api.common.v1.PayloadOrBuilder getArgumentsOrBuilder(
-        int index) {
-      return arguments_.get(index);
-    }
-
-    public static final int WORKFLOW_EXECUTION_TIMEOUT_FIELD_NUMBER = 5;
+    public static final int WORKFLOW_EXECUTION_TIMEOUT_FIELD_NUMBER = 4;
     private com.google.protobuf.Duration workflowExecutionTimeout_;
     /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      * @return Whether the workflowExecutionTimeout field is set.
      */
     @java.lang.Override
@@ -16279,7 +16213,7 @@ java.lang.String defaultValue) {
       return ((bitField0_ & 0x00000001) != 0);
     }
     /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      * @return The workflowExecutionTimeout.
      */
     @java.lang.Override
@@ -16287,17 +16221,17 @@ java.lang.String defaultValue) {
       return workflowExecutionTimeout_ == null ? com.google.protobuf.Duration.getDefaultInstance() : workflowExecutionTimeout_;
     }
     /**
-     * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+     * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
      */
     @java.lang.Override
     public com.google.protobuf.DurationOrBuilder getWorkflowExecutionTimeoutOrBuilder() {
       return workflowExecutionTimeout_ == null ? com.google.protobuf.Duration.getDefaultInstance() : workflowExecutionTimeout_;
     }
 
-    public static final int WORKFLOW_TASK_TIMEOUT_FIELD_NUMBER = 6;
+    public static final int WORKFLOW_TASK_TIMEOUT_FIELD_NUMBER = 5;
     private com.google.protobuf.Duration workflowTaskTimeout_;
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      * @return Whether the workflowTaskTimeout field is set.
      */
     @java.lang.Override
@@ -16305,7 +16239,7 @@ java.lang.String defaultValue) {
       return ((bitField0_ & 0x00000002) != 0);
     }
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      * @return The workflowTaskTimeout.
      */
     @java.lang.Override
@@ -16313,17 +16247,17 @@ java.lang.String defaultValue) {
       return workflowTaskTimeout_ == null ? com.google.protobuf.Duration.getDefaultInstance() : workflowTaskTimeout_;
     }
     /**
-     * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+     * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
      */
     @java.lang.Override
     public com.google.protobuf.DurationOrBuilder getWorkflowTaskTimeoutOrBuilder() {
       return workflowTaskTimeout_ == null ? com.google.protobuf.Duration.getDefaultInstance() : workflowTaskTimeout_;
     }
 
-    public static final int RETRY_POLICY_FIELD_NUMBER = 7;
+    public static final int RETRY_POLICY_FIELD_NUMBER = 6;
     private io.temporal.api.common.v1.RetryPolicy retryPolicy_;
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      * @return Whether the retryPolicy field is set.
      */
     @java.lang.Override
@@ -16331,7 +16265,7 @@ java.lang.String defaultValue) {
       return ((bitField0_ & 0x00000004) != 0);
     }
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      * @return The retryPolicy.
      */
     @java.lang.Override
@@ -16339,7 +16273,7 @@ java.lang.String defaultValue) {
       return retryPolicy_ == null ? io.temporal.api.common.v1.RetryPolicy.getDefaultInstance() : retryPolicy_;
     }
     /**
-     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+     * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
      */
     @java.lang.Override
     public io.temporal.api.common.v1.RetryPolicyOrBuilder getRetryPolicyOrBuilder() {
@@ -16369,17 +16303,14 @@ java.lang.String defaultValue) {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(taskQueue_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, taskQueue_);
       }
-      for (int i = 0; i < arguments_.size(); i++) {
-        output.writeMessage(4, arguments_.get(i));
-      }
       if (((bitField0_ & 0x00000001) != 0)) {
-        output.writeMessage(5, getWorkflowExecutionTimeout());
+        output.writeMessage(4, getWorkflowExecutionTimeout());
       }
       if (((bitField0_ & 0x00000002) != 0)) {
-        output.writeMessage(6, getWorkflowTaskTimeout());
+        output.writeMessage(5, getWorkflowTaskTimeout());
       }
       if (((bitField0_ & 0x00000004) != 0)) {
-        output.writeMessage(7, getRetryPolicy());
+        output.writeMessage(6, getRetryPolicy());
       }
       getUnknownFields().writeTo(output);
     }
@@ -16399,21 +16330,17 @@ java.lang.String defaultValue) {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(taskQueue_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, taskQueue_);
       }
-      for (int i = 0; i < arguments_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, arguments_.get(i));
-      }
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, getWorkflowExecutionTimeout());
+          .computeMessageSize(4, getWorkflowExecutionTimeout());
       }
       if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, getWorkflowTaskTimeout());
+          .computeMessageSize(5, getWorkflowTaskTimeout());
       }
       if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(7, getRetryPolicy());
+          .computeMessageSize(6, getRetryPolicy());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -16436,8 +16363,6 @@ java.lang.String defaultValue) {
           .equals(other.getWorkflowType())) return false;
       if (!getTaskQueue()
           .equals(other.getTaskQueue())) return false;
-      if (!getArgumentsList()
-          .equals(other.getArgumentsList())) return false;
       if (hasWorkflowExecutionTimeout() != other.hasWorkflowExecutionTimeout()) return false;
       if (hasWorkflowExecutionTimeout()) {
         if (!getWorkflowExecutionTimeout()
@@ -16470,10 +16395,6 @@ java.lang.String defaultValue) {
       hash = (53 * hash) + getWorkflowType().hashCode();
       hash = (37 * hash) + TASK_QUEUE_FIELD_NUMBER;
       hash = (53 * hash) + getTaskQueue().hashCode();
-      if (getArgumentsCount() > 0) {
-        hash = (37 * hash) + ARGUMENTS_FIELD_NUMBER;
-        hash = (53 * hash) + getArgumentsList().hashCode();
-      }
       if (hasWorkflowExecutionTimeout()) {
         hash = (37 * hash) + WORKFLOW_EXECUTION_TIMEOUT_FIELD_NUMBER;
         hash = (53 * hash) + getWorkflowExecutionTimeout().hashCode();
@@ -16616,7 +16537,6 @@ java.lang.String defaultValue) {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getArgumentsFieldBuilder();
           getWorkflowExecutionTimeoutFieldBuilder();
           getWorkflowTaskTimeoutFieldBuilder();
           getRetryPolicyFieldBuilder();
@@ -16629,13 +16549,6 @@ java.lang.String defaultValue) {
         workflowId_ = "";
         workflowType_ = "";
         taskQueue_ = "";
-        if (argumentsBuilder_ == null) {
-          arguments_ = java.util.Collections.emptyList();
-        } else {
-          arguments_ = null;
-          argumentsBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000008);
         workflowExecutionTimeout_ = null;
         if (workflowExecutionTimeoutBuilder_ != null) {
           workflowExecutionTimeoutBuilder_.dispose();
@@ -16677,22 +16590,9 @@ java.lang.String defaultValue) {
       @java.lang.Override
       public io.temporal.omes.KitchenSink.ScheduleAction buildPartial() {
         io.temporal.omes.KitchenSink.ScheduleAction result = new io.temporal.omes.KitchenSink.ScheduleAction(this);
-        buildPartialRepeatedFields(result);
         if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
-      }
-
-      private void buildPartialRepeatedFields(io.temporal.omes.KitchenSink.ScheduleAction result) {
-        if (argumentsBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) != 0)) {
-            arguments_ = java.util.Collections.unmodifiableList(arguments_);
-            bitField0_ = (bitField0_ & ~0x00000008);
-          }
-          result.arguments_ = arguments_;
-        } else {
-          result.arguments_ = argumentsBuilder_.build();
-        }
       }
 
       private void buildPartial0(io.temporal.omes.KitchenSink.ScheduleAction result) {
@@ -16707,19 +16607,19 @@ java.lang.String defaultValue) {
           result.taskQueue_ = taskQueue_;
         }
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000010) != 0)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           result.workflowExecutionTimeout_ = workflowExecutionTimeoutBuilder_ == null
               ? workflowExecutionTimeout_
               : workflowExecutionTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000001;
         }
-        if (((from_bitField0_ & 0x00000020) != 0)) {
+        if (((from_bitField0_ & 0x00000010) != 0)) {
           result.workflowTaskTimeout_ = workflowTaskTimeoutBuilder_ == null
               ? workflowTaskTimeout_
               : workflowTaskTimeoutBuilder_.build();
           to_bitField0_ |= 0x00000002;
         }
-        if (((from_bitField0_ & 0x00000040) != 0)) {
+        if (((from_bitField0_ & 0x00000020) != 0)) {
           result.retryPolicy_ = retryPolicyBuilder_ == null
               ? retryPolicy_
               : retryPolicyBuilder_.build();
@@ -16787,32 +16687,6 @@ java.lang.String defaultValue) {
           bitField0_ |= 0x00000004;
           onChanged();
         }
-        if (argumentsBuilder_ == null) {
-          if (!other.arguments_.isEmpty()) {
-            if (arguments_.isEmpty()) {
-              arguments_ = other.arguments_;
-              bitField0_ = (bitField0_ & ~0x00000008);
-            } else {
-              ensureArgumentsIsMutable();
-              arguments_.addAll(other.arguments_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.arguments_.isEmpty()) {
-            if (argumentsBuilder_.isEmpty()) {
-              argumentsBuilder_.dispose();
-              argumentsBuilder_ = null;
-              arguments_ = other.arguments_;
-              bitField0_ = (bitField0_ & ~0x00000008);
-              argumentsBuilder_ = 
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getArgumentsFieldBuilder() : null;
-            } else {
-              argumentsBuilder_.addAllMessages(other.arguments_);
-            }
-          }
-        }
         if (other.hasWorkflowExecutionTimeout()) {
           mergeWorkflowExecutionTimeout(other.getWorkflowExecutionTimeout());
         }
@@ -16864,39 +16738,26 @@ java.lang.String defaultValue) {
                 break;
               } // case 26
               case 34: {
-                io.temporal.api.common.v1.Payload m =
-                    input.readMessage(
-                        io.temporal.api.common.v1.Payload.parser(),
-                        extensionRegistry);
-                if (argumentsBuilder_ == null) {
-                  ensureArgumentsIsMutable();
-                  arguments_.add(m);
-                } else {
-                  argumentsBuilder_.addMessage(m);
-                }
+                input.readMessage(
+                    getWorkflowExecutionTimeoutFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bitField0_ |= 0x00000008;
                 break;
               } // case 34
               case 42: {
                 input.readMessage(
-                    getWorkflowExecutionTimeoutFieldBuilder().getBuilder(),
+                    getWorkflowTaskTimeoutFieldBuilder().getBuilder(),
                     extensionRegistry);
                 bitField0_ |= 0x00000010;
                 break;
               } // case 42
               case 50: {
                 input.readMessage(
-                    getWorkflowTaskTimeoutFieldBuilder().getBuilder(),
+                    getRetryPolicyFieldBuilder().getBuilder(),
                     extensionRegistry);
                 bitField0_ |= 0x00000020;
                 break;
               } // case 50
-              case 58: {
-                input.readMessage(
-                    getRetryPolicyFieldBuilder().getBuilder(),
-                    extensionRegistry);
-                bitField0_ |= 0x00000040;
-                break;
-              } // case 58
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -17130,258 +16991,18 @@ java.lang.String defaultValue) {
         return this;
       }
 
-      private java.util.List<io.temporal.api.common.v1.Payload> arguments_ =
-        java.util.Collections.emptyList();
-      private void ensureArgumentsIsMutable() {
-        if (!((bitField0_ & 0x00000008) != 0)) {
-          arguments_ = new java.util.ArrayList<io.temporal.api.common.v1.Payload>(arguments_);
-          bitField0_ |= 0x00000008;
-         }
-      }
-
-      private com.google.protobuf.RepeatedFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> argumentsBuilder_;
-
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public java.util.List<io.temporal.api.common.v1.Payload> getArgumentsList() {
-        if (argumentsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(arguments_);
-        } else {
-          return argumentsBuilder_.getMessageList();
-        }
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public int getArgumentsCount() {
-        if (argumentsBuilder_ == null) {
-          return arguments_.size();
-        } else {
-          return argumentsBuilder_.getCount();
-        }
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload getArguments(int index) {
-        if (argumentsBuilder_ == null) {
-          return arguments_.get(index);
-        } else {
-          return argumentsBuilder_.getMessage(index);
-        }
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder setArguments(
-          int index, io.temporal.api.common.v1.Payload value) {
-        if (argumentsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureArgumentsIsMutable();
-          arguments_.set(index, value);
-          onChanged();
-        } else {
-          argumentsBuilder_.setMessage(index, value);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder setArguments(
-          int index, io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argumentsBuilder_ == null) {
-          ensureArgumentsIsMutable();
-          arguments_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          argumentsBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder addArguments(io.temporal.api.common.v1.Payload value) {
-        if (argumentsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureArgumentsIsMutable();
-          arguments_.add(value);
-          onChanged();
-        } else {
-          argumentsBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder addArguments(
-          int index, io.temporal.api.common.v1.Payload value) {
-        if (argumentsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureArgumentsIsMutable();
-          arguments_.add(index, value);
-          onChanged();
-        } else {
-          argumentsBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder addArguments(
-          io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argumentsBuilder_ == null) {
-          ensureArgumentsIsMutable();
-          arguments_.add(builderForValue.build());
-          onChanged();
-        } else {
-          argumentsBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder addArguments(
-          int index, io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argumentsBuilder_ == null) {
-          ensureArgumentsIsMutable();
-          arguments_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          argumentsBuilder_.addMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder addAllArguments(
-          java.lang.Iterable<? extends io.temporal.api.common.v1.Payload> values) {
-        if (argumentsBuilder_ == null) {
-          ensureArgumentsIsMutable();
-          com.google.protobuf.AbstractMessageLite.Builder.addAll(
-              values, arguments_);
-          onChanged();
-        } else {
-          argumentsBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder clearArguments() {
-        if (argumentsBuilder_ == null) {
-          arguments_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
-          onChanged();
-        } else {
-          argumentsBuilder_.clear();
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public Builder removeArguments(int index) {
-        if (argumentsBuilder_ == null) {
-          ensureArgumentsIsMutable();
-          arguments_.remove(index);
-          onChanged();
-        } else {
-          argumentsBuilder_.remove(index);
-        }
-        return this;
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder getArgumentsBuilder(
-          int index) {
-        return getArgumentsFieldBuilder().getBuilder(index);
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public io.temporal.api.common.v1.PayloadOrBuilder getArgumentsOrBuilder(
-          int index) {
-        if (argumentsBuilder_ == null) {
-          return arguments_.get(index);  } else {
-          return argumentsBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-           getArgumentsOrBuilderList() {
-        if (argumentsBuilder_ != null) {
-          return argumentsBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(arguments_);
-        }
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder addArgumentsBuilder() {
-        return getArgumentsFieldBuilder().addBuilder(
-            io.temporal.api.common.v1.Payload.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder addArgumentsBuilder(
-          int index) {
-        return getArgumentsFieldBuilder().addBuilder(
-            index, io.temporal.api.common.v1.Payload.getDefaultInstance());
-      }
-      /**
-       * <code>repeated .temporal.api.common.v1.Payload arguments = 4;</code>
-       */
-      public java.util.List<io.temporal.api.common.v1.Payload.Builder> 
-           getArgumentsBuilderList() {
-        return getArgumentsFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> 
-          getArgumentsFieldBuilder() {
-        if (argumentsBuilder_ == null) {
-          argumentsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
-              io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder>(
-                  arguments_,
-                  ((bitField0_ & 0x00000008) != 0),
-                  getParentForChildren(),
-                  isClean());
-          arguments_ = null;
-        }
-        return argumentsBuilder_;
-      }
-
       private com.google.protobuf.Duration workflowExecutionTimeout_;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> workflowExecutionTimeoutBuilder_;
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        * @return Whether the workflowExecutionTimeout field is set.
        */
       public boolean hasWorkflowExecutionTimeout() {
-        return ((bitField0_ & 0x00000010) != 0);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        * @return The workflowExecutionTimeout.
        */
       public com.google.protobuf.Duration getWorkflowExecutionTimeout() {
@@ -17392,7 +17013,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public Builder setWorkflowExecutionTimeout(com.google.protobuf.Duration value) {
         if (workflowExecutionTimeoutBuilder_ == null) {
@@ -17403,12 +17024,12 @@ java.lang.String defaultValue) {
         } else {
           workflowExecutionTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public Builder setWorkflowExecutionTimeout(
           com.google.protobuf.Duration.Builder builderForValue) {
@@ -17417,16 +17038,16 @@ java.lang.String defaultValue) {
         } else {
           workflowExecutionTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public Builder mergeWorkflowExecutionTimeout(com.google.protobuf.Duration value) {
         if (workflowExecutionTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) != 0) &&
+          if (((bitField0_ & 0x00000008) != 0) &&
             workflowExecutionTimeout_ != null &&
             workflowExecutionTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getWorkflowExecutionTimeoutBuilder().mergeFrom(value);
@@ -17437,16 +17058,16 @@ java.lang.String defaultValue) {
           workflowExecutionTimeoutBuilder_.mergeFrom(value);
         }
         if (workflowExecutionTimeout_ != null) {
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000008;
           onChanged();
         }
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public Builder clearWorkflowExecutionTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000008);
         workflowExecutionTimeout_ = null;
         if (workflowExecutionTimeoutBuilder_ != null) {
           workflowExecutionTimeoutBuilder_.dispose();
@@ -17456,15 +17077,15 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public com.google.protobuf.Duration.Builder getWorkflowExecutionTimeoutBuilder() {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return getWorkflowExecutionTimeoutFieldBuilder().getBuilder();
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       public com.google.protobuf.DurationOrBuilder getWorkflowExecutionTimeoutOrBuilder() {
         if (workflowExecutionTimeoutBuilder_ != null) {
@@ -17475,7 +17096,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.google.protobuf.Duration workflow_execution_timeout = 5;</code>
+       * <code>.google.protobuf.Duration workflow_execution_timeout = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
@@ -17495,14 +17116,14 @@ java.lang.String defaultValue) {
       private com.google.protobuf.SingleFieldBuilderV3<
           com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> workflowTaskTimeoutBuilder_;
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        * @return Whether the workflowTaskTimeout field is set.
        */
       public boolean hasWorkflowTaskTimeout() {
-        return ((bitField0_ & 0x00000020) != 0);
+        return ((bitField0_ & 0x00000010) != 0);
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        * @return The workflowTaskTimeout.
        */
       public com.google.protobuf.Duration getWorkflowTaskTimeout() {
@@ -17513,7 +17134,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public Builder setWorkflowTaskTimeout(com.google.protobuf.Duration value) {
         if (workflowTaskTimeoutBuilder_ == null) {
@@ -17524,12 +17145,12 @@ java.lang.String defaultValue) {
         } else {
           workflowTaskTimeoutBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public Builder setWorkflowTaskTimeout(
           com.google.protobuf.Duration.Builder builderForValue) {
@@ -17538,16 +17159,16 @@ java.lang.String defaultValue) {
         } else {
           workflowTaskTimeoutBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public Builder mergeWorkflowTaskTimeout(com.google.protobuf.Duration value) {
         if (workflowTaskTimeoutBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) != 0) &&
+          if (((bitField0_ & 0x00000010) != 0) &&
             workflowTaskTimeout_ != null &&
             workflowTaskTimeout_ != com.google.protobuf.Duration.getDefaultInstance()) {
             getWorkflowTaskTimeoutBuilder().mergeFrom(value);
@@ -17558,16 +17179,16 @@ java.lang.String defaultValue) {
           workflowTaskTimeoutBuilder_.mergeFrom(value);
         }
         if (workflowTaskTimeout_ != null) {
-          bitField0_ |= 0x00000020;
+          bitField0_ |= 0x00000010;
           onChanged();
         }
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public Builder clearWorkflowTaskTimeout() {
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000010);
         workflowTaskTimeout_ = null;
         if (workflowTaskTimeoutBuilder_ != null) {
           workflowTaskTimeoutBuilder_.dispose();
@@ -17577,15 +17198,15 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public com.google.protobuf.Duration.Builder getWorkflowTaskTimeoutBuilder() {
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
         return getWorkflowTaskTimeoutFieldBuilder().getBuilder();
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       public com.google.protobuf.DurationOrBuilder getWorkflowTaskTimeoutOrBuilder() {
         if (workflowTaskTimeoutBuilder_ != null) {
@@ -17596,7 +17217,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.google.protobuf.Duration workflow_task_timeout = 6;</code>
+       * <code>.google.protobuf.Duration workflow_task_timeout = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
@@ -17616,14 +17237,14 @@ java.lang.String defaultValue) {
       private com.google.protobuf.SingleFieldBuilderV3<
           io.temporal.api.common.v1.RetryPolicy, io.temporal.api.common.v1.RetryPolicy.Builder, io.temporal.api.common.v1.RetryPolicyOrBuilder> retryPolicyBuilder_;
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        * @return Whether the retryPolicy field is set.
        */
       public boolean hasRetryPolicy() {
-        return ((bitField0_ & 0x00000040) != 0);
+        return ((bitField0_ & 0x00000020) != 0);
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        * @return The retryPolicy.
        */
       public io.temporal.api.common.v1.RetryPolicy getRetryPolicy() {
@@ -17634,7 +17255,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public Builder setRetryPolicy(io.temporal.api.common.v1.RetryPolicy value) {
         if (retryPolicyBuilder_ == null) {
@@ -17645,12 +17266,12 @@ java.lang.String defaultValue) {
         } else {
           retryPolicyBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         onChanged();
         return this;
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public Builder setRetryPolicy(
           io.temporal.api.common.v1.RetryPolicy.Builder builderForValue) {
@@ -17659,16 +17280,16 @@ java.lang.String defaultValue) {
         } else {
           retryPolicyBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         onChanged();
         return this;
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public Builder mergeRetryPolicy(io.temporal.api.common.v1.RetryPolicy value) {
         if (retryPolicyBuilder_ == null) {
-          if (((bitField0_ & 0x00000040) != 0) &&
+          if (((bitField0_ & 0x00000020) != 0) &&
             retryPolicy_ != null &&
             retryPolicy_ != io.temporal.api.common.v1.RetryPolicy.getDefaultInstance()) {
             getRetryPolicyBuilder().mergeFrom(value);
@@ -17679,16 +17300,16 @@ java.lang.String defaultValue) {
           retryPolicyBuilder_.mergeFrom(value);
         }
         if (retryPolicy_ != null) {
-          bitField0_ |= 0x00000040;
+          bitField0_ |= 0x00000020;
           onChanged();
         }
         return this;
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public Builder clearRetryPolicy() {
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000020);
         retryPolicy_ = null;
         if (retryPolicyBuilder_ != null) {
           retryPolicyBuilder_.dispose();
@@ -17698,15 +17319,15 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public io.temporal.api.common.v1.RetryPolicy.Builder getRetryPolicyBuilder() {
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         onChanged();
         return getRetryPolicyFieldBuilder().getBuilder();
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       public io.temporal.api.common.v1.RetryPolicyOrBuilder getRetryPolicyOrBuilder() {
         if (retryPolicyBuilder_ != null) {
@@ -17717,7 +17338,7 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 7;</code>
+       * <code>.temporal.api.common.v1.RetryPolicy retry_policy = 6;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           io.temporal.api.common.v1.RetryPolicy, io.temporal.api.common.v1.RetryPolicy.Builder, io.temporal.api.common.v1.RetryPolicyOrBuilder> 
@@ -55979,227 +55600,225 @@ java.lang.String defaultValue) {
       "itchen_sink.Action\022\022\n\nconcurrent\030\002 \001(\010\"S" +
       "\n\014ScheduleSpec\022\030\n\020cron_expressions\030\001 \003(\t" +
       "\022)\n\006jitter\030\002 \001(\0132\031.google.protobuf.Durat" +
-      "ion\"\270\002\n\016ScheduleAction\022\023\n\013workflow_id\030\001 " +
+      "ion\"\204\002\n\016ScheduleAction\022\023\n\013workflow_id\030\001 " +
       "\001(\t\022\025\n\rworkflow_type\030\002 \001(\t\022\022\n\ntask_queue" +
-      "\030\003 \001(\t\0222\n\targuments\030\004 \003(\0132\037.temporal.api" +
-      ".common.v1.Payload\022=\n\032workflow_execution" +
-      "_timeout\030\005 \001(\0132\031.google.protobuf.Duratio" +
-      "n\0228\n\025workflow_task_timeout\030\006 \001(\0132\031.googl" +
-      "e.protobuf.Duration\0229\n\014retry_policy\030\007 \001(" +
-      "\0132#.temporal.api.common.v1.RetryPolicy\"}" +
-      "\n\020SchedulePolicies\022\031\n\021remaining_actions\030" +
-      "\001 \001(\003\022\033\n\023trigger_immediately\030\002 \001(\010\0221\n\016ca" +
-      "tchup_window\030\003 \001(\0132\031.google.protobuf.Dur" +
-      "ation\"B\n\020ScheduleBackfill\022\027\n\017start_times" +
-      "tamp\030\001 \001(\003\022\025\n\rend_timestamp\030\002 \001(\003\"\237\002\n\024Cr" +
-      "eateScheduleAction\022\023\n\013schedule_id\030\001 \001(\t\022" +
-      "6\n\004spec\030\002 \001(\0132(.temporal.omes.kitchen_si" +
-      "nk.ScheduleSpec\022:\n\006action\030\003 \001(\0132*.tempor" +
-      "al.omes.kitchen_sink.ScheduleAction\022>\n\010p" +
-      "olicies\030\004 \001(\0132,.temporal.omes.kitchen_si" +
-      "nk.SchedulePolicies\022>\n\010backfill\030\005 \003(\0132,." +
-      "temporal.omes.kitchen_sink.ScheduleBackf" +
-      "ill\"-\n\026DescribeScheduleAction\022\023\n\013schedul" +
-      "e_id\030\001 \001(\t\"c\n\024UpdateScheduleAction\022\023\n\013sc" +
-      "hedule_id\030\001 \001(\t\0226\n\004spec\030\002 \001(\0132(.temporal" +
-      ".omes.kitchen_sink.ScheduleSpec\"+\n\024Delet" +
-      "eScheduleAction\022\023\n\013schedule_id\030\001 \001(\t\"\262\013\n" +
-      "\006Action\0228\n\005timer\030\001 \001(\0132\'.temporal.omes.k" +
-      "itchen_sink.TimerActionH\000\022J\n\rexec_activi" +
-      "ty\030\002 \001(\01321.temporal.omes.kitchen_sink.Ex" +
-      "ecuteActivityActionH\000\022U\n\023exec_child_work" +
-      "flow\030\003 \001(\01326.temporal.omes.kitchen_sink." +
-      "ExecuteChildWorkflowActionH\000\022N\n\024await_wo" +
-      "rkflow_state\030\004 \001(\0132..temporal.omes.kitch" +
-      "en_sink.AwaitWorkflowStateH\000\022C\n\013send_sig" +
-      "nal\030\005 \001(\0132,.temporal.omes.kitchen_sink.S" +
-      "endSignalActionH\000\022K\n\017cancel_workflow\030\006 \001" +
-      "(\01320.temporal.omes.kitchen_sink.CancelWo" +
-      "rkflowActionH\000\022L\n\020set_patch_marker\030\007 \001(\013" +
-      "20.temporal.omes.kitchen_sink.SetPatchMa" +
-      "rkerActionH\000\022\\\n\030upsert_search_attributes" +
-      "\030\010 \001(\01328.temporal.omes.kitchen_sink.Upse" +
-      "rtSearchAttributesActionH\000\022C\n\013upsert_mem" +
-      "o\030\t \001(\0132,.temporal.omes.kitchen_sink.Ups" +
-      "ertMemoActionH\000\022G\n\022set_workflow_state\030\n " +
-      "\001(\0132).temporal.omes.kitchen_sink.Workflo" +
-      "wStateH\000\022G\n\rreturn_result\030\013 \001(\0132..tempor" +
-      "al.omes.kitchen_sink.ReturnResultActionH" +
-      "\000\022E\n\014return_error\030\014 \001(\0132-.temporal.omes." +
-      "kitchen_sink.ReturnErrorActionH\000\022J\n\017cont" +
-      "inue_as_new\030\r \001(\0132/.temporal.omes.kitche" +
-      "n_sink.ContinueAsNewActionH\000\022B\n\021nested_a" +
-      "ction_set\030\016 \001(\0132%.temporal.omes.kitchen_" +
-      "sink.ActionSetH\000\022L\n\017nexus_operation\030\017 \001(" +
-      "\01321.temporal.omes.kitchen_sink.ExecuteNe" +
-      "xusOperationH\000\022K\n\017create_schedule\030\020 \001(\0132" +
-      "0.temporal.omes.kitchen_sink.CreateSched" +
-      "uleActionH\000\022O\n\021describe_schedule\030\021 \001(\01322" +
-      ".temporal.omes.kitchen_sink.DescribeSche" +
-      "duleActionH\000\022K\n\017update_schedule\030\022 \001(\01320." +
-      "temporal.omes.kitchen_sink.UpdateSchedul" +
-      "eActionH\000\022K\n\017delete_schedule\030\023 \001(\01320.tem" +
-      "poral.omes.kitchen_sink.DeleteScheduleAc" +
-      "tionH\000B\t\n\007variant\"\243\002\n\017AwaitableChoice\022-\n" +
-      "\013wait_finish\030\001 \001(\0132\026.google.protobuf.Emp" +
-      "tyH\000\022)\n\007abandon\030\002 \001(\0132\026.google.protobuf." +
-      "EmptyH\000\0227\n\025cancel_before_started\030\003 \001(\0132\026" +
-      ".google.protobuf.EmptyH\000\0226\n\024cancel_after" +
-      "_started\030\004 \001(\0132\026.google.protobuf.EmptyH\000" +
-      "\0228\n\026cancel_after_completed\030\005 \001(\0132\026.googl" +
-      "e.protobuf.EmptyH\000B\013\n\tcondition\"j\n\013Timer" +
-      "Action\022\024\n\014milliseconds\030\001 \001(\004\022E\n\020awaitabl" +
-      "e_choice\030\002 \001(\0132+.temporal.omes.kitchen_s" +
-      "ink.AwaitableChoice\"\352\014\n\025ExecuteActivityA" +
-      "ction\022T\n\007generic\030\001 \001(\0132A.temporal.omes.k" +
-      "itchen_sink.ExecuteActivityAction.Generi" +
-      "cActivityH\000\022*\n\005delay\030\002 \001(\0132\031.google.prot" +
-      "obuf.DurationH\000\022&\n\004noop\030\003 \001(\0132\026.google.p" +
-      "rotobuf.EmptyH\000\022X\n\tresources\030\016 \001(\0132C.tem" +
-      "poral.omes.kitchen_sink.ExecuteActivityA" +
-      "ction.ResourcesActivityH\000\022T\n\007payload\030\022 \001" +
-      "(\0132A.temporal.omes.kitchen_sink.ExecuteA" +
-      "ctivityAction.PayloadActivityH\000\022R\n\006clien" +
-      "t\030\023 \001(\0132@.temporal.omes.kitchen_sink.Exe" +
-      "cuteActivityAction.ClientActivityH\000\022\022\n\nt" +
-      "ask_queue\030\004 \001(\t\022O\n\007headers\030\005 \003(\0132>.tempo" +
-      "ral.omes.kitchen_sink.ExecuteActivityAct" +
-      "ion.HeadersEntry\022<\n\031schedule_to_close_ti" +
-      "meout\030\006 \001(\0132\031.google.protobuf.Duration\022<" +
-      "\n\031schedule_to_start_timeout\030\007 \001(\0132\031.goog" +
-      "le.protobuf.Duration\0229\n\026start_to_close_t" +
-      "imeout\030\010 \001(\0132\031.google.protobuf.Duration\022" +
-      "4\n\021heartbeat_timeout\030\t \001(\0132\031.google.prot" +
-      "obuf.Duration\0229\n\014retry_policy\030\n \001(\0132#.te" +
-      "mporal.api.common.v1.RetryPolicy\022*\n\010is_l" +
-      "ocal\030\013 \001(\0132\026.google.protobuf.EmptyH\001\022C\n\006" +
-      "remote\030\014 \001(\01321.temporal.omes.kitchen_sin" +
-      "k.RemoteActivityOptionsH\001\022E\n\020awaitable_c" +
-      "hoice\030\r \001(\0132+.temporal.omes.kitchen_sink" +
-      ".AwaitableChoice\0222\n\010priority\030\017 \001(\0132 .tem" +
-      "poral.api.common.v1.Priority\022\024\n\014fairness" +
-      "_key\030\020 \001(\t\022\027\n\017fairness_weight\030\021 \001(\002\032S\n\017G" +
-      "enericActivity\022\014\n\004type\030\001 \001(\t\0222\n\targument" +
-      "s\030\002 \003(\0132\037.temporal.api.common.v1.Payload" +
-      "\032\232\001\n\021ResourcesActivity\022*\n\007run_for\030\001 \001(\0132" +
-      "\031.google.protobuf.Duration\022\031\n\021bytes_to_a" +
-      "llocate\030\002 \001(\004\022$\n\034cpu_yield_every_n_itera" +
-      "tions\030\003 \001(\r\022\030\n\020cpu_yield_for_ms\030\004 \001(\r\032D\n" +
-      "\017PayloadActivity\022\030\n\020bytes_to_receive\030\001 \001" +
-      "(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032U\n\016ClientAct" +
-      "ivity\022C\n\017client_sequence\030\001 \001(\0132*.tempora" +
-      "l.omes.kitchen_sink.ClientSequence\032O\n\014He" +
-      "adersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
-      ".temporal.api.common.v1.Payload:\0028\001B\017\n\ra" +
-      "ctivity_typeB\n\n\010locality\"\255\n\n\032ExecuteChil" +
-      "dWorkflowAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013wo" +
-      "rkflow_id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022" +
-      "\n\ntask_queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temp" +
-      "oral.api.common.v1.Payload\022=\n\032workflow_e" +
-      "xecution_timeout\030\007 \001(\0132\031.google.protobuf" +
-      ".Duration\0227\n\024workflow_run_timeout\030\010 \001(\0132" +
-      "\031.google.protobuf.Duration\0228\n\025workflow_t" +
-      "ask_timeout\030\t \001(\0132\031.google.protobuf.Dura" +
-      "tion\022J\n\023parent_close_policy\030\n \001(\0162-.temp" +
-      "oral.omes.kitchen_sink.ParentClosePolicy" +
-      "\022N\n\030workflow_id_reuse_policy\030\014 \001(\0162,.tem" +
-      "poral.api.enums.v1.WorkflowIdReusePolicy" +
-      "\0229\n\014retry_policy\030\r \001(\0132#.temporal.api.co" +
-      "mmon.v1.RetryPolicy\022\025\n\rcron_schedule\030\016 \001" +
-      "(\t\022T\n\007headers\030\017 \003(\0132C.temporal.omes.kitc" +
-      "hen_sink.ExecuteChildWorkflowAction.Head" +
-      "ersEntry\022N\n\004memo\030\020 \003(\0132@.temporal.omes.k" +
-      "itchen_sink.ExecuteChildWorkflowAction.M" +
-      "emoEntry\022g\n\021search_attributes\030\021 \003(\0132L.te" +
-      "mporal.omes.kitchen_sink.ExecuteChildWor" +
-      "kflowAction.SearchAttributesEntry\022T\n\021can" +
-      "cellation_type\030\022 \001(\01629.temporal.omes.kit" +
-      "chen_sink.ChildWorkflowCancellationType\022" +
-      "G\n\021versioning_intent\030\023 \001(\0162,.temporal.om" +
-      "es.kitchen_sink.VersioningIntent\022E\n\020awai" +
-      "table_choice\030\024 \001(\0132+.temporal.omes.kitch" +
+      "\030\003 \001(\t\022=\n\032workflow_execution_timeout\030\004 \001" +
+      "(\0132\031.google.protobuf.Duration\0228\n\025workflo" +
+      "w_task_timeout\030\005 \001(\0132\031.google.protobuf.D" +
+      "uration\0229\n\014retry_policy\030\006 \001(\0132#.temporal" +
+      ".api.common.v1.RetryPolicy\"}\n\020SchedulePo" +
+      "licies\022\031\n\021remaining_actions\030\001 \001(\003\022\033\n\023tri" +
+      "gger_immediately\030\002 \001(\010\0221\n\016catchup_window" +
+      "\030\003 \001(\0132\031.google.protobuf.Duration\"B\n\020Sch" +
+      "eduleBackfill\022\027\n\017start_timestamp\030\001 \001(\003\022\025" +
+      "\n\rend_timestamp\030\002 \001(\003\"\237\002\n\024CreateSchedule" +
+      "Action\022\023\n\013schedule_id\030\001 \001(\t\0226\n\004spec\030\002 \001(" +
+      "\0132(.temporal.omes.kitchen_sink.ScheduleS" +
+      "pec\022:\n\006action\030\003 \001(\0132*.temporal.omes.kitc" +
+      "hen_sink.ScheduleAction\022>\n\010policies\030\004 \001(" +
+      "\0132,.temporal.omes.kitchen_sink.ScheduleP" +
+      "olicies\022>\n\010backfill\030\005 \003(\0132,.temporal.ome" +
+      "s.kitchen_sink.ScheduleBackfill\"-\n\026Descr" +
+      "ibeScheduleAction\022\023\n\013schedule_id\030\001 \001(\t\"c" +
+      "\n\024UpdateScheduleAction\022\023\n\013schedule_id\030\001 " +
+      "\001(\t\0226\n\004spec\030\002 \001(\0132(.temporal.omes.kitche" +
+      "n_sink.ScheduleSpec\"+\n\024DeleteScheduleAct" +
+      "ion\022\023\n\013schedule_id\030\001 \001(\t\"\262\013\n\006Action\0228\n\005t" +
+      "imer\030\001 \001(\0132\'.temporal.omes.kitchen_sink." +
+      "TimerActionH\000\022J\n\rexec_activity\030\002 \001(\01321.t" +
+      "emporal.omes.kitchen_sink.ExecuteActivit" +
+      "yActionH\000\022U\n\023exec_child_workflow\030\003 \001(\01326" +
+      ".temporal.omes.kitchen_sink.ExecuteChild" +
+      "WorkflowActionH\000\022N\n\024await_workflow_state" +
+      "\030\004 \001(\0132..temporal.omes.kitchen_sink.Awai" +
+      "tWorkflowStateH\000\022C\n\013send_signal\030\005 \001(\0132,." +
+      "temporal.omes.kitchen_sink.SendSignalAct" +
+      "ionH\000\022K\n\017cancel_workflow\030\006 \001(\01320.tempora" +
+      "l.omes.kitchen_sink.CancelWorkflowAction" +
+      "H\000\022L\n\020set_patch_marker\030\007 \001(\01320.temporal." +
+      "omes.kitchen_sink.SetPatchMarkerActionH\000" +
+      "\022\\\n\030upsert_search_attributes\030\010 \001(\01328.tem" +
+      "poral.omes.kitchen_sink.UpsertSearchAttr" +
+      "ibutesActionH\000\022C\n\013upsert_memo\030\t \001(\0132,.te" +
+      "mporal.omes.kitchen_sink.UpsertMemoActio" +
+      "nH\000\022G\n\022set_workflow_state\030\n \001(\0132).tempor" +
+      "al.omes.kitchen_sink.WorkflowStateH\000\022G\n\r" +
+      "return_result\030\013 \001(\0132..temporal.omes.kitc" +
+      "hen_sink.ReturnResultActionH\000\022E\n\014return_" +
+      "error\030\014 \001(\0132-.temporal.omes.kitchen_sink" +
+      ".ReturnErrorActionH\000\022J\n\017continue_as_new\030" +
+      "\r \001(\0132/.temporal.omes.kitchen_sink.Conti" +
+      "nueAsNewActionH\000\022B\n\021nested_action_set\030\016 " +
+      "\001(\0132%.temporal.omes.kitchen_sink.ActionS" +
+      "etH\000\022L\n\017nexus_operation\030\017 \001(\01321.temporal" +
+      ".omes.kitchen_sink.ExecuteNexusOperation" +
+      "H\000\022K\n\017create_schedule\030\020 \001(\01320.temporal.o" +
+      "mes.kitchen_sink.CreateScheduleActionH\000\022" +
+      "O\n\021describe_schedule\030\021 \001(\01322.temporal.om" +
+      "es.kitchen_sink.DescribeScheduleActionH\000" +
+      "\022K\n\017update_schedule\030\022 \001(\01320.temporal.ome" +
+      "s.kitchen_sink.UpdateScheduleActionH\000\022K\n" +
+      "\017delete_schedule\030\023 \001(\01320.temporal.omes.k" +
+      "itchen_sink.DeleteScheduleActionH\000B\t\n\007va" +
+      "riant\"\243\002\n\017AwaitableChoice\022-\n\013wait_finish" +
+      "\030\001 \001(\0132\026.google.protobuf.EmptyH\000\022)\n\007aban" +
+      "don\030\002 \001(\0132\026.google.protobuf.EmptyH\000\0227\n\025c" +
+      "ancel_before_started\030\003 \001(\0132\026.google.prot" +
+      "obuf.EmptyH\000\0226\n\024cancel_after_started\030\004 \001" +
+      "(\0132\026.google.protobuf.EmptyH\000\0228\n\026cancel_a" +
+      "fter_completed\030\005 \001(\0132\026.google.protobuf.E" +
+      "mptyH\000B\013\n\tcondition\"j\n\013TimerAction\022\024\n\014mi" +
+      "lliseconds\030\001 \001(\004\022E\n\020awaitable_choice\030\002 \001" +
+      "(\0132+.temporal.omes.kitchen_sink.Awaitabl" +
+      "eChoice\"\352\014\n\025ExecuteActivityAction\022T\n\007gen" +
+      "eric\030\001 \001(\0132A.temporal.omes.kitchen_sink." +
+      "ExecuteActivityAction.GenericActivityH\000\022" +
+      "*\n\005delay\030\002 \001(\0132\031.google.protobuf.Duratio" +
+      "nH\000\022&\n\004noop\030\003 \001(\0132\026.google.protobuf.Empt" +
+      "yH\000\022X\n\tresources\030\016 \001(\0132C.temporal.omes.k" +
+      "itchen_sink.ExecuteActivityAction.Resour" +
+      "cesActivityH\000\022T\n\007payload\030\022 \001(\0132A.tempora" +
+      "l.omes.kitchen_sink.ExecuteActivityActio" +
+      "n.PayloadActivityH\000\022R\n\006client\030\023 \001(\0132@.te" +
+      "mporal.omes.kitchen_sink.ExecuteActivity" +
+      "Action.ClientActivityH\000\022\022\n\ntask_queue\030\004 " +
+      "\001(\t\022O\n\007headers\030\005 \003(\0132>.temporal.omes.kit" +
+      "chen_sink.ExecuteActivityAction.HeadersE" +
+      "ntry\022<\n\031schedule_to_close_timeout\030\006 \001(\0132" +
+      "\031.google.protobuf.Duration\022<\n\031schedule_t" +
+      "o_start_timeout\030\007 \001(\0132\031.google.protobuf." +
+      "Duration\0229\n\026start_to_close_timeout\030\010 \001(\013" +
+      "2\031.google.protobuf.Duration\0224\n\021heartbeat" +
+      "_timeout\030\t \001(\0132\031.google.protobuf.Duratio" +
+      "n\0229\n\014retry_policy\030\n \001(\0132#.temporal.api.c" +
+      "ommon.v1.RetryPolicy\022*\n\010is_local\030\013 \001(\0132\026" +
+      ".google.protobuf.EmptyH\001\022C\n\006remote\030\014 \001(\013" +
+      "21.temporal.omes.kitchen_sink.RemoteActi" +
+      "vityOptionsH\001\022E\n\020awaitable_choice\030\r \001(\0132" +
+      "+.temporal.omes.kitchen_sink.AwaitableCh" +
+      "oice\0222\n\010priority\030\017 \001(\0132 .temporal.api.co" +
+      "mmon.v1.Priority\022\024\n\014fairness_key\030\020 \001(\t\022\027" +
+      "\n\017fairness_weight\030\021 \001(\002\032S\n\017GenericActivi" +
+      "ty\022\014\n\004type\030\001 \001(\t\0222\n\targuments\030\002 \003(\0132\037.te" +
+      "mporal.api.common.v1.Payload\032\232\001\n\021Resourc" +
+      "esActivity\022*\n\007run_for\030\001 \001(\0132\031.google.pro" +
+      "tobuf.Duration\022\031\n\021bytes_to_allocate\030\002 \001(" +
+      "\004\022$\n\034cpu_yield_every_n_iterations\030\003 \001(\r\022" +
+      "\030\n\020cpu_yield_for_ms\030\004 \001(\r\032D\n\017PayloadActi" +
+      "vity\022\030\n\020bytes_to_receive\030\001 \001(\005\022\027\n\017bytes_" +
+      "to_return\030\002 \001(\005\032U\n\016ClientActivity\022C\n\017cli" +
+      "ent_sequence\030\001 \001(\0132*.temporal.omes.kitch" +
+      "en_sink.ClientSequence\032O\n\014HeadersEntry\022\013" +
+      "\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.ap" +
+      "i.common.v1.Payload:\0028\001B\017\n\ractivity_type" +
+      "B\n\n\010locality\"\255\n\n\032ExecuteChildWorkflowAct" +
+      "ion\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_id\030\003 " +
+      "\001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_queue" +
+      "\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.api.com" +
+      "mon.v1.Payload\022=\n\032workflow_execution_tim" +
+      "eout\030\007 \001(\0132\031.google.protobuf.Duration\0227\n" +
+      "\024workflow_run_timeout\030\010 \001(\0132\031.google.pro" +
+      "tobuf.Duration\0228\n\025workflow_task_timeout\030" +
+      "\t \001(\0132\031.google.protobuf.Duration\022J\n\023pare" +
+      "nt_close_policy\030\n \001(\0162-.temporal.omes.ki" +
+      "tchen_sink.ParentClosePolicy\022N\n\030workflow" +
+      "_id_reuse_policy\030\014 \001(\0162,.temporal.api.en" +
+      "ums.v1.WorkflowIdReusePolicy\0229\n\014retry_po" +
+      "licy\030\r \001(\0132#.temporal.api.common.v1.Retr" +
+      "yPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007header" +
+      "s\030\017 \003(\0132C.temporal.omes.kitchen_sink.Exe" +
+      "cuteChildWorkflowAction.HeadersEntry\022N\n\004" +
+      "memo\030\020 \003(\0132@.temporal.omes.kitchen_sink." +
+      "ExecuteChildWorkflowAction.MemoEntry\022g\n\021" +
+      "search_attributes\030\021 \003(\0132L.temporal.omes." +
+      "kitchen_sink.ExecuteChildWorkflowAction." +
+      "SearchAttributesEntry\022T\n\021cancellation_ty" +
+      "pe\030\022 \001(\01629.temporal.omes.kitchen_sink.Ch" +
+      "ildWorkflowCancellationType\022G\n\021versionin" +
+      "g_intent\030\023 \001(\0162,.temporal.omes.kitchen_s" +
+      "ink.VersioningIntent\022E\n\020awaitable_choice" +
+      "\030\024 \001(\0132+.temporal.omes.kitchen_sink.Awai" +
+      "tableChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t" +
+      "\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v1" +
+      ".Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022." +
+      "\n\005value\030\002 \001(\0132\037.temporal.api.common.v1.P" +
+      "ayload:\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003k" +
+      "ey\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.c" +
+      "ommon.v1.Payload:\0028\001\"0\n\022AwaitWorkflowSta" +
+      "te\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020SendS" +
+      "ignalAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_" +
+      "id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004args\030\004 " +
+      "\003(\0132\037.temporal.api.common.v1.Payload\022J\n\007" +
+      "headers\030\005 \003(\01329.temporal.omes.kitchen_si" +
+      "nk.SendSignalAction.HeadersEntry\022E\n\020awai" +
+      "table_choice\030\006 \001(\0132+.temporal.omes.kitch" +
       "en_sink.AwaitableChoice\032O\n\014HeadersEntry\022" +
       "\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.a" +
-      "pi.common.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n" +
-      "\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api" +
-      ".common.v1.Payload:\0028\001\032X\n\025SearchAttribut" +
-      "esEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.te" +
-      "mporal.api.common.v1.Payload:\0028\001\"0\n\022Awai" +
-      "tWorkflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001" +
-      "(\t\"\337\002\n\020SendSignalAction\022\023\n\013workflow_id\030\001" +
-      " \001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(" +
-      "\t\022-\n\004args\030\004 \003(\0132\037.temporal.api.common.v1" +
-      ".Payload\022J\n\007headers\030\005 \003(\01329.temporal.ome" +
-      "s.kitchen_sink.SendSignalAction.HeadersE" +
-      "ntry\022E\n\020awaitable_choice\030\006 \001(\0132+.tempora" +
-      "l.omes.kitchen_sink.AwaitableChoice\032O\n\014H" +
-      "eadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132" +
-      "\037.temporal.api.common.v1.Payload:\0028\001\";\n\024" +
-      "CancelWorkflowAction\022\023\n\013workflow_id\030\001 \001(" +
-      "\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerActio" +
-      "n\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\022" +
-      "8\n\014inner_action\030\003 \001(\0132\".temporal.omes.ki" +
-      "tchen_sink.Action\"\343\001\n\034UpsertSearchAttrib" +
-      "utesAction\022i\n\021search_attributes\030\001 \003(\0132N." +
-      "temporal.omes.kitchen_sink.UpsertSearchA" +
-      "ttributesAction.SearchAttributesEntry\032X\n" +
-      "\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005v" +
-      "alue\030\002 \001(\0132\037.temporal.api.common.v1.Payl" +
-      "oad:\0028\001\"G\n\020UpsertMemoAction\0223\n\rupserted_" +
-      "memo\030\001 \001(\0132\034.temporal.api.common.v1.Memo" +
-      "\"J\n\022ReturnResultAction\0224\n\013return_this\030\001 " +
-      "\001(\0132\037.temporal.api.common.v1.Payload\"F\n\021" +
-      "ReturnErrorAction\0221\n\007failure\030\001 \001(\0132 .tem" +
-      "poral.api.failure.v1.Failure\"\336\006\n\023Continu" +
-      "eAsNewAction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\nt" +
-      "ask_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.tem" +
-      "poral.api.common.v1.Payload\0227\n\024workflow_" +
-      "run_timeout\030\004 \001(\0132\031.google.protobuf.Dura" +
-      "tion\0228\n\025workflow_task_timeout\030\005 \001(\0132\031.go" +
-      "ogle.protobuf.Duration\022G\n\004memo\030\006 \003(\01329.t" +
-      "emporal.omes.kitchen_sink.ContinueAsNewA" +
-      "ction.MemoEntry\022M\n\007headers\030\007 \003(\0132<.tempo" +
-      "ral.omes.kitchen_sink.ContinueAsNewActio" +
-      "n.HeadersEntry\022`\n\021search_attributes\030\010 \003(" +
-      "\0132E.temporal.omes.kitchen_sink.ContinueA" +
-      "sNewAction.SearchAttributesEntry\0229\n\014retr" +
-      "y_policy\030\t \001(\0132#.temporal.api.common.v1." +
-      "RetryPolicy\022G\n\021versioning_intent\030\n \001(\0162," +
-      ".temporal.omes.kitchen_sink.VersioningIn" +
-      "tent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030" +
-      "\002 \001(\0132\037.temporal.api.common.v1.Payload:\002" +
-      "8\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value" +
-      "\030\002 \001(\0132\037.temporal.api.common.v1.Payload:" +
-      "\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(" +
-      "\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v" +
-      "1.Payload:\0028\001\"\321\001\n\025RemoteActivityOptions\022" +
-      "O\n\021cancellation_type\030\001 \001(\01624.temporal.om" +
-      "es.kitchen_sink.ActivityCancellationType" +
-      "\022\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021vers" +
-      "ioning_intent\030\003 \001(\0162,.temporal.omes.kitc" +
-      "hen_sink.VersioningIntent\"\254\002\n\025ExecuteNex" +
-      "usOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperati" +
-      "on\030\002 \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004 \003(\013" +
-      "2>.temporal.omes.kitchen_sink.ExecuteNex" +
-      "usOperation.HeadersEntry\022E\n\020awaitable_ch" +
-      "oice\030\005 \001(\0132+.temporal.omes.kitchen_sink." +
-      "AwaitableChoice\022\027\n\017expected_output\030\006 \001(\t" +
-      "\032.\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002" +
-      " \001(\t:\0028\001*\244\001\n\021ParentClosePolicy\022#\n\037PARENT" +
-      "_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CL" +
-      "OSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_P" +
-      "OLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_R" +
-      "EQUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013U" +
-      "NSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020" +
-      "\002*\242\001\n\035ChildWorkflowCancellationType\022\024\n\020C" +
-      "HILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL" +
-      "\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLET" +
-      "ED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQUE" +
-      "STED\020\003*X\n\030ActivityCancellationType\022\016\n\nTR" +
-      "Y_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETE" +
-      "D\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.gi" +
-      "thub.com/temporalio/omes/loadgen/kitchen" +
-      "sinkb\006proto3"
+      "pi.common.v1.Payload:\0028\001\";\n\024CancelWorkfl" +
+      "owAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030" +
+      "\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n\010patch_i" +
+      "d\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inner_act" +
+      "ion\030\003 \001(\0132\".temporal.omes.kitchen_sink.A" +
+      "ction\"\343\001\n\034UpsertSearchAttributesAction\022i" +
+      "\n\021search_attributes\030\001 \003(\0132N.temporal.ome" +
+      "s.kitchen_sink.UpsertSearchAttributesAct" +
+      "ion.SearchAttributesEntry\032X\n\025SearchAttri" +
+      "butesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
+      ".temporal.api.common.v1.Payload:\0028\001\"G\n\020U" +
+      "psertMemoAction\0223\n\rupserted_memo\030\001 \001(\0132\034" +
+      ".temporal.api.common.v1.Memo\"J\n\022ReturnRe" +
+      "sultAction\0224\n\013return_this\030\001 \001(\0132\037.tempor" +
+      "al.api.common.v1.Payload\"F\n\021ReturnErrorA" +
+      "ction\0221\n\007failure\030\001 \001(\0132 .temporal.api.fa" +
+      "ilure.v1.Failure\"\336\006\n\023ContinueAsNewAction" +
+      "\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_queue\030\002 " +
+      "\001(\t\0222\n\targuments\030\003 \003(\0132\037.temporal.api.co" +
+      "mmon.v1.Payload\0227\n\024workflow_run_timeout\030" +
+      "\004 \001(\0132\031.google.protobuf.Duration\0228\n\025work" +
+      "flow_task_timeout\030\005 \001(\0132\031.google.protobu" +
+      "f.Duration\022G\n\004memo\030\006 \003(\01329.temporal.omes" +
+      ".kitchen_sink.ContinueAsNewAction.MemoEn" +
+      "try\022M\n\007headers\030\007 \003(\0132<.temporal.omes.kit" +
+      "chen_sink.ContinueAsNewAction.HeadersEnt" +
+      "ry\022`\n\021search_attributes\030\010 \003(\0132E.temporal" +
+      ".omes.kitchen_sink.ContinueAsNewAction.S" +
+      "earchAttributesEntry\0229\n\014retry_policy\030\t \001" +
+      "(\0132#.temporal.api.common.v1.RetryPolicy\022" +
+      "G\n\021versioning_intent\030\n \001(\0162,.temporal.om" +
+      "es.kitchen_sink.VersioningIntent\032L\n\tMemo" +
+      "Entry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temp" +
+      "oral.api.common.v1.Payload:\0028\001\032O\n\014Header" +
+      "sEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tem" +
+      "poral.api.common.v1.Payload:\0028\001\032X\n\025Searc" +
+      "hAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002" +
+      " \001(\0132\037.temporal.api.common.v1.Payload:\0028" +
+      "\001\"\321\001\n\025RemoteActivityOptions\022O\n\021cancellat" +
+      "ion_type\030\001 \001(\01624.temporal.omes.kitchen_s" +
+      "ink.ActivityCancellationType\022\036\n\026do_not_e" +
+      "agerly_execute\030\002 \001(\010\022G\n\021versioning_inten" +
+      "t\030\003 \001(\0162,.temporal.omes.kitchen_sink.Ver" +
+      "sioningIntent\"\254\002\n\025ExecuteNexusOperation\022" +
+      "\020\n\010endpoint\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t\022\r\n\005" +
+      "input\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132>.temporal." +
+      "omes.kitchen_sink.ExecuteNexusOperation." +
+      "HeadersEntry\022E\n\020awaitable_choice\030\005 \001(\0132+" +
+      ".temporal.omes.kitchen_sink.AwaitableCho" +
+      "ice\022\027\n\017expected_output\030\006 \001(\t\032.\n\014HeadersE" +
+      "ntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001*\244\001\n" +
+      "\021ParentClosePolicy\022#\n\037PARENT_CLOSE_POLIC" +
+      "Y_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLICY_T" +
+      "ERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_ABANDO" +
+      "N\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_CANCE" +
+      "L\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFIED\020\000" +
+      "\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035ChildW" +
+      "orkflowCancellationType\022\024\n\020CHILD_WF_ABAN" +
+      "DON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CHILD_" +
+      "WF_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$CHIL" +
+      "D_WF_WAIT_CANCELLATION_REQUESTED\020\003*X\n\030Ac" +
+      "tivityCancellationType\022\016\n\nTRY_CANCEL\020\000\022\037" +
+      "\n\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007ABAND" +
+      "ON\020\002BB\n\020io.temporal.omesZ.github.com/tem" +
+      "poralio/omes/loadgen/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -56311,7 +55930,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ScheduleAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ScheduleAction_descriptor,
-        new java.lang.String[] { "WorkflowId", "WorkflowType", "TaskQueue", "Arguments", "WorkflowExecutionTimeout", "WorkflowTaskTimeout", "RetryPolicy", });
+        new java.lang.String[] { "WorkflowId", "WorkflowType", "TaskQueue", "WorkflowExecutionTimeout", "WorkflowTaskTimeout", "RetryPolicy", });
     internal_static_temporal_omes_kitchen_sink_SchedulePolicies_descriptor =
       getDescriptor().getMessageTypes().get(15);
     internal_static_temporal_omes_kitchen_sink_SchedulePolicies_fieldAccessorTable = new
