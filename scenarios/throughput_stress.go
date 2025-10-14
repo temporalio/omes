@@ -416,6 +416,14 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+			// Add activity cancellation scenario
+			DelayActivityWithCancellation(10*time.Second, 30*time.Second),
+			// Test activity retry: fails twice, succeeds on 3rd attempt
+			RetryableErrorActivity(2, RemoteActivityWithRetry(10*time.Second, 3, 1*time.Second, 2.0)),
+			// Test activity timeout with retry: times out on 1st attempt, succeeds on 2nd
+			TimeoutActivity(1, RemoteActivityWithRetry(2*time.Second, 3, 500*time.Millisecond, 2.0)),
+			// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
+			HeartbeatActivity(1, RemoteActivityWithHeartbeat(15*time.Second, 2*time.Second, 3, 500*time.Millisecond, 2.0)),
 		}
 
 		// Add sleep activities, if configured.
