@@ -159,6 +159,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxIterationAttempts:          r.maxIterationAttempts,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
+			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,

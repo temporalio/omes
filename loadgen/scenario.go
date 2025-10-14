@@ -201,6 +201,9 @@ type RunConfiguration struct {
 	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
+	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
+	// Default is false.
+	IgnoreAlreadyStarted bool
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
 	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
@@ -305,7 +308,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
 		TaskQueue:                                TaskQueueForRun(r.RunID),
 		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
-		WorkflowExecutionErrorWhenAlreadyStarted: true,
+		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
 	}
 }
 
