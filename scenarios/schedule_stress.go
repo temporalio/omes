@@ -10,6 +10,7 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/converter"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -104,10 +105,40 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
+			info.Logger.Info(fmt.Sprintf("Preparing workflow for iteration %d with schedule ID: %s", run.Iteration, scheduleID))
 			// Thread-safe append to track created schedules
 			e.mu.Lock()
 			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
 			e.mu.Unlock()
+
+			// Create workflow input for scheduled workflows with a return action that returns a non-nil payload
+			// This is necessary because the kitchen sink workflow enters an infinite signal loop
+			// if initial actions return (nil, nil)
+			emptyPayload := &common.Payload{
+				Data: []byte("{}"),
+			}
+			scheduledWorkflowInput := &kitchensink.WorkflowInput{
+				InitialActions: []*kitchensink.ActionSet{
+					{
+						Actions: []*kitchensink.Action{
+							{
+								Variant: &kitchensink.Action_ReturnResult{
+									ReturnResult: &kitchensink.ReturnResultAction{
+										ReturnThis: emptyPayload,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			// Encode the workflow input as a payload using the default data converter
+			dc := converter.GetDefaultDataConverter()
+			scheduledWorkflowPayload, err := dc.ToPayload(scheduledWorkflowInput)
+			if err != nil {
+				return fmt.Errorf("failed to encode scheduled workflow input: %w", err)
+			}
 
 			// The workflow will execute a CreateScheduleActivity to create the schedule
 			options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
@@ -125,7 +156,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 										WorkflowId:               fmt.Sprintf("scheduled-workflow-%s-%d", run.RunID, run.Iteration),
 										WorkflowType:             "kitchenSink",
 										TaskQueue:                run.TaskQueue(),
-										Arguments:                []*common.Payload{},
+										Arguments:                []*common.Payload{scheduledWorkflowPayload},
 										WorkflowExecutionTimeout: durationpb.New(30 * time.Second),
 										WorkflowTaskTimeout:      durationpb.New(10 * time.Second),
 									},
@@ -139,7 +170,9 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 						},
 						{
 							Variant: &kitchensink.Action_ReturnResult{
-								ReturnResult: &kitchensink.ReturnResultAction{},
+								ReturnResult: &kitchensink.ReturnResultAction{
+									ReturnThis: emptyPayload,
+								},
 							},
 						},
 					},
@@ -152,11 +185,12 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	}
 
 	// Run the executor to create all the schedules
+	info.Logger.Info("Starting kitchen sink executor to create schedules")
 	if err := ksExec.Run(ctx, info); err != nil {
 		return fmt.Errorf("failed to create schedules: %w", err)
 	}
 
-	info.Logger.Info(fmt.Sprintf("Created %d schedules, waiting for them to complete", len(e.schedulesCreated)))
+	info.Logger.Info(fmt.Sprintf("Kitchen sink executor finished. Created %d schedules, waiting for them to complete", len(e.schedulesCreated)))
 
 	// Wait for all schedules to complete concurrently using errgroup
 	completionTimeout := 5 * time.Minute
