@@ -213,6 +213,15 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
     elif execute_activity.HasField("client"):
         act_type = "client"
         args.append(execute_activity.client)
+    elif execute_activity.HasField("retryable_error"):
+        act_type = "retryable_error"
+        args.append(execute_activity.retryable_error)
+    elif execute_activity.HasField("timeout"):
+        act_type = "timeout"
+        args.append(execute_activity.timeout)
+    elif execute_activity.HasField("heartbeat"):
+        act_type = "heartbeat"
+        args.append(execute_activity.heartbeat)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(

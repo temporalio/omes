@@ -115,6 +115,37 @@ func NewTimerAction(t time.Duration) *Action {
 	}
 }
 
+func DelayActivity(duration time.Duration, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Delay{
+			Delay: durationpb.New(duration),
+		},
+	}
+	return factory(activity)
+}
+
+// DelayActivityWithCancellation creates a delay activity that will be cancelled after it starts
+func DelayActivityWithCancellation(duration time.Duration, startToCloseTimeout time.Duration) *Action {
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: &ExecuteActivityAction{
+				ActivityType: &ExecuteActivityAction_Delay{
+					Delay: durationpb.New(duration),
+				},
+				StartToCloseTimeout: durationpb.New(startToCloseTimeout),
+				AwaitableChoice: &AwaitableChoice{
+					Condition: &AwaitableChoice_CancelAfterStarted{
+						CancelAfterStarted: &emptypb.Empty{},
+					},
+				},
+				Locality: &ExecuteActivityAction_Remote{
+					Remote: &RemoteActivityOptions{},
+				},
+			},
+		},
+	}
+}
+
 func PayloadActivity(inSize, outSize int, factory ActionFactory[ExecuteActivityAction]) *Action {
 	activity := &ExecuteActivityAction{
 		ActivityType: &ExecuteActivityAction_Payload{
@@ -132,6 +163,39 @@ func GenericActivity(activityType string, factory ActionFactory[ExecuteActivityA
 		ActivityType: &ExecuteActivityAction_Generic{
 			Generic: &ExecuteActivityAction_GenericActivity{
 				Type: activityType,
+			},
+		},
+	}
+	return factory(activity)
+}
+
+func RetryableErrorActivity(failAttempts int32, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_RetryableError{
+			RetryableError: &ExecuteActivityAction_RetryableErrorActivity{
+				FailAttempts: failAttempts,
+			},
+		},
+	}
+	return factory(activity)
+}
+
+func TimeoutActivity(failAttempts int32, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Timeout{
+			Timeout: &ExecuteActivityAction_TimeoutActivity{
+				FailAttempts: failAttempts,
+			},
+		},
+	}
+	return factory(activity)
+}
+
+func HeartbeatActivity(failAttempts int32, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Heartbeat{
+			Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+				FailAttempts: failAttempts,
 			},
 		},
 	}
@@ -164,6 +228,47 @@ func DefaultLocalActivity(activity *ExecuteActivityAction) *Action {
 		Variant: &Action_ExecActivity{
 			ExecActivity: activity,
 		},
+	}
+}
+
+// RemoteActivityWithRetry creates a remote activity with custom retry configuration
+func RemoteActivityWithRetry(startToCloseTimeout time.Duration, maxAttempts int32, initialInterval time.Duration, backoffCoefficient float64) ActionFactory[ExecuteActivityAction] {
+	return func(activity *ExecuteActivityAction) *Action {
+		activity.StartToCloseTimeout = durationpb.New(startToCloseTimeout)
+		activity.RetryPolicy = &common.RetryPolicy{
+			MaximumAttempts:    maxAttempts,
+			InitialInterval:    durationpb.New(initialInterval),
+			BackoffCoefficient: backoffCoefficient,
+		}
+		activity.Locality = &ExecuteActivityAction_Remote{
+			Remote: &RemoteActivityOptions{},
+		}
+		return &Action{
+			Variant: &Action_ExecActivity{
+				ExecActivity: activity,
+			},
+		}
+	}
+}
+
+// RemoteActivityWithHeartbeat creates a remote activity with heartbeat timeout and retry configuration
+func RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout time.Duration, maxAttempts int32, initialInterval time.Duration, backoffCoefficient float64) ActionFactory[ExecuteActivityAction] {
+	return func(activity *ExecuteActivityAction) *Action {
+		activity.StartToCloseTimeout = durationpb.New(startToCloseTimeout)
+		activity.HeartbeatTimeout = durationpb.New(heartbeatTimeout)
+		activity.RetryPolicy = &common.RetryPolicy{
+			MaximumAttempts:    maxAttempts,
+			InitialInterval:    durationpb.New(initialInterval),
+			BackoffCoefficient: backoffCoefficient,
+		}
+		activity.Locality = &ExecuteActivityAction_Remote{
+			Remote: &RemoteActivityOptions{},
+		}
+		return &Action{
+			Variant: &Action_ExecActivity{
+				ExecActivity: activity,
+			},
+		}
 	}
 }
 

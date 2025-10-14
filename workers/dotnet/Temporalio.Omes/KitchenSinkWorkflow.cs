@@ -357,6 +357,21 @@ public class KitchenSinkWorkflow
             actType = "client";
             args.Add(client);
         }
+        else if (eaa.RetryableError is { } retryableError)
+        {
+            actType = "retryable_error";
+            args.Add(retryableError);
+        }
+        else if (eaa.Timeout is { } timeout)
+        {
+            actType = "timeout";
+            args.Add(timeout);
+        }
+        else if (eaa.Heartbeat is { } heartbeat)
+        {
+            actType = "heartbeat";
+            args.Add(heartbeat);
+        }
 
         if (eaa.IsLocal != null)
         {
@@ -443,6 +458,62 @@ public class KitchenSinkWorkflow
         var output = new byte[bytesToReturn];
         new Random().NextBytes(output);
         return output;
+    }
+
+    [Activity("retryable_error")]
+    public static void RetryableError(ExecuteActivityAction.Types.RetryableErrorActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        if (info.Attempt <= config.FailAttempts)
+        {
+            throw new ApplicationFailureException("retryable error");
+        }
+    }
+
+    [Activity("timeout")]
+    public static async Task Timeout(ExecuteActivityAction.Types.TimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var durationMs = info.StartToCloseTimeout;
+        if (info.Attempt <= config.FailAttempts)
+        {
+            // Failure case: run for double StartToCloseTimeout
+            durationMs *= 2;
+        }
+        else
+        {
+            // Success case: run for half StartToCloseTimeout
+            durationMs /= 2;
+        }
+
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(durationMs);
+    }
+
+    [Activity("heartbeat")]
+    public static async Task Heartbeat(ExecuteActivityAction.Types.HeartbeatTimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var shouldSendHeartbeats = info.Attempt > config.FailAttempts;
+
+        // Run activity for 2x the heartbeat timeout
+        // Ensures we miss enough heartbeat intervals (if not sending heartbeats).
+        var duration = info.HeartbeatTimeout * 2;
+
+        // Unified loop with conditional heartbeat sending
+        var elapsed = TimeSpan.Zero;
+        var heartbeatInterval = TimeSpan.FromSeconds(1);
+        while (elapsed < duration)
+        {
+            var sleepTime = elapsed + heartbeatInterval > duration ? duration - elapsed : heartbeatInterval;
+            await Task.Delay(sleepTime, ActivityExecutionContext.Current.CancellationToken);
+            elapsed += sleepTime;
+            if (shouldSendHeartbeats && elapsed < duration)
+            {
+                ActivityExecutionContext.Current.Heartbeat();
+            }
+        }
     }
 }
 

@@ -361,6 +361,15 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	} else if client := act.GetClient(); client != nil {
 		actType = "client"
 		args = append(args, client)
+	} else if retryable := act.GetRetryableError(); retryable != nil {
+		actType = "retryable_error"
+		args = append(args, retryable)
+	} else if timeout := act.GetTimeout(); timeout != nil {
+		actType = "timeout"
+		args = append(args, timeout)
+	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
+		actType = "heartbeat"
+		args = append(args, heartbeat)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -506,6 +515,63 @@ func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, 
 func Delay(_ context.Context, delayFor time.Duration) error {
 	time.Sleep(delayFor)
 	return nil
+}
+
+// RetryableError throws retryable errors for N attempts, then succeeds
+func RetryableError(ctx context.Context, config *kitchensink.ExecuteActivityAction_RetryableErrorActivity) error {
+	info := activity.GetInfo(ctx)
+	if info.Attempt <= config.FailAttempts {
+		return temporal.NewApplicationError("retryable error", "RetryableError", nil)
+	}
+	return nil
+}
+
+// Timeout runs too long for N attempts (causing timeout), then completes quickly
+func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_TimeoutActivity) error {
+	info := activity.GetInfo(ctx)
+
+	if info.Attempt <= config.FailAttempts {
+		// Run until context is canceled (via StartToCloseTimeout)
+		<-ctx.Done()
+		return ctx.Err()
+	}
+
+	// Success case: run for a safe duration (well under StartToCloseTimeout)
+	duration := info.StartToCloseTimeout / 2
+	select {
+	case <-time.After(duration):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Heartbeat skips heartbeats for N attempts (causing heartbeat timeout), then sends them
+func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_HeartbeatTimeoutActivity) error {
+	info := activity.GetInfo(ctx)
+	shouldSendHeartbeats := info.Attempt > config.FailAttempts
+
+	// Run activity for 2x the heartbeat timeout
+	// Ensures we miss enough heartbeat intervals (if not sending heartbeats).
+	activityDeadline := time.After(info.HeartbeatTimeout * 2)
+
+	heartbeatTicker := time.NewTicker(time.Second)
+	defer heartbeatTicker.Stop()
+	for {
+		select {
+		// Finished running activity
+		case <-activityDeadline:
+			return nil
+		// Potentially send heartbeats
+		case <-heartbeatTicker.C:
+			if shouldSendHeartbeats {
+				activity.RecordHeartbeat(ctx)
+			}
+		// Activity canceled (via heartbeat timeout)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {

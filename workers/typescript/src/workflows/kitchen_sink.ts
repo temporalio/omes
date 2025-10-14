@@ -290,6 +290,19 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'client';
     args.push(execActivity.client);
   }
+  if (execActivity.retryableError) {
+    actType = 'retryable_error';
+    args.push(execActivity.retryableError);
+  }
+  if (execActivity.timeout) {
+    actType = 'timeout';
+    args.push(execActivity.timeout);
+  }
+  if (execActivity.heartbeat) {
+    actType = 'heartbeat';
+    args.push(execActivity.heartbeat);
+  }
+
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
     startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
