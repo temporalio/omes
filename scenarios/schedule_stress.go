@@ -16,21 +16,27 @@ import (
 )
 
 const (
-	ScheduleCountFlag                       = "schedule-count"
-	ScheduleActionsPerScheduleFlag          = "schedule-actions-per-schedule"
-	ScheduleCronFlag                        = "schedule-cron"
-	ScheduleStressScenarioIdSearchAttribute = "ScheduleStressScenarioId"
+	ScheduleCountFlag              = "schedule-count"
+	ScheduleActionsPerScheduleFlag = "schedule-actions-per-schedule"
+	ScheduleCronFlag               = "schedule-cron"
+	ScheduleCompletionTimeoutFlag  = "schedule-completion-timeout"
 )
 
+// Note: VisibilityVerificationTimeoutFlag is defined in throughput_stress.go
+
 type scheduleStressConfig struct {
-	ScheduleCount      int
-	ActionsPerSchedule int
-	CronSchedule       string
-	ScenarioRunID      string
+	ScheduleCount                 int
+	ActionsPerSchedule            int
+	CronSchedule                  string
+	ScenarioRunID                 string
+	ScheduleCompletionTimeout     time.Duration
+	VisibilityVerificationTimeout time.Duration
 }
 
 type scheduleStressExecutor struct {
-	config *scheduleStressConfig
+	mu               sync.Mutex
+	config           *scheduleStressConfig
+	schedulesCreated []string
 }
 
 var _ loadgen.Configurable = (*scheduleStressExecutor)(nil)
@@ -38,8 +44,15 @@ var _ loadgen.Configurable = (*scheduleStressExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Schedule stress scenario. Use --option with '%s', '%s' to control parameters",
-			ScheduleCountFlag, ScheduleActionsPerScheduleFlag),
+			"Schedule stress scenario. Creates schedules and verifies they execute workflows at the expected rate.\n"+
+				"Options:\n"+
+				"  %s (default: 10) - Number of schedules to create\n"+
+				"  %s (default: 5) - Number of workflow executions per schedule\n"+
+				"  %s (default: '* * * * * * *') - Cron schedule for workflow execution\n"+
+				"  %s (default: 5m) - Timeout waiting for schedules to complete\n"+
+				"  %s (default: 3m) - Timeout for visibility verification",
+			ScheduleCountFlag, ScheduleActionsPerScheduleFlag, ScheduleCronFlag,
+			ScheduleCompletionTimeoutFlag, VisibilityVerificationTimeoutFlag),
 		ExecutorFn: func() loadgen.Executor { return newScheduleStressExecutor() },
 	})
 }
@@ -50,18 +63,20 @@ func newScheduleStressExecutor() *scheduleStressExecutor {
 
 func (e *scheduleStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &scheduleStressConfig{
-		ScheduleCount:      info.ScenarioOptionInt(ScheduleCountFlag, 10),
-		ActionsPerSchedule: info.ScenarioOptionInt(ScheduleActionsPerScheduleFlag, 5),
-		CronSchedule:       info.ScenarioOptions[ScheduleCronFlag],
-		ScenarioRunID:      info.RunID,
+		ScheduleCount:                 info.ScenarioOptionInt(ScheduleCountFlag, 10),
+		ActionsPerSchedule:            info.ScenarioOptionInt(ScheduleActionsPerScheduleFlag, 5),
+		CronSchedule:                  info.ScenarioOptions[ScheduleCronFlag],
+		ScenarioRunID:                 info.RunID,
+		ScheduleCompletionTimeout:     info.ScenarioOptionDuration(ScheduleCompletionTimeoutFlag, 5*time.Minute),
+		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 3*time.Minute),
 	}
 
 	if config.ScheduleCount <= 0 {
-		return fmt.Errorf("schedule-count must be positive, got %d", config.ScheduleCount)
+		return fmt.Errorf("%s must be positive, got %d", ScheduleCountFlag, config.ScheduleCount)
 	}
 
 	if config.ActionsPerSchedule <= 0 {
-		return fmt.Errorf("schedule-actions-per-schedule must be positive, got %d", config.ActionsPerSchedule)
+		return fmt.Errorf("%s must be positive, got %d", ScheduleActionsPerScheduleFlag, config.ActionsPerSchedule)
 	}
 
 	if config.CronSchedule == "" {
@@ -69,34 +84,38 @@ func (e *scheduleStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		config.CronSchedule = "* * * * * * *"
 	}
 
+	if config.ScheduleCompletionTimeout <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", ScheduleCompletionTimeoutFlag, config.ScheduleCompletionTimeout)
+	}
+
+	if config.VisibilityVerificationTimeout <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
+	}
+
 	e.config = config
 	return nil
 }
 
+// Run executes the schedule stress scenario.
+//
+// It creates N schedules (configured by schedule-count), each configured to trigger M workflow
+// executions (configured by schedule-actions-per-schedule) on a cron schedule.
+// After all schedules complete, it verifies the expected number of workflows were executed via visibility.
 func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	if err := e.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
-	}
-
-	// Add search attribute for tracking
-	if err := loadgen.InitSearchAttribute(ctx, info, ScheduleStressScenarioIdSearchAttribute); err != nil {
-		return err
 	}
 
 	// Each iteration creates a schedule that will trigger the configured number of workflow executions
 	info.Logger.Info(fmt.Sprintf("Creating %d schedules with %d actions each",
 		e.config.ScheduleCount, e.config.ActionsPerSchedule))
 
-	// Track created schedules for cleanup and waiting
-	var schedulesCreated []string
-	var schedulesMu sync.Mutex
-
 	// Cleanup all schedules on exit
 	defer func() {
-		schedulesMu.Lock()
-		schedules := make([]string, len(schedulesCreated))
-		copy(schedules, schedulesCreated)
-		schedulesMu.Unlock()
+		e.mu.Lock()
+		schedules := make([]string, len(e.schedulesCreated))
+		copy(schedules, e.schedulesCreated)
+		e.mu.Unlock()
 
 		if len(schedules) == 0 {
 			return
@@ -122,10 +141,9 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
 			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
-			// Thread-safe append to track created schedules
-			schedulesMu.Lock()
-			schedulesCreated = append(schedulesCreated, scheduleID)
-			schedulesMu.Unlock()
+			e.mu.Lock()
+			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
+			e.mu.Unlock()
 
 			// Create workflow input for scheduled workflows with a return action that returns a non-nil payload
 			// This is necessary because the kitchen sink workflow enters an infinite signal loop
@@ -206,22 +224,21 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		return fmt.Errorf("failed to create schedules: %w", err)
 	}
 
-	schedulesMu.Lock()
-	schedules := make([]string, len(schedulesCreated))
-	copy(schedules, schedulesCreated)
-	schedulesMu.Unlock()
+	e.mu.Lock()
+	schedules := make([]string, len(e.schedulesCreated))
+	copy(schedules, e.schedulesCreated)
+	e.mu.Unlock()
 
 	info.Logger.Info(fmt.Sprintf("Kitchen sink executor finished. Created %d schedules, waiting for them to complete", len(schedules)))
 
 	// Wait for all schedules to complete concurrently using errgroup
-	completionTimeout := 5 * time.Minute
 	g, gctx := errgroup.WithContext(ctx)
 
 	for _, scheduleID := range schedules {
 		scheduleID := scheduleID // capture loop variable
 		g.Go(func() error {
 			info.Logger.Infof("Waiting for schedule %s to complete", scheduleID)
-			if err := loadgen.WaitForScheduleCompletion(gctx, info.Client, scheduleID, completionTimeout); err != nil {
+			if err := loadgen.WaitForScheduleCompletion(gctx, info.Client, scheduleID, e.config.ScheduleCompletionTimeout); err != nil {
 				return fmt.Errorf("failed waiting for schedule %s to complete: %w", scheduleID, err)
 			}
 			return nil
@@ -238,8 +255,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 	expectedWorkflows := e.config.ScheduleCount + (e.config.ScheduleCount * e.config.ActionsPerSchedule)
 	info.Logger.Info(fmt.Sprintf("Verifying %d workflows were executed", expectedWorkflows))
 
-	// Give visibility some time to catch up
-	visibilityTimeout := 3 * time.Minute
+	// Post-scenario: verify reported workflow completion count from Visibility
 	if err := loadgen.MinVisibilityCountEventually(
 		ctx,
 		info,
@@ -248,7 +264,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 			Query:     fmt.Sprintf("WorkflowType='kitchenSink' AND TaskQueue='%s'", loadgen.TaskQueueForRun(info.RunID)),
 		},
 		expectedWorkflows,
-		visibilityTimeout,
+		e.config.VisibilityVerificationTimeout,
 	); err != nil {
 		return fmt.Errorf("visibility verification failed: %w", err)
 	}
