@@ -140,7 +140,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		},
 		UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 			// Each iteration creates a schedule
-			scheduleID := loadgen.ScheduleIDForRun(run.RunID, run.Iteration)
+			scheduleID := fmt.Sprintf("schedule-%s-%d", run.RunID, run.Iteration)
 			e.mu.Lock()
 			e.schedulesCreated = append(e.schedulesCreated, scheduleID)
 			e.mu.Unlock()
@@ -238,7 +238,7 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 		scheduleID := scheduleID // capture loop variable
 		g.Go(func() error {
 			info.Logger.Infof("Waiting for schedule %s to complete", scheduleID)
-			if err := loadgen.WaitForScheduleCompletion(gctx, info.Client, scheduleID, e.config.ScheduleCompletionTimeout); err != nil {
+			if err := e.waitForScheduleCompletion(gctx, info, scheduleID); err != nil {
 				return fmt.Errorf("failed waiting for schedule %s to complete: %w", scheduleID, err)
 			}
 			return nil
@@ -271,4 +271,31 @@ func (e *scheduleStressExecutor) Run(ctx context.Context, info loadgen.ScenarioI
 
 	info.Logger.Info("Schedule stress scenario completed successfully")
 	return nil
+}
+
+// waitForScheduleCompletion polls a schedule until it has completed all actions
+func (e *scheduleStressExecutor) waitForScheduleCompletion(ctx context.Context, info loadgen.ScenarioInfo, scheduleID string) error {
+	ctx, cancel := context.WithTimeout(ctx, e.config.ScheduleCompletionTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for schedule %s to complete: %w", scheduleID, ctx.Err())
+		case <-ticker.C:
+			handle := info.Client.ScheduleClient().GetHandle(ctx, scheduleID)
+			desc, err := handle.Describe(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to describe schedule %s: %w", scheduleID, err)
+			}
+
+			// Schedule is complete when RemainingActions is 0 and no workflows are running
+			if desc.Schedule.State.RemainingActions == 0 && len(desc.Info.RunningWorkflows) == 0 {
+				return nil
+			}
+		}
+	}
 }
