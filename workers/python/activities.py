@@ -36,7 +36,7 @@ async def retryable_error_activity(config):
 async def timeout_activity(config):
     """Activity that runs too long for N attempts (causing timeout), then completes quickly."""
     info = activity.info()
-    duration_seconds = info.start_to_close_timeout.total_seconds() 
+    duration_seconds = info.start_to_close_timeout.total_seconds()
     if info.attempt <= config.fail_attempts:
         # Failure case: run for double StartToCloseTimeout
         duration_seconds *= 2

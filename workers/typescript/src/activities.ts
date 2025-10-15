@@ -51,7 +51,7 @@ export async function retryableError(config: IRetryableErrorActivity): Promise<v
 export async function timeout(config: ITimeoutActivity): Promise<void> {
   const info = activityInfo();
   let durationMs = info.startToCloseTimeoutMs;
-  if (info.attempt <= config.failAttempts) {
+  if (info.attempt <= config.failAttempts!) {
     // Failure case: run for double StartToCloseTimeout
     durationMs *= 2;
   } else {

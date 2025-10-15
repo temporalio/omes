@@ -474,7 +474,7 @@ public class KitchenSinkWorkflow
     public static async Task Timeout(ExecuteActivityAction.Types.TimeoutActivity config)
     {
         var info = ActivityExecutionContext.Current.Info;
-        var durationMs = info.StartToCloseTimeout;
+        var durationMs = info.StartToCloseTimeout!.Value.TotalMilliseconds;
         if (info.Attempt <= config.FailAttempts)
         {
             // Failure case: run for double StartToCloseTimeout
@@ -488,7 +488,7 @@ public class KitchenSinkWorkflow
 
         // Sleep for failure/success timeout duration.
         // In failure case, this will throw a TaskCancelledException.
-        await Task.Delay(durationMs);
+        await Task.Delay(TimeSpan.FromMilliseconds(durationMs), ActivityExecutionContext.Current.CancellationToken);
     }
 
     [Activity("heartbeat")]
@@ -499,7 +499,7 @@ public class KitchenSinkWorkflow
 
         // Run activity for 2x the heartbeat timeout
         // Ensures we miss enough heartbeat intervals (if not sending heartbeats).
-        var duration = info.HeartbeatTimeout * 2;
+        var duration = TimeSpan.FromTicks(info.HeartbeatTimeout!.Value.Ticks * 2);
 
         // Unified loop with conditional heartbeat sending
         var elapsed = TimeSpan.Zero;
