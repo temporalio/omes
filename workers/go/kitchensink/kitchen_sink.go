@@ -40,6 +40,8 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 // Schedule-related activities
 
 func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
+	c := activity.GetClient(ctx)
+
 	scheduleAction := client.ScheduleWorkflowAction{
 		ID:                  action.Action.WorkflowId,
 		Workflow:            action.Action.WorkflowType,
@@ -83,17 +85,42 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		scheduleOptions.ScheduleBackfill = backfills
 	}
 
-	_, err := ca.Client.ScheduleClient().Create(ctx, scheduleOptions)
+	_, err := c.ScheduleClient().Create(ctx, scheduleOptions)
 	return err
 }
 
 func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {
-	handle := ca.Client.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	c := activity.GetClient(ctx)
+	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
 	return handle.Describe(ctx)
 }
 
+func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *kitchensink.UpdateScheduleAction) error {
+	c := activity.GetClient(ctx)
+	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+
+	return handle.Update(ctx, client.ScheduleUpdateOptions{
+		DoUpdate: func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+			schedule := &input.Description.Schedule
+
+			// Update the spec if provided
+			if action.Spec != nil {
+				schedule.Spec.CronExpressions = action.Spec.CronExpressions
+				if action.Spec.Jitter != nil {
+					schedule.Spec.Jitter = action.Spec.Jitter.AsDuration()
+				}
+			}
+
+			return &client.ScheduleUpdate{
+				Schedule: schedule,
+			}, nil
+		},
+	})
+}
+
 func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
-	handle := ca.Client.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	c := activity.GetClient(ctx)
+	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
 	return handle.Delete(ctx)
 }
 
@@ -301,6 +328,11 @@ func (ws *KSWorkflowState) handleAction(
 			StartToCloseTimeout: 30 * time.Second,
 		})
 		return nil, workflow.ExecuteActivity(actCtx, "DescribeScheduleActivity", describeSchedule).Get(ctx, nil)
+	} else if updateSchedule := action.GetUpdateSchedule(); updateSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "UpdateScheduleActivity", updateSchedule).Get(ctx, nil)
 	} else if deleteSchedule := action.GetDeleteSchedule(); deleteSchedule != nil {
 		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 			StartToCloseTimeout: 30 * time.Second,
