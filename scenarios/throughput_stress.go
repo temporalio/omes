@@ -405,18 +405,68 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 		}
 
-		// Add schedule operations sequence: Create→Describe→Update→Describe→Delete
-		// These must run sequentially, so wrap in a nested sequential action set
 		scheduleID := fmt.Sprintf("tps-schedule-%s-%d-%d", t.runID, run.Iteration, childCount)
 		asyncActions = append(asyncActions, &Action{
 			Variant: &Action_NestedActionSet{
 				NestedActionSet: &ActionSet{
 					Actions: []*Action{
-						t.createScheduleCreateAction(scheduleID),
-						t.createScheduleDescribeAction(scheduleID),
-						t.createScheduleUpdateAction(scheduleID),
-						t.createScheduleDescribeAction(scheduleID),
-						t.createScheduleDeleteAction(scheduleID),
+						{
+							Variant: &Action_CreateSchedule{
+								CreateSchedule: &CreateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &ScheduleSpec{
+										CronExpressions: []string{"* * * * *"},
+									},
+									Action: &ScheduleAction{
+										WorkflowId:   fmt.Sprintf("%s-wf", scheduleID),
+										WorkflowType: "kitchenSink",
+										TaskQueue:    fmt.Sprintf("omes-%s", t.runID),
+										Input: []*common.Payload{
+											ConvertToPayload(&WorkflowInput{
+												InitialActions: []*ActionSet{
+													NoOpSingleActivityActionSet(),
+												},
+											}),
+										},
+									},
+									Policies: &SchedulePolicies{
+										RemainingActions:    1,
+										TriggerImmediately: true,
+									},
+								},
+							},
+						},
+						{
+							Variant: &Action_DescribeSchedule{
+								DescribeSchedule: &DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
+						{
+							Variant: &Action_UpdateSchedule{
+								UpdateSchedule: &UpdateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &ScheduleSpec{
+										CronExpressions: []string{"*/5 * * * *"},
+									},
+								},
+							},
+						},
+						{
+							Variant: &Action_DescribeSchedule{
+								DescribeSchedule: &DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
+						{
+							Variant: &Action_DeleteSchedule{
+								DeleteSchedule: &DeleteScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
 					},
 					Concurrent: false,
 				},
@@ -626,68 +676,6 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 						CancelAfterStarted: &emptypb.Empty{},
 					},
 				},
-			},
-		},
-	}
-}
-
-func (t *tpsExecutor) createScheduleCreateAction(scheduleID string) *Action {
-	return &Action{
-		Variant: &Action_CreateSchedule{
-			CreateSchedule: &CreateScheduleAction{
-				ScheduleId: scheduleID,
-				Spec: &ScheduleSpec{
-					CronExpressions: []string{"* * * * *"},
-				},
-				Action: &ScheduleAction{
-					WorkflowId:   fmt.Sprintf("%s-wf", scheduleID),
-					WorkflowType: "kitchenSink",
-					TaskQueue:    fmt.Sprintf("omes-%s", t.runID),
-					Input: []*common.Payload{
-						ConvertToPayload(&WorkflowInput{
-							InitialActions: []*ActionSet{
-								NoOpSingleActivityActionSet(),
-							},
-						}),
-					},
-				},
-				Policies: &SchedulePolicies{
-					RemainingActions:    1,    // Only run once if triggered
-					TriggerImmediately: true, // Fire immediately when created
-				},
-			},
-		},
-	}
-}
-
-func (t *tpsExecutor) createScheduleDescribeAction(scheduleID string) *Action {
-	return &Action{
-		Variant: &Action_DescribeSchedule{
-			DescribeSchedule: &DescribeScheduleAction{
-				ScheduleId: scheduleID,
-			},
-		},
-	}
-}
-
-func (t *tpsExecutor) createScheduleUpdateAction(scheduleID string) *Action {
-	return &Action{
-		Variant: &Action_UpdateSchedule{
-			UpdateSchedule: &UpdateScheduleAction{
-				ScheduleId: scheduleID,
-				Spec: &ScheduleSpec{
-					CronExpressions: []string{"*/5 * * * *"}, // Updated cron expression
-				},
-			},
-		},
-	}
-}
-
-func (t *tpsExecutor) createScheduleDeleteAction(scheduleID string) *Action {
-	return &Action{
-		Variant: &Action_DeleteSchedule{
-			DeleteSchedule: &DeleteScheduleAction{
-				ScheduleId: scheduleID,
 			},
 		},
 	}

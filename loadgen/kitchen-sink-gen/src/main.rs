@@ -135,7 +135,7 @@ impl Default for ActionChances {
         Self {
             timer: 25.0,
             activity: 25.0,
-            child_workflow: 20.0,  // Reduced from 25.0 to make room for schedule_operations
+            child_workflow: 20.0,
             nested_action_set: 12.5,
             patch_marker: 2.5,
             set_workflow_state: 2.5,
