@@ -41,12 +41,15 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 
 func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
 	c := activity.GetClient(ctx)
+	info := activity.GetInfo(ctx)
 
 	// If task queue is not specified, use the parent workflow's task queue
 	if action.Action.TaskQueue == "" {
-		info := activity.GetInfo(ctx)
 		action.Action.TaskQueue = info.TaskQueue
 	}
+
+	// Make schedule ID unique per workflow execution to support concurrent iterations with same input
+	action.ScheduleId = fmt.Sprintf("%s-%s", action.ScheduleId, info.WorkflowExecution.ID)
 
 	// Convert input payloads to args
 	args := make([]interface{}, len(action.Action.Input))
@@ -107,13 +110,19 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 
 func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {
 	c := activity.GetClient(ctx)
-	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, info.WorkflowExecution.ID)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 	return handle.Describe(ctx)
 }
 
 func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *kitchensink.UpdateScheduleAction) error {
 	c := activity.GetClient(ctx)
-	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, info.WorkflowExecution.ID)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 
 	return handle.Update(ctx, client.ScheduleUpdateOptions{
 		DoUpdate: func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
@@ -136,7 +145,10 @@ func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *
 
 func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
 	c := activity.GetClient(ctx)
-	handle := c.ScheduleClient().GetHandle(ctx, action.ScheduleId)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, info.WorkflowExecution.ID)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 	return handle.Delete(ctx)
 }
 
