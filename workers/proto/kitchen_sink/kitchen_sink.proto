@@ -153,6 +153,7 @@ message ScheduleAction {
   google.protobuf.Duration workflow_execution_timeout = 4;
   google.protobuf.Duration workflow_task_timeout = 5;
   temporal.api.common.v1.RetryPolicy retry_policy = 6;
+  repeated temporal.api.common.v1.Payload input = 7;
 }
 
 message SchedulePolicies {

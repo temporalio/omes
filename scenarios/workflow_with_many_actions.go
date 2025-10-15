@@ -34,7 +34,8 @@ func init() {
 					// Get options
 					children := opts.ScenarioOptionInt("children-per-workflow", 30)
 					activities := opts.ScenarioOptionInt("activities-per-workflow", 30)
-					opts.Logger.Infof("Preparing to run with %v child workflow(s) and %v activity execution(s)", children, activities)
+					schedules := opts.ScenarioOptionInt("schedules-per-workflow", 10)
+					opts.Logger.Infof("Preparing to run with %v child workflow(s), %v activity execution(s), and %v schedule operation(s)", children, activities, schedules)
 
 					childInput, err := converter.GetDefaultDataConverter().ToPayload(
 						&kitchensink.WorkflowInput{
@@ -69,6 +70,106 @@ func init() {
 							},
 						})
 					}
+
+					// Add schedule operations in 5 phases
+					// Phase 1: Create schedules concurrently
+					createScheduleActions := &kitchensink.ActionSet{
+						Actions:    []*kitchensink.Action{},
+						Concurrent: true,
+					}
+					for i := 0; i < schedules; i++ {
+						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						createScheduleActions.Actions = append(createScheduleActions.Actions, &kitchensink.Action{
+							Variant: &kitchensink.Action_CreateSchedule{
+								CreateSchedule: &kitchensink.CreateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &kitchensink.ScheduleSpec{
+										CronExpressions: []string{"0 0 * * *"}, // Fires daily at midnight
+									},
+									Action: &kitchensink.ScheduleAction{
+										WorkflowId:   scheduleID + "-wf",
+										WorkflowType: "kitchenSink",
+									},
+									Policies: &kitchensink.SchedulePolicies{
+										RemainingActions:    1,    // Only run once if triggered
+										TriggerImmediately: true, // Fire immediately when created
+									},
+								},
+							},
+						})
+					}
+					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, createScheduleActions)
+
+					// Phase 2: Describe schedules concurrently
+					describeScheduleActions1 := &kitchensink.ActionSet{
+						Actions:    []*kitchensink.Action{},
+						Concurrent: true,
+					}
+					for i := 0; i < schedules; i++ {
+						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						describeScheduleActions1.Actions = append(describeScheduleActions1.Actions, &kitchensink.Action{
+							Variant: &kitchensink.Action_DescribeSchedule{
+								DescribeSchedule: &kitchensink.DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						})
+					}
+					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, describeScheduleActions1)
+
+					// Phase 3: Update schedules concurrently
+					updateScheduleActions := &kitchensink.ActionSet{
+						Actions:    []*kitchensink.Action{},
+						Concurrent: true,
+					}
+					for i := 0; i < schedules; i++ {
+						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						updateScheduleActions.Actions = append(updateScheduleActions.Actions, &kitchensink.Action{
+							Variant: &kitchensink.Action_UpdateSchedule{
+								UpdateSchedule: &kitchensink.UpdateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &kitchensink.ScheduleSpec{
+										CronExpressions: []string{"0 12 1 1 *"}, // Changed cron (Jan 1st noon)
+									},
+								},
+							},
+						})
+					}
+					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, updateScheduleActions)
+
+					// Phase 4: Describe schedules again concurrently (verify update)
+					describeScheduleActions2 := &kitchensink.ActionSet{
+						Actions:    []*kitchensink.Action{},
+						Concurrent: true,
+					}
+					for i := 0; i < schedules; i++ {
+						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						describeScheduleActions2.Actions = append(describeScheduleActions2.Actions, &kitchensink.Action{
+							Variant: &kitchensink.Action_DescribeSchedule{
+								DescribeSchedule: &kitchensink.DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						})
+					}
+					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, describeScheduleActions2)
+
+					// Phase 5: Delete schedules sequentially (for cleanup)
+					deleteScheduleActions := &kitchensink.ActionSet{
+						Actions:    []*kitchensink.Action{},
+						Concurrent: false, // Sequential to ensure cleanup
+					}
+					for i := 0; i < schedules; i++ {
+						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						deleteScheduleActions.Actions = append(deleteScheduleActions.Actions, &kitchensink.Action{
+							Variant: &kitchensink.Action_DeleteSchedule{
+								DeleteSchedule: &kitchensink.DeleteScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						})
+					}
+					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, deleteScheduleActions)
 
 					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions,
 						&kitchensink.ActionSet{

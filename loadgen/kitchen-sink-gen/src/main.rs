@@ -7,10 +7,11 @@ use crate::protos::temporal::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
         do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
-        DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
-        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
-        WorkflowInput, WorkflowState,
+        CreateScheduleAction, DeleteScheduleAction, DescribeScheduleAction, DoQuery, DoSignal, DoUpdate,
+        ExecuteActivityAction, ExecuteChildWorkflowAction, HandlerInvocation, RemoteActivityOptions,
+        ReturnResultAction, ScheduleAction, SchedulePolicies, ScheduleSpec,
+        SetPatchMarkerAction, TestInput, TimerAction, UpdateScheduleAction, UpsertMemoAction,
+        UpsertSearchAttributesAction, WithStartClientAction, WorkflowInput, WorkflowState,
         execute_activity_action::{ClientActivity, PayloadActivity},
     },
 };
@@ -127,6 +128,7 @@ struct ActionChances {
     upsert_memo: f32,
     upsert_search_attributes: f32,
     nested_action_set: f32,
+    schedule_operations: f32,
 }
 impl Default for ActionChances {
     fn default() -> Self {
@@ -140,6 +142,7 @@ impl Default for ActionChances {
             await_workflow_state: 2.5,
             upsert_memo: 2.5,
             upsert_search_attributes: 2.5,
+            schedule_operations: 5.0,
         }
     }
 }
@@ -153,7 +156,8 @@ impl ActionChances {
             + self.await_workflow_state
             + self.upsert_memo
             + self.upsert_search_attributes
-            + self.nested_action_set;
+            + self.nested_action_set
+            + self.schedule_operations;
         sum == 100.0
     }
 }
@@ -187,7 +191,8 @@ define_action_chances!(
     set_workflow_state,
     await_workflow_state,
     upsert_memo,
-    upsert_search_attributes
+    upsert_search_attributes,
+    schedule_operations
 );
 
 fn main() -> Result<(), Error> {
@@ -555,6 +560,43 @@ impl<'a> Arbitrary<'a> for Action {
             action::Variant::UpsertSearchAttributes(u.arbitrary()?)
         } else if chances.nested_action_set(action_kind) {
             action::Variant::NestedActionSet(u.arbitrary()?)
+        } else if chances.schedule_operations(action_kind) {
+            // Generate a complete schedule operation sequence: Create→Describe→Update→Describe→Delete
+            let create_action: CreateScheduleAction = u.arbitrary()?;
+            let schedule_id_for_actions = create_action.schedule_id.clone();
+
+            action::Variant::NestedActionSet(ActionSet {
+                actions: vec![
+                    Action {
+                        variant: Some(action::Variant::CreateSchedule(create_action)),
+                    },
+                    Action {
+                        variant: Some(action::Variant::DescribeSchedule(DescribeScheduleAction {
+                            schedule_id: schedule_id_for_actions.clone(),
+                        })),
+                    },
+                    Action {
+                        variant: Some(action::Variant::UpdateSchedule(UpdateScheduleAction {
+                            schedule_id: schedule_id_for_actions.clone(),
+                            spec: Some(ScheduleSpec {
+                                cron_expressions: vec!["0 12 * * *".to_string()],
+                                jitter: None,
+                            }),
+                        })),
+                    },
+                    Action {
+                        variant: Some(action::Variant::DescribeSchedule(DescribeScheduleAction {
+                            schedule_id: schedule_id_for_actions.clone(),
+                        })),
+                    },
+                    Action {
+                        variant: Some(action::Variant::DeleteSchedule(DeleteScheduleAction {
+                            schedule_id: schedule_id_for_actions,
+                        })),
+                    },
+                ],
+                concurrent: false, // Execute sequentially
+            })
         } else {
             unreachable!()
         };
@@ -707,6 +749,55 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
     }
 }
 
+impl<'a> Arbitrary<'a> for ScheduleSpec {
+    fn arbitrary(_u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // Use a cron that fires daily at midnight
+        // Tests complete in seconds/minutes, so schedules won't fire during test execution
+        Ok(Self {
+            cron_expressions: vec!["0 0 * * *".to_string()],
+            jitter: None,
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for ScheduleAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self {
+            workflow_id: format!("ks-schedule-wf-{}", u.int_in_range(1..=10000)?),
+            workflow_type: WF_TYPE_NAME.to_string(),
+            task_queue: "".to_string(), // Will use default task queue
+            workflow_execution_timeout: Some(Duration::from_secs(10).try_into().unwrap()),
+            workflow_task_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
+            retry_policy: None,
+            input: vec![], // Empty input - workflow will handle and complete
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for SchedulePolicies {
+    fn arbitrary(_u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self {
+            remaining_actions: 1, // Only run once
+            trigger_immediately: true, // Fire immediately when created
+            catchup_window: None,
+        })
+    }
+}
+
+impl<'a> Arbitrary<'a> for CreateScheduleAction {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // Use deterministic schedule IDs to enable describe/update/delete
+        let schedule_id = format!("ks-schedule-{}", u.int_in_range(1..=100)?);
+        Ok(Self {
+            schedule_id,
+            spec: Some(u.arbitrary()?),
+            action: Some(u.arbitrary()?),
+            policies: Some(u.arbitrary()?),
+            backfill: vec![],
+        })
+    }
+}
+
 impl<'a> Arbitrary<'a> for ClientActivity {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let client_sequence = ClientSequence {
@@ -717,7 +808,7 @@ impl<'a> Arbitrary<'a> for ClientActivity {
                 wait_for_current_run_to_finish_at_end: false,
             }],
         };
-        
+
         Ok(Self {
             client_sequence: Some(client_sequence),
         })
