@@ -3326,7 +3326,7 @@ func (x *ExecuteActivityAction_RetryableErrorActivity) GetFailAttempts() int32 {
 // Activity that runs too long for N attempts (causing timeout), then completes.
 // Tests StartToCloseTimeout behavior with retries.
 // On failing attempts, the activity runs until context cancellation (timeout).
-// On success, it runs for duration < activity info's HeartbeatTimeout (runs for 0.5x StartToClose timeout).
+// On success, it runs for duration < StartToCloseTimeout (runs for 0.5x StartToClose timeout).
 type ExecuteActivityAction_TimeoutActivity struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
