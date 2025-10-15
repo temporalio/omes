@@ -8618,7 +8618,7 @@ namespace Temporal.Omes.KitchenSink {
       /// Activity that runs too long for N attempts (causing timeout), then completes.
       /// Tests StartToCloseTimeout behavior with retries.
       /// On failing attempts, the activity runs until context cancellation (timeout).
-      /// On success, it runs for duration &lt; activity info's HeartbeatTimeout (runs for 0.5x StartToClose timeout).
+      /// On success, it runs for duration &lt; StartToCloseTimeout (runs for 0.5x StartToClose timeout).
       /// </summary>
       [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
       public sealed partial class TimeoutActivity : pb::IMessage<TimeoutActivity>
