@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"fmt"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -23,6 +24,18 @@ func init() {
 					},
 				},
 				PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
+					// Prepare the workflow input for schedule-triggered workflows
+					// Use the same pattern as child workflows
+					scheduleWorkflowInput, err := converter.GetDefaultDataConverter().ToPayload(&kitchensink.WorkflowInput{
+						InitialActions: []*kitchensink.ActionSet{
+							kitchensink.NoOpSingleActivityActionSet(),
+						},
+					})
+					if err != nil {
+						return err
+					}
+					opts.Logger.Infof("Schedule workflow input payload size: %d bytes", len(scheduleWorkflowInput.Data))
+
 					actionSet := &kitchensink.ActionSet{
 						Actions: []*kitchensink.Action{},
 						// We want these executed concurrently
@@ -79,17 +92,21 @@ func init() {
 					}
 					for i := 0; i < schedules; i++ {
 						scheduleID := opts.RunID + "-schedule-" + strconv.Itoa(i)
+						scheduleAction := &kitchensink.ScheduleAction{
+							WorkflowId:   scheduleID + "-wf",
+							WorkflowType: "kitchenSink",
+							TaskQueue:    fmt.Sprintf("omes-%s", opts.RunID),
+							Input:        []*common.Payload{scheduleWorkflowInput},
+						}
+						opts.Logger.Infof("Creating schedule %s with input length: %d", scheduleID, len(scheduleAction.Input))
 						createScheduleActions.Actions = append(createScheduleActions.Actions, &kitchensink.Action{
 							Variant: &kitchensink.Action_CreateSchedule{
 								CreateSchedule: &kitchensink.CreateScheduleAction{
 									ScheduleId: scheduleID,
 									Spec: &kitchensink.ScheduleSpec{
-										CronExpressions: []string{"0 0 * * *"}, // Fires daily at midnight
+										CronExpressions: []string{"* * * * *"},
 									},
-									Action: &kitchensink.ScheduleAction{
-										WorkflowId:   scheduleID + "-wf",
-										WorkflowType: "kitchenSink",
-									},
+									Action: scheduleAction,
 									Policies: &kitchensink.SchedulePolicies{
 										RemainingActions:    1,    // Only run once if triggered
 										TriggerImmediately: true, // Fire immediately when created
@@ -129,7 +146,7 @@ func init() {
 								UpdateSchedule: &kitchensink.UpdateScheduleAction{
 									ScheduleId: scheduleID,
 									Spec: &kitchensink.ScheduleSpec{
-										CronExpressions: []string{"0 12 1 1 *"}, // Changed cron (Jan 1st noon)
+										CronExpressions: []string{"*/5 * * * *"}, // Updated cron expression
 									},
 								},
 							},

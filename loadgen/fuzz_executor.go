@@ -64,6 +64,9 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(protoBytes, asTInput)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal test input from proto: %w", err)
+		}
 		testInputs = append(testInputs, asTInput)
 	} else {
 		return fmt.Errorf("InitInputs must specify either a file or args")
@@ -73,12 +76,8 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	ge := &GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
 			options := run.DefaultKitchenSinkWorkflowOptions()
-			// TODO: Iterations
-			testInputClone, ok := proto.Clone(testInputs[0]).(*kitchensink.TestInput)
-			if !ok {
-				panic("failed to clone test input")
-			}
-			options.Params = testInputClone
+			// No need to clone since we only have one iteration and task queues are already populated
+			options.Params = testInputs[0]
 			// Run the workflow while we perform the client actions in the background
 			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 		},

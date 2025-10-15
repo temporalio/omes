@@ -5,6 +5,7 @@ go.work
 go.work.sum
 mise.toml
 .idea/
+.claude/
 # Ignore Gradle project-specific cache directory
 .gradle
 

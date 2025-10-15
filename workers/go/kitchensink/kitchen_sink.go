@@ -42,11 +42,23 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
 	c := activity.GetClient(ctx)
 
+	// If task queue is not specified, use the parent workflow's task queue
+	if action.Action.TaskQueue == "" {
+		info := activity.GetInfo(ctx)
+		action.Action.TaskQueue = info.TaskQueue
+	}
+
+	// Convert input payloads to args
+	args := make([]interface{}, len(action.Action.Input))
+	for i, payload := range action.Action.Input {
+		args[i] = payload
+	}
+
 	scheduleAction := client.ScheduleWorkflowAction{
 		ID:                  action.Action.WorkflowId,
 		Workflow:            action.Action.WorkflowType,
 		TaskQueue:           action.Action.TaskQueue,
-		Args:                []interface{}{},
+		Args:                args,
 		WorkflowRunTimeout:  action.Action.WorkflowExecutionTimeout.AsDuration(),
 		WorkflowTaskTimeout: action.Action.WorkflowTaskTimeout.AsDuration(),
 		RetryPolicy:         convertFromPBRetryPolicy(action.Action.RetryPolicy),
@@ -85,8 +97,12 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		scheduleOptions.ScheduleBackfill = backfills
 	}
 
+	activity.GetLogger(ctx).Info("Creating schedule", "schedule_id", action.ScheduleId)
 	_, err := c.ScheduleClient().Create(ctx, scheduleOptions)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create schedule %s: %w", action.ScheduleId, err)
+	}
+	return nil
 }
 
 func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {

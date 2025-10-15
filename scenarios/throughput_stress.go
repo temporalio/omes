@@ -639,11 +639,19 @@ func (t *tpsExecutor) createScheduleCreateAction(scheduleID string) *Action {
 			CreateSchedule: &CreateScheduleAction{
 				ScheduleId: scheduleID,
 				Spec: &ScheduleSpec{
-					CronExpressions: []string{"0 0 * * *"}, // Fires daily at midnight
+					CronExpressions: []string{"* * * * *"},
 				},
 				Action: &ScheduleAction{
 					WorkflowId:   fmt.Sprintf("%s-wf", scheduleID),
 					WorkflowType: "kitchenSink",
+					TaskQueue:    fmt.Sprintf("omes-%s", t.runID),
+					Input: []*common.Payload{
+						ConvertToPayload(&WorkflowInput{
+							InitialActions: []*ActionSet{
+								NoOpSingleActivityActionSet(),
+							},
+						}),
+					},
 				},
 				Policies: &SchedulePolicies{
 					RemainingActions:    1,    // Only run once if triggered
@@ -670,7 +678,7 @@ func (t *tpsExecutor) createScheduleUpdateAction(scheduleID string) *Action {
 			UpdateSchedule: &UpdateScheduleAction{
 				ScheduleId: scheduleID,
 				Spec: &ScheduleSpec{
-					CronExpressions: []string{"0 12 1 1 *"}, // Changed cron (Jan 1st noon)
+					CronExpressions: []string{"*/5 * * * *"}, // Updated cron expression
 				},
 			},
 		},

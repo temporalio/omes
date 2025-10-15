@@ -135,7 +135,7 @@ impl Default for ActionChances {
         Self {
             timer: 25.0,
             activity: 25.0,
-            child_workflow: 25.0,
+            child_workflow: 20.0,  // Reduced from 25.0 to make room for schedule_operations
             nested_action_set: 12.5,
             patch_marker: 2.5,
             set_workflow_state: 2.5,
@@ -579,7 +579,7 @@ impl<'a> Arbitrary<'a> for Action {
                         variant: Some(action::Variant::UpdateSchedule(UpdateScheduleAction {
                             schedule_id: schedule_id_for_actions.clone(),
                             spec: Some(ScheduleSpec {
-                                cron_expressions: vec!["0 12 * * *".to_string()],
+                                cron_expressions: vec!["*/5 * * * *".to_string()],
                                 jitter: None,
                             }),
                         })),
@@ -751,25 +751,38 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
 
 impl<'a> Arbitrary<'a> for ScheduleSpec {
     fn arbitrary(_u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // Use a cron that fires daily at midnight
-        // Tests complete in seconds/minutes, so schedules won't fire during test execution
         Ok(Self {
-            cron_expressions: vec!["0 0 * * *".to_string()],
+            cron_expressions: vec!["* * * * *".to_string()],
             jitter: None,
         })
     }
 }
 
 impl<'a> Arbitrary<'a> for ScheduleAction {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(_u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // Create a simple workflow input that just returns immediately
+        let input = WorkflowInput {
+            initial_actions: vec![ActionSet {
+                actions: vec![
+                    Action {
+                        variant: Some(action::Variant::ReturnResult(ReturnResultAction {
+                            return_this: Some(empty_payload()),
+                        })),
+                    },
+                ],
+                concurrent: false,
+            }],
+        };
+        let input_payload = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
+
         Ok(Self {
-            workflow_id: format!("ks-schedule-wf-{}", u.int_in_range(1..=10000)?),
+            workflow_id: "".to_string(), // Will be set by the scenario
             workflow_type: WF_TYPE_NAME.to_string(),
-            task_queue: "".to_string(), // Will use default task queue
+            task_queue: "".to_string(), // Will be set by the scenario
             workflow_execution_timeout: Some(Duration::from_secs(10).try_into().unwrap()),
             workflow_task_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
             retry_policy: None,
-            input: vec![], // Empty input - workflow will handle and complete
+            input: vec![input_payload],
         })
     }
 }
@@ -786,8 +799,8 @@ impl<'a> Arbitrary<'a> for SchedulePolicies {
 
 impl<'a> Arbitrary<'a> for CreateScheduleAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        // Use deterministic schedule IDs to enable describe/update/delete
-        let schedule_id = format!("ks-schedule-{}", u.int_in_range(1..=100)?);
+        // Generate unique schedule ID using random u64 to avoid conflicts in concurrent runs
+        let schedule_id = format!("ks-schedule-{}", u.arbitrary::<u64>()?);
         Ok(Self {
             schedule_id,
             spec: Some(u.arbitrary()?),
