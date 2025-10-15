@@ -810,6 +810,12 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "unrecognized action",
+				clioptions.LangPython:     "unrecognized action",
+				clioptions.LangTypeScript: "unrecognized action",
+				clioptions.LangDotNet:     "unrecognized action",
+			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"CreateScheduleActivity"}}
 				ActivityTaskCompleted
