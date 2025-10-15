@@ -512,6 +512,68 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
+			name: "ClientSequence/Signal/Deduplication",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 10,
+					InitialActions: ListActionSet(
+						NewTimerAction(2000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: NewSignalActionsWithIDs(10),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/MissingSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					InitialActions: ListActionSet(
+						NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: NewSignalActionsWithIDs(2), // Only send 2 signals, expect 3 and WF should fail
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
 			name: "ClientSequence/Signal/Custom",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{
