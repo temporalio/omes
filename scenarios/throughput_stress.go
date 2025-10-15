@@ -416,14 +416,22 @@ func (t *tpsExecutor) createActionsChunk(
 		}
 
 		// Add schedule operations sequence: Create→Describe→Update→Describe→Delete
+		// These must run sequentially, so wrap in a nested sequential action set
 		scheduleID := fmt.Sprintf("tps-schedule-%s-%d-%d", t.runID, iteration, childCount)
-		asyncActions = append(asyncActions,
-			t.createScheduleCreateAction(scheduleID),
-			t.createScheduleDescribeAction(scheduleID),
-			t.createScheduleUpdateAction(scheduleID),
-			t.createScheduleDescribeAction(scheduleID),
-			t.createScheduleDeleteAction(scheduleID),
-		)
+		asyncActions = append(asyncActions, &Action{
+			Variant: &Action_NestedActionSet{
+				NestedActionSet: &ActionSet{
+					Actions: []*Action{
+						t.createScheduleCreateAction(scheduleID),
+						t.createScheduleDescribeAction(scheduleID),
+						t.createScheduleUpdateAction(scheduleID),
+						t.createScheduleDescribeAction(scheduleID),
+						t.createScheduleDeleteAction(scheduleID),
+					},
+					Concurrent: false,
+				},
+			},
+		})
 
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{

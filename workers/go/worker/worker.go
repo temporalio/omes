@@ -83,6 +83,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 			w.RegisterActivityWithOptions(clientActivities.CreateScheduleActivity, activity.RegisterOptions{Name: "CreateScheduleActivity"})
 			w.RegisterActivityWithOptions(clientActivities.DescribeScheduleActivity, activity.RegisterOptions{Name: "DescribeScheduleActivity"})
+			w.RegisterActivityWithOptions(clientActivities.UpdateScheduleActivity, activity.RegisterOptions{Name: "UpdateScheduleActivity"})
 			w.RegisterActivityWithOptions(clientActivities.DeleteScheduleActivity, activity.RegisterOptions{Name: "DeleteScheduleActivity"})
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
