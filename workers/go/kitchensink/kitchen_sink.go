@@ -40,6 +40,15 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 
 // Schedule-related activities
 
+// makeScheduleIDUnique appends the sanitized workflow execution ID to the schedule ID
+// to ensure uniqueness when the same TestInput is used across concurrent iterations.
+func makeScheduleIDUnique(baseScheduleID string, workflowExecutionID string) string {
+	// Sanitize workflow execution ID by replacing slashes with dashes
+	// (some scenarios like throughput_stress use workflow IDs with slashes)
+	sanitizedWorkflowID := strings.ReplaceAll(workflowExecutionID, "/", "-")
+	return fmt.Sprintf("%s-%s", baseScheduleID, sanitizedWorkflowID)
+}
+
 func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
 	c := activity.GetClient(ctx)
 	info := activity.GetInfo(ctx)
@@ -49,16 +58,13 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		action.Action.TaskQueue = info.TaskQueue
 	}
 
-	// Sanitize workflow execution ID for use in schedule IDs (replace slashes with dashes)
-	sanitizedWorkflowID := strings.ReplaceAll(info.WorkflowExecution.ID, "/", "-")
-
 	// Make schedule ID unique per workflow execution to support concurrent iterations with same input
-	action.ScheduleId = fmt.Sprintf("%s-%s", action.ScheduleId, sanitizedWorkflowID)
+	action.ScheduleId = makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
 
 	// Also make the schedule's workflow ID unique to prevent conflicts when schedules trigger
 	scheduleWorkflowID := action.Action.WorkflowId
 	if scheduleWorkflowID != "" {
-		scheduleWorkflowID = fmt.Sprintf("%s-%s", scheduleWorkflowID, sanitizedWorkflowID)
+		scheduleWorkflowID = makeScheduleIDUnique(scheduleWorkflowID, info.WorkflowExecution.ID)
 	}
 
 	// Convert input payloads to args
@@ -110,38 +116,36 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		scheduleOptions.ScheduleBackfill = backfills
 	}
 
-	activity.GetLogger(ctx).Info("Create schedule", "schedule_id", action.ScheduleId)
+	activity.GetLogger(ctx).Debug("Create schedule", "schedule_id", action.ScheduleId)
 	_, err := c.ScheduleClient().Create(ctx, scheduleOptions)
 	if err != nil {
 		return fmt.Errorf("failed to create schedule %s: %w", action.ScheduleId, err)
 	}
-	activity.GetLogger(ctx).Info("Create schedule SUCCESS", "schedule_id", action.ScheduleId)
+	activity.GetLogger(ctx).Debug("Create schedule SUCCESS", "schedule_id", action.ScheduleId)
 	return nil
 }
 
 func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {
 	c := activity.GetClient(ctx)
 	info := activity.GetInfo(ctx)
-	// Make schedule ID match the one created in CreateScheduleActivity (sanitize to replace slashes)
-	sanitizedWorkflowID := strings.ReplaceAll(info.WorkflowExecution.ID, "/", "-")
-	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, sanitizedWorkflowID)
-	activity.GetLogger(ctx).Info("Describe schedule", "schedule_id", scheduleId)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Describe schedule", "schedule_id", scheduleId)
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 	desc, err := handle.Describe(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to describe schedule %s: %w", scheduleId, err)
 	}
-	activity.GetLogger(ctx).Info("Describe schedule SUCCESS", "schedule_id", scheduleId)
+	activity.GetLogger(ctx).Debug("Describe schedule SUCCESS", "schedule_id", scheduleId)
 	return desc, nil
 }
 
 func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *kitchensink.UpdateScheduleAction) error {
 	c := activity.GetClient(ctx)
 	info := activity.GetInfo(ctx)
-	// Make schedule ID match the one created in CreateScheduleActivity (sanitize to replace slashes)
-	sanitizedWorkflowID := strings.ReplaceAll(info.WorkflowExecution.ID, "/", "-")
-	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, sanitizedWorkflowID)
-	activity.GetLogger(ctx).Info("Update schedule", "schedule_id", scheduleId)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Update schedule", "schedule_id", scheduleId)
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 
 	err := handle.Update(ctx, client.ScheduleUpdateOptions{
@@ -164,23 +168,22 @@ func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *
 	if err != nil {
 		return fmt.Errorf("failed to update schedule %s: %w", scheduleId, err)
 	}
-	activity.GetLogger(ctx).Info("Update schedule SUCCESS", "schedule_id", scheduleId)
+	activity.GetLogger(ctx).Debug("Update schedule SUCCESS", "schedule_id", scheduleId)
 	return nil
 }
 
 func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
 	c := activity.GetClient(ctx)
 	info := activity.GetInfo(ctx)
-	// Make schedule ID match the one created in CreateScheduleActivity (sanitize to replace slashes)
-	sanitizedWorkflowID := strings.ReplaceAll(info.WorkflowExecution.ID, "/", "-")
-	scheduleId := fmt.Sprintf("%s-%s", action.ScheduleId, sanitizedWorkflowID)
-	activity.GetLogger(ctx).Info("Delete schedule", "schedule_id", scheduleId)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Delete schedule", "schedule_id", scheduleId)
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
 	err := handle.Delete(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete schedule %s: %w", scheduleId, err)
 	}
-	activity.GetLogger(ctx).Info("Delete schedule SUCCESS", "schedule_id", scheduleId)
+	activity.GetLogger(ctx).Debug("Delete schedule SUCCESS", "schedule_id", scheduleId)
 	return nil
 }
 
