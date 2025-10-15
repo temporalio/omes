@@ -811,10 +811,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava:       "unrecognized action",
-				clioptions.LangPython:     "unrecognized action",
-				clioptions.LangTypeScript: "unrecognized action",
-				clioptions.LangDotNet:     "unrecognized action",
+				clioptions.LangJava: "schedule operations are not yet implemented",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"CreateScheduleActivity"}}

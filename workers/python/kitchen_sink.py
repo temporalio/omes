@@ -171,6 +171,30 @@ class KitchenSinkWorkflow:
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
             raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
+        elif action.HasField("create_schedule"):
+            await workflow.execute_activity(
+                "CreateScheduleActivity",
+                action.create_schedule,
+                start_to_close_timeout=timedelta(seconds=30),
+            )
+        elif action.HasField("describe_schedule"):
+            await workflow.execute_activity(
+                "DescribeScheduleActivity",
+                action.describe_schedule,
+                start_to_close_timeout=timedelta(seconds=30),
+            )
+        elif action.HasField("update_schedule"):
+            await workflow.execute_activity(
+                "UpdateScheduleActivity",
+                action.update_schedule,
+                start_to_close_timeout=timedelta(seconds=30),
+            )
+        elif action.HasField("delete_schedule"):
+            await workflow.execute_activity(
+                "DeleteScheduleActivity",
+                action.delete_schedule,
+                start_to_close_timeout=timedelta(seconds=30),
+            )
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 

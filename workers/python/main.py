@@ -19,6 +19,7 @@ from temporalio.worker import Worker
 
 from activities import (
     create_client_activity,
+    create_schedule_activities,
     delay_activity,
     noop_activity,
     payload_activity,
@@ -183,6 +184,7 @@ async def run():
         ] = args.max_concurrent_workflow_tasks
 
     # Start all workers, throwing on first exception
+    schedule_activities = create_schedule_activities(client)
     workers = [
         Worker(
             client,
@@ -193,6 +195,7 @@ async def run():
                 delay_activity,
                 payload_activity,
                 create_client_activity(client),
+                *schedule_activities,
             ],
             **worker_kwargs,
         )

@@ -202,6 +202,58 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       Workflow.upsertMemo(memo);
     } else if (action.hasNexusOperation()) {
       throw Workflow.wrap(new IllegalArgumentException("ExecuteNexusOperation is not supported"));
+    } else if (action.hasCreateSchedule()) {
+      CancellationScope scope =
+          Workflow.newCancellationScope(
+              () -> {
+                Promise<Void> result =
+                    Workflow.newUntypedActivityStub(
+                            ActivityOptions.newBuilder()
+                                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                                .build())
+                        .executeAsync("CreateScheduleActivity", void.class, action.getCreateSchedule());
+                result.get();
+              });
+      scope.run();
+    } else if (action.hasDescribeSchedule()) {
+      CancellationScope scope =
+          Workflow.newCancellationScope(
+              () -> {
+                Promise<Void> result =
+                    Workflow.newUntypedActivityStub(
+                            ActivityOptions.newBuilder()
+                                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                                .build())
+                        .executeAsync("DescribeScheduleActivity", void.class, action.getDescribeSchedule());
+                result.get();
+              });
+      scope.run();
+    } else if (action.hasUpdateSchedule()) {
+      CancellationScope scope =
+          Workflow.newCancellationScope(
+              () -> {
+                Promise<Void> result =
+                    Workflow.newUntypedActivityStub(
+                            ActivityOptions.newBuilder()
+                                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                                .build())
+                        .executeAsync("UpdateScheduleActivity", void.class, action.getUpdateSchedule());
+                result.get();
+              });
+      scope.run();
+    } else if (action.hasDeleteSchedule()) {
+      CancellationScope scope =
+          Workflow.newCancellationScope(
+              () -> {
+                Promise<Void> result =
+                    Workflow.newUntypedActivityStub(
+                            ActivityOptions.newBuilder()
+                                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                                .build())
+                        .executeAsync("DeleteScheduleActivity", void.class, action.getDeleteSchedule());
+                result.get();
+              });
+      scope.run();
     } else {
       throw ApplicationFailure.newNonRetryableFailure("Unrecognized action", "");
     }

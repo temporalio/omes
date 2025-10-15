@@ -2,6 +2,7 @@ using Temporal.Omes.KitchenSink;
 using Temporalio.Activities;
 using Temporalio.Api.Common.V1;
 using Temporalio.Client;
+using Temporalio.Client.Schedules;
 using Temporalio.Common;
 using Temporalio.Converters;
 using Temporalio.Exceptions;
@@ -245,6 +246,50 @@ public class KitchenSinkWorkflow
         {
             throw new ApplicationFailureException("ExecuteNexusOperation is not supported");
         }
+        else if (action.CreateSchedule is { } createSchedule)
+        {
+            await Workflow.ExecuteActivityAsync(
+                "CreateScheduleActivity",
+                new[] { createSchedule },
+                new ActivityOptions
+                {
+                    StartToCloseTimeout = TimeSpan.FromSeconds(30),
+                    CancellationToken = tokenSrc.Token
+                });
+        }
+        else if (action.DescribeSchedule is { } describeSchedule)
+        {
+            await Workflow.ExecuteActivityAsync(
+                "DescribeScheduleActivity",
+                new[] { describeSchedule },
+                new ActivityOptions
+                {
+                    StartToCloseTimeout = TimeSpan.FromSeconds(30),
+                    CancellationToken = tokenSrc.Token
+                });
+        }
+        else if (action.UpdateSchedule is { } updateSchedule)
+        {
+            await Workflow.ExecuteActivityAsync(
+                "UpdateScheduleActivity",
+                new[] { updateSchedule },
+                new ActivityOptions
+                {
+                    StartToCloseTimeout = TimeSpan.FromSeconds(30),
+                    CancellationToken = tokenSrc.Token
+                });
+        }
+        else if (action.DeleteSchedule is { } deleteSchedule)
+        {
+            await Workflow.ExecuteActivityAsync(
+                "DeleteScheduleActivity",
+                new[] { deleteSchedule },
+                new ActivityOptions
+                {
+                    StartToCloseTimeout = TimeSpan.FromSeconds(30),
+                    CancellationToken = tokenSrc.Token
+                });
+        }
         else
         {
             throw new ApplicationFailureException("Unrecognized action");
@@ -430,6 +475,12 @@ public class ClientActivitiesImpl
         _client = client;
     }
 
+    private static string MakeScheduleIDUnique(string baseScheduleID, string workflowExecutionID)
+    {
+        var sanitizedWorkflowID = workflowExecutionID.Replace("/", "-");
+        return $"{baseScheduleID}-{sanitizedWorkflowID}";
+    }
+
     [Activity("client")]
     public async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
     {
@@ -439,5 +490,117 @@ public class ClientActivitiesImpl
 
         var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
         await executor.ExecuteClientSequence(clientActivity.ClientSequence);
+    }
+
+    [Activity("CreateScheduleActivity")]
+    public async Task CreateScheduleActivity(CreateScheduleAction action)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var taskQueue = string.IsNullOrEmpty(action.Action.TaskQueue)
+            ? activityInfo.TaskQueue
+            : action.Action.TaskQueue;
+
+        var uniqueScheduleId = MakeScheduleIDUnique(action.ScheduleId, workflowId);
+        var uniqueWorkflowId = string.IsNullOrEmpty(action.Action.WorkflowId)
+            ? ""
+            : MakeScheduleIDUnique(action.Action.WorkflowId, workflowId);
+
+        var scheduleAction = ScheduleActionStartWorkflow.Create(
+            action.Action.WorkflowType,
+            action.Action.Input.Select(p => new RawValue(p)).ToArray(),
+            new()
+            {
+                Id = string.IsNullOrEmpty(uniqueWorkflowId) ? null : uniqueWorkflowId,
+                TaskQueue = taskQueue,
+                RunTimeout = action.Action.WorkflowExecutionTimeout?.ToTimeSpan(),
+                TaskTimeout = action.Action.WorkflowTaskTimeout?.ToTimeSpan()
+            });
+
+        var specBuilder = new Temporalio.Client.Schedules.ScheduleSpec
+        {
+            CronExpressions = action.Spec?.CronExpressions.ToList() ?? new(),
+            Jitter = action.Spec?.Jitter?.ToTimeSpan()
+        };
+
+        var policyBuilder = new SchedulePolicy
+        {
+            CatchupWindow = action.Policies?.CatchupWindow != null
+                ? action.Policies.CatchupWindow.ToTimeSpan()
+                : TimeSpan.Zero
+        };
+
+        var schedule = new Schedule(
+            Action: scheduleAction,
+            Spec: specBuilder,
+            Policy: policyBuilder
+        );
+
+        var options = new ScheduleOptions
+        {
+            TriggerImmediately = action.Policies?.TriggerImmediately ?? false,
+            RemainingActions = action.Policies != null && action.Policies.RemainingActions > 0
+                ? (long?)action.Policies.RemainingActions
+                : null
+        };
+
+        if (action.Backfill.Count > 0)
+        {
+            options.Backfills = action.Backfill.Select(bf => new Temporalio.Client.Schedules.ScheduleBackfill(
+                DateTimeOffset.FromUnixTimeSeconds(bf.StartTimestamp),
+                DateTimeOffset.FromUnixTimeSeconds(bf.EndTimestamp)
+            )).ToList();
+        }
+
+        await _client.CreateScheduleAsync(uniqueScheduleId, schedule, options);
+    }
+
+    [Activity("DescribeScheduleActivity")]
+    public async Task<ScheduleDescription> DescribeScheduleActivity(DescribeScheduleAction action)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var uniqueScheduleId = MakeScheduleIDUnique(action.ScheduleId, workflowId);
+
+        var handle = _client.GetScheduleHandle(uniqueScheduleId);
+        return await handle.DescribeAsync();
+    }
+
+    [Activity("UpdateScheduleActivity")]
+    public async Task UpdateScheduleActivity(UpdateScheduleAction action)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var uniqueScheduleId = MakeScheduleIDUnique(action.ScheduleId, workflowId);
+
+        var handle = _client.GetScheduleHandle(uniqueScheduleId);
+        await handle.UpdateAsync(input =>
+        {
+            var schedule = input.Description.Schedule;
+
+            if (action.Spec != null)
+            {
+                var specBuilder = new Temporalio.Client.Schedules.ScheduleSpec
+                {
+                    CronExpressions = action.Spec.CronExpressions.ToList(),
+                    Jitter = action.Spec.Jitter?.ToTimeSpan()
+                };
+
+                schedule = schedule with { Spec = specBuilder };
+            }
+
+            return new ScheduleUpdate(schedule);
+        });
+    }
+
+    [Activity("DeleteScheduleActivity")]
+    public async Task DeleteScheduleActivity(DeleteScheduleAction action)
+    {
+        var activityInfo = ActivityExecutionContext.Current.Info;
+        var workflowId = activityInfo.WorkflowId;
+        var uniqueScheduleId = MakeScheduleIDUnique(action.ScheduleId, workflowId);
+
+        var handle = _client.GetScheduleHandle(uniqueScheduleId);
+        await handle.DeleteAsync();
     }
 }
