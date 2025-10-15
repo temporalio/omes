@@ -24,8 +24,8 @@ func init() {
 					},
 				},
 				PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
-					// Prepare the workflow input for schedule-triggered workflows
-					// Use the same pattern as child workflows
+					// schedule Workflows are triggered by the creation of a schedule. This is meant to test the scheduler
+					// and therefore does not need to have any actions performed within a workflow execution.
 					scheduleWorkflowInput, err := converter.GetDefaultDataConverter().ToPayload(&kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{
 							kitchensink.NoOpSingleActivityActionSet(),
@@ -84,8 +84,6 @@ func init() {
 						})
 					}
 
-					// Add schedule operations in 5 phases
-					// Phase 1: Create schedules concurrently
 					createScheduleActions := &kitchensink.ActionSet{
 						Actions:    []*kitchensink.Action{},
 						Concurrent: true,
@@ -108,7 +106,7 @@ func init() {
 									},
 									Action: scheduleAction,
 									Policies: &kitchensink.SchedulePolicies{
-										RemainingActions:    1,    // Only run once if triggered
+										RemainingActions:   1,    // Only run once if triggered
 										TriggerImmediately: true, // Fire immediately when created
 									},
 								},
@@ -171,7 +169,6 @@ func init() {
 					}
 					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions, describeScheduleActions2)
 
-					// Phase 5: Delete schedules sequentially (for cleanup)
 					deleteScheduleActions := &kitchensink.ActionSet{
 						Actions:    []*kitchensink.Action{},
 						Concurrent: false, // Sequential to ensure cleanup
