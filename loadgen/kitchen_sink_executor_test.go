@@ -152,8 +152,9 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
+			// Note: workflowId is now "my-child-{parent-workflow-id}" due to concurrent execution support
 			historyMatcher: PartialHistoryMatcher(`
-				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
+				StartChildWorkflowExecutionInitiated`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",
