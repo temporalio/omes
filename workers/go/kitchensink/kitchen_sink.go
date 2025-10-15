@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -48,8 +49,17 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		action.Action.TaskQueue = info.TaskQueue
 	}
 
+	// Sanitize workflow execution ID for use in schedule IDs (replace slashes with dashes)
+	sanitizedWorkflowID := strings.ReplaceAll(info.WorkflowExecution.ID, "/", "-")
+
 	// Make schedule ID unique per workflow execution to support concurrent iterations with same input
-	action.ScheduleId = fmt.Sprintf("%s-%s", action.ScheduleId, info.WorkflowExecution.ID)
+	action.ScheduleId = fmt.Sprintf("%s-%s", action.ScheduleId, sanitizedWorkflowID)
+
+	// Also make the schedule's workflow ID unique to prevent conflicts when schedules trigger
+	scheduleWorkflowID := action.Action.WorkflowId
+	if scheduleWorkflowID != "" {
+		scheduleWorkflowID = fmt.Sprintf("%s-%s", scheduleWorkflowID, sanitizedWorkflowID)
+	}
 
 	// Convert input payloads to args
 	args := make([]interface{}, len(action.Action.Input))
@@ -58,7 +68,7 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 	}
 
 	scheduleAction := client.ScheduleWorkflowAction{
-		ID:                  action.Action.WorkflowId,
+		ID:                  scheduleWorkflowID,
 		Workflow:            action.Action.WorkflowType,
 		TaskQueue:           action.Action.TaskQueue,
 		Args:                args,
@@ -299,8 +309,13 @@ func (ws *KSWorkflowState) handleAction(
 				searchAttributes[k] = v
 			}
 		}
+		// Make child workflow ID unique per workflow execution to support concurrent iterations with same input
+		childWorkflowID := child.WorkflowId
+		if childWorkflowID != "" {
+			childWorkflowID = fmt.Sprintf("%s-%s", childWorkflowID, workflow.GetInfo(ctx).WorkflowExecution.ID)
+		}
 		cCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
-			WorkflowID:       child.WorkflowId,
+			WorkflowID:       childWorkflowID,
 			SearchAttributes: searchAttributes,
 		})
 		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
