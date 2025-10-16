@@ -3,12 +3,14 @@ import { isMainThread, Worker } from 'node:worker_threads';
 import { activityInfo } from '@temporalio/activity';
 import { Client, Backfill, ScheduleOptionsAction, ScheduleSpec } from '@temporalio/client';
 import { ClientActionExecutor } from './client-action-executor';
+import { payloadConverter } from './payload-converter';
 import IResourcesActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IResourcesActivity;
 import IClientActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IClientActivity;
 import ICreateScheduleAction = temporal.omes.kitchen_sink.ICreateScheduleAction;
 import IDescribeScheduleAction = temporal.omes.kitchen_sink.IDescribeScheduleAction;
 import IUpdateScheduleAction = temporal.omes.kitchen_sink.IUpdateScheduleAction;
 import IDeleteScheduleAction = temporal.omes.kitchen_sink.IDeleteScheduleAction;
+import Payload = temporal.api.common.v1.Payload;
 
 export { sleep as delay } from '@temporalio/activity';
 
@@ -86,12 +88,21 @@ export const createActivities = (client: Client) => ({
       uniqueWorkflowId = makeScheduleIDUnique(uniqueWorkflowId, info.workflowId);
     }
 
+    const args: any[] = [];
+    if (action.action.input && action.action.input.length > 0) {
+      for (const payloadProto of action.action.input) {
+        const payload = Payload.create(payloadProto);
+        const decoded = payloadConverter.fromPayload(payload);
+        args.push(decoded);
+      }
+    }
+
     const scheduleAction: ScheduleOptionsAction = {
       type: 'startWorkflow',
       workflowType: action.action.workflowType || 'kitchenSink',
       taskQueue,
       workflowId: uniqueWorkflowId,
-      args: action.action.input || [],
+      args,
       workflowRunTimeout: action.action.workflowExecutionTimeout?.seconds
         ? Number(action.action.workflowExecutionTimeout.seconds) * 1000
         : undefined,
@@ -156,7 +167,7 @@ export const createActivities = (client: Client) => ({
     await client.schedule.create(scheduleOptions);
   },
 
-  async DescribeScheduleActivity(action: IDescribeScheduleAction): Promise<any> {
+  async DescribeScheduleActivity(action: IDescribeScheduleAction): Promise<void> {
     const activityContext = activityInfo();
     const info = activityContext.workflowExecution;
 
@@ -166,7 +177,7 @@ export const createActivities = (client: Client) => ({
 
     const uniqueScheduleId = makeScheduleIDUnique(action.scheduleId, info.workflowId);
     const handle = client.schedule.getHandle(uniqueScheduleId);
-    return await handle.describe();
+    await handle.describe();
   },
 
   async UpdateScheduleActivity(action: IUpdateScheduleAction): Promise<void> {

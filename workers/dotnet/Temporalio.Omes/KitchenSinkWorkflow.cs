@@ -564,14 +564,14 @@ public class ClientActivitiesImpl
     }
 
     [Activity("DescribeScheduleActivity")]
-    public async Task<ScheduleDescription> DescribeScheduleActivity(DescribeScheduleAction action)
+    public async Task DescribeScheduleActivity(DescribeScheduleAction action)
     {
         var activityInfo = ActivityExecutionContext.Current.Info;
         var workflowId = activityInfo.WorkflowId;
         var uniqueScheduleId = MakeScheduleIDUnique(action.ScheduleId, workflowId);
 
         var handle = _client.GetScheduleHandle(uniqueScheduleId);
-        return await handle.DescribeAsync();
+        await handle.DescribeAsync();
     }
 
     [Activity("UpdateScheduleActivity")]
