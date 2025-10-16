@@ -18,7 +18,8 @@ public interface Activities {
   void client(io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity clientActivity);
 
   @ActivityMethod(name = "retryable_error")
-  void retryableError(io.temporal.omes.KitchenSink.ExecuteActivityAction.RetryableErrorActivity config);
+  void retryableError(
+      io.temporal.omes.KitchenSink.ExecuteActivityAction.RetryableErrorActivity config);
 
   @ActivityMethod(name = "timeout")
   void timeout(io.temporal.omes.KitchenSink.ExecuteActivityAction.TimeoutActivity config)

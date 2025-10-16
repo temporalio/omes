@@ -49,8 +49,7 @@ public class ActivitiesImpl implements Activities {
       io.temporal.omes.KitchenSink.ExecuteActivityAction.RetryableErrorActivity config) {
     var activityInfo = Activity.getExecutionContext().getInfo();
     if (activityInfo.getAttempt() <= config.getFailAttempts()) {
-      throw Activity.wrap(
-          new RuntimeException("retryable error"));
+      throw Activity.wrap(new RuntimeException("retryable error"));
     }
   }
 
@@ -66,7 +65,7 @@ public class ActivitiesImpl implements Activities {
       // Success case: run for half StartToCloseTimeout
       durationMs /= 2;
     }
-  
+
     // Sleep for failure/success timeout duration.
     // In failure case, this will throw an InterruptedException.
     Thread.sleep(durationMs);

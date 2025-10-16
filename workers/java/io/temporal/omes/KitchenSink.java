@@ -7274,6 +7274,18 @@ public final class KitchenSink {
           onChanged();
           return doActionsInMainBuilder_;
         }
+        @java.lang.Override
+        public final Builder setUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.setUnknownFields(unknownFields);
+        }
+
+        @java.lang.Override
+        public final Builder mergeUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.mergeUnknownFields(unknownFields);
+        }
+
 
         private int signalId_ ;
         /**
@@ -13673,6 +13685,13 @@ java.lang.String defaultValue) {
       return new WorkflowInput();
     }
 
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new WorkflowInput();
+    }
+
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_WorkflowInput_descriptor;
@@ -14569,6 +14588,18 @@ java.lang.String defaultValue) {
         }
         return initialActionsBuilder_;
       }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
 
       private int expectedSignalCount_ ;
       /**
@@ -26670,6 +26701,18 @@ io.temporal.api.common.v1.Payload defaultValue);
           onChanged();
           return this;
         }
+        @java.lang.Override
+        public final Builder setUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.setUnknownFields(unknownFields);
+        }
+
+        @java.lang.Override
+        public final Builder mergeUnknownFields(
+            final com.google.protobuf.UnknownFieldSet unknownFields) {
+          return super.mergeUnknownFields(unknownFields);
+        }
+
 
         // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity)
       }
