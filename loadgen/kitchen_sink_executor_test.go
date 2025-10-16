@@ -810,9 +810,6 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "schedule operations are not yet implemented",
-			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"CreateScheduleActivity"}}
 				ActivityTaskCompleted
