@@ -211,7 +211,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                             ActivityOptions.newBuilder()
                                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                                 .build())
-                        .executeAsync("CreateScheduleActivity", void.class, action.getCreateSchedule());
+                        .executeAsync(
+                            "CreateScheduleActivity", void.class, action.getCreateSchedule());
                 result.get();
               });
       scope.run();
@@ -224,7 +225,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                             ActivityOptions.newBuilder()
                                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                                 .build())
-                        .executeAsync("DescribeScheduleActivity", void.class, action.getDescribeSchedule());
+                        .executeAsync(
+                            "DescribeScheduleActivity", void.class, action.getDescribeSchedule());
                 result.get();
               });
       scope.run();
@@ -237,7 +239,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                             ActivityOptions.newBuilder()
                                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                                 .build())
-                        .executeAsync("UpdateScheduleActivity", void.class, action.getUpdateSchedule());
+                        .executeAsync(
+                            "UpdateScheduleActivity", void.class, action.getUpdateSchedule());
                 result.get();
               });
       scope.run();
@@ -250,7 +253,8 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                             ActivityOptions.newBuilder()
                                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                                 .build())
-                        .executeAsync("DeleteScheduleActivity", void.class, action.getDeleteSchedule());
+                        .executeAsync(
+                            "DeleteScheduleActivity", void.class, action.getDeleteSchedule());
                 result.get();
               });
       scope.run();

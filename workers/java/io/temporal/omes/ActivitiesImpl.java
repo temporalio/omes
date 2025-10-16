@@ -39,22 +39,26 @@ public class ActivitiesImpl implements Activities {
 
   @Override
   public void createScheduleActivity(io.temporal.omes.KitchenSink.CreateScheduleAction action) {
-    throw new UnsupportedOperationException("Schedule operations are not yet implemented for Java SDK");
+    throw new UnsupportedOperationException(
+        "Schedule operations are not yet implemented for Java SDK");
   }
 
   @Override
   public Object describeScheduleActivity(
       io.temporal.omes.KitchenSink.DescribeScheduleAction action) {
-    throw new UnsupportedOperationException("Schedule operations are not yet implemented for Java SDK");
+    throw new UnsupportedOperationException(
+        "Schedule operations are not yet implemented for Java SDK");
   }
 
   @Override
   public void updateScheduleActivity(io.temporal.omes.KitchenSink.UpdateScheduleAction action) {
-    throw new UnsupportedOperationException("Schedule operations are not yet implemented for Java SDK");
+    throw new UnsupportedOperationException(
+        "Schedule operations are not yet implemented for Java SDK");
   }
 
   @Override
   public void deleteScheduleActivity(io.temporal.omes.KitchenSink.DeleteScheduleAction action) {
-    throw new UnsupportedOperationException("Schedule operations are not yet implemented for Java SDK");
+    throw new UnsupportedOperationException(
+        "Schedule operations are not yet implemented for Java SDK");
   }
 }

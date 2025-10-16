@@ -530,25 +530,33 @@ public class ClientActivitiesImpl
                 : TimeSpan.Zero
         };
 
+        var stateBuilder = new ScheduleState
+        {
+            LimitedActions = action.Policies != null && action.Policies.RemainingActions > 0,
+            RemainingActions = action.Policies != null && action.Policies.RemainingActions > 0
+                ? action.Policies.RemainingActions
+                : 0
+        };
+
         var schedule = new Schedule(
             Action: scheduleAction,
-            Spec: specBuilder,
-            Policy: policyBuilder
-        );
+            Spec: specBuilder
+        )
+        {
+            Policy = policyBuilder,
+            State = stateBuilder
+        };
 
         var options = new ScheduleOptions
         {
-            TriggerImmediately = action.Policies?.TriggerImmediately ?? false,
-            RemainingActions = action.Policies != null && action.Policies.RemainingActions > 0
-                ? (long?)action.Policies.RemainingActions
-                : null
+            TriggerImmediately = action.Policies?.TriggerImmediately ?? false
         };
 
         if (action.Backfill.Count > 0)
         {
             options.Backfills = action.Backfill.Select(bf => new Temporalio.Client.Schedules.ScheduleBackfill(
-                DateTimeOffset.FromUnixTimeSeconds(bf.StartTimestamp),
-                DateTimeOffset.FromUnixTimeSeconds(bf.EndTimestamp)
+                DateTimeOffset.FromUnixTimeSeconds(bf.StartTimestamp).DateTime,
+                DateTimeOffset.FromUnixTimeSeconds(bf.EndTimestamp).DateTime
             )).ToList();
         }
 

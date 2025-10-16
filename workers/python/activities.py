@@ -4,7 +4,15 @@ from datetime import datetime, timedelta
 
 from google.protobuf.duration_pb2 import Duration
 from temporalio import activity
-from temporalio.client import Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec, SchedulePolicy, ScheduleBackfill
+from temporalio.client import (
+    Client,
+    Schedule,
+    ScheduleActionStartWorkflow,
+    ScheduleBackfill,
+    SchedulePolicy,
+    ScheduleSpec,
+    ScheduleUpdate,
+)
 
 from client_action_executor import ClientActionExecutor
 
@@ -56,35 +64,54 @@ def create_schedule_activities(client: Client):
 
         unique_workflow_id = action.action.workflow_id or ""
         if unique_workflow_id:
-            unique_workflow_id = make_schedule_id_unique(unique_workflow_id, workflow_id)
+            unique_workflow_id = make_schedule_id_unique(
+                unique_workflow_id, workflow_id
+            )
 
         schedule_action = ScheduleActionStartWorkflow(
             action.action.workflow_type or "kitchenSink",
             *action.action.input,
             id=unique_workflow_id,
             task_queue=task_queue,
-            execution_timeout=timedelta(seconds=action.action.workflow_execution_timeout.seconds) if action.action.workflow_execution_timeout.seconds else None,
-            task_timeout=timedelta(seconds=action.action.workflow_task_timeout.seconds) if action.action.workflow_task_timeout.seconds else None,
+            execution_timeout=timedelta(
+                seconds=action.action.workflow_execution_timeout.seconds
+            )
+            if action.action.workflow_execution_timeout.seconds
+            else None,
+            task_timeout=timedelta(seconds=action.action.workflow_task_timeout.seconds)
+            if action.action.workflow_task_timeout.seconds
+            else None,
         )
 
         spec = ScheduleSpec()
         if action.spec:
-            spec.cron_expressions = list(action.spec.cron_expressions) if action.spec.cron_expressions else []
+            spec.cron_expressions = (
+                list(action.spec.cron_expressions)
+                if action.spec.cron_expressions
+                else []
+            )
             if action.spec.jitter and action.spec.jitter.seconds:
                 spec.jitter = timedelta(seconds=action.spec.jitter.seconds)
 
         policy = SchedulePolicy()
         if action.policies:
-            if action.policies.catchup_window and action.policies.catchup_window.seconds:
-                policy.catchup_window = timedelta(seconds=action.policies.catchup_window.seconds)
+            if (
+                action.policies.catchup_window
+                and action.policies.catchup_window.seconds
+            ):
+                policy.catchup_window = timedelta(
+                    seconds=action.policies.catchup_window.seconds
+                )
 
         backfills = []
         if action.backfill:
             for bf in action.backfill:
-                backfills.append(ScheduleBackfill(
-                    start_at=datetime.fromtimestamp(bf.start_timestamp),
-                    end_at=datetime.fromtimestamp(bf.end_timestamp),
-                ))
+                backfills.append(
+                    ScheduleBackfill(
+                        start_at=datetime.fromtimestamp(bf.start_timestamp),
+                        end_at=datetime.fromtimestamp(bf.end_timestamp),
+                    )
+                )
 
         schedule = Schedule(
             action=schedule_action,
@@ -93,10 +120,12 @@ def create_schedule_activities(client: Client):
         )
 
         schedule_options = {
-            "trigger_immediately": action.policies.trigger_immediately if action.policies else False,
+            "trigger_immediately": action.policies.trigger_immediately
+            if action.policies
+            else False,
         }
         if backfills:
-            schedule_options["backfills"] = backfills
+            schedule_options["backfill"] = backfills
 
         await client.create_schedule(
             unique_schedule_id,
@@ -114,7 +143,7 @@ def create_schedule_activities(client: Client):
 
         unique_schedule_id = make_schedule_id_unique(action.schedule_id, workflow_id)
         handle = client.get_schedule_handle(unique_schedule_id)
-        return await handle.describe()
+        await handle.describe()
 
     @activity.defn(name="UpdateScheduleActivity")
     async def update_schedule_activity(action):
@@ -130,10 +159,14 @@ def create_schedule_activities(client: Client):
         async def updater(input):
             schedule = input.description.schedule
             if action.spec:
-                schedule.spec.cron_expressions = list(action.spec.cron_expressions) if action.spec.cron_expressions else []
+                schedule.spec.cron_expressions = (
+                    list(action.spec.cron_expressions)
+                    if action.spec.cron_expressions
+                    else []
+                )
                 if action.spec.jitter and action.spec.jitter.seconds:
                     schedule.spec.jitter = timedelta(seconds=action.spec.jitter.seconds)
-            return schedule
+            return ScheduleUpdate(schedule=schedule)
 
         await handle.update(updater)
 

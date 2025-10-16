@@ -1,7 +1,7 @@
 import { temporal } from './protos/root';
 import { isMainThread, Worker } from 'node:worker_threads';
 import { activityInfo } from '@temporalio/activity';
-import { Client, ScheduleBackfill, ScheduleOptionsAction, ScheduleOptionsSpec } from '@temporalio/client';
+import { Client, Backfill, ScheduleOptionsAction, ScheduleSpec } from '@temporalio/client';
 import { ClientActionExecutor } from './client-action-executor';
 import IResourcesActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IResourcesActivity;
 import IClientActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IClientActivity;
@@ -89,38 +89,42 @@ export const createActivities = (client: Client) => ({
     const scheduleAction: ScheduleOptionsAction = {
       type: 'startWorkflow',
       workflowType: action.action.workflowType || 'kitchenSink',
-      taskQueue: taskQueue,
+      taskQueue,
       workflowId: uniqueWorkflowId,
       args: action.action.input || [],
       workflowRunTimeout: action.action.workflowExecutionTimeout?.seconds
-        ? `${action.action.workflowExecutionTimeout.seconds}s`
+        ? Number(action.action.workflowExecutionTimeout.seconds) * 1000
         : undefined,
       workflowTaskTimeout: action.action.workflowTaskTimeout?.seconds
-        ? `${action.action.workflowTaskTimeout.seconds}s`
+        ? Number(action.action.workflowTaskTimeout.seconds) * 1000
         : undefined,
-      retry: action.action.retryPolicy ? {
-        initialInterval: action.action.retryPolicy.initialInterval?.seconds
-          ? `${action.action.retryPolicy.initialInterval.seconds}s`
-          : undefined,
-        maximumInterval: action.action.retryPolicy.maximumInterval?.seconds
-          ? `${action.action.retryPolicy.maximumInterval.seconds}s`
-          : undefined,
-        backoffCoefficient: action.action.retryPolicy.backoffCoefficient,
-        maximumAttempts: action.action.retryPolicy.maximumAttempts,
-        nonRetryableErrorTypes: action.action.retryPolicy.nonRetryableErrorTypes || undefined,
-      } : undefined,
+      retry: action.action.retryPolicy
+        ? {
+            initialInterval: action.action.retryPolicy.initialInterval?.seconds
+              ? Number(action.action.retryPolicy.initialInterval.seconds) * 1000
+              : undefined,
+            maximumInterval: action.action.retryPolicy.maximumInterval?.seconds
+              ? Number(action.action.retryPolicy.maximumInterval.seconds) * 1000
+              : undefined,
+            backoffCoefficient: action.action.retryPolicy.backoffCoefficient ?? undefined,
+            maximumAttempts: action.action.retryPolicy.maximumAttempts ?? undefined,
+            nonRetryableErrorTypes: action.action.retryPolicy.nonRetryableErrorTypes || undefined,
+          }
+        : undefined,
     };
 
-    const spec: ScheduleOptionsSpec = {};
+    const spec: ScheduleSpec = {};
     if (action.spec) {
       spec.cronExpressions = action.spec.cronExpressions || [];
-      spec.jitter = action.spec.jitter?.seconds ? `${action.spec.jitter.seconds}s` : undefined;
+      spec.jitter = action.spec.jitter?.seconds
+        ? Number(action.spec.jitter.seconds) * 1000
+        : undefined;
     }
 
     const scheduleOptions: any = {
       scheduleId: uniqueScheduleId,
       action: scheduleAction,
-      spec: spec,
+      spec,
     };
 
     if (action.policies) {
@@ -129,20 +133,24 @@ export const createActivities = (client: Client) => ({
           ? `${action.policies.catchupWindow.seconds}s`
           : undefined,
       };
-      if (action.policies.remainingActions) {
-        scheduleOptions.remainingActions = Number(action.policies.remainingActions);
-      }
-      if (action.policies.triggerImmediately) {
-        scheduleOptions.triggerImmediately = action.policies.triggerImmediately;
-      }
     }
 
+    const stateOptions: any = {};
+    if (action.policies?.remainingActions) {
+      stateOptions.remainingActions = Number(action.policies.remainingActions);
+    }
+    if (action.policies?.triggerImmediately) {
+      stateOptions.triggerImmediately = action.policies.triggerImmediately;
+    }
     if (action.backfill && action.backfill.length > 0) {
-      const backfills: ScheduleBackfill[] = action.backfill.map(bf => ({
+      const backfills: Backfill[] = action.backfill.map((bf) => ({
         start: new Date(Number(bf.startTimestamp) * 1000),
         end: new Date(Number(bf.endTimestamp) * 1000),
       }));
-      scheduleOptions.backfill = backfills;
+      stateOptions.backfill = backfills;
+    }
+    if (Object.keys(stateOptions).length > 0) {
+      scheduleOptions.state = stateOptions;
     }
 
     await client.schedule.create(scheduleOptions);
@@ -174,10 +182,14 @@ export const createActivities = (client: Client) => ({
 
     await handle.update((schedule) => {
       if (action.spec) {
-        schedule.spec.cronExpressions = action.spec.cronExpressions || [];
-        if (action.spec.jitter?.seconds) {
-          schedule.spec.jitter = `${action.spec.jitter.seconds}s`;
-        }
+        const newSpec: ScheduleSpec = {
+          ...schedule.spec,
+          cronExpressions: action.spec.cronExpressions || [],
+          jitter: action.spec.jitter?.seconds
+            ? Number(action.spec.jitter.seconds) * 1000
+            : undefined,
+        };
+        schedule.spec = newSpec as any;
       }
       return schedule;
     });
