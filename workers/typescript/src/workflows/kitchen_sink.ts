@@ -201,6 +201,22 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       return await handleActionSet(action.nestedActionSet);
     } else if (action.nexusOperation) {
       throw new ApplicationFailure('ExecuteNexusOperation is not supported');
+    } else if (action.createSchedule) {
+      await scheduleActivity('CreateScheduleActivity', [action.createSchedule], {
+        startToCloseTimeout: '30s',
+      });
+    } else if (action.describeSchedule) {
+      await scheduleActivity('DescribeScheduleActivity', [action.describeSchedule], {
+        startToCloseTimeout: '30s',
+      });
+    } else if (action.updateSchedule) {
+      await scheduleActivity('UpdateScheduleActivity', [action.updateSchedule], {
+        startToCloseTimeout: '30s',
+      });
+    } else if (action.deleteSchedule) {
+      await scheduleActivity('DeleteScheduleActivity', [action.deleteSchedule], {
+        startToCloseTimeout: '30s',
+      });
     } else {
       throw new ApplicationFailure('unrecognized action ' + JSON.stringify(action));
     }

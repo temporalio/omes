@@ -53,7 +53,7 @@ export const payloadConverter = new CompositePayloadConverter(
   new UndefinedPayloadConverter(),
   new BinaryPayloadConverter(),
   new PassThroughPayload(),
-  new ProtobufJsonPayloadConverter(root),
   new ProtobufBinaryPayloadConverter(root),
+  new ProtobufJsonPayloadConverter(root),
   new JsonPayloadConverter()
 );
