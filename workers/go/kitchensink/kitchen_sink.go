@@ -43,8 +43,6 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 // makeScheduleIDUnique appends the sanitized workflow execution ID to the schedule ID
 // to ensure uniqueness when the same TestInput is used across concurrent iterations.
 func makeScheduleIDUnique(baseScheduleID string, workflowExecutionID string) string {
-	// Sanitize workflow execution ID by replacing slashes with dashes
-	// (some scenarios like throughput_stress use workflow IDs with slashes)
 	sanitizedWorkflowID := strings.ReplaceAll(workflowExecutionID, "/", "-")
 	return fmt.Sprintf("%s-%s", baseScheduleID, sanitizedWorkflowID)
 }
@@ -58,7 +56,6 @@ func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *
 		action.Action.TaskQueue = info.TaskQueue
 	}
 
-	// Make schedule ID unique per workflow execution to support concurrent iterations with same input
 	action.ScheduleId = makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
 
 	// Also make the schedule's workflow ID unique to prevent conflicts when schedules trigger
