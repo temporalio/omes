@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -35,6 +36,152 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 		WorkflowInput: &kitchensink.WorkflowInput{},
 	}
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
+}
+
+// Schedule-related activities
+
+// makeScheduleIDUnique appends the sanitized workflow execution ID to the schedule ID
+// to ensure uniqueness when the same TestInput is used across concurrent iterations.
+func makeScheduleIDUnique(baseScheduleID string, workflowExecutionID string) string {
+	sanitizedWorkflowID := strings.ReplaceAll(workflowExecutionID, "/", "-")
+	return fmt.Sprintf("%s-%s", baseScheduleID, sanitizedWorkflowID)
+}
+
+func (ca *ClientActivities) CreateScheduleActivity(ctx context.Context, action *kitchensink.CreateScheduleAction) error {
+	c := activity.GetClient(ctx)
+	info := activity.GetInfo(ctx)
+
+	// If task queue is not specified, use the parent workflow's task queue
+	if action.Action.TaskQueue == "" {
+		action.Action.TaskQueue = info.TaskQueue
+	}
+
+	action.ScheduleId = makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+
+	// Also make the schedule's workflow ID unique to prevent conflicts when schedules trigger
+	scheduleWorkflowID := action.Action.WorkflowId
+	if scheduleWorkflowID != "" {
+		scheduleWorkflowID = makeScheduleIDUnique(scheduleWorkflowID, info.WorkflowExecution.ID)
+	}
+
+	// Convert input payloads to args
+	args := make([]interface{}, len(action.Action.Input))
+	for i, payload := range action.Action.Input {
+		args[i] = payload
+	}
+
+	scheduleAction := client.ScheduleWorkflowAction{
+		ID:                  scheduleWorkflowID,
+		Workflow:            action.Action.WorkflowType,
+		TaskQueue:           action.Action.TaskQueue,
+		Args:                args,
+		WorkflowRunTimeout:  action.Action.WorkflowExecutionTimeout.AsDuration(),
+		WorkflowTaskTimeout: action.Action.WorkflowTaskTimeout.AsDuration(),
+		RetryPolicy:         convertFromPBRetryPolicy(action.Action.RetryPolicy),
+	}
+
+	scheduleSpec := client.ScheduleSpec{}
+	if action.Spec != nil {
+		scheduleSpec.CronExpressions = action.Spec.CronExpressions
+		if action.Spec.Jitter != nil {
+			scheduleSpec.Jitter = action.Spec.Jitter.AsDuration()
+		}
+	}
+
+	scheduleOptions := client.ScheduleOptions{
+		ID:     action.ScheduleId,
+		Action: &scheduleAction,
+		Spec:   scheduleSpec,
+	}
+
+	if action.Policies != nil {
+		scheduleOptions.RemainingActions = int(action.Policies.RemainingActions)
+		scheduleOptions.TriggerImmediately = action.Policies.TriggerImmediately
+		if action.Policies.CatchupWindow != nil {
+			scheduleOptions.CatchupWindow = action.Policies.CatchupWindow.AsDuration()
+		}
+	}
+
+	if len(action.Backfill) > 0 {
+		backfills := make([]client.ScheduleBackfill, len(action.Backfill))
+		for i, bf := range action.Backfill {
+			backfills[i] = client.ScheduleBackfill{
+				Start: time.Unix(bf.StartTimestamp, 0),
+				End:   time.Unix(bf.EndTimestamp, 0),
+			}
+		}
+		scheduleOptions.ScheduleBackfill = backfills
+	}
+
+	activity.GetLogger(ctx).Debug("Create schedule", "schedule_id", action.ScheduleId)
+	_, err := c.ScheduleClient().Create(ctx, scheduleOptions)
+	if err != nil {
+		return fmt.Errorf("failed to create schedule %s: %w", action.ScheduleId, err)
+	}
+	activity.GetLogger(ctx).Debug("Create schedule SUCCESS", "schedule_id", action.ScheduleId)
+	return nil
+}
+
+func (ca *ClientActivities) DescribeScheduleActivity(ctx context.Context, action *kitchensink.DescribeScheduleAction) (*client.ScheduleDescription, error) {
+	c := activity.GetClient(ctx)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Describe schedule", "schedule_id", scheduleId)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
+	desc, err := handle.Describe(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to describe schedule %s: %w", scheduleId, err)
+	}
+	activity.GetLogger(ctx).Debug("Describe schedule SUCCESS", "schedule_id", scheduleId)
+	return desc, nil
+}
+
+func (ca *ClientActivities) UpdateScheduleActivity(ctx context.Context, action *kitchensink.UpdateScheduleAction) error {
+	c := activity.GetClient(ctx)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Update schedule", "schedule_id", scheduleId)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
+
+	err := handle.Update(ctx, client.ScheduleUpdateOptions{
+		DoUpdate: func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+			schedule := &input.Description.Schedule
+
+			// Update the spec if provided
+			if action.Spec != nil {
+				schedule.Spec.CronExpressions = action.Spec.CronExpressions
+				if action.Spec.Jitter != nil {
+					schedule.Spec.Jitter = action.Spec.Jitter.AsDuration()
+				}
+			}
+
+			return &client.ScheduleUpdate{
+				Schedule: schedule,
+			}, nil
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update schedule %s: %w", scheduleId, err)
+	}
+	activity.GetLogger(ctx).Debug("Update schedule SUCCESS", "schedule_id", scheduleId)
+	return nil
+}
+
+func (ca *ClientActivities) DeleteScheduleActivity(ctx context.Context, action *kitchensink.DeleteScheduleAction) error {
+	c := activity.GetClient(ctx)
+	info := activity.GetInfo(ctx)
+	// Make schedule ID match the one created in CreateScheduleActivity
+	scheduleId := makeScheduleIDUnique(action.ScheduleId, info.WorkflowExecution.ID)
+	activity.GetLogger(ctx).Debug("Delete schedule", "schedule_id", scheduleId)
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleId)
+	err := handle.Delete(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete schedule %s: %w", scheduleId, err)
+	}
+	activity.GetLogger(ctx).Debug("Delete schedule SUCCESS", "schedule_id", scheduleId)
+	return nil
 }
 
 type KSWorkflowState struct {
@@ -184,8 +331,13 @@ func (ws *KSWorkflowState) handleAction(
 				searchAttributes[k] = v
 			}
 		}
+		// Make child workflow ID unique per workflow execution to support concurrent iterations with same input
+		childWorkflowID := child.WorkflowId
+		if childWorkflowID != "" {
+			childWorkflowID = fmt.Sprintf("%s-%s", childWorkflowID, workflow.GetInfo(ctx).WorkflowExecution.ID)
+		}
 		cCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
-			WorkflowID:       child.WorkflowId,
+			WorkflowID:       childWorkflowID,
 			SearchAttributes: searchAttributes,
 		})
 		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
@@ -231,6 +383,26 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if createSchedule := action.GetCreateSchedule(); createSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "CreateScheduleActivity", createSchedule).Get(ctx, nil)
+	} else if describeSchedule := action.GetDescribeSchedule(); describeSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "DescribeScheduleActivity", describeSchedule).Get(ctx, nil)
+	} else if updateSchedule := action.GetUpdateSchedule(); updateSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "UpdateScheduleActivity", updateSchedule).Get(ctx, nil)
+	} else if deleteSchedule := action.GetDeleteSchedule(); deleteSchedule != nil {
+		actCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+			StartToCloseTimeout: 30 * time.Second,
+		})
+		return nil, workflow.ExecuteActivity(actCtx, "DeleteScheduleActivity", deleteSchedule).Get(ctx, nil)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}

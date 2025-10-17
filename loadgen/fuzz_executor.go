@@ -64,6 +64,9 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(protoBytes, asTInput)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal test input from proto: %w", err)
+		}
 		testInputs = append(testInputs, asTInput)
 	} else {
 		return fmt.Errorf("InitInputs must specify either a file or args")

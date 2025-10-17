@@ -405,6 +405,74 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 		}
 
+		scheduleID := fmt.Sprintf("tps-schedule-%s-%d-%d", t.runID, run.Iteration, childCount)
+		asyncActions = append(asyncActions, &Action{
+			Variant: &Action_NestedActionSet{
+				NestedActionSet: &ActionSet{
+					Actions: []*Action{
+						{
+							Variant: &Action_CreateSchedule{
+								CreateSchedule: &CreateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &ScheduleSpec{
+										CronExpressions: []string{"* * * * *"},
+									},
+									Action: &ScheduleAction{
+										WorkflowId:   fmt.Sprintf("%s-wf", scheduleID),
+										WorkflowType: "kitchenSink",
+										TaskQueue:    fmt.Sprintf("omes-%s", t.runID),
+										Input: []*common.Payload{
+											ConvertToPayload(&WorkflowInput{
+												InitialActions: []*ActionSet{
+													NoOpSingleActivityActionSet(),
+												},
+											}),
+										},
+									},
+									Policies: &SchedulePolicies{
+										RemainingActions:    1,
+										TriggerImmediately: true,
+									},
+								},
+							},
+						},
+						{
+							Variant: &Action_DescribeSchedule{
+								DescribeSchedule: &DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
+						{
+							Variant: &Action_UpdateSchedule{
+								UpdateSchedule: &UpdateScheduleAction{
+									ScheduleId: scheduleID,
+									Spec: &ScheduleSpec{
+										CronExpressions: []string{"*/5 * * * *"},
+									},
+								},
+							},
+						},
+						{
+							Variant: &Action_DescribeSchedule{
+								DescribeSchedule: &DescribeScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
+						{
+							Variant: &Action_DeleteSchedule{
+								DeleteSchedule: &DeleteScheduleAction{
+									ScheduleId: scheduleID,
+								},
+							},
+						},
+					},
+					Concurrent: false,
+				},
+			},
+		})
+
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{
 			Variant: &Action_NestedActionSet{

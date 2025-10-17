@@ -152,8 +152,9 @@ func TestKitchenSink(t *testing.T) {
 						}),
 				},
 			},
+			// Note: workflowId is now "my-child-{parent-workflow-id}" due to concurrent execution support
 			historyMatcher: PartialHistoryMatcher(`
-				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
+				StartChildWorkflowExecutionInitiated`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",
@@ -745,6 +746,88 @@ func TestKitchenSink(t *testing.T) {
 				clioptions.LangTypeScript: "unrecognized action",
 				clioptions.LangDotNet:     "unrecognized action",
 			},
+		},
+		{
+			name: "ScheduleOperations",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NestedActionSet{
+								NestedActionSet: &ActionSet{
+									Actions: []*Action{
+										{
+											Variant: &Action_CreateSchedule{
+												CreateSchedule: &CreateScheduleAction{
+													ScheduleId: "test-schedule",
+													Spec: &ScheduleSpec{
+														CronExpressions: []string{"* * * * *"},
+													},
+													Action: &ScheduleAction{
+														WorkflowId:   "test-schedule-wf",
+														WorkflowType: "kitchenSink",
+														Input: []*common.Payload{
+															ConvertToPayload(&WorkflowInput{
+																InitialActions: ListActionSet(NewTimerAction(1)),
+															}),
+														},
+													},
+													Policies: &SchedulePolicies{
+														RemainingActions:    1,
+														TriggerImmediately: false,
+													},
+												},
+											},
+										},
+										{
+											Variant: &Action_DescribeSchedule{
+												DescribeSchedule: &DescribeScheduleAction{
+													ScheduleId: "test-schedule",
+												},
+											},
+										},
+										{
+											Variant: &Action_UpdateSchedule{
+												UpdateSchedule: &UpdateScheduleAction{
+													ScheduleId: "test-schedule",
+													Spec: &ScheduleSpec{
+														CronExpressions: []string{"*/5 * * * *"},
+													},
+												},
+											},
+										},
+										{
+											Variant: &Action_DeleteSchedule{
+												DeleteSchedule: &DeleteScheduleAction{
+													ScheduleId: "test-schedule",
+												},
+											},
+										},
+									},
+									Concurrent: false,
+								},
+							},
+						}),
+				},
+			},
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "unrecognized action",
+				clioptions.LangPython:     "unrecognized action",
+				clioptions.LangTypeScript: "unrecognized action",
+				clioptions.LangDotNet:     "unrecognized action",
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"CreateScheduleActivity"}}
+				ActivityTaskCompleted
+				...
+				ActivityTaskScheduled {"activityType":{"name":"DescribeScheduleActivity"}}
+				ActivityTaskCompleted
+				...
+				ActivityTaskScheduled {"activityType":{"name":"UpdateScheduleActivity"}}
+				ActivityTaskCompleted
+				...
+				ActivityTaskScheduled {"activityType":{"name":"DeleteScheduleActivity"}}
+				ActivityTaskCompleted`),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

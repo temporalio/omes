@@ -181,8 +181,86 @@ class ActionSet(_message.Message):
     concurrent: bool
     def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., concurrent: bool = ...) -> None: ...
 
+class ScheduleSpec(_message.Message):
+    __slots__ = ("cron_expressions", "jitter")
+    CRON_EXPRESSIONS_FIELD_NUMBER: _ClassVar[int]
+    JITTER_FIELD_NUMBER: _ClassVar[int]
+    cron_expressions: _containers.RepeatedScalarFieldContainer[str]
+    jitter: _duration_pb2.Duration
+    def __init__(self, cron_expressions: _Optional[_Iterable[str]] = ..., jitter: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+
+class ScheduleAction(_message.Message):
+    __slots__ = ("workflow_id", "workflow_type", "task_queue", "workflow_execution_timeout", "workflow_task_timeout", "retry_policy", "input")
+    WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_TYPE_FIELD_NUMBER: _ClassVar[int]
+    TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_EXECUTION_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_TASK_TIMEOUT_FIELD_NUMBER: _ClassVar[int]
+    RETRY_POLICY_FIELD_NUMBER: _ClassVar[int]
+    INPUT_FIELD_NUMBER: _ClassVar[int]
+    workflow_id: str
+    workflow_type: str
+    task_queue: str
+    workflow_execution_timeout: _duration_pb2.Duration
+    workflow_task_timeout: _duration_pb2.Duration
+    retry_policy: _message_pb2.RetryPolicy
+    input: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
+    def __init__(self, workflow_id: _Optional[str] = ..., workflow_type: _Optional[str] = ..., task_queue: _Optional[str] = ..., workflow_execution_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., workflow_task_timeout: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., retry_policy: _Optional[_Union[_message_pb2.RetryPolicy, _Mapping]] = ..., input: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ...) -> None: ...
+
+class SchedulePolicies(_message.Message):
+    __slots__ = ("remaining_actions", "trigger_immediately", "catchup_window")
+    REMAINING_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    TRIGGER_IMMEDIATELY_FIELD_NUMBER: _ClassVar[int]
+    CATCHUP_WINDOW_FIELD_NUMBER: _ClassVar[int]
+    remaining_actions: int
+    trigger_immediately: bool
+    catchup_window: _duration_pb2.Duration
+    def __init__(self, remaining_actions: _Optional[int] = ..., trigger_immediately: bool = ..., catchup_window: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+
+class ScheduleBackfill(_message.Message):
+    __slots__ = ("start_timestamp", "end_timestamp")
+    START_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    END_TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+    start_timestamp: int
+    end_timestamp: int
+    def __init__(self, start_timestamp: _Optional[int] = ..., end_timestamp: _Optional[int] = ...) -> None: ...
+
+class CreateScheduleAction(_message.Message):
+    __slots__ = ("schedule_id", "spec", "action", "policies", "backfill")
+    SCHEDULE_ID_FIELD_NUMBER: _ClassVar[int]
+    SPEC_FIELD_NUMBER: _ClassVar[int]
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    POLICIES_FIELD_NUMBER: _ClassVar[int]
+    BACKFILL_FIELD_NUMBER: _ClassVar[int]
+    schedule_id: str
+    spec: ScheduleSpec
+    action: ScheduleAction
+    policies: SchedulePolicies
+    backfill: _containers.RepeatedCompositeFieldContainer[ScheduleBackfill]
+    def __init__(self, schedule_id: _Optional[str] = ..., spec: _Optional[_Union[ScheduleSpec, _Mapping]] = ..., action: _Optional[_Union[ScheduleAction, _Mapping]] = ..., policies: _Optional[_Union[SchedulePolicies, _Mapping]] = ..., backfill: _Optional[_Iterable[_Union[ScheduleBackfill, _Mapping]]] = ...) -> None: ...
+
+class DescribeScheduleAction(_message.Message):
+    __slots__ = ("schedule_id",)
+    SCHEDULE_ID_FIELD_NUMBER: _ClassVar[int]
+    schedule_id: str
+    def __init__(self, schedule_id: _Optional[str] = ...) -> None: ...
+
+class UpdateScheduleAction(_message.Message):
+    __slots__ = ("schedule_id", "spec")
+    SCHEDULE_ID_FIELD_NUMBER: _ClassVar[int]
+    SPEC_FIELD_NUMBER: _ClassVar[int]
+    schedule_id: str
+    spec: ScheduleSpec
+    def __init__(self, schedule_id: _Optional[str] = ..., spec: _Optional[_Union[ScheduleSpec, _Mapping]] = ...) -> None: ...
+
+class DeleteScheduleAction(_message.Message):
+    __slots__ = ("schedule_id",)
+    SCHEDULE_ID_FIELD_NUMBER: _ClassVar[int]
+    schedule_id: str
+    def __init__(self, schedule_id: _Optional[str] = ...) -> None: ...
+
 class Action(_message.Message):
-    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation")
+    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation", "create_schedule", "describe_schedule", "update_schedule", "delete_schedule")
     TIMER_FIELD_NUMBER: _ClassVar[int]
     EXEC_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     EXEC_CHILD_WORKFLOW_FIELD_NUMBER: _ClassVar[int]
@@ -198,6 +276,10 @@ class Action(_message.Message):
     CONTINUE_AS_NEW_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTION_SET_FIELD_NUMBER: _ClassVar[int]
     NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
+    CREATE_SCHEDULE_FIELD_NUMBER: _ClassVar[int]
+    DESCRIBE_SCHEDULE_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_SCHEDULE_FIELD_NUMBER: _ClassVar[int]
+    DELETE_SCHEDULE_FIELD_NUMBER: _ClassVar[int]
     timer: TimerAction
     exec_activity: ExecuteActivityAction
     exec_child_workflow: ExecuteChildWorkflowAction
@@ -213,7 +295,11 @@ class Action(_message.Message):
     continue_as_new: ContinueAsNewAction
     nested_action_set: ActionSet
     nexus_operation: ExecuteNexusOperation
-    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ...) -> None: ...
+    create_schedule: CreateScheduleAction
+    describe_schedule: DescribeScheduleAction
+    update_schedule: UpdateScheduleAction
+    delete_schedule: DeleteScheduleAction
+    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ..., create_schedule: _Optional[_Union[CreateScheduleAction, _Mapping]] = ..., describe_schedule: _Optional[_Union[DescribeScheduleAction, _Mapping]] = ..., update_schedule: _Optional[_Union[UpdateScheduleAction, _Mapping]] = ..., delete_schedule: _Optional[_Union[DeleteScheduleAction, _Mapping]] = ...) -> None: ...
 
 class AwaitableChoice(_message.Message):
     __slots__ = ("wait_finish", "abandon", "cancel_before_started", "cancel_after_started", "cancel_after_completed")
