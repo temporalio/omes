@@ -503,7 +503,8 @@ public class KitchenSinkWorkflow
 
         // Unified loop with conditional heartbeat sending
         var elapsed = TimeSpan.Zero;
-        var heartbeatInterval = TimeSpan.FromSeconds(1);
+        // Heartbeat interval is half of heartbeat timeout
+        var heartbeatInterval = TimeSpan.FromTicks(info.HeartbeatTimeout!.Value.Ticks / 2);
         while (elapsed < duration)
         {
             var sleepTime = elapsed + heartbeatInterval > duration ? duration - elapsed : heartbeatInterval;

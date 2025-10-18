@@ -84,7 +84,8 @@ public class ActivitiesImpl implements Activities {
 
     // Unified loop with conditional heartbeat sending
     long elapsed = 0;
-    long heartbeatInterval = 1000; // Send heartbeat every second
+    // Heartbeat interval is half of heartbeat timeout
+    long heartbeatInterval = activityInfo.getHeartbeatTimeout().toMillis() / 2;
     while (elapsed < durationMs) {
       long sleepTime = Math.min(heartbeatInterval, durationMs - elapsed);
       Thread.sleep(sleepTime);

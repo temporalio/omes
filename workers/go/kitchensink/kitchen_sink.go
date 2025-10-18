@@ -555,7 +555,7 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 	// Ensures we miss enough heartbeat intervals (if not sending heartbeats).
 	activityDeadline := time.After(info.HeartbeatTimeout * 2)
 
-	heartbeatTicker := time.NewTicker(time.Second)
+	heartbeatTicker := time.NewTicker(info.HeartbeatTimeout / 2)
 	defer heartbeatTicker.Stop()
 	for {
 		select {
