@@ -73,7 +73,8 @@ export async function heartbeatActivity(config: IHeartbeatTimeoutActivity): Prom
   const durationMs = info.heartbeatTimeoutMs! * 2;
 
   let elapsed = 0;
-  const heartbeatIntervalMs = 1000; // Send heartbeat every second
+  // Heartbeat interval is half of heartbeat timeout
+  const heartbeatIntervalMs = info.heartbeatTimeoutMs! / 2;
   while (elapsed < durationMs) {
     const sleepTime = Math.min(heartbeatIntervalMs, durationMs - elapsed);
     await sleep(sleepTime);

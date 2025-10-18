@@ -59,7 +59,8 @@ async def heartbeat_activity(config):
     # Ensures we miss enough heartbeat intervals (if not sending heartbeats).
     duration_seconds = info.heartbeat_timeout.total_seconds() * 2
 
-    heartbeat_interval = 1.0  # Send heartbeat every second
+    # Heartbeat interval is half of heartbeat timeout
+    heartbeat_interval = info.heartbeat_timeout.total_seconds() / 2
     elapsed = 0.0
     while elapsed < duration_seconds:
         sleep_time = min(heartbeat_interval, duration_seconds - elapsed)
