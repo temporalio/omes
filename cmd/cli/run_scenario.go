@@ -56,6 +56,7 @@ type scenarioRunConfig struct {
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
+	ignoreAlreadyStarted          bool
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -81,6 +82,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
+	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
+		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -156,6 +159,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxIterationAttempts:          r.maxIterationAttempts,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
+			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,

@@ -2,14 +2,10 @@ name: Build docker images
 on:
   workflow_call:
     inputs:
-      build-command:
-        description: Build command to run (e.g., 'build-worker-image' or 'build-cli-image')
-        required: true
-        type: string
       push-command:
         description: Push command to run (e.g., 'build-push-worker-image' or 'build-push-cli-image')
-        required: true
         type: string
+        default: "build-push-worker-image"
       lang:
         description: SDK language to build the container for (only for worker images)
         required: false
@@ -90,8 +86,9 @@ jobs:
           TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
           LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
           VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}
+          PUSH_COMMAND: ${{ inputs.push-command }}
         run: |
-          go run ./cmd/dev ${{ inputs.push-command }} \
+          go run ./cmd/dev "$PUSH_COMMAND" \
           --platform linux/amd64,linux/arm64 \
           --repo-prefix temporaliotest \
           $LANG_ARGS \
@@ -101,6 +98,6 @@ jobs:
 
       - name: 🐳 Docker Hub image tag
         env:
-          LANG: ${{ inputs.lang }}
+          LANG: ${{ inputs.lang || 'CLI' }}
         run: |
-          echo "::notice title=🐳 Docker Hub image published for ${{ inputs.lang || 'CLI' }}::Check temporaliotest/omes tags"
+          echo "::notice title=🐳 Docker Hub image published for $LANG::Check temporaliotest/omes tags"

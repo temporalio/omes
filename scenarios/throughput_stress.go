@@ -14,7 +14,6 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -69,6 +68,7 @@ type tpsExecutor struct {
 	config     *tpsConfig
 	isResuming bool
 	runID      string
+	rng        *rand.Rand
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -157,6 +157,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	t.config = config
+	t.rng = rand.New(rand.NewSource(config.RngSeed))
 	return nil
 }
 
@@ -199,19 +200,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Debugf("Completed iteration %d", run.Iteration)
 	}
 
-	// When resuming, it can happen that the workflow for the current iteration already exists since the snapshot
-	// was not up-to-date. In that case, we just skip this iteration and move on.
-	info.Configuration.HandleExecuteError = func(ctx context.Context, run *loadgen.Run, err error) error {
-		if isResuming {
-			var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
-			if errors.As(err, &alreadyStartedErr) {
-				info.Logger.Warnf("after resume, workflow for iteration %d already exists", run.Iteration)
-				return nil
-			}
-		}
-		return err
-	}
-
 	// Start the scenario run.
 	//
 	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
@@ -226,18 +214,38 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				},
 			},
 			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
-				options.StartOptions.ID = workflowID(run.RunID, run.Iteration)
+				options.StartOptions = run.DefaultStartWorkflowOptions()
+				if isResuming {
+					// Enforce to never fail on "workflow already started" when resuming.
+					options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
+				}
 
 				// Add search attribute to the workflow options so that it can be used in visibility queries.
 				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
 					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
 				)
 
+				// Start some workflows via Update-with-Start.
+				if t.maybeWithStart(0.5) {
+					options.Params.WithStartAction = &WithStartClientAction{
+						Variant: &WithStartClientAction_DoUpdate{
+							DoUpdate: &DoUpdate{
+								Variant: &DoUpdate_DoActions{
+									DoActions: &DoActionsUpdate{
+										Variant: &DoActionsUpdate_DoActions{},
+									},
+								},
+								WithStart: true,
+							},
+						},
+					}
+				}
+
 				// Generate the actions for the workflow.
 				//
 				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
 				// That means these client actions are sent from the activity worker instead of Omes.
-				options.Params.WorkflowInput.InitialActions = t.createActions(run.Iteration)
+				options.Params.WorkflowInput.InitialActions = t.createActions(run)
 
 				return nil
 			},
@@ -325,17 +333,17 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	t.state.LastCompletedIterationAt = time.Now()
 }
 
-func (t *tpsExecutor) createActions(iteration int) []*ActionSet {
+func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 	return []*ActionSet{
 		{
-			Actions:    t.createActionsChunk(iteration, 0, 0, t.config.InternalIterations),
+			Actions:    t.createActionsChunk(run, 0, 0, t.config.InternalIterations),
 			Concurrent: false,
 		},
 	}
 }
 
 func (t *tpsExecutor) createActionsChunk(
-	iteration int,
+	run *loadgen.Run,
 	childCount int,
 	continueAsNewCounter int,
 	remainingInternalIters int,
@@ -349,7 +357,7 @@ func (t *tpsExecutor) createActionsChunk(
 	isLastChunk := remainingInternalIters <= itersPerChunk
 	itersPerChunk = min(itersPerChunk, remainingInternalIters) // cap chunk size to remaining iterations
 
-	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(iteration)))
+	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
 
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
@@ -363,7 +371,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 		childCount++
 		asyncActions := []*Action{
-			t.createChildWorkflowAction(iteration, childCount),
+			t.createChildWorkflowAction(run, childCount),
 			PayloadActivity(256, 256, DefaultRemoteActivity),
 			PayloadActivity(256, 256, DefaultRemoteActivity),
 			PayloadActivity(0, 256, DefaultLocalActivity),
@@ -427,7 +435,7 @@ func (t *tpsExecutor) createActionsChunk(
 							InitialActions: []*ActionSet{
 								{
 									Actions: t.createActionsChunk(
-										iteration,
+										run,
 										childCount,
 										continueAsNewCounter+1,
 										remainingInternalIters-itersPerChunk),
@@ -444,7 +452,7 @@ func (t *tpsExecutor) createActionsChunk(
 	return chunkActions
 }
 
-func (t *tpsExecutor) createChildWorkflowAction(iteration int, childID int) *Action {
+func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *Action {
 	return &Action{
 		Variant: &Action_ExecChildWorkflow{
 			ExecChildWorkflow: &ExecuteChildWorkflowAction{
@@ -463,7 +471,7 @@ func (t *tpsExecutor) createChildWorkflowAction(iteration int, childID int) *Act
 						},
 					}),
 				},
-				WorkflowId: fmt.Sprintf("%s/child-%d", workflowID(t.runID, iteration), childID),
+				WorkflowId: fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
 				SearchAttributes: map[string]*common.Payload{
 					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain")},
@@ -518,6 +526,7 @@ func (t *tpsExecutor) createSelfUpdateWithTimer() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -536,6 +545,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayload() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -554,6 +564,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 						},
 					},
 				},
+				WithStart: t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -602,6 +613,8 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 	}
 }
 
-func workflowID(runID string, iteration int) string {
-	return fmt.Sprintf("throughputStress/%s/iter-%d", runID, iteration)
+func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.rng.Float64() <= likelihood
 }
