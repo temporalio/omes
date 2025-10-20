@@ -204,9 +204,9 @@ type RunConfiguration struct {
 	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
 	// Default is false.
 	IgnoreAlreadyStarted bool
-	// MinWorkflowsCompleted is the minimum number of workflows that must complete for the test to pass.
-	// Default is 0, meaning disabled. Scenarios may use this to enforce work-based success criteria.
-	MinWorkflowsCompleted int
+	// MinThroughputPerHour is the minimum workflow throughput required (workflows/hour).
+	// Default is 0, meaning disabled. Scenarios calculate actual throughput and compare.
+	MinThroughputPerHour float64
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
 	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.

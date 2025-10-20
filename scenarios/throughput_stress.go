@@ -47,6 +47,9 @@ type tpsState struct {
 	CompletedIterations int `json:"completedIterations"`
 	// LastCompletedIterationAt is the time when the last iteration was completed. Helpful for debugging.
 	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
+	// AccumulatedDuration is the total execution time across all runs (original + resumes).
+	// This excludes any downtime between runs. Used for accurate throughput calculation.
+	AccumulatedDuration time.Duration `json:"accumulatedDuration"`
 }
 
 type tpsConfig struct {
@@ -58,7 +61,7 @@ type tpsConfig struct {
 	SkipCleanNamespaceCheck       bool
 	SleepActivities               *loadgen.SleepActivityConfig
 	VisibilityVerificationTimeout time.Duration
-	MinWorkflowsCompleted         int
+	MinThroughputPerHour          float64
 	ScenarioRunID                 string
 	RngSeed                       int64
 }
@@ -118,7 +121,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
 		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
 		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
-		MinWorkflowsCompleted:   info.Configuration.MinWorkflowsCompleted,
+		MinThroughputPerHour:    info.Configuration.MinThroughputPerHour,
 		ScenarioRunID:           info.RunID,
 	}
 
@@ -176,6 +179,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 	t.runID = info.RunID
+
+	// Track start time of current run
+	currentRunStartTime := time.Now()
 
 	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
 	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
@@ -260,6 +266,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	t.lock.Lock()
 	completedIterations := t.state.CompletedIterations
+	t.state.AccumulatedDuration += time.Since(currentRunStartTime)
+	totalDuration := t.state.AccumulatedDuration
 	t.lock.Unlock()
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
@@ -302,10 +310,22 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return err
 	}
 
-	// Post-scenario: check work-based success threshold
-	if t.config.MinWorkflowsCompleted > 0 && completedWorkflows < t.config.MinWorkflowsCompleted {
-		return fmt.Errorf("insufficient work completed: %d workflows < %d required",
-			completedWorkflows, t.config.MinWorkflowsCompleted)
+	// Post-scenario: check throughput threshold
+	if t.config.MinThroughputPerHour > 0 {
+		actualThroughputPerHour := float64(completedWorkflows) / totalDuration.Hours()
+
+		if actualThroughputPerHour < t.config.MinThroughputPerHour {
+			// Calculate how many workflows we expected given the duration
+			expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
+
+			return fmt.Errorf("insufficient throughput: %.1f workflows/hour < %.1f required "+
+				"(completed %d workflows, expected %d in %v)",
+				actualThroughputPerHour,
+				t.config.MinThroughputPerHour,
+				completedWorkflows,
+				expectedWorkflows,
+				totalDuration.Round(time.Second))
+		}
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
