@@ -132,7 +132,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				if err != nil {
 					workflow.GetLogger(ctx).Error("error handling signal deduplication", "error", err)
 					retOrErrChan.Send(ctx, ReturnOrErr{nil, err})
-					return
 				}
 			}
 
@@ -140,7 +139,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				ret, err := state.handleActionSet(ctx, actionSet)
 				if ret != nil || err != nil {
 					retOrErrChan.Send(ctx, ReturnOrErr{ret, err})
-					return
 				}
 			})
 		}
@@ -198,13 +196,34 @@ func (ws *KSWorkflowState) handleActionSet(
 	return
 }
 
+func (ws *KSWorkflowState) validateAllSignalsReceived() error {
+	if len(ws.expectedSignalIDs) > 0 {
+		missingSignals := make([]int32, 0, len(ws.expectedSignalIDs))
+		for signalID := range ws.expectedSignalIDs {
+			missingSignals = append(missingSignals, signalID)
+		}
+		return temporal.NewApplicationError(
+			fmt.Sprintf("workflow completing with %d missing signal(s): %v", len(missingSignals), missingSignals),
+			"MissingSignals")
+	}
+	return nil
+}
+
 func (ws *KSWorkflowState) handleAction(
 	ctx workflow.Context,
 	action *kitchensink.Action,
 ) (*common.Payload, error) {
 	if rr := action.GetReturnResult(); rr != nil {
+		// Check if all expected signals have been received
+		if err := ws.validateAllSignalsReceived(); err != nil {
+			return nil, err
+		}
 		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
+		// Check if all expected signals have been received before returning error
+		if err := ws.validateAllSignalsReceived(); err != nil {
+			return nil, err
+		}
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
 		// Create new workflow input preserving signal deduplication state

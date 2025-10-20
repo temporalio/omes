@@ -42,6 +42,7 @@ type testCase struct {
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
+	expectedWorkflowError   string
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -515,7 +516,7 @@ func TestKitchenSink(t *testing.T) {
 			name: "ClientSequence/Signal/Deduplication",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					ExpectedSignalCount: 10,
+					ExpectedSignalCount: 5,
 					InitialActions: ListActionSet(
 						NewTimerAction(2000),
 					),
@@ -558,7 +559,8 @@ func TestKitchenSink(t *testing.T) {
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: NewSignalActionsWithIDs(2), // Only send 2 signals, expect 3 and WF should fail
+							// Only send 2 signals, expect 3 and WF should fail
+							Actions: NewSignalActionsWithIDs(2),
 						},
 					},
 				},
@@ -566,6 +568,7 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
+			expectedWorkflowError: "missing signal",
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -904,7 +907,26 @@ func testSupportedFeature(
 		}
 	}
 
-	require.NoError(t, execErr, "executor failed")
+	// Check if workflow failure is expected
+	if tc.expectedWorkflowError != "" {
+		require.Errorf(t, execErr, "SDK %s should fail with workflow error", sdk)
+		require.Containsf(t, strings.ToLower(execErr.Error()), strings.ToLower(tc.expectedWorkflowError),
+			"SDK %s workflow error should contain '%s'", sdk, tc.expectedWorkflowError)
+		require.NoError(t, historyErr, "failed to get workflow history")
+
+		// Verify workflow failed in history
+		hasWorkflowFailed := false
+		for _, event := range historyEvents {
+			if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
+				hasWorkflowFailed = true
+				break
+			}
+		}
+		require.Truef(t, hasWorkflowFailed, "SDK %s workflow should have WorkflowExecutionFailed event in history", sdk)
+	} else {
+		require.NoError(t, execErr, "executor failed")
+	}
+
 	require.NoError(t, historyErr, "failed to get workflow history")
 	require.NotNilf(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
 	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
