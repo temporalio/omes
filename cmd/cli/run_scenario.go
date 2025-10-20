@@ -57,7 +57,6 @@ type scenarioRunConfig struct {
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
 	ignoreAlreadyStarted          bool
-	minThroughputPerHour          float64
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -85,9 +84,6 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
-	fs.Float64Var(&r.minThroughputPerHour, "min-throughput-per-hour", 0,
-		"Minimum workflow throughput required (workflows/hour, default: 0, disabled). "+
-			"Only scenarios that implement this check will enforce it (currently: throughput_stress)")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -164,7 +160,6 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
-			MinThroughputPerHour:          r.minThroughputPerHour,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,

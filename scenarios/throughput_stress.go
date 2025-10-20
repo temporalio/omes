@@ -36,6 +36,9 @@ const (
 	// SleepActivityJsonFlag is a JSON string that defines the sleep activity's behavior.
 	// See throughputstress.SleepActivityConfig for details.
 	SleepActivityJsonFlag = "sleep-activity-json"
+	// MinThroughputPerHourFlag is the minimum workflow throughput required (workflows/hour).
+	// Default is 0, meaning disabled. The scenario calculates actual throughput and compares.
+	MinThroughputPerHourFlag = "min-throughput-per-hour"
 )
 
 const (
@@ -121,7 +124,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
 		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
 		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
-		MinThroughputPerHour:    info.Configuration.MinThroughputPerHour,
+		MinThroughputPerHour:    info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
 		ScenarioRunID:           info.RunID,
 	}
 
