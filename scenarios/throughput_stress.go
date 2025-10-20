@@ -58,6 +58,7 @@ type tpsConfig struct {
 	SkipCleanNamespaceCheck       bool
 	SleepActivities               *loadgen.SleepActivityConfig
 	VisibilityVerificationTimeout time.Duration
+	MinWorkflowsCompleted         int
 	ScenarioRunID                 string
 	RngSeed                       int64
 }
@@ -111,11 +112,13 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	return nil
 }
 
+// Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
 		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
 		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
 		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
+		MinWorkflowsCompleted:   info.Configuration.MinWorkflowsCompleted,
 		ScenarioRunID:           info.RunID,
 	}
 
@@ -297,6 +300,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		t.config.VisibilityVerificationTimeout,
 	); err != nil {
 		return err
+	}
+
+	// Post-scenario: check work-based success threshold
+	if t.config.MinWorkflowsCompleted > 0 && completedWorkflows < t.config.MinWorkflowsCompleted {
+		return fmt.Errorf("insufficient work completed: %d workflows < %d required",
+			completedWorkflows, t.config.MinWorkflowsCompleted)
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
