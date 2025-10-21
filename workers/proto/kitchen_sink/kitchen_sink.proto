@@ -231,19 +231,24 @@ message ExecuteActivityAction {
 
   // Activity that runs too long for N attempts (causing timeout), then completes.
   // Tests StartToCloseTimeout behavior with retries.
-  // On failing attempts, the activity runs until context cancellation (timeout).
-  // On success, it runs for duration < StartToCloseTimeout (runs for 0.5x StartToClose timeout).
   message TimeoutActivity {
     // How many attempts should timeout before succeeding (1-indexed)
     int32 fail_attempts = 1;
+    // Duration to run on success, must be less than StartToClose timeout
+    google.protobuf.Duration success_duration = 2;
+    // Duration to run on failure, must be more than StartToClose timeout
+    google.protobuf.Duration failure_duration = 3;
   }
 
   // Activity that skips heartbeats for N attempts (causing heartbeat timeout), then sends them.
   // Tests HeartbeatTimeout behavior with retries.
-  // Duration is derived from activity info's HeartbeatTimeout (runs for 2x heartbeat timeout).
   message HeartbeatTimeoutActivity {
     // How many attempts should skip heartbeats before succeeding (1-indexed)
     int32 fail_attempts = 1;
+    // Duration to run on success, must be less than HeartbeatTimeout timeout
+    google.protobuf.Duration success_duration = 2;
+    // Duration to run on failure, must be more than HeartbeatTimeout timeout
+    google.protobuf.Duration failure_duration = 3;
   }
   oneof activity_type {
     GenericActivity generic = 1;

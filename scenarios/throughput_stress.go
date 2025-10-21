@@ -432,9 +432,9 @@ func (t *tpsExecutor) createActionsChunk(
 				// Test activity retry: fails, succeeds on retry
 				RetryableErrorActivity(1, RemoteActivityWithRetry(1*time.Second, 2, 500*time.Millisecond, 1.0)),
 				// Test activity timeout with retry: times out on 1st attempt, succeeds on 2nd
-				TimeoutActivity(1, RemoteActivityWithRetry(1*time.Second, 2, 500*time.Millisecond, 1.0)),
+				TimeoutActivity(1, 0*time.Second, 2*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
 				// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
-				HeartbeatActivity(1, RemoteActivityWithHeartbeat(10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0)),
+				HeartbeatActivity(1, 0*time.Second, 2*time.Second, 10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
 			)
 		}
 

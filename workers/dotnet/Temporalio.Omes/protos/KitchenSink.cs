@@ -57,6 +57,7 @@ namespace Temporal.Omes.KitchenSink {
             "bmFsQWN0aW9ucxI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9yYWwub21l",
             "cy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASQwoSZG9fYWN0aW9uc19pbl9t",
             "YWluGAIgASgLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9u",
+<<<<<<< HEAD
             "U2V0SAASEQoJc2lnbmFsX2lkGAMgASgFQgkKB3ZhcmlhbnRCCQoHdmFyaWFu",
             "dCKpAQoHRG9RdWVyeRI4CgxyZXBvcnRfc3RhdGUYASABKAsyIC50ZW1wb3Jh",
             "bC5hcGkuY29tbW9uLnYxLlBheWxvYWRzSAASPwoGY3VzdG9tGAIgASgLMi0u",
@@ -256,6 +257,210 @@ namespace Temporal.Omes.KitchenSink {
             "WV9DQU5DRUwQABIfChtXQUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQARIL",
             "CgdBQkFORE9OEAJCQgoQaW8udGVtcG9yYWwub21lc1ouZ2l0aHViLmNvbS90",
             "ZW1wb3JhbGlvL29tZXMvbG9hZGdlbi9raXRjaGVuc2lua2IGcHJvdG8z"));
+=======
+            "U2V0SABCCQoHdmFyaWFudEIJCgd2YXJpYW50IqkBCgdEb1F1ZXJ5EjgKDHJl",
+            "cG9ydF9zdGF0ZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5",
+            "bG9hZHNIABI/CgZjdXN0b20YAiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5IYW5kbGVySW52b2NhdGlvbkgAEhgKEGZhaWx1cmVfZXhwZWN0",
+            "ZWQYCiABKAhCCQoHdmFyaWFudCLHAQoIRG9VcGRhdGUSQQoKZG9fYWN0aW9u",
+            "cxgBIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkRvQWN0aW9u",
+            "c1VwZGF0ZUgAEj8KBmN1c3RvbRgCIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
+            "Y2hlbl9zaW5rLkhhbmRsZXJJbnZvY2F0aW9uSAASEgoKd2l0aF9zdGFydBgD",
+            "IAEoCBIYChBmYWlsdXJlX2V4cGVjdGVkGAogASgIQgkKB3ZhcmlhbnQihgEK",
+            "D0RvQWN0aW9uc1VwZGF0ZRI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASKwoJcmVqZWN0X21l",
+            "GAIgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SABCCQoHdmFyaWFudCJQ",
+            "ChFIYW5kbGVySW52b2NhdGlvbhIMCgRuYW1lGAEgASgJEi0KBGFyZ3MYAiAD",
+            "KAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQifAoNV29ya2Zs",
+            "b3dTdGF0ZRI/CgNrdnMYASADKAsyMi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5Xb3JrZmxvd1N0YXRlLkt2c0VudHJ5GioKCEt2c0VudHJ5EgsKA2tl",
+            "eRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiTwoNV29ya2Zsb3dJbnB1dBI+",
+            "Cg9pbml0aWFsX2FjdGlvbnMYASADKAsyJS50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5BY3Rpb25TZXQiVAoJQWN0aW9uU2V0EjMKB2FjdGlvbnMYASAD",
+            "KAsyIi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb24SEgoKY29u",
+            "Y3VycmVudBgCIAEoCCL6CAoGQWN0aW9uEjgKBXRpbWVyGAEgASgLMicudGVt",
+            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuVGltZXJBY3Rpb25IABJKCg1leGVj",
+            "X2FjdGl2aXR5GAIgASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "RXhlY3V0ZUFjdGl2aXR5QWN0aW9uSAASVQoTZXhlY19jaGlsZF93b3JrZmxv",
+            "dxgDIAEoCzI2LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVD",
+            "aGlsZFdvcmtmbG93QWN0aW9uSAASTgoUYXdhaXRfd29ya2Zsb3dfc3RhdGUY",
+            "BCABKAsyLi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdFdvcmtm",
+            "bG93U3RhdGVIABJDCgtzZW5kX3NpZ25hbBgFIAEoCzIsLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLlNlbmRTaWduYWxBY3Rpb25IABJLCg9jYW5jZWxf",
+            "d29ya2Zsb3cYBiABKAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5D",
+            "YW5jZWxXb3JrZmxvd0FjdGlvbkgAEkwKEHNldF9wYXRjaF9tYXJrZXIYByAB",
+            "KAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZXRQYXRjaE1hcmtl",
+            "ckFjdGlvbkgAElwKGHVwc2VydF9zZWFyY2hfYXR0cmlidXRlcxgIIAEoCzI4",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNlYXJjaEF0dHJp",
+            "YnV0ZXNBY3Rpb25IABJDCgt1cHNlcnRfbWVtbxgJIAEoCzIsLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydE1lbW9BY3Rpb25IABJHChJzZXRf",
+            "d29ya2Zsb3dfc3RhdGUYCiABKAsyKS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5Xb3JrZmxvd1N0YXRlSAASRwoNcmV0dXJuX3Jlc3VsdBgLIAEoCzIu",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlJldHVyblJlc3VsdEFjdGlv",
+            "bkgAEkUKDHJldHVybl9lcnJvchgMIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
+            "Y2hlbl9zaW5rLlJldHVybkVycm9yQWN0aW9uSAASSgoPY29udGludWVfYXNf",
+            "bmV3GA0gASgLMi8udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGlu",
+            "dWVBc05ld0FjdGlvbkgAEkIKEW5lc3RlZF9hY3Rpb25fc2V0GA4gASgLMiUu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASTAoPbmV4",
+            "dXNfb3BlcmF0aW9uGA8gASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uSABCCQoHdmFyaWFudCKjAgoPQXdh",
+            "aXRhYmxlQ2hvaWNlEi0KC3dhaXRfZmluaXNoGAEgASgLMhYuZ29vZ2xlLnBy",
+            "b3RvYnVmLkVtcHR5SAASKQoHYWJhbmRvbhgCIAEoCzIWLmdvb2dsZS5wcm90",
+            "b2J1Zi5FbXB0eUgAEjcKFWNhbmNlbF9iZWZvcmVfc3RhcnRlZBgDIAEoCzIW",
+            "Lmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEjYKFGNhbmNlbF9hZnRlcl9zdGFy",
+            "dGVkGAQgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASOAoWY2FuY2Vs",
+            "X2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0",
+            "eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxtaWxsaXNlY29u",
+            "ZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIrLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLqEQoVRXhlY3V0",
+            "ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50ZW1wb3JhbC5v",
+            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uR2VuZXJp",
+            "Y0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
+            "RHVyYXRpb25IABImCgRub29wGAMgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVt",
+            "cHR5SAASWAoJcmVzb3VyY2VzGA4gASgLMkMudGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJlc291cmNlc0FjdGl2",
+            "aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
+            "bl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXlsb2FkQWN0aXZpdHlI",
+            "ABJSCgZjbGllbnQYEyABKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uQ2xpZW50QWN0aXZpdHlIABJjCg9y",
+            "ZXRyeWFibGVfZXJyb3IYFCABKAsySC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uUmV0cnlhYmxlRXJyb3JBY3Rp",
+            "dml0eUgAElQKB3RpbWVvdXQYFSABKAsyQS50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uVGltZW91dEFjdGl2aXR5",
+            "SAASXwoJaGVhcnRiZWF0GBYgASgLMkoudGVtcG9yYWwub21lcy5raXRjaGVu",
+            "X3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLkhlYXJ0YmVhdFRpbWVvdXRB",
+            "Y3Rpdml0eUgAEhIKCnRhc2tfcXVldWUYBCABKAkSTwoHaGVhZGVycxgFIAMo",
+            "CzI+LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0",
+            "eUFjdGlvbi5IZWFkZXJzRW50cnkSPAoZc2NoZWR1bGVfdG9fY2xvc2VfdGlt",
+            "ZW91dBgGIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI8ChlzY2hl",
+            "ZHVsZV90b19zdGFydF90aW1lb3V0GAcgASgLMhkuZ29vZ2xlLnByb3RvYnVm",
+            "LkR1cmF0aW9uEjkKFnN0YXJ0X3RvX2Nsb3NlX3RpbWVvdXQYCCABKAsyGS5n",
+            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SNAoRaGVhcnRiZWF0X3RpbWVvdXQY",
+            "CSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOQoMcmV0cnlfcG9s",
+            "aWN5GAogASgLMiMudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5SZXRyeVBvbGlj",
+            "eRIqCghpc19sb2NhbBgLIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgB",
+            "EkMKBnJlbW90ZRgMIAEoCzIxLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LlJlbW90ZUFjdGl2aXR5T3B0aW9uc0gBEkUKEGF3YWl0YWJsZV9jaG9pY2UY",
+            "DSABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFibGVD",
+            "aG9pY2USMgoIcHJpb3JpdHkYDyABKAsyIC50ZW1wb3JhbC5hcGkuY29tbW9u",
+            "LnYxLlByaW9yaXR5EhQKDGZhaXJuZXNzX2tleRgQIAEoCRIXCg9mYWlybmVz",
+            "c193ZWlnaHQYESABKAIaUwoPR2VuZXJpY0FjdGl2aXR5EgwKBHR5cGUYASAB",
+            "KAkSMgoJYXJndW1lbnRzGAIgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
+            "MS5QYXlsb2FkGpoBChFSZXNvdXJjZXNBY3Rpdml0eRIqCgdydW5fZm9yGAEg",
+            "ASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEhkKEWJ5dGVzX3RvX2Fs",
+            "bG9jYXRlGAIgASgEEiQKHGNwdV95aWVsZF9ldmVyeV9uX2l0ZXJhdGlvbnMY",
+            "AyABKA0SGAoQY3B1X3lpZWxkX2Zvcl9tcxgEIAEoDRpECg9QYXlsb2FkQWN0",
+            "aXZpdHkSGAoQYnl0ZXNfdG9fcmVjZWl2ZRgBIAEoBRIXCg9ieXRlc190b19y",
+            "ZXR1cm4YAiABKAUaVQoOQ2xpZW50QWN0aXZpdHkSQwoPY2xpZW50X3NlcXVl",
+            "bmNlGAEgASgLMioudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ2xpZW50",
+            "U2VxdWVuY2UaLwoWUmV0cnlhYmxlRXJyb3JBY3Rpdml0eRIVCg1mYWlsX2F0",
+            "dGVtcHRzGAEgASgFGpIBCg9UaW1lb3V0QWN0aXZpdHkSFQoNZmFpbF9hdHRl",
+            "bXB0cxgBIAEoBRIzChBzdWNjZXNzX2R1cmF0aW9uGAIgASgLMhkuZ29vZ2xl",
+            "LnByb3RvYnVmLkR1cmF0aW9uEjMKEGZhaWx1cmVfZHVyYXRpb24YAyABKAsy",
+            "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24amwEKGEhlYXJ0YmVhdFRpbWVv",
+            "dXRBY3Rpdml0eRIVCg1mYWlsX2F0dGVtcHRzGAEgASgFEjMKEHN1Y2Nlc3Nf",
+            "ZHVyYXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SMwoQ",
+            "ZmFpbHVyZV9kdXJhdGlvbhgDIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJh",
+            "dGlvbhpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIg",
+            "ASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4AUIPCg1h",
+            "Y3Rpdml0eV90eXBlQgoKCGxvY2FsaXR5Iq0KChpFeGVjdXRlQ2hpbGRXb3Jr",
+            "Zmxvd0FjdGlvbhIRCgluYW1lc3BhY2UYAiABKAkSEwoLd29ya2Zsb3dfaWQY",
+            "AyABKAkSFQoNd29ya2Zsb3dfdHlwZRgEIAEoCRISCgp0YXNrX3F1ZXVlGAUg",
+            "ASgJEi4KBWlucHV0GAYgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Q",
+            "YXlsb2FkEj0KGndvcmtmbG93X2V4ZWN1dGlvbl90aW1lb3V0GAcgASgLMhku",
+            "Z29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEjcKFHdvcmtmbG93X3J1bl90aW1l",
+            "b3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEjgKFXdvcmtm",
+            "bG93X3Rhc2tfdGltZW91dBgJIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJh",
+            "dGlvbhJKChNwYXJlbnRfY2xvc2VfcG9saWN5GAogASgOMi0udGVtcG9yYWwu",
+            "b21lcy5raXRjaGVuX3NpbmsuUGFyZW50Q2xvc2VQb2xpY3kSTgoYd29ya2Zs",
+            "b3dfaWRfcmV1c2VfcG9saWN5GAwgASgOMiwudGVtcG9yYWwuYXBpLmVudW1z",
+            "LnYxLldvcmtmbG93SWRSZXVzZVBvbGljeRI5CgxyZXRyeV9wb2xpY3kYDSAB",
+            "KAsyIy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlJldHJ5UG9saWN5EhUKDWNy",
+            "b25fc2NoZWR1bGUYDiABKAkSVAoHaGVhZGVycxgPIAMoCzJDLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9u",
+            "LkhlYWRlcnNFbnRyeRJOCgRtZW1vGBAgAygLMkAudGVtcG9yYWwub21lcy5r",
+            "aXRjaGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uTWVtb0Vu",
+            "dHJ5EmcKEXNlYXJjaF9hdHRyaWJ1dGVzGBEgAygLMkwudGVtcG9yYWwub21l",
+            "cy5raXRjaGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uU2Vh",
+            "cmNoQXR0cmlidXRlc0VudHJ5ElQKEWNhbmNlbGxhdGlvbl90eXBlGBIgASgO",
+            "MjkudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ2hpbGRXb3JrZmxvd0Nh",
+            "bmNlbGxhdGlvblR5cGUSRwoRdmVyc2lvbmluZ19pbnRlbnQYEyABKA4yLC50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50EkUK",
+            "EGF3YWl0YWJsZV9jaG9pY2UYFCABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNo",
+            "ZW5fc2luay5Bd2FpdGFibGVDaG9pY2UaTwoMSGVhZGVyc0VudHJ5EgsKA2tl",
+            "eRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24u",
+            "djEuUGF5bG9hZDoCOAEaTAoJTWVtb0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2",
+            "YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoC",
+            "OAEaWAoVU2VhcmNoQXR0cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2",
+            "YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoC",
+            "OAEiMAoSQXdhaXRXb3JrZmxvd1N0YXRlEgsKA2tleRgBIAEoCRINCgV2YWx1",
+            "ZRgCIAEoCSLfAgoQU2VuZFNpZ25hbEFjdGlvbhITCgt3b3JrZmxvd19pZBgB",
+            "IAEoCRIOCgZydW5faWQYAiABKAkSEwoLc2lnbmFsX25hbWUYAyABKAkSLQoE",
+            "YXJncxgEIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBJK",
+            "CgdoZWFkZXJzGAUgAygLMjkudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "U2VuZFNpZ25hbEFjdGlvbi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2No",
+            "b2ljZRgGIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0",
+            "YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZh",
+            "bHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4",
+            "ASI7ChRDYW5jZWxXb3JrZmxvd0FjdGlvbhITCgt3b3JrZmxvd19pZBgBIAEo",
+            "CRIOCgZydW5faWQYAiABKAkidgoUU2V0UGF0Y2hNYXJrZXJBY3Rpb24SEAoI",
+            "cGF0Y2hfaWQYASABKAkSEgoKZGVwcmVjYXRlZBgCIAEoCBI4Cgxpbm5lcl9h",
+            "Y3Rpb24YAyABKAsyIi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rp",
+            "b24i4wEKHFVwc2VydFNlYXJjaEF0dHJpYnV0ZXNBY3Rpb24SaQoRc2VhcmNo",
+            "X2F0dHJpYnV0ZXMYASADKAsyTi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5VcHNlcnRTZWFyY2hBdHRyaWJ1dGVzQWN0aW9uLlNlYXJjaEF0dHJpYnV0",
+            "ZXNFbnRyeRpYChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJ",
+            "Ei4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXls",
+            "b2FkOgI4ASJHChBVcHNlcnRNZW1vQWN0aW9uEjMKDXVwc2VydGVkX21lbW8Y",
+            "ASABKAsyHC50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLk1lbW8iSgoSUmV0dXJu",
+            "UmVzdWx0QWN0aW9uEjQKC3JldHVybl90aGlzGAEgASgLMh8udGVtcG9yYWwu",
+            "YXBpLmNvbW1vbi52MS5QYXlsb2FkIkYKEVJldHVybkVycm9yQWN0aW9uEjEK",
+            "B2ZhaWx1cmUYASABKAsyIC50ZW1wb3JhbC5hcGkuZmFpbHVyZS52MS5GYWls",
+            "dXJlIt4GChNDb250aW51ZUFzTmV3QWN0aW9uEhUKDXdvcmtmbG93X3R5cGUY",
+            "ASABKAkSEgoKdGFza19xdWV1ZRgCIAEoCRIyCglhcmd1bWVudHMYAyADKAsy",
+            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQSNwoUd29ya2Zsb3df",
+            "cnVuX3RpbWVvdXQYBCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24S",
+            "OAoVd29ya2Zsb3dfdGFza190aW1lb3V0GAUgASgLMhkuZ29vZ2xlLnByb3Rv",
+            "YnVmLkR1cmF0aW9uEkcKBG1lbW8YBiADKAsyOS50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5Db250aW51ZUFzTmV3QWN0aW9uLk1lbW9FbnRyeRJNCgdo",
+            "ZWFkZXJzGAcgAygLMjwudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29u",
+            "dGludWVBc05ld0FjdGlvbi5IZWFkZXJzRW50cnkSYAoRc2VhcmNoX2F0dHJp",
+            "YnV0ZXMYCCADKAsyRS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250",
+            "aW51ZUFzTmV3QWN0aW9uLlNlYXJjaEF0dHJpYnV0ZXNFbnRyeRI5CgxyZXRy",
+            "eV9wb2xpY3kYCSABKAsyIy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlJldHJ5",
+            "UG9saWN5EkcKEXZlcnNpb25pbmdfaW50ZW50GAogASgOMiwudGVtcG9yYWwu",
+            "b21lcy5raXRjaGVuX3NpbmsuVmVyc2lvbmluZ0ludGVudBpMCglNZW1vRW50",
+            "cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBp",
+            "LmNvbW1vbi52MS5QYXlsb2FkOgI4ARpPCgxIZWFkZXJzRW50cnkSCwoDa2V5",
+            "GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
+            "MS5QYXlsb2FkOgI4ARpYChVTZWFyY2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5",
+            "GAEgASgJEi4KBXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
+            "MS5QYXlsb2FkOgI4ASLRAQoVUmVtb3RlQWN0aXZpdHlPcHRpb25zEk8KEWNh",
+            "bmNlbGxhdGlvbl90eXBlGAEgASgOMjQudGVtcG9yYWwub21lcy5raXRjaGVu",
+            "X3NpbmsuQWN0aXZpdHlDYW5jZWxsYXRpb25UeXBlEh4KFmRvX25vdF9lYWdl",
+            "cmx5X2V4ZWN1dGUYAiABKAgSRwoRdmVyc2lvbmluZ19pbnRlbnQYAyABKA4y",
+            "LC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5WZXJzaW9uaW5nSW50ZW50",
+            "IqwCChVFeGVjdXRlTmV4dXNPcGVyYXRpb24SEAoIZW5kcG9pbnQYASABKAkS",
+            "EQoJb3BlcmF0aW9uGAIgASgJEg0KBWlucHV0GAMgASgJEk8KB2hlYWRlcnMY",
+            "BCADKAsyPi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlTmV4",
+            "dXNPcGVyYXRpb24uSGVhZGVyc0VudHJ5EkUKEGF3YWl0YWJsZV9jaG9pY2UY",
+            "BSABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFibGVD",
+            "aG9pY2USFwoPZXhwZWN0ZWRfb3V0cHV0GAYgASgJGi4KDEhlYWRlcnNFbnRy",
+            "eRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKqQBChFQYXJlbnRD",
+            "bG9zZVBvbGljeRIjCh9QQVJFTlRfQ0xPU0VfUE9MSUNZX1VOU1BFQ0lGSUVE",
+            "EAASIQodUEFSRU5UX0NMT1NFX1BPTElDWV9URVJNSU5BVEUQARIfChtQQVJF",
+            "TlRfQ0xPU0VfUE9MSUNZX0FCQU5ET04QAhImCiJQQVJFTlRfQ0xPU0VfUE9M",
+            "SUNZX1JFUVVFU1RfQ0FOQ0VMEAMqQAoQVmVyc2lvbmluZ0ludGVudBIPCgtV",
+            "TlNQRUNJRklFRBAAEg4KCkNPTVBBVElCTEUQARILCgdERUZBVUxUEAIqogEK",
+            "HUNoaWxkV29ya2Zsb3dDYW5jZWxsYXRpb25UeXBlEhQKEENISUxEX1dGX0FC",
+            "QU5ET04QABIXChNDSElMRF9XRl9UUllfQ0FOQ0VMEAESKAokQ0hJTERfV0Zf",
+            "V0FJVF9DQU5DRUxMQVRJT05fQ09NUExFVEVEEAISKAokQ0hJTERfV0ZfV0FJ",
+            "VF9DQU5DRUxMQVRJT05fUkVRVUVTVEVEEAMqWAoYQWN0aXZpdHlDYW5jZWxs",
+            "YXRpb25UeXBlEg4KClRSWV9DQU5DRUwQABIfChtXQUlUX0NBTkNFTExBVElP",
+            "Tl9DT01QTEVURUQQARILCgdBQkFORE9OEAJCQgoQaW8udGVtcG9yYWwub21l",
+            "c1ouZ2l0aHViLmNvbS90ZW1wb3JhbGlvL29tZXMvbG9hZGdlbi9raXRjaGVu",
+            "c2lua2IGcHJvdG8z"));
+>>>>>>> a378468 (parameterize success/failure durations for timeout activities)
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -280,8 +485,8 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity.Parser, new[]{ "BytesToReceive", "BytesToReturn" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity.Parser, new[]{ "ClientSequence" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity.Parser, new[]{ "FailAttempts" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity.Parser, new[]{ "FailAttempts" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity.Parser, new[]{ "FailAttempts" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity.Parser, new[]{ "FailAttempts", "SuccessDuration", "FailureDuration" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity.Parser, new[]{ "FailAttempts", "SuccessDuration", "FailureDuration" }, null, null, null, null),
             null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction), global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction.Parser, new[]{ "Namespace", "WorkflowId", "WorkflowType", "TaskQueue", "Input", "WorkflowExecutionTimeout", "WorkflowRunTimeout", "WorkflowTaskTimeout", "ParentClosePolicy", "WorkflowIdReusePolicy", "RetryPolicy", "CronSchedule", "Headers", "Memo", "SearchAttributes", "CancellationType", "VersioningIntent", "AwaitableChoice" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitWorkflowState), global::Temporal.Omes.KitchenSink.AwaitWorkflowState.Parser, new[]{ "Key", "Value" }, null, null, null, null),
@@ -623,7 +828,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -659,7 +868,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -839,7 +1052,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -858,7 +1075,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1119,7 +1340,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1153,7 +1378,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1407,7 +1636,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1440,7 +1673,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -1763,7 +2000,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -1814,7 +2055,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -2124,7 +2369,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2161,7 +2410,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -2462,7 +2715,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -2499,7 +2756,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -2800,7 +3061,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -2837,7 +3102,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3165,7 +3434,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3206,7 +3479,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3475,7 +3752,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3508,7 +3789,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3711,7 +3996,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3734,7 +4023,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -3901,7 +4194,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -3920,7 +4217,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4151,7 +4452,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4184,7 +4489,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -4395,7 +4704,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -4418,7 +4731,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5116,7 +5433,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5266,7 +5587,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -5765,7 +6090,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -5825,7 +6154,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -6069,7 +6402,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -6095,7 +6432,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -7065,7 +7406,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -7244,7 +7589,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -7596,7 +7945,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7619,7 +7972,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -7884,7 +8241,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -7918,7 +8279,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8133,7 +8498,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -8156,7 +8525,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8334,7 +8707,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -8356,7 +8733,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8537,7 +8918,11 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
@@ -8556,7 +8941,11 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
@@ -8574,8 +8963,6 @@ namespace Temporal.Omes.KitchenSink {
       /// <summary>
       /// Activity that runs too long for N attempts (causing timeout), then completes.
       /// Tests StartToCloseTimeout behavior with retries.
-      /// On failing attempts, the activity runs until context cancellation (timeout).
-      /// On success, it runs for duration &lt; StartToCloseTimeout (runs for 0.5x StartToClose timeout).
       /// </summary>
       [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
       public sealed partial class TimeoutActivity : pb::IMessage<TimeoutActivity>
@@ -8613,6 +9000,8 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public TimeoutActivity(TimeoutActivity other) : this() {
           failAttempts_ = other.failAttempts_;
+          successDuration_ = other.successDuration_ != null ? other.successDuration_.Clone() : null;
+          failureDuration_ = other.failureDuration_ != null ? other.failureDuration_.Clone() : null;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
 
@@ -8637,6 +9026,36 @@ namespace Temporal.Omes.KitchenSink {
           }
         }
 
+        /// <summary>Field number for the "success_duration" field.</summary>
+        public const int SuccessDurationFieldNumber = 2;
+        private global::Google.Protobuf.WellKnownTypes.Duration successDuration_;
+        /// <summary>
+        /// Duration to run on success, must be less than StartToClose timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration SuccessDuration {
+          get { return successDuration_; }
+          set {
+            successDuration_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "failure_duration" field.</summary>
+        public const int FailureDurationFieldNumber = 3;
+        private global::Google.Protobuf.WellKnownTypes.Duration failureDuration_;
+        /// <summary>
+        /// Duration to run on failure, must be more than StartToClose timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration FailureDuration {
+          get { return failureDuration_; }
+          set {
+            failureDuration_ = value;
+          }
+        }
+
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override bool Equals(object other) {
@@ -8653,6 +9072,8 @@ namespace Temporal.Omes.KitchenSink {
             return true;
           }
           if (FailAttempts != other.FailAttempts) return false;
+          if (!object.Equals(SuccessDuration, other.SuccessDuration)) return false;
+          if (!object.Equals(FailureDuration, other.FailureDuration)) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
 
@@ -8661,6 +9082,8 @@ namespace Temporal.Omes.KitchenSink {
         public override int GetHashCode() {
           int hash = 1;
           if (FailAttempts != 0) hash ^= FailAttempts.GetHashCode();
+          if (successDuration_ != null) hash ^= SuccessDuration.GetHashCode();
+          if (failureDuration_ != null) hash ^= FailureDuration.GetHashCode();
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
           }
@@ -8683,6 +9106,14 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(8);
             output.WriteInt32(FailAttempts);
           }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
           }
@@ -8697,6 +9128,14 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(8);
             output.WriteInt32(FailAttempts);
           }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
           }
@@ -8709,6 +9148,12 @@ namespace Temporal.Omes.KitchenSink {
           int size = 0;
           if (FailAttempts != 0) {
             size += 1 + pb::CodedOutputStream.ComputeInt32Size(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(FailureDuration);
           }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
@@ -8725,6 +9170,18 @@ namespace Temporal.Omes.KitchenSink {
           if (other.FailAttempts != 0) {
             FailAttempts = other.FailAttempts;
           }
+          if (other.successDuration_ != null) {
+            if (successDuration_ == null) {
+              SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            SuccessDuration.MergeFrom(other.SuccessDuration);
+          }
+          if (other.failureDuration_ != null) {
+            if (failureDuration_ == null) {
+              FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            FailureDuration.MergeFrom(other.FailureDuration);
+          }
           _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
         }
 
@@ -8736,12 +9193,30 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
               case 8: {
                 FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
                 break;
               }
             }
@@ -8755,12 +9230,30 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
               case 8: {
                 FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
                 break;
               }
             }
@@ -8773,7 +9266,6 @@ namespace Temporal.Omes.KitchenSink {
       /// <summary>
       /// Activity that skips heartbeats for N attempts (causing heartbeat timeout), then sends them.
       /// Tests HeartbeatTimeout behavior with retries.
-      /// Duration is derived from activity info's HeartbeatTimeout (runs for 2x heartbeat timeout).
       /// </summary>
       [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
       public sealed partial class HeartbeatTimeoutActivity : pb::IMessage<HeartbeatTimeoutActivity>
@@ -8811,6 +9303,8 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public HeartbeatTimeoutActivity(HeartbeatTimeoutActivity other) : this() {
           failAttempts_ = other.failAttempts_;
+          successDuration_ = other.successDuration_ != null ? other.successDuration_.Clone() : null;
+          failureDuration_ = other.failureDuration_ != null ? other.failureDuration_.Clone() : null;
           _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
         }
 
@@ -8835,6 +9329,36 @@ namespace Temporal.Omes.KitchenSink {
           }
         }
 
+        /// <summary>Field number for the "success_duration" field.</summary>
+        public const int SuccessDurationFieldNumber = 2;
+        private global::Google.Protobuf.WellKnownTypes.Duration successDuration_;
+        /// <summary>
+        /// Duration to run on success, must be less than HeartbeatTimeout timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration SuccessDuration {
+          get { return successDuration_; }
+          set {
+            successDuration_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "failure_duration" field.</summary>
+        public const int FailureDurationFieldNumber = 3;
+        private global::Google.Protobuf.WellKnownTypes.Duration failureDuration_;
+        /// <summary>
+        /// Duration to run on failure, must be more than HeartbeatTimeout timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration FailureDuration {
+          get { return failureDuration_; }
+          set {
+            failureDuration_ = value;
+          }
+        }
+
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public override bool Equals(object other) {
@@ -8851,6 +9375,8 @@ namespace Temporal.Omes.KitchenSink {
             return true;
           }
           if (FailAttempts != other.FailAttempts) return false;
+          if (!object.Equals(SuccessDuration, other.SuccessDuration)) return false;
+          if (!object.Equals(FailureDuration, other.FailureDuration)) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
 
@@ -8859,6 +9385,8 @@ namespace Temporal.Omes.KitchenSink {
         public override int GetHashCode() {
           int hash = 1;
           if (FailAttempts != 0) hash ^= FailAttempts.GetHashCode();
+          if (successDuration_ != null) hash ^= SuccessDuration.GetHashCode();
+          if (failureDuration_ != null) hash ^= FailureDuration.GetHashCode();
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
           }
@@ -8881,6 +9409,14 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(8);
             output.WriteInt32(FailAttempts);
           }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
           }
@@ -8895,6 +9431,14 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(8);
             output.WriteInt32(FailAttempts);
           }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
           }
@@ -8907,6 +9451,12 @@ namespace Temporal.Omes.KitchenSink {
           int size = 0;
           if (FailAttempts != 0) {
             size += 1 + pb::CodedOutputStream.ComputeInt32Size(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(FailureDuration);
           }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
@@ -8923,6 +9473,18 @@ namespace Temporal.Omes.KitchenSink {
           if (other.FailAttempts != 0) {
             FailAttempts = other.FailAttempts;
           }
+          if (other.successDuration_ != null) {
+            if (successDuration_ == null) {
+              SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            SuccessDuration.MergeFrom(other.SuccessDuration);
+          }
+          if (other.failureDuration_ != null) {
+            if (failureDuration_ == null) {
+              FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            FailureDuration.MergeFrom(other.FailureDuration);
+          }
           _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
         }
 
@@ -8934,12 +9496,30 @@ namespace Temporal.Omes.KitchenSink {
         #else
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
                 break;
               case 8: {
                 FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
                 break;
               }
             }
@@ -8953,12 +9533,30 @@ namespace Temporal.Omes.KitchenSink {
         void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
           uint tag;
           while ((tag = input.ReadTag()) != 0) {
-            switch(tag) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
               default:
                 _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
                 break;
               case 8: {
                 FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
                 break;
               }
             }
@@ -9623,7 +10221,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -9725,7 +10327,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10011,7 +10617,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10034,7 +10644,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10347,7 +10961,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10389,7 +11007,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10615,7 +11237,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10638,7 +11264,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -10891,7 +11521,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -10921,7 +11555,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11096,7 +11734,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11115,7 +11757,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11294,7 +11940,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11316,7 +11966,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11493,7 +12147,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11515,7 +12173,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -11692,7 +12354,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -11714,7 +12380,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -12148,7 +12818,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -12212,7 +12886,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -12497,7 +13175,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -12524,7 +13206,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
@@ -12858,7 +13544,11 @@ namespace Temporal.Omes.KitchenSink {
     #else
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
@@ -12900,7 +13590,11 @@ namespace Temporal.Omes.KitchenSink {
     void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
       uint tag;
       while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;

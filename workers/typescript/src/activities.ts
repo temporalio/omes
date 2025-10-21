@@ -9,6 +9,7 @@ import IClientActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IClien
 import IRetryableErrorActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IRetryableErrorActivity;
 import ITimeoutActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.ITimeoutActivity;
 import IHeartbeatTimeoutActivity = temporal.omes.kitchen_sink.ExecuteActivityAction.IHeartbeatTimeoutActivity;
+import { durationConvert } from './proto_help';
 
 export { sleep as delay } from '@temporalio/activity';
 
@@ -50,39 +51,30 @@ export async function retryableError(config: IRetryableErrorActivity): Promise<v
 
 export async function timeout(config: ITimeoutActivity): Promise<void> {
   const info = activityInfo();
-  let durationMs = info.startToCloseTimeoutMs;
+  let duration = config.successDuration;
   if (info.attempt <= config.failAttempts!) {
-    // Failure case: run for double StartToCloseTimeout
-    durationMs *= 2;
-  } else {
-    // Success case: run for half StartToCloseTimeout
-    durationMs /= 2;
+    // Failure case: run failure duration (exceeds activity timeout)
+    duration = config.failureDuration;
   }
 
   // Sleep for failure/success timeout duration.
   // In failure case, this will throw a cancellation error.
-  await sleep(durationMs);
+  await sleep(durationConvert(duration));
 }
 
 export async function heartbeatActivity(config: IHeartbeatTimeoutActivity): Promise<void> {
   const info = activityInfo();
   const shouldSendHeartbeats = info.attempt > (config.failAttempts || 0);
-
-  // Run activity for 2x the heartbeat timeout
-  // Ensures we miss enough heartbeat intervals (if not sending heartbeats).
-  const durationMs = info.heartbeatTimeoutMs! * 2;
-
-  let elapsed = 0;
-  // Heartbeat interval is half of heartbeat timeout
-  const heartbeatIntervalMs = info.heartbeatTimeoutMs! / 2;
-  while (elapsed < durationMs) {
-    const sleepTime = Math.min(heartbeatIntervalMs, durationMs - elapsed);
-    await sleep(sleepTime);
-    elapsed += sleepTime;
-    if (shouldSendHeartbeats && elapsed < durationMs) {
-      heartbeat();
-    }
+  let duration = config.successDuration;
+  if (!shouldSendHeartbeats) {
+    // Failure case: run failure duration (exceeds heartbeat timeout)
+    duration = config.failureDuration;
   }
+  // Sleep for failure/success timeout duration.
+  // In failure case, this will throw a cancellation error.
+  await sleep(durationConvert(duration));
+  // On success, heartbeat
+  heartbeat();
 }
 
 export const createActivities = (client: Client, errOnUnimplemented = false) => ({

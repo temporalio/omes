@@ -536,10 +536,9 @@ func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_Time
 		return ctx.Err()
 	}
 
-	// Success case: run for a safe duration (well under StartToCloseTimeout)
-	duration := info.StartToCloseTimeout / 2
 	select {
-	case <-time.After(duration):
+	// Success case: run for configured duration
+	case <-time.After(config.SuccessDuration.AsDuration()):
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -550,28 +549,15 @@ func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_Time
 func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_HeartbeatTimeoutActivity) error {
 	info := activity.GetInfo(ctx)
 	shouldSendHeartbeats := info.Attempt > config.FailAttempts
-
-	// Run activity for 2x the heartbeat timeout
-	// Ensures we miss enough heartbeat intervals (if not sending heartbeats).
-	activityDeadline := time.After(info.HeartbeatTimeout * 2)
-
-	heartbeatTicker := time.NewTicker(info.HeartbeatTimeout / 2)
-	defer heartbeatTicker.Stop()
-	for {
-		select {
-		// Finished running activity
-		case <-activityDeadline:
-			return nil
-		// Potentially send heartbeats
-		case <-heartbeatTicker.C:
-			if shouldSendHeartbeats {
-				activity.RecordHeartbeat(ctx)
-			}
-		// Activity canceled (via heartbeat timeout)
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+	// If we should not send heartbeats, run the activity until it is cancelled via heartbeat timeout.
+	if !shouldSendHeartbeats {
+		<-ctx.Done()
+		return ctx.Err()
 	}
+	// Otherwise, run it for the configured success duration and heartbeat.
+	<-time.After(config.SuccessDuration.AsDuration())
+	activity.RecordHeartbeat(ctx)
+	return nil
 }
 
 func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {

@@ -180,25 +180,43 @@ func RetryableErrorActivity(failAttempts int32, factory ActionFactory[ExecuteAct
 	return factory(activity)
 }
 
-func TimeoutActivity(failAttempts int32, factory ActionFactory[ExecuteActivityAction]) *Action {
+func TimeoutActivity(failAttempts int32, successDuration time.Duration, failureDuration time.Duration, startToCloseTimeout time.Duration, maxAttempts int32, initialInterval time.Duration, backoffCoefficient float64) *Action {
+	if successDuration >= startToCloseTimeout {
+		panic(fmt.Sprintf("successDuration (%v) must be < startToCloseTimeout (%v)", successDuration, startToCloseTimeout))
+	}
+	if failureDuration <= startToCloseTimeout {
+		panic(fmt.Sprintf("failureDuration (%v) must be > startToCloseTimeout (%v)", failureDuration, startToCloseTimeout))
+	}
 	activity := &ExecuteActivityAction{
 		ActivityType: &ExecuteActivityAction_Timeout{
 			Timeout: &ExecuteActivityAction_TimeoutActivity{
-				FailAttempts: failAttempts,
+				FailAttempts:    failAttempts,
+				SuccessDuration: &durationpb.Duration{Seconds: int64(successDuration.Seconds())},
+				FailureDuration: &durationpb.Duration{Seconds: int64(failureDuration.Seconds())},
 			},
 		},
 	}
+	factory := RemoteActivityWithRetry(startToCloseTimeout, maxAttempts, initialInterval, backoffCoefficient)
 	return factory(activity)
 }
 
-func HeartbeatActivity(failAttempts int32, factory ActionFactory[ExecuteActivityAction]) *Action {
+func HeartbeatActivity(failAttempts int32, successDuration time.Duration, failureDuration time.Duration, startToCloseTimeout, heartbeatTimeout time.Duration, maxAttempts int32, initialInterval time.Duration, backoffCoefficient float64) *Action {
+	if successDuration >= heartbeatTimeout {
+		panic(fmt.Sprintf("successDuration (%v) must be < heartbeatTimeout (%v)", successDuration, heartbeatTimeout))
+	}
+	if failureDuration <= heartbeatTimeout {
+		panic(fmt.Sprintf("failureDuration (%v) must be > heartbeatTimeout (%v)", failureDuration, heartbeatTimeout))
+	}
 	activity := &ExecuteActivityAction{
 		ActivityType: &ExecuteActivityAction_Heartbeat{
 			Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
-				FailAttempts: failAttempts,
+				FailAttempts:    failAttempts,
+				SuccessDuration: &durationpb.Duration{Seconds: int64(successDuration.Seconds())},
+				FailureDuration: &durationpb.Duration{Seconds: int64(failureDuration.Seconds())},
 			},
 		},
 	}
+	factory := RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout, maxAttempts, initialInterval, backoffCoefficient)
 	return factory(activity)
 }
 

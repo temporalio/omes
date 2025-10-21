@@ -474,21 +474,16 @@ public class KitchenSinkWorkflow
     public static async Task Timeout(ExecuteActivityAction.Types.TimeoutActivity config)
     {
         var info = ActivityExecutionContext.Current.Info;
-        var durationMs = info.StartToCloseTimeout!.Value.TotalMilliseconds;
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds activity timeout)
         if (info.Attempt <= config.FailAttempts)
         {
-            // Failure case: run for double StartToCloseTimeout
-            durationMs *= 2;
-        }
-        else
-        {
-            // Success case: run for half StartToCloseTimeout
-            durationMs /= 2;
+            duration = config.FailureDuration;
         }
 
         // Sleep for failure/success timeout duration.
         // In failure case, this will throw a TaskCancelledException.
-        await Task.Delay(TimeSpan.FromMilliseconds(durationMs), ActivityExecutionContext.Current.CancellationToken);
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
     }
 
     [Activity("heartbeat")]
@@ -496,25 +491,17 @@ public class KitchenSinkWorkflow
     {
         var info = ActivityExecutionContext.Current.Info;
         var shouldSendHeartbeats = info.Attempt > config.FailAttempts;
-
-        // Run activity for 2x the heartbeat timeout
-        // Ensures we miss enough heartbeat intervals (if not sending heartbeats).
-        var duration = TimeSpan.FromTicks(info.HeartbeatTimeout!.Value.Ticks * 2);
-
-        // Unified loop with conditional heartbeat sending
-        var elapsed = TimeSpan.Zero;
-        // Heartbeat interval is half of heartbeat timeout
-        var heartbeatInterval = TimeSpan.FromTicks(info.HeartbeatTimeout!.Value.Ticks / 2);
-        while (elapsed < duration)
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds heartbeat timeout)
+        if (!shouldSendHeartbeats)
         {
-            var sleepTime = elapsed + heartbeatInterval > duration ? duration - elapsed : heartbeatInterval;
-            await Task.Delay(sleepTime, ActivityExecutionContext.Current.CancellationToken);
-            elapsed += sleepTime;
-            if (shouldSendHeartbeats && elapsed < duration)
-            {
-                ActivityExecutionContext.Current.Heartbeat();
-            }
+            duration = config.FailureDuration;
         }
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
+        // If successful, heartbeat
+        ActivityExecutionContext.Current.Heartbeat();
     }
 }
 

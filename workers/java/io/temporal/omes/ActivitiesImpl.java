@@ -57,18 +57,15 @@ public class ActivitiesImpl implements Activities {
   public void timeout(io.temporal.omes.KitchenSink.ExecuteActivityAction.TimeoutActivity config)
       throws InterruptedException {
     var activityInfo = Activity.getExecutionContext().getInfo();
-    var durationMs = activityInfo.getStartToCloseTimeout().toMillis();
+    var duration = config.getSuccessDuration();
     if (activityInfo.getAttempt() <= config.getFailAttempts()) {
-      // Failure case: run for double StartToCloseTimeout
-      durationMs *= 2;
-    } else {
-      // Success case: run for half StartToCloseTimeout
-      durationMs /= 2;
+      // Failure case: run failure duration (exceeds activity timeout)
+      duration = config.getFailureDuration();
     }
 
     // Sleep for failure/success timeout duration.
     // In failure case, this will throw an InterruptedException.
-    Thread.sleep(durationMs);
+    delay(duration);
   }
 
   @Override
@@ -77,22 +74,15 @@ public class ActivitiesImpl implements Activities {
       throws InterruptedException {
     var activityInfo = Activity.getExecutionContext().getInfo();
     boolean shouldSendHeartbeats = activityInfo.getAttempt() > config.getFailAttempts();
-
-    // Run activity for 2x the heartbeat timeout
-    // Ensures we miss enough heartbeat intervals (if not sending heartbeats).
-    long durationMs = activityInfo.getHeartbeatTimeout().toMillis() * 2;
-
-    // Unified loop with conditional heartbeat sending
-    long elapsed = 0;
-    // Heartbeat interval is half of heartbeat timeout
-    long heartbeatInterval = activityInfo.getHeartbeatTimeout().toMillis() / 2;
-    while (elapsed < durationMs) {
-      long sleepTime = Math.min(heartbeatInterval, durationMs - elapsed);
-      Thread.sleep(sleepTime);
-      elapsed += sleepTime;
-      if (shouldSendHeartbeats && elapsed < durationMs) {
-        Activity.getExecutionContext().heartbeat(null);
-      }
+    var duration = config.getSuccessDuration();
+    if (!shouldSendHeartbeats) {
+      // Failure case: run failure duration (exceeds heartbeat timeout)
+      duration = config.getFailureDuration();
     }
+    // Sleep for failure/success timeout duration.
+    // In failure case, this will throw an InterruptedException.
+    delay(duration);
+    // On success, heartbeat
+    Activity.getExecutionContext().heartbeat(null);
   }
 }
