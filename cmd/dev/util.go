@@ -19,14 +19,14 @@ var (
 		"dotnet", "go", "java", "node", "protoc", "python", "rust",
 	}
 	toolDependencies = map[string][]string{
-		"python":     {"python", "uv", "poe"},
+		"python":     {"python3", "uv", "poe"},
 		"typescript": {"node"},
 		"protoc":     {"protoc-gen-go"},
 	}
 	toolVersionCommands = map[string][]string{
 		"go":            {"go", "version"},
 		"java":          {"java", "-version"},
-		"python":        {"python", "--version"},
+		"python3":       {"python3", "--version"},
 		"node":          {"node", "--version"},
 		"dotnet":        {"dotnet", "--version"},
 		"cargo":         {"cargo", "--version"},
