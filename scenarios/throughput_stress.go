@@ -287,6 +287,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var sb strings.Builder
 	sb.WriteString("[Scenario completion summary] ")
+	sb.WriteString(fmt.Sprintf("Run ID: %s, ", info.RunID))
 	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
 	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
 	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
