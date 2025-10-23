@@ -59,7 +59,6 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 	clientActivities := kitchensink.ClientActivities{
 		Client: client,
 	}
-
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
 	if err != nil {
@@ -87,7 +86,6 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
 			w.RegisterActivity(&ebbFlowActivities)
-
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()

@@ -508,7 +508,7 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				SearchAttributes: map[string]*common.Payload{
 					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain")},
-						Data:     fmt.Appendf(nil, "%q", t.config.ScenarioRunID), // quoted to be valid JSON string
+						Data:     []byte(fmt.Sprintf("%q", t.config.ScenarioRunID)), // quoted to be valid JSON string
 					},
 				},
 			},

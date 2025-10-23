@@ -46,7 +46,7 @@ func init() {
 						return err
 					}
 					// Add children
-					for i := range children {
+					for i := 0; i < children; i++ {
 						actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
 							Variant: &kitchensink.Action_ExecChildWorkflow{
 								ExecChildWorkflow: &kitchensink.ExecuteChildWorkflowAction{
@@ -59,7 +59,7 @@ func init() {
 					}
 
 					// Add activities
-					for range activities {
+					for i := 0; i < activities; i++ {
 						actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
 							Variant: &kitchensink.Action_ExecActivity{
 								ExecActivity: &kitchensink.ExecuteActivityAction{

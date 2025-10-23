@@ -50,7 +50,7 @@ func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, 
 	if config.Count == nil {
 		return nil, fmt.Errorf("SleepActivityConfig: Count field is required")
 	}
-	if len(config.Groups) == 0 {
+	if config.Groups == nil || len(config.Groups) == 0 {
 		return nil, fmt.Errorf("SleepActivityConfig: Groups field is required and must not be empty")
 	}
 	for groupID, groupConfig := range config.Groups {

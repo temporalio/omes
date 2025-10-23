@@ -3,7 +3,6 @@ package workers
 import (
 	"encoding/json"
 	"fmt"
-	"maps"
 	"reflect"
 	"strings"
 	"testing"
@@ -93,7 +92,7 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 	var expectedDump strings.Builder
 	maxLines := max(len(actualEvents), len(expectedEvents))
 
-	for i := range maxLines {
+	for i := 0; i < maxLines; i++ {
 		lineNumber := i + 1
 
 		var expectedEvent event
@@ -243,7 +242,9 @@ func extractFields(event *historypb.HistoryEvent) map[string]any {
 	for k, v := range raw {
 		if strings.HasSuffix(k, "Attributes") {
 			if inner, ok := v.(map[string]any); ok {
-				maps.Copy(result, inner)
+				for ik, iv := range inner {
+					result[ik] = iv
+				}
 			}
 		} else if k != "eventId" && k != "eventType" {
 			result[k] = v

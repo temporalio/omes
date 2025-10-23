@@ -468,7 +468,7 @@ func TestDistributionField(t *testing.T) {
 			assert.Equal(t, expected.distType, df.distType)
 
 			// Test all samples return the same value regardless of seed.
-			for i := range 10 {
+			for i := 0; i < 10; i++ {
 				rng := rand.New(rand.NewSource(testSeed + int64(i)))
 				v, ok := df.Sample(rng)
 				assert.True(t, ok)
