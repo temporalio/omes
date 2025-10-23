@@ -58,5 +58,3 @@ replace (
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20250118005052-7111e232d0b9
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20250118005608-efab77dea8fd
 )
-
-replace github.com/nexus-rpc/sdk-go => /Users/alex.stanfield/repos/nexus-rpc/sdk-go
