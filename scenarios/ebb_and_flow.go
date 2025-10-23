@@ -315,7 +315,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
-	options.SearchAttributes = map[string]interface{}{
+	options.SearchAttributes = map[string]any{
 		EbbAndFlowScenarioIdSearchAttribute: e.id,
 	}
 
@@ -368,7 +368,7 @@ func calculateBacklogTarget(
 ) int64 {
 	// Compute elapsed time since mode switch.
 	elapsed := time.Since(cycleStartTime)
-	progress := math.Min(1.0, elapsed.Seconds()/phaseTime.Seconds())
+	progress := min(1.0, elapsed.Seconds()/phaseTime.Seconds())
 
 	// Oscillation curve: cosine easing
 	var osc float64

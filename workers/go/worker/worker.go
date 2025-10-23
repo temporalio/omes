@@ -8,6 +8,7 @@ import (
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
+	"github.com/temporalio/omes/workers/go/scheduledworkflows"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -59,6 +60,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 	clientActivities := kitchensink.ClientActivities{
 		Client: client,
 	}
+
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
 	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
 	if err != nil {
@@ -86,6 +88,15 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
 			w.RegisterActivity(&ebbFlowActivities)
+
+			// Register scheduled workflows
+			w.RegisterWorkflowWithOptions(scheduledworkflows.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
+			w.RegisterWorkflowWithOptions(scheduledworkflows.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+			w.RegisterWorkflowWithOptions(scheduledworkflows.SchedulerOrchestrationWorkflow, workflow.RegisterOptions{Name: "SchedulerOrchestrationWorkflow"})
+			// Register scheduler activities
+			schedulerActivities := &scheduledworkflows.SchedulerActivities{}
+			w.RegisterActivity(schedulerActivities)
+
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()

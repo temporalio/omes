@@ -22,11 +22,11 @@ func (h latencyHeap) Len() int           { return len(h) }
 func (h latencyHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h latencyHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
-func (h *latencyHeap) Push(x interface{}) {
+func (h *latencyHeap) Push(x any) {
 	*h = append(*h, x.(float64))
 }
 
-func (h *latencyHeap) Pop() interface{} {
+func (h *latencyHeap) Pop() any {
 	old := *h
 	n := len(old)
 	x := old[n-1]
@@ -217,12 +217,7 @@ func calculatePercentile(sortedValues []float64, percentile float64) float64 {
 	if len(sortedValues) == 0 {
 		return 0
 	}
-	if percentile < 0 {
-		percentile = 0
-	}
-	if percentile > 1 {
-		percentile = 1
-	}
+	percentile = max(0, min(1, percentile))
 
 	index := percentile * float64(len(sortedValues)-1)
 	lower := int(math.Floor(index))
@@ -308,9 +303,7 @@ func (ft *FairnessTracker) identifyTopViolators(
 	})
 
 	// Return top 5
-	if len(violators) > 5 {
-		violators = violators[:5]
-	}
+	violators = violators[:min(5, len(violators))]
 
 	return violators
 }

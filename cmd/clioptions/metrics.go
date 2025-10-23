@@ -3,6 +3,7 @@ package clioptions
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"sync"
@@ -30,9 +31,7 @@ func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler 
 	for i, l := range h.labels {
 		mergedTags[l] = h.values[i]
 	}
-	for l, v := range tags {
-		mergedTags[l] = v
-	}
+	maps.Copy(mergedTags, tags)
 
 	var labels, values []string
 	for l, v := range mergedTags {
@@ -152,7 +151,7 @@ type MetricsOptions struct {
 type Metrics struct {
 	server   *http.Server
 	registry *prometheus.Registry
-	cache    map[string]interface{}
+	cache    map[string]any
 	mutex    sync.Mutex
 }
 
@@ -168,7 +167,7 @@ func (m *MetricsOptions) MustCreateMetrics(logger *zap.SugaredLogger) *Metrics {
 	return &Metrics{
 		server:   server,
 		registry: registry,
-		cache:    make(map[string]interface{}),
+		cache:    make(map[string]any),
 	}
 }
 

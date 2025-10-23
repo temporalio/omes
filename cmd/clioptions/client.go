@@ -170,7 +170,7 @@ func (c *ClientOptions) ToFlags() (flags []string) {
 
 type PassThroughPayloadConverter struct{}
 
-func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payload, error) {
+func (p *PassThroughPayloadConverter) ToPayload(value any) (*common.Payload, error) {
 	if valuePayload, ok := value.(*common.Payload); ok {
 		asBytes, err := proto.Marshal(valuePayload)
 		if err != nil {
@@ -187,7 +187,7 @@ func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payl
 	return nil, nil
 }
 
-func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, valuePtr interface{}) error {
+func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, valuePtr any) error {
 	innerPayload := &common.Payload{}
 	err := proto.Unmarshal(payload.GetData(), innerPayload)
 	if err != nil {

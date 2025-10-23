@@ -30,7 +30,7 @@ func writeGitHubEnv(name string, value string) (retErr error) {
 		}
 	}()
 
-	msg := []byte(fmt.Sprintf("%s=%s\n", name, value))
+	msg := fmt.Appendf(nil, "%s=%s\n", name, value)
 	if _, err := f.Write(msg); err != nil {
 		retErr = fmt.Errorf(errFileCmdFmt, err)
 		return

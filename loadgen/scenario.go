@@ -3,6 +3,7 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -86,9 +87,7 @@ func MustRegisterScenario(scenario Scenario) {
 // GetScenarios gets a copy of registered scenarios
 func GetScenarios() map[string]*Scenario {
 	ret := make(map[string]*Scenario, len(registeredScenarios))
-	for k, v := range registeredScenarios {
-		ret[k] = v
-	}
+	maps.Copy(ret, registeredScenarios)
 	return ret
 }
 
@@ -163,6 +162,13 @@ func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Dur
 		panic(err)
 	}
 	return d
+}
+func (s *ScenarioInfo) ScenarioOptionString(name string, defaultValue string) string {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	return v
 }
 
 const DefaultIterations = 10
@@ -384,7 +390,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
 // returning an error if the execution fails.
-func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, valuePtr interface{}, args ...interface{}) error {
+func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow any, valuePtr any, args ...any) error {
 	r.Logger.Debugf("Executing workflow %s with info: %v", workflow, options)
 	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {

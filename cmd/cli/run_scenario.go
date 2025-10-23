@@ -110,8 +110,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		key, value := pieces[0], pieces[1]
 
 		// If the value starts with '@', read the file and use its contents as the value.
-		if strings.HasPrefix(value, "@") {
-			filePath := strings.TrimPrefix(value, "@")
+		if after, ok := strings.CutPrefix(value, "@"); ok {
+			filePath := after
 			data, err := os.ReadFile(filePath)
 			if err != nil {
 				return fmt.Errorf("failed to read file %s: %w", filePath, err)
