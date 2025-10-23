@@ -147,41 +147,55 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	})
 
 	// Handle initial set.
+	// Store return value/error from initial actions instead of returning immediately
+	var initialRetOrErr *ReturnOrErr
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err, "actionSet", actionSet)
-				return ret, err
+				workflow.GetLogger(ctx).Info("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
+				// If there's an error, return immediately without waiting for signals
+				if err != nil {
+					return ret, err
+				}
+				// Otherwise, store the return value to use later
+				initialRetOrErr = &ReturnOrErr{ret, err}
 			}
 		}
 	}
 
 	workflow.GetLogger(ctx).Info("Entering main wait loop")
 	var retOrErr ReturnOrErr
-	for {
-		retOrErrChan.Receive(ctx, &retOrErr)
-		workflow.GetLogger(ctx).Info("Finishing workflow", "retOrErr", retOrErr)
-		// return retOrErr.retme, retOrErr.err
-		if retOrErr.retme != nil || retOrErr.err != nil {
-			break
+	// If we got a return value from initial actions, use it
+	if initialRetOrErr != nil {
+		retOrErr = *initialRetOrErr
+	} else {
+		// Otherwise wait for return/error from signals
+		for {
+			retOrErrChan.Receive(ctx, retOrErr)
+			workflow.GetLogger(ctx).Info("Received return/error from signal", "retOrErr", retOrErr)
+			if retOrErr.retme != nil || retOrErr.err != nil {
+				break
+			}
 		}
 	}
 
+	// If there's an error, return immediately without waiting for signals
 	if retOrErr.err != nil {
 		return retOrErr.retme, retOrErr.err
 	}
 
-	deadline := workflow.GetInfo(ctx).WorkflowExecutionTimeout - (10 * time.Second)
-
 	// Wait for all signals to arrive or an error indicating early termination
 	var missingSignals []int32
-	ok, err := workflow.AwaitWithTimeout(ctx, deadline, func() bool {
-		missingSignals = state.validateAllSignalsReceived(ctx)
-		if len(missingSignals) > 0 {
-			return false
-		}
-		return true
-	})
+	ok, err := workflow.AwaitWithTimeout(
+		ctx,
+		workflow.GetInfo(ctx).WorkflowExecutionTimeout-(10*time.Second),
+		func() bool {
+			missingSignals = state.validateAllSignalsReceived(ctx)
+			if len(missingSignals) > 0 {
+				return false
+			}
+			return true
+		})
 	if err != nil || !ok {
 		if !ok {
 			err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
