@@ -49,7 +49,7 @@ type KSWorkflowState struct {
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
-	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
+	workflow.GetLogger(ctx).Info("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
 		workflowState:       &kitchensink.WorkflowState{},
@@ -84,6 +84,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
+		workflow.GetLogger(ctx).Info("Error setting query handler", queryErr)
 		return nil, queryErr
 	}
 
@@ -104,6 +105,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			},
 		})
 	if updateErr != nil {
+		workflow.GetLogger(ctx).Info("Error setting update handler", updateErr)
 		return nil, updateErr
 	}
 
@@ -148,18 +150,46 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Debug("Finishing early", "ret", ret, "err", err)
+				workflow.GetLogger(ctx).Info("Finishing early", "ret", ret, "err", err, "actionSet", actionSet)
 				return ret, err
 			}
 		}
 	}
 
+	workflow.GetLogger(ctx).Info("Entering main wait loop")
+	var retOrErr ReturnOrErr
 	for {
-		var retOrErr ReturnOrErr
 		retOrErrChan.Receive(ctx, &retOrErr)
 		workflow.GetLogger(ctx).Info("Finishing workflow", "retOrErr", retOrErr)
+		// return retOrErr.retme, retOrErr.err
+		if retOrErr.retme != nil || retOrErr.err != nil {
+			break
+		}
+	}
+
+	if retOrErr.err != nil {
 		return retOrErr.retme, retOrErr.err
 	}
+
+	deadline := workflow.GetInfo(ctx).WorkflowExecutionTimeout - (10 * time.Second)
+
+	// Wait for all signals to arrive or an error indicating early termination
+	var missingSignals []int32
+	ok, err := workflow.AwaitWithTimeout(ctx, deadline, func() bool {
+		missingSignals = state.validateAllSignalsReceived(ctx)
+		if len(missingSignals) > 0 {
+			return false
+		}
+		return true
+	})
+	if err != nil || !ok {
+		if !ok {
+			err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
+		}
+		return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+	}
+
+	return retOrErr.retme, nil
 }
 
 func (ws *KSWorkflowState) handleActionSet(
@@ -196,16 +226,19 @@ func (ws *KSWorkflowState) handleActionSet(
 	return
 }
 
-func (ws *KSWorkflowState) validateAllSignalsReceived() error {
+// validateAllSignalsReceived checks if all expected signals have been received
+// and returns the list of missing signal IDs if any are missing and
+func (ws *KSWorkflowState) validateAllSignalsReceived(ctx workflow.Context) []int32 {
+	workflow.GetLogger(ctx).Info("Validating all signals received", "expectedCount", ws.expectedSignalCount, "expectedIDs", ws.expectedSignalIDs, "receivedIDs", ws.receivedSignalIDs)
 	if len(ws.expectedSignalIDs) > 0 {
 		missingSignals := make([]int32, 0, len(ws.expectedSignalIDs))
 		for signalID := range ws.expectedSignalIDs {
 			missingSignals = append(missingSignals, signalID)
 		}
-		return temporal.NewApplicationError(
-			fmt.Sprintf("workflow completing with %d missing signal(s): %v", len(missingSignals), missingSignals),
-			"MissingSignals")
+		workflow.GetLogger(ctx).Info("Missing expected signals", "missingSignalIDs", missingSignals)
+		return missingSignals
 	}
+	workflow.GetLogger(ctx).Info("All expected signals received")
 	return nil
 }
 
@@ -214,21 +247,11 @@ func (ws *KSWorkflowState) handleAction(
 	action *kitchensink.Action,
 ) (*common.Payload, error) {
 	if rr := action.GetReturnResult(); rr != nil {
-		// Check if all expected signals have been received
-		if err := ws.validateAllSignalsReceived(); err != nil {
-			return nil, err
-		}
 		return rr.ReturnThis, nil
 	} else if re := action.GetReturnError(); re != nil {
-		// Check if all expected signals have been received before returning error
-		if err := ws.validateAllSignalsReceived(); err != nil {
-			return nil, err
-		}
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
-		// Create new workflow input preserving signal deduplication state
-		newInput := ws.createContinueAsNewInput(can.GetArguments()[0])
-		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", newInput)
+		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
 		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)
