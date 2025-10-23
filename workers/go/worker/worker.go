@@ -92,7 +92,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			// Register scheduled workflows
 			w.RegisterWorkflowWithOptions(scheduledworkflows.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 			w.RegisterWorkflowWithOptions(scheduledworkflows.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
-			w.RegisterWorkflowWithOptions(scheduledworkflows.SchedulerOrchestrationWorkflow, workflow.RegisterOptions{Name: "SchedulerOrchestrationWorkflow"})
+			w.RegisterWorkflowWithOptions(scheduledworkflows.CleanUpSchedulesWorkflow, workflow.RegisterOptions{Name: "CleanUpSchedulesWorkflow"})
 			// Register scheduler activities
 			schedulerActivities := &scheduledworkflows.SchedulerActivities{}
 			w.RegisterActivity(schedulerActivities)

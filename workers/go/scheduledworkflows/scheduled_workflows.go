@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"time"
 
+	"github.com/temporalio/omes/scenarios"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
@@ -48,115 +49,22 @@ func getSleepDuration(runID string) time.Duration {
 
 var schedulerActivityStub = &SchedulerActivities{}
 
-type SchedulerOrchestrationInput struct {
-	RunID                 string
-	Iteration             int
-	WaitTimeBeforeCleanup time.Duration
-}
-
-type SchedulerOrchestrationResult struct {
-	SchedulesDeleted int
-	TotalDuration    time.Duration
-}
-
-// Signals for orchestration workflow
-const (
-	ScheduleIDsSignal = "schedule-ids"
-	DeleteSignal      = "delete-schedules"
-)
-
-type ScheduleIDsSignalData struct {
-	ScheduleIDs []string
-	StartTime   time.Time
-}
-
-func SchedulerOrchestrationWorkflow(ctx workflow.Context, input SchedulerOrchestrationInput) (SchedulerOrchestrationResult, error) {
+func CleanUpSchedulesWorkflow(ctx workflow.Context, input scenarios.CleanUpScheduleInput) error {
 	logger := workflow.GetLogger(ctx)
-	startTime := workflow.Now(ctx)
 
-	logger.Info("Starting scheduler orchestration workflow",
-		"runID", input.RunID,
-		"iteration", input.Iteration,
-		"waitTimeBeforeCleanup", input.WaitTimeBeforeCleanup)
+	logger.Debug("Starting cleanup workflow for schedule",
+		"scheduleID", input.ScheduleID,
+		"deleteAfter", input.DeleteAfter)
 
-	var scheduleIDs []string
-	var scheduleStartTime time.Time
-	var deleteRequested bool
-
-	// Set up signal handlers
-	scheduleIDsChannel := workflow.GetSignalChannel(ctx, ScheduleIDsSignal)
-	deleteChannel := workflow.GetSignalChannel(ctx, DeleteSignal)
-
-	// Set up 30-minute timeout timer
-	timeoutTimer := workflow.NewTimer(ctx, 30*time.Minute)
-
-	result := SchedulerOrchestrationResult{}
-
-	// Wait for signals or timeout
-	for !deleteRequested {
-		selector := workflow.NewSelector(ctx)
-
-		// Handle schedule IDs signal
-		selector.AddReceive(scheduleIDsChannel, func(c workflow.ReceiveChannel, more bool) {
-			var signalData ScheduleIDsSignalData
-			c.Receive(ctx, &signalData)
-			logger.Info("Received schedule IDs", "count", len(signalData.ScheduleIDs), "startTime", signalData.StartTime)
-			scheduleIDs = append(scheduleIDs, signalData.ScheduleIDs...)
-			// Store the start time from the first signal
-			if scheduleStartTime.IsZero() {
-				scheduleStartTime = signalData.StartTime
-			}
-		})
-
-		// Handle delete signal
-		selector.AddReceive(deleteChannel, func(c workflow.ReceiveChannel, more bool) {
-			var signal interface{}
-			c.Receive(ctx, &signal)
-			logger.Info("Received delete signal, will cleanup after wait time", "totalSchedules", len(scheduleIDs))
-			deleteRequested = true
-		})
-
-		// Handle 30-minute timeout
-		selector.AddFuture(timeoutTimer, func(f workflow.Future) {
-			logger.Warn("30-minute timeout reached, forcing cleanup", "totalSchedules", len(scheduleIDs))
-			deleteRequested = true
-		})
-
-		selector.Select(ctx)
+	// Wait for the specified duration
+	if input.DeleteAfter > 0 {
+		logger.Debug("Waiting before cleanup", "waitDuration", input.DeleteAfter)
+		workflow.Sleep(ctx, input.DeleteAfter)
 	}
 
-	// Wait until start time + WaitTimeBeforeCleanup before deleting schedules
-	if !scheduleStartTime.IsZero() && input.WaitTimeBeforeCleanup > 0 {
-		cleanupTime := scheduleStartTime.Add(input.WaitTimeBeforeCleanup)
-		currentTime := workflow.Now(ctx)
-		if cleanupTime.After(currentTime) {
-			waitDuration := cleanupTime.Sub(currentTime)
-			logger.Info("Waiting before cleanup", "waitDuration", waitDuration, "cleanupTime", cleanupTime)
-			workflow.Sleep(ctx, waitDuration)
-		}
-	}
+	// Delete the schedule
+	logger.Debug("Deleting schedule", "scheduleID", input.ScheduleID)
 
-	// Delete all schedules from signals (schedules auto-expire via EndAt)
-	if len(scheduleIDs) > 0 {
-		logger.Info("Deleting schedules", "count", len(scheduleIDs))
-		deletedCount, err := deleteSchedules(ctx, scheduleIDs)
-		if err != nil {
-			logger.Warn("Some schedule deletions failed", "error", err)
-		}
-		result.SchedulesDeleted = deletedCount
-	} else {
-		logger.Info("No schedules to delete")
-	}
-
-	result.TotalDuration = workflow.Now(ctx).Sub(startTime)
-	logger.Info("Scheduler orchestration completed",
-		"totalDuration", result.TotalDuration,
-		"schedulesDeleted", result.SchedulesDeleted)
-
-	return result, nil
-}
-
-func deleteSchedules(ctx workflow.Context, scheduleIDs []string) (int, error) {
 	activityOptions := workflow.ActivityOptions{
 		StartToCloseTimeout: 30 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
@@ -168,22 +76,12 @@ func deleteSchedules(ctx workflow.Context, scheduleIDs []string) (int, error) {
 	}
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 
-	// Start all activities concurrently
-	futures := make([]workflow.Future, len(scheduleIDs))
-	for i, scheduleID := range scheduleIDs {
-		futures[i] = workflow.ExecuteActivity(activityCtx, schedulerActivityStub.DeleteScheduleActivity, scheduleID)
+	err := workflow.ExecuteActivity(activityCtx, schedulerActivityStub.DeleteScheduleActivity, input.ScheduleID).Get(ctx, nil)
+	if err != nil {
+		logger.Error("Failed to delete schedule", "scheduleID", input.ScheduleID, "error", err)
+		return err
 	}
 
-	// Wait for all activities to complete and count successes
-	deletedCount := 0
-	for i, future := range futures {
-		err := future.Get(activityCtx, nil)
-		if err != nil {
-			workflow.GetLogger(ctx).Warn("Delete schedule activity failed", "scheduleID", scheduleIDs[i], "error", err)
-		} else {
-			deletedCount++
-		}
-	}
-
-	return deletedCount, nil
+	logger.Debug("Successfully deleted schedule", "scheduleID", input.ScheduleID)
+	return nil
 }

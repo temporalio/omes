@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -42,21 +42,9 @@ func init() {
 	})
 }
 
-// Types for orchestration workflow
-type SchedulerOrchestrationInput struct {
-	RunID                 string
-	Iteration             int
-	WaitTimeBeforeCleanup time.Duration
-}
-
-type SchedulerOrchestrationResult struct {
-	SchedulesDeleted int
-	TotalDuration    time.Duration
-}
-
-type ScheduleIDsSignalData struct {
-	ScheduleIDs []string
-	StartTime   time.Time
+type CleanUpScheduleInput struct {
+	ScheduleID  string
+	DeleteAfter time.Duration
 }
 
 type schedulerExecutorConfig struct {
@@ -98,9 +86,9 @@ const (
 )
 
 const (
-	DefaultScheduleCreationPerIteration = 5
-	DefaultScheduleReadsPerCreation     = 1
-	DefaultScheduleUpdatesPerCreation   = 1
+	DefaultScheduleCreationPerIteration = 10
+	DefaultScheduleReadsPerCreation     = 3
+	DefaultScheduleUpdatesPerCreation   = 3
 	DefaultPayloadSize                  = 1024
 	DefaultCronExpression               = "* * * * * *"
 	DefaultScheduledWorkflowType        = NoopScheduledWorkflowType
@@ -160,90 +148,75 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 
 	logger := run.Logger
 	client := run.Client
-	workflowOptions := run.DefaultStartWorkflowOptions()
-	workflowOptions.ID = fmt.Sprintf("scheduler-orchestration-%s-%d", run.RunID, run.Iteration)
-	workflowRun, err := run.Client.ExecuteWorkflow(ctx, workflowOptions, "SchedulerOrchestrationWorkflow",
-		SchedulerOrchestrationInput{
-			RunID:                 run.RunID,
-			Iteration:             run.Iteration,
-			WaitTimeBeforeCleanup: s.config.WaitTimeBeforeCleanup,
-		})
-	if err != nil {
-		logger.Error("Failed to start orchestration workflow", "error", err)
-		return err
-	}
 
-	g, gctx := errgroup.WithContext(ctx)
+	var wg sync.WaitGroup
 	for i := range s.config.ScheduleCreationPerIteration {
 		sc := ScheduleState{
 			ScheduleID: fmt.Sprintf("sched-%s-%d-%d", run.RunID, run.Iteration, i),
 		}
-		g.Go(func() error {
+		wg.Go(func() {
 			ticker := time.NewTicker(s.config.OperationInterval)
 			defer ticker.Stop()
 
-			scheduleStartTime := time.Now()
-			if err := s.createSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
+			sc, err := s.createSchedule(ctx, client, sc.ScheduleID, logger)
+			if err != nil {
 				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
-				return err
+				return
 			}
 			<-ticker.C // Wait before next operation
 
-			signalData := ScheduleIDsSignalData{
-				ScheduleIDs: []string{sc.ScheduleID},
-				StartTime:   scheduleStartTime,
-			}
+			// Start cleanup workflow for this schedule
+			cleanupWorkflowOptions := run.DefaultStartWorkflowOptions()
+			cleanupWorkflowOptions.ID = fmt.Sprintf("cleanup-%s", sc.ScheduleID)
 
-			err := run.Client.SignalWorkflow(gctx, workflowOptions.ID, "", "schedule-ids", signalData)
+			wf, err := client.ExecuteWorkflow(ctx, cleanupWorkflowOptions, "CleanUpSchedulesWorkflow",
+				CleanUpScheduleInput{
+					ScheduleID:  sc.ScheduleID,
+					DeleteAfter: sc.DeleteAfter,
+				})
 			if err != nil {
-				logger.Error("Failed to signal schedule IDs", "error", err)
-				return err
+				logger.Error("Failed to start cleanup workflow", "scheduleID", sc.ScheduleID, "error", err)
+				return
 			}
 			<-ticker.C // Wait before read operations
 
 			for range s.config.ScheduleReadsPerCreation {
-				if err := s.describeSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
+				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					logger.Error("Failed to describe schedule", "scheduleID", sc.ScheduleID, "error", err)
-					return err
+					return
 				}
 				<-ticker.C // Wait between read operations
 			}
 
 			for range s.config.ScheduleUpdatesPerCreation {
-				if err := s.updateSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
+				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
-					return err
+					return
 				}
 				<-ticker.C // Wait between update operations
 			}
-			return nil
+			if err := wf.Get(ctx, nil); err != nil {
+				logger.Error("Failed to get workflow result", "error", err)
+				return
+			}
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
 
-	// Signal the workflow to start deletion
-	err = run.Client.SignalWorkflow(ctx, workflowOptions.ID, "", "delete-schedules", nil)
-	if err != nil {
-		logger.Error("Failed to signal deletion", "error", err)
-		return err
-	}
-
-	// Wait for workflow completion
-	var result SchedulerOrchestrationResult
-	err = workflowRun.Get(ctx, &result)
-	logger.Info("Scheduler execution completed via orchestration workflow",
-		"schedulesDeleted", result.SchedulesDeleted,
-		"totalDuration", result.TotalDuration)
+	// Wait for all goroutines to complete
+	wg.Wait()
 	return nil
 }
 
 type ScheduleState struct {
-	ScheduleID string
+	ScheduleID  string
+	DeleteAfter time.Duration
 }
 
-func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
+func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) (ScheduleState, error) {
+	sc := ScheduleState{
+		ScheduleID:  scheduleID,
+		DeleteAfter: s.config.SchedulerDurationPerIteration,
+	}
 	workflowID := fmt.Sprintf("scheduled-%s", scheduleID)
 	taskQueue := fmt.Sprintf("scheduler-test-%s", scheduleID)
 	action := &client.ScheduleWorkflowAction{
@@ -253,8 +226,7 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		TaskQueue: taskQueue,
 	}
 
-	// Set schedule end time based on scheduler duration per iteration
-	endTime := time.Now().Add(s.config.SchedulerDurationPerIteration)
+	endTime := time.Now().Add(sc.DeleteAfter).Add(2 * time.Second)
 
 	options := client.ScheduleOptions{
 		ID: scheduleID,
@@ -263,15 +235,13 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 			EndAt:           endTime,
 		},
 		Action:  action,
-		Overlap: randSelectOverlapPolicy(s.config.OverlapPolicy, logger),
+		Overlap: pickOverlap(s.config.OverlapPolicy, logger),
 	}
-
-	logger.Info("Creating schedule with end time", "scheduleID", scheduleID, "endTime", endTime)
 	_, err := c.ScheduleClient().Create(ctx, options)
-	return err
+	return sc, err
 }
 
-func randSelectOverlapPolicy(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogger) enums.ScheduleOverlapPolicy {
+func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogger) enums.ScheduleOverlapPolicy {
 	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(policies))))
 	if err != nil {
 		logger.Error("Failed to select overlap policy", "error", err)
@@ -281,18 +251,9 @@ func randSelectOverlapPolicy(policies []enums.ScheduleOverlapPolicy, logger *zap
 }
 
 func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
-	startTime := time.Now()
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
 	_, err := handle.Describe(ctx)
-	duration := time.Since(startTime)
-
-	if err != nil {
-		logger.Warn("Describe schedule failed", "scheduleID", scheduleID, "duration", duration, "error", err)
-		return err
-	}
-
-	logger.Debug("Describe schedule succeeded", "scheduleID", scheduleID, "duration", duration)
-	return nil
+	return err
 }
 
 func (s *SchedulerExecutor) updateSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
@@ -310,6 +271,7 @@ func (s *SchedulerExecutor) updateSchedule(ctx context.Context, c client.Client,
 			Schedule: &schedule,
 		}, nil
 	}
+
 	return handle.Update(ctx, client.ScheduleUpdateOptions{
 		DoUpdate: updateFn,
 	})
@@ -338,7 +300,6 @@ func parseOverlapPolicy(policyStr string) []enums.ScheduleOverlapPolicy {
 		case "terminate_other":
 			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER)
 		case "all":
-			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER)
 			return []enums.ScheduleOverlapPolicy{
 				enums.SCHEDULE_OVERLAP_POLICY_SKIP,
 				enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ONE,
@@ -349,7 +310,7 @@ func parseOverlapPolicy(policyStr string) []enums.ScheduleOverlapPolicy {
 		}
 	}
 	if len(l) == 0 {
-		return []enums.ScheduleOverlapPolicy{enums.SCHEDULE_OVERLAP_POLICY_SKIP}
+		return []enums.ScheduleOverlapPolicy{enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL}
 	}
 	return l
 }
