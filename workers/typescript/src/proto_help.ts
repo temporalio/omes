@@ -3,6 +3,12 @@ import { google } from './protos/root';
 import IDuration = google.protobuf.IDuration;
 import Long from 'long';
 
+export function durationConvertMaybeUndefined(d: IDuration | null | undefined): number | undefined {
+  if (!d) {
+    return undefined;
+  }
+  return durationConvert(d);
+}
 export function durationConvert(d: IDuration | null | undefined): number {
   if (!d) {
     return 0;
