@@ -87,9 +87,12 @@ func SchedulerOrchestrationWorkflow(ctx workflow.Context, input SchedulerOrchest
 	scheduleIDsChannel := workflow.GetSignalChannel(ctx, ScheduleIDsSignal)
 	deleteChannel := workflow.GetSignalChannel(ctx, DeleteSignal)
 
+	// Set up 30-minute timeout timer
+	timeoutTimer := workflow.NewTimer(ctx, 30*time.Minute)
+
 	result := SchedulerOrchestrationResult{}
 
-	// Wait for signals
+	// Wait for signals or timeout
 	for !deleteRequested {
 		selector := workflow.NewSelector(ctx)
 
@@ -113,6 +116,12 @@ func SchedulerOrchestrationWorkflow(ctx workflow.Context, input SchedulerOrchest
 			deleteRequested = true
 		})
 
+		// Handle 30-minute timeout
+		selector.AddFuture(timeoutTimer, func(f workflow.Future) {
+			logger.Warn("30-minute timeout reached, forcing cleanup", "totalSchedules", len(scheduleIDs))
+			deleteRequested = true
+		})
+
 		selector.Select(ctx)
 	}
 
@@ -127,7 +136,7 @@ func SchedulerOrchestrationWorkflow(ctx workflow.Context, input SchedulerOrchest
 		}
 	}
 
-	// Delete all schedules
+	// Delete all schedules from signals (schedules auto-expire via EndAt)
 	if len(scheduleIDs) > 0 {
 		logger.Info("Deleting schedules", "count", len(scheduleIDs))
 		deletedCount, err := deleteSchedules(ctx, scheduleIDs)

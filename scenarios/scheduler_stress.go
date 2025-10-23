@@ -18,14 +18,16 @@ import (
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf("Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently. "+
-			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), "+
+			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), '%s' (default: %v), "+
 			"'%s' (default: '%s'), '%s' (default: '%s', options: skip,buffer_one,buffer_all,cancel_other,terminate_other,all), "+
 			"'%s' (default: '%s', options: %s,%s)",
 			ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration,
 			ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation,
+			ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation,
 			SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration,
 			PayloadSizeFlag, DefaultPayloadSize,
 			WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup,
+			OperationIntervalFlag, DefaultOperationInterval,
 			CronExpressionFlag, DefaultCronExpression,
 			OverlapPolicyFlag, DefaultOverlapPolicy,
 			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType),
@@ -60,9 +62,11 @@ type ScheduleIDsSignalData struct {
 type schedulerExecutorConfig struct {
 	ScheduleCreationPerIteration  int
 	ScheduleReadsPerCreation      int
+	ScheduleUpdatesPerCreation    int
 	SchedulerDurationPerIteration time.Duration
 	PayloadSize                   int
 	WaitTimeBeforeCleanup         time.Duration
+	OperationInterval             time.Duration
 	CronExpression                string
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
@@ -83,9 +87,11 @@ const (
 	// Parameter name constants
 	ScheduleCreationPerIterationFlag  = "schedule-creation-per-iteration"
 	ScheduleReadsPerCreationFlag      = "schedule-reads-per-creation"
+	ScheduleUpdatesPerCreationFlag    = "schedule-updates-per-creation"
 	SchedulerDurationPerIterationFlag = "scheduler-duration-per-iteration"
 	PayloadSizeFlag                   = "payload-size"
 	WaitTimeBeforeCleanupFlag         = "wait-time-before-cleanup"
+	OperationIntervalFlag             = "operation-interval"
 	CronExpressionFlag                = "cron-expression"
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
@@ -94,6 +100,7 @@ const (
 const (
 	DefaultScheduleCreationPerIteration = 5
 	DefaultScheduleReadsPerCreation     = 1
+	DefaultScheduleUpdatesPerCreation   = 1
 	DefaultPayloadSize                  = 1024
 	DefaultCronExpression               = "* * * * * *"
 	DefaultScheduledWorkflowType        = NoopScheduledWorkflowType
@@ -104,6 +111,7 @@ const (
 var (
 	DefaultSchedulerDurationPerIteration = time.Minute
 	DefaultWaitTimeBeforeCleanup         = 5 * time.Second
+	DefaultOperationInterval             = 50 * time.Millisecond
 )
 
 // Configure implements the loadgen.Configurable interface
@@ -111,9 +119,11 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
 		ScheduleCreationPerIteration:  info.ScenarioOptionInt(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration),
 		ScheduleReadsPerCreation:      info.ScenarioOptionInt(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation),
+		ScheduleUpdatesPerCreation:    info.ScenarioOptionInt(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation),
 		SchedulerDurationPerIteration: info.ScenarioOptionDuration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration),
 		PayloadSize:                   info.ScenarioOptionInt(PayloadSizeFlag, DefaultPayloadSize),
 		WaitTimeBeforeCleanup:         info.ScenarioOptionDuration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup),
+		OperationInterval:             info.ScenarioOptionDuration(OperationIntervalFlag, DefaultOperationInterval),
 		CronExpression:                info.ScenarioOptionString(CronExpressionFlag, DefaultCronExpression),
 		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
 		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
@@ -124,6 +134,9 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.ScheduleReadsPerCreation < 0 {
 		return fmt.Errorf("schedule-reads-per-creation cannot be negative, got %d", config.ScheduleReadsPerCreation)
 	}
+	if config.ScheduleUpdatesPerCreation < 0 {
+		return fmt.Errorf("schedule-updates-per-creation cannot be negative, got %d", config.ScheduleUpdatesPerCreation)
+	}
 	if config.PayloadSize <= 0 {
 		return fmt.Errorf("payload-size must be positive, got %d", config.PayloadSize)
 	}
@@ -132,6 +145,9 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 	if config.WaitTimeBeforeCleanup < 0 {
 		return fmt.Errorf("wait-time-before-cleanup cannot be negative, got %v", config.WaitTimeBeforeCleanup)
+	}
+	if config.OperationInterval < 0 {
+		return fmt.Errorf("operation-interval cannot be negative, got %v", config.OperationInterval)
 	}
 	s.config = config
 	return nil
@@ -163,11 +179,16 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			ScheduleID: fmt.Sprintf("sched-%s-%d-%d", run.RunID, run.Iteration, i),
 		}
 		g.Go(func() error {
+			ticker := time.NewTicker(s.config.OperationInterval)
+			defer ticker.Stop()
+
 			scheduleStartTime := time.Now()
 			if err := s.createSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
 				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
 				return err
 			}
+			<-ticker.C // Wait before next operation
+
 			signalData := ScheduleIDsSignalData{
 				ScheduleIDs: []string{sc.ScheduleID},
 				StartTime:   scheduleStartTime,
@@ -178,15 +199,22 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 				logger.Error("Failed to signal schedule IDs", "error", err)
 				return err
 			}
+			<-ticker.C // Wait before read operations
+
 			for range s.config.ScheduleReadsPerCreation {
 				if err := s.describeSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
 					logger.Error("Failed to describe schedule", "scheduleID", sc.ScheduleID, "error", err)
 					return err
 				}
+				<-ticker.C // Wait between read operations
 			}
-			if err := s.updateSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
-				logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
-				return err
+
+			for range s.config.ScheduleUpdatesPerCreation {
+				if err := s.updateSchedule(gctx, client, sc.ScheduleID, logger); err != nil {
+					logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
+					return err
+				}
+				<-ticker.C // Wait between update operations
 			}
 			return nil
 		})
@@ -224,14 +252,21 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		Args:      []any{make([]byte, s.config.PayloadSize)},
 		TaskQueue: taskQueue,
 	}
+
+	// Set schedule end time based on scheduler duration per iteration
+	endTime := time.Now().Add(s.config.SchedulerDurationPerIteration)
+
 	options := client.ScheduleOptions{
 		ID: scheduleID,
 		Spec: client.ScheduleSpec{
 			CronExpressions: []string{s.config.CronExpression},
+			EndAt:           endTime,
 		},
 		Action:  action,
 		Overlap: randSelectOverlapPolicy(s.config.OverlapPolicy, logger),
 	}
+
+	logger.Info("Creating schedule with end time", "scheduleID", scheduleID, "endTime", endTime)
 	_, err := c.ScheduleClient().Create(ctx, options)
 	return err
 }
