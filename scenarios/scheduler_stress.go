@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -116,6 +118,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
 		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
 	}
+
 	if config.ScheduleCreationPerIteration <= 0 {
 		return fmt.Errorf("schedule-creation-per-iteration must be positive, got %d", config.ScheduleCreationPerIteration)
 	}
@@ -157,33 +160,17 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		wg.Go(func() {
 			ticker := time.NewTicker(s.config.OperationInterval)
 			defer ticker.Stop()
+			start := time.Now()
 
 			sc, err := s.createSchedule(ctx, client, sc.ScheduleID, logger)
 			if err != nil {
 				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
 				return
 			}
-			<-ticker.C // Wait before next operation
-
-			// Start cleanup workflow for this schedule
-			cleanupWorkflowOptions := run.DefaultStartWorkflowOptions()
-			cleanupWorkflowOptions.ID = fmt.Sprintf("cleanup-%s", sc.ScheduleID)
-
-			wf, err := client.ExecuteWorkflow(ctx, cleanupWorkflowOptions, "CleanUpSchedulesWorkflow",
-				CleanUpScheduleInput{
-					ScheduleID:  sc.ScheduleID,
-					DeleteAfter: sc.DeleteAfter,
-				})
-			if err != nil {
-				logger.Error("Failed to start cleanup workflow", "scheduleID", sc.ScheduleID, "error", err)
-				return
-			}
-			<-ticker.C // Wait before read operations
-
+			<-ticker.C
 			for range s.config.ScheduleReadsPerCreation {
 				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					logger.Error("Failed to describe schedule", "scheduleID", sc.ScheduleID, "error", err)
-					return
 				}
 				<-ticker.C // Wait between read operations
 			}
@@ -191,18 +178,20 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			for range s.config.ScheduleUpdatesPerCreation {
 				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
-					return
 				}
 				<-ticker.C // Wait between update operations
 			}
-			if err := wf.Get(ctx, nil); err != nil {
-				logger.Error("Failed to get workflow result", "error", err)
-				return
+			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
+			select {
+			case <-time.After(dur):
+				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+					logger.Error("Failed to delete schedule", "scheduleID", sc.ScheduleID, "error", err)
+				}
+			case <-ctx.Done():
+				logger.Info("Context canceled")
 			}
 		})
 	}
-
-	// Wait for all goroutines to complete
 	wg.Wait()
 	return nil
 }
@@ -226,13 +215,20 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		TaskQueue: taskQueue,
 	}
 
-	endTime := time.Now().Add(sc.DeleteAfter).Add(2 * time.Second)
+	dur := (time.Duration(int64(int64(s.config.ScheduleReadsPerCreation)+int64(s.config.ScheduleUpdatesPerCreation))) *
+		s.config.OperationInterval) +
+		(2 * time.Second)
+
+	//Add some time to give the executor enough time to delete the schedule
+	endTime := time.Now().Add(sc.DeleteAfter).Add(dur)
 
 	options := client.ScheduleOptions{
 		ID: scheduleID,
 		Spec: client.ScheduleSpec{
 			CronExpressions: []string{s.config.CronExpression},
-			EndAt:           endTime,
+			// defining an end at ensures all schedules will be removed
+			// regardless of errors from this executor
+			EndAt: endTime,
 		},
 		Action:  action,
 		Overlap: pickOverlap(s.config.OverlapPolicy, logger),
@@ -253,6 +249,14 @@ func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogg
 func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
 	_, err := handle.Describe(ctx)
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during describe operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
 	return err
 }
 
@@ -272,14 +276,32 @@ func (s *SchedulerExecutor) updateSchedule(ctx context.Context, c client.Client,
 		}, nil
 	}
 
-	return handle.Update(ctx, client.ScheduleUpdateOptions{
+	err := handle.Update(ctx, client.ScheduleUpdateOptions{
 		DoUpdate: updateFn,
 	})
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during update operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
+	return err
 }
 
 func (s *SchedulerExecutor) deleteSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
-	return handle.Delete(ctx)
+	err := handle.Delete(ctx)
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during delete operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
+	return err
 }
 
 // parseOverlapPolicy converts string overlap policy to enum
