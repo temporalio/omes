@@ -155,8 +155,9 @@ func DefaultLocalActivity(activity *ExecuteActivityAction) *Action {
 		IsLocal: &emptypb.Empty{},
 	}
 	activity.RetryPolicy = &common.RetryPolicy{
-		InitialInterval: durationpb.New(10 * time.Millisecond),
-		MaximumAttempts: 10,
+		InitialInterval:    durationpb.New(10 * time.Millisecond),
+		MaximumAttempts:    10,
+		BackoffCoefficient: 2.0,
 	}
 	return &Action{
 		Variant: &Action_ExecActivity{
