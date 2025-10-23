@@ -19,7 +19,7 @@ func NewZapAdapter(zapLogger *zap.Logger) *ZapAdapter {
 	}
 }
 
-func (log *ZapAdapter) fields(keyvals []any) []zap.Field {
+func (log *ZapAdapter) fields(keyvals []interface{}) []zap.Field {
 	if len(keyvals)%2 != 0 {
 		return []zap.Field{zap.Error(fmt.Errorf("odd number of keyvals pairs: %v", keyvals))}
 	}
@@ -36,22 +36,22 @@ func (log *ZapAdapter) fields(keyvals []any) []zap.Field {
 	return fields
 }
 
-func (log *ZapAdapter) Debug(msg string, keyvals ...any) {
+func (log *ZapAdapter) Debug(msg string, keyvals ...interface{}) {
 	log.zl.Debug(msg, log.fields(keyvals)...)
 }
 
-func (log *ZapAdapter) Info(msg string, keyvals ...any) {
+func (log *ZapAdapter) Info(msg string, keyvals ...interface{}) {
 	log.zl.Info(msg, log.fields(keyvals)...)
 }
 
-func (log *ZapAdapter) Warn(msg string, keyvals ...any) {
+func (log *ZapAdapter) Warn(msg string, keyvals ...interface{}) {
 	log.zl.Warn(msg, log.fields(keyvals)...)
 }
 
-func (log *ZapAdapter) Error(msg string, keyvals ...any) {
+func (log *ZapAdapter) Error(msg string, keyvals ...interface{}) {
 	log.zl.Error(msg, log.fields(keyvals)...)
 }
 
-func (log *ZapAdapter) With(keyvals ...any) log.Logger {
+func (log *ZapAdapter) With(keyvals ...interface{}) log.Logger {
 	return &ZapAdapter{zl: log.zl.With(log.fields(keyvals)...)}
 }
