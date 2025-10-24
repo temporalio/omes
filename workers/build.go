@@ -146,7 +146,7 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		if err != nil {
 			return nil, fmt.Errorf("failed reading package.json: %w", err)
 		}
-		for _, line := range strings.Split(string(b), "\n") {
+		for line := range strings.SplitSeq(string(b), "\n") {
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "\"temporalio:\"") || strings.HasPrefix(line, "\"@temporalio/") {
 				split := strings.Split(line, "\"")
