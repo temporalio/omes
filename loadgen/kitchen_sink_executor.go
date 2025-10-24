@@ -8,6 +8,8 @@ import (
 )
 
 type KitchenSinkExecutor struct {
+	GenericExecutor
+
 	TestInput *kitchensink.TestInput
 
 	// Called once on start
@@ -18,29 +20,28 @@ type KitchenSinkExecutor struct {
 	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
 }
 
-func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
+func (k *KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.PrepareTestInput != nil {
 		if err := k.PrepareTestInput(ctx, info, k.TestInput); err != nil {
 			return err
 		}
 	}
-	// Create generic executor and run it
-	ge := &GenericExecutor{
-		Execute: func(ctx context.Context, run *Run) error {
-			options := run.DefaultKitchenSinkWorkflowOptions()
-			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
-			if !ok {
-				panic("failed to clone test input")
+
+	k.GenericExecutor.Execute = func(ctx context.Context, run *Run) error {
+		options := run.DefaultKitchenSinkWorkflowOptions()
+		testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
+		if !ok {
+			panic("failed to clone test input")
+		}
+		options.Params = testInputClone
+		if k.UpdateWorkflowOptions != nil {
+			err := k.UpdateWorkflowOptions(ctx, run, &options)
+			if err != nil {
+				return err
 			}
-			options.Params = testInputClone
-			if k.UpdateWorkflowOptions != nil {
-				err := k.UpdateWorkflowOptions(ctx, run, &options)
-				if err != nil {
-					return err
-				}
-			}
-			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
-		},
+		}
+		return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 	}
-	return ge.Run(ctx, info)
+
+	return k.GenericExecutor.Run(ctx, info)
 }

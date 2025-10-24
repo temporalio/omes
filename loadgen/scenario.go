@@ -31,6 +31,17 @@ type Executor interface {
 	Run(context.Context, ScenarioInfo) error
 }
 
+type ExecutorState struct {
+	// StartedAt is the timestamp when the executor run started.
+	StartedAt time.Time `json:"startedAt"`
+	// CompletedIterations tracks the number of successfully completed iterations.
+	CompletedIterations int `json:"completedIterations"`
+	// LastCompletedAt is the timestamp of the last completed workflow.
+	LastCompletedAt time.Time `json:"lastCompletedAt"`
+	// IterationErrors tracks errors encountered during iterations (for debugging/resumption)
+	IterationErrors []string `json:"iterationErrors,omitempty"`
+}
+
 // Optional interface that can be implemented by an [Executor] to allow it to be resumable.
 type Resumable interface {
 	// LoadState loads a snapshot into the executor's internal state.
@@ -52,6 +63,12 @@ type Configurable interface {
 	// Call this method if you want to ensure that all required configuration parameters
 	// are present and valid without actually running the executor.
 	Configure(ScenarioInfo) error
+}
+
+// Verifyable is an optional interface that executors can implement to perform verifications after Run() completes.
+type Verifyable interface {
+	// VerifyRun performs post-execution verifications and returns a list of errors.
+	VerifyRun(context.Context, ScenarioInfo) []error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
@@ -210,6 +227,9 @@ type RunConfiguration struct {
 	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
 	// Default is false.
 	IgnoreAlreadyStarted bool
+	// ContinueOnError, if set, will continue running iterations even after an iteration fails
+	// (after all retries are exhausted). Default is false.
+	ContinueOnError bool
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
 	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.

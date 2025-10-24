@@ -9,7 +9,7 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Each iteration executes a single workflow with a noop activity.",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.KitchenSinkExecutor{
+			return &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{
