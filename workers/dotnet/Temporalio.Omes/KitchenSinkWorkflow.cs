@@ -102,16 +102,20 @@ public class KitchenSinkWorkflow
 
         // If actions are concurrent, run them all, returning early if any action wishes to return
         var tasks = new List<Task>();
+
+        // Local async function to process each action
+        async Task ProcessActionAsync(Temporal.Omes.KitchenSink.Action action)
+        {
+            var result = await HandleActionAsync(action);
+            if (result != null)
+            {
+                returnMe = result;
+            }
+        }
+
         foreach (var action in actionSet.Actions)
         {
-            async void Action()
-            {
-                returnMe = await HandleActionAsync(action);
-            }
-
-            var task = new Task(Action);
-            task.Start();
-            tasks.Add(task);
+            tasks.Add(ProcessActionAsync(action));
         }
 
         var waitReturnSet = Workflow.WaitConditionAsync(() => returnMe != null);
@@ -154,20 +158,25 @@ public class KitchenSinkWorkflow
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
-            var childType = execChild.WorkflowType ?? "kitchenSink";
+            var childType = string.IsNullOrEmpty(execChild.WorkflowType) ? "kitchenSink" : execChild.WorkflowType;
+            var childId = string.IsNullOrEmpty(execChild.WorkflowId) ? null : execChild.WorkflowId;
+            var tq = string.IsNullOrEmpty(execChild.TaskQueue) ? null : execChild.TaskQueue;
             var args = execChild.Input.Select(p => new RawValue(p)).ToArray();
             var options = new ChildWorkflowOptions
             {
                 CancellationToken = tokenSrc.Token,
-                Id = execChild.WorkflowId == "" ? null : execChild.WorkflowId,
-                TaskQueue = execChild.TaskQueue,
+                Id = childId,
                 ExecutionTimeout = execChild.WorkflowExecutionTimeout?.ToTimeSpan(),
                 TaskTimeout = execChild.WorkflowTaskTimeout?.ToTimeSpan(),
-                RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan()
+                RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan(),
+                TypedSearchAttributes = execChild.SearchAttributes.Count == 0
+                    ? SearchAttributeCollection.Empty
+                    : SearchAttributeCollection.FromProto(new SearchAttributes { IndexedFields = { execChild.SearchAttributes } }),
             };
             var childTask = Workflow.StartChildWorkflowAsync(childType, args, options);
             await HandleAwaitableChoiceAsync(childTask, tokenSrc, execChild.AwaitableChoice,
-                afterStartedFn: t => t, afterCompletedFn: async t =>
+                afterStartedFn: async t => await t,
+                afterCompletedFn: async t =>
                 {
                     var childHandle = await t;
                     await childHandle.GetResultAsync();
