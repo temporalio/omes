@@ -169,6 +169,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 
 	cmd = exec.Command("npm", "run", "build")
 	cmd.Dir = baseDir
+	cmd.Stdout = b.stdout
+	cmd.Stderr = b.stderr
 	err = cmd.Run()
 	if err != nil {
 		return nil, fmt.Errorf("npm run build in ./workers/typescript failed: %w", err)
