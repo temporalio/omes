@@ -73,7 +73,8 @@ func TestEbbAndFlow(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
-		require.GreaterOrEqual(t, state.TotalCompletedWorkflows, int64(1))
+		execState := state.ExecutorState
+		require.GreaterOrEqual(t, execState.CompletedIterations, 1)
 
 		fairnessStatusLogs := res.ObservedLogs.FilterMessageSnippet("Fairness status").All()
 		require.GreaterOrEqual(t, len(fairnessStatusLogs), 1, "Fairness status logs should be present")
@@ -97,7 +98,9 @@ func TestEbbAndFlow(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
-		require.Greater(t, state.TotalCompletedWorkflows, previouState.TotalCompletedWorkflows)
+		execState := state.ExecutorState
+		prevExecState := previouState.ExecutorState
+		require.Greater(t, execState.CompletedIterations, prevExecState.CompletedIterations)
 
 		fairnessStatusLogs := res.ObservedLogs.FilterMessageSnippet("Fairness status").All()
 		require.GreaterOrEqual(t, len(fairnessStatusLogs), 1, "Fairness status logs should be present")

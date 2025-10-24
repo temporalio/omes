@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -57,6 +58,7 @@ type scenarioRunConfig struct {
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
 	ignoreAlreadyStarted          bool
+	continueOnError               bool
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -84,6 +86,9 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
+	fs.BoolVar(&r.continueOnError, "continue-on-error", false,
+		"Continue running even when any iterations fail after all retries are exhausted. "+
+			"In case of any errors, Omes will exit nonzero and log the errors.")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -160,15 +165,31 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
+			ContinueOnError:               r.continueOnError,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
 	}
 	executor := scenario.ExecutorFn()
-	err = executor.Run(ctx, scenarioInfo)
-	if err != nil {
-		return fmt.Errorf("failed scenario: %w", err)
+
+	// 1. Run the scenario
+	scenarioErr := executor.Run(ctx, scenarioInfo)
+
+	// Collect all errors
+	var allErrors []error
+	if scenarioErr != nil {
+		allErrors = append(allErrors, fmt.Errorf("scenario execution: %w", scenarioErr))
 	}
-	return nil
+
+	// 2. Run verifications
+	if verifiable, ok := executor.(loadgen.Verifyable); ok {
+		verifyErrs := verifiable.VerifyRun(ctx, scenarioInfo)
+		for _, err := range verifyErrs {
+			allErrors = append(allErrors, fmt.Errorf("post-scenario verification: %w", err))
+		}
+	}
+
+	// Aggregate all errors
+	return errors.Join(allErrors...)
 }
