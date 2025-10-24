@@ -258,3 +258,34 @@ func TestExecutorRetriesLimit(t *testing.T) {
 		require.Equal(t, []int{1, 1, 1, 1, 1}, totalTracker.seen, "expected 5 attempts")
 	})
 }
+
+func TestExecutorContinuesOnError(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		tracker := newIterationTracker()
+		executor := &GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				tracker.track(run.Iteration)
+				if run.Iteration == 2 || run.Iteration == 4 {
+					return errors.New("deliberate failure")
+				}
+				return nil
+			},
+		}
+
+		err := execute(executor,
+			RunConfiguration{
+				Iterations:      5,
+				ContinueOnError: true,
+			},
+		)
+
+		require.NoError(t, err, "executor should complete when ContinueOnError is true")
+		tracker.assertSeen(t, 5)
+
+		state := executor.GetState()
+		require.Equal(t, 3, state.CompletedIterations)
+		require.Len(t, state.IterationErrors, 2)
+		require.Contains(t, state.IterationErrors[0], "deliberate failure")
+		require.Contains(t, state.IterationErrors[1], "deliberate failure")
+	})
+}

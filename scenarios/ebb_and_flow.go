@@ -2,7 +2,6 @@ package scenarios
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -12,11 +11,6 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/ebbandflow"
-	"go.temporal.io/api/workflowservice/v1"
-)
-
-const (
-	EbbAndFlowScenarioIdSearchAttribute = "EbbAndFlowScenarioId"
 )
 
 const (
@@ -41,23 +35,20 @@ const (
 )
 
 type ebbAndFlowConfig struct {
-	MinBacklog                    int64
-	MaxBacklog                    int64
-	PhaseTime                     time.Duration
-	SleepDuration                 time.Duration
-	MaxRate                       int
-	ControlInterval               time.Duration
-	MaxConsecutiveErrors          int
-	FairnessReportInterval        time.Duration
-	BacklogLogInterval            time.Duration
-	VisibilityVerificationTimeout time.Duration
-	SleepActivityConfig           *loadgen.SleepActivityConfig
+	MinBacklog             int64
+	MaxBacklog             int64
+	PhaseTime              time.Duration
+	SleepDuration          time.Duration
+	MaxRate                int
+	ControlInterval        time.Duration
+	MaxConsecutiveErrors   int
+	FairnessReportInterval time.Duration
+	BacklogLogInterval     time.Duration
+	SleepActivityConfig    *loadgen.SleepActivityConfig
 }
 
 type ebbAndFlowState struct {
-	// TotalCompletedWorkflows tracks the total number of completed workflows across
-	// all restarts. It is used to verify workflow counts after the scenario completes.
-	TotalCompletedWorkflows int64 `json:"totalCompletedWorkflows"`
+	ExecutorState loadgen.ExecutorState `json:"executorState"`
 }
 
 type ebbAndFlowExecutor struct {
@@ -72,6 +63,8 @@ type ebbAndFlowExecutor struct {
 	fairnessTracker    *ebbandflow.FairnessTracker
 	stateLock          sync.Mutex
 	state              *ebbAndFlowState
+	completionTracker  *loadgen.WorkflowCompletionChecker
+	executorState      *loadgen.ExecutorState
 }
 
 var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
@@ -95,12 +88,11 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
-		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
-		MaxRate:                       info.ScenarioOptionInt(MaxRateFlag, 1000),
-		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
-		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
-		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
-		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+		SleepDuration:        info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
+		MaxRate:              info.ScenarioOptionInt(MaxRateFlag, 1000),
+		ControlInterval:      info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
+		MaxConsecutiveErrors: info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
+		BacklogLogInterval:   info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
 	}
 
 	config.MinBacklog = int64(info.ScenarioOptionInt(MinBacklogFlag, 0))
@@ -160,14 +152,24 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		return fmt.Errorf("configuration not parsed - Parse must be called before run")
 	}
 
-	// Initialize search attribute for visibility tracking
-	err := loadgen.InitSearchAttribute(
-		ctx,
-		e.ScenarioInfo,
-		EbbAndFlowScenarioIdSearchAttribute,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize search attribute %s: %w", EbbAndFlowScenarioIdSearchAttribute, err)
+	// Initialize executor state if needed
+	if e.executorState == nil {
+		e.executorState = &loadgen.ExecutorState{}
+	}
+
+	// Initialize workflow completion tracker with timeout from scenario options
+	e.completionTracker = &loadgen.WorkflowCompletionChecker{
+		Timeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+	}
+
+	// Restore state if resuming
+	if e.isResuming && e.state != nil {
+		*e.executorState = e.state.ExecutorState
+	}
+
+	// Initialize completion verifier (registers search attribute)
+	if err := e.completionTracker.Init(ctx, info); err != nil {
+		return fmt.Errorf("failed to initialize completion verifier: %w", err)
 	}
 
 	var consecutiveErrCount int
@@ -244,34 +246,17 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 
 	e.Logger.Info("Scenario complete; waiting for all workflows to finish...")
 	startWG.Wait()
-	e.Logger.Info("Verifying scenario completion...")
+	e.Logger.Info("Scenario execution complete")
 
-	e.stateLock.Lock()
-	totalCompletedWorkflows := int(e.state.TotalCompletedWorkflows)
-	e.stateLock.Unlock()
+	return nil
+}
 
-	// Post-scenario: verify that at least one workflow was completed.
-	if totalCompletedWorkflows == 0 {
-		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
+// VerifyRun implements loadgen.VerifyRunnable
+func (e *ebbAndFlowExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) []error {
+	if err := e.completionTracker.Verify(ctx, info, *e.executorState); err != nil {
+		return []error{err}
 	}
-
-	// Post-scenario: verify reported workflow completion count from Visibility.
-	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
-		e.ScenarioInfo,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: e.Namespace,
-			Query: fmt.Sprintf("%s='%s'",
-				EbbAndFlowScenarioIdSearchAttribute, e.id),
-		},
-		totalCompletedWorkflows,
-		config.VisibilityVerificationTimeout,
-	); err != nil {
-		return err
-	}
-
-	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, EbbAndFlowScenarioIdSearchAttribute, e.ScenarioInfo.RunID)
+	return nil
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -279,7 +264,9 @@ func (e *ebbAndFlowExecutor) Snapshot() any {
 	e.stateLock.Lock()
 	defer e.stateLock.Unlock()
 
-	return *e.state
+	return ebbAndFlowState{
+		ExecutorState: *e.executorState,
+	}
 }
 
 // LoadState loads the state from the provided loader function.
@@ -316,7 +303,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
 	options.SearchAttributes = map[string]interface{}{
-		EbbAndFlowScenarioIdSearchAttribute: e.id,
+		loadgen.OmesRunIDSearchAttribute: e.id,
 	}
 
 	workflowInput := &ebbandflow.WorkflowParams{
@@ -347,17 +334,14 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		}
 	}
 	e.completedWorkflows.Add(1)
-	e.incrementTotalCompletedWorkflow()
+
+	// Record completion in executor state for verification
+	e.stateLock.Lock()
+	e.executorState.CompletedIterations++
+	e.executorState.LastCompletedAt = time.Now()
+	e.stateLock.Unlock()
 
 	return nil
-}
-
-func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
-	e.stateLock.Lock()
-	if e.state != nil {
-		e.state.TotalCompletedWorkflows++
-	}
-	e.stateLock.Unlock()
 }
 
 func calculateBacklogTarget(

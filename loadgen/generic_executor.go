@@ -2,9 +2,12 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -12,6 +15,14 @@ import (
 type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
 	Execute func(context.Context, *Run) error
+
+	// WorkflowCompletionChecker verifies the workflow completion count after a scenario completed.
+	// It is optional; and needs to be initialized by the scenario executor.
+	WorkflowCompletionChecker *WorkflowCompletionChecker
+
+	// State management
+	mu    sync.Mutex
+	state *ExecutorState
 }
 
 type genericRun struct {
@@ -24,11 +35,82 @@ type genericRun struct {
 }
 
 func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
+	g.mu.Lock()
+	if g.state == nil {
+		g.state = &ExecutorState{}
+	}
+	if g.state.StartedAt.IsZero() {
+		g.state.StartedAt = time.Now()
+	}
+	g.mu.Unlock()
+
 	r, err := g.newRun(info)
 	if err != nil {
 		return err
 	}
 	return r.Run(ctx)
+}
+
+func (g *GenericExecutor) RecordCompletion() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.state != nil {
+		g.state.CompletedIterations += 1
+		g.state.LastCompletedAt = time.Now()
+	}
+}
+
+func (g *GenericExecutor) RecordError(err error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.state != nil && err != nil {
+		g.state.IterationErrors = append(g.state.IterationErrors, err.Error())
+	}
+}
+
+func (g *GenericExecutor) VerifyRun(ctx context.Context, info ScenarioInfo) []error {
+	g.mu.Lock()
+	state := *g.state
+	checker := g.WorkflowCompletionChecker
+	g.mu.Unlock()
+
+	if checker == nil {
+		return nil
+	}
+	if err := checker.Verify(ctx, info, state); err != nil {
+		return []error{err}
+	}
+	return nil
+}
+
+// GetState returns a copy of the current state
+func (g *GenericExecutor) GetState() ExecutorState {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.state == nil {
+		return ExecutorState{}
+	}
+	return *g.state
+}
+
+func (g *GenericExecutor) Snapshot() any {
+	return g.GetState()
+}
+
+func (g *GenericExecutor) LoadState(loader func(any) error) error {
+	var state ExecutorState
+	if err := loader(&state); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	g.state = &state
+	g.mu.Unlock()
+
+	return nil
 }
 
 func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
@@ -83,7 +165,12 @@ func (g *genericRun) Run(ctx context.Context) error {
 		case err := <-doneCh:
 			currentlyRunning--
 			if err != nil {
-				runErr = err
+				if g.config.ContinueOnError {
+					g.logger.Warnf("Iteration failed but continuing due to --continue-on-error: %v", err)
+					g.executor.RecordError(err)
+				} else {
+					runErr = err
+				}
 			}
 		case <-contextToWaitOn.Done():
 		}
@@ -125,6 +212,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 		run := g.info.NewRun(i + 1)
 		go func() {
 			var err error
+			var shouldRecordCompletion bool
 			iterStart := time.Now()
 
 			defer func() {
@@ -133,8 +221,11 @@ func (g *genericRun) Run(ctx context.Context) error {
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					if err == nil && g.config.OnCompletion != nil {
-						g.config.OnCompletion(ctx, run)
+					if err == nil && shouldRecordCompletion {
+						g.executor.RecordCompletion()
+						if g.config.OnCompletion != nil {
+							g.config.OnCompletion(ctx, run)
+						}
 					}
 				}
 			}()
@@ -145,7 +236,22 @@ func (g *genericRun) Run(ctx context.Context) error {
 				if err != nil && g.config.HandleExecuteError != nil {
 					err = g.config.HandleExecuteError(ctx, run, err)
 				}
+
+				// Check if workflow was already started
+				if err != nil {
+					var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
+					if errors.As(err, &alreadyStartedErr) {
+						if g.config.IgnoreAlreadyStarted {
+							g.logger.Debugf("Workflow already started, skipping iteration %v", run.Iteration)
+							err = nil
+							shouldRecordCompletion = false
+							break
+						}
+					}
+				}
+
 				if err == nil {
+					shouldRecordCompletion = true
 					break
 				}
 
