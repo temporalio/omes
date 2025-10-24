@@ -9,39 +9,28 @@ import {
   JsonPayloadConverter,
   PayloadConverterWithEncoding,
   UndefinedPayloadConverter,
-  ValueError,
 } from '@temporalio/common';
-import { decode, encode } from '@temporalio/common/lib/encoding';
 import Payload = temporal.api.common.v1.Payload;
 
+// TODO(thomas): can remove this file entirely (and usage of custom payload converter for worker)
+// once RawValue.fromPayload(p) is released.
 export class PassThroughPayload implements PayloadConverterWithEncoding {
   public toPayload(value: any): Payload | undefined {
-    if (!value || value.metadata === undefined || value.data === undefined) {
+    if (
+      !value ||
+      value.metadata == null ||
+      value.data == null ||
+      value?.metadata?.encoding == null
+    ) {
       return undefined;
     }
-    let asPayload;
-    try {
-      asPayload = Payload.fromObject(value as any);
-    } catch (e) {
-      throw new ValueError('PassThroughPayload can only convert Payloads');
-    }
-    const asBytes = Payload.encode(asPayload).finish();
-    return Payload.create({
-      metadata: {
-        encoding: encode(this.encodingType),
-      },
-      data: asBytes,
-    });
+    // If it looks like a Payload, return it as-is
+    return value as Payload;
   }
 
-  public fromPayload<T>(content: Payload): T {
-    if (decode(content.metadata?.encoding) === '__passthrough') {
-      const innerPayload = Payload.decode(new Uint8Array(content.data));
-      return payloadConverter.fromPayload<T>(innerPayload);
-    }
-    throw new ValueError(
-      'PassThroughPayload can only decode passthrough Payloads, got ' + JSON.stringify(content)
-    );
+  public fromPayload<T>(_: Payload): T {
+    // This should never be called since we don't modify the encoding
+    throw new Error('PassThroughPayload.fromPayload should not be called');
   }
 
   public get encodingType(): string {
