@@ -15,6 +15,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
 
 func init() {
@@ -22,7 +23,7 @@ func init() {
 		Description: fmt.Sprintf("Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently. "+
 			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), '%s' (default: %v), "+
 			"'%s' (default: '%s'), '%s' (default: '%s', options: skip,buffer_one,buffer_all,cancel_other,terminate_other,all), "+
-			"'%s' (default: '%s', options: %s,%s)",
+			"'%s' (default: '%s', options: %s,%s), '%s' (default: %v)",
 			ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration,
 			ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation,
 			ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation,
@@ -32,7 +33,8 @@ func init() {
 			OperationIntervalFlag, DefaultOperationInterval,
 			CronExpressionFlag, DefaultCronExpression,
 			OverlapPolicyFlag, DefaultOverlapPolicy,
-			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType),
+			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType,
+			EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
 				Execute: func(ctx context.Context, run *loadgen.Run) error {
@@ -60,6 +62,7 @@ type schedulerExecutorConfig struct {
 	CronExpression                string
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
+	EnableChasmScheduler          bool
 }
 
 var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
@@ -85,6 +88,7 @@ const (
 	CronExpressionFlag                = "cron-expression"
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
+	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
 )
 
 const (
@@ -95,6 +99,7 @@ const (
 	DefaultCronExpression               = "* * * * * *"
 	DefaultScheduledWorkflowType        = NoopScheduledWorkflowType
 	DefaultOverlapPolicy                = "all"
+	DefaultEnableChasmScheduler         = true
 )
 
 // Default duration constants
@@ -117,6 +122,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		CronExpression:                info.ScenarioOptionString(CronExpressionFlag, DefaultCronExpression),
 		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
 		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
+		EnableChasmScheduler:          info.ScenarioOptionBool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {
@@ -151,6 +157,11 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 
 	logger := run.Logger
 	client := run.Client
+
+	// Enable chasm-scheduler experiment if configured
+	if s.config.EnableChasmScheduler {
+		ctx = metadata.AppendToOutgoingContext(ctx, "temporal-experiment", "chasm-scheduler")
+	}
 
 	var wg sync.WaitGroup
 	for i := range s.config.ScheduleCreationPerIteration {
