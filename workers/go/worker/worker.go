@@ -84,7 +84,6 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
-			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
 			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
