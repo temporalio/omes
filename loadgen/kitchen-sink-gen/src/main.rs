@@ -5,7 +5,7 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
+        do_signal::do_signal_actions, do_signal::DoSignalActions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
         HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
@@ -205,37 +205,48 @@ fn main() -> Result<(), Error> {
 }
 
 fn example(args: ExampleCmd) -> Result<(), Error> {
+    // Initialize context for signal ID generation
+    ARB_CONTEXT.set(ArbContext::default());
+
     let mut example_input = TestInput::default();
     let client_sequence = ClientSequence {
         action_sets: vec![
             ClientActionSet {
-                actions: vec![mk_client_signal_action([TimerAction {
-                    milliseconds: 100,
-                    awaitable_choice: None,
-                }
-                .into()])],
+                actions: vec![{
+                    // Reset counter for new ClientActionSet
+                    ARB_CONTEXT.with_borrow_mut(|c| c.next_signal_id = 0);
+                    mk_client_signal_action([TimerAction {
+                        milliseconds: 100,
+                        awaitable_choice: None,
+                    }
+                    .into()])
+                }],
                 concurrent: false,
                 wait_at_end: Some(Duration::from_secs(1).try_into().unwrap()),
                 wait_for_current_run_to_finish_at_end: false,
             },
             ClientActionSet {
-                actions: vec![mk_client_signal_action([
-                    TimerAction {
-                        milliseconds: 100,
-                        awaitable_choice: None,
-                    }
-                    .into(),
-                    ExecuteActivityAction {
-                        activity_type: Some(execute_activity_action::ActivityType::Noop(())),
-                        start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
-                        ..Default::default()
-                    }
-                    .into(),
-                    ReturnResultAction {
-                        return_this: Some(empty_payload()),
-                    }
-                    .into(),
-                ])],
+                actions: vec![{
+                    // Reset counter for new ClientActionSet
+                    ARB_CONTEXT.with_borrow_mut(|c| c.next_signal_id = 0);
+                    mk_client_signal_action([
+                        TimerAction {
+                            milliseconds: 100,
+                            awaitable_choice: None,
+                        }
+                        .into(),
+                        ExecuteActivityAction {
+                            activity_type: Some(execute_activity_action::ActivityType::Noop(())),
+                            start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                            ..Default::default()
+                        }
+                        .into(),
+                        ReturnResultAction {
+                            return_this: Some(empty_payload()),
+                        }
+                        .into(),
+                    ])
+                }],
                 ..Default::default()
             },
         ],
@@ -271,6 +282,7 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
         config,
         cur_workflow_state: Default::default(),
         action_set_nest_level: 0,
+        next_signal_id: 0,
     };
     ARB_CONTEXT.set(context);
 
@@ -297,6 +309,9 @@ struct ArbContext {
     config: GeneratorConfig,
     cur_workflow_state: WorkflowState,
     action_set_nest_level: usize,
+    /// Tracks the next signal ID to assign. Signal IDs are consecutive integers starting from 0,
+    /// scoped to each ClientActionSet. This counter is reset at the start of each ClientActionSet.
+    next_signal_id: i32,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
@@ -335,7 +350,15 @@ impl<'a> Arbitrary<'a> for WorkflowInput {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let num_actions = 1..=ARB_CONTEXT.with_borrow(|c| c.config.max_initial_actions);
         let initial_actions = vec_of_size(u, num_actions)?;
-        Ok(Self { initial_actions })
+        Ok(Self {
+            initial_actions,
+            // Signal ID tracking fields are initialized empty and populated by the workflow during execution.
+            // expected_signal_ids: Populated by workflow to track which signal IDs should be received.
+            // received_signal_ids: Populated by workflow as signals arrive; copied to new workflow on continue-as-new.
+            expected_signal_count: 0,
+            expected_signal_ids: vec![],
+            received_signal_ids: vec![]
+        })
     }
 }
 
@@ -349,6 +372,11 @@ impl<'a> Arbitrary<'a> for ClientSequence {
 
 impl<'a> Arbitrary<'a> for ClientActionSet {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // Reset signal ID counter at the start of each ClientActionSet
+        ARB_CONTEXT.with_borrow_mut(|c| {
+            c.next_signal_id = 0;
+        });
+
         let nest_level = ARB_CONTEXT.with_borrow_mut(|c| {
             c.action_set_nest_level += 1;
             c.action_set_nest_level
@@ -362,6 +390,9 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
                         initial_actions: vec![mk_action_set([action::Variant::SetWorkflowState(
                             ARB_CONTEXT.with_borrow(|c| c.cur_workflow_state.clone()),
                         )])],
+                        expected_signal_count: 0,
+                        expected_signal_ids: vec![],
+                        received_signal_ids: vec![]
                     },
                     "temporal.omes.kitchen_sink.WorkflowInput",
                 )],
@@ -433,14 +464,29 @@ impl<'a> Arbitrary<'a> for DoSignal {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let variant = if u.ratio(95, 100)? {
             // 95% of the time do actions
+            // Signal IDs are assigned consecutively starting from 0 within each ClientActionSet.
+            // This ensures deterministic ordering and makes it easier to track which signals
+            // have been received by the workflow.
+            let signal_id = ARB_CONTEXT.with_borrow_mut(|c| {
+                let id = c.next_signal_id;
+                c.next_signal_id += 1;
+                id
+            });
+
             // Half of that in the handler half in main
             if u.ratio(50, 100)? {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)).into(),
+                    DoSignalActions {
+                        signal_id,
+                        variant: Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)),
+                    }
                 )
             } else {
                 do_signal::Variant::DoSignalActions(
-                    Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)).into(),
+                    DoSignalActions {
+                        signal_id,
+                        variant: Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)),
+                    }
                 )
             }
         } else {
@@ -631,6 +677,9 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
                 ],
                 concurrent: false,
             }],
+            expected_signal_count: 0,
+            expected_signal_ids: vec![],
+            received_signal_ids: vec![]
         };
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {
@@ -846,14 +895,24 @@ fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result
     Ok(())
 }
 
+/// Helper function to create a signal client action with consecutive signal IDs.
+/// Signal IDs are assigned sequentially starting from 0 within each ClientActionSet.
 fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -> ClientAction {
+    let signal_id = ARB_CONTEXT.with_borrow_mut(|c| {
+        let id = c.next_signal_id;
+        c.next_signal_id += 1;
+        id
+    });
+
     ClientAction {
         variant: Some(client_action::Variant::DoSignal(DoSignal {
             variant: Some(do_signal::Variant::DoSignalActions(
-                Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
-                    actions,
-                )))
-                .into(),
+                DoSignalActions {
+                    signal_id,
+                    variant: Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
+                        actions,
+                    ))),
+                }
             )),
             with_start: false,
         })),
