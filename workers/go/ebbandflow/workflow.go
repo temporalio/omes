@@ -40,6 +40,15 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 				opts.Priority.PriorityKey = int(activity.Priority.PriorityKey)
 			}
 
+			// Set fairness, if specified
+			fairnessKey := activity.GetFairnessKey()
+			fairnessWeight := activity.GetFairnessWeight()
+			if fairnessKey != "" {
+				// TODO(fairness): hack until there is a fairness key in the SDK
+				opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%d",
+					fairnessKey, fairnessWeight, rng.Uint64())
+			}
+
 			// Execute activity
 			var activityResult ActivityExecutionResult
 			actCtx := workflow.WithActivityOptions(ctx, opts)
