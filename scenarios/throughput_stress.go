@@ -13,7 +13,6 @@ import (
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -209,17 +208,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				},
 			},
 			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
-				options.StartOptions = run.DefaultStartWorkflowOptions()
-				if isResuming {
-					// Enforce to never fail on "workflow already started" when resuming.
-					options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
-				}
-
-				// Add search attribute to the workflow options so that it can be used in visibility queries.
-				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
-					temporal.NewSearchAttributeKeyString(loadgen.OmesRunIDSearchAttribute).ValueSet(info.RunID),
-				)
-
 				// Start some workflows via Update-with-Start.
 				if t.maybeWithStart(0.5) {
 					options.Params.WithStartAction = &WithStartClientAction{
@@ -257,14 +245,29 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			}
 		}
 
-		// Configure workflow completion tracker to verify all workflows (parent + children + continue-as-new)
-		t.executor.WorkflowCompletionChecker = &loadgen.WorkflowCompletionChecker{
-			Timeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+		timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
+
+		// Configure expected workflow count function based on scenario config
+		expectedWorkflowCount := func(state loadgen.ExecutorState) int {
+			completedIterations := state.CompletedIterations
+
+			// Calculate continue-as-new workflows
+			var continueAsNewWorkflows int
+			if t.config.ContinueAsNewAfterIter > 0 {
+				// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
+				continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+				continueAsNewWorkflows = continueAsNewPerIter * completedIterations
+			}
+
+			// Calculate child workflows
+			completedChildWorkflows := completedIterations * t.config.InternalIterations
+
+			// Total: parent + children + continue-as-new
+			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
 		}
 
-		// Initialize the tracker (registers search attribute)
-		if err := t.executor.WorkflowCompletionChecker.Init(ctx, info); err != nil {
-			return fmt.Errorf("failed to initialize workflow completion tracker: %w", err)
+		if err := t.executor.EnableWorkflowCompletionCheck(ctx, info, timeout, expectedWorkflowCount); err != nil {
+			return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
 		}
 
 		if err := t.executor.Run(ctx, info); err != nil {
@@ -284,7 +287,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 	t.lock.Unlock()
 
-	// Calculate completion metrics.
+	// Calculate completion metrics for logging.
 	var continueAsNewPerIter int
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
@@ -294,11 +297,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
-
-	// Set expectation for workflow completion.
-	t.executor.WorkflowCompletionChecker.ExpectedWorkflowCount = func(state loadgen.ExecutorState) int {
-		return completedWorkflows
-	}
 
 	// Log completion summary.
 	info.Logger.Info(fmt.Sprintf(
@@ -321,7 +319,15 @@ func (t *tpsExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) 
 	// 2. Check throughput, if configured.
 	if t.config.MinThroughputPerHour > 0 {
 		state := t.executor.GetState()
-		completedWorkflows := t.executor.WorkflowCompletionChecker.ExpectedWorkflowCount(state)
+
+		// Recalculate expected workflow count for throughput check
+		var continueAsNewWorkflows int
+		if t.config.ContinueAsNewAfterIter > 0 {
+			continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+			continueAsNewWorkflows = continueAsNewPerIter * state.CompletedIterations
+		}
+		completedChildWorkflows := state.CompletedIterations * t.config.InternalIterations
+		completedWorkflows := state.CompletedIterations + completedChildWorkflows + continueAsNewWorkflows
 
 		// Calculate duration from executor state
 		var totalDuration time.Duration

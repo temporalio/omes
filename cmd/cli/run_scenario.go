@@ -57,7 +57,6 @@ type scenarioRunConfig struct {
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
-	ignoreAlreadyStarted          bool
 	continueOnError               bool
 }
 
@@ -84,8 +83,6 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
-	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
-		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
 	fs.BoolVar(&r.continueOnError, "continue-on-error", false,
 		"Continue running even when any iterations fail after all retries are exhausted. "+
 			"In case of any errors, Omes will exit nonzero and log the errors.")
@@ -164,7 +161,6 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxIterationAttempts:          r.maxIterationAttempts,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnError:               r.continueOnError,
 		},
 		ScenarioOptions: scenarioOptions,

@@ -12,17 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// skipIterationErr is a sentinel error indicating that the iteration
+// should be skipped and not recorded as a completion or failure.
+var skipIterationErr = errors.New("skip iteration")
+
 type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
 	Execute func(context.Context, *Run) error
 
-	// WorkflowCompletionChecker verifies the workflow completion count after a scenario completed.
-	// It is optional; and needs to be initialized by the scenario executor.
-	WorkflowCompletionChecker *WorkflowCompletionChecker
-
 	// State management
-	mu    sync.Mutex
-	state *ExecutorState
+	mu                        sync.Mutex
+	state                     *ExecutorState
+	workflowCompletionChecker *WorkflowCompletionChecker
 }
 
 type genericRun struct {
@@ -73,15 +74,38 @@ func (g *GenericExecutor) RecordError(err error) {
 func (g *GenericExecutor) VerifyRun(ctx context.Context, info ScenarioInfo) []error {
 	g.mu.Lock()
 	state := *g.state
-	checker := g.WorkflowCompletionChecker
+	checker := g.workflowCompletionChecker
 	g.mu.Unlock()
 
 	if checker == nil {
 		return nil
 	}
-	if err := checker.Verify(ctx, info, state); err != nil {
+	if err := checker.Verify(ctx, state); err != nil {
 		return []error{err}
 	}
+	return nil
+}
+
+// EnableWorkflowCompletionCheck enables workflow completion verification for this executor.
+// It initializes a checker with the given timeout and registers the required search attributes.
+// The timeout specifies how long to wait for workflow completion verification (defaults to 30 seconds if zero).
+// The expectedWorkflowCount function, if provided, calculates the expected number of workflows from the ExecutorState.
+// If nil, defaults to using state.CompletedIterations.
+// Returns an error if search attribute registration fails.
+func (g *GenericExecutor) EnableWorkflowCompletionCheck(ctx context.Context, info ScenarioInfo, timeout time.Duration, expectedWorkflowCount func(ExecutorState) int) error {
+	checker, err := NewWorkflowCompletionChecker(ctx, info, timeout)
+	if err != nil {
+		return err
+	}
+
+	if expectedWorkflowCount != nil {
+		checker.SetExpectedWorkflowCount(expectedWorkflowCount)
+	}
+
+	g.mu.Lock()
+	g.workflowCompletionChecker = checker
+	g.mu.Unlock()
+
 	return nil
 }
 
@@ -212,16 +236,21 @@ func (g *genericRun) Run(ctx context.Context) error {
 		run := g.info.NewRun(i + 1)
 		go func() {
 			var err error
-			var shouldRecordCompletion bool
 			iterStart := time.Now()
 
 			defer func() {
 				g.executeTimer.Record(time.Since(iterStart))
 
+				// Check if this is the special "skip iteration" error
+				isSkipIteration := errors.Is(err, skipIterationErr)
+				if isSkipIteration {
+					err = nil // Don't propagate this as an actual error
+				}
+
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					if err == nil && shouldRecordCompletion {
+					if err == nil && !isSkipIteration {
 						g.executor.RecordCompletion()
 						if g.config.OnCompletion != nil {
 							g.config.OnCompletion(ctx, run)
@@ -233,28 +262,27 @@ func (g *genericRun) Run(ctx context.Context) error {
 		retryLoop:
 			for {
 				err = g.executor.Execute(ctx, run)
+
+				// Skip if workflow was already started.
+				if err != nil {
+					var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
+					if errors.As(err, &alreadyStartedErr) {
+						g.logger.Debugf("Workflow already started, skipping iteration %v", run.Iteration)
+						err = skipIterationErr
+						break
+					}
+				}
+
+				// If defined, invoke user-defined error handler.
 				if err != nil && g.config.HandleExecuteError != nil {
 					err = g.config.HandleExecuteError(ctx, run, err)
 				}
 
-				// Check if workflow was already started
-				if err != nil {
-					var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
-					if errors.As(err, &alreadyStartedErr) {
-						if g.config.IgnoreAlreadyStarted {
-							g.logger.Debugf("Workflow already started, skipping iteration %v", run.Iteration)
-							err = nil
-							shouldRecordCompletion = false
-							break
-						}
-					}
-				}
-
 				if err == nil {
-					shouldRecordCompletion = true
 					break
 				}
 
+				// Attempt to retry.
 				backoff, retry := run.ShouldRetry(err)
 				if retry {
 					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)

@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/api/operatorservice/v1"
 
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -218,9 +219,6 @@ type RunConfiguration struct {
 	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
-	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
-	// Default is false.
-	IgnoreAlreadyStarted bool
 	// ContinueOnError, if set, will continue running iterations even after an iteration fails
 	// (after all retries are exhausted). Default is false.
 	ContinueOnError bool
@@ -326,9 +324,14 @@ func (r *Run) TaskQueue() string {
 // DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                TaskQueueForRun(r.RunID),
-		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
-		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
+		ID:        fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
+		TaskQueue: TaskQueueForRun(r.RunID),
+		// Always return error so that Executor can handle it and record starts accurately.
+		WorkflowExecutionErrorWhenAlreadyStarted: true,
+		// TODO: get from helper
+		TypedSearchAttributes: temporal.NewSearchAttributes(
+			temporal.NewSearchAttributeKeyString(OmesRunIDSearchAttribute).ValueSet(r.RunID),
+		),
 	}
 }
 

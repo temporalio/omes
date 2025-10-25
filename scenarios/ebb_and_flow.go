@@ -63,7 +63,7 @@ type ebbAndFlowExecutor struct {
 	fairnessTracker    *ebbandflow.FairnessTracker
 	stateLock          sync.Mutex
 	state              *ebbAndFlowState
-	completionTracker  *loadgen.WorkflowCompletionChecker
+	completionChecker  *loadgen.WorkflowCompletionChecker
 	executorState      *loadgen.ExecutorState
 }
 
@@ -157,20 +157,18 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		e.executorState = &loadgen.ExecutorState{}
 	}
 
-	// Initialize workflow completion tracker with timeout from scenario options
-	e.completionTracker = &loadgen.WorkflowCompletionChecker{
-		Timeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
-	}
-
 	// Restore state if resuming
 	if e.isResuming && e.state != nil {
 		*e.executorState = e.state.ExecutorState
 	}
 
-	// Initialize completion verifier (registers search attribute)
-	if err := e.completionTracker.Init(ctx, info); err != nil {
-		return fmt.Errorf("failed to initialize completion verifier: %w", err)
+	// Initialize workflow completion checker with timeout from scenario options
+	timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
+	checker, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
+	if err != nil {
+		return fmt.Errorf("failed to initialize completion checker: %w", err)
 	}
+	e.completionChecker = checker
 
 	var consecutiveErrCount int
 	errCh := make(chan error, 10000)
@@ -253,7 +251,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 
 // VerifyRun implements loadgen.VerifyRunnable
 func (e *ebbAndFlowExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) []error {
-	if err := e.completionTracker.Verify(ctx, info, *e.executorState); err != nil {
+	if err := e.completionChecker.Verify(ctx, *e.executorState); err != nil {
 		return []error{err}
 	}
 	return nil
