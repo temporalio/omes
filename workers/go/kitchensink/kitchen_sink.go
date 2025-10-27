@@ -16,7 +16,6 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
-	"google.golang.org/protobuf/proto"
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
@@ -357,47 +356,6 @@ func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) error {
 // isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
 func (ws *KSWorkflowState) isSignalAlreadyReceived(signalID int32) bool {
 	return slices.Contains(ws.receivedSignalIDs, signalID)
-}
-
-// createContinueAsNewInput creates a new WorkflowInput for continue-as-new that preserves
-// signal deduplication state by tracking received and expected signal IDs
-func (ws *KSWorkflowState) createContinueAsNewInput(originalArg *common.Payload) *common.Payload {
-	if ws.expectedSignalCount == 0 && len(ws.expectedSignalIDs) == 0 {
-		return originalArg
-	}
-
-	var originalInput kitchensink.WorkflowInput
-	if originalArg != nil && originalArg.Data != nil {
-		if err := proto.Unmarshal(originalArg.Data, &originalInput); err != nil {
-			// If unmarshaling fails, just return the original argument
-			return originalArg
-		}
-	}
-
-	expectedSignalIds := make([]int32, 0, len(ws.expectedSignalIDs))
-	for signalID := range ws.expectedSignalIDs {
-		expectedSignalIds = append(expectedSignalIds, signalID)
-	}
-
-	// Create new input preserving original data but updating signal state
-	newInput := &kitchensink.WorkflowInput{
-		InitialActions:      originalInput.InitialActions,
-		ExpectedSignalCount: ws.expectedSignalCount,
-		ExpectedSignalIds:   expectedSignalIds,
-		ReceivedSignalIds:   append([]int32{}, ws.receivedSignalIDs...),
-	}
-
-	data, err := proto.Marshal(newInput)
-	if err != nil {
-		return originalArg
-	}
-
-	return &common.Payload{
-		Metadata: map[string][]byte{
-			"encoding": []byte("binary/protobuf"),
-		},
-		Data: data,
-	}
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
