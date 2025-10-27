@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"slices"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -39,42 +38,30 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 }
 
 type KSWorkflowState struct {
-	workflowState *kitchensink.WorkflowState
-
-	// signal de-duplication fields
-	expectedSignalCount int32
-	expectedSignalIDs   map[int32]struct{}
-	receivedSignalIDs   []int32
+	workflowState     *kitchensink.WorkflowState
+	expectedSignalIDs map[int32]struct{}
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Info("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
-		workflowState:       &kitchensink.WorkflowState{},
-		expectedSignalCount: 0,
-		expectedSignalIDs:   make(map[int32]struct{}),
-		receivedSignalIDs:   []int32{},
+		workflowState:     &kitchensink.WorkflowState{},
+		expectedSignalIDs: make(map[int32]struct{}),
 	}
 
 	if params != nil {
-		state.expectedSignalCount = params.ExpectedSignalCount
-
-		// Initialize from the array-based approach if present (for continue-as-new)
 		if len(params.ExpectedSignalIds) > 0 {
 			// Use the explicit expected signal IDs
 			for _, id := range params.ExpectedSignalIds {
 				state.expectedSignalIDs[id] = struct{}{}
 			}
-		} else {
+		} else if params.ExpectedSignalCount > 0 {
 			// Fallback to count-based approach (initial workflow)
-			for i := int32(1); i <= state.expectedSignalCount; i++ {
+			for i := int32(1); i <= params.ExpectedSignalCount; i++ {
 				state.expectedSignalIDs[i] = struct{}{}
 			}
 		}
-
-		// Track already received signals (for continue-as-new deduplication)
-		state.receivedSignalIDs = append([]int32{}, params.ReceivedSignalIds...)
 	}
 
 	// Setup query handler.
@@ -128,12 +115,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 					workflow.GetLogger(ctx).Debug("Signal already received, skipping", "signalID", receivedID)
 					continue
 				}
-
-				err := state.handleSignalDeduplication(receivedID)
-				if err != nil {
-					workflow.GetLogger(ctx).Error("error handling signal deduplication", "error", err)
-					retOrErrChan.Send(ctx, ReturnOrErr{nil, err})
-				}
+				state.handleSignalDeduplication(receivedID)
 			}
 
 			workflow.Go(ctx, func(ctx workflow.Context) {
@@ -240,9 +222,8 @@ func (ws *KSWorkflowState) handleActionSet(
 }
 
 // validateAllSignalsReceived checks if all expected signals have been received
-// and returns the list of missing signal IDs if any are missing and
+// and returns the list of missing signal IDs if any are missing
 func (ws *KSWorkflowState) validateAllSignalsReceived(ctx workflow.Context) []int32 {
-	workflow.GetLogger(ctx).Info("Validating all signals received", "expectedCount", ws.expectedSignalCount, "expectedIDs", ws.expectedSignalIDs, "receivedIDs", ws.receivedSignalIDs)
 	if len(ws.expectedSignalIDs) > 0 {
 		missingSignals := make([]int32, 0, len(ws.expectedSignalIDs))
 		for signalID := range ws.expectedSignalIDs {
@@ -342,20 +323,17 @@ func (ws *KSWorkflowState) handleAction(
 	return nil, nil
 }
 
-func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) error {
-	if _, ok := ws.expectedSignalIDs[signalID]; !ok {
-		return fmt.Errorf("signal ID %d not expected", signalID)
-	}
-
+func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) {
+	// Simply remove the signal ID from the expected set
+	// If it's not there, that's fine - it was already processed or wasn't expected
 	delete(ws.expectedSignalIDs, signalID)
-	ws.receivedSignalIDs = append(ws.receivedSignalIDs, signalID)
-
-	return nil
 }
 
 // isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
 func (ws *KSWorkflowState) isSignalAlreadyReceived(signalID int32) bool {
-	return slices.Contains(ws.receivedSignalIDs, signalID)
+	// If the signal ID is not in the expected map, it means we already processed it
+	_, exists := ws.expectedSignalIDs[signalID]
+	return !exists
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
