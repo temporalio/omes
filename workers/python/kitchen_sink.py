@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
-from temporalio.api.common.v1 import Payload
+from temporalio.api.common.v1 import Payload, SearchAttributes
 from temporalio.common import (
     Priority,
     RawValue,
@@ -14,7 +14,6 @@ from temporalio.common import (
     SearchAttributeKey,
     SearchAttributeUpdate,
 )
-from temporalio.converter import DefaultPayloadConverter
 from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
 from protos.kitchen_sink_pb2 import (
@@ -135,15 +134,14 @@ class KitchenSinkWorkflow:
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
             args = [RawValue(i) for i in child_action.input]
-
+            proto_sa = SearchAttributes(indexed_fields=child_action.search_attributes)
+            typed_attrs = temporalio.converter.decode_typed_search_attributes(proto_sa)
             await handle_awaitable_choice(
                 workflow.start_child_workflow(
                     child,
                     id=child_action.workflow_id,
                     args=args,
-                    search_attributes=decode_search_attrs(
-                        child_action.search_attributes, DefaultPayloadConverter()
-                    ),
+                    search_attributes=typed_attrs,
                 ),
                 child_action.awaitable_choice,
                 after_started_fn=wait_task_complete,
@@ -329,10 +327,3 @@ def convert_act_cancel_type(
         return temporalio.workflow.ActivityCancellationType.ABANDON
     else:
         raise NotImplementedError("Unknown cancellation type " + str(ctype))
-
-
-def decode_search_attrs(msg_map, converter):
-    return {
-        k: v if isinstance(v := converter.from_payload(p), list) else [v]
-        for k, p in msg_map.items()
-    }

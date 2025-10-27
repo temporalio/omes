@@ -4,7 +4,6 @@ import {
   ApplicationFailure,
   CancellationScope,
   ChildWorkflowHandle,
-  ChildWorkflowOptions,
   condition,
   continueAsNew,
   defineQuery,
@@ -28,7 +27,8 @@ import {
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
-import { durationConvert, numify } from '../proto_help';
+import { decodeTypedSearchAttributes } from '@temporalio/common/lib/converter/payload-search-attributes';
+import { durationConvert, durationConvertMaybeUndefined, numify } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -143,19 +143,17 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         action.execActivity.awaitableChoice
       );
     } else if (action.execChildWorkflow) {
-      const opts: ChildWorkflowOptions = {};
-      if (action.execChildWorkflow.workflowId) {
-        opts.workflowId = action.execChildWorkflow.workflowId;
-      }
       const execChild = action.execChildWorkflow;
-      const childStarter = () => {
-        return startChild(execChild.workflowType ?? 'kitchenSink', {
-          args: execChild.input ?? [],
-          ...opts,
-        });
-      };
       await handleAwaitableChoice(
-        childStarter,
+        () => {
+          return startChild(execChild.workflowType || 'kitchenSink', {
+            args: execChild.input ?? [],
+            workflowId: execChild.workflowId ?? undefined,
+            typedSearchAttributes: decodeTypedSearchAttributes(
+              action?.execChildWorkflow?.searchAttributes
+            ),
+          });
+        },
         action.execChildWorkflow.awaitableChoice,
         async (task) => {
           await task;
@@ -281,11 +279,10 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'client';
     args.push(execActivity.client);
   }
-
   const actArgs: ActivityOptions | LocalActivityOptions = {
-    scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),
-    startToCloseTimeout: durationConvert(execActivity.startToCloseTimeout),
-    scheduleToStartTimeout: durationConvert(execActivity.scheduleToStartTimeout),
+    scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
+    startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
+    scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
     retry: decompileRetryPolicy(execActivity.retryPolicy),
     priority: decodePriority(execActivity.priority),
   };
