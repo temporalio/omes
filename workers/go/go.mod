@@ -10,7 +10,6 @@ require (
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
 	go.uber.org/zap v1.27.0
-	google.golang.org/protobuf v1.36.5
 )
 
 require (
