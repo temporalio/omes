@@ -220,7 +220,7 @@ func (ws *KSWorkflowState) handleActionSet(
 }
 
 // validateAllSignalsReceived checks if all expected signals have been received
-// and returns the list of missing signal IDs if any are missing
+// and returns the list of missing signal IDs if any are missing.
 func validateAllSignalsReceived(params *kitchensink.WorkflowInput) []int32 {
 	if params != nil && len(params.ExpectedSignalIds) > 0 {
 		return params.ExpectedSignalIds
@@ -228,7 +228,7 @@ func validateAllSignalsReceived(params *kitchensink.WorkflowInput) []int32 {
 	return nil
 }
 
-// isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
+// isSignalAlreadyReceived checks if a signal has already been received (for deduplication).
 func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) bool {
 	if params == nil {
 		return true
@@ -242,7 +242,7 @@ func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) 
 	return true
 }
 
-// handleSignalDeduplication removes a received signal ID from the expected list
+// handleSignalDeduplication removes a received signal ID from the expected list.
 func handleSignalDeduplication(params *kitchensink.WorkflowInput, signalID int32) {
 	if params == nil {
 		return
@@ -490,7 +490,7 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		})
 }
 
-// Noop is used as a no-op activity
+// Noop is used as a no-op activity.
 func Noop(_ context.Context) error {
 	return nil
 }
@@ -502,7 +502,7 @@ func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, 
 	return output, nil
 }
 
-// Delay runs for the provided delay period
+// Delay runs for the provided delay period.
 func Delay(_ context.Context, delayFor time.Duration) error {
 	time.Sleep(delayFor)
 	return nil
