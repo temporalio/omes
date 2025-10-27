@@ -607,6 +607,62 @@ func TestKitchenSink(t *testing.T) {
 			},
 		},
 		{
+			name: "ErrorFromInitialActions/SkipsSignalWaiting",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3, // Expect 3 signals (but don't send any)
+					InitialActions: ListActionSet(
+						NewErrorAction("error from initial actions"),
+					),
+				},
+				// No ClientSequence - no signals will be sent
+			},
+			expectedWorkflowError: "error from initial actions",
+			historyMatcher: FullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionFailed`), // No TimerStarted for AwaitWithTimeout
+		},
+		{
+			name: "ErrorInInitialActions/WithExpectedSignals",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 2, // Expect signals but error before waiting
+					InitialActions: ListActionSet(
+						// Send some signals first
+						ClientActivity(
+							&ClientSequence{
+								ActionSets: []*ClientActionSet{
+									{
+										Actions: NewSignalActionsWithIDs(1, 2),
+									},
+								},
+							},
+							DefaultRemoteActivity,
+						),
+						// Then error - this should skip signal waiting even though signals arrived
+						NewErrorAction("error after signals sent"),
+					),
+				},
+			},
+			expectedWorkflowError: "error after signals sent",
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled
+				...
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				...
+				ActivityTaskCompleted
+				...
+				WorkflowExecutionFailed`), // No TimerStarted - error skips signal waiting
+		},
+		{
 			name: "ClientSequence/Signal/Custom",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{
