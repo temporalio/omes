@@ -38,28 +38,22 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 }
 
 type KSWorkflowState struct {
-	workflowState     *kitchensink.WorkflowState
-	expectedSignalIDs map[int32]struct{}
+	workflowState *kitchensink.WorkflowState
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
-	workflow.GetLogger(ctx).Info("Started kitchen sink workflow")
+	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
-		workflowState:     &kitchensink.WorkflowState{},
-		expectedSignalIDs: make(map[int32]struct{}),
+		workflowState: &kitchensink.WorkflowState{},
 	}
 
 	if params != nil {
-		if len(params.ExpectedSignalIds) > 0 {
-			// Use the explicit expected signal IDs
-			for _, id := range params.ExpectedSignalIds {
-				state.expectedSignalIDs[id] = struct{}{}
-			}
-		} else if params.ExpectedSignalCount > 0 {
-			// Fallback to count-based approach (initial workflow)
-			for i := int32(1); i <= params.ExpectedSignalCount; i++ {
-				state.expectedSignalIDs[i] = struct{}{}
+		// If ExpectedSignalCount is provided but no explicit IDs, generate them
+		if len(params.ExpectedSignalIds) == 0 && params.ExpectedSignalCount > 0 {
+			params.ExpectedSignalIds = make([]int32, params.ExpectedSignalCount)
+			for i := int32(0); i < params.ExpectedSignalCount; i++ {
+				params.ExpectedSignalIds[i] = i + 1
 			}
 		}
 	}
@@ -70,7 +64,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
-		workflow.GetLogger(ctx).Info("Error setting query handler", queryErr)
 		return nil, queryErr
 	}
 
@@ -91,7 +84,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			},
 		})
 	if updateErr != nil {
-		workflow.GetLogger(ctx).Info("Error setting update handler", updateErr)
 		return nil, updateErr
 	}
 
@@ -107,15 +99,13 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				actionSet = sigActions.GetDoActions()
 			}
 
-			receivedID := sigActions.GetSignalId()
-
 			// Handle signal deduplication if signal ID is provided
-			if receivedID != 0 {
-				if state.isSignalAlreadyReceived(receivedID) {
+			if receivedID := sigActions.GetSignalId(); receivedID != 0 {
+				if isSignalAlreadyReceived(params, receivedID) {
 					workflow.GetLogger(ctx).Debug("Signal already received, skipping", "signalID", receivedID)
 					continue
 				}
-				state.handleSignalDeduplication(receivedID)
+				handleSignalDeduplication(params, receivedID)
 			}
 
 			workflow.Go(ctx, func(ctx workflow.Context) {
@@ -128,12 +118,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	})
 
 	// Handle initial set.
-	// Store return value/error from initial actions instead of returning immediately
 	var initialRetOrErr *ReturnOrErr
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Info("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
+				workflow.GetLogger(ctx).Debug("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
 				// If there's an error, return immediately without waiting for signals
 				if err != nil {
 					return ret, err
@@ -144,7 +133,6 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		}
 	}
 
-	workflow.GetLogger(ctx).Info("Entering main wait loop")
 	var retOrErr ReturnOrErr
 	// If we got a return value from initial actions, use it
 	if initialRetOrErr != nil {
@@ -165,23 +153,33 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		return retOrErr.retme, retOrErr.err
 	}
 
-	// Wait for all signals to arrive or an error indicating early termination
-	var missingSignals []int32
-	ok, err := workflow.AwaitWithTimeout(
-		ctx,
-		workflow.GetInfo(ctx).WorkflowExecutionTimeout-(10*time.Second),
-		func() bool {
-			missingSignals = state.validateAllSignalsReceived(ctx)
-			if len(missingSignals) > 0 {
-				return false
-			}
-			return true
-		})
-	if err != nil || !ok {
-		if !ok {
-			err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
+	// Only wait for signals if we're expecting any
+	if params != nil && len(params.ExpectedSignalIds) > 0 {
+		// Calculate timeout - use WorkflowExecutionTimeout if set, otherwise a reasonable default
+		timeout := workflow.GetInfo(ctx).WorkflowExecutionTimeout - (10 * time.Second)
+		if timeout <= 0 {
+			// If no WorkflowExecutionTimeout or it's too short, use a default
+			timeout = 1 * time.Minute
 		}
-		return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+
+		// Wait for all signals to arrive or an error indicating early termination
+		var missingSignals []int32
+		ok, err := workflow.AwaitWithTimeout(
+			ctx,
+			timeout,
+			func() bool {
+				missingSignals = validateAllSignalsReceived(params)
+				if len(missingSignals) > 0 {
+					return false
+				}
+				return true
+			})
+		if err != nil || !ok {
+			if !ok {
+				err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
+			}
+			return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+		}
 	}
 
 	return retOrErr.retme, nil
@@ -223,17 +221,41 @@ func (ws *KSWorkflowState) handleActionSet(
 
 // validateAllSignalsReceived checks if all expected signals have been received
 // and returns the list of missing signal IDs if any are missing
-func (ws *KSWorkflowState) validateAllSignalsReceived(ctx workflow.Context) []int32 {
-	if len(ws.expectedSignalIDs) > 0 {
-		missingSignals := make([]int32, 0, len(ws.expectedSignalIDs))
-		for signalID := range ws.expectedSignalIDs {
-			missingSignals = append(missingSignals, signalID)
-		}
-		workflow.GetLogger(ctx).Info("Missing expected signals", "missingSignalIDs", missingSignals)
-		return missingSignals
+func validateAllSignalsReceived(params *kitchensink.WorkflowInput) []int32 {
+	if params != nil && len(params.ExpectedSignalIds) > 0 {
+		return params.ExpectedSignalIds
 	}
-	workflow.GetLogger(ctx).Info("All expected signals received")
 	return nil
+}
+
+// isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
+func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) bool {
+	if params == nil {
+		return true
+	}
+	// If the signal ID is not in the expected list, it means we already processed it
+	for _, id := range params.ExpectedSignalIds {
+		if id == signalID {
+			return false
+		}
+	}
+	return true
+}
+
+// handleSignalDeduplication removes a received signal ID from the expected list
+func handleSignalDeduplication(params *kitchensink.WorkflowInput, signalID int32) {
+	if params == nil {
+		return
+	}
+	// Remove the signal ID from the expected slice
+	for i, id := range params.ExpectedSignalIds {
+		if id == signalID {
+			// Remove by swapping with last element and truncating
+			params.ExpectedSignalIds[i] = params.ExpectedSignalIds[len(params.ExpectedSignalIds)-1]
+			params.ExpectedSignalIds = params.ExpectedSignalIds[:len(params.ExpectedSignalIds)-1]
+			return
+		}
+	}
 }
 
 func (ws *KSWorkflowState) handleAction(
@@ -321,19 +343,6 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, fmt.Errorf("unrecognized action")
 	}
 	return nil, nil
-}
-
-func (ws *KSWorkflowState) handleSignalDeduplication(signalID int32) {
-	// Simply remove the signal ID from the expected set
-	// If it's not there, that's fine - it was already processed or wasn't expected
-	delete(ws.expectedSignalIDs, signalID)
-}
-
-// isSignalAlreadyReceived checks if a signal has already been received (for deduplication)
-func (ws *KSWorkflowState) isSignalAlreadyReceived(signalID int32) bool {
-	// If the signal ID is not in the expected map, it means we already processed it
-	_, exists := ws.expectedSignalIDs[signalID]
-	return !exists
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {

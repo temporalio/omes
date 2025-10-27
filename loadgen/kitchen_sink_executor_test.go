@@ -53,6 +53,9 @@ func TestKitchenSink(t *testing.T) {
 	}
 	env := SetupTestEnvironment(t)
 
+	// Default workflow execution timeout for tests
+	defaultWorkflowTimeout := 30 * time.Second
+
 	for _, tc := range []testCase{
 		{
 			name: "TimerAction",
@@ -517,14 +520,11 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					ExpectedSignalCount: 5,
-					InitialActions: ListActionSet(
-						NewTimerAction(2000),
-					),
 				},
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: NewSignalActionsWithIDs(10),
+							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
 						},
 					},
 				},
@@ -560,7 +560,7 @@ func TestKitchenSink(t *testing.T) {
 					ActionSets: []*ClientActionSet{
 						{
 							// Only send 2 signals, expect 3 and WF should fail
-							Actions: NewSignalActionsWithIDs(2),
+							Actions: NewSignalActionsWithIDs(1, 2),
 						},
 					},
 				},
@@ -569,6 +569,36 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				WorkflowExecutionSignaled`),
 			expectedWorkflowError: "missing signal",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/DuplicatedSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					InitialActions: ListActionSet(
+						NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							// Send the 2 signal twice, then 3
+							Actions: NewSignalActionsWithIDs(1, 2, 2, 3),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -828,7 +858,7 @@ func TestKitchenSink(t *testing.T) {
 				}
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
-					testForSDK(t, tc, sdk, env)
+					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
 				})
 			}
 		})
@@ -840,6 +870,7 @@ func testForSDK(
 	tc testCase,
 	sdk clioptions.Language,
 	env *TestEnvironment,
+	workflowTimeout time.Duration,
 ) {
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
@@ -849,6 +880,10 @@ func testForSDK(
 
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
+		UpdateWorkflowOptions: func(_ context.Context, _ *Run, opts *KitchenSinkWorkflowOptions) error {
+			opts.StartOptions.WorkflowExecutionTimeout = workflowTimeout
+			return nil
+		},
 	}
 	scenarioInfo := ScenarioInfo{
 		ScenarioName: "kitchenSinkTest",
