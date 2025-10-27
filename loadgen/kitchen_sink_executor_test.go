@@ -648,6 +648,9 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedWorkflowError: "error after signals sent",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
+			},
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionStarted
 				WorkflowTaskScheduled
