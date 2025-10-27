@@ -230,11 +230,14 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   );
 
   // Run all initial input actions
+  let initialReturnValue: IPayload | undefined;
   if (input?.initialActions) {
     for (const actionSet of input.initialActions) {
       const rval = await handleActionSet(actionSet);
       if (rval) {
-        return rval;
+        // Store return value but continue to check signal deduplication
+        initialReturnValue = rval;
+        break;
       }
     }
   }
@@ -243,6 +246,11 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   // (if initial actions errored, we never reach here)
   if (input && input.expectedSignalCount && input.expectedSignalCount > 0) {
     throw new ApplicationFailure('signal deduplication not implemented');
+  }
+
+  // If initial actions returned a value, return it now
+  if (initialReturnValue) {
+    return initialReturnValue;
   }
 
   // Run all actions from signals
