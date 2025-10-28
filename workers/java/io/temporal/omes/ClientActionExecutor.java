@@ -1,6 +1,5 @@
 package io.temporal.omes;
 
-import io.temporal.api.common.v1.Payload;
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy;
 import io.temporal.client.UpdateOptions;
 import io.temporal.client.WorkflowClient;
@@ -109,7 +108,9 @@ public class ClientActionExecutor {
         WorkflowStub stub = client.newUntypedWorkflowStub(workflowType, workflowOptions);
 
         UpdateOptions<KitchenSink.WorkflowState> updateOptions =
-            UpdateOptions.newBuilder(KitchenSink.WorkflowState.class).setUpdateName(updateName).build();
+            UpdateOptions.newBuilder(KitchenSink.WorkflowState.class)
+                .setUpdateName(updateName)
+                .build();
 
         stub.executeUpdateWithStart(
             updateOptions, new Object[] {updateArgs}, new Object[] {workflowInput});
