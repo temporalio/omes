@@ -182,9 +182,6 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
@@ -215,9 +212,6 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
@@ -241,9 +235,6 @@ func TestKitchenSink(t *testing.T) {
 						),
 					),
 				},
-			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled {"signalName":"test_signal"}`),
 		},
@@ -271,9 +262,6 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 		},
 		{
 			name: "ExecActivity/Client/Query/Custom/Failure",
@@ -302,9 +290,6 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 		},
 		{
 			name: "ExecActivity/Client/Update/DoActions",
@@ -334,9 +319,6 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				...
 				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 		},
 		{
 			name: "ExecActivity/Client/Update/Custom/Failure",
@@ -365,9 +347,6 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 		},
 		{
 			name: "ExecActivity/Client/Update/WithStart",
@@ -397,9 +376,6 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
-			},
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
 		},
 		{
@@ -425,7 +401,7 @@ func TestKitchenSink(t *testing.T) {
 				clioptions.LangTypeScript: "concurrent client actions are not supported",
 				clioptions.LangDotNet:     "concurrent client actions are not supported",
 				clioptions.LangPython:     "concurrent client actions are not supported",
-				clioptions.LangJava:       "client actions activity is not supported",
+				clioptions.LangJava:       "concurrent client actions are not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
@@ -478,9 +454,6 @@ func TestKitchenSink(t *testing.T) {
 							},
 						}),
 				},
-			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangJava: "client actions activity is not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				WorkflowExecutionSignaled
