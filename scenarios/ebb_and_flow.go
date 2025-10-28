@@ -34,8 +34,6 @@ const (
 	ControlIntervalFlag = "control-interval"
 	// MaxConsecutiveErrorsFlag defines how many consecutive errors are tolerated before stopping the scenario.
 	MaxConsecutiveErrorsFlag = "max-consecutive-errors"
-	// FairnessReportIntervalFlag defines how often fairness reports are logged.
-	FairnessReportIntervalFlag = "fairness-report-interval"
 	// BacklogLogIntervalFlag defines how often the current backlog stats are logged.
 	BacklogLogIntervalFlag = "backlog-log-interval"
 )
@@ -48,7 +46,6 @@ type ebbAndFlowConfig struct {
 	MaxRate                       int
 	ControlInterval               time.Duration
 	MaxConsecutiveErrors          int
-	FairnessReportInterval        time.Duration
 	BacklogLogInterval            time.Duration
 	VisibilityVerificationTimeout time.Duration
 	SleepActivityConfig           *loadgen.SleepActivityConfig
@@ -69,7 +66,6 @@ type ebbAndFlowExecutor struct {
 	startTime          time.Time
 	startedWorkflows   atomic.Int64
 	completedWorkflows atomic.Int64
-	fairnessTracker    *ebbandflow.FairnessTracker
 	stateLock          sync.Mutex
 	state              *ebbAndFlowState
 }
@@ -82,8 +78,7 @@ func init() {
 		Description: "Oscillates backlog between min and max.\n" +
 			"Options:\n" +
 			"  min-backlog, max-backlog, phase-time, sleep-duration, max-rate,\n" +
-			"  control-interval, max-consecutive-errors, fairness-report-interval,\n" +
-			"  fairness-threshold, backlog-log-interval.\n" +
+			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
 			"Duration must be set.",
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
 	})
@@ -117,7 +112,6 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.PhaseTime <= 0 {
 		return fmt.Errorf("phase-time must be greater than 0, got %v", config.PhaseTime)
 	}
-	config.FairnessReportInterval = info.ScenarioOptionDuration(FairnessReportIntervalFlag, config.PhaseTime) // default to phase time
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
@@ -152,7 +146,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.RunID)
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
-	e.fairnessTracker = ebbandflow.NewFairnessTracker()
 
 	// Get parsed configuration
 	config := e.config
@@ -174,11 +167,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	errCh := make(chan error, 10000)
 	ticker := time.NewTicker(config.ControlInterval)
 	defer ticker.Stop()
-
-	// Setup fairness reporting
-	fairnessTicker := time.NewTicker(config.FairnessReportInterval)
-	defer fairnessTicker.Stop()
-	go e.fairnessReportLoop(ctx, fairnessTicker)
 
 	// Setup configurable backlog logging
 	backlogTicker := time.NewTicker(config.BacklogLogInterval)
@@ -330,21 +318,11 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	}
 	e.startedWorkflows.Add(1)
 
-	// Wait for workflow completion and collect results.
+	// Wait for workflow completion
 	var result ebbandflow.WorkflowOutput
 	err = wf.Get(ctx, &result)
 	if err != nil {
 		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
-	} else {
-		for _, activityResult := range result.Timings {
-			if activityResult.FairnessKey != "" {
-				e.fairnessTracker.Track(
-					activityResult.FairnessKey,
-					activityResult.FairnessWeight,
-					activityResult.ScheduleToStart,
-				)
-			}
-		}
 	}
 	e.completedWorkflows.Add(1)
 	e.incrementTotalCompletedWorkflow()
@@ -398,29 +376,4 @@ func calculateSpawnRate(
 	rate = min(maxRate, rate)                                                     // cap at maximum allowed rate
 	rate = max(0, rate)
 	return rate
-}
-
-// fairnessReportLoop periodically generates fairness reports and starts reporting workflows.
-func (e *ebbAndFlowExecutor) fairnessReportLoop(ctx context.Context, ticker *time.Ticker) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			// Generate fairness report.
-			report, err := e.fairnessTracker.GetReport()
-			if err != nil {
-				e.Logger.Warnf("Skipping fairness report: %v", err)
-				continue
-			}
-
-			// Log the report.
-			options := e.NewRun(0).DefaultStartWorkflowOptions()
-			options.ID = fmt.Sprintf("%s-report-%d", e.id, time.Now().UnixMilli())
-			_, err = e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowReport", *report)
-			if err != nil {
-				e.Logger.Errorf("Failed to start fairness report workflow: %v", err)
-			}
-		}
-	}
 }

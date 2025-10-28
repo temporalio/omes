@@ -29,7 +29,7 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 	var activityFuncs []func(workflow.Context) error
 	for _, activity := range activities {
 		activityFuncs = append(activityFuncs, func(ctx workflow.Context) error {
-			// Set up activity options with fairness information
+			// Set up activity options
 			opts := workflow.ActivityOptions{
 				StartToCloseTimeout: 1 * time.Minute,
 				RetryPolicy:         &temporal.RetryPolicy{},
@@ -44,9 +44,8 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 			fairnessKey := activity.GetFairnessKey()
 			fairnessWeight := activity.GetFairnessWeight()
 			if fairnessKey != "" {
-				// TODO(fairness): hack until there is a fairness key in the SDK
-				opts.ActivityID = fmt.Sprintf("x-temporal-internal-fairness-key[%s:%f]-%d",
-					fairnessKey, fairnessWeight, rng.Uint64())
+				opts.Priority.FairnessKey = fairnessKey
+				opts.Priority.FairnessWeight = fairnessWeight
 			}
 
 			// Execute activity
@@ -62,8 +61,6 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 			scheduleToStartMS := activityResult.ActualStartTime.Sub(activityResult.ScheduledTime)
 
 			result := ebbandflow.ActivityTiming{
-				FairnessKey:     fairnessKey,
-				FairnessWeight:  fairnessWeight,
 				ScheduleToStart: scheduleToStartMS,
 			}
 
@@ -87,16 +84,4 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 	}
 
 	return &ebbandflow.WorkflowOutput{Timings: results}, nil
-}
-
-// EbbAndFlowReportWorkflow receives fairness reports and handles logging and metrics
-func EbbAndFlowReportWorkflow(ctx workflow.Context, report ebbandflow.FairnessReport) error {
-	// Execute the report activity with the snapshot data
-	opts := workflow.ActivityOptions{
-		StartToCloseTimeout: 1 * time.Minute,
-		RetryPolicy:         &temporal.RetryPolicy{},
-	}
-
-	actCtx := workflow.WithActivityOptions(ctx, opts)
-	return workflow.ExecuteActivity(actCtx, activityStub.ProcessFairnessReport, report).Get(ctx, nil)
 }
