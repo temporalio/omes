@@ -1,5 +1,6 @@
 ﻿using Temporalio.Runtime;
 using Temporalio.Worker;
+using Temporalio.Worker.Tuning;
 
 namespace Temporalio.Omes;
 
@@ -42,6 +43,14 @@ public static class App
     private static readonly Option<uint?> maxWFTPollersOption = new(
         name: "--max-concurrent-workflow-pollers",
         description: "Max concurrent workflow pollers");
+
+    private static readonly Option<uint?> activityPollerAutoscaleMaxOption = new(
+        name: "--activity-poller-autoscale-max",
+        description: "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)");
+
+    private static readonly Option<uint?> workflowPollerAutoscaleMaxOption = new(
+        name: "--workflow-poller-autoscale-max",
+        description: "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)");
 
     private static readonly Option<uint?> maxATOption = new(
         name: "--max-concurrent-activities",
@@ -99,6 +108,8 @@ public static class App
         cmd.Add(taskQSuffixEndOption);
         cmd.Add(maxATPollersOption);
         cmd.Add(maxWFTPollersOption);
+        cmd.Add(activityPollerAutoscaleMaxOption);
+        cmd.Add(workflowPollerAutoscaleMaxOption);
         cmd.Add(maxATOption);
         cmd.Add(maxWFTOption);
         cmd.Add(logLevelOption);
@@ -192,7 +203,22 @@ public static class App
             {
                 workerOptions.MaxConcurrentActivities = (int)maxAt;
             }
-            // TODO: Max pollers options aren't in .NET yet
+
+            // Configure poller behaviors with autoscaling support
+            if (ctx.ParseResult.GetValueForOption(activityPollerAutoscaleMaxOption) is { } activityAutoscaleMax)
+            {
+                workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling
+                {
+                    Maximum = (int)activityAutoscaleMax
+                };
+            }
+            if (ctx.ParseResult.GetValueForOption(workflowPollerAutoscaleMaxOption) is { } workflowAutoscaleMax)
+            {
+                workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling
+                {
+                    Maximum = (int)workflowAutoscaleMax
+                };
+            }
 
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
             workerOptions.AddActivity(KitchenSinkWorkflow.Noop);

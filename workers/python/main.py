@@ -15,7 +15,7 @@ from temporalio.runtime import (
     TelemetryFilter,
 )
 from temporalio.service import TLSConfig
-from temporalio.worker import Worker
+from temporalio.worker import Worker, PollerBehaviorAutoscaling
 
 from activities import (
     create_client_activity,
@@ -63,6 +63,16 @@ async def run():
         "--max-concurrent-workflow-pollers",
         type=int,
         help="Max concurrent workflow pollers",
+    )
+    parser.add_argument(
+        "--activity-poller-autoscale-max",
+        type=int,
+        help="Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)",
+    )
+    parser.add_argument(
+        "--workflow-poller-autoscale-max",
+        type=int,
+        help="Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)",
     )
     parser.add_argument(
         "--max-concurrent-activities", type=int, help="Max concurrent activities"
@@ -167,11 +177,19 @@ async def run():
         logger.info("Python worker running for %s task queue(s)" % len(task_queues))
 
     worker_kwargs = {}
-    if args.max_concurrent_activity_pollers is not None:
+    if args.activity_poller_autoscale_max is not None:
+        worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling(
+            maximum=args.activity_poller_autoscale_max
+        )
+    elif args.max_concurrent_activity_pollers is not None:
         worker_kwargs[
             "max_concurrent_activity_task_polls"
         ] = args.max_concurrent_activity_pollers
-    if args.max_concurrent_workflow_pollers is not None:
+    if args.workflow_poller_autoscale_max is not None:
+        worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
+            maximum=args.workflow_poller_autoscale_max
+        )
+    elif args.max_concurrent_workflow_pollers is not None:
         worker_kwargs[
             "max_concurrent_workflow_task_polls"
         ] = args.max_concurrent_workflow_pollers

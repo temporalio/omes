@@ -31,6 +31,8 @@ async function run() {
     .option('-n, --namespace <namespace>', 'The namespace to use', 'default')
     .option('--max-concurrent-activity-pollers <maxActPollers>', 'Max concurrent activity pollers')
     .option('--max-concurrent-workflow-pollers <maxWfPollers>', 'Max concurrent workflow pollers')
+    .option('--activity-poller-autoscale-max <actPollerAutoscaleMax>', 'Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)')
+    .option('--workflow-poller-autoscale-max <wfPollerAutoscaleMax>', 'Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)')
     .option('--max-concurrent-activities <maxActs>', 'Max concurrent activities')
     .option('--max-concurrent-workflow-tasks <maxWFTs>', 'Max concurrent workflow tasks')
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
@@ -50,6 +52,8 @@ async function run() {
 
     maxActPollers: number;
     maxWfPollers: number;
+    actPollerAutoscaleMax: number;
+    wfPollerAutoscaleMax: number;
     maxActs: number;
     maxWFTs: number;
 
@@ -156,10 +160,20 @@ async function run() {
       payloadConverterPath: require.resolve('./payload-converter'),
     },
   };
-  if (opts.maxActPollers) {
+  if (opts.actPollerAutoscaleMax) {
+    workerArgs.activityTaskPollerBehavior = {
+      type: 'autoscaling',
+      maximum: opts.actPollerAutoscaleMax,
+    };
+  } else if (opts.maxActPollers) {
     workerArgs.maxConcurrentActivityTaskPolls = opts.maxActPollers;
   }
-  if (opts.maxWfPollers) {
+  if (opts.wfPollerAutoscaleMax) {
+    workerArgs.workflowTaskPollerBehavior = {
+      type: 'autoscaling',
+      maximum: opts.wfPollerAutoscaleMax,
+    };
+  } else if (opts.maxWfPollers) {
     workerArgs.maxConcurrentWorkflowTaskPolls = opts.maxWfPollers;
   }
   if (opts.maxActs) {
