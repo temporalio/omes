@@ -56,7 +56,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     if (signalActions.hasDoActionsInMain()) {
       signalActionQueue.put(signalActions.getDoActionsInMain());
     } else if (signalActions.hasDoActions()) {
-      signalActionQueue.put(signalActions.getDoActions());
+      handleActionSet(signalActions.getDoActions());
     } else {
       throw ApplicationFailure.newNonRetryableFailure(
           "Signal actions must have a recognizable variant", "");
