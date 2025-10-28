@@ -255,6 +255,7 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 			<PropertyGroup>
 				<OutputType>Exe</OutputType>
 				<TargetFramework>net8.0</TargetFramework>
+				<ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
 			</PropertyGroup>
 			<ItemGroup>
 				<ProjectReference Include="` + omesProjPath + `" />
