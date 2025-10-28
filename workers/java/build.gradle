@@ -48,7 +48,8 @@ dependencies {
 sourceSets {
     main {
         java {
-            srcDirs = ['./']
+            srcDirs = ['io/temporal/omes']
+            exclude '**/build/**'
         }
     }
 }
