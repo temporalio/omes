@@ -11,6 +11,8 @@ type WorkerOptions struct {
 	BuildID                      string
 	MaxConcurrentActivityPollers int
 	MaxConcurrentWorkflowPollers int
+	ActivityPollerAutoscaleMax   int // overrides MaxConcurrentActivityPollers
+	WorkflowPollerAutoscaleMax   int // overrides MaxConcurrentWorkflowPollers
 	MaxConcurrentActivities      int
 	MaxConcurrentWorkflowTasks   int
 }
@@ -20,6 +22,8 @@ func (m *WorkerOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
 	fs.StringVar(&m.BuildID, prefix+"build-id", "", "Build ID")
 	fs.IntVar(&m.MaxConcurrentActivityPollers, prefix+"max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
 	fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
+	fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
+	fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
 	fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
 	fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
 }
@@ -34,6 +38,12 @@ func (m *WorkerOptions) ToFlags() (flags []string) {
 	}
 	if m.MaxConcurrentWorkflowPollers != 0 {
 		flags = append(flags, "--max-concurrent-workflow-pollers", strconv.Itoa(m.MaxConcurrentWorkflowPollers))
+	}
+	if m.ActivityPollerAutoscaleMax != 0 {
+		flags = append(flags, "--activity-poller-autoscale-max", strconv.Itoa(m.ActivityPollerAutoscaleMax))
+	}
+	if m.WorkflowPollerAutoscaleMax != 0 {
+		flags = append(flags, "--workflow-poller-autoscale-max", strconv.Itoa(m.WorkflowPollerAutoscaleMax))
 	}
 	if m.MaxConcurrentActivities != 0 {
 		flags = append(flags, "--max-concurrent-activities", strconv.Itoa(m.MaxConcurrentActivities))

@@ -53,6 +53,17 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
+func makePollerBehavior(simple, auto int) worker.PollerBehavior {
+	if auto > 0 {
+		return worker.NewPollerBehaviorAutoscaling(worker.PollerBehaviorAutoscalingOptions{
+			MaximumNumberOfPollers: auto,
+		})
+	}
+	return worker.NewPollerBehaviorSimpleMaximum(worker.PollerBehaviorSimpleMaximumOptions{
+		MaximumNumberOfPollers: simple,
+	})
+}
+
 func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
 	ebbFlowActivities := ebbandflow.Activities{}
@@ -73,8 +84,14 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 				UseBuildIDForVersioning:                options.BuildID != "",
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
-				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
-				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
+				ActivityTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentActivityPollers,
+					options.ActivityPollerAutoscaleMax,
+				),
+				WorkflowTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentWorkflowPollers,
+					options.WorkflowPollerAutoscaleMax,
+				),
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
