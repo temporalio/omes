@@ -61,7 +61,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("failed starting embedded server: %w", err)
 		}
-		r.ClientOptions.Address = server.FrontendHostPort()
+		r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
 		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.Address)
 		defer func() {
 			r.Logger.Info("Stopping embedded local server")
