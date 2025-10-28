@@ -63,11 +63,25 @@ class KitchenSinkWorkflow:
         workflow.logger.debug("Started kitchen sink workflow")
 
         # Run all initial input actions
+        initial_return_value = None
         if input and input.initial_actions:
             for action_set in input.initial_actions:
                 return_value = await self.handle_action_set(action_set)
                 if return_value is not None:
-                    return return_value
+                    # Store return value but continue to check signal deduplication
+                    initial_return_value = return_value
+                    break
+
+        # Check signal deduplication after initial actions
+        # (if initial actions errored, we never reach here)
+        if input and input.expected_signal_count > 0:
+            raise exceptions.ApplicationError(
+                "signal deduplication not implemented", non_retryable=True
+            )
+
+        # If initial actions returned a value, return it now
+        if initial_return_value is not None:
+            return initial_return_value
 
         # Run all actions from signals
         while True:

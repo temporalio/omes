@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -182,6 +183,62 @@ func NewAwaitWorkflowStateAction(key, value string) *Action {
 			AwaitWorkflowState: &AwaitWorkflowState{
 				Key:   key,
 				Value: value,
+			},
+		},
+	}
+}
+
+func NewSignalActionsWithIDs(ids ...int32) []*ClientAction {
+	actions := make([]*ClientAction, len(ids))
+	for i, id := range ids {
+		actions[i] = &ClientAction{
+			Variant: &ClientAction_DoSignal{
+				DoSignal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{
+						DoSignalActions: &DoSignal_DoSignalActions{
+							SignalId: id,
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(
+									NewSetWorkflowStateAction(fmt.Sprintf("signal_%d", i), "received"),
+								),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	return actions
+}
+
+// NewSignalActionWithError creates a signal action that returns an error
+func NewSignalActionWithError(signalID int32, errorMessage string) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoSignal{
+			DoSignal: &DoSignal{
+				Variant: &DoSignal_DoSignalActions_{
+					DoSignalActions: &DoSignal_DoSignalActions{
+						SignalId: signalID,
+						Variant: &DoSignal_DoSignalActions_DoActions{
+							DoActions: SingleActionSet(
+								NewErrorAction(errorMessage),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// NewErrorAction creates an action that returns an error
+func NewErrorAction(errorMessage string) *Action {
+	return &Action{
+		Variant: &Action_ReturnError{
+			ReturnError: &ReturnErrorAction{
+				Failure: &failure.Failure{
+					Message: errorMessage,
+				},
 			},
 		},
 	}

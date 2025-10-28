@@ -42,6 +42,7 @@ type testCase struct {
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
+	expectedWorkflowError   string
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -51,6 +52,9 @@ func TestKitchenSink(t *testing.T) {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
 	env := SetupTestEnvironment(t)
+
+	// Default workflow execution timeout for tests
+	defaultWorkflowTimeout := 30 * time.Second
 
 	for _, tc := range []testCase{
 		{
@@ -512,6 +516,156 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionSignaled`),
 		},
 		{
+			name: "ClientSequence/Signal/Deduplication",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 5,
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/MissingSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					InitialActions: ListActionSet(
+						NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							// Only send 2 signals, expect 3 and WF should fail
+							Actions: NewSignalActionsWithIDs(1, 2),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedWorkflowError: "missing signal",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
+			name: "ClientSequence/Signal/Deduplication/DuplicatedSignal",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3,
+					InitialActions: ListActionSet(
+						NewTimerAction(1000),
+					),
+				},
+				ClientSequence: &ClientSequence{
+					ActionSets: []*ClientActionSet{
+						{
+							// Send the 2 signal twice, then 3
+							Actions: NewSignalActionsWithIDs(1, 2, 2, 3),
+						},
+					},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava:       "signal deduplication not implemented",
+				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangTypeScript: "signal deduplication not implemented",
+				clioptions.LangDotNet:     "signal deduplication not implemented",
+			},
+		},
+		{
+			name: "ErrorFromInitialActions/SkipsSignalWaiting",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 3, // Expect 3 signals (but don't send any)
+					InitialActions: ListActionSet(
+						NewErrorAction("error from initial actions"),
+					),
+				},
+				// No ClientSequence - no signals will be sent
+			},
+			expectedWorkflowError: "error from initial actions",
+			historyMatcher: FullHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				WorkflowExecutionFailed`), // No TimerStarted for AwaitWithTimeout
+		},
+		{
+			name: "ErrorInInitialActions/WithExpectedSignals",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					ExpectedSignalCount: 2, // Expect signals but error before waiting
+					InitialActions: ListActionSet(
+						// Send some signals first
+						ClientActivity(
+							&ClientSequence{
+								ActionSets: []*ClientActionSet{
+									{
+										Actions: NewSignalActionsWithIDs(1, 2),
+									},
+								},
+							},
+							DefaultRemoteActivity,
+						),
+						// Then error - this should skip signal waiting even though signals arrived
+						NewErrorAction("error after signals sent"),
+					),
+				},
+			},
+			expectedWorkflowError: "error after signals sent",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangJava: "client actions activity is not supported",
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ActivityTaskScheduled
+				...
+				WorkflowExecutionSignaled
+				WorkflowExecutionSignaled
+				...
+				ActivityTaskCompleted
+				...
+				WorkflowExecutionFailed`), // No TimerStarted - error skips signal waiting
+		},
+		{
 			name: "ClientSequence/Signal/Custom",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{
@@ -763,7 +917,7 @@ func TestKitchenSink(t *testing.T) {
 				}
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
-					testForSDK(t, tc, sdk, env)
+					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
 				})
 			}
 		})
@@ -775,6 +929,7 @@ func testForSDK(
 	tc testCase,
 	sdk clioptions.Language,
 	env *TestEnvironment,
+	workflowTimeout time.Duration,
 ) {
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
@@ -784,6 +939,10 @@ func testForSDK(
 
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
+		UpdateWorkflowOptions: func(_ context.Context, _ *Run, opts *KitchenSinkWorkflowOptions) error {
+			opts.StartOptions.WorkflowExecutionTimeout = workflowTimeout
+			return nil
+		},
 	}
 	scenarioInfo := ScenarioInfo{
 		ScenarioName: "kitchenSinkTest",
@@ -842,7 +1001,26 @@ func testSupportedFeature(
 		}
 	}
 
-	require.NoError(t, execErr, "executor failed")
+	// Check if workflow failure is expected
+	if tc.expectedWorkflowError != "" {
+		require.Errorf(t, execErr, "SDK %s should fail with workflow error", sdk)
+		require.Containsf(t, strings.ToLower(execErr.Error()), strings.ToLower(tc.expectedWorkflowError),
+			"SDK %s workflow error should contain '%s'", sdk, tc.expectedWorkflowError)
+		require.NoError(t, historyErr, "failed to get workflow history")
+
+		// Verify workflow failed in history
+		hasWorkflowFailed := false
+		for _, event := range historyEvents {
+			if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
+				hasWorkflowFailed = true
+				break
+			}
+		}
+		require.Truef(t, hasWorkflowFailed, "SDK %s workflow should have WorkflowExecutionFailed event in history", sdk)
+	} else {
+		require.NoError(t, execErr, "executor failed")
+	}
+
 	require.NoError(t, historyErr, "failed to get workflow history")
 	require.NotNilf(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
 	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)

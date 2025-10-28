@@ -57,6 +57,7 @@ public class KitchenSinkWorkflow
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
     {
         // Run all initial input actions
+        Payload? initialReturnValue = null;
         if (workflowInput?.InitialActions is { } actions)
         {
             foreach (var actionSet in actions)
@@ -64,9 +65,24 @@ public class KitchenSinkWorkflow
                 var returnMe = await HandleActionSetAsync(actionSet);
                 if (returnMe != null)
                 {
-                    return null;
+                    // Store return value but continue to check signal deduplication
+                    initialReturnValue = returnMe;
+                    break;
                 }
             }
+        }
+
+        // Check signal deduplication after initial actions
+        // (if initial actions errored, we never reach here)
+        if (workflowInput?.ExpectedSignalCount > 0)
+        {
+            throw new ApplicationFailureException("signal deduplication not implemented");
+        }
+
+        // If initial actions returned a value, return it now
+        if (initialReturnValue != null)
+        {
+            return initialReturnValue;
         }
 
         // Run all actions from signals

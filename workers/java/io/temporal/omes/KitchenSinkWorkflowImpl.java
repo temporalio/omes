@@ -31,13 +31,27 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
     // Run all initial input actions
+    Payload initialReturnValue = null;
     if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
         Payload result = handleActionSet(actionSet);
         if (result != null) {
-          return result;
+          // Store return value but continue to check signal deduplication
+          initialReturnValue = result;
+          break;
         }
       }
+    }
+
+    // Check signal deduplication after initial actions
+    // (if initial actions errored, we never reach here)
+    if (input != null && input.getExpectedSignalCount() > 0) {
+      throw ApplicationFailure.newNonRetryableFailure("signal deduplication not implemented", "");
+    }
+
+    // If initial actions returned a value, return it now
+    if (initialReturnValue != null) {
+      return initialReturnValue;
     }
 
     // Run all actions from signals
