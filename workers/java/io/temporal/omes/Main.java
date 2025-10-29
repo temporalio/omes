@@ -113,12 +113,14 @@ public class Main implements Runnable {
 
   @CommandLine.Option(
       names = "--activity-poller-autoscale-max",
-      description = "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)")
+      description =
+          "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)")
   private int activityPollerAutoscaleMax;
 
   @CommandLine.Option(
       names = "--workflow-poller-autoscale-max",
-      description = "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)")
+      description =
+          "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)")
   private int workflowPollerAutoscaleMax;
 
   @CommandLine.Option(
@@ -226,20 +228,16 @@ public class Main implements Runnable {
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     // Workflow options
     if (workflowPollerAutoscaleMax > 0) {
-      workerOptions.setWorkflowTaskPollerBehavior(
-          PollerBehaviorAutoscaling.newBuilder()
-              .setMaximumNumberOfPollers(workflowPollerAutoscaleMax)
-              .build());
+      workerOptions.setWorkflowTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, workflowPollerAutoscaleMax, null));
     } else if (maxConcurrentWorkflowPollers > 0) {
       workerOptions.setMaxConcurrentWorkflowTaskPollers(maxConcurrentWorkflowPollers);
     }
     workerOptions.setMaxConcurrentWorkflowTaskExecutionSize(maxConcurrentWorkflowTasks);
     // Activity options
     if (activityPollerAutoscaleMax > 0) {
-      workerOptions.setActivityTaskPollerBehavior(
-          PollerBehaviorAutoscaling.newBuilder()
-              .setMaximumNumberOfPollers(activityPollerAutoscaleMax)
-              .build());
+      workerOptions.setActivityTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, activityPollerAutoscaleMax, null));
     } else if (maxConcurrentActivityPollers > 0) {
       workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
     }
