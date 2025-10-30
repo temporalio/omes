@@ -207,17 +207,11 @@ public static class App
             // Configure poller behaviors with autoscaling support
             if (ctx.ParseResult.GetValueForOption(activityPollerAutoscaleMaxOption) is { } activityAutoscaleMax)
             {
-                workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling
-                {
-                    Maximum = (int)activityAutoscaleMax
-                };
+                workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling(maximum: (int)activityAutoscaleMax);
             }
             if (ctx.ParseResult.GetValueForOption(workflowPollerAutoscaleMaxOption) is { } workflowAutoscaleMax)
             {
-                workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling
-                {
-                    Maximum = (int)workflowAutoscaleMax
-                };
+                workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling(maximum: (int)workflowAutoscaleMax);
             }
 
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
