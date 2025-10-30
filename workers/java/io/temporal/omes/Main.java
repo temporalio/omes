@@ -23,6 +23,7 @@ import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
 import io.temporal.worker.WorkerOptions;
+import io.temporal.worker.tuning.PollerBehaviorAutoscaling;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -109,6 +110,18 @@ public class Main implements Runnable {
       names = "--max-concurrent-workflow-pollers",
       description = "Max concurrent workflow pollers")
   private int maxConcurrentWorkflowPollers;
+
+  @CommandLine.Option(
+      names = "--activity-poller-autoscale-max",
+      description =
+          "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)")
+  private int activityPollerAutoscaleMax;
+
+  @CommandLine.Option(
+      names = "--workflow-poller-autoscale-max",
+      description =
+          "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)")
+  private int workflowPollerAutoscaleMax;
 
   @CommandLine.Option(
       names = "--max-concurrent-activities",
@@ -214,10 +227,20 @@ public class Main implements Runnable {
     // Create the base worker options
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     // Workflow options
-    workerOptions.setMaxConcurrentWorkflowTaskPollers(maxConcurrentWorkflowPollers);
+    if (workflowPollerAutoscaleMax > 0) {
+      workerOptions.setWorkflowTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, workflowPollerAutoscaleMax, null));
+    } else if (maxConcurrentWorkflowPollers > 0) {
+      workerOptions.setMaxConcurrentWorkflowTaskPollers(maxConcurrentWorkflowPollers);
+    }
     workerOptions.setMaxConcurrentWorkflowTaskExecutionSize(maxConcurrentWorkflowTasks);
     // Activity options
-    workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
+    if (activityPollerAutoscaleMax > 0) {
+      workerOptions.setActivityTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, activityPollerAutoscaleMax, null));
+    } else if (maxConcurrentActivityPollers > 0) {
+      workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
+    }
     workerOptions.setMaxConcurrentActivityExecutionSize(maxConcurrentActivities);
     // Start all workers, throwing on first exception
     for (String taskQueue : taskQueues) {
