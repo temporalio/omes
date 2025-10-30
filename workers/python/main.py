@@ -15,7 +15,7 @@ from temporalio.runtime import (
     TelemetryFilter,
 )
 from temporalio.service import TLSConfig
-from temporalio.worker import Worker, PollerBehaviorAutoscaling
+from temporalio.worker import PollerBehaviorAutoscaling, Worker
 
 from activities import (
     create_client_activity,
