@@ -41,7 +41,7 @@ type workerWithScenarioRunner struct {
 func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.workerRunner.addCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
-	r.metricsOptions.AddCLIFlags(fs, "")
+	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
 }
 
 func (r *workerWithScenarioRunner) preRun() {

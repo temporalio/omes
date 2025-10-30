@@ -145,6 +145,9 @@ type MetricsOptions struct {
 	// HTTP path for serving metrics.
 	// Default "/metrics".
 	PrometheusHandlerPath string
+
+	fs         *pflag.FlagSet
+	usedPrefix string
 }
 
 // Metrics is a component for insrumenting an application with Promethues metrics.
@@ -213,19 +216,17 @@ func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, reg
 	return server
 }
 
-// AddCLIFlags adds the relevant flags to populate the options struct.
-func (m *MetricsOptions) AddCLIFlags(fs *pflag.FlagSet, prefix string) {
-	fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
-	fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
-}
-
-// ToFlags converts these options to string flags.
-func (m *MetricsOptions) ToFlags() (flags []string) {
-	if m.PrometheusListenAddress != "" {
-		flags = append(flags, "--prom-listen-address", m.PrometheusListenAddress)
+// FlagSet adds the relevant flags to populate the options struct and returns a pflag.FlagSet.
+func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
+	if m.fs != nil {
+		if prefix != m.usedPrefix {
+			panic("prefix mismatch")
+		}
+		return m.fs
 	}
-	if m.PrometheusHandlerPath != "" {
-		flags = append(flags, "--prom-handler-path", m.PrometheusHandlerPath)
-	}
-	return
+	m.usedPrefix = prefix
+	m.fs = pflag.NewFlagSet("metrics_options", pflag.ExitOnError)
+	m.fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
+	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
+	return m.fs
 }
