@@ -8,6 +8,7 @@
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
     </PropertyGroup>
 
     <!-- When testing/linting, treat this as a library so no Main method is needed. -->

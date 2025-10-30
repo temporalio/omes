@@ -63,9 +63,9 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.scenario.AddCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
 	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
-	r.clientOptions.AddCLIFlags(fs)
-	r.metricsOptions.AddCLIFlags(fs, "")
-	r.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(r.clientOptions.FlagSet())
+	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(r.loggingOptions.FlagSet())
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {

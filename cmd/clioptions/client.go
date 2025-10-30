@@ -46,6 +46,8 @@ type ClientOptions struct {
 	AuthHeader string
 	// Disable Host Verification
 	DisableHostVerification bool
+
+	fs *pflag.FlagSet
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -126,46 +128,23 @@ func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (clien
 	return client, nil
 }
 
-// AddCLIFlags adds the relevant flags to populate the options struct.
-func (c *ClientOptions) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
-	fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
-	fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
-	fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
-	fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
-	fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
-	fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
-	fs.StringVar(&c.AuthHeader, "auth-header", "",
-		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
-}
+// FlagSet adds the relevant flags to populate the options struct and returns a pflag.FlagSet.
+func (c *ClientOptions) FlagSet() *pflag.FlagSet {
+	if c.fs != nil {
+		return c.fs
+	}
 
-// ToFlags converts these options to string flags.
-func (c *ClientOptions) ToFlags() (flags []string) {
-	if c.Address != "" {
-		flags = append(flags, "--server-address", c.Address)
-	}
-	if c.Namespace != "" {
-		flags = append(flags, "--namespace", c.Namespace)
-	}
-	if c.EnableTLS {
-		flags = append(flags, "--tls")
-	}
-	if c.ClientCertPath != "" {
-		flags = append(flags, "--tls-cert-path", c.ClientCertPath)
-	}
-	if c.ClientKeyPath != "" {
-		flags = append(flags, "--tls-key-path", c.ClientKeyPath)
-	}
-	if c.DisableHostVerification {
-		flags = append(flags, "--disable-tls-host-verification")
-	}
-	if c.TLSServerName != "" {
-		flags = append(flags, "--tls-server-name", c.TLSServerName)
-	}
-	if c.AuthHeader != "" {
-		flags = append(flags, "--auth-header", c.AuthHeader)
-	}
-	return
+	c.fs = pflag.NewFlagSet("client_options", pflag.ExitOnError)
+	c.fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
+	c.fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
+	c.fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
+	c.fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
+	c.fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	c.fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
+	c.fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
+	c.fs.StringVar(&c.AuthHeader, "auth-header", "",
+		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
+	return c.fs
 }
 
 type PassThroughPayloadConverter struct{}

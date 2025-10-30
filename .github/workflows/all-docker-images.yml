@@ -1,4 +1,8 @@
 name: Build all language docker images
+
+permissions:
+  contents: read
+
 on:
   workflow_call:
     # TODO: Can eventually support repo refs too rather than just versions if/when we need that.

@@ -49,9 +49,9 @@ type scenarioCleaner struct {
 func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {
 	c.scenario.AddCLIFlags(fs)
 	fs.DurationVar(&c.pollInterval, "poll-interval", time.Second, "Interval for polling completion of job")
-	c.clientOptions.AddCLIFlags(fs)
-	c.metricsOptions.AddCLIFlags(fs, "")
-	c.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(c.clientOptions.FlagSet())
+	fs.AddFlagSet(c.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(c.loggingOptions.FlagSet())
 }
 
 func (c *scenarioCleaner) run(ctx context.Context) error {

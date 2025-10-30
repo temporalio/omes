@@ -123,10 +123,10 @@ func Main() {
 		Run:   app.Run,
 	}
 
-	app.loggingOptions.AddCLIFlags(cmd.Flags())
-	app.clientOptions.AddCLIFlags(cmd.Flags())
-	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
-	app.workerOptions.AddCLIFlags(cmd.Flags(), "")
+	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
