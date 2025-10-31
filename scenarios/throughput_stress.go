@@ -62,6 +62,7 @@ type tpsConfig struct {
 
 type tpsExecutor struct {
 	executor   *loadgen.KitchenSinkExecutor
+	verifier   *tpsVerifier
 	lock       sync.Mutex
 	state      *tpsState
 	config     *tpsConfig
@@ -79,6 +80,14 @@ func init() {
 			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
 			IterFlag, ContinueAsNewAfterIterFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			t := executor.(*tpsExecutor)
+			if t.verifier == nil || t.executor == nil {
+				return nil
+			}
+			state := t.executor.GetState()
+			return t.verifier.VerifyRun(ctx, info, state)
+		},
 	})
 }
 
@@ -272,8 +281,17 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
 		}
 
-		if err := t.executor.EnableWorkflowCompletionCheck(ctx, info, timeout, expectedWorkflowCount); err != nil {
+		// Initialize workflow completion checker
+		completionVerifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
+		if err != nil {
 			return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
+		}
+		completionVerifier.SetExpectedWorkflowCount(expectedWorkflowCount)
+
+		// Create verifier that combines workflow completion and throughput checking
+		t.verifier = &tpsVerifier{
+			completionVerifier: completionVerifier,
+			config:             t.config,
 		}
 
 		if err := t.executor.Run(ctx, info); err != nil {
@@ -315,54 +333,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	return nil
 }
 
-// VerifyRun implements loadgen.VerifyRunnable for post-execution verifications
-func (t *tpsExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) []error {
-	var errors []error
-
-	// 1. Delegate to executor's internal verifier
-	errors = append(errors, t.executor.VerifyRun(ctx, info)...)
-
-	// 2. Check throughput, if configured.
-	if t.config.MinThroughputPerHour > 0 {
-		state := t.executor.GetState()
-
-		// Recalculate expected workflow count for throughput check
-		var continueAsNewWorkflows int
-		if t.config.ContinueAsNewAfterIter > 0 {
-			continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
-			continueAsNewWorkflows = continueAsNewPerIter * state.CompletedIterations
-		}
-		completedChildWorkflows := state.CompletedIterations * t.config.InternalIterations
-		completedWorkflows := state.CompletedIterations + completedChildWorkflows + continueAsNewWorkflows
-
-		// Calculate duration from executor state
-		var totalDuration time.Duration
-		if !state.StartedAt.IsZero() && !state.LastCompletedAt.IsZero() {
-			totalDuration = state.LastCompletedAt.Sub(state.StartedAt)
-		}
-
-		if totalDuration == 0 {
-			errors = append(errors, fmt.Errorf("throughput check: no duration recorded (startedAt=%v, lastCompletedAt=%v)",
-				state.StartedAt, state.LastCompletedAt))
-		} else {
-			actualThroughput := float64(completedWorkflows) / totalDuration.Hours()
-
-			if actualThroughput < t.config.MinThroughputPerHour {
-				expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
-				errors = append(errors, fmt.Errorf("throughput check: %.1f workflows/hour < %.1f required "+
-					"(completed %d workflows, expected %d in %v)",
-					actualThroughput,
-					t.config.MinThroughputPerHour,
-					completedWorkflows,
-					expectedWorkflows,
-					totalDuration.Round(time.Second)))
-			}
-		}
-	}
-
-	return errors
-}
-
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
 	if skipCleanNamespaceCheck {
 		info.Logger.Info("Skipping check to verify if the namespace is clean")
@@ -370,7 +340,7 @@ func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioI
 	}
 
 	// Complain if there are already existing workflows with the provided run id; unless resuming.
-	workflowCountQry := fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.OmesRunID())
+	workflowCountQry := fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID)
 	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
 		Query:     workflowCountQry,
@@ -537,7 +507,7 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				SearchAttributes: map[string]*common.Payload{
 					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
-						Data:     []byte(fmt.Sprintf("%q", run.OmesRunID())), // quoted to be valid JSON string
+						Data:     []byte(fmt.Sprintf("%q", run.ExecutionID)), // quoted to be valid JSON string
 					},
 				},
 			},
@@ -679,4 +649,54 @@ func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	return t.rng.Float64() <= likelihood
+}
+
+type tpsVerifier struct {
+	completionVerifier *loadgen.WorkflowCompletionVerifier
+	config             *tpsConfig
+}
+
+func (v *tpsVerifier) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo, state loadgen.ExecutorState) []error {
+	var errors []error
+
+	// 1. Delegate to completion verifier
+	errors = append(errors, v.completionVerifier.VerifyRun(ctx, info, state)...)
+
+	// 2. Check throughput, if configured.
+	if v.config.MinThroughputPerHour > 0 {
+		// Recalculate expected workflow count for throughput check
+		var continueAsNewWorkflows int
+		if v.config.ContinueAsNewAfterIter > 0 {
+			continueAsNewPerIter := (v.config.InternalIterations - 1) / v.config.ContinueAsNewAfterIter
+			continueAsNewWorkflows = continueAsNewPerIter * state.CompletedIterations
+		}
+		completedChildWorkflows := state.CompletedIterations * v.config.InternalIterations
+		completedWorkflows := state.CompletedIterations + completedChildWorkflows + continueAsNewWorkflows
+
+		// Calculate duration from executor state
+		var totalDuration time.Duration
+		if !state.StartedAt.IsZero() && !state.LastCompletedAt.IsZero() {
+			totalDuration = state.LastCompletedAt.Sub(state.StartedAt)
+		}
+
+		if totalDuration == 0 {
+			errors = append(errors, fmt.Errorf("throughput check: no duration recorded (startedAt=%v, lastCompletedAt=%v)",
+				state.StartedAt, state.LastCompletedAt))
+		} else {
+			actualThroughput := float64(completedWorkflows) / totalDuration.Hours()
+
+			if actualThroughput < v.config.MinThroughputPerHour {
+				expectedWorkflows := int(totalDuration.Hours() * v.config.MinThroughputPerHour)
+				errors = append(errors, fmt.Errorf("throughput check: %.1f workflows/hour < %.1f required "+
+					"(completed %d workflows, expected %d in %v)",
+					actualThroughput,
+					v.config.MinThroughputPerHour,
+					completedWorkflows,
+					expectedWorkflows,
+					totalDuration.Round(time.Second)))
+			}
+		}
+	}
+
+	return errors
 }

@@ -103,9 +103,9 @@ func MinVisibilityCountEventually(
 	return nil
 }
 
-// GetNonCompletedWorkflows queries and returns details about non-completed workflows for debugging purposes.
-// Returns a formatted string with up to the specified number of workflow details, or an error if the query fails.
-func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string, limit int32) (string, error) {
+// GetNonCompletedWorkflows queries and returns an error for each non-completed workflow.
+// Returns a list of errors (one per non-completed workflow) with workflow details, or a query error if the list fails.
+func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string, limit int32) []error {
 	nonCompletedQuery := fmt.Sprintf(
 		"%s='%s' AND ExecutionStatus != 'Completed'",
 		searchAttribute,
@@ -119,22 +119,22 @@ func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttr
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("failed to list non-completed workflows: %w", err)
+		return []error{fmt.Errorf("failed to list non-completed workflows: %w", err)}
 	}
 
 	if len(resp.Executions) == 0 {
-		return "", nil
+		return nil
 	}
 
-	var workflowDetails string
-	for i, exec := range resp.Executions {
-		workflowDetails += fmt.Sprintf("\n  %d. WorkflowID: %s, RunID: %s, Status: %s",
-			i+1,
+	var workflowErrors []error
+	for _, exec := range resp.Executions {
+		workflowErrors = append(workflowErrors, fmt.Errorf(
+			"non-completed workflow: WorkflowID=%s, RunID=%s, Status=%s",
 			exec.Execution.WorkflowId,
 			exec.Execution.RunId,
-			exec.Status.String())
+			exec.Status.String()))
 	}
-	return workflowDetails, nil
+	return workflowErrors
 }
 
 // VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
