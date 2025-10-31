@@ -8,7 +8,6 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
-	"go.temporal.io/api/workflowservice/v1"
 )
 
 func init() {
@@ -49,6 +48,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 		stateTransitionsPerSecond,
 		durationPerStateTransition,
 	)
+
+	completionChecker, err := loadgen.NewWorkflowCompletionChecker(ctx, s.ScenarioInfo, time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to create workflow completion checker: %w", err)
+	}
 
 	// Execute initial workflow and get the transition count
 	workflowParams := &kitchensink.WorkflowInput{
@@ -130,15 +134,6 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	s.Logger.Infof("Run complete, ran %v iterations, waiting on all workflows to complete", iter)
 	// First, wait for all starts to have started (they are done in goroutine)
 	startWG.Wait()
-	return loadgen.MinVisibilityCountEventually(
-		ctx,
-		s.ScenarioInfo,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: s.Namespace,
-			Query: fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
-				loadgen.TaskQueueForRun(s.RunID)),
-		},
-		0,
-		time.Minute,
-	)
+
+	return completionChecker.VerifyNoRunningWorkflows(ctx)
 }

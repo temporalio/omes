@@ -22,7 +22,8 @@ func TestThroughputStress(t *testing.T) {
 		workers.WithNexusEndpoint(taskQueueName))
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		RunID: runID,
+		RunID:       runID,
+		ExecutionID: "test-exec-id",
 		Configuration: loadgen.RunConfiguration{
 			Iterations: 2,
 		},
@@ -42,7 +43,8 @@ func TestThroughputStress(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state := executor.Snapshot().(tpsState)
-		require.Equal(t, state.CompletedIterations, 2)
+		execState := state.ExecutorState.(loadgen.ExecutorState)
+		require.Equal(t, 2, execState.CompletedIterations)
 	})
 
 	t.Run("Run executor again, resuming from middle", func(t *testing.T) {
@@ -50,13 +52,19 @@ func TestThroughputStress(t *testing.T) {
 
 		err := executor.LoadState(func(v any) error {
 			s := v.(*tpsState)
-			s.CompletedIterations = 0 // execution will start from iteration 1
+			s.ExecutorState = loadgen.ExecutorState{
+				CompletedIterations: 1, // execution will start from iteration 1
+			}
 			return nil
 		})
 		require.NoError(t, err)
 
 		_, err = env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully when resuming from middle")
+
+		state := executor.Snapshot().(tpsState)
+		execState := state.ExecutorState.(loadgen.ExecutorState)
+		require.Equal(t, 2, execState.CompletedIterations)
 	})
 
 	t.Run("Run executor again, resuming from end", func(t *testing.T) {
@@ -64,12 +72,18 @@ func TestThroughputStress(t *testing.T) {
 
 		err := executor.LoadState(func(v any) error {
 			s := v.(*tpsState)
-			s.CompletedIterations = s.CompletedIterations
+			s.ExecutorState = loadgen.ExecutorState{
+				CompletedIterations: 2,
+			}
 			return nil
 		})
 		require.NoError(t, err)
 
 		_, err = env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully when resuming from end")
+
+		state := executor.Snapshot().(tpsState)
+		execState := state.ExecutorState.(loadgen.ExecutorState)
+		require.Equal(t, 2, execState.CompletedIterations)
 	})
 }

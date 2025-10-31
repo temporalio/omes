@@ -3,11 +3,9 @@ package scenarios
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -15,7 +13,6 @@ import (
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -39,20 +36,13 @@ const (
 	// MinThroughputPerHourFlag is the minimum workflow throughput required (workflows/hour).
 	// Default is 0, meaning disabled. The scenario calculates actual throughput and compares.
 	MinThroughputPerHourFlag = "min-throughput-per-hour"
-)
-
-const (
-	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
+	// DisableLocalActivitiesFlag converts all local activities to remote activities when set to true.
+	// Default is false, meaning local activities will be used as designed.
+	DisableLocalActivitiesFlag = "disable-local-activities"
 )
 
 type tpsState struct {
-	// CompletedIterations is the number of iteration that have been completed.
-	CompletedIterations int `json:"completedIterations"`
-	// LastCompletedIterationAt is the time when the last iteration was completed. Helpful for debugging.
-	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
-	// AccumulatedDuration is the total execution time across all runs (original + resumes).
-	// This excludes any downtime between runs. Used for accurate throughput calculation.
-	AccumulatedDuration time.Duration `json:"accumulatedDuration"`
+	ExecutorState any `json:"executorState"`
 }
 
 type tpsConfig struct {
@@ -67,9 +57,11 @@ type tpsConfig struct {
 	MinThroughputPerHour          float64
 	ScenarioRunID                 string
 	RngSeed                       int64
+	DisableLocalActivities        bool
 }
 
 type tpsExecutor struct {
+	executor   *loadgen.KitchenSinkExecutor
 	lock       sync.Mutex
 	state      *tpsState
 	config     *tpsConfig
@@ -99,7 +91,13 @@ func (t *tpsExecutor) Snapshot() any {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	return *t.state
+	if t.executor == nil {
+		return *t.state
+	}
+
+	return tpsState{
+		ExecutorState: t.executor.Snapshot(),
+	}
 }
 
 // LoadState loads the state from the provided byte slice.
@@ -165,8 +163,11 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
 	}
 
+	config.DisableLocalActivities = info.ScenarioOptionBool(DisableLocalActivitiesFlag, false)
+
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
+
 	return nil
 }
 
@@ -183,15 +184,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 	t.runID = info.RunID
 
-	// Track start time of current run
-	currentRunStartTime := time.Now()
-
-	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
-	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
-	if err := loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
-		return err
-	}
-
 	t.lock.Lock()
 	isResuming := t.isResuming
 	currentState := *t.state
@@ -199,17 +191,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
-		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
+		if execState, ok := currentState.ExecutorState.(loadgen.ExecutorState); ok {
+			info.Configuration.StartFromIteration = execState.CompletedIterations
+		}
 	} else {
 		if err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck); err != nil {
 			return err
 		}
-	}
-
-	// Listen to iteration completion events to update the state.
-	info.Configuration.OnCompletion = func(ctx context.Context, run *loadgen.Run) {
-		t.updateStateOnIterationCompletion()
-		info.Logger.Debugf("Completed iteration %d", run.Iteration)
 	}
 
 	// Start the scenario run.
@@ -219,24 +207,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if isResuming && info.Configuration.Duration <= 0 && info.Configuration.Iterations == 0 {
 		info.Logger.Info("Skipping executor run: out of time")
 	} else {
-		ksExec := &loadgen.KitchenSinkExecutor{
+		t.executor = &loadgen.KitchenSinkExecutor{
 			TestInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: []*ActionSet{},
 				},
 			},
 			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
-				options.StartOptions = run.DefaultStartWorkflowOptions()
-				if isResuming {
-					// Enforce to never fail on "workflow already started" when resuming.
-					options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
-				}
-
-				// Add search attribute to the workflow options so that it can be used in visibility queries.
-				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
-					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
-				)
-
 				// Start some workflows via Update-with-Start.
 				if t.maybeWithStart(0.5) {
 					options.Params.WithStartAction = &WithStartClientAction{
@@ -262,19 +239,61 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				return nil
 			},
 		}
-		if err := ksExec.Run(ctx, info); err != nil {
+
+		// Restore state if resuming
+		if isResuming {
+			if execState, ok := t.state.ExecutorState.(loadgen.ExecutorState); ok {
+				t.executor.LoadState(func(v any) error {
+					s := v.(*loadgen.ExecutorState)
+					*s = execState
+					return nil
+				})
+			}
+		}
+
+		timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
+
+		// Configure expected workflow count function based on scenario config
+		expectedWorkflowCount := func(state loadgen.ExecutorState) int {
+			completedIterations := state.CompletedIterations
+
+			// Calculate continue-as-new workflows
+			var continueAsNewWorkflows int
+			if t.config.ContinueAsNewAfterIter > 0 {
+				// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
+				continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+				continueAsNewWorkflows = continueAsNewPerIter * completedIterations
+			}
+
+			// Calculate child workflows
+			completedChildWorkflows := completedIterations * t.config.InternalIterations
+
+			// Total: parent + children + continue-as-new
+			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
+		}
+
+		if err := t.executor.EnableWorkflowCompletionCheck(ctx, info, timeout, expectedWorkflowCount); err != nil {
+			return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
+		}
+
+		if err := t.executor.Run(ctx, info); err != nil {
 			return err
 		}
 	}
 
 	t.lock.Lock()
-	completedIterations := t.state.CompletedIterations
-	t.state.AccumulatedDuration += time.Since(currentRunStartTime)
-	totalDuration := t.state.AccumulatedDuration
+	var completedIterations int
+	if t.executor != nil {
+		completedIterations = t.executor.GetState().CompletedIterations
+	} else {
+		// Executor was skipped, use state from previous run
+		if execState, ok := t.state.ExecutorState.(loadgen.ExecutorState); ok {
+			completedIterations = execState.CompletedIterations
+		}
+	}
 	t.lock.Unlock()
 
-	completedChildWorkflows := completedIterations * t.config.InternalIterations
-
+	// Calculate completion metrics for logging.
 	var continueAsNewPerIter int
 	var continueAsNewWorkflows int
 	if t.config.ContinueAsNewAfterIter > 0 {
@@ -282,58 +301,66 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		continueAsNewPerIter = (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
 		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
-
+	completedChildWorkflows := completedIterations * t.config.InternalIterations
 	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
 
-	var sb strings.Builder
-	sb.WriteString("[Scenario completion summary] ")
-	sb.WriteString(fmt.Sprintf("Run ID: %s, ", info.RunID))
-	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
-	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
-	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
-	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
-	info.Logger.Info(sb.String())
+	// Log completion summary.
+	info.Logger.Info(fmt.Sprintf(
+		"[Scenario completion summary] Run ID: %s, Total iterations completed: %d, "+
+			"Total child workflows: %d (%d per iteration), Total continue-as-new workflows: %d (%d per iteration), "+
+			"Total workflows completed: %d",
+		info.RunID, completedIterations, completedChildWorkflows, t.config.InternalIterations,
+		continueAsNewWorkflows, continueAsNewPerIter, completedWorkflows))
 
-	// Post-scenario: verify that at least one iteration was completed.
-	if completedIterations == 0 {
-		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
-	}
+	return nil
+}
 
-	// Post-scenario: verify reported workflow completion count from Visibility.
-	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
-		info,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query: fmt.Sprintf("%s='%s'",
-				ThroughputStressScenarioIdSearchAttribute, info.RunID),
-		},
-		completedWorkflows,
-		t.config.VisibilityVerificationTimeout,
-	); err != nil {
-		return err
-	}
+// VerifyRun implements loadgen.VerifyRunnable for post-execution verifications
+func (t *tpsExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) []error {
+	var errors []error
 
-	// Post-scenario: check throughput threshold
+	// 1. Delegate to executor's internal verifier
+	errors = append(errors, t.executor.VerifyRun(ctx, info)...)
+
+	// 2. Check throughput, if configured.
 	if t.config.MinThroughputPerHour > 0 {
-		actualThroughputPerHour := float64(completedWorkflows) / totalDuration.Hours()
+		state := t.executor.GetState()
 
-		if actualThroughputPerHour < t.config.MinThroughputPerHour {
-			// Calculate how many workflows we expected given the duration
-			expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
+		// Recalculate expected workflow count for throughput check
+		var continueAsNewWorkflows int
+		if t.config.ContinueAsNewAfterIter > 0 {
+			continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+			continueAsNewWorkflows = continueAsNewPerIter * state.CompletedIterations
+		}
+		completedChildWorkflows := state.CompletedIterations * t.config.InternalIterations
+		completedWorkflows := state.CompletedIterations + completedChildWorkflows + continueAsNewWorkflows
 
-			return fmt.Errorf("insufficient throughput: %.1f workflows/hour < %.1f required "+
-				"(completed %d workflows, expected %d in %v)",
-				actualThroughputPerHour,
-				t.config.MinThroughputPerHour,
-				completedWorkflows,
-				expectedWorkflows,
-				totalDuration.Round(time.Second))
+		// Calculate duration from executor state
+		var totalDuration time.Duration
+		if !state.StartedAt.IsZero() && !state.LastCompletedAt.IsZero() {
+			totalDuration = state.LastCompletedAt.Sub(state.StartedAt)
+		}
+
+		if totalDuration == 0 {
+			errors = append(errors, fmt.Errorf("throughput check: no duration recorded (startedAt=%v, lastCompletedAt=%v)",
+				state.StartedAt, state.LastCompletedAt))
+		} else {
+			actualThroughput := float64(completedWorkflows) / totalDuration.Hours()
+
+			if actualThroughput < t.config.MinThroughputPerHour {
+				expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
+				errors = append(errors, fmt.Errorf("throughput check: %.1f workflows/hour < %.1f required "+
+					"(completed %d workflows, expected %d in %v)",
+					actualThroughput,
+					t.config.MinThroughputPerHour,
+					completedWorkflows,
+					expectedWorkflows,
+					totalDuration.Round(time.Second)))
+			}
 		}
 	}
 
-	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID)
+	return errors
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
@@ -343,7 +370,7 @@ func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioI
 	}
 
 	// Complain if there are already existing workflows with the provided run id; unless resuming.
-	workflowCountQry := fmt.Sprintf("%s='%s'", ThroughputStressScenarioIdSearchAttribute, info.RunID)
+	workflowCountQry := fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.OmesRunID())
 	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
 		Query:     workflowCountQry,
@@ -359,13 +386,6 @@ func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioI
 	return nil
 }
 
-func (t *tpsExecutor) updateStateOnIterationCompletion() {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	t.state.CompletedIterations += 1
-	t.state.LastCompletedIterationAt = time.Now()
-}
-
 func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 	return []*ActionSet{
 		{
@@ -373,6 +393,15 @@ func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 			Concurrent: false,
 		},
 	}
+}
+
+// activityLocality returns the appropriate activity locality function based on the config.
+// If DisableLocalActivities is true, all activities will be remote; otherwise, return the local activity function.
+func (t *tpsExecutor) activityLocality() func(*ExecuteActivityAction) *Action {
+	if t.config.DisableLocalActivities {
+		return DefaultRemoteActivity
+	}
+	return DefaultLocalActivity
 }
 
 func (t *tpsExecutor) createActionsChunk(
@@ -395,9 +424,9 @@ func (t *tpsExecutor) createActionsChunk(
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
 		syncActions := []*Action{
-			PayloadActivity(256, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
+			PayloadActivity(256, 256, t.activityLocality()),
+			PayloadActivity(0, 256, t.activityLocality()),
+			PayloadActivity(0, 256, t.activityLocality()),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 		}
@@ -407,11 +436,11 @@ func (t *tpsExecutor) createActionsChunk(
 			t.createChildWorkflowAction(run, childCount),
 			PayloadActivity(256, 256, DefaultRemoteActivity),
 			PayloadActivity(256, 256, DefaultRemoteActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
-			GenericActivity("noop", DefaultLocalActivity),
+			PayloadActivity(0, 256, t.activityLocality()),
+			PayloadActivity(0, 256, t.activityLocality()),
+			GenericActivity("noop", t.activityLocality()),
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
-			ClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
+			ClientActivity(ClientActions(t.createSelfSignal()), t.activityLocality()),
 			ClientActivity(ClientActions(t.createSelfUpdateWithTimer()), DefaultRemoteActivity),
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
@@ -506,9 +535,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				},
 				WorkflowId: fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
 				SearchAttributes: map[string]*common.Payload{
-					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
+					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
-						Data:     []byte(fmt.Sprintf("%q", t.config.ScenarioRunID)), // quoted to be valid JSON string
+						Data:     []byte(fmt.Sprintf("%q", run.OmesRunID())), // quoted to be valid JSON string
 					},
 				},
 			},
@@ -592,7 +621,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 					DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{
 							DoActions: SingleActionSet(
-								PayloadActivity(0, 256, DefaultLocalActivity),
+								PayloadActivity(0, 256, t.activityLocality()),
 							),
 						},
 					},

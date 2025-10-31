@@ -3,6 +3,7 @@ module github.com/temporalio/omes
 go 1.25.0
 
 require (
+	github.com/antithesishq/antithesis-sdk-go v0.5.1-0.20250924165633-f60b0222f1b6
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0

@@ -14,7 +14,7 @@ func init() {
 			"Workers must be started with --task-queue-suffix-index-end as one less than task queue count here. " +
 			"Additional options: task-queue-count (required).",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.KitchenSinkExecutor{
+			return &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{

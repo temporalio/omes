@@ -2,6 +2,9 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -56,7 +59,6 @@ type scenarioRunConfig struct {
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
-	ignoreAlreadyStarted          bool
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -82,8 +84,6 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
-	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
-		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -145,9 +145,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	// Generate a random execution ID to ensure no two executions with the same RunID collide
+	executionID, err := generateExecutionID()
+	if err != nil {
+		return fmt.Errorf("failed to generate execution ID: %w", err)
+	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
+		ExecutionID:    executionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
@@ -159,16 +166,40 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxIterationAttempts:          r.maxIterationAttempts,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
 	}
 	executor := scenario.ExecutorFn()
-	err = executor.Run(ctx, scenarioInfo)
-	if err != nil {
-		return fmt.Errorf("failed scenario: %w", err)
+
+	// 1. Run the scenario
+	scenarioErr := executor.Run(ctx, scenarioInfo)
+
+	// Collect all errors
+	var allErrors []error
+	if scenarioErr != nil {
+		allErrors = append(allErrors, fmt.Errorf("scenario execution: %w", scenarioErr))
 	}
-	return nil
+
+	// 2. Run verifications
+	if verifiable, ok := executor.(loadgen.Verifyable); ok {
+		verifyErrs := verifiable.VerifyRun(ctx, scenarioInfo)
+		for _, err := range verifyErrs {
+			allErrors = append(allErrors, fmt.Errorf("post-scenario verification: %w", err))
+		}
+	}
+
+	// Aggregate all errors
+	return errors.Join(allErrors...)
+}
+
+// generateExecutionID generates a random execution ID to uniquely identify this particular
+// execution of a scenario. This ensures no two executions with the same RunID collide.
+func generateExecutionID() (string, error) {
+	bytes := make([]byte, 8) // 8 bytes = 16 hex characters
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

@@ -96,6 +96,11 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		LogLevel: "error",
 		Stdout:   &logWriter{logger: serverLogger},
 		Stderr:   &logWriter{logger: serverLogger},
+		ExtraArgs: []string{
+			"--search-attribute", "OmesExecutionID=Keyword",
+			"--search-attribute", "KS_Int=Int",
+			"--search-attribute", "KS_Keyword=Keyword",
+		},
 	})
 	require.NoError(t, err, "Failed to start dev server")
 

@@ -49,7 +49,7 @@ func TestScenarioConfigValidation(t *testing.T) {
 			expectedErr:   "iterations and duration are mutually exclusive",
 		},
 		{
-			name:          "both duration and start iteration (allowed)",
+			name:          "both duration and start iteration",
 			configuration: RunConfiguration{Duration: 3 * time.Second, StartFromIteration: 3},
 			expectedErr:   "",
 		},

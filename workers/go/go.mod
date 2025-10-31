@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/antithesishq/antithesis-sdk-go v0.5.1-0.20250924165633-f60b0222f1b6 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
