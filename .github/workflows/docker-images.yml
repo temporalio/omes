@@ -82,11 +82,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
+      - name: Extract branch name
+        id: extract_branch
+        run: |
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "branch_name=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
       - name: Build and push to Docker Hub
         env:
           LANG: ${{ inputs.lang }}
           SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
-          IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1}', inputs.lang, inputs.docker-tag-ext) || ''}}
+          BRANCH_TAG_COMPONENT: ${{ inputs.lang && format('{0}-{1}', inputs.lang, steps.extract_branch.outputs.branch_name) || format('cli-{0}', steps.extract_branch.outputs.branch_name) }}
+          IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag {0}-{1} --image-tag {2}', inputs.lang, inputs.docker-tag-ext, inputs.lang && format('{0}-{1}', inputs.lang, steps.extract_branch.outputs.branch_name) || format('cli-{0}', steps.extract_branch.outputs.branch_name)) || format('--image-tag {0}', inputs.lang && format('{0}-{1}', inputs.lang, steps.extract_branch.outputs.branch_name) || format('cli-{0}', steps.extract_branch.outputs.branch_name)) }}
           TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
           LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
           VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}

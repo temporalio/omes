@@ -2,10 +2,11 @@ package scenarios
 
 import (
 	"context"
+	"strconv"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"strconv"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -16,7 +17,7 @@ func init() {
 		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities. " +
 			"Additional options: children-per-workflow (default 30), activities-per-workflow (default 30).",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.KitchenSinkExecutor{
+			return &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{},
