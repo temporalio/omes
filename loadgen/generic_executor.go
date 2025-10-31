@@ -22,9 +22,9 @@ type GenericExecutor struct {
 	Execute func(context.Context, *Run) error
 
 	// State management
-	mu                        sync.Mutex
-	state                     *ExecutorState
-	workflowCompletionChecker *WorkflowCompletionChecker
+	mu                         sync.Mutex
+	state                      *ExecutorState
+	workflowCompletionVerifier *WorkflowCompletionVerifier
 }
 
 type genericRun struct {
@@ -74,36 +74,36 @@ func (g *GenericExecutor) VerifyRun(ctx context.Context, info ScenarioInfo) []er
 		g.state = &ExecutorState{}
 	}
 	state := *g.state
-	checker := g.workflowCompletionChecker
+	verifier := g.workflowCompletionVerifier
 	g.mu.Unlock()
 
-	if checker == nil {
+	if verifier == nil {
 		return nil
 	}
-	if err := checker.Verify(ctx, state); err != nil {
+	if err := verifier.Verify(ctx, state); err != nil {
 		return []error{err}
 	}
 	return nil
 }
 
 // EnableWorkflowCompletionCheck enables workflow completion verification for this executor.
-// It initializes a checker with the given timeout and registers the required search attributes.
+// It initializes a verifier with the given timeout and registers the required search attributes.
 // The timeout specifies how long to wait for workflow completion verification (defaults to 30 seconds if zero).
 // The expectedWorkflowCount function, if provided, calculates the expected number of workflows from the ExecutorState.
 // If nil, defaults to using state.CompletedIterations.
 // Returns an error if search attribute registration fails.
 func (g *GenericExecutor) EnableWorkflowCompletionCheck(ctx context.Context, info ScenarioInfo, timeout time.Duration, expectedWorkflowCount func(ExecutorState) int) error {
-	checker, err := NewWorkflowCompletionChecker(ctx, info, timeout)
+	verifier, err := NewWorkflowCompletionChecker(ctx, info, timeout)
 	if err != nil {
 		return err
 	}
 
 	if expectedWorkflowCount != nil {
-		checker.SetExpectedWorkflowCount(expectedWorkflowCount)
+		verifier.SetExpectedWorkflowCount(expectedWorkflowCount)
 	}
 
 	g.mu.Lock()
-	g.workflowCompletionChecker = checker
+	g.workflowCompletionVerifier = verifier
 	g.mu.Unlock()
 
 	return nil
