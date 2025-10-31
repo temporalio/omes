@@ -64,7 +64,7 @@ type ebbAndFlowExecutor struct {
 	completedActivities atomic.Int64
 	stateLock           sync.Mutex
 	state               *ebbAndFlowState
-	completionChecker   *loadgen.WorkflowCompletionChecker
+	completionVerifier  *loadgen.WorkflowCompletionChecker
 	executorState       *loadgen.ExecutorState
 }
 
@@ -172,7 +172,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed to initialize completion checker: %w", err)
 	}
-	e.completionChecker = checker
+	e.completionVerifier = checker
 
 	var consecutiveErrCount int
 	errCh := make(chan error, 10000)
@@ -239,7 +239,7 @@ func (e *ebbAndFlowExecutor) VerifyRun(ctx context.Context, info loadgen.Scenari
 	if e.executorState == nil {
 		return nil
 	}
-	if err := e.completionChecker.Verify(ctx, *e.executorState); err != nil {
+	if err := e.completionVerifier.Verify(ctx, *e.executorState); err != nil {
 		return []error{err}
 	}
 	return nil
