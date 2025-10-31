@@ -103,6 +103,40 @@ func MinVisibilityCountEventually(
 	return nil
 }
 
+// GetNonCompletedWorkflows queries and returns details about non-completed workflows for debugging purposes.
+// Returns a formatted string with up to the specified number of workflow details, or an error if the query fails.
+func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string, limit int32) (string, error) {
+	nonCompletedQuery := fmt.Sprintf(
+		"%s='%s' AND ExecutionStatus != 'Completed'",
+		searchAttribute,
+		runID,
+	)
+
+	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
+		Namespace: info.Namespace,
+		Query:     nonCompletedQuery,
+		PageSize:  limit,
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("failed to list non-completed workflows: %w", err)
+	}
+
+	if len(resp.Executions) == 0 {
+		return "", nil
+	}
+
+	var workflowDetails string
+	for i, exec := range resp.Executions {
+		workflowDetails += fmt.Sprintf("\n  %d. WorkflowID: %s, RunID: %s, Status: %s",
+			i+1,
+			exec.Execution.WorkflowId,
+			exec.Execution.RunId,
+			exec.Status.String())
+	}
+	return workflowDetails, nil
+}
+
 // VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
 func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string) error {
 	var errors []string

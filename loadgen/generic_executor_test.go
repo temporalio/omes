@@ -42,6 +42,7 @@ func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
 	info := ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
+		ExecutionID:    "test-exec-id",
 		Configuration:  runConfig,
 	}
 	return executor.Run(context.Background(), info)
@@ -258,3 +259,4 @@ func TestExecutorRetriesLimit(t *testing.T) {
 		require.Equal(t, []int{1, 1, 1, 1, 1}, totalTracker.seen, "expected 5 attempts")
 	})
 }
+
