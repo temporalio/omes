@@ -183,8 +183,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 
 	// 2. Run verifications
-	if verifiable, ok := executor.(loadgen.Verifyable); ok {
-		verifyErrs := verifiable.VerifyRun(ctx, scenarioInfo)
+	if scenario.VerifyFn != nil {
+		verifyErrs := scenario.VerifyFn(ctx, scenarioInfo, executor)
 		for _, err := range verifyErrs {
 			allErrors = append(allErrors, fmt.Errorf("post-scenario verification: %w", err))
 		}

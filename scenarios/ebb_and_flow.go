@@ -79,6 +79,13 @@ func init() {
 			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
 			"Duration must be set.",
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			e := executor.(*ebbAndFlowExecutor)
+			if e.completionVerifier == nil || e.executorState == nil {
+				return nil
+			}
+			return e.completionVerifier.VerifyRun(ctx, info, *e.executorState)
+		},
 	})
 }
 
@@ -144,7 +151,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	e.ScenarioInfo = info
-	e.id = fmt.Sprintf("ebb_and_flow_%s", e.OmesRunID())
+	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
 
@@ -232,16 +239,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	startWG.Wait()
 	e.Logger.Info("Scenario execution complete")
 
-	return nil
-}
-
-func (e *ebbAndFlowExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo) []error {
-	if e.executorState == nil {
-		return nil
-	}
-	if err := e.completionVerifier.Verify(ctx, *e.executorState); err != nil {
-		return []error{err}
-	}
 	return nil
 }
 

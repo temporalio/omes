@@ -26,6 +26,7 @@ import (
 type Scenario struct {
 	Description string
 	ExecutorFn  func() Executor
+	VerifyFn    func(context.Context, ScenarioInfo, Executor) []error
 }
 
 // Executor for a scenario.
@@ -68,10 +69,11 @@ type Configurable interface {
 	Configure(ScenarioInfo) error
 }
 
-// Verifyable is an optional interface that executors can implement to perform verifications after Run() completes.
-type Verifyable interface {
+// Verifier performs post-execution verifications and returns a list of errors.
+type Verifier interface {
 	// VerifyRun performs post-execution verifications and returns a list of errors.
-	VerifyRun(context.Context, ScenarioInfo) []error
+	// The ExecutorState is provided by the caller.
+	VerifyRun(context.Context, ScenarioInfo, ExecutorState) []error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
@@ -141,12 +143,6 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
-}
-
-// OmesRunID returns the full OmesRunID value that combines RunID with ExecutionID
-// to ensure no two executions with the same RunID collide.
-func (s *ScenarioInfo) OmesRunID() string {
-	return s.RunID + "-" + s.ExecutionID
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -356,7 +352,7 @@ func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 		// Always return error so that Executor can handle it and record starts accurately.
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
 		TypedSearchAttributes: temporal.NewSearchAttributes(
-			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).ValueSet(r.OmesRunID()),
+			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).ValueSet(r.ExecutionID),
 		),
 	}
 }

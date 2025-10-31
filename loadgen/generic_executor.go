@@ -22,9 +22,8 @@ type GenericExecutor struct {
 	Execute func(context.Context, *Run) error
 
 	// State management
-	mu                         sync.Mutex
-	state                      *ExecutorState
-	workflowCompletionVerifier *WorkflowCompletionVerifier
+	mu    sync.Mutex
+	state *ExecutorState
 }
 
 type genericRun struct {
@@ -66,47 +65,6 @@ func (g *GenericExecutor) RecordCompletion() {
 func (g *GenericExecutor) RecordError(err error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-}
-
-func (g *GenericExecutor) VerifyRun(ctx context.Context, info ScenarioInfo) []error {
-	g.mu.Lock()
-	if g.state == nil {
-		g.state = &ExecutorState{}
-	}
-	state := *g.state
-	verifier := g.workflowCompletionVerifier
-	g.mu.Unlock()
-
-	if verifier == nil {
-		return nil
-	}
-	if err := verifier.Verify(ctx, state); err != nil {
-		return []error{err}
-	}
-	return nil
-}
-
-// EnableWorkflowCompletionCheck enables workflow completion verification for this executor.
-// It initializes a verifier with the given timeout and registers the required search attributes.
-// The timeout specifies how long to wait for workflow completion verification (defaults to 30 seconds if zero).
-// The expectedWorkflowCount function, if provided, calculates the expected number of workflows from the ExecutorState.
-// If nil, defaults to using state.CompletedIterations.
-// Returns an error if search attribute registration fails.
-func (g *GenericExecutor) EnableWorkflowCompletionCheck(ctx context.Context, info ScenarioInfo, timeout time.Duration, expectedWorkflowCount func(ExecutorState) int) error {
-	verifier, err := NewWorkflowCompletionChecker(ctx, info, timeout)
-	if err != nil {
-		return err
-	}
-
-	if expectedWorkflowCount != nil {
-		verifier.SetExpectedWorkflowCount(expectedWorkflowCount)
-	}
-
-	g.mu.Lock()
-	g.workflowCompletionVerifier = verifier
-	g.mu.Unlock()
-
-	return nil
 }
 
 // GetState returns a copy of the current state
@@ -314,7 +272,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	for runErr == nil && currentlyRunning > 0 {
 		waitOne(ctx)
 		if ctx.Err() != nil {
-			return fmt.Errorf("timeout while waiting for runs to complete: %w", ctx.Err())
+			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 		}
 	}
 	if runErr != nil {
