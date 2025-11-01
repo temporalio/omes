@@ -187,7 +187,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 	fs.VisitAll(func(f *pflag.Flag) {
-		if f.DefValue == f.Value.String() {
+		if !f.Changed {
 			return
 		}
 		flags = append(flags, fmt.Sprintf("--%s=%s",
