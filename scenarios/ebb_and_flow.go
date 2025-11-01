@@ -43,7 +43,7 @@ type ebbAndFlowConfig struct {
 	MaxBacklog                    int64
 	PhaseTime                     time.Duration
 	SleepDuration                 time.Duration
-	MaxRate                       int
+	MaxRate                       int64
 	ControlInterval               time.Duration
 	MaxConsecutiveErrors          int
 	BacklogLogInterval            time.Duration
@@ -59,15 +59,15 @@ type ebbAndFlowState struct {
 
 type ebbAndFlowExecutor struct {
 	loadgen.ScenarioInfo
-	config             *ebbAndFlowConfig
-	rng                *rand.Rand
-	id                 string
-	isResuming         bool
-	startTime          time.Time
-	startedWorkflows   atomic.Int64
-	completedWorkflows atomic.Int64
-	stateLock          sync.Mutex
-	state              *ebbAndFlowState
+	config              *ebbAndFlowConfig
+	rng                 *rand.Rand
+	id                  string
+	isResuming          bool
+	startTime           time.Time
+	scheduledActivities atomic.Int64
+	completedActivities atomic.Int64
+	stateLock           sync.Mutex
+	state               *ebbAndFlowState
 }
 
 var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
@@ -91,7 +91,7 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
 		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
-		MaxRate:                       info.ScenarioOptionInt(MaxRateFlag, 1000),
+		MaxRate:                       int64(info.ScenarioOptionInt(MaxRateFlag, 1000)),
 		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
 		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
 		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
@@ -115,7 +115,8 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		// This scenario overrides "count" so do not require it.
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
@@ -173,12 +174,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	defer backlogTicker.Stop()
 
 	var startWG sync.WaitGroup
-	iter := 1
+	var iter int64 = 1
 
 	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, phase_time=%v, duration=%v",
 		config.MinBacklog, config.MaxBacklog, config.PhaseTime, e.Configuration.Duration)
 
-	var rate int
+	var rate int64
 	var isDraining bool // true = draining mode, false = growing mode
 	var started, completed, backlog, target int64
 	cycleStartTime := e.startTime
@@ -198,8 +199,8 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 				consecutiveErrCount = 0
 			}
 		case <-ticker.C:
-			started = e.startedWorkflows.Load()
-			completed = e.completedWorkflows.Load()
+			started = e.scheduledActivities.Load()
+			completed = e.completedActivities.Load()
 			backlog = started - completed
 
 			// Check if we need to switch modes.
@@ -218,9 +219,9 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 
 			if rate > 0 {
 				startWG.Add(1)
-				go func(iteration, count int) {
+				go func(iter, rate int64) {
 					defer startWG.Done()
-					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, config.SleepActivityConfig)
+					errCh <- e.spawnWorkflowWithActivities(ctx, iter, rate, config.SleepActivityConfig)
 				}(iter, rate)
 				iter++
 			}
@@ -288,18 +289,18 @@ func (e *ebbAndFlowExecutor) LoadState(loader func(any) error) error {
 
 func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	ctx context.Context,
-	iteration, rate int,
+	iteration, rate int64,
 	template *loadgen.SleepActivityConfig,
 ) error {
 	// Override activity count to fixed rate.
-	fixedDist := loadgen.NewFixedDistribution(int64(rate))
+	fixedDist := loadgen.NewFixedDistribution(rate)
 	config := loadgen.SleepActivityConfig{
 		Count:  &fixedDist,
 		Groups: template.Groups,
 	}
 
 	// Start workflow.
-	run := e.NewRun(iteration)
+	run := e.NewRun(int(iteration))
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
@@ -316,7 +317,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	if err != nil {
 		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
 	}
-	e.startedWorkflows.Add(1)
+	e.scheduledActivities.Add(rate)
 
 	// Wait for workflow completion
 	var result ebbandflow.WorkflowOutput
@@ -324,7 +325,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	if err != nil {
 		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
 	}
-	e.completedWorkflows.Add(1)
+	e.completedActivities.Add(rate)
 	e.incrementTotalCompletedWorkflow()
 
 	return nil
@@ -367,12 +368,12 @@ func calculateSpawnRate(
 	target int64,
 	backlog int64,
 	minBacklog, maxBacklog int64,
-	maxRate int,
-) int {
+	maxRate int64,
+) int64 {
 	backlogDelta := float64(target - backlog)                                     // how far backlog is from target
 	scaledBacklogDelta := math.Abs(backlogDelta) / float64(maxBacklog-minBacklog) // normalize to 0.0-1.0 range
 	gain := 1.0 + 2.0*scaledBacklogDelta                                          // smooth gain scheduling: 1.0 (small errors) to 3.0 (large errors)
-	rate := int(backlogDelta * gain)                                              // calculate desired spawn rate (workflows/second)
+	rate := int64(backlogDelta * gain)                                            // calculate desired spawn rate (workflows/second)
 	rate = min(maxRate, rate)                                                     // cap at maximum allowed rate
 	rate = max(0, rate)
 	return rate
