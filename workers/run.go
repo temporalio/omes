@@ -186,7 +186,10 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 }
 
 func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
-	fs.Visit(func(f *pflag.Flag) {
+	fs.VisitAll(func(f *pflag.Flag) {
+		if f.DefValue == f.Value.String() {
+			return
+		}
 		flags = append(flags, fmt.Sprintf("--%s=%s",
 			strings.TrimPrefix(f.Name, prefix),
 			f.Value.String(),
