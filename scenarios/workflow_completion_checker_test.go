@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"github.com/temporalio/omes/workers"
+	"go.temporal.io/api/common/v1"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -57,7 +58,21 @@ func TestWorkflowCompletionChecker(t *testing.T) {
 								},
 							},
 						},
-						Concurrent: false,
+					},
+				}
+			} else if run.Iteration%2 == 0 {
+				// Have some Continue-As-New.
+				options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
+					{
+						Actions: []*kitchensink.Action{
+							{
+								Variant: &kitchensink.Action_ContinueAsNew{
+									ContinueAsNew: &kitchensink.ContinueAsNewAction{
+										Arguments: []*common.Payload{},
+									},
+								},
+							},
+						},
 					},
 				}
 			} else {
@@ -74,7 +89,7 @@ func TestWorkflowCompletionChecker(t *testing.T) {
 	require.Contains(t, err.Error(), "deadline exceeded", "should report timed out iteration")
 
 	execState := executor.Snapshot().(loadgen.ExecutorState)
-	require.Equal(t, 9, execState.CompletedIterations, "should complete 9 iterations")
+	require.Equal(t, 4, execState.CompletedIterations, "should complete 4 iterations")
 
 	// Verify using the verifier - pass the state directly
 	verifyErrs := verifier.VerifyRun(t.Context(), scenarioInfo, execState)

@@ -107,7 +107,7 @@ func MinVisibilityCountEventually(
 // Returns a list of errors (one per non-completed workflow) with workflow details, or a query error if the list fails.
 func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string, limit int32) []error {
 	nonCompletedQuery := fmt.Sprintf(
-		"%s='%s' AND ExecutionStatus != 'Completed'",
+		"%s='%s' AND ExecutionStatus != 'Completed' AND ExecutionStatus != 'ContinuedAsNew'",
 		searchAttribute,
 		runID,
 	)
