@@ -82,6 +82,11 @@ async def run():
         type=int,
         help="Max concurrent workflow tasks",
     )
+    parser.add_argument(
+        "--worker-activities-per-second",
+        type=int,
+        help="Per-worker activity rate limit",
+    )
     # Log arguments
     parser.add_argument(
         "--log-level", default="info", help="(debug info warn error panic fatal)"
@@ -199,6 +204,8 @@ async def run():
         worker_kwargs[
             "max_concurrent_workflow_tasks"
         ] = args.max_concurrent_workflow_tasks
+    if args.worker_activities_per_second is not None:
+        worker_kwargs["worker_activities_per_second"] = args.worker_activities_per_second
 
     # Start all workers, throwing on first exception
     workers = [

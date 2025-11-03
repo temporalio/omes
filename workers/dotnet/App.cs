@@ -60,6 +60,10 @@ public static class App
         name: "--max-concurrent-workflow-tasks",
         description: "Max concurrent workflow tasks");
 
+    private static readonly Option<uint?> workerActivitiesPerSecond = new(
+        name: "--worker-activities-per-second",
+        description: "Per-worker activity rate limit");
+
     private static readonly Option<string> logLevelOption = new Option<string>(
         name: "--log-level",
         description: "Log level",
@@ -112,6 +116,7 @@ public static class App
         cmd.Add(workflowPollerAutoscaleMaxOption);
         cmd.Add(maxATOption);
         cmd.Add(maxWFTOption);
+        cmd.Add(workerActivitiesPerSecond);
         cmd.Add(logLevelOption);
         cmd.Add(logEncodingOption);
         cmd.Add(useTLSOption);
@@ -202,6 +207,11 @@ public static class App
             if (ctx.ParseResult.GetValueForOption(maxATOption) is { } maxAt)
             {
                 workerOptions.MaxConcurrentActivities = (int)maxAt;
+            }
+
+            if (ctx.ParseResult.GetValueForOption(workerActivitiesPerSecond) is { } rate)
+            {
+                workerOptions.WorkerActivitiesPerSecond = (int)rate;
             }
 
             // Configure poller behaviors with autoscaling support
