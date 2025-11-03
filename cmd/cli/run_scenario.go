@@ -137,6 +137,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		}
 		// Wait 300ms and try again
 		time.Sleep(300 * time.Millisecond)
+
+		r.logger.Error("Failed to dial, retrying ...", zap.Error(err))
 	}
 	defer client.Close()
 
