@@ -12,6 +12,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -503,7 +504,8 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 						},
 					}),
 				},
-				WorkflowId: fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
+				WorkflowId:            fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
+				WorkflowIdReusePolicy: enums.WorkflowIdReusePolicy(enums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING),
 				SearchAttributes: map[string]*common.Payload{
 					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
