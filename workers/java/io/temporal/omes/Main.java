@@ -136,7 +136,7 @@ public class Main implements Runnable {
   @CommandLine.Option(
       names = "--worker-activities-per-second",
       description = "Per-worker activity rate limit")
-  private int workerActivitiesPerSecond;
+  private double workerActivitiesPerSecond;
 
   @Override
   public void run() {

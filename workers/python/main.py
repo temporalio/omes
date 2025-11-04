@@ -84,7 +84,7 @@ async def run():
     )
     parser.add_argument(
         "--worker-activities-per-second",
-        type=int,
+        type=float,
         help="Per-worker activity rate limit",
     )
     # Log arguments

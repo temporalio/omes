@@ -60,7 +60,7 @@ public static class App
         name: "--max-concurrent-workflow-tasks",
         description: "Max concurrent workflow tasks");
 
-    private static readonly Option<uint?> workerActivitiesPerSecond = new(
+    private static readonly Option<double?> workerActivitiesPerSecond = new(
         name: "--worker-activities-per-second",
         description: "Per-worker activity rate limit");
 
@@ -211,7 +211,7 @@ public static class App
 
             if (ctx.ParseResult.GetValueForOption(workerActivitiesPerSecond) is { } rate)
             {
-                workerOptions.MaxActivitiesPerSecond = (int)rate;
+                workerOptions.MaxActivitiesPerSecond = rate;
             }
 
             // Configure poller behaviors with autoscaling support
