@@ -21,12 +21,16 @@ const (
 
 const (
 	// MinBacklogFlag defines the minimum backlog to target.
+	// Note that it controls total backlog size, not counting partitions or priority levels.
 	MinBacklogFlag = "min-backlog"
 	// MaxBacklogFlag defines the maximum backlog to target.
+	// Note that it controls total backlog size, not counting partitions or priority levels.
 	MaxBacklogFlag = "max-backlog"
-	// PhaseTimeFlag defines the duration of each growing and draining phase.
-	PhaseTimeFlag = "phase-time"
-	// SleepDurationFlag defines the duration an activity sleeps for.
+	// PeriodFlag defines the period of oscilation of backlog size.
+	PeriodFlag = "period"
+	// SleepDurationFlag defines the duration an activity sleeps for (default 1ms).
+	// This can be used to slow down activity processing, but
+	// --worker-worker-activity-per-second may be more intuitive.
 	SleepDurationFlag = "sleep-duration"
 	// MaxRateFlag defines the maximum number of workflows to spawn per control interval.
 	MaxRateFlag = "max-rate"
@@ -41,7 +45,7 @@ const (
 type ebbAndFlowConfig struct {
 	MinBacklog                    int64
 	MaxBacklog                    int64
-	PhaseTime                     time.Duration
+	Period                        time.Duration
 	SleepDuration                 time.Duration
 	MaxRate                       int64
 	ControlInterval               time.Duration
@@ -77,7 +81,7 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max.\n" +
 			"Options:\n" +
-			"  min-backlog, max-backlog, phase-time, sleep-duration, max-rate,\n" +
+			"  min-backlog, max-backlog, period, sleep-duration, max-rate,\n" +
 			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
 			"Duration must be set.",
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
@@ -108,9 +112,11 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
 	}
 
-	config.PhaseTime = info.ScenarioOptionDuration(PhaseTimeFlag, 60*time.Second)
-	if config.PhaseTime <= 0 {
-		return fmt.Errorf("phase-time must be greater than 0, got %v", config.PhaseTime)
+	// TODO: backwards-compatibility, remove later
+	pt := info.ScenarioOptionDuration("phase-time", 60*time.Second)
+	config.Period = info.ScenarioOptionDuration(PeriodFlag, pt)
+	if config.Period <= 0 {
+		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
 	}
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
@@ -176,8 +182,8 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	var startWG sync.WaitGroup
 	var iter int64 = 1
 
-	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, phase_time=%v, duration=%v",
-		config.MinBacklog, config.MaxBacklog, config.PhaseTime, e.Configuration.Duration)
+	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
+		config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 
 	var started, completed, backlog, target, rate int64
 
@@ -200,7 +206,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			completed = e.completedActivities.Load()
 			backlog = started - completed
 
-			target = calculateBacklogTarget(elapsed, config.PhaseTime, config.MinBacklog, config.MaxBacklog)
+			target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
 			rate = calculateSpawnRate(target, backlog, config.MinBacklog, config.MaxBacklog, config.MaxRate)
 
 			if rate > 0 {
@@ -326,11 +332,11 @@ func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
 }
 
 func calculateBacklogTarget(
-	elapsed, phaseTime time.Duration,
+	elapsed, period time.Duration,
 	minBacklog, maxBacklog int64,
 ) int64 {
-	phaseCount := elapsed.Seconds() / phaseTime.Seconds()
-	osc := (math.Sin(2*math.Pi*phaseCount) + 1.0) / 2
+	periods := elapsed.Seconds() / period.Seconds()
+	osc := (math.Sin(2*math.Pi*periods) + 1.0) / 2
 	backlogRange := float64(maxBacklog - minBacklog)
 	baseTarget := float64(minBacklog) + osc*backlogRange
 	return int64(math.Round(baseTarget))
