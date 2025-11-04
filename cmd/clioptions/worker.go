@@ -13,7 +13,7 @@ type WorkerOptions struct {
 	WorkflowPollerAutoscaleMax   int // overrides MaxConcurrentWorkflowPollers
 	MaxConcurrentActivities      int
 	MaxConcurrentWorkflowTasks   int
-	WorkerActivitiesPerSecond    int
+	WorkerActivitiesPerSecond    float64
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -36,6 +36,6 @@ func (m *WorkerOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
-	m.fs.IntVar(&m.WorkerActivitiesPerSecond, prefix+"worker-activities-per-second", 0, "Per-worker activity rate limit")
+	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"worker-activities-per-second", 0, "Per-worker activity rate limit")
 	return m.fs
 }
