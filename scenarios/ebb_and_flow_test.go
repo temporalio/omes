@@ -56,7 +56,7 @@ func TestEbbAndFlow(t *testing.T) {
 		ScenarioOptions: map[string]string{
 			MinBacklogFlag:                    "0",
 			MaxBacklogFlag:                    "1",
-			PhaseTimeFlag:                     "5s",
+			PeriodFlag:                        "5s",
 			BacklogLogIntervalFlag:            "5s",
 			VisibilityVerificationTimeoutFlag: "5s",
 			SleepActivityJsonFlag:             sleepActivityJson,
