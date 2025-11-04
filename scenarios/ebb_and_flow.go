@@ -179,10 +179,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, phase_time=%v, duration=%v",
 		config.MinBacklog, config.MaxBacklog, config.PhaseTime, e.Configuration.Duration)
 
-	var rate int64
-	var isDraining bool // true = draining mode, false = growing mode
-	var started, completed, backlog, target int64
-	cycleStartTime := e.startTime
+	var started, completed, backlog, target, rate int64
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
 		select {
@@ -203,18 +200,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			completed = e.completedActivities.Load()
 			backlog = started - completed
 
-			// Check if we need to switch modes.
-			if isDraining && backlog <= config.MinBacklog {
-				e.Logger.Infof("Backlog reached %d, switching to growing mode", backlog)
-				isDraining = false
-				cycleStartTime = time.Now()
-			} else if !isDraining && backlog >= config.MaxBacklog {
-				e.Logger.Infof("Backlog reached %d, switching to draining mode", backlog)
-				isDraining = true
-				cycleStartTime = time.Now()
-			}
-
-			target = calculateBacklogTarget(isDraining, cycleStartTime, config.PhaseTime, config.MinBacklog, config.MaxBacklog)
+			target = calculateBacklogTarget(elapsed, config.PhaseTime, config.MinBacklog, config.MaxBacklog)
 			rate = calculateSpawnRate(target, backlog, config.MinBacklog, config.MaxBacklog, config.MaxRate)
 
 			if rate > 0 {
@@ -340,28 +326,14 @@ func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
 }
 
 func calculateBacklogTarget(
-	isDraining bool,
-	cycleStartTime time.Time,
-	phaseTime time.Duration,
+	elapsed, phaseTime time.Duration,
 	minBacklog, maxBacklog int64,
 ) int64 {
-	// Compute elapsed time since mode switch.
-	elapsed := time.Since(cycleStartTime)
-	progress := math.Min(1.0, elapsed.Seconds()/phaseTime.Seconds())
-
-	// Oscillation curve: cosine easing
-	var osc float64
-	if isDraining {
-		osc = (1 + math.Cos(math.Pi*progress)) / 2 // 1 → 0
-	} else {
-		osc = (1 - math.Cos(math.Pi*progress)) / 2 // 0 → 1
-	}
-
+	phaseCount := elapsed.Seconds() / phaseTime.Seconds()
+	osc := (math.Sin(2*math.Pi*phaseCount) + 1.0) / 2
 	backlogRange := float64(maxBacklog - minBacklog)
 	baseTarget := float64(minBacklog) + osc*backlogRange
-	inflatedTarget := baseTarget * 1.10 // apply 10% overshoot
-	inflatedTarget = max(0, inflatedTarget)
-	return int64(math.Round(inflatedTarget))
+	return int64(math.Round(baseTarget))
 }
 
 func calculateSpawnRate(
