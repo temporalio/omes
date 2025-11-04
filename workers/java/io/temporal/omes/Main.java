@@ -247,7 +247,7 @@ public class Main implements Runnable {
       workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
     }
     workerOptions.setMaxConcurrentActivityExecutionSize(maxConcurrentActivities);
-    workerOptions.setWorkerActivitiesPerSecond(workerActivitiesPerSecond);
+    workerOptions.setMaxWorkerActivitiesPerSecond(workerActivitiesPerSecond);
     // Start all workers, throwing on first exception
     for (String taskQueue : taskQueues) {
       Worker worker = workerFactory.newWorker(taskQueue, workerOptions.build());

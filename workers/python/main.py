@@ -205,7 +205,7 @@ async def run():
             "max_concurrent_workflow_tasks"
         ] = args.max_concurrent_workflow_tasks
     if args.worker_activities_per_second is not None:
-        worker_kwargs["worker_activities_per_second"] = args.worker_activities_per_second
+        worker_kwargs["max_activities_per_second"] = args.worker_activities_per_second
 
     # Start all workers, throwing on first exception
     workers = [

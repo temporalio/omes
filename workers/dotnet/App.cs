@@ -211,7 +211,7 @@ public static class App
 
             if (ctx.ParseResult.GetValueForOption(workerActivitiesPerSecond) is { } rate)
             {
-                workerOptions.WorkerActivitiesPerSecond = (int)rate;
+                workerOptions.MaxActivitiesPerSecond = (int)rate;
             }
 
             // Configure poller behaviors with autoscaling support

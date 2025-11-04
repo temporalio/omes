@@ -73,6 +73,7 @@ async function run() {
 
     promListenAddress: string;
     promHandlerPath: string;
+    workerActivityRate: number;
   }>();
 
   // Configure TLS
@@ -190,7 +191,7 @@ async function run() {
     workerArgs.maxConcurrentWorkflowTaskExecutions = opts.maxWFTs;
   }
   if (opts.workerActivityRate) {
-    workerArgs.workerActivitiesPerSecond = opts.workerActivityRate;
+    workerArgs.maxActivitiesPerSecond = opts.workerActivityRate;
   }
   const workerPromises = [];
   for (const taskQueue of taskQueues) {
