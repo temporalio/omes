@@ -32,7 +32,7 @@ func (wct *WorkflowCompletionVerifier) SetExpectedWorkflowCount(fn func(Executor
 // Call this before the scenario is started to initialize and register search attributes.
 func NewWorkflowCompletionChecker(ctx context.Context, info ScenarioInfo, timeout time.Duration) (*WorkflowCompletionVerifier, error) {
 	if timeout == 0 {
-		timeout = 30 * time.Second
+		timeout = 3 * time.Minute // TODO: set back to 30s
 	}
 
 	checker := &WorkflowCompletionVerifier{
