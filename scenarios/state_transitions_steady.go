@@ -10,6 +10,15 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
+type steadyStateConfig struct {
+	MaxConsecutiveErrors int
+}
+
+type stateTransitionsSteadyExecutor struct {
+	loadgen.ScenarioInfo
+	config *steadyStateConfig
+}
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Run a certain number of state transitions per second. This requires duration option to be set " +
@@ -17,16 +26,34 @@ func init() {
 			"example, can be run with: run-scenario-with-worker --scenario state_transitions_steady --language go " +
 			"--embedded-server --duration 5m --option state-transitions-per-second=3",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
-				return (&stateTransitionsSteady{runOptions}).run(ctx)
-			})
+			return &stateTransitionsSteadyExecutor{}
 		},
 	})
 }
 
-type stateTransitionsSteady struct{ loadgen.ScenarioInfo }
+var _ loadgen.Configurable = (*stateTransitionsSteadyExecutor)(nil)
 
-func (s *stateTransitionsSteady) run(ctx context.Context) error {
+// Configure initializes the steadyStateConfig by reading scenario options
+func (s *stateTransitionsSteadyExecutor) Configure(info loadgen.ScenarioInfo) error {
+	s.ScenarioInfo = info
+	s.config = &steadyStateConfig{
+		MaxConsecutiveErrors: s.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 5),
+	}
+	if s.config.MaxConsecutiveErrors < 1 {
+		return fmt.Errorf("%s must be at least 1, got %d", MaxConsecutiveErrorsFlag, s.config.MaxConsecutiveErrors)
+	}
+	return nil
+}
+
+// Run executes the state transitions steady scenario
+func (s *stateTransitionsSteadyExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	if err := s.Configure(info); err != nil {
+		return fmt.Errorf("failed to parse scenario configuration: %w", err)
+	}
+	return s.run(ctx)
+}
+
+func (s *stateTransitionsSteadyExecutor) run(ctx context.Context) error {
 	// The goal here is to meet a certain number of state transitions per second.
 	// For us this means a certain number of workflows per second. So we must
 	// first execute a basic workflow (i.e. with a simple activity) and get the
@@ -88,7 +115,6 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	// Start a workflow every X interval until duration reached or there are N
 	// start failures in a row
 
-	const maxConsecutiveErrors = 5
 	errCh := make(chan error, 10000)
 	ticker := time.NewTicker(workflowStartInterval)
 	defer ticker.Stop()
@@ -104,8 +130,8 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 				consecutiveErrCount = 0
 			} else {
 				consecutiveErrCount++
-				if consecutiveErrCount >= maxConsecutiveErrors {
-					return fmt.Errorf("got %v consecutive errors, most recent: %w", maxConsecutiveErrors, err)
+				if consecutiveErrCount >= s.config.MaxConsecutiveErrors {
+					return fmt.Errorf("got %v consecutive errors, most recent: %w", s.config.MaxConsecutiveErrors, err)
 				}
 			}
 		case <-ticker.C:
