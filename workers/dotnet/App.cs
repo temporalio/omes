@@ -1,12 +1,11 @@
-﻿using Temporalio.Runtime;
+using System.CommandLine;
+using System.CommandLine.Invocation;
+using Temporalio.Client;
+using Temporalio.Runtime;
 using Temporalio.Worker;
 using Temporalio.Worker.Tuning;
 
 namespace Temporalio.Omes;
-
-using System.CommandLine;
-using System.CommandLine.Invocation;
-using Temporalio.Client;
 
 /// <summary>
 /// Main application that can parse args and run command.
@@ -95,6 +94,11 @@ public static class App
         description: "Prometheus handler path",
         getDefaultValue: () => "/metrics");
 
+    private static readonly Option<bool> errOnUnimplementedOption = new(
+        name: "--err-on-unimplemented",
+        description: "Error when receiving unimplemented actions (currently only affects concurrent client actions)",
+        getDefaultValue: () => false);
+
     /// <summary>
     /// Run Omes worker with the given args.
     /// </summary>
@@ -124,6 +128,7 @@ public static class App
         cmd.Add(clientKeyPathOption);
         cmd.Add(promAddrOption);
         cmd.Add(promHandlerPathOption);
+        cmd.Add(errOnUnimplementedOption);
         cmd.SetHandler(RunCommandAsync);
         return cmd;
     }
@@ -228,7 +233,8 @@ public static class App
             workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
             workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
             workerOptions.AddActivity(KitchenSinkWorkflow.Payload);
-            var clientActivities = new ClientActivitiesImpl(client);
+            var errOnUnimplemented = ctx.ParseResult.GetValueForOption(errOnUnimplementedOption);
+            var clientActivities = new ClientActivitiesImpl(client, errOnUnimplemented);
             workerOptions.AddActivity(clientActivities.Client);
             var worker = new TemporalWorker(client, workerOptions);
             var workerTask = worker.ExecuteAsync(default);

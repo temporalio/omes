@@ -144,7 +144,8 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         () => {
           return startChild(execChild.workflowType || 'kitchenSink', {
             args: execChild.input ?? [],
-            workflowId: execChild.workflowId ?? undefined,
+            // Do not set workflowId field if not supplied
+            ...(execChild.workflowId && { workflowId: execChild.workflowId }),
             typedSearchAttributes: decodeTypedSearchAttributes(
               action?.execChildWorkflow?.searchAttributes
             ),

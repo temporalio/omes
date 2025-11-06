@@ -48,7 +48,11 @@ async function run() {
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')
-    .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics');
+    .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics')
+    .option(
+      '--err-on-unimplemented <errOnImplemented>',
+      'Error when receiving unimplemented actions (currently only affects concurrent client actions)',
+    );
 
   const opts = program.parse(process.argv).opts<{
     serverAddress: string;
@@ -74,6 +78,7 @@ async function run() {
     promListenAddress: string;
     promHandlerPath: string;
     workerActivityRate: number;
+    errOnUnimplemented: boolean;
   }>();
 
   // Configure TLS
@@ -156,7 +161,7 @@ async function run() {
     logger.info(`Running TypeScript worker on ${taskQueues.length} task queues`);
   }
 
-  const activities = createActivities(client);
+  const activities = createActivities(client, opts.errOnUnimplemented || false);
 
   const workerArgs: WorkerOptions = {
     connection,

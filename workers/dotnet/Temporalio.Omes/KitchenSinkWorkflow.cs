@@ -449,10 +449,12 @@ public class KitchenSinkWorkflow
 public class ClientActivitiesImpl
 {
     private readonly ITemporalClient _client;
+    private readonly bool _errOnUnimplemented;
 
-    public ClientActivitiesImpl(ITemporalClient client)
+    public ClientActivitiesImpl(ITemporalClient client, bool errOnUnimplemented = false)
     {
         _client = client;
+        _errOnUnimplemented = errOnUnimplemented;
     }
 
     [Activity("client")]
@@ -462,7 +464,7 @@ public class ClientActivitiesImpl
         var workflowId = activityInfo.WorkflowId;
         var taskQueue = activityInfo.TaskQueue;
 
-        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue, _errOnUnimplemented);
         await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
 }

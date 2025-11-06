@@ -37,7 +37,7 @@ export async function payload(inputData: Uint8Array, bytesToReturn: number): Pro
   return output;
 }
 
-export const createActivities = (client: Client) => ({
+export const createActivities = (client: Client, errOnUnimplemented: boolean = false) => ({
   noop,
   resources,
   payload,
@@ -49,7 +49,7 @@ export const createActivities = (client: Client) => ({
     const workflowId = activityContext.workflowExecution.workflowId;
     const taskQueue = activityContext.taskQueue;
 
-    const executor = new ClientActionExecutor(client, workflowId, taskQueue);
+    const executor = new ClientActionExecutor(client, workflowId, taskQueue, errOnUnimplemented);
     try {
       await executor.executeClientSequence(clientActivity.clientSequence);
     } catch (error) {

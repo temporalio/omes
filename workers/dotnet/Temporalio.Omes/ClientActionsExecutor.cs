@@ -12,14 +12,16 @@ public class ClientActionsExecutor
     private readonly string _taskQueue;
     private object? _workflowInput = null;
     private string _runId = "";
+    private readonly bool _errOnUnimplemented;
 
     public string? WorkflowId { get; set; }
 
-    public ClientActionsExecutor(ITemporalClient client, string workflowId, string taskQueue)
+    public ClientActionsExecutor(ITemporalClient client, string workflowId, string taskQueue, bool errOnUnimplemented = false)
     {
         _client = client;
         WorkflowId = workflowId;
         _taskQueue = taskQueue;
+        _errOnUnimplemented = errOnUnimplemented;
     }
 
     public async Task ExecuteClientSequence(ClientSequence clientSeq)
@@ -34,7 +36,12 @@ public class ClientActionsExecutor
     {
         if (actionSet.Concurrent)
         {
-            throw new ApplicationFailureException("concurrent client actions are not supported", "UnsupportedOperation", nonRetryable: true);
+            if (_errOnUnimplemented)
+            {
+                throw new ApplicationFailureException("concurrent client actions are not supported", "UnsupportedOperation", nonRetryable: true);
+            }
+            // Skip concurrent actions when not erroring on unimplemented
+            return;
         }
 
         foreach (var action in actionSet.Actions)

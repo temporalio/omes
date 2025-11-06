@@ -87,6 +87,12 @@ async def run():
         type=float,
         help="Per-worker activity rate limit",
     )
+    parser.add_argument(
+        "--err-on-unimplemented",
+        default=False,
+        type=bool,
+        help="Error when receiving unimplemented actions (currently only affects concurrent client actions)",
+    )
     # Log arguments
     parser.add_argument(
         "--log-level", default="info", help="(debug info warn error panic fatal)"
@@ -217,7 +223,7 @@ async def run():
                 noop_activity,
                 delay_activity,
                 payload_activity,
-                create_client_activity(client),
+                create_client_activity(client, args.err_on_unimplemented),
             ],
             **worker_kwargs,
         )
