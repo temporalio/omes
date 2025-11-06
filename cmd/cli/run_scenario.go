@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/antithesishq/antithesis-sdk-go/assert"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -181,14 +182,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	// Collect all errors
 	var allErrors []error
 	if scenarioErr != nil {
-		allErrors = append(allErrors, fmt.Errorf("scenario execution: %w", scenarioErr))
+		allErrors = append(allErrors, fmt.Errorf("scenario execution failed: %w", scenarioErr))
+		assert.Unreachable("scenario execution failed", map[string]any{"error": scenarioErr})
 	}
 
 	// 2. Run verifications
 	if scenario.VerifyFn != nil {
 		verifyErrs := scenario.VerifyFn(ctx, scenarioInfo, executor)
 		for _, err := range verifyErrs {
-			allErrors = append(allErrors, fmt.Errorf("post-scenario verification: %w", err))
+			allErrors = append(allErrors, fmt.Errorf("post-scenario verification failed: %w", err))
+			assert.Unreachable("post-scenario verification failed", map[string]any{"error": err})
 		}
 	}
 
