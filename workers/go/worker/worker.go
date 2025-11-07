@@ -92,6 +92,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 					options.MaxConcurrentWorkflowPollers,
 					options.WorkflowPollerAutoscaleMax,
 				),
+				WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
