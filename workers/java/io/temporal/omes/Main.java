@@ -137,6 +137,7 @@ public class Main implements Runnable {
       names = "--worker-activities-per-second",
       description = "Per-worker activity rate limit")
   private double workerActivitiesPerSecond;
+
   @CommandLine.Option(
       names = "--err-on-unimplemented",
       description =
