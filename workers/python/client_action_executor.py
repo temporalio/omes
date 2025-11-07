@@ -41,6 +41,7 @@ class ClientActionExecutor:
                     "concurrent client actions are not supported", non_retryable=True
                 )
             # Skip concurrent actions when not erroring on unimplemented
+            print("Skipping concurrent client actions (not implemented)")
             return
 
         for action in action_set.actions:

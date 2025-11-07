@@ -41,6 +41,7 @@ public class ClientActionsExecutor
                 throw new ApplicationFailureException("concurrent client actions are not supported", "UnsupportedOperation", nonRetryable: true);
             }
             // Skip concurrent actions when not erroring on unimplemented
+            Console.WriteLine("Skipping concurrent client actions (not implemented)");
             return;
         }
 

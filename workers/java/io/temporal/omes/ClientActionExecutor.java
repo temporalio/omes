@@ -41,6 +41,7 @@ public class ClientActionExecutor {
             "concurrent client actions are not supported", "UnsupportedOperation");
       }
       // Skip concurrent actions when not erroring on unimplemented
+      System.out.println("Skipping concurrent client actions (not implemented)");
       return;
     }
 

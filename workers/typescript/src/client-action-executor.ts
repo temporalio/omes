@@ -37,6 +37,7 @@ export class ClientActionExecutor {
         throw ApplicationFailure.nonRetryable('concurrent client actions are not supported');
       }
       // Skip concurrent actions when not erroring on unimplemented
+      console.log('Skipping concurrent client actions (not implemented)');
       return;
     }
 
