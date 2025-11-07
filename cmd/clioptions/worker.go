@@ -38,6 +38,6 @@ func (m *WorkerOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
 	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"worker-activities-per-second", 0, "Per-worker activity rate limit")
-	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (currently this only applies to concurrenct client actions)")
+	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (currently this only applies to concurrent client actions)")
 	return m.fs
 }
