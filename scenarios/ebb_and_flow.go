@@ -64,7 +64,7 @@ type ebbAndFlowExecutor struct {
 	completedActivities atomic.Int64
 	stateLock           sync.Mutex
 	state               *ebbAndFlowState
-	completionVerifier  *loadgen.WorkflowCompletionChecker
+	completionVerifier  *loadgen.WorkflowCompletionVerifier
 	executorState       *loadgen.ExecutorState
 }
 
@@ -304,7 +304,6 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
 	}
 	e.completedActivities.Add(rate)
-	e.incrementTotalCompletedWorkflow()
 
 	// Record completion in executor state for verification
 	e.stateLock.Lock()
