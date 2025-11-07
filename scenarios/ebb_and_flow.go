@@ -64,7 +64,7 @@ type ebbAndFlowExecutor struct {
 	completedActivities atomic.Int64
 	stateLock           sync.Mutex
 	state               *ebbAndFlowState
-	completionVerifier  *loadgen.WorkflowCompletionChecker
+	completionVerifier  *loadgen.WorkflowCompletionVerifier
 	executorState       *loadgen.ExecutorState
 }
 
