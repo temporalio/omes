@@ -37,7 +37,7 @@ export async function payload(inputData: Uint8Array, bytesToReturn: number): Pro
   return output;
 }
 
-export const createActivities = (client: Client, errOnUnimplemented: boolean = false) => ({
+export const createActivities = (client: Client, errOnUnimplemented = false) => ({
   noop,
   resources,
   payload,

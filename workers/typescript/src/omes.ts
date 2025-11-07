@@ -51,7 +51,7 @@ async function run() {
     .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics')
     .option(
       '--err-on-unimplemented <errOnImplemented>',
-      'Error when receiving unimplemented actions (currently only affects concurrent client actions)',
+      'Error when receiving unimplemented actions (currently only affects concurrent client actions)'
     );
 
   const opts = program.parse(process.argv).opts<{

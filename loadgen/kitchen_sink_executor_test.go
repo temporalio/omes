@@ -401,12 +401,6 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangTypeScript: "concurrent client actions are not supported",
-				clioptions.LangDotNet:     "concurrent client actions are not supported",
-				clioptions.LangPython:     "concurrent client actions are not supported",
-				clioptions.LangJava:       "concurrent client actions are not supported",
-			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				ActivityTaskStarted

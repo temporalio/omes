@@ -18,7 +18,7 @@ export class ClientActionExecutor {
   private taskQueue;
   private errOnUnimplemented: boolean;
 
-  constructor(client: Client, workflowId: string, taskQueue: string, errOnUnimplemented: boolean = false) {
+  constructor(client: Client, workflowId: string, taskQueue: string, errOnUnimplemented = false) {
     this.client = client;
     this.workflowId = workflowId;
     this.taskQueue = taskQueue;
