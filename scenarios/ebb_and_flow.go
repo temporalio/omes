@@ -21,12 +21,16 @@ const (
 
 const (
 	// MinBacklogFlag defines the minimum backlog to target.
+	// Note that it controls total backlog size, not counting partitions or priority levels.
 	MinBacklogFlag = "min-backlog"
 	// MaxBacklogFlag defines the maximum backlog to target.
+	// Note that it controls total backlog size, not counting partitions or priority levels.
 	MaxBacklogFlag = "max-backlog"
-	// PhaseTimeFlag defines the duration of each growing and draining phase.
-	PhaseTimeFlag = "phase-time"
-	// SleepDurationFlag defines the duration an activity sleeps for.
+	// PeriodFlag defines the period of oscilation of backlog size.
+	PeriodFlag = "period"
+	// SleepDurationFlag defines the duration an activity sleeps for (default 1ms).
+	// This can be used to slow down activity processing, but
+	// --worker-worker-activity-per-second may be more intuitive.
 	SleepDurationFlag = "sleep-duration"
 	// MaxRateFlag defines the maximum number of workflows to spawn per control interval.
 	MaxRateFlag = "max-rate"
@@ -41,9 +45,9 @@ const (
 type ebbAndFlowConfig struct {
 	MinBacklog                    int64
 	MaxBacklog                    int64
-	PhaseTime                     time.Duration
+	Period                        time.Duration
 	SleepDuration                 time.Duration
-	MaxRate                       int
+	MaxRate                       int64
 	ControlInterval               time.Duration
 	MaxConsecutiveErrors          int
 	BacklogLogInterval            time.Duration
@@ -59,15 +63,15 @@ type ebbAndFlowState struct {
 
 type ebbAndFlowExecutor struct {
 	loadgen.ScenarioInfo
-	config             *ebbAndFlowConfig
-	rng                *rand.Rand
-	id                 string
-	isResuming         bool
-	startTime          time.Time
-	startedWorkflows   atomic.Int64
-	completedWorkflows atomic.Int64
-	stateLock          sync.Mutex
-	state              *ebbAndFlowState
+	config              *ebbAndFlowConfig
+	rng                 *rand.Rand
+	id                  string
+	isResuming          bool
+	startTime           time.Time
+	scheduledActivities atomic.Int64
+	completedActivities atomic.Int64
+	stateLock           sync.Mutex
+	state               *ebbAndFlowState
 }
 
 var _ loadgen.Configurable = (*ebbAndFlowExecutor)(nil)
@@ -77,7 +81,7 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Oscillates backlog between min and max.\n" +
 			"Options:\n" +
-			"  min-backlog, max-backlog, phase-time, sleep-duration, max-rate,\n" +
+			"  min-backlog, max-backlog, period, sleep-duration, max-rate,\n" +
 			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
 			"Duration must be set.",
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
@@ -91,7 +95,7 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
 		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
-		MaxRate:                       info.ScenarioOptionInt(MaxRateFlag, 1000),
+		MaxRate:                       int64(info.ScenarioOptionInt(MaxRateFlag, 1000)),
 		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
 		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
 		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
@@ -108,14 +112,17 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
 	}
 
-	config.PhaseTime = info.ScenarioOptionDuration(PhaseTimeFlag, 60*time.Second)
-	if config.PhaseTime <= 0 {
-		return fmt.Errorf("phase-time must be greater than 0, got %v", config.PhaseTime)
+	// TODO: backwards-compatibility, remove later
+	pt := info.ScenarioOptionDuration("phase-time", 60*time.Second)
+	config.Period = info.ScenarioOptionDuration(PeriodFlag, pt)
+	if config.Period <= 0 {
+		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
 	}
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		// This scenario overrides "count" so do not require it.
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
@@ -173,15 +180,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	defer backlogTicker.Stop()
 
 	var startWG sync.WaitGroup
-	iter := 1
+	var iter int64 = 1
 
-	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, phase_time=%v, duration=%v",
-		config.MinBacklog, config.MaxBacklog, config.PhaseTime, e.Configuration.Duration)
+	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
+		config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 
-	var rate int
-	var isDraining bool // true = draining mode, false = growing mode
-	var started, completed, backlog, target int64
-	cycleStartTime := e.startTime
+	var started, completed, backlog, target, rate int64
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
 		select {
@@ -198,29 +202,18 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 				consecutiveErrCount = 0
 			}
 		case <-ticker.C:
-			started = e.startedWorkflows.Load()
-			completed = e.completedWorkflows.Load()
+			started = e.scheduledActivities.Load()
+			completed = e.completedActivities.Load()
 			backlog = started - completed
 
-			// Check if we need to switch modes.
-			if isDraining && backlog <= config.MinBacklog {
-				e.Logger.Infof("Backlog reached %d, switching to growing mode", backlog)
-				isDraining = false
-				cycleStartTime = time.Now()
-			} else if !isDraining && backlog >= config.MaxBacklog {
-				e.Logger.Infof("Backlog reached %d, switching to draining mode", backlog)
-				isDraining = true
-				cycleStartTime = time.Now()
-			}
-
-			target = calculateBacklogTarget(isDraining, cycleStartTime, config.PhaseTime, config.MinBacklog, config.MaxBacklog)
+			target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
 			rate = calculateSpawnRate(target, backlog, config.MinBacklog, config.MaxBacklog, config.MaxRate)
 
 			if rate > 0 {
 				startWG.Add(1)
-				go func(iteration, count int) {
+				go func(iter, rate int64) {
 					defer startWG.Done()
-					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, count, config.SleepActivityConfig)
+					errCh <- e.spawnWorkflowWithActivities(ctx, iter, rate, config.SleepActivityConfig)
 				}(iter, rate)
 				iter++
 			}
@@ -288,18 +281,18 @@ func (e *ebbAndFlowExecutor) LoadState(loader func(any) error) error {
 
 func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	ctx context.Context,
-	iteration, rate int,
+	iteration, rate int64,
 	template *loadgen.SleepActivityConfig,
 ) error {
 	// Override activity count to fixed rate.
-	fixedDist := loadgen.NewFixedDistribution(int64(rate))
+	fixedDist := loadgen.NewFixedDistribution(rate)
 	config := loadgen.SleepActivityConfig{
 		Count:  &fixedDist,
 		Groups: template.Groups,
 	}
 
 	// Start workflow.
-	run := e.NewRun(iteration)
+	run := e.NewRun(int(iteration))
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
@@ -316,7 +309,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	if err != nil {
 		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
 	}
-	e.startedWorkflows.Add(1)
+	e.scheduledActivities.Add(rate)
 
 	// Wait for workflow completion
 	var result ebbandflow.WorkflowOutput
@@ -324,7 +317,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	if err != nil {
 		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
 	}
-	e.completedWorkflows.Add(1)
+	e.completedActivities.Add(rate)
 	e.incrementTotalCompletedWorkflow()
 
 	return nil
@@ -339,40 +332,26 @@ func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
 }
 
 func calculateBacklogTarget(
-	isDraining bool,
-	cycleStartTime time.Time,
-	phaseTime time.Duration,
+	elapsed, period time.Duration,
 	minBacklog, maxBacklog int64,
 ) int64 {
-	// Compute elapsed time since mode switch.
-	elapsed := time.Since(cycleStartTime)
-	progress := math.Min(1.0, elapsed.Seconds()/phaseTime.Seconds())
-
-	// Oscillation curve: cosine easing
-	var osc float64
-	if isDraining {
-		osc = (1 + math.Cos(math.Pi*progress)) / 2 // 1 → 0
-	} else {
-		osc = (1 - math.Cos(math.Pi*progress)) / 2 // 0 → 1
-	}
-
+	periods := elapsed.Seconds() / period.Seconds()
+	osc := (math.Sin(2*math.Pi*periods) + 1.0) / 2
 	backlogRange := float64(maxBacklog - minBacklog)
 	baseTarget := float64(minBacklog) + osc*backlogRange
-	inflatedTarget := baseTarget * 1.10 // apply 10% overshoot
-	inflatedTarget = max(0, inflatedTarget)
-	return int64(math.Round(inflatedTarget))
+	return int64(math.Round(baseTarget))
 }
 
 func calculateSpawnRate(
 	target int64,
 	backlog int64,
 	minBacklog, maxBacklog int64,
-	maxRate int,
-) int {
+	maxRate int64,
+) int64 {
 	backlogDelta := float64(target - backlog)                                     // how far backlog is from target
 	scaledBacklogDelta := math.Abs(backlogDelta) / float64(maxBacklog-minBacklog) // normalize to 0.0-1.0 range
 	gain := 1.0 + 2.0*scaledBacklogDelta                                          // smooth gain scheduling: 1.0 (small errors) to 3.0 (large errors)
-	rate := int(backlogDelta * gain)                                              // calculate desired spawn rate (workflows/second)
+	rate := int64(backlogDelta * gain)                                            // calculate desired spawn rate (workflows/second)
 	rate = min(maxRate, rate)                                                     // cap at maximum allowed rate
 	rate = max(0, rate)
 	return rate
