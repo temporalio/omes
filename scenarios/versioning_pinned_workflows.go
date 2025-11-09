@@ -376,17 +376,34 @@ func (e *versioningPinnedExecutor) startWorkflows(ctx context.Context, info load
 
 // setupVersioning configures the worker versioning for the deployment using Worker Deployment APIs.
 func (e *versioningPinnedExecutor) setupVersioning(ctx context.Context, c client.Client, namespace, deploymentName, buildID string) error {
-	// Set the build ID as the current deployment version
-	_, err := c.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
-		Namespace:      namespace,
-		DeploymentName: deploymentName,
-		BuildId:        buildID,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to set version %s as current for deployment %s: %w", buildID, deploymentName, err)
-	}
+	// Retry indefinitely until ctx is done
+	backoff := 1 * time.Second
+	for {
+		_, err := c.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
+			Namespace:      namespace,
+			DeploymentName: deploymentName,
+			BuildId:        buildID,
+		})
+		if err == nil {
+			return nil
+		}
 
-	return nil
+		// Wait for backoff or exit if context is done
+		select {
+		case <-ctx.Done():
+			// Return the last observed error to preserve original cause (e.g., "Not enough hosts...")
+			return fmt.Errorf("failed to set version %s as current for deployment %s: %w", buildID, deploymentName, err)
+		case <-time.After(backoff):
+		}
+
+		// Exponential backoff capped at 30s
+		if backoff < 30*time.Second {
+			backoff *= 2
+			if backoff > 30*time.Second {
+				backoff = 30 * time.Second
+			}
+		}
+	}
 }
 
 // bumpVersion increases the version, starts a new worker with the new build ID, and sets it as current.
