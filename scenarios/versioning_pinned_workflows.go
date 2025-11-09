@@ -27,12 +27,40 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
+	historypb "go.temporal.io/api/history/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 )
+
+// retryUntilCtx retries the given function until it reports done or the context is done.
+// Backoff starts at 1s and is capped at 10s.
+func retryUntilCtx(ctx context.Context, fn func(context.Context) (bool, error)) error {
+	backoff := 1 * time.Second
+	for {
+		done, err := fn(ctx)
+		if done {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			if err != nil {
+				return err
+			}
+			return ctx.Err()
+		case <-time.After(backoff):
+		}
+		if backoff < 10*time.Second {
+			backoff *= 2
+			if backoff > 10*time.Second {
+				backoff = 10 * time.Second
+			}
+		}
+	}
+}
 
 const (
 	// NumWorkflowsFlag controls how many workflows to start on iteration 0
@@ -182,8 +210,13 @@ func (e *versioningPinnedExecutor) startWorker(ctx context.Context, info loadgen
 	w.RegisterWorkflowWithOptions(simpleKitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 	w.RegisterActivityWithOptions(noopActivity, activity.RegisterOptions{Name: "noop"})
 
-	// Start the worker
-	if err := w.Start(); err != nil {
+	// Start the worker with retry until context done
+	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+		if err := w.Start(); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, fmt.Errorf("failed to start worker with build ID %s: %w", buildID, err)
 	}
 
@@ -341,14 +374,24 @@ func (e *versioningPinnedExecutor) startWorkflows(ctx context.Context, info load
 				},
 			}
 
-			_, err := info.Client.ExecuteWorkflow(
-				ctx,
-				options,
-				"kitchenSink",
-				testInput.WorkflowInput,
-			)
-			if err != nil {
-				errChan <- fmt.Errorf("failed to start workflow %s: %w", workflowID, err)
+			var startErr error
+			if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+				_, startErr = info.Client.ExecuteWorkflow(
+					ctx,
+					options,
+					"kitchenSink",
+					testInput.WorkflowInput,
+				)
+				if startErr == nil {
+					return true, nil
+				}
+				// Treat AlreadyStarted as success for idempotency
+				if _, ok := startErr.(*serviceerror.WorkflowExecutionAlreadyStarted); ok {
+					return true, nil
+				}
+				return false, startErr
+			}); err != nil {
+				errChan <- fmt.Errorf("failed to start workflow %s: %w", workflowID, startErr)
 				return
 			}
 
@@ -376,34 +419,17 @@ func (e *versioningPinnedExecutor) startWorkflows(ctx context.Context, info load
 
 // setupVersioning configures the worker versioning for the deployment using Worker Deployment APIs.
 func (e *versioningPinnedExecutor) setupVersioning(ctx context.Context, c client.Client, namespace, deploymentName, buildID string) error {
-	// Retry indefinitely until ctx is done
-	backoff := 1 * time.Second
-	for {
+	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		_, err := c.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
 			Namespace:      namespace,
 			DeploymentName: deploymentName,
 			BuildId:        buildID,
 		})
-		if err == nil {
-			return nil
-		}
-
-		// Wait for backoff or exit if context is done
-		select {
-		case <-ctx.Done():
-			// Return the last observed error to preserve original cause (e.g., "Not enough hosts...")
-			return fmt.Errorf("failed to set version %s as current for deployment %s: %w", buildID, deploymentName, err)
-		case <-time.After(backoff):
-		}
-
-		// Exponential backoff capped at 30s
-		if backoff < 30*time.Second {
-			backoff *= 2
-			if backoff > 30*time.Second {
-				backoff = 30 * time.Second
-			}
-		}
+		return err == nil, err
+	}); err != nil {
+		return fmt.Errorf("failed to set version %s as current for deployment %s: %w", buildID, deploymentName, err)
 	}
+	return nil
 }
 
 // bumpVersion increases the version, starts a new worker with the new build ID, and sets it as current.
@@ -437,31 +463,16 @@ func (e *versioningPinnedExecutor) bumpVersion(ctx context.Context, info loadgen
 	time.Sleep(1 * time.Second)
 
 	// Retry indefinitely until ctx is done when setting the new current version
-	backoff := 1 * time.Second
-	for {
+	// Set the new version as the current deployment version (retry until ctx done)
+	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		_, err = info.Client.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
 			Namespace:      info.Namespace,
 			DeploymentName: deploymentName,
 			BuildId:        newVersion,
 		})
-		if err == nil {
-			break
-		}
-
-		// Wait for backoff or exit if context is done
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("failed to set version %s as current: %w", newVersion, err)
-		case <-time.After(backoff):
-		}
-
-		// Exponential backoff capped at 30s
-		if backoff < 30*time.Second {
-			backoff *= 2
-			if backoff > 30*time.Second {
-				backoff = 30 * time.Second
-			}
-		}
+		return err == nil, err
+	}); err != nil {
+		return fmt.Errorf("failed to set version %s as current: %w", newVersion, err)
 	}
 
 	e.lock.Lock()
@@ -563,15 +574,20 @@ func (e *versioningPinnedExecutor) Verify(ctx context.Context, info loadgen.Scen
 func (e *versioningPinnedExecutor) checkWorkflowHistory(ctx context.Context, info loadgen.ScenarioInfo, workflowID string) []error {
 	var errors []error
 
-	// Get workflow execution description to access versioning info
-	describeResp, err := info.Client.WorkflowService().DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
-		Namespace: info.Namespace,
-		Execution: &commonpb.WorkflowExecution{
-			WorkflowId: workflowID,
-		},
+	// Get workflow execution description to access versioning info (with retry)
+	var describeResp *workflowservice.DescribeWorkflowExecutionResponse
+	var derr error
+	_ = retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+		describeResp, derr = info.Client.WorkflowService().DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
+			Namespace: info.Namespace,
+			Execution: &commonpb.WorkflowExecution{
+				WorkflowId: workflowID,
+			},
+		})
+		return derr == nil, derr
 	})
-	if err != nil {
-		errors = append(errors, fmt.Errorf("workflow %s: failed to describe execution: %w", workflowID, err))
+	if derr != nil {
+		errors = append(errors, fmt.Errorf("workflow %s: failed to describe execution: %w", workflowID, derr))
 		return errors
 	}
 
@@ -605,8 +621,15 @@ func (e *versioningPinnedExecutor) checkWorkflowHistory(ctx context.Context, inf
 	// Iterate through history events to track build ID progression
 	// Use Started events (not deprecated) instead of Completed events
 	for historyIter.HasNext() {
-		event, err := historyIter.Next()
-		if err != nil {
+		var event *historypb.HistoryEvent
+		if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+			var err error
+			event, err = historyIter.Next()
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		}); err != nil {
 			errors = append(errors, fmt.Errorf("workflow %s: failed to read history: %w", workflowID, err))
 			return errors
 		}
