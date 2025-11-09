@@ -38,29 +38,7 @@ import (
 
 // retryUntilCtx retries the given function until it reports done or the context is done.
 // Backoff starts at 1s and is capped at 10s.
-func retryUntilCtx(ctx context.Context, fn func(context.Context) (bool, error)) error {
-	backoff := 1 * time.Second
-	for {
-		done, err := fn(ctx)
-		if done {
-			return err
-		}
-		select {
-		case <-ctx.Done():
-			if err != nil {
-				return err
-			}
-			return ctx.Err()
-		case <-time.After(backoff):
-		}
-		if backoff < 10*time.Second {
-			backoff *= 2
-			if backoff > 10*time.Second {
-				backoff = 10 * time.Second
-			}
-		}
-	}
-}
+// Using loadgen.RetryUntilCtx (removed local helper)
 
 const (
 	// NumWorkflowsFlag controls how many workflows to start on iteration 0
@@ -211,7 +189,7 @@ func (e *versioningPinnedExecutor) startWorker(ctx context.Context, info loadgen
 	w.RegisterActivityWithOptions(noopActivity, activity.RegisterOptions{Name: "noop"})
 
 	// Start the worker with retry until context done
-	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+	if err := loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		if err := w.Start(); err != nil {
 			return false, err
 		}
@@ -375,7 +353,7 @@ func (e *versioningPinnedExecutor) startWorkflows(ctx context.Context, info load
 			}
 
 			var startErr error
-			if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+			if err := loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 				_, startErr = info.Client.ExecuteWorkflow(
 					ctx,
 					options,
@@ -419,7 +397,7 @@ func (e *versioningPinnedExecutor) startWorkflows(ctx context.Context, info load
 
 // setupVersioning configures the worker versioning for the deployment using Worker Deployment APIs.
 func (e *versioningPinnedExecutor) setupVersioning(ctx context.Context, c client.Client, namespace, deploymentName, buildID string) error {
-	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+	if err := loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		_, err := c.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
 			Namespace:      namespace,
 			DeploymentName: deploymentName,
@@ -464,7 +442,7 @@ func (e *versioningPinnedExecutor) bumpVersion(ctx context.Context, info loadgen
 
 	// Retry indefinitely until ctx is done when setting the new current version
 	// Set the new version as the current deployment version (retry until ctx done)
-	if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+	if err := loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		_, err = info.Client.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
 			Namespace:      info.Namespace,
 			DeploymentName: deploymentName,
@@ -577,7 +555,7 @@ func (e *versioningPinnedExecutor) checkWorkflowHistory(ctx context.Context, inf
 	// Get workflow execution description to access versioning info (with retry)
 	var describeResp *workflowservice.DescribeWorkflowExecutionResponse
 	var derr error
-	_ = retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+	_ = loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 		describeResp, derr = info.Client.WorkflowService().DescribeWorkflowExecution(ctx, &workflowservice.DescribeWorkflowExecutionRequest{
 			Namespace: info.Namespace,
 			Execution: &commonpb.WorkflowExecution{
@@ -622,7 +600,7 @@ func (e *versioningPinnedExecutor) checkWorkflowHistory(ctx context.Context, inf
 	// Use Started events (not deprecated) instead of Completed events
 	for historyIter.HasNext() {
 		var event *historypb.HistoryEvent
-		if err := retryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+		if err := loadgen.RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
 			var err error
 			event, err = historyIter.Next()
 			if err != nil {
