@@ -15,8 +15,7 @@ type WorkflowCompletionVerifier struct {
 	// expectedWorkflowCount is an optional function to calculate the expected number of workflows
 	// from the ExecutorState. If nil, defaults to using state.CompletedIterations.
 	expectedWorkflowCount func(ExecutorState) int
-	// timeout is the maximum time to wait for workflow completion verification in visibility.
-	timeout time.Duration
+
 	// info is the scenario information stored during initialization.
 	info ScenarioInfo
 }
@@ -31,13 +30,7 @@ func (wct *WorkflowCompletionVerifier) SetExpectedWorkflowCount(fn func(Executor
 // If timeout is zero, it uses a default of 30 seconds.
 // Call this before the scenario is started to initialize and register search attributes.
 func NewWorkflowCompletionChecker(ctx context.Context, info ScenarioInfo, timeout time.Duration) (*WorkflowCompletionVerifier, error) {
-	if timeout == 0 {
-		timeout = 3 * time.Minute // TODO: set back to 30s
-	}
-
-	checker := &WorkflowCompletionVerifier{
-		timeout: timeout,
-	}
+	checker := &WorkflowCompletionVerifier{}
 
 	if err := checker.init(ctx, info); err != nil {
 		return nil, err
@@ -82,8 +75,6 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 		allErrors = append(allErrors, fmt.Errorf("no workflows completed"))
 	} else {
 		// (2) Verify that all completed workflows have indeed completed.
-		verifyCtx, cancel := context.WithTimeout(ctx, wct.timeout)
-		defer cancel()
 
 		query := fmt.Sprintf(
 			"%s='%s' AND ExecutionStatus = 'Completed'",
@@ -91,15 +82,24 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 			wct.info.ExecutionID,
 		)
 
+		// Bound waits to the parent context's deadline; otherwise allow up to 24h.
+		var waitAtMost time.Duration
+		if dl, ok := ctx.Deadline(); ok {
+			waitAtMost = time.Until(dl)
+			if waitAtMost < 0 {
+				waitAtMost = 0
+			}
+		} else {
+			waitAtMost = 24 * time.Hour
+		}
 		err := MinVisibilityCountEventually(
-			verifyCtx,
+			ctx,
 			wct.info,
 			&workflowservice.CountWorkflowExecutionsRequest{
 				Namespace: wct.info.Namespace,
 				Query:     query,
 			},
 			expectedCount,
-			wct.timeout,
 		)
 		if err != nil {
 			allErrors = append(allErrors, err)
@@ -126,17 +126,23 @@ func (wct *WorkflowCompletionVerifier) VerifyNoRunningWorkflows(ctx context.Cont
 	query := fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
 		TaskQueueForRun(wct.info.RunID))
 
-	verifyCtx, cancel := context.WithTimeout(ctx, wct.timeout)
-	defer cancel()
-
+	// Bound waits to the parent context's deadline; otherwise allow up to 24h.
+	var waitAtMost time.Duration
+	if dl, ok := ctx.Deadline(); ok {
+		waitAtMost = time.Until(dl)
+		if waitAtMost < 0 {
+			waitAtMost = 0
+		}
+	} else {
+		waitAtMost = 24 * time.Hour
+	}
 	return MinVisibilityCountEventually(
-		verifyCtx,
+		ctx,
 		wct.info,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: wct.info.Namespace,
 			Query:     query,
 		},
 		0,
-		wct.timeout,
 	)
 }

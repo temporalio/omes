@@ -49,10 +49,7 @@ func MinVisibilityCountEventually(
 	info ScenarioInfo,
 	request *workflowservice.CountWorkflowExecutionsRequest,
 	minCount int,
-	waitAtMost time.Duration,
 ) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
-	defer cancel()
 
 	countTicker := time.NewTicker(3 * time.Second)
 	defer countTicker.Stop()
@@ -61,46 +58,45 @@ func MinVisibilityCountEventually(
 	defer printTicker.Stop()
 
 	var lastVisibilityCount int64
-	done := false
 
 	check := func() error {
-		visibilityCount, err := info.Client.CountWorkflow(timeoutCtx, request)
+		visibilityCount, err := info.Client.CountWorkflow(ctx, request)
 		if err != nil {
 			return fmt.Errorf("failed to count workflows in visibility: %w", err)
 		}
 		lastVisibilityCount = visibilityCount.Count
-		if lastVisibilityCount >= int64(minCount) {
-			done = true
-		}
 		return nil
 	}
 
-	// Initial check before entering the loop.
+	// Initial check
 	if err := check(); err != nil {
 		return err
 	}
+	if lastVisibilityCount >= int64(minCount) {
+		return nil
+	}
 
-	// Loop until we reach the desired count or timeout.
-	for !done {
+	for {
 		select {
-		case <-timeoutCtx.Done():
-			return fmt.Errorf(
-				"expected at least %d workflows in visibility, got %d after waiting %v",
-				minCount, lastVisibilityCount, waitAtMost,
-			)
-
+		case <-ctx.Done():
+			// Context ended (deadline or cancellation). Return success only if min reached.
+			if lastVisibilityCount >= int64(minCount) {
+				return nil
+			}
+			return fmt.Errorf("expected at least %d workflows in visibility, got %d (context done)",
+				minCount, lastVisibilityCount)
 		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
+			info.Logger.Infof("current visibility count: %d (expected at least: %d)",
 				lastVisibilityCount, minCount)
-
 		case <-countTicker.C:
 			if err := check(); err != nil {
 				return err
 			}
+			if lastVisibilityCount >= int64(minCount) {
+				return nil
+			}
 		}
 	}
-
-	return nil
 }
 
 // GetNonCompletedWorkflows queries and returns an error for each non-completed workflow.
