@@ -60,6 +60,7 @@ type scenarioRunConfig struct {
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
+	verificationTimeout           time.Duration
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -85,6 +86,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
+	fs.DurationVar(&r.verificationTimeout, "verification-timeout", 2*time.Minute,
+		"Maximum duration to wait for post-scenario verification (default 2m).")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -99,6 +102,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
+	} else if r.verificationTimeout <= 0 {
+		return fmt.Errorf("verification-timeout must be greater than 0")
 	}
 
 	// Parse options
@@ -186,9 +191,12 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		assert.Unreachable("scenario execution failed", map[string]any{"error": scenarioErr})
 	}
 
+	verifyCtx, verifyCancel := context.WithTimeout(ctx, r.verificationTimeout)
+	defer verifyCancel()
+
 	// 2. Run verifications
 	if scenario.VerifyFn != nil {
-		verifyErrs := scenario.VerifyFn(ctx, scenarioInfo, executor)
+		verifyErrs := scenario.VerifyFn(verifyCtx, scenarioInfo, executor)
 		for _, err := range verifyErrs {
 			allErrors = append(allErrors, fmt.Errorf("post-scenario verification failed: %w", err))
 			assert.Unreachable("post-scenario verification failed", map[string]any{"error": err})
