@@ -302,36 +302,39 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 
 func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
 	if s.Client == nil {
-		// No client in some unit tests. Ideally this would be mocked but no mock operator service
-		// client is readily available.
 		return nil
 	}
-	// Ensure custom search attributes are registered that many scenarios rely on
-	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
-			"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
-			OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
-		},
-		Namespace: s.Namespace,
-	})
-	// Throw an error if the attributes could not be registered, but ignore already exists errs
+
+	attrs := map[string]enums.IndexedValueType{
+		"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
+		"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
+		OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
+	}
+
 	alreadyExistsStrings := []string{
 		"already exists",
 		"attributes mapping unavailble",
 	}
-	if err != nil {
-		isAlreadyExistsErr := false
-		for _, s := range alreadyExistsStrings {
-			if strings.Contains(err.Error(), s) {
-				isAlreadyExistsErr = true
-				break
+
+	var lastErr error
+	if err := RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+		_, lastErr = s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+			SearchAttributes: attrs,
+			Namespace:        s.Namespace,
+		})
+		if lastErr == nil {
+			return true, nil
+		}
+		for _, substr := range alreadyExistsStrings {
+			if strings.Contains(lastErr.Error(), substr) {
+				return true, nil
 			}
 		}
-		if !isAlreadyExistsErr {
-			return fmt.Errorf("failed to register search attributes: %w", err)
-		}
+		return false, lastErr
+	}); err != nil {
+		return fmt.Errorf("failed to register search attributes: %w", err)
 	}
+
 	return nil
 }
 
