@@ -436,14 +436,32 @@ func (e *versioningPinnedExecutor) bumpVersion(ctx context.Context, info loadgen
 	// Wait for worker to be ready
 	time.Sleep(1 * time.Second)
 
-	// Set the new version as the current deployment version
-	_, err = info.Client.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
-		Namespace:      info.Namespace,
-		DeploymentName: deploymentName,
-		BuildId:        newVersion,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to set version %s as current: %w", newVersion, err)
+	// Retry indefinitely until ctx is done when setting the new current version
+	backoff := 1 * time.Second
+	for {
+		_, err = info.Client.WorkflowService().SetWorkerDeploymentCurrentVersion(ctx, &workflowservice.SetWorkerDeploymentCurrentVersionRequest{
+			Namespace:      info.Namespace,
+			DeploymentName: deploymentName,
+			BuildId:        newVersion,
+		})
+		if err == nil {
+			break
+		}
+
+		// Wait for backoff or exit if context is done
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("failed to set version %s as current: %w", newVersion, err)
+		case <-time.After(backoff):
+		}
+
+		// Exponential backoff capped at 30s
+		if backoff < 30*time.Second {
+			backoff *= 2
+			if backoff > 30*time.Second {
+				backoff = 30 * time.Second
+			}
+		}
 	}
 
 	e.lock.Lock()
