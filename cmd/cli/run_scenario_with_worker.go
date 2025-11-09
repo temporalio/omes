@@ -80,6 +80,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 			maxIterationsPerSecond:        r.maxIterationsPerSecond,
 			scenarioOptions:               r.scenarioOptions,
 			timeout:                       r.timeout,
+			verificationTimeout:           r.verificationTimeout,
 			doNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 		},
 		clientOptions:  r.ClientOptions,
