@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -44,59 +43,23 @@ func InitSearchAttribute(
 	return nil
 }
 
-func MinVisibilityCountEventually(
+func MinVisibilityCount(
 	ctx context.Context,
 	info ScenarioInfo,
 	request *workflowservice.CountWorkflowExecutionsRequest,
 	minCount int,
 ) error {
-
-	countTicker := time.NewTicker(3 * time.Second)
-	defer countTicker.Stop()
-
-	printTicker := time.NewTicker(30 * time.Second)
-	defer printTicker.Stop()
-
-	var lastVisibilityCount int64
-
-	check := func() error {
-		visibilityCount, err := info.Client.CountWorkflow(ctx, request)
-		if err != nil {
-			return fmt.Errorf("failed to count workflows in visibility: %w", err)
-		}
-		lastVisibilityCount = visibilityCount.Count
-		return nil
+	visibilityCount, err := info.Client.CountWorkflow(ctx, request)
+	if err != nil {
+		return fmt.Errorf("failed to count workflows in visibility: %w", err)
 	}
 
-	// Initial check
-	if err := check(); err != nil {
-		return err
-	}
-	if lastVisibilityCount >= int64(minCount) {
-		return nil
+	if visibilityCount.Count < int64(minCount) {
+		return fmt.Errorf("expected at least %d workflows in visibility, got %d",
+			minCount, visibilityCount.Count)
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			// Context ended (deadline or cancellation). Return success only if min reached.
-			if lastVisibilityCount >= int64(minCount) {
-				return nil
-			}
-			return fmt.Errorf("expected at least %d workflows in visibility, got %d (context done)",
-				minCount, lastVisibilityCount)
-		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected at least: %d)",
-				lastVisibilityCount, minCount)
-		case <-countTicker.C:
-			if err := check(); err != nil {
-				return err
-			}
-			if lastVisibilityCount >= int64(minCount) {
-				return nil
-			}
-		}
-	}
+	return nil
 }
 
 // GetNonCompletedWorkflows queries and returns an error for each non-completed workflow.
