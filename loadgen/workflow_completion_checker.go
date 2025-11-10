@@ -61,9 +61,8 @@ func (wct *WorkflowCompletionVerifier) VerifyRun(ctx context.Context, info Scena
 }
 
 // Verify checks that the expected number of workflows have completed.
+// It retries all checks until the context deadline is reached.
 func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state ExecutorState) []error {
-	var allErrors []error
-
 	// Calculate expected workflow count
 	expectedCount := state.CompletedIterations
 	if wct.expectedWorkflowCount != nil {
@@ -72,27 +71,30 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 
 	// (1) Verify that we have completions at all.
 	if expectedCount == 0 {
-		allErrors = append(allErrors, fmt.Errorf("no workflows completed"))
-	} else {
+		return []error{fmt.Errorf("no workflows completed")}
+	}
+
+	// Setup retry loop
+	checkTicker := time.NewTicker(15 * time.Second)
+	defer checkTicker.Stop()
+
+	printTicker := time.NewTicker(30 * time.Second)
+	defer printTicker.Stop()
+
+	query := fmt.Sprintf(
+		"%s='%s' AND ExecutionStatus = 'Completed'",
+		OmesExecutionIDSearchAttribute,
+		wct.info.ExecutionID,
+	)
+
+	var lastErrors []error
+
+	// Function to perform all checks
+	performChecks := func() []error {
+		var allErrors []error
+
 		// (2) Verify that all completed workflows have indeed completed.
-
-		query := fmt.Sprintf(
-			"%s='%s' AND ExecutionStatus = 'Completed'",
-			OmesExecutionIDSearchAttribute,
-			wct.info.ExecutionID,
-		)
-
-		// Bound waits to the parent context's deadline; otherwise allow up to 24h.
-		var waitAtMost time.Duration
-		if dl, ok := ctx.Deadline(); ok {
-			waitAtMost = time.Until(dl)
-			if waitAtMost < 0 {
-				waitAtMost = 0
-			}
-		} else {
-			waitAtMost = 24 * time.Hour
-		}
-		err := MinVisibilityCountEventually(
+		err := MinVisibilityCount(
 			ctx,
 			wct.info,
 			&workflowservice.CountWorkflowExecutionsRequest{
@@ -104,45 +106,85 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 		if err != nil {
 			allErrors = append(allErrors, err)
 		}
+
+		// (3) Verify that all started workflows have completed.
+		nonCompletedErrs := GetNonCompletedWorkflows(
+			ctx,
+			wct.info,
+			OmesExecutionIDSearchAttribute,
+			wct.info.ExecutionID,
+			10,
+		)
+		allErrors = append(allErrors, nonCompletedErrs...)
+
+		return allErrors
 	}
 
-	// (3) Verify that all started workflows have completed.
-	nonCompletedErrs := GetNonCompletedWorkflows(
-		ctx,
-		wct.info,
-		OmesExecutionIDSearchAttribute,
-		wct.info.ExecutionID,
-		10,
-	)
-	allErrors = append(allErrors, nonCompletedErrs...)
-
-	return allErrors
+	for {
+		select {
+		case <-ctx.Done():
+			// Context ended (deadline or cancellation). Return last errors.
+			return lastErrors
+		case <-printTicker.C:
+			wct.info.Logger.Infof("verification still has %d error(s), retrying until deadline...", len(lastErrors))
+		case <-checkTicker.C:
+			lastErrors = performChecks()
+			if len(lastErrors) == 0 {
+				return nil
+			}
+		}
+	}
 }
 
 // TODO: remove this
 // VerifyNoRunningWorkflows waits until there are no running workflows on the task queue for the given run ID.
 // This is useful for scenarios that want to ensure all started workflows have completed.
+// It retries the check until the context deadline is reached.
 func (wct *WorkflowCompletionVerifier) VerifyNoRunningWorkflows(ctx context.Context) error {
 	query := fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
 		TaskQueueForRun(wct.info.RunID))
 
-	// Bound waits to the parent context's deadline; otherwise allow up to 24h.
-	var waitAtMost time.Duration
-	if dl, ok := ctx.Deadline(); ok {
-		waitAtMost = time.Until(dl)
-		if waitAtMost < 0 {
-			waitAtMost = 0
-		}
-	} else {
-		waitAtMost = 24 * time.Hour
+	// Setup retry loop
+	checkTicker := time.NewTicker(3 * time.Second)
+	defer checkTicker.Stop()
+
+	printTicker := time.NewTicker(30 * time.Second)
+	defer printTicker.Stop()
+
+	var lastError error
+
+	// Function to perform check
+	performCheck := func() error {
+		return MinVisibilityCount(
+			ctx,
+			wct.info,
+			&workflowservice.CountWorkflowExecutionsRequest{
+				Namespace: wct.info.Namespace,
+				Query:     query,
+			},
+			0,
+		)
 	}
-	return MinVisibilityCountEventually(
-		ctx,
-		wct.info,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: wct.info.Namespace,
-			Query:     query,
-		},
-		0,
-	)
+
+	// Initial check
+	lastError = performCheck()
+	if lastError == nil {
+		return nil
+	}
+
+	// Retry loop until context deadline
+	for {
+		select {
+		case <-ctx.Done():
+			// Context ended (deadline or cancellation). Return last error.
+			return lastError
+		case <-printTicker.C:
+			wct.info.Logger.Infof("still waiting for running workflows to complete, retrying until deadline...")
+		case <-checkTicker.C:
+			lastError = performCheck()
+			if lastError == nil {
+				return nil
+			}
+		}
+	}
 }
