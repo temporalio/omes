@@ -7,9 +7,15 @@ import java.util.Random;
 public class ActivitiesImpl implements Activities {
 
   private final WorkflowClient client;
+  private final boolean errOnUnimplemented;
 
   public ActivitiesImpl(WorkflowClient client) {
+    this(client, false);
+  }
+
+  public ActivitiesImpl(WorkflowClient client, boolean errOnUnimplemented) {
     this.client = client;
+    this.errOnUnimplemented = errOnUnimplemented;
   }
 
   @Override
@@ -33,7 +39,8 @@ public class ActivitiesImpl implements Activities {
     var activityInfo = Activity.getExecutionContext().getInfo();
     String workflowId = activityInfo.getWorkflowId();
     String taskQueue = activityInfo.getActivityTaskQueue();
-    ClientActionExecutor executor = new ClientActionExecutor(client, workflowId, taskQueue);
+    ClientActionExecutor executor =
+        new ClientActionExecutor(client, workflowId, taskQueue, errOnUnimplemented);
     executor.executeClientSequence(clientActivity.getClientSequence());
   }
 }

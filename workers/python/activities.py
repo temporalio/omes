@@ -23,12 +23,14 @@ async def payload_activity(input_data: bytes, bytes_to_return: int) -> bytes:
     return os.urandom(bytes_to_return)
 
 
-def create_client_activity(client: Client):
+def create_client_activity(client: Client, err_on_unimplemented: bool = False):
     @activity.defn(name="client")
     async def client_activity(client_activity_proto):
         activity_info = activity.info()
         workflow_id = activity_info.workflow_id
-        executor = ClientActionExecutor(client, workflow_id, activity_info.task_queue)
+        executor = ClientActionExecutor(
+            client, workflow_id, activity_info.task_queue, err_on_unimplemented
+        )
         await executor.execute_client_sequence(client_activity_proto.client_sequence)
 
     return client_activity

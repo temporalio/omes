@@ -138,6 +138,13 @@ public class Main implements Runnable {
       description = "Per-worker activity rate limit")
   private double workerActivitiesPerSecond;
 
+  @CommandLine.Option(
+      names = "--err-on-unimplemented",
+      description =
+          "Error when receiving unimplemented actions (currently only affects concurrent client actions)",
+      defaultValue = "false")
+  private boolean errOnUnimplemented;
+
   @Override
   public void run() {
     // Configure TLS
@@ -252,7 +259,7 @@ public class Main implements Runnable {
     for (String taskQueue : taskQueues) {
       Worker worker = workerFactory.newWorker(taskQueue, workerOptions.build());
       worker.registerWorkflowImplementationTypes(KitchenSinkWorkflowImpl.class);
-      worker.registerActivitiesImplementations(new ActivitiesImpl(client));
+      worker.registerActivitiesImplementations(new ActivitiesImpl(client, errOnUnimplemented));
     }
     workerFactory.start();
     CountDownLatch latch = new CountDownLatch(1);

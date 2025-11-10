@@ -14,11 +14,18 @@ public class ClientActionExecutor {
   private final String workflowType = "kitchenSink";
   private final Object workflowInput = null;
   private final String taskQueue;
+  private final boolean errOnUnimplemented;
 
   public ClientActionExecutor(WorkflowClient client, String workflowId, String taskQueue) {
+    this(client, workflowId, taskQueue, false);
+  }
+
+  public ClientActionExecutor(
+      WorkflowClient client, String workflowId, String taskQueue, boolean errOnUnimplemented) {
     this.client = client;
     this.workflowId = workflowId;
     this.taskQueue = taskQueue;
+    this.errOnUnimplemented = errOnUnimplemented;
   }
 
   public void executeClientSequence(KitchenSink.ClientSequence clientSeq) {
@@ -29,8 +36,13 @@ public class ClientActionExecutor {
 
   private void executeClientActionSet(KitchenSink.ClientActionSet actionSet) {
     if (actionSet.getConcurrent()) {
-      throw ApplicationFailure.newNonRetryableFailure(
-          "concurrent client actions are not supported", "UnsupportedOperation");
+      if (errOnUnimplemented) {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "concurrent client actions are not supported", "UnsupportedOperation");
+      }
+      // Skip concurrent actions when not erroring on unimplemented
+      System.out.println("Skipping concurrent client actions (not implemented)");
+      return;
     }
 
     for (KitchenSink.ClientAction action : actionSet.getActionsList()) {
