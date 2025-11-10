@@ -92,7 +92,10 @@ func TestWorkflowCompletionChecker(t *testing.T) {
 	require.Equal(t, 4, execState.CompletedIterations, "should complete 4 iterations")
 
 	// Verify using the verifier - pass the state directly
-	verifyErrs := verifier.VerifyRun(t.Context(), scenarioInfo, execState)
+	// Use a timeout that allows for visibility to catch up and retries to occur
+	verifyCtx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	verifyErrs := verifier.VerifyRun(verifyCtx, scenarioInfo, execState)
 	require.NotEmpty(t, verifyErrs)
 	require.Contains(t, verifyErrs[0].Error(), "non-completed workflow: WorkflowID=w-stuck-")
 }
