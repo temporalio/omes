@@ -120,6 +120,12 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 		return allErrors
 	}
 
+	// Initial check
+	lastErrors = performChecks()
+	if len(lastErrors) == 0 {
+		return nil
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -128,6 +134,10 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 		case <-printTicker.C:
 			wct.info.Logger.Infof("verification still has %d error(s), retrying until deadline...", len(lastErrors))
 		case <-checkTicker.C:
+			// Don't perform checks if context is already done
+			if ctx.Err() != nil {
+				return lastErrors
+			}
 			lastErrors = performChecks()
 			if len(lastErrors) == 0 {
 				return nil
@@ -181,6 +191,10 @@ func (wct *WorkflowCompletionVerifier) VerifyNoRunningWorkflows(ctx context.Cont
 		case <-printTicker.C:
 			wct.info.Logger.Infof("still waiting for running workflows to complete, retrying until deadline...")
 		case <-checkTicker.C:
+			// Don't perform check if context is already done
+			if ctx.Err() != nil {
+				return lastError
+			}
 			lastError = performCheck()
 			if lastError == nil {
 				return nil
