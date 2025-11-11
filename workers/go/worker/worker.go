@@ -56,6 +56,8 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 func makePollerBehavior(simple, auto int) worker.PollerBehavior {
 	if auto > 0 {
 		return worker.NewPollerBehaviorAutoscaling(worker.PollerBehaviorAutoscalingOptions{
+			// TODO: remove InitialNumberOfPollers after https://github.com/temporalio/sdk-go/pull/2105
+			InitialNumberOfPollers: auto,
 			MaximumNumberOfPollers: auto,
 		})
 	}
