@@ -477,6 +477,12 @@ func (t *tpsExecutor) createActionsChunk(
 							},
 						}),
 					},
+					SearchAttributes: map[string]*common.Payload{
+						loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
+							Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
+							Data:     []byte(fmt.Sprintf("%q", run.ExecutionID)), // quoted to be valid JSON string
+						},
+					},
 				},
 			},
 		})
