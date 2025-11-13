@@ -205,6 +205,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				case doneCh <- err:
 					if err == nil && !isSkipIteration {
 						g.executor.RecordCompletion()
+						fmt.Printf("✅ Workflow completed: iteration %d\n", run.Iteration)
 						if g.config.OnCompletion != nil {
 							g.config.OnCompletion(ctx, run)
 						}
