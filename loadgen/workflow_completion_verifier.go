@@ -132,7 +132,7 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 			// Context ended (deadline or cancellation). Return last errors.
 			return lastErrors
 		case <-printTicker.C:
-			wct.info.Logger.Infof("verification still has %d error(s), retrying until deadline...", len(lastErrors))
+			wct.info.Logger.Infof("verification still has error(s), retrying until deadline: %v", lastErrors)
 		case <-checkTicker.C:
 			// Don't perform checks if context is already done
 			if ctx.Err() != nil {
