@@ -10,7 +10,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
-	github.com/temporalio/features v0.0.0-20250808182149-bb2a99cdf200
+	github.com/temporalio/features v0.0.0-20251113235102-ac7c92445a59
 	go.temporal.io/api v1.53.0
 	go.temporal.io/sdk v1.37.0
 	go.uber.org/zap v1.27.0
@@ -54,6 +54,6 @@ require (
 // This is dumb, but necesary because Go (for some commands) can't figure out the transitive
 // local-replace inside of the features module itself, so we have to help it.
 replace (
-	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20250118005052-7111e232d0b9
-	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20250118005608-efab77dea8fd
+	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20251113235102-ac7c92445a59
+	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20251113235102-ac7c92445a59
 )
