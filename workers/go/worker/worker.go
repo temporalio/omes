@@ -6,7 +6,6 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
@@ -68,7 +67,6 @@ func makePollerBehavior(simple, auto int) worker.PollerBehavior {
 
 func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
-	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{
 		Client: client,
 	}
@@ -103,8 +101,6 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
-			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
-			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()

@@ -63,7 +63,7 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Used for testing slot provider performance. Runs activities that consume certain amounts of resources.",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.KitchenSinkExecutor{
+			return &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{

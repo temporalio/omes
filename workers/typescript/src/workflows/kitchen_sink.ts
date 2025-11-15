@@ -290,21 +290,41 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'client';
     args.push(execActivity.client);
   }
-  const actArgs: ActivityOptions | LocalActivityOptions = {
-    scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
-    startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
-    scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
-    retry: decompileRetryPolicy(execActivity.retryPolicy),
-    priority: decodePriority(execActivity.priority),
-  };
-
   if (execActivity.isLocal) {
-    return scheduleLocalActivity(actType, args, actArgs);
+    const localArgs: LocalActivityOptions = {
+      scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
+      startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
+      scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
+      retry: decompileRetryPolicy(execActivity.retryPolicy),
+    };
+    return scheduleLocalActivity(actType, args, localArgs);
   } else {
-    const remoteArgs = actArgs as ActivityOptions;
-    remoteArgs.taskQueue = execActivity.taskQueue ?? undefined;
-    remoteArgs.cancellationType = convertCancelType(execActivity.remote?.cancellationType);
-    remoteArgs.heartbeatTimeout = durationConvert(execActivity.heartbeatTimeout);
+    // Build priority object with fairness key and weight
+    let priority = decodePriority(execActivity.priority);
+    if (
+      execActivity.fairnessKey ||
+      (execActivity.fairnessWeight && execActivity.fairnessWeight > 0)
+    ) {
+      priority = {
+        ...priority,
+        fairnessKey: execActivity.fairnessKey || undefined,
+        fairnessWeight:
+          execActivity.fairnessWeight && execActivity.fairnessWeight > 0
+            ? execActivity.fairnessWeight
+            : undefined,
+      };
+    }
+
+    const remoteArgs: ActivityOptions = {
+      scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
+      startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
+      scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
+      retry: decompileRetryPolicy(execActivity.retryPolicy),
+      priority,
+      taskQueue: execActivity.taskQueue ?? undefined,
+      cancellationType: convertCancelType(execActivity.remote?.cancellationType),
+      heartbeatTimeout: durationConvert(execActivity.heartbeatTimeout),
+    };
     return scheduleActivity(actType, args, remoteArgs);
   }
 }
