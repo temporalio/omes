@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/ebbandflow"
+	. "github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 const (
@@ -280,29 +280,47 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		Groups: template.Groups,
 	}
 
-	// Start workflow.
+	// Sample activities from the configuration
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	activities := config.Sample(rng)
+
+	// Build actions for the kitchensink workflow
+	var actions []*Action
+	for _, activityAction := range activities {
+		actions = append(actions, &Action{
+			Variant: &Action_ExecActivity{
+				ExecActivity: activityAction,
+			},
+		})
+	}
+
+	// Start workflow using kitchensink.
 	run := e.NewRun(int(iteration))
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
 	// TypedSearchAttributes are already set by DefaultStartWorkflowOptions()
 
-	workflowInput := &ebbandflow.WorkflowParams{
-		SleepActivities: &config,
+	workflowInput := &WorkflowInput{
+		InitialActions: []*ActionSet{
+			{
+				Actions:    actions,
+				Concurrent: true,
+			},
+		},
 	}
 
-	// Start workflow to track activity timings.
-	wf, err := e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowTrack", workflowInput)
+	// Start workflow using kitchensink.
+	wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
 	if err != nil {
-		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
+		return fmt.Errorf("failed to start kitchensink workflow for iteration %d: %w", iteration, err)
 	}
 	e.scheduledActivities.Add(activities)
 
 	// Wait for workflow completion
-	var result ebbandflow.WorkflowOutput
-	err = wf.Get(ctx, &result)
+	err = wf.Get(ctx, nil)
 	if err != nil {
-		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
+		e.Logger.Errorf("kitchensink workflow failed for iteration %d: %v", iteration, err)
 	}
 	e.completedActivities.Add(activities)
 	e.incrementTotalCompletedWorkflow()
