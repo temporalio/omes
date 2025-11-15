@@ -234,11 +234,21 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
         )
     else:
         priority = None
-        if execute_activity.HasField("priority") or execute_activity.fairness_key or execute_activity.fairness_weight > 0:
-            priority = Priority(
-                priority_key=execute_activity.priority.priority_key if execute_activity.HasField("priority") else 0,
-                fairness_key=execute_activity.fairness_key if execute_activity.fairness_key else None,
-                fairness_weight=execute_activity.fairness_weight if execute_activity.fairness_weight > 0 else None,
+        if (
+            execute_activity.HasField("priority")
+            or execute_activity.fairness_key
+            or execute_activity.fairness_weight > 0
+        ):
+            priority = Priority(  # type: ignore[call-arg]
+                priority_key=execute_activity.priority.priority_key
+                if execute_activity.HasField("priority")
+                else 0,
+                fairness_key=execute_activity.fairness_key  # type: ignore[call-arg]
+                if execute_activity.fairness_key
+                else None,
+                fairness_weight=execute_activity.fairness_weight  # type: ignore[call-arg]
+                if execute_activity.fairness_weight > 0
+                else None,
             )
 
         activity_task = workflow.start_activity(
@@ -261,7 +271,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             cancellation_type=convert_act_cancel_type(
                 execute_activity.remote.cancellation_type
             ),
-            priority=priority,
+            priority=priority,  # type: ignore[arg-type]
         )
 
     return activity_task
