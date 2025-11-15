@@ -251,7 +251,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
                 else None,
             )
 
-        activity_task = workflow.start_activity(
+        activity_task = workflow.start_activity(  # type: ignore[misc]
             activity=act_type,
             args=args,
             task_queue=execute_activity.task_queue,
