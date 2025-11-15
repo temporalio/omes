@@ -233,8 +233,13 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             # TODO: cancel type can be in local
         )
     else:
-        if execute_activity.HasField("priority"):
-            raise NotImplementedError("priority is not supported yet")
+        priority = None
+        if execute_activity.HasField("priority") or execute_activity.fairness_key or execute_activity.fairness_weight > 0:
+            priority = Priority(
+                priority_key=execute_activity.priority.priority_key if execute_activity.HasField("priority") else 0,
+                fairness_key=execute_activity.fairness_key if execute_activity.fairness_key else None,
+                fairness_weight=execute_activity.fairness_weight if execute_activity.fairness_weight > 0 else None,
+            )
 
         activity_task = workflow.start_activity(
             activity=act_type,
@@ -256,6 +261,7 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
             cancellation_type=convert_act_cancel_type(
                 execute_activity.remote.cancellation_type
             ),
+            priority=priority,
         )
 
     return activity_task

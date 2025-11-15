@@ -357,10 +357,10 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       prio.setPriorityKey(priority.getPriorityKey());
     }
     if (executeActivity.getFairnessKey() != "") {
-      throw new IllegalArgumentException("FairnessKey is not supported");
+      prio.setFairnessKey(executeActivity.getFairnessKey());
     }
     if (executeActivity.getFairnessWeight() > 0) {
-      throw new IllegalArgumentException("FairnessWeight is not supported");
+      prio.setFairnessWeight(executeActivity.getFairnessWeight());
     }
 
     if (executeActivity.hasIsLocal()) {

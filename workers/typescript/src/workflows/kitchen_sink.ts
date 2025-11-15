@@ -290,12 +290,22 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'client';
     args.push(execActivity.client);
   }
+  // Build priority object with fairness key and weight
+  let priority = decodePriority(execActivity.priority);
+  if (execActivity.fairnessKey || (execActivity.fairnessWeight && execActivity.fairnessWeight > 0)) {
+    priority = {
+      ...priority,
+      fairnessKey: execActivity.fairnessKey || undefined,
+      fairnessWeight: (execActivity.fairnessWeight && execActivity.fairnessWeight > 0) ? execActivity.fairnessWeight : undefined,
+    };
+  }
+
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
     startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
     scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
     retry: decompileRetryPolicy(execActivity.retryPolicy),
-    priority: decodePriority(execActivity.priority),
+    priority: priority,
   };
 
   if (execActivity.isLocal) {
