@@ -190,10 +190,17 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 		if !f.Changed {
 			return
 		}
-		flags = append(flags, fmt.Sprintf("--%s=%s",
-			strings.TrimPrefix(f.Name, prefix),
-			f.Value.String(),
-		))
+
+		flagName := strings.TrimPrefix(f.Name, prefix)
+
+		if f.Value.Type() == "bool" {
+			// Some SDKs like Python don't like `--tls=true`
+			if f.Value.String() == "true" {
+				flags = append(flags, fmt.Sprintf("--%s", flagName))
+			}
+		} else {
+			flags = append(flags, fmt.Sprintf("--%s=%s", flagName, f.Value.String()))
+		}
 	})
 	return
 }
