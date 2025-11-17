@@ -62,8 +62,8 @@ type tpsConfig struct {
 }
 
 type tpsExecutor struct {
+	*tpsVerifier
 	executor   *loadgen.KitchenSinkExecutor
-	verifier   *tpsVerifier
 	lock       sync.Mutex
 	state      *tpsState
 	config     *tpsConfig
@@ -205,6 +205,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if err != nil {
 		return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
 	}
+	t.tpsVerifier = &tpsVerifier{
+		completionVerifier: completionVerifier,
+		config:             t.config,
+	}
 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
@@ -287,12 +291,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
 		}
 		completionVerifier.SetExpectedWorkflowCount(expectedWorkflowCount)
-
-		// Create verifier that combines workflow completion and throughput checking
-		t.verifier = &tpsVerifier{
-			completionVerifier: completionVerifier,
-			config:             t.config,
-		}
 
 		if err := t.executor.Run(ctx, info); err != nil {
 			return err
