@@ -69,7 +69,7 @@ COPY --from=instrumented /app_transformed /app_transformed
 WORKDIR /app_transformed/customer
 
 # Build the CLI
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 go build -o temporal-omes -tags with_antithesis_sdk ./cmd
 
 # Install protoc-gen-go for kitchen-sink-gen build
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
