@@ -326,7 +326,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
-	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
+	completedWorkflows := completedIterations + completedChildWorkflows // + continueAsNewWorkflows TODO
 
 	// Log completion summary.
 	info.Logger.Info(fmt.Sprintf(
