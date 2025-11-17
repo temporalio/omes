@@ -62,14 +62,14 @@ type tpsConfig struct {
 }
 
 type tpsExecutor struct {
-	*tpsVerifier
-	executor   *loadgen.KitchenSinkExecutor
-	lock       sync.Mutex
-	state      *tpsState
-	config     *tpsConfig
-	isResuming bool
-	runID      string
-	rng        *rand.Rand
+	executor    *loadgen.KitchenSinkExecutor
+	tpsVerifier *tpsVerifier
+	lock        sync.Mutex
+	state       *tpsState
+	config      *tpsConfig
+	isResuming  bool
+	runID       string
+	rng         *rand.Rand
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -83,11 +83,11 @@ func init() {
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
 			t := executor.(*tpsExecutor)
-			if t.verifier == nil || t.executor == nil {
+			if t.tpsVerifier == nil || t.executor == nil {
 				return nil
 			}
 			state := t.executor.GetState()
-			return t.verifier.VerifyRun(ctx, info, state)
+			return t.VerifyRun(ctx, info, state)
 		},
 	})
 }
@@ -124,6 +124,14 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	t.isResuming = true
 
 	return nil
+}
+
+// VerifyRun implements the Verifier interface.
+func (t *tpsExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo, state loadgen.ExecutorState) []error {
+	if t.tpsVerifier == nil || t.executor == nil {
+		return nil
+	}
+	return t.tpsVerifier.VerifyRun(ctx, info, state)
 }
 
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
