@@ -199,6 +199,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	currentState := *t.state
 	t.lock.Unlock()
 
+	// Initialize workflow completion checker
+	timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
+	completionVerifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
+	if err != nil {
+		return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
+	}
+
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
 		if execState, ok := currentState.ExecutorState.(loadgen.ExecutorState); ok {
@@ -208,13 +215,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		if err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck); err != nil {
 			return err
 		}
-	}
-
-	// Initialize workflow completion checker
-	timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
-	completionVerifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
-	if err != nil {
-		return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
 	}
 
 	// Start the scenario run.
