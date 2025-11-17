@@ -210,6 +210,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		}
 	}
 
+	// Initialize workflow completion checker
+	timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
+	completionVerifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
+	if err != nil {
+		return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
+	}
+
 	// Start the scenario run.
 	//
 	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
@@ -261,8 +268,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			}
 		}
 
-		timeout := info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second)
-
 		// Configure expected workflow count function based on scenario config
 		expectedWorkflowCount := func(state loadgen.ExecutorState) int {
 			completedIterations := state.CompletedIterations
@@ -280,12 +285,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 			// Total: parent + children + continue-as-new
 			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
-		}
-
-		// Initialize workflow completion checker
-		completionVerifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, timeout)
-		if err != nil {
-			return fmt.Errorf("failed to initialize workflow completion checker: %w", err)
 		}
 		completionVerifier.SetExpectedWorkflowCount(expectedWorkflowCount)
 
