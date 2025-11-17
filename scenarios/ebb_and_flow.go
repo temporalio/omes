@@ -144,6 +144,14 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	return nil
 }
 
+// VerifyRun implements the Verifier interface.
+func (e *ebbAndFlowExecutor) VerifyRun(ctx context.Context, info loadgen.ScenarioInfo, state loadgen.ExecutorState) []error {
+	if e.completionVerifier == nil || e.executorState == nil {
+		return nil
+	}
+	return e.completionVerifier.VerifyRun(ctx, info, *e.executorState)
+}
+
 // Run executes the ebb and flow scenario.
 func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	if err := e.Configure(info); err != nil {
