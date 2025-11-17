@@ -307,6 +307,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
+	options.WorkflowExecutionTimeout = 30 * time.Second
 	// TypedSearchAttributes are already set by DefaultStartWorkflowOptions()
 
 	workflowInput := &WorkflowInput{
