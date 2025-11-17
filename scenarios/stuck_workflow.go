@@ -59,57 +59,65 @@ func init() {
 						WorkflowInput: &kitchensink.WorkflowInput{},
 					},
 					UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
-					// Only the first iteration should block forever.
-					if run.Iteration == 1 {
-						options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
-							{
-								Actions: []*kitchensink.Action{
-									{
-										Variant: &kitchensink.Action_AwaitWorkflowState{
-											AwaitWorkflowState: &kitchensink.AwaitWorkflowState{
-												Key:   "will-never-be-set",
-												Value: "never",
+						// Only the first iteration should block forever.
+						if run.Iteration == 1 {
+							options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
+								{
+									Actions: []*kitchensink.Action{
+										{
+											Variant: &kitchensink.Action_AwaitWorkflowState{
+												AwaitWorkflowState: &kitchensink.AwaitWorkflowState{
+													Key:   "will-never-be-set",
+													Value: "never",
+												},
 											},
 										},
 									},
 								},
-							},
-						}
-					} else if run.Iteration%2 == 0 {
-						// Have some Continue-As-New.
-						// ContinueAsNew needs to pass the workflow input as the first argument.
-						// We pass a simple completion action to make the continued workflow complete immediately.
-						workflowInput, err := converter.GetDefaultDataConverter().ToPayload(
-							&kitchensink.WorkflowInput{
-								InitialActions: []*kitchensink.ActionSet{
-									kitchensink.NoOpSingleActivityActionSet(),
-								},
-							})
-						if err != nil {
-							return err
-						}
-						options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
-							{
-								Actions: []*kitchensink.Action{
-									{
-										Variant: &kitchensink.Action_ContinueAsNew{
-											ContinueAsNew: &kitchensink.ContinueAsNewAction{
-												Arguments: []*common.Payload{workflowInput},
+							}
+						} else if run.Iteration%2 == 0 {
+							// Have some Continue-As-New.
+							// ContinueAsNew needs to pass the workflow input as the first argument.
+							// We pass a simple completion action to make the continued workflow complete immediately.
+							workflowInput, err := converter.GetDefaultDataConverter().ToPayload(
+								&kitchensink.WorkflowInput{
+									InitialActions: []*kitchensink.ActionSet{
+										kitchensink.NoOpSingleActivityActionSet(),
+									},
+								})
+							if err != nil {
+								return err
+							}
+							options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
+								{
+									Actions: []*kitchensink.Action{
+										{
+											Variant: &kitchensink.Action_ContinueAsNew{
+												ContinueAsNew: &kitchensink.ContinueAsNewAction{
+													Arguments: []*common.Payload{workflowInput},
+												},
 											},
 										},
 									},
 								},
-							},
+							}
+						} else {
+							options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
+								kitchensink.NoOpSingleActivityActionSet(),
+							}
 						}
-					} else {
-						options.Params.WorkflowInput.InitialActions = []*kitchensink.ActionSet{
-							kitchensink.NoOpSingleActivityActionSet(),
-						}
-					}
-					return nil
+						return nil
+					},
 				},
-			},
-		}
-	},
-})
+			}
+		},
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			e := executor.(*stuckWorkflowExecutor)
+			if e.verifier == nil || e.KitchenSinkExecutor == nil {
+				return nil
+			}
+			state := e.KitchenSinkExecutor.Snapshot().(loadgen.ExecutorState)
+			return e.verifier.VerifyRun(ctx, info, state)
+		},
+	})
 }
