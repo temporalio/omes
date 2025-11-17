@@ -285,18 +285,18 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			completedIterations := state.CompletedIterations
 
 			// Calculate continue-as-new workflows
-			var continueAsNewWorkflows int
-			if t.config.ContinueAsNewAfterIter > 0 {
-				// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
-				continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
-				continueAsNewWorkflows = continueAsNewPerIter * completedIterations
-			}
+			// var continueAsNewWorkflows int
+			// if t.config.ContinueAsNewAfterIter > 0 {
+			// 	// Subtract 1 because the last iteration doesn't trigger a continue-as-new.
+			// 	continueAsNewPerIter := (t.config.InternalIterations - 1) / t.config.ContinueAsNewAfterIter
+			// 	continueAsNewWorkflows = continueAsNewPerIter * completedIterations
+			// }
 
 			// Calculate child workflows
 			completedChildWorkflows := completedIterations * t.config.InternalIterations
 
 			// Total: parent + children + continue-as-new
-			return completedIterations + completedChildWorkflows + continueAsNewWorkflows
+			return completedIterations + completedChildWorkflows // TODO continueAsNewWorkflows
 		}
 		completionVerifier.SetExpectedWorkflowCount(expectedWorkflowCount)
 
@@ -326,7 +326,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		continueAsNewWorkflows = continueAsNewPerIter * completedIterations
 	}
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
-	completedWorkflows := completedIterations + completedChildWorkflows // + continueAsNewWorkflows TODO
+	completedWorkflows := completedIterations + completedChildWorkflows + continueAsNewWorkflows
 
 	// Log completion summary.
 	info.Logger.Info(fmt.Sprintf(
