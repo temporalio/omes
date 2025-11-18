@@ -307,7 +307,6 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
-	// TypedSearchAttributes are already set by DefaultStartWorkflowOptions()
 
 	workflowInput := &WorkflowInput{
 		InitialActions: []*ActionSet{
