@@ -312,7 +312,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		InitialActions: []*ActionSet{
 			{
 				Actions:    actions,
-				Concurrent: false,
+				Concurrent: true,
 			},
 			{
 				Actions: []*Action{
