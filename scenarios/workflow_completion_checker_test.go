@@ -38,7 +38,7 @@ func TestWorkflowCompletionChecker(t *testing.T) {
 	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 	require.Error(t, err, "should fail due to stuck workflow and verification errors")
 	require.Contains(t, err.Error(), "deadline exceeded", "should report timed out iteration")
-	require.Contains(t, err.Error(), "non-completed workflow: WorkflowID=w-stuck-", "should report stuck workflow from verifier")
+	require.Contains(t, err.Error(), "non-completed workflow: Namespace=default, WorkflowID=w-stuck-", "should report stuck workflow from verifier")
 
 	// Verify the executor state shows 9 completed iterations (all except the stuck one)
 	resumable, ok := executor.(loadgen.Resumable)

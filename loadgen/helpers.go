@@ -88,7 +88,8 @@ func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttr
 	var workflowErrors []error
 	for _, exec := range resp.Executions {
 		workflowErrors = append(workflowErrors, fmt.Errorf(
-			"non-completed workflow: WorkflowID=%s, RunID=%s, Status=%s",
+			"non-completed workflow: Namespace=%s, WorkflowID=%s, RunID=%s, Status=%s",
+			info.Namespace,
 			exec.Execution.WorkflowId,
 			exec.Execution.RunId,
 			exec.Status.String()))
