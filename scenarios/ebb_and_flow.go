@@ -313,13 +313,22 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		InitialActions: []*ActionSet{
 			{
 				Actions:    actions,
-				Concurrent: true,
+				Concurrent: false,
+			},
+			{
+				Actions: []*Action{
+					{
+						Variant: &Action_ReturnResult{
+							ReturnResult: &ReturnResultAction{},
+						},
+					},
+				},
 			},
 		},
 	}
 
 	// Start workflow using kitchensink.
-	wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
+	_, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
 	if err != nil {
 		return fmt.Errorf("failed to start kitchensink workflow for iteration %d: %w", iteration, err)
 	}
