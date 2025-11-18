@@ -330,7 +330,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	}
 
 	// Start workflow using kitchensink.
-	_, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
+	wf, err := e.Client.ExecuteWorkflow(ctx, options, "kitchenSink", workflowInput)
 	if err != nil {
 		return fmt.Errorf("failed to start kitchensink workflow for iteration %d: %w", iteration, err)
 	}
