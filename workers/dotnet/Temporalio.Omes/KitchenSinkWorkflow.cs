@@ -319,7 +319,7 @@ public class KitchenSinkWorkflow
             }
             else
             {
-                await awaitableTask;
+                await afterCompletedFn(awaitableTask);
             }
         }
         catch (Exception e) when (TemporalException.IsCanceledException(e))

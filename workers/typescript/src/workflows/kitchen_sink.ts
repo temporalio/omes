@@ -118,7 +118,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         await afterCompleted(cancellablePromise);
         cancelScope.cancel();
       } else {
-        await cancellablePromise;
+        await afterCompleted(cancellablePromise);
       }
     }
 

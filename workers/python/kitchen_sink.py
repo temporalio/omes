@@ -305,7 +305,7 @@ async def handle_awaitable_choice(
             task.cancel()
             did_cancel = True
         else:
-            await task
+            await after_completed_fn(task)
     except asyncio.CancelledError:
         if not did_cancel:
             raise

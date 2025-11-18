@@ -144,20 +144,21 @@ func TestKitchenSink(t *testing.T) {
 									WorkflowType: "kitchenSink",
 									Input: []*common.Payload{
 										ConvertToPayload(&WorkflowInput{
-											InitialActions: ListActionSet(NewTimerAction(1 * time.Millisecond)),
+											InitialActions: ListActionSet(NewEmptyReturnResultAction()),
 										})},
-									AwaitableChoice: &AwaitableChoice{
-										Condition: &AwaitableChoice_Abandon{
-											Abandon: &emptypb.Empty{},
-										},
-									},
 								},
 							},
 						}),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
+				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}
+				ChildWorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ChildWorkflowExecutionCompleted
+			`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",
