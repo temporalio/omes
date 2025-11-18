@@ -11,6 +11,7 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/common/v1"
 )
 
 const (
@@ -318,7 +319,9 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 				Actions: []*Action{
 					{
 						Variant: &Action_ReturnResult{
-							ReturnResult: &ReturnResultAction{},
+							ReturnResult: &ReturnResultAction{
+								ReturnThis: &common.Payload{},
+							},
 						},
 					},
 				},
