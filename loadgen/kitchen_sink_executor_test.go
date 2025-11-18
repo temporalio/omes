@@ -912,7 +912,6 @@ func testForSDK(
 	scenarioInfo := ScenarioInfo{
 		ScenarioName: "kitchenSinkTest",
 		RunID:        fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-		ExecutionID:  "test-exec-id",
 		Configuration: RunConfiguration{
 			Iterations: 1,
 		},

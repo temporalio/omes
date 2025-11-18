@@ -49,8 +49,7 @@ func TestEbbAndFlow(t *testing.T) {
 	}`
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		RunID:       fmt.Sprintf("eaf-%d", time.Now().Unix()),
-		ExecutionID: "test-exec-id",
+		RunID: fmt.Sprintf("eaf-%d", time.Now().Unix()),
 		Configuration: loadgen.RunConfiguration{
 			Duration: 10 * time.Second,
 		},

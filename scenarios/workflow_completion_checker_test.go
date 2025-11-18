@@ -22,8 +22,7 @@ func TestWorkflowCompletionChecker(t *testing.T) {
 		workers.WithExecutorTimeout(5*time.Second))
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		RunID:       fmt.Sprintf("stuck-%d", time.Now().Unix()),
-		ExecutionID: "test-exec-id",
+		RunID: fmt.Sprintf("stuck-%d", time.Now().Unix()),
 		Configuration: loadgen.RunConfiguration{
 			Iterations: 10,
 		},

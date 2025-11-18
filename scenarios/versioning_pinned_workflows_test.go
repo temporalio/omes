@@ -23,8 +23,7 @@ func TestVersioningPinnedWorkflows(t *testing.T) {
 		workers.WithExecutorTimeout(2*time.Minute))
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		RunID:       runID,
-		ExecutionID: "test-exec-id",
+		RunID: runID,
 		Configuration: loadgen.RunConfiguration{
 			Iterations: 12, // 0 (start) + 11 iterations, will bump versions at 5 and 10
 		},

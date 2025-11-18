@@ -22,8 +22,7 @@ func TestThroughputStress(t *testing.T) {
 		workers.WithNexusEndpoint(taskQueueName))
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		RunID:       runID,
-		ExecutionID: "test-exec-id",
+		RunID: runID,
 		Configuration: loadgen.RunConfiguration{
 			Iterations: 2,
 		},
