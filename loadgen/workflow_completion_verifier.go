@@ -87,6 +87,8 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 		wct.info.ExecutionID,
 	)
 
+	wct.info.Logger.Infof("Using visibility query for completed workflows: %q", query)
+
 	var lastErrors []error
 
 	// Function to perform all checks
@@ -153,6 +155,8 @@ func (wct *WorkflowCompletionVerifier) Verify(ctx context.Context, state Executo
 func (wct *WorkflowCompletionVerifier) VerifyNoRunningWorkflows(ctx context.Context) error {
 	query := fmt.Sprintf("TaskQueue = %q and ExecutionStatus = 'Running'",
 		TaskQueueForRun(wct.info.RunID))
+
+	wct.info.Logger.Infof("Using visibility query for running workflows: %q", query)
 
 	// Setup retry loop
 	checkTicker := time.NewTicker(3 * time.Second)
