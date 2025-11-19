@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
@@ -12,8 +13,8 @@ import (
 const (
 	// ActivityCountFlag controls the number of activities to execute sequentially
 	ActivityCountFlag = "activity-count"
-	// UseUpdateFlag controls whether to use update instead of signal (default: false, use signal)
-	UseUpdateFlag = "use-update"
+	// MessageViaFlag controls whether to use signal, update, or random (default: "signal")
+	MessageViaFlag = "message-via"
 )
 
 type workflowLoopExecutor struct {
@@ -35,11 +36,11 @@ func (e *workflowLoopExecutor) Run(ctx context.Context, info loadgen.ScenarioInf
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf("Creates n activities sequentially, each activity sends one signal or update back to the workflow. "+
+		Description: fmt.Sprintf("Creates n activities sequentially, each sends one signal or update back to the workflow. "+
 			"The workflow waits for each signal/update before proceeding. "+
-			"Use --option %s=<number> to set the activity count (default: 1). "+
-			"Use --option %s=true to use updates instead of signals (default: false).",
-			ActivityCountFlag, UseUpdateFlag),
+			"Use --option %s=<number> to set the count (default: 1). "+
+			"Use --option %s=<signal|update|random> to choose mechanism (default: signal).",
+			ActivityCountFlag, MessageViaFlag),
 		ExecutorFn: func() loadgen.Executor {
 			return &workflowLoopExecutor{
 				KitchenSinkExecutor: &loadgen.KitchenSinkExecutor{
@@ -52,12 +53,15 @@ func init() {
 							return fmt.Errorf("%s must be positive, got %d", ActivityCountFlag, activityCount)
 						}
 
-						useUpdate := info.ScenarioOptions[UseUpdateFlag] == "true"
-						mechanism := "signal"
-						if useUpdate {
-							mechanism = "update"
+						messageVia := info.ScenarioOptions[MessageViaFlag]
+						if messageVia == "" {
+							messageVia = "signal"
 						}
-						info.Logger.Infof("Preparing workflow loop with %d activities using %s", activityCount, mechanism)
+						if messageVia != "signal" && messageVia != "update" && messageVia != "random" {
+							return fmt.Errorf("%s must be 'signal', 'update', or 'random', got '%s'", MessageViaFlag, messageVia)
+						}
+
+						info.Logger.Infof("Preparing workflow loop with %d iterations using message-via=%s", activityCount, messageVia)
 
 						// Create actions for the workflow
 						var actions []*kitchensink.Action
@@ -72,7 +76,16 @@ func init() {
 						for i := 0; i < activityCount; i++ {
 							stateValue := fmt.Sprintf("%d", i)
 
-							// Create the activity that sends signal/update to set the workflow state to the current index
+							// Determine if we use update for this iteration
+							var useUpdate bool
+							if messageVia == "random" {
+								// Pick randomly between signal and update
+								useUpdate = rand.Intn(2) == 1
+							} else {
+								useUpdate = messageVia == "update"
+							}
+
+							// Create the client action that will be executed
 							var clientAction *kitchensink.ClientAction
 							if useUpdate {
 								// Use update
@@ -115,7 +128,7 @@ func init() {
 							}
 
 							// Execute an activity that performs the client action (sends signal/update)
-							// This activity will use the Temporal client to send the signal/update back to its parent workflow
+							// This activity will use the Temporal client to send the signal/update back to the workflow
 							actions = append(actions, kitchensink.ClientActivity(
 								kitchensink.ClientActions(clientAction),
 								kitchensink.DefaultRemoteActivity,

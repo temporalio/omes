@@ -157,7 +157,7 @@ func TestWorkflowLoopScenarioWithUpdates(t *testing.T) {
 		},
 		ScenarioOptions: map[string]string{
 			ActivityCountFlag: "3",
-			UseUpdateFlag:     "true", // Use updates instead of signals
+			MessageViaFlag:    "update", // Use updates instead of signals
 		},
 	}
 
@@ -192,7 +192,7 @@ func TestWorkflowLoopScenarioWithUpdatesMultipleIterations(t *testing.T) {
 		},
 		ScenarioOptions: map[string]string{
 			ActivityCountFlag: "2",
-			UseUpdateFlag:     "true",
+			MessageViaFlag:    "update",
 		},
 	}
 
@@ -211,4 +211,39 @@ func TestWorkflowLoopScenarioWithUpdatesMultipleIterations(t *testing.T) {
 	require.True(t, ok, "executor should implement Resumable interface")
 	execState := resumable.Snapshot().(loadgen.ExecutorState)
 	require.Equal(t, 4, execState.CompletedIterations, "should complete 4 iterations")
+}
+
+// TestWorkflowLoopScenarioWithRandomSignalAndUpdate tests random selection between signals and updates.
+func TestWorkflowLoopScenarioWithRandomSignalAndUpdate(t *testing.T) {
+	t.Parallel()
+
+	env := workers.SetupTestEnvironment(t,
+		workers.WithExecutorTimeout(30*time.Second))
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID: fmt.Sprintf("loop-random-via-%d", time.Now().Unix()),
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 2,
+		},
+		ScenarioOptions: map[string]string{
+			ActivityCountFlag: "5",
+			MessageViaFlag:    "random", // Randomly pick between signal and update
+		},
+	}
+
+	// Get the workflow_loop scenario
+	scenario := loadgen.GetScenario("workflow_loop")
+	require.NotNil(t, scenario, "workflow_loop scenario should be registered")
+
+	executor := scenario.ExecutorFn()
+
+	// Run the executor
+	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "executor should complete successfully with random signal/update")
+
+	// Verify the executor state
+	resumable, ok := executor.(loadgen.Resumable)
+	require.True(t, ok, "executor should implement Resumable interface")
+	execState := resumable.Snapshot().(loadgen.ExecutorState)
+	require.Equal(t, 2, execState.CompletedIterations, "should complete 2 iterations with random via")
 }
