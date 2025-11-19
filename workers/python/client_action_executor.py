@@ -22,7 +22,6 @@ class ClientActionExecutor:
         task_queue: str,
         err_on_unimplemented: bool = False,
     ):
-        print("ERR ON UNIMPLEMENTED?", err_on_unimplemented)
         self.client = client
         self.workflow_id: str = workflow_id
         self.workflow_type: str = "kitchenSink"
