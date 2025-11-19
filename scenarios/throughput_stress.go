@@ -3,10 +3,13 @@ package scenarios
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -299,6 +302,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
 	}
 
+	var tpsErrors []error
+
 	// Post-scenario: verify reported workflow completion count from Visibility.
 	if err := loadgen.MinVisibilityCountEventually(
 		ctx,
@@ -311,7 +316,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		completedWorkflows,
 		t.config.VisibilityVerificationTimeout,
 	); err != nil {
-		return err
+		tpsErrors = append(tpsErrors, err)
 	}
 
 	// Post-scenario: check throughput threshold
@@ -322,18 +327,37 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 			// Calculate how many workflows we expected given the duration
 			expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
 
-			return fmt.Errorf("insufficient throughput: %.1f workflows/hour < %.1f required "+
+			err := fmt.Errorf("insufficient throughput: %.1f workflows/hour < %.1f required "+
 				"(completed %d workflows, expected %d in %v)",
 				actualThroughputPerHour,
 				t.config.MinThroughputPerHour,
 				completedWorkflows,
 				expectedWorkflows,
 				totalDuration.Round(time.Second))
+			tpsErrors = append(tpsErrors, err)
 		}
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID)
+	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID); err != nil {
+		tpsErrors = append(tpsErrors, err)
+		// Export failed workflow histories if requested
+		if info.ExportOptions.ExportFailedHistories != "" {
+			info.Logger.Warn("Failed workflows detected, exporting histories...")
+			if exportErr := loadgen.ExportFailedWorkflowHistories(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID, info.ExportOptions.ExportFailedHistories); exportErr != nil {
+				info.Logger.Errorf("Failed to export workflow histories: %v", exportErr)
+			}
+		}
+	}
+
+	// Export scenario metrics if requested
+	if info.ExportOptions.ExportMetrics != "" {
+		if err := t.exportMetrics(info, completedIterations, completedWorkflows, totalDuration); err != nil {
+			info.Logger.Errorf("failed to export metrics: %w", err)
+		}
+	}
+
+	return errors.Join(tpsErrors...)
 }
 
 func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
@@ -650,4 +674,42 @@ func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	return t.rng.Float64() <= likelihood
+}
+
+// exportMetrics exports scenario metrics to a JSON file.
+func (t *tpsExecutor) exportMetrics(info loadgen.ScenarioInfo, completedIterations, completedWorkflows int, totalDuration time.Duration) error {
+	throughputPerSecond := float64(completedWorkflows) / totalDuration.Seconds()
+
+	metrics := map[string]interface{}{
+		"scenario":            "throughput_stress",
+		"runId":               info.RunID,
+		"startTime":           time.Now().Add(-totalDuration).Format(time.RFC3339),
+		"endTime":             time.Now().Format(time.RFC3339),
+		"duration":            totalDuration.String(),
+		"throughputPerSecond": throughputPerSecond,
+		"configuration": map[string]interface{}{
+			"iterations":         info.Configuration.Iterations,
+			"maxConcurrent":      info.Configuration.MaxConcurrent,
+			"internalIterations": t.config.InternalIterations,
+			"continueAsNewAfter": t.config.ContinueAsNewAfterIter,
+		},
+		"results": map[string]interface{}{
+			"completedIterations": completedIterations,
+			"completedWorkflows":  completedWorkflows,
+		},
+	}
+
+	// Write to file
+	filename := filepath.Join(info.ExportOptions.ExportMetrics, fmt.Sprintf("scenario-metrics-%s.json", info.RunID))
+	data, err := json.MarshalIndent(metrics, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metrics: %w", err)
+	}
+
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return fmt.Errorf("failed to write metrics file: %w", err)
+	}
+
+	info.Logger.Infof("Scenario metrics exported to %s", filename)
+	return nil
 }

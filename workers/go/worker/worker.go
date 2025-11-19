@@ -8,6 +8,7 @@ import (
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
+	"github.com/temporalio/omes/workers/go/resources"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -18,6 +19,7 @@ import (
 type App struct {
 	logger                    *zap.SugaredLogger
 	taskQueue                 string
+	runID                     string
 	taskQueueIndexSuffixStart int
 	taskQueueIndexSuffixEnd   int
 
@@ -34,6 +36,25 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	a.logger = a.loggingOptions.MustCreateLogger()
 	metrics := a.metricsOptions.MustCreateMetrics(a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
+
+	// Start resource tracking if export metrics is enabled
+	var tracker *resources.Tracker
+	if a.workerOptions.ExportMetrics != "" {
+		var err error
+		tracker, err = resources.NewTracker(a.runID, a.workerOptions.ExportMetrics)
+		if err != nil {
+			a.logger.Fatalf("Failed to create resource tracker: %v", err)
+		}
+		tracker.Start(cmd.Context())
+		a.logger.Infof("Resource tracking enabled, will write to: %s", tracker.OutputPath())
+		defer func() {
+			if err := tracker.Stop(); err != nil {
+				a.logger.Errorf("Failed to write resource metrics: %v", err)
+			} else {
+				a.logger.Infof("Resource metrics exported to %s", tracker.OutputPath())
+			}
+		}()
+	}
 
 	// If there is an end, we run multiple
 	var taskQueues []string
@@ -131,6 +152,7 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
 	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
+	cmd.Flags().StringVar(&app.runID, "run-id", "", "Run ID for metrics filename")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixEnd,

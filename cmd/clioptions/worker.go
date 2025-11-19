@@ -15,6 +15,7 @@ type WorkerOptions struct {
 	MaxConcurrentWorkflowTasks   int
 	WorkerActivitiesPerSecond    float64
 	ErrOnUnimplemented           bool
+	ExportMetrics                string
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -39,5 +40,7 @@ func (m *WorkerOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
 	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"worker-activities-per-second", 0, "Per-worker activity rate limit")
 	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (currently this only applies to concurrent client actions)")
+	m.fs.StringVar(&m.ExportMetrics, prefix+"export-metrics", "", "Export worker resource metrics (CPU/memory) in JSON format. Optionally specify directory (defaults to current directory if flag specified without value)")
+	m.fs.Lookup(prefix + "export-metrics").NoOptDefVal = "."
 	return m.fs
 }
