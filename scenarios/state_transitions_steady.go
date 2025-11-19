@@ -16,7 +16,8 @@ type steadyStateConfig struct {
 
 type stateTransitionsSteadyExecutor struct {
 	loadgen.ScenarioInfo
-	config *steadyStateConfig
+	config             *steadyStateConfig
+	completionVerifier *loadgen.WorkflowCompletionVerifier
 }
 
 func init() {
@@ -27,6 +28,14 @@ func init() {
 			"--embedded-server --duration 5m --option state-transitions-per-second=3",
 		ExecutorFn: func() loadgen.Executor {
 			return &stateTransitionsSteadyExecutor{}
+		},
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			e := executor.(*stateTransitionsSteadyExecutor)
+			if e.completionVerifier == nil {
+				return nil
+			}
+			// For state transitions steady, we just need to verify no running workflows
+			return []error{e.completionVerifier.VerifyNoRunningWorkflows(ctx)}
 		},
 	})
 }
@@ -80,6 +89,7 @@ func (s *stateTransitionsSteadyExecutor) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create workflow completion checker: %w", err)
 	}
+	s.completionVerifier = completionChecker
 
 	// Execute initial workflow and get the transition count
 	workflowParams := &kitchensink.WorkflowInput{

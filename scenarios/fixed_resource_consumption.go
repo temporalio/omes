@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"time"
@@ -13,6 +14,23 @@ import (
 
 // This scenario is meant to be adjusted and run manually to evaluate the performance of different
 // slot provider implementations
+
+type fixedResourceExecutor struct {
+	*loadgen.KitchenSinkExecutor
+	completionVerifier *loadgen.WorkflowCompletionVerifier
+}
+
+func (e *fixedResourceExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	// Create completion verifier
+	verifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	e.completionVerifier = verifier
+
+	// Run the kitchen sink executor
+	return e.KitchenSinkExecutor.Run(ctx, info)
+}
 
 func parallelResourcesActions(
 	numConccurrent int,
@@ -63,7 +81,8 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Used for testing slot provider performance. Runs activities that consume certain amounts of resources.",
 		ExecutorFn: func() loadgen.Executor {
-			return &loadgen.KitchenSinkExecutor{
+			return &fixedResourceExecutor{
+				KitchenSinkExecutor: &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{
@@ -123,7 +142,16 @@ func init() {
 						},
 					},
 				},
+			},
 			}
+		},
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			e := executor.(*fixedResourceExecutor)
+			if e.completionVerifier == nil {
+				return nil
+			}
+			state := e.KitchenSinkExecutor.GetState()
+			return e.completionVerifier.VerifyRun(ctx, info, state)
 		},
 	})
 }

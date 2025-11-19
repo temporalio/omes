@@ -43,6 +43,11 @@ func init() {
 				},
 			}
 		},
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			// Scheduler stress scenario manages its own lifecycle and cleanup
+			// No additional verification needed beyond what happens during execution
+			return nil
+		},
 	})
 }
 
