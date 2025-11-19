@@ -108,6 +108,11 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        help="Run ID",
+    )
     parser.add_argument("--tls", action="store_true", help="Enable TLS")
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"

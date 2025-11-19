@@ -52,7 +52,8 @@ async function run() {
     .option(
       '--err-on-unimplemented <errOnImplemented>',
       'Error when receiving unimplemented actions (currently only affects concurrent client actions)'
-    );
+    )
+    .option('--run-id <runId>', 'Run ID');
 
   const opts = program.parse(process.argv).opts<{
     serverAddress: string;

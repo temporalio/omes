@@ -152,7 +152,7 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
 	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
-	cmd.Flags().StringVar(&app.runID, "run-id", "", "Run ID for metrics filename")
+	cmd.Flags().StringVar(&app.runID, "run-id", "", "Run ID")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixEnd,
