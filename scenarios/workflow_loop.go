@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// ActivityCountFlag controls the number of activities to execute sequentially
-	ActivityCountFlag = "activity-count"
+	// LoopsFlag controls the number of activities to execute sequentially
+	LoopsFlag = "loops"
 	// MessageViaFlag controls whether to use signal, update, or random (default: "signal")
 	MessageViaFlag = "message-via"
 )
@@ -40,7 +40,7 @@ func init() {
 			"The workflow waits for each signal/update before proceeding. "+
 			"Use --option %s=<number> to set the count (default: 1). "+
 			"Use --option %s=<signal|update|random> to choose mechanism (default: signal).",
-			ActivityCountFlag, MessageViaFlag),
+			LoopsFlag, MessageViaFlag),
 		ExecutorFn: func() loadgen.Executor {
 			return &workflowLoopExecutor{
 				KitchenSinkExecutor: &loadgen.KitchenSinkExecutor{
@@ -48,9 +48,9 @@ func init() {
 						WorkflowInput: &kitchensink.WorkflowInput{},
 					},
 					PrepareTestInput: func(ctx context.Context, info loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
-						activityCount := info.ScenarioOptionInt(ActivityCountFlag, 1)
+						activityCount := info.ScenarioOptionInt(LoopsFlag, 1)
 						if activityCount <= 0 {
-							return fmt.Errorf("%s must be positive, got %d", ActivityCountFlag, activityCount)
+							return fmt.Errorf("%s must be positive, got %d", LoopsFlag, activityCount)
 						}
 
 						messageVia := info.ScenarioOptions[MessageViaFlag]

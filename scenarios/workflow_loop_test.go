@@ -24,7 +24,7 @@ func TestWorkflowLoopScenario(t *testing.T) {
 			Iterations: 3,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "1",
+			LoopsFlag: "1",
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestWorkflowLoopScenarioMultipleActivities(t *testing.T) {
 			Iterations: 2,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "5",
+			LoopsFlag: "5",
 		},
 	}
 
@@ -93,7 +93,7 @@ func TestWorkflowLoopScenarioVerification(t *testing.T) {
 			Iterations: 5,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "3",
+			LoopsFlag: "3",
 		},
 	}
 
@@ -127,7 +127,7 @@ func TestWorkflowLoopScenarioInvalidConfig(t *testing.T) {
 			Iterations: 1,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "0", // Invalid: must be positive
+			LoopsFlag: "0", // Invalid: must be positive
 		},
 	}
 
@@ -156,8 +156,8 @@ func TestWorkflowLoopScenarioWithUpdates(t *testing.T) {
 			Iterations: 2,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "3",
-			MessageViaFlag:    "update", // Use updates instead of signals
+			LoopsFlag:      "3",
+			MessageViaFlag: "update", // Use updates instead of signals
 		},
 	}
 
@@ -191,8 +191,8 @@ func TestWorkflowLoopScenarioWithUpdatesMultipleIterations(t *testing.T) {
 			Iterations: 4,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "2",
-			MessageViaFlag:    "update",
+			LoopsFlag:      "2",
+			MessageViaFlag: "update",
 		},
 	}
 
@@ -226,8 +226,8 @@ func TestWorkflowLoopScenarioWithRandomSignalAndUpdate(t *testing.T) {
 			Iterations: 2,
 		},
 		ScenarioOptions: map[string]string{
-			ActivityCountFlag: "5",
-			MessageViaFlag:    "random", // Randomly pick between signal and update
+			LoopsFlag:      "5",
+			MessageViaFlag: "random", // Randomly pick between signal and update
 		},
 	}
 
