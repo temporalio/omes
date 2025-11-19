@@ -71,7 +71,8 @@ func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttr
 		runID,
 	)
 
-	info.Logger.Infof("Using visibility query for non-completed workflows: %q", nonCompletedQuery)
+	info.Logger.Infof("Visibility query for non-completed workflows - CLI command: temporal workflow list --namespace %s --query %q",
+		info.Namespace, nonCompletedQuery)
 
 	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
@@ -110,7 +111,8 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 		statusQuery := fmt.Sprintf(
 			"%s='%s' and ExecutionStatus = '%s'",
 			searchAttribute, runID, status)
-		info.Logger.Infof("Using visibility query for %s workflows: %q", status.String(), statusQuery)
+		info.Logger.Infof("Visibility query for %s workflows - CLI command: temporal workflow count --namespace %s --query %q",
+			status.String(), info.Namespace, statusQuery)
 		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query:     statusQuery,
