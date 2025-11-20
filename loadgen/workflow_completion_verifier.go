@@ -47,11 +47,44 @@ func (wct *WorkflowCompletionVerifier) init(ctx context.Context, info ScenarioIn
 		return nil
 	}
 
+	// Retry InitSearchAttribute until context deadline expires
+	retryTicker := time.NewTicker(2 * time.Second)
+	defer retryTicker.Stop()
+
+	// Try immediately first
+	var lastErr error
 	if err := InitSearchAttribute(ctx, info, OmesExecutionIDSearchAttribute); err != nil {
-		return fmt.Errorf("failed to register search attribute %s: %w",
+		lastErr = err
+		info.Logger.Warnf("failed to register search attribute %s, will retry: %v",
 			OmesExecutionIDSearchAttribute, err)
+	} else {
+		return nil
 	}
-	return nil
+
+	// Retry loop until context deadline
+	for {
+		select {
+		case <-ctx.Done():
+			// Context ended (deadline or cancellation). Return last error.
+			return fmt.Errorf("failed to register search attribute %s after retries: %w",
+				OmesExecutionIDSearchAttribute, lastErr)
+		case <-retryTicker.C:
+			// Don't perform retry if context is already done
+			if ctx.Err() != nil {
+				return fmt.Errorf("failed to register search attribute %s after retries: %w",
+					OmesExecutionIDSearchAttribute, lastErr)
+			}
+			if err := InitSearchAttribute(ctx, info, OmesExecutionIDSearchAttribute); err != nil {
+				lastErr = err
+				info.Logger.Warnf("failed to register search attribute %s, will retry: %v",
+					OmesExecutionIDSearchAttribute, err)
+			} else {
+				info.Logger.Infof("successfully registered search attribute %s after retries",
+					OmesExecutionIDSearchAttribute)
+				return nil
+			}
+		}
+	}
 }
 
 // VerifyRun implements the Verifier interface.
