@@ -260,3 +260,71 @@ jobs:
       java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
       py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
       dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
+
+  trigger-private-registry-mirror:
+    name: Trigger private registry mirror
+    runs-on: ubuntu-latest
+    needs:
+      - push-docker-images
+      - prepare-for-docker-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Prepare webhook payload
+        id: payload
+        env:
+          GO_VERSION: ${{ needs.prepare-for-docker-push.outputs.go-sdk-version }}
+          PYTHON_VERSION: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
+          JAVA_VERSION: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
+          TS_VERSION: ${{ needs.prepare-for-docker-push.outputs.ts-sdk-version }}
+          DOTNET_VERSION: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
+        run: |
+          # Create webhook payload with all omes images
+          PAYLOAD=$(jq -n \
+            --arg type "repository" \
+            --arg timestamp "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            --arg repository "${{ github.repository }}" \
+            --arg ref "${{ github.ref }}" \
+            --arg commit_sha "${{ github.sha }}" \
+            --arg go_version "$GO_VERSION" \
+            --arg python_version "$PYTHON_VERSION" \
+            --arg java_version "$JAVA_VERSION" \
+            --arg ts_version "$TS_VERSION" \
+            --arg dotnet_version "$DOTNET_VERSION" \
+            '{
+              metadata: {
+                type: $type,
+                timestamp: $timestamp,
+                repository: $repository,
+                ref: $ref,
+                commit_sha: $commit_sha
+              },
+              images: [
+                {source: "docker.io/temporaliotest/omes:go-\($go_version)", destination: "omes:go-\($go_version)"},
+                {source: "docker.io/temporaliotest/omes:python-\($python_version)", destination: "omes:python-\($python_version)"},
+                {source: "docker.io/temporaliotest/omes:java-\($java_version)", destination: "omes:java-\($java_version)"},
+                {source: "docker.io/temporaliotest/omes:typescript-\($ts_version)", destination: "omes:typescript-\($ts_version)"},
+                {source: "docker.io/temporaliotest/omes:dotnet-\($dotnet_version)", destination: "omes:dotnet-\($dotnet_version)"},
+                {source: "docker.io/temporaliotest/omes:cli", destination: "omes:cli"}
+              ]
+            }')
+
+          echo "payload=$PAYLOAD" >> $GITHUB_OUTPUT
+
+      - name: Send webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.PRIVATE_REGISTRY_MIRROR_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.PRIVATE_REGISTRY_MIRROR_WEBHOOK_SECRET }}
+          PAYLOAD: ${{ steps.payload.outputs.payload }}
+        run: |
+          # Compute HMAC-SHA256 signature (hex-encoded)
+          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" -binary | xxd -p -c 256)
+
+          # Send webhook with retries
+          curl -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Webhook-Signature: $SIGNATURE" \
+            -H "X-Request-ID: ${{ github.run_id }}" \
+            --data "$PAYLOAD" \
+            --fail-with-body \
+            --retry 3 \
+            --retry-delay 2
