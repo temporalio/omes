@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -96,6 +97,14 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		LogLevel: "error",
 		Stdout:   &logWriter{logger: serverLogger},
 		Stderr:   &logWriter{logger: serverLogger},
+		ExtraArgs: []string{
+			"--search-attribute", "OmesExecutionID=Keyword",
+			"--search-attribute", "KS_Int=Int",
+			"--search-attribute", "KS_Keyword=Keyword",
+			"--dynamic-config-value", "frontend.workerVersioningDataAPIs=true",
+			"--dynamic-config-value", "frontend.workerVersioningWorkflowAPIs=true",
+			"--dynamic-config-value", "frontend.workerVersioningRuleAPIs=true",
+		},
 	})
 	require.NoError(t, err, "Failed to start dev server")
 
@@ -163,7 +172,7 @@ func (env *TestEnvironment) createNexusEndpoint(ctx context.Context, taskQueueNa
 	return endpointName, nil
 }
 
-// RunExecutorTest runs an executor with a specific SDK and server address
+// RunExecutorTest runs an executor with a specific SDK and server address.
 func (env *TestEnvironment) RunExecutorTest(
 	t *testing.T,
 	executor loadgen.Executor,
@@ -194,6 +203,48 @@ func (env *TestEnvironment) RunExecutorTest(
 
 	execErr := executor.Run(testCtx, scenarioInfo)
 
+	// Run verification if executor implements Verifier interface.
+	// Use a fresh context for verification, not the executor context which may be canceled.
+	var verifyErrs []error
+	if verifier, ok := executor.(loadgen.Verifier); ok {
+		if stateful, hasSnapshot := executor.(interface{ Snapshot() any }); hasSnapshot {
+			snapshot := stateful.Snapshot()
+			// Try to extract ExecutorState from the snapshot
+			var execState loadgen.ExecutorState
+			var hasState bool
+
+			switch s := snapshot.(type) {
+			case loadgen.ExecutorState:
+				execState = s
+				hasState = true
+			default:
+				// For custom state types with an ExecutorState field
+				v := reflect.ValueOf(snapshot)
+				if v.Kind() == reflect.Struct {
+					if field := v.FieldByName("ExecutorState"); field.IsValid() {
+						if es, ok := field.Interface().(loadgen.ExecutorState); ok {
+							execState = es
+							hasState = true
+						} else if field.Kind() == reflect.Interface && !field.IsNil() {
+							// Handle case where ExecutorState is stored as interface{}
+							if es, ok := field.Elem().Interface().(loadgen.ExecutorState); ok {
+								execState = es
+								hasState = true
+							}
+						}
+					}
+				}
+			}
+
+			if hasState {
+				// Create a fresh context for verification with appropriate timeout
+				verifyCtx, cancelVerify := context.WithTimeout(t.Context(), env.executorTimeout)
+				defer cancelVerify()
+				verifyErrs = verifier.VerifyRun(verifyCtx, scenarioInfo, execState)
+			}
+		}
+	}
+
 	// Trigger worker shutdown.
 	cancelTestCtx()
 
@@ -208,8 +259,9 @@ func (env *TestEnvironment) RunExecutorTest(
 		workerErr = fmt.Errorf("timed out waiting for worker shutdown")
 	}
 
-	return TestResult{ObservedLogs: observedLogs},
-		errors.Join(execErr, workerErr)
+	// Combine all errors
+	allErrs := append([]error{execErr, workerErr}, verifyErrs...)
+	return TestResult{ObservedLogs: observedLogs}, errors.Join(allErrs...)
 }
 
 func (env *TestEnvironment) buildDirName() string {

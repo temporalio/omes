@@ -2,21 +2,41 @@ package scenarios
 
 import (
 	"context"
+	"strconv"
+	"time"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"strconv"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
+
+type manyActionsExecutor struct {
+	*loadgen.KitchenSinkExecutor
+	completionVerifier *loadgen.WorkflowCompletionVerifier
+}
+
+func (e *manyActionsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	// Create completion verifier
+	verifier, err := loadgen.NewWorkflowCompletionChecker(ctx, info, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	e.completionVerifier = verifier
+
+	// Run the kitchen sink executor
+	return e.KitchenSinkExecutor.Run(ctx, info)
+}
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities. " +
 			"Additional options: children-per-workflow (default 30), activities-per-workflow (default 30).",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.KitchenSinkExecutor{
+			return &manyActionsExecutor{
+				KitchenSinkExecutor: &loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
 					WorkflowInput: &kitchensink.WorkflowInput{
 						InitialActions: []*kitchensink.ActionSet{},
@@ -85,7 +105,16 @@ func init() {
 					)
 					return nil
 				},
+			},
 			}
+		},
+		VerifyFn: func(ctx context.Context, info loadgen.ScenarioInfo, executor loadgen.Executor) []error {
+			e := executor.(*manyActionsExecutor)
+			if e.completionVerifier == nil {
+				return nil
+			}
+			state := e.KitchenSinkExecutor.GetState()
+			return e.completionVerifier.VerifyRun(ctx, info, state)
 		},
 	})
 }

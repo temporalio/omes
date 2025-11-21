@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -13,8 +14,10 @@ import (
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -23,12 +26,24 @@ import (
 type Scenario struct {
 	Description string
 	ExecutorFn  func() Executor
+	VerifyFn    func(context.Context, ScenarioInfo, Executor) []error
 }
 
 // Executor for a scenario.
 type Executor interface {
 	// Run the scenario
 	Run(context.Context, ScenarioInfo) error
+}
+
+type ExecutorState struct {
+	// ExecutionID is the unique identifier for this particular execution of the scenario.
+	ExecutionID string `json:"executionID"`
+	// StartedAt is the timestamp when the executor run started.
+	StartedAt time.Time `json:"startedAt"`
+	// CompletedIterations tracks the number of successfully completed iterations.
+	CompletedIterations int `json:"completedIterations"`
+	// LastCompletedAt is the timestamp of the last completed workflow.
+	LastCompletedAt time.Time `json:"lastCompletedAt"`
 }
 
 // Optional interface that can be implemented by an [Executor] to allow it to be resumable.
@@ -52,6 +67,13 @@ type Configurable interface {
 	// Call this method if you want to ensure that all required configuration parameters
 	// are present and valid without actually running the executor.
 	Configure(ScenarioInfo) error
+}
+
+// Verifier performs post-execution verifications and returns a list of errors.
+type Verifier interface {
+	// VerifyRun performs post-execution verifications and returns a list of errors.
+	// The ExecutorState is provided by the caller.
+	VerifyRun(context.Context, ScenarioInfo, ExecutorState) []error
 }
 
 // ExecutorFunc is an [Executor] implementation for a function
@@ -104,6 +126,9 @@ type ScenarioInfo struct {
 	// and workflow ID prefix. This is a single value for the whole scenario, and
 	// not a Workflow RunId.
 	RunID string
+	// ExecutionID is a randomly generated ID that uniquely identifies this particular
+	// execution of the scenario. Combined with RunID, it ensures no two executions collide.
+	ExecutionID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
 	// A zap logger.
@@ -207,9 +232,6 @@ type RunConfiguration struct {
 	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
-	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
-	// Default is false.
-	IgnoreAlreadyStarted bool
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
 	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
@@ -225,6 +247,18 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 	if r.MaxIterationAttempts == 0 {
 		r.MaxIterationAttempts = DefaultMaxIterationAttempts
+	}
+	if r.HandleExecuteError == nil {
+		r.HandleExecuteError = func(ctx context.Context, run *Run, err error) error {
+			if err != nil {
+				var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
+				if errors.As(err, &alreadyStartedErr) {
+					run.Logger.Debugf("Workflow already started, skipping iteration %v", run.Iteration)
+					return nil
+				}
+			}
+			return err
+		}
 	}
 }
 
@@ -268,35 +302,39 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 
 func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
 	if s.Client == nil {
-		// No client in some unit tests. Ideally this would be mocked but no mock operator service
-		// client is readily available.
 		return nil
 	}
-	// Ensure custom search attributes are registered that many scenarios rely on
-	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
-		},
-		Namespace: s.Namespace,
-	})
-	// Throw an error if the attributes could not be registered, but ignore already exists errs
+
+	attrs := map[string]enums.IndexedValueType{
+		"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
+		"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
+		OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
+	}
+
 	alreadyExistsStrings := []string{
 		"already exists",
 		"attributes mapping unavailble",
 	}
-	if err != nil {
-		isAlreadyExistsErr := false
-		for _, s := range alreadyExistsStrings {
-			if strings.Contains(err.Error(), s) {
-				isAlreadyExistsErr = true
-				break
+
+	var lastErr error
+	if err := RetryUntilCtx(ctx, func(ctx context.Context) (bool, error) {
+		_, lastErr = s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+			SearchAttributes: attrs,
+			Namespace:        s.Namespace,
+		})
+		if lastErr == nil {
+			return true, nil
+		}
+		for _, substr := range alreadyExistsStrings {
+			if strings.Contains(lastErr.Error(), substr) {
+				return true, nil
 			}
 		}
-		if !isAlreadyExistsErr {
-			return fmt.Errorf("failed to register search attributes: %w", err)
-		}
+		return false, lastErr
+	}); err != nil {
+		return fmt.Errorf("failed to register search attributes: %w", err)
 	}
+
 	return nil
 }
 
@@ -312,9 +350,13 @@ func (r *Run) TaskQueue() string {
 // DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                TaskQueueForRun(r.RunID),
-		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
-		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
+		ID:        fmt.Sprintf("w-%s-%s-%d", r.RunID, r.ExecutionID, r.Iteration),
+		TaskQueue: TaskQueueForRun(r.RunID),
+		// Always return error so that Executor can handle it and record starts accurately.
+		WorkflowExecutionErrorWhenAlreadyStarted: true,
+		TypedSearchAttributes: temporal.NewSearchAttributes(
+			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).ValueSet(r.ExecutionID),
+		),
 	}
 }
 
@@ -380,10 +422,12 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 	executeErr := executor.Handle.Get(cancelCtx, nil)
 	if executeErr != nil {
-		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
+		return fmt.Errorf("failed to execute kitchen sink workflow (workflowID: %s, runID: %s): %w",
+			executor.Handle.GetID(), executor.Handle.GetRunID(), executeErr)
 	}
 	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
-		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
+		return fmt.Errorf("kitchen sink client actions failed (workflowID: %s, runID: %s): %w",
+			executor.Handle.GetID(), executor.Handle.GetRunID(), *clientActionsErr)
 	}
 	return nil
 }

@@ -2,11 +2,15 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/antithesishq/antithesis-sdk-go/assert"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -56,7 +60,7 @@ type scenarioRunConfig struct {
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
-	ignoreAlreadyStarted          bool
+	verificationTimeout           time.Duration
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -82,8 +86,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
-	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
-		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
+	fs.DurationVar(&r.verificationTimeout, "verification-timeout", 2*time.Minute,
+		"Maximum duration to wait for post-scenario verification (default 2m).")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -98,6 +102,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
+	} else if r.verificationTimeout <= 0 {
+		return fmt.Errorf("verification-timeout must be greater than 0")
 	}
 
 	// Parse options
@@ -137,6 +143,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		}
 		// Wait 300ms and try again
 		time.Sleep(300 * time.Millisecond)
+
+		r.logger.Error("Failed to dial, retrying ...", zap.Error(err))
 	}
 	defer client.Close()
 
@@ -145,9 +153,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	// Generate a random execution ID to ensure no two executions with the same RunID collide
+	executionID, err := generateExecutionID()
+	if err != nil {
+		return fmt.Errorf("failed to generate execution ID: %w", err)
+	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
+		ExecutionID:    executionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
@@ -159,16 +174,45 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			MaxIterationAttempts:          r.maxIterationAttempts,
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
 	}
 	executor := scenario.ExecutorFn()
-	err = executor.Run(ctx, scenarioInfo)
-	if err != nil {
-		return fmt.Errorf("failed scenario: %w", err)
+
+	// 1. Run the scenario
+	scenarioErr := executor.Run(ctx, scenarioInfo)
+
+	// Collect all errors
+	var allErrors []error
+	if scenarioErr != nil {
+		allErrors = append(allErrors, fmt.Errorf("scenario execution failed: %w", scenarioErr))
+		assert.Unreachable("scenario execution failed", map[string]any{"error": scenarioErr})
 	}
-	return nil
+
+	verifyCtx, verifyCancel := context.WithTimeout(ctx, r.verificationTimeout)
+	defer verifyCancel()
+
+	// 2. Run verifications
+	if scenario.VerifyFn != nil {
+		verifyErrs := scenario.VerifyFn(verifyCtx, scenarioInfo, executor)
+		for _, err := range verifyErrs {
+			allErrors = append(allErrors, fmt.Errorf("post-scenario verification failed: %w", err))
+			assert.Unreachable("post-scenario verification failed", map[string]any{"error": err})
+		}
+	}
+
+	// Aggregate all errors
+	return errors.Join(allErrors...)
+}
+
+// generateExecutionID generates a random execution ID to uniquely identify this particular
+// execution of a scenario. This ensures no two executions with the same RunID collide.
+func generateExecutionID() (string, error) {
+	bytes := make([]byte, 8) // 8 bytes = 16 hex characters
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

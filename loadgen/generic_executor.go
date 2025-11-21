@@ -2,16 +2,28 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/antithesishq/antithesis-sdk-go/assert"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
+// skipIterationErr is a sentinel error indicating that the iteration
+// should be skipped and not recorded as a completion or failure.
+var skipIterationErr = errors.New("skip iteration")
+
 type GenericExecutor struct {
 	// Function to execute a single iteration of this scenario
 	Execute func(context.Context, *Run) error
+
+	// State management
+	mu    sync.Mutex
+	state *ExecutorState
 }
 
 type genericRun struct {
@@ -24,11 +36,63 @@ type genericRun struct {
 }
 
 func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
+	g.mu.Lock()
+	if g.state == nil {
+		g.state = &ExecutorState{
+			ExecutionID: info.ExecutionID,
+		}
+	}
+	if g.state.StartedAt.IsZero() {
+		g.state.StartedAt = time.Now()
+	}
+	g.mu.Unlock()
+
 	r, err := g.newRun(info)
 	if err != nil {
 		return err
 	}
 	return r.Run(ctx)
+}
+
+func (g *GenericExecutor) RecordCompletion() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.state.CompletedIterations += 1
+	g.state.LastCompletedAt = time.Now()
+}
+
+func (g *GenericExecutor) RecordError(err error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+}
+
+// GetState returns a copy of the current state
+func (g *GenericExecutor) GetState() ExecutorState {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.state == nil {
+		return ExecutorState{}
+	}
+	return *g.state
+}
+
+func (g *GenericExecutor) Snapshot() any {
+	return g.GetState()
+}
+
+func (g *GenericExecutor) LoadState(loader func(any) error) error {
+	var state ExecutorState
+	if err := loader(&state); err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	g.state = &state
+	g.mu.Unlock()
+
+	return nil
 }
 
 func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
@@ -130,11 +194,21 @@ func (g *genericRun) Run(ctx context.Context) error {
 			defer func() {
 				g.executeTimer.Record(time.Since(iterStart))
 
+				// Check if this is the special "skip iteration" error
+				isSkipIteration := errors.Is(err, skipIterationErr)
+				if isSkipIteration {
+					err = nil // Don't propagate this as an actual error
+				}
+
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					if err == nil && g.config.OnCompletion != nil {
-						g.config.OnCompletion(ctx, run)
+					if err == nil && !isSkipIteration {
+						g.executor.RecordCompletion()
+						g.logger.Debugf("✅ Workflow completed: iteration %v", run.Iteration)
+						if g.config.OnCompletion != nil {
+							g.config.OnCompletion(ctx, run)
+						}
 					}
 				}
 			}()
@@ -142,13 +216,27 @@ func (g *genericRun) Run(ctx context.Context) error {
 		retryLoop:
 			for {
 				err = g.executor.Execute(ctx, run)
+
+				// Skip if workflow was already started.
+				if err != nil {
+					var alreadyStartedErr *serviceerror.WorkflowExecutionAlreadyStarted
+					if errors.As(err, &alreadyStartedErr) {
+						g.logger.Debugf("Workflow already started, skipping iteration %v", run.Iteration)
+						err = skipIterationErr
+						break
+					}
+				}
+
+				// If defined, invoke user-defined error handler.
 				if err != nil && g.config.HandleExecuteError != nil {
 					err = g.config.HandleExecuteError(ctx, run, err)
 				}
+
 				if err == nil {
 					break
 				}
 
+				// Attempt to retry.
 				backoff, retry := run.ShouldRetry(err)
 				if retry {
 					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
@@ -156,6 +244,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 				} else {
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
 					g.logger.Error(err)
+					assert.Unreachable(
+						"Workflow execution should never return an error after retries exhausted",
+						map[string]any{
+							"iteration":     run.Iteration,
+							"error":         err.Error(),
+							"attempt_count": run.attemptCount,
+						},
+					)
 					break retryLoop
 				}
 

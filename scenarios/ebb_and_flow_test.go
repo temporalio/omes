@@ -72,7 +72,7 @@ func TestEbbAndFlow(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
-		require.GreaterOrEqual(t, state.TotalCompletedWorkflows, int64(1))
+		require.GreaterOrEqual(t, state.ExecutorState.CompletedIterations, 1)
 	})
 
 	t.Run("Run executor again, resuming from previous state", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestEbbAndFlow(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
-		require.Greater(t, state.TotalCompletedWorkflows, previouState.TotalCompletedWorkflows)
+		require.Greater(t, state.ExecutorState.CompletedIterations, previouState.ExecutorState.CompletedIterations)
 	})
 
 	t.Run("Run executor again, resuming from previous state but without any time left", func(t *testing.T) {

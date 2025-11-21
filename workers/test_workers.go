@@ -114,6 +114,10 @@ func (w *workerPool) startWorker(
 				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
 			},
 		}
+		// Configure build ID for versioning if specified in scenario options
+		if buildID, ok := scenarioInfo.ScenarioOptions["worker-build-id"]; ok && buildID != "" {
+			runner.WorkerOptions.FlagSet("worker-").Set("worker-build-id", buildID)
+		}
 		runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
 		runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
 		workerDone <- runner.Run(ctx, baseDir)

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -44,63 +43,61 @@ func InitSearchAttribute(
 	return nil
 }
 
-func MinVisibilityCountEventually(
+func MinVisibilityCount(
 	ctx context.Context,
 	info ScenarioInfo,
 	request *workflowservice.CountWorkflowExecutionsRequest,
 	minCount int,
-	waitAtMost time.Duration,
 ) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
-	defer cancel()
-
-	countTicker := time.NewTicker(3 * time.Second)
-	defer countTicker.Stop()
-
-	printTicker := time.NewTicker(30 * time.Second)
-	defer printTicker.Stop()
-
-	var lastVisibilityCount int64
-	done := false
-
-	check := func() error {
-		visibilityCount, err := info.Client.CountWorkflow(timeoutCtx, request)
-		if err != nil {
-			return fmt.Errorf("failed to count workflows in visibility: %w", err)
-		}
-		lastVisibilityCount = visibilityCount.Count
-		if lastVisibilityCount >= int64(minCount) {
-			done = true
-		}
-		return nil
+	visibilityCount, err := info.Client.CountWorkflow(ctx, request)
+	if err != nil {
+		return fmt.Errorf("failed to count workflows in visibility: %w", err)
 	}
 
-	// Initial check before entering the loop.
-	if err := check(); err != nil {
-		return err
-	}
-
-	// Loop until we reach the desired count or timeout.
-	for !done {
-		select {
-		case <-timeoutCtx.Done():
-			return fmt.Errorf(
-				"expected at least %d workflows in visibility, got %d after waiting %v",
-				minCount, lastVisibilityCount, waitAtMost,
-			)
-
-		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
-				lastVisibilityCount, minCount)
-
-		case <-countTicker.C:
-			if err := check(); err != nil {
-				return err
-			}
-		}
+	if visibilityCount.Count < int64(minCount) {
+		return fmt.Errorf("expected at least %d workflows in visibility, got %d",
+			minCount, visibilityCount.Count)
 	}
 
 	return nil
+}
+
+// GetNonCompletedWorkflows queries and returns an error for each non-completed workflow.
+// Returns a list of errors (one per non-completed workflow) with workflow details, or a query error if the list fails.
+func GetNonCompletedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string, limit int32) []error {
+	nonCompletedQuery := fmt.Sprintf(
+		"%s='%s' AND ExecutionStatus != 'Completed' AND ExecutionStatus != 'ContinuedAsNew'",
+		searchAttribute,
+		runID,
+	)
+
+	info.Logger.Infof("Visibility query for non-completed workflows - CLI command: temporal workflow list --namespace %s --query %q",
+		info.Namespace, nonCompletedQuery)
+
+	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
+		Namespace: info.Namespace,
+		Query:     nonCompletedQuery,
+		PageSize:  limit,
+	})
+
+	if err != nil {
+		return []error{fmt.Errorf("failed to list non-completed workflows: %w", err)}
+	}
+
+	if len(resp.Executions) == 0 {
+		return nil
+	}
+
+	var workflowErrors []error
+	for _, exec := range resp.Executions {
+		workflowErrors = append(workflowErrors, fmt.Errorf(
+			"non-completed workflow: Namespace=%s, WorkflowID=%s, RunID=%s, Status=%s",
+			info.Namespace,
+			exec.Execution.WorkflowId,
+			exec.Execution.RunId,
+			exec.Status.String()))
+	}
+	return workflowErrors
 }
 
 // VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
@@ -114,6 +111,8 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 		statusQuery := fmt.Sprintf(
 			"%s='%s' and ExecutionStatus = '%s'",
 			searchAttribute, runID, status)
+		info.Logger.Infof("Visibility query for %s workflows - CLI command: temporal workflow count --namespace %s --query %q",
+			status.String(), info.Namespace, statusQuery)
 		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query:     statusQuery,
