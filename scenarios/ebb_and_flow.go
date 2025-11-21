@@ -342,7 +342,6 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		e.Logger.Errorf("kitchensink workflow failed for iteration %d: %v", iteration, err)
 	}
 	e.completedActivities.Add(activities)
-	e.incrementTotalCompletedWorkflow()
 
 	// Record completion in executor state for verification
 	e.stateLock.Lock()
