@@ -121,8 +121,8 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		// This scenario overrides "count" so do not require it.
-		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false)
+		// This scenario overrides "count" and "sleepDuration" so do not require them.
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false, false)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
