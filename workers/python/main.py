@@ -20,8 +20,11 @@ from temporalio.worker import PollerBehaviorAutoscaling, Worker
 from activities import (
     create_client_activity,
     delay_activity,
+    heartbeat_activity,
     noop_activity,
     payload_activity,
+    retryable_error_activity,
+    timeout_activity,
 )
 from kitchen_sink import KitchenSinkWorkflow
 
@@ -223,6 +226,9 @@ async def run():
                 noop_activity,
                 delay_activity,
                 payload_activity,
+                retryable_error_activity,
+                timeout_activity,
+                heartbeat_activity,
                 create_client_activity(client, args.err_on_unimplemented),
             ],
             **worker_kwargs,
