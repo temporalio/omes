@@ -39,6 +39,9 @@ const (
 	// MinThroughputPerHourFlag is the minimum workflow throughput required (workflows/hour).
 	// Default is 0, meaning disabled. The scenario calculates actual throughput and compares.
 	MinThroughputPerHourFlag = "min-throughput-per-hour"
+	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
+	// Default is false.
+	IncludeRetryScenariosFlag = "include-retry-scenarios"
 )
 
 const (
@@ -67,6 +70,7 @@ type tpsConfig struct {
 	MinThroughputPerHour          float64
 	ScenarioRunID                 string
 	RngSeed                       int64
+	IncludeRetryScenarios         bool
 }
 
 type tpsExecutor struct {
@@ -84,8 +88,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -164,6 +168,8 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.VisibilityVerificationTimeout <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
 	}
+
+	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -416,6 +422,20 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+		}
+
+		// Add retry/timeout/heartbeat activities if flag is enabled.
+		if t.config.IncludeRetryScenarios {
+			asyncActions = append(asyncActions,
+				// Add activity cancellation scenario
+				DelayActivityWithCancellation(1*time.Second, 10*time.Second),
+				// Test activity retry: fails, succeeds on retry
+				RetryableErrorActivity(1, RemoteActivityWithRetry(1*time.Second, 2, 500*time.Millisecond, 1.0)),
+				// Test activity timeout with retry: times out on 1st attempt, succeeds on 2nd
+				TimeoutActivity(1, 0*time.Second, 2*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
+				// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
+				HeartbeatActivity(1, 0*time.Second, 2*time.Second, 10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
+			)
 		}
 
 		// Add sleep activities, if configured.
