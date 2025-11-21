@@ -291,11 +291,11 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Sample activities from the configuration
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	activities := config.Sample(rng)
+	activityActions := config.Sample(rng)
 
 	// Build actions for the kitchensink workflow
 	var actions []*Action
-	for _, activityAction := range activities {
+	for _, activityAction := range activityActions {
 		actions = append(actions, &Action{
 			Variant: &Action_ExecActivity{
 				ExecActivity: activityAction,
