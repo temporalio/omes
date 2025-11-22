@@ -121,6 +121,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "./tslib/omes.js")
 	}
 	args = append(args, "--task-queue", r.TaskQueueName)
+	args = append(args, "--run-id", r.ScenarioID.RunID)
 	if r.TaskQueueIndexSuffixEnd > 0 {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
@@ -128,6 +129,17 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
+
+	// Convert export metrics path to absolute path before passing to subprocess
+	// so it writes to the correct location (not the temp build directory)
+	if r.WorkerOptions.ExportMetrics != "" {
+		absPath, err := filepath.Abs(r.WorkerOptions.ExportMetrics)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for export-metrics: %w", err)
+		}
+		r.WorkerOptions.ExportMetrics = absPath
+	}
+
 	args = append(args, passthrough(r.WorkerOptions.FlagSet("worker-"), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)

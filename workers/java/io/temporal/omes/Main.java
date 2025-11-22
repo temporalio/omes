@@ -78,6 +78,11 @@ public class Main implements Runnable {
       defaultValue = "localhost:7233")
   private String serverAddress;
 
+  @CommandLine.Option(
+      names = {"--run-id"},
+      description = "Run ID")
+  private String runId;
+
   @CommandLine.Option(names = "--tls", description = "Enable TLS")
   private boolean isTlsEnabled;
 

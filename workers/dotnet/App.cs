@@ -27,6 +27,10 @@ public static class App
         description: "The namespace to use",
         getDefaultValue: () => "default");
 
+    private static readonly Option<string> runIdOption = new(
+        name: "--run-id",
+        description: "Run ID");
+
     private static readonly Option<uint> taskQSuffixStartOption = new(
         name: "--task-queue-suffix-index-start",
         description: "Inclusive start for task queue suffix range");
@@ -112,6 +116,7 @@ public static class App
         cmd.Add(serverOption);
         cmd.Add(taskQueueOption);
         cmd.Add(namespaceOption);
+        cmd.Add(runIdOption);
         cmd.Add(taskQSuffixStartOption);
         cmd.Add(taskQSuffixEndOption);
         cmd.Add(maxATPollersOption);
