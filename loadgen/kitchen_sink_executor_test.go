@@ -144,20 +144,21 @@ func TestKitchenSink(t *testing.T) {
 									WorkflowType: "kitchenSink",
 									Input: []*common.Payload{
 										ConvertToPayload(&WorkflowInput{
-											InitialActions: ListActionSet(NewTimerAction(1 * time.Millisecond)),
+											InitialActions: ListActionSet(NewEmptyReturnResultAction()),
 										})},
-									AwaitableChoice: &AwaitableChoice{
-										Condition: &AwaitableChoice_Abandon{
-											Abandon: &emptypb.Empty{},
-										},
-									},
 								},
 							},
 						}),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}`),
+				StartChildWorkflowExecutionInitiated {"workflowId":"my-child"}
+				ChildWorkflowExecutionStarted
+				WorkflowTaskScheduled
+				WorkflowTaskStarted
+				WorkflowTaskCompleted
+				ChildWorkflowExecutionCompleted
+			`),
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",
@@ -400,12 +401,6 @@ func TestKitchenSink(t *testing.T) {
 						),
 					),
 				},
-			},
-			expectedUnsupportedErrs: map[clioptions.Language]string{
-				clioptions.LangTypeScript: "concurrent client actions are not supported",
-				clioptions.LangDotNet:     "concurrent client actions are not supported",
-				clioptions.LangPython:     "concurrent client actions are not supported",
-				clioptions.LangJava:       "concurrent client actions are not supported",
 			},
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}

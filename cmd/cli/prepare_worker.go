@@ -42,7 +42,7 @@ type workerBuilder struct {
 func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&b.DirName, "dir-name", "", "Directory name for prepared worker")
 	b.SdkOptions.AddCLIFlags(fs)
-	b.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(b.loggingOptions.FlagSet())
 }
 
 func (b *workerBuilder) preRun() {

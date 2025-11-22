@@ -39,7 +39,7 @@ type SleepActivityGroupConfig struct {
 	FairnessWeight *DistributionField[float32] `json:"fairnessWeight"`
 }
 
-func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, error) {
+func ParseAndValidateSleepActivityConfig(jsonStr string, requireCount bool) (*SleepActivityConfig, error) {
 	if jsonStr == "" {
 		return nil, nil
 	}
@@ -47,7 +47,7 @@ func ParseAndValidateSleepActivityConfig(jsonStr string) (*SleepActivityConfig, 
 	if err := json.Unmarshal([]byte(jsonStr), config); err != nil {
 		return nil, fmt.Errorf("failed to parse SleepActivityConfig JSON: %w", err)
 	}
-	if config.Count == nil {
+	if requireCount && config.Count == nil {
 		return nil, fmt.Errorf("SleepActivityConfig: Count field is required")
 	}
 	if config.Groups == nil || len(config.Groups) == 0 {

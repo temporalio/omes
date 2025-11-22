@@ -319,7 +319,7 @@ public class KitchenSinkWorkflow
             }
             else
             {
-                await awaitableTask;
+                await afterCompletedFn(awaitableTask);
             }
         }
         catch (Exception e) when (TemporalException.IsCanceledException(e))
@@ -356,6 +356,21 @@ public class KitchenSinkWorkflow
         {
             actType = "client";
             args.Add(client);
+        }
+        else if (eaa.RetryableError is { } retryableError)
+        {
+            actType = "retryable_error";
+            args.Add(retryableError);
+        }
+        else if (eaa.Timeout is { } timeout)
+        {
+            actType = "timeout";
+            args.Add(timeout);
+        }
+        else if (eaa.Heartbeat is { } heartbeat)
+        {
+            actType = "heartbeat";
+            args.Add(heartbeat);
         }
 
         if (eaa.IsLocal != null)
@@ -444,15 +459,61 @@ public class KitchenSinkWorkflow
         new Random().NextBytes(output);
         return output;
     }
+
+    [Activity("retryable_error")]
+    public static void RetryableError(ExecuteActivityAction.Types.RetryableErrorActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        if (info.Attempt <= config.FailAttempts)
+        {
+            throw new ApplicationFailureException("retryable error");
+        }
+    }
+
+    [Activity("timeout")]
+    public static async Task Timeout(ExecuteActivityAction.Types.TimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds activity timeout)
+        if (info.Attempt <= config.FailAttempts)
+        {
+            duration = config.FailureDuration;
+        }
+
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
+    }
+
+    [Activity("heartbeat")]
+    public static async Task Heartbeat(ExecuteActivityAction.Types.HeartbeatTimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var shouldSendHeartbeats = info.Attempt > config.FailAttempts;
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds heartbeat timeout)
+        if (!shouldSendHeartbeats)
+        {
+            duration = config.FailureDuration;
+        }
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
+        // If successful, heartbeat
+        ActivityExecutionContext.Current.Heartbeat();
+    }
 }
 
 public class ClientActivitiesImpl
 {
     private readonly ITemporalClient _client;
+    private readonly bool _errOnUnimplemented;
 
-    public ClientActivitiesImpl(ITemporalClient client)
+    public ClientActivitiesImpl(ITemporalClient client, bool errOnUnimplemented = false)
     {
         _client = client;
+        _errOnUnimplemented = errOnUnimplemented;
     }
 
     [Activity("client")]
@@ -462,7 +523,7 @@ public class ClientActivitiesImpl
         var workflowId = activityInfo.WorkflowId;
         var taskQueue = activityInfo.TaskQueue;
 
-        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue, _errOnUnimplemented);
         await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
 }

@@ -53,6 +53,19 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 }
 
+func makePollerBehavior(simple, auto int) worker.PollerBehavior {
+	if auto > 0 {
+		return worker.NewPollerBehaviorAutoscaling(worker.PollerBehaviorAutoscalingOptions{
+			// TODO: remove InitialNumberOfPollers after https://github.com/temporalio/sdk-go/pull/2105
+			InitialNumberOfPollers: auto,
+			MaximumNumberOfPollers: auto,
+		})
+	}
+	return worker.NewPollerBehaviorSimpleMaximum(worker.PollerBehaviorSimpleMaximumOptions{
+		MaximumNumberOfPollers: simple,
+	})
+}
+
 func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
 	errCh := make(chan error, len(taskQueues))
 	ebbFlowActivities := ebbandflow.Activities{}
@@ -73,13 +86,23 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 				UseBuildIDForVersioning:                options.BuildID != "",
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
-				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
-				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
+				ActivityTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentActivityPollers,
+					options.ActivityPollerAutoscaleMax,
+				),
+				WorkflowTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentWorkflowPollers,
+					options.WorkflowPollerAutoscaleMax,
+				),
+				WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
+			w.RegisterActivityWithOptions(kitchensink.RetryableError, activity.RegisterOptions{Name: "retryable_error"})
+			w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
+			w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
@@ -106,10 +129,10 @@ func Main() {
 		Run:   app.Run,
 	}
 
-	app.loggingOptions.AddCLIFlags(cmd.Flags())
-	app.clientOptions.AddCLIFlags(cmd.Flags())
-	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
-	app.workerOptions.AddCLIFlags(cmd.Flags(), "")
+	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")

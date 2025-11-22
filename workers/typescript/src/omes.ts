@@ -31,15 +31,28 @@ async function run() {
     .option('-n, --namespace <namespace>', 'The namespace to use', 'default')
     .option('--max-concurrent-activity-pollers <maxActPollers>', 'Max concurrent activity pollers')
     .option('--max-concurrent-workflow-pollers <maxWfPollers>', 'Max concurrent workflow pollers')
+    .option(
+      '--activity-poller-autoscale-max <actPollerAutoscaleMax>',
+      'Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)'
+    )
+    .option(
+      '--workflow-poller-autoscale-max <wfPollerAutoscaleMax>',
+      'Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)'
+    )
     .option('--max-concurrent-activities <maxActs>', 'Max concurrent activities')
     .option('--max-concurrent-workflow-tasks <maxWFTs>', 'Max concurrent workflow tasks')
+    .option('--worker-activities-per-second <workerActivityRate>', 'Per-worker activity rate limit')
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
     .option('--log-encoding <logEncoding>', '(console json)', 'console')
     .option('--tls', 'Enable TLS')
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')
-    .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics');
+    .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics')
+    .option(
+      '--err-on-unimplemented <errOnImplemented>',
+      'Error when receiving unimplemented actions (currently only affects concurrent client actions)'
+    );
 
   const opts = program.parse(process.argv).opts<{
     serverAddress: string;
@@ -50,6 +63,8 @@ async function run() {
 
     maxActPollers: number;
     maxWfPollers: number;
+    actPollerAutoscaleMax: number;
+    wfPollerAutoscaleMax: number;
     maxActs: number;
     maxWFTs: number;
 
@@ -62,6 +77,8 @@ async function run() {
 
     promListenAddress: string;
     promHandlerPath: string;
+    workerActivityRate: number;
+    errOnUnimplemented: boolean;
   }>();
 
   // Configure TLS
@@ -144,7 +161,7 @@ async function run() {
     logger.info(`Running TypeScript worker on ${taskQueues.length} task queues`);
   }
 
-  const activities = createActivities(client);
+  const activities = createActivities(client, opts.errOnUnimplemented || false);
 
   const workerArgs: WorkerOptions = {
     connection,
@@ -156,10 +173,20 @@ async function run() {
       payloadConverterPath: require.resolve('./payload-converter'),
     },
   };
-  if (opts.maxActPollers) {
+  if (opts.actPollerAutoscaleMax) {
+    workerArgs.activityTaskPollerBehavior = {
+      type: 'autoscaling',
+      maximum: opts.actPollerAutoscaleMax,
+    };
+  } else if (opts.maxActPollers) {
     workerArgs.maxConcurrentActivityTaskPolls = opts.maxActPollers;
   }
-  if (opts.maxWfPollers) {
+  if (opts.wfPollerAutoscaleMax) {
+    workerArgs.workflowTaskPollerBehavior = {
+      type: 'autoscaling',
+      maximum: opts.wfPollerAutoscaleMax,
+    };
+  } else if (opts.maxWfPollers) {
     workerArgs.maxConcurrentWorkflowTaskPolls = opts.maxWfPollers;
   }
   if (opts.maxActs) {
@@ -167,6 +194,9 @@ async function run() {
   }
   if (opts.maxWFTs) {
     workerArgs.maxConcurrentWorkflowTaskExecutions = opts.maxWFTs;
+  }
+  if (opts.workerActivityRate) {
+    workerArgs.maxActivitiesPerSecond = opts.workerActivityRate;
   }
   const workerPromises = [];
   for (const taskQueue of taskQueues) {

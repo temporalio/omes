@@ -15,13 +15,16 @@ from temporalio.runtime import (
     TelemetryFilter,
 )
 from temporalio.service import TLSConfig
-from temporalio.worker import Worker
+from temporalio.worker import PollerBehaviorAutoscaling, Worker
 
 from activities import (
     create_client_activity,
     delay_activity,
+    heartbeat_activity,
     noop_activity,
     payload_activity,
+    retryable_error_activity,
+    timeout_activity,
 )
 from kitchen_sink import KitchenSinkWorkflow
 
@@ -65,12 +68,33 @@ async def run():
         help="Max concurrent workflow pollers",
     )
     parser.add_argument(
+        "--activity-poller-autoscale-max",
+        type=int,
+        help="Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)",
+    )
+    parser.add_argument(
+        "--workflow-poller-autoscale-max",
+        type=int,
+        help="Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)",
+    )
+    parser.add_argument(
         "--max-concurrent-activities", type=int, help="Max concurrent activities"
     )
     parser.add_argument(
         "--max-concurrent-workflow-tasks",
         type=int,
         help="Max concurrent workflow tasks",
+    )
+    parser.add_argument(
+        "--worker-activities-per-second",
+        type=float,
+        help="Per-worker activity rate limit",
+    )
+    parser.add_argument(
+        "--err-on-unimplemented",
+        default=False,
+        type=bool,
+        help="Error when receiving unimplemented actions (currently only affects concurrent client actions)",
     )
     # Log arguments
     parser.add_argument(
@@ -167,11 +191,19 @@ async def run():
         logger.info("Python worker running for %s task queue(s)" % len(task_queues))
 
     worker_kwargs = {}
-    if args.max_concurrent_activity_pollers is not None:
+    if args.activity_poller_autoscale_max is not None:
+        worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling(
+            maximum=args.activity_poller_autoscale_max
+        )
+    elif args.max_concurrent_activity_pollers is not None:
         worker_kwargs[
             "max_concurrent_activity_task_polls"
         ] = args.max_concurrent_activity_pollers
-    if args.max_concurrent_workflow_pollers is not None:
+    if args.workflow_poller_autoscale_max is not None:
+        worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
+            maximum=args.workflow_poller_autoscale_max
+        )
+    elif args.max_concurrent_workflow_pollers is not None:
         worker_kwargs[
             "max_concurrent_workflow_task_polls"
         ] = args.max_concurrent_workflow_pollers
@@ -181,6 +213,8 @@ async def run():
         worker_kwargs[
             "max_concurrent_workflow_tasks"
         ] = args.max_concurrent_workflow_tasks
+    if args.worker_activities_per_second is not None:
+        worker_kwargs["max_activities_per_second"] = args.worker_activities_per_second
 
     # Start all workers, throwing on first exception
     workers = [
@@ -192,7 +226,10 @@ async def run():
                 noop_activity,
                 delay_activity,
                 payload_activity,
-                create_client_activity(client),
+                retryable_error_activity,
+                timeout_activity,
+                heartbeat_activity,
+                create_client_activity(client, args.err_on_unimplemented),
             ],
             **worker_kwargs,
         )

@@ -18,6 +18,8 @@ type LoggingOptions struct {
 	LogEncoding string
 	// Prepared logger to use instead of creating a new one from options. Progamatic use only.
 	PreparedLogger *zap.SugaredLogger
+
+	fs *pflag.FlagSet
 }
 
 // BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`).
@@ -53,19 +55,13 @@ func (l *LoggingOptions) MustCreateLogger() *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
-// AddCLIFlags adds the relevant flags to populate the options struct.
-func (l *LoggingOptions) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&l.LogLevel, "log-level", "info", "(debug info warn error panic fatal)")
-	fs.StringVar(&l.LogEncoding, "log-encoding", "console", "(console json)")
-}
-
-// ToFlags converts these options to string flags.
-func (l *LoggingOptions) ToFlags() (flags []string) {
-	if l.LogLevel != "" {
-		flags = append(flags, "--log-level", l.LogLevel)
+// FlagSet adds the relevant flags to populate the options struct and returns a pflag.FlagSet.
+func (l *LoggingOptions) FlagSet() *pflag.FlagSet {
+	if l.fs != nil {
+		return l.fs
 	}
-	if l.LogEncoding != "" {
-		flags = append(flags, "--log-encoding", l.LogEncoding)
-	}
-	return
+	l.fs = pflag.NewFlagSet("logging_options", pflag.ExitOnError)
+	l.fs.StringVar(&l.LogLevel, "log-level", "info", "(debug info warn error panic fatal)")
+	l.fs.StringVar(&l.LogEncoding, "log-encoding", "console", "(console json)")
+	return l.fs
 }
