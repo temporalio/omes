@@ -12,8 +12,19 @@ func Main() {
 	var rootCmd = &cobra.Command{
 		Use:   "omes",
 		Short: "A load generator for Temporal",
+		Run: func(cmd *cobra.Command, args []string) {
+			// Default behavior when no subcommand is specified
+			// Just wait if --wait flag is set, otherwise show help
+			if !waitAfterRun {
+				cmd.Help()
+			}
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			waitAfterRunIfRequested(cmd)
+		},
 	}
 
+	waitCmd(rootCmd)
 	rootCmd.AddCommand(cleanupScenarioCmd())
 	rootCmd.AddCommand(listScenariosCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())
