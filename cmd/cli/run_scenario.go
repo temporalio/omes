@@ -57,6 +57,7 @@ type scenarioRunConfig struct {
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
 	ignoreAlreadyStarted          bool
+	exportFailedHistories         string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -84,6 +85,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
+	fs.StringVar(&r.exportFailedHistories, "export-failed-histories", "", "Export failed workflow histories in JSON format. Optionally specify directory (defaults to current directory if flag specified without value)")
+	fs.Lookup("export-failed-histories").NoOptDefVal = "."
 }
 
 func (r *scenarioRunner) preRun() {
@@ -164,6 +167,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
+		ExportOptions: loadgen.ExportOptions{
+			ExportFailedHistories: r.exportFailedHistories,
+		},
 	}
 	executor := scenario.ExecutorFn()
 	err = executor.Run(ctx, scenarioInfo)

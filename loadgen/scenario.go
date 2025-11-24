@@ -118,6 +118,15 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
+	// ExportOptions contains export-related configuration
+	ExportOptions ExportOptions
+}
+
+// ExportOptions contains configuration for exporting scenario data.
+type ExportOptions struct {
+	// ExportFailedHistories is the directory to export failed workflow histories.
+	// Empty string means disabled.
+	ExportFailedHistories string
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
