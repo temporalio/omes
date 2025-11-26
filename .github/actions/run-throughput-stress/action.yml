@@ -65,17 +65,21 @@ runs:
 
     - name: Setup log directory
       shell: bash
-      run: mkdir -p ${{ inputs.log-dir }}
+      env:
+        LOG_DIR: ${{ inputs.log-dir }}
+      run: mkdir -p "$LOG_DIR"
 
     - name: Start Temporal Server
       if: inputs.server-address == ''
       shell: bash
+      env:
+        LOG_DIR: ${{ inputs.log-dir }}
       run: |
         temporal server start-dev \
           --db-filename temporal-throughput-stress.sqlite \
           --sqlite-pragma journal_mode=WAL \
           --sqlite-pragma synchronous=OFF \
-          --headless &> ${{ inputs.log-dir }}/temporal-server.log &
+          --headless &> "$LOG_DIR/temporal-server.log" &
 
         # Wait for server to be ready
         echo "Waiting for Temporal server to start..."
@@ -92,42 +96,49 @@ runs:
       shell: bash
       working-directory: omes-repo
       env:
+        LANGUAGE: ${{ inputs.language }}
+        VERSION_OVERRIDE: ${{ inputs.version-override }}
+        RUN_ID: ${{ inputs.run-id }}
         TEST_DURATION: ${{ inputs.duration }}
         TEST_TIMEOUT: ${{ inputs.timeout }}
+        MAX_CONCURRENT: ${{ inputs.max-concurrent }}
+        MIN_THROUGHPUT: ${{ inputs.min-throughput-per-hour }}
         LOG_DIR: ${{ inputs.log-dir }}
+        SERVER_ADDRESS: ${{ inputs.server-address }}
+        SERVER_NAMESPACE: ${{ inputs.server-namespace }}
         # Required for dotnet to avoid importing Directory.Build.props from parent directories
         ImportDirectoryBuildProps: ${{ inputs.language == 'dotnet' && 'false' || '' }}
       run: |
         set -o pipefail
 
         echo "=== Throughput Stress Test Configuration ==="
-        echo "Language: ${{ inputs.language }}"
+        echo "Language: $LANGUAGE"
         echo "Duration: $TEST_DURATION"
         echo "Timeout: $TEST_TIMEOUT"
-        echo "Run ID: ${{ inputs.run-id }}"
-        echo "SDK Path: ${{ inputs.version-override }}"
+        echo "Run ID: $RUN_ID"
+        echo "SDK Path: $VERSION_OVERRIDE"
         echo "============================================="
 
-        SERVER_ARGS=""
-        if [ -n "${{ inputs.server-address }}" ]; then
-          SERVER_ARGS="--server ${{ inputs.server-address }} --namespace ${{ inputs.server-namespace }}"
+        SERVER_ARGS=()
+        if [ -n "$SERVER_ADDRESS" ]; then
+          SERVER_ARGS=(--server "$SERVER_ADDRESS" --namespace "$SERVER_NAMESPACE")
         fi
 
         go run ./cmd run-scenario-with-worker \
           --scenario throughput_stress \
-          --language ${{ inputs.language }} \
-          --version ${{ inputs.version-override }} \
-          --run-id ${{ inputs.run-id }} \
-          --duration $TEST_DURATION \
-          --timeout $TEST_TIMEOUT \
-          --max-concurrent ${{ inputs.max-concurrent }} \
+          --language "$LANGUAGE" \
+          --version "$VERSION_OVERRIDE" \
+          --run-id "$RUN_ID" \
+          --duration "$TEST_DURATION" \
+          --timeout "$TEST_TIMEOUT" \
+          --max-concurrent "$MAX_CONCURRENT" \
           --option internal-iterations=10 \
           --option continue-as-new-after-iterations=3 \
           --option sleep-time=1s \
           --option visibility-count-timeout=5m \
-          --option min-throughput-per-hour=${{ inputs.min-throughput-per-hour }} \
-          $SERVER_ARGS \
-          2>&1 | tee $LOG_DIR/scenario.log
+          --option min-throughput-per-hour="$MIN_THROUGHPUT" \
+          "${SERVER_ARGS}" \
+          2>&1 | tee "$LOG_DIR/scenario.log"
 
     - name: Upload logs on failure
       if: failure() || cancelled()
