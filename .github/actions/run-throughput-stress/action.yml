@@ -1,0 +1,159 @@
+name: 'Run Throughput Stress'
+description: 'Runs the omes throughput stress scenario against a local SDK build'
+
+inputs:
+  language:
+    description: 'SDK language (go, java, python, dotnet, typescript)'
+    required: true
+  version-override:
+    description: 'Path to local SDK directory to test against'
+    required: true
+  run-id:
+    description: 'Unique run identifier'
+    required: true
+  duration:
+    description: 'Test duration (e.g., 5h, 1h)'
+    required: false
+    default: '5h'
+  timeout:
+    description: 'Scenario timeout (should be greater than duration)'
+    required: false
+    default: '5h30m'
+  max-concurrent:
+    description: 'Maximum concurrent workflows'
+    required: false
+    default: '10'
+  min-throughput-per-hour:
+    description: 'Minimum throughput per hour threshold'
+    required: false
+    default: '1000'
+  log-dir:
+    description: 'Directory to store logs'
+    required: false
+    default: '/tmp/throughput-stress-logs'
+  slack-webhook-url:
+    description: 'Slack webhook URL for failure notifications'
+    required: false
+    default: ''
+  server-address:
+    description: 'Temporal server address (if empty, starts local dev server)'
+    required: false
+    default: ''
+  server-namespace:
+    description: 'Temporal namespace'
+    required: false
+    default: 'default'
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout OMES
+      uses: actions/checkout@v4
+      with:
+        repository: temporalio/omes
+        ref: main
+        path: omes-repo
+
+    - name: Setup Go for OMES
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: omes-repo/go.mod
+        cache-dependency-path: omes-repo/go.sum
+
+    - name: Install Temporal CLI
+      uses: temporalio/setup-temporal@v0
+
+    - name: Setup log directory
+      shell: bash
+      run: mkdir -p ${{ inputs.log-dir }}
+
+    - name: Start Temporal Server
+      if: inputs.server-address == ''
+      shell: bash
+      run: |
+        temporal server start-dev \
+          --db-filename temporal-throughput-stress.sqlite \
+          --sqlite-pragma journal_mode=WAL \
+          --sqlite-pragma synchronous=OFF \
+          --headless &> ${{ inputs.log-dir }}/temporal-server.log &
+
+        # Wait for server to be ready
+        echo "Waiting for Temporal server to start..."
+        for i in {1..30}; do
+          if temporal workflow list --namespace default &>/dev/null; then
+            echo "Temporal server is ready"
+            break
+          fi
+          sleep 1
+        done
+
+    - name: Run throughput stress scenario
+      id: run-scenario
+      shell: bash
+      working-directory: omes-repo
+      env:
+        TEST_DURATION: ${{ inputs.duration }}
+        TEST_TIMEOUT: ${{ inputs.timeout }}
+        LOG_DIR: ${{ inputs.log-dir }}
+        # Required for dotnet to avoid importing Directory.Build.props from parent directories
+        ImportDirectoryBuildProps: ${{ inputs.language == 'dotnet' && 'false' || '' }}
+      run: |
+        set -o pipefail
+
+        echo "=== Throughput Stress Test Configuration ==="
+        echo "Language: ${{ inputs.language }}"
+        echo "Duration: $TEST_DURATION"
+        echo "Timeout: $TEST_TIMEOUT"
+        echo "Run ID: ${{ inputs.run-id }}"
+        echo "SDK Path: ${{ inputs.version-override }}"
+        echo "============================================="
+
+        SERVER_ARGS=""
+        if [ -n "${{ inputs.server-address }}" ]; then
+          SERVER_ARGS="--server ${{ inputs.server-address }} --namespace ${{ inputs.server-namespace }}"
+        fi
+
+        go run ./cmd run-scenario-with-worker \
+          --scenario throughput_stress \
+          --language ${{ inputs.language }} \
+          --version ${{ inputs.version-override }} \
+          --run-id ${{ inputs.run-id }} \
+          --duration $TEST_DURATION \
+          --timeout $TEST_TIMEOUT \
+          --max-concurrent ${{ inputs.max-concurrent }} \
+          --option internal-iterations=10 \
+          --option continue-as-new-after-iterations=3 \
+          --option sleep-time=1s \
+          --option visibility-count-timeout=5m \
+          --option min-throughput-per-hour=${{ inputs.min-throughput-per-hour }} \
+          $SERVER_ARGS \
+          2>&1 | tee $LOG_DIR/scenario.log
+
+    - name: Upload logs on failure
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v4
+      with:
+        name: throughput-stress-logs-${{ inputs.language }}
+        path: ${{ inputs.log-dir }}
+        retention-days: 30
+
+    - name: Notify Slack on failure
+      if: (failure() || cancelled()) && inputs.slack-webhook-url != ''
+      uses: slackapi/slack-github-action@v2
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+      with:
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": "Nightly ${{ inputs.language }} throughput stress test failed",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Nightly Throughput Stress Failed* :x:\n\n*Repository:* ${{ github.repository }}\n*Language:* ${{ inputs.language }}\n*Duration:* ${{ inputs.duration }}\n*Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>\n*Triggered by:* ${{ github.event_name == 'schedule' && 'Scheduled' || github.actor }}"
+                }
+              }
+            ]
+          }
