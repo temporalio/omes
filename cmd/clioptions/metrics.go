@@ -142,15 +142,19 @@ func (m metricsTimer) Record(duration time.Duration) {
 // to collect CPU and memory metrics. The standard ProcessCollector from Prometheus
 // only works on Linux (requires /proc).
 type processCollector struct {
-	pid            int32
+	process        *process.Process
 	cpuDesc        *prometheus.Desc
 	memDesc        *prometheus.Desc
 	memPercentDesc *prometheus.Desc
 }
 
-func newProcessCollector() *processCollector {
+func newProcessCollector() (*processCollector, error) {
+	p, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return nil, err
+	}
 	return &processCollector{
-		pid: int32(os.Getpid()),
+		process: p,
 		cpuDesc: prometheus.NewDesc(
 			"process_cpu_percent",
 			"CPU usage as a percentage (100 = 1 core).",
@@ -166,7 +170,7 @@ func newProcessCollector() *processCollector {
 			"Memory usage as a percentage of total system memory.",
 			nil, nil,
 		),
-	}
+	}, nil
 }
 
 func (c *processCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -175,23 +179,18 @@ func (c *processCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
-	p, err := process.NewProcess(c.pid)
-	if err != nil {
-		return
-	}
-
 	// CPU percent
-	if cpuPercent, err := p.Percent(0); err == nil {
+	if cpuPercent, err := c.process.Percent(0); err == nil {
 		ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.GaugeValue, cpuPercent)
 	}
 
 	// Resident memory (RSS)
-	if memInfo, err := p.MemoryInfo(); err == nil {
+	if memInfo, err := c.process.MemoryInfo(); err == nil {
 		ch <- prometheus.MustNewConstMetric(c.memDesc, prometheus.GaugeValue, float64(memInfo.RSS))
 	}
 
 	// Percent of total system memory
-	if memPercent, err := p.MemoryPercent(); err == nil {
+	if memPercent, err := c.process.MemoryPercent(); err == nil {
 		ch <- prometheus.MustNewConstMetric(c.memPercentDesc, prometheus.GaugeValue, float64(memPercent))
 	}
 }
@@ -225,7 +224,11 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 	registry := prometheus.NewRegistry()
 	var server *http.Server
 	if m.PrometheusListenAddress != "" {
-		registry.MustRegister(newProcessCollector())
+		procCollector, err := newProcessCollector()
+		if err != nil {
+			logger.Fatalf("Unable to setup process collector for Prometheus: %v", err)
+		}
+		registry.MustRegister(procCollector)
 		server = m.mustInitPrometheusServer(logger, registry)
 	}
 	var promInstance *PrometheusInstance
