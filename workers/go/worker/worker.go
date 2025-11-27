@@ -32,7 +32,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		a.logger.Fatal("Task queue suffix start after end")
 	}
 	a.logger = a.loggingOptions.MustCreateLogger()
-	metrics := a.metricsOptions.MustCreateMetrics(a.logger)
+	metrics := a.metricsOptions.MustCreateMetrics(cmd.Context(), a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
 	// If there is an end, we run multiple
@@ -48,7 +48,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
-	if err := metrics.Shutdown(cmd.Context()); err != nil {
+	if err := metrics.Shutdown(cmd.Context(), a.logger); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
 }

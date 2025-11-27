@@ -6,12 +6,13 @@ import (
 	"maps"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shirou/gopsutil/v4/process"
 	"github.com/spf13/pflag"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -137,6 +138,63 @@ func (m metricsTimer) Record(duration time.Duration) {
 	m.prom.Observe(duration.Seconds())
 }
 
+// processCollector is a cross-platform Prometheus collector that uses gopsutil
+// to collect CPU and memory metrics. The standard ProcessCollector from Prometheus
+// only works on Linux (requires /proc).
+type processCollector struct {
+	process        *process.Process
+	cpuDesc        *prometheus.Desc
+	memDesc        *prometheus.Desc
+	memPercentDesc *prometheus.Desc
+}
+
+func newProcessCollector() (*processCollector, error) {
+	p, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return nil, err
+	}
+	return &processCollector{
+		process: p,
+		cpuDesc: prometheus.NewDesc(
+			"process_cpu_percent",
+			"CPU usage as a percentage (100 = 1 core).",
+			nil, nil,
+		),
+		memDesc: prometheus.NewDesc(
+			"process_resident_memory_bytes",
+			"Resident memory size in bytes.",
+			nil, nil,
+		),
+		memPercentDesc: prometheus.NewDesc(
+			"process_memory_percent",
+			"Memory usage as a percentage of total system memory.",
+			nil, nil,
+		),
+	}, nil
+}
+
+func (c *processCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.cpuDesc
+	ch <- c.memDesc
+}
+
+func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
+	// CPU percent
+	if cpuPercent, err := c.process.Percent(0); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.GaugeValue, cpuPercent)
+	}
+
+	// Resident memory (RSS)
+	if memInfo, err := c.process.MemoryInfo(); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.memDesc, prometheus.GaugeValue, float64(memInfo.RSS))
+	}
+
+	// Percent of total system memory
+	if memPercent, err := c.process.MemoryPercent(); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.memPercentDesc, prometheus.GaugeValue, float64(memPercent))
+	}
+}
+
 // MetricsOptions for setting up Prometheus metrics.
 type MetricsOptions struct {
 	// Address for the Prometheus HTTP listener.
@@ -144,33 +202,44 @@ type MetricsOptions struct {
 	PrometheusListenAddress string
 	// HTTP path for serving metrics.
 	// Default "/metrics".
-	PrometheusHandlerPath string
+	PrometheusHandlerPath     string
+	prometheusInstanceOptions PrometheusInstanceOptions
 
 	fs         *pflag.FlagSet
 	usedPrefix string
 }
 
-// Metrics is a component for insrumenting an application with Promethues metrics.
+// Metrics is a component for insrumenting an application with Prometheus metrics.
 type Metrics struct {
-	server   *http.Server
-	registry *prometheus.Registry
-	cache    map[string]any
-	mutex    sync.Mutex
+	server       *http.Server
+	registry     *prometheus.Registry
+	cache        map[string]any
+	mutex        sync.Mutex
+	promInstance *PrometheusInstance
 }
 
 // MustCreateMetrics sets up Prometheus based metrics and starts an HTTP server
 // for serving metrics.
-func (m *MetricsOptions) MustCreateMetrics(logger *zap.SugaredLogger) *Metrics {
+func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.SugaredLogger) *Metrics {
 	registry := prometheus.NewRegistry()
 	var server *http.Server
 	if m.PrometheusListenAddress != "" {
-		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+		procCollector, err := newProcessCollector()
+		if err != nil {
+			logger.Fatalf("Unable to setup process collector for Prometheus: %v", err)
+		}
+		registry.MustRegister(procCollector)
 		server = m.mustInitPrometheusServer(logger, registry)
 	}
+	var promInstance *PrometheusInstance
+	if m.prometheusInstanceOptions.IsConfigured() {
+		promInstance = m.prometheusInstanceOptions.StartPrometheusInstance(ctx, logger)
+	}
 	return &Metrics{
-		server:   server,
-		registry: registry,
-		cache:    make(map[string]any),
+		server:       server,
+		registry:     registry,
+		cache:        make(map[string]any),
+		promInstance: promInstance,
 	}
 }
 
@@ -181,13 +250,18 @@ func (m *Metrics) NewHandler() client.MetricsHandler {
 	}
 }
 
-// Shutdown the Promethus HTTP server if one was set up.
-func (m *Metrics) Shutdown(ctx context.Context) error {
-	// server might be nil if no listen address was provided
-	if m.server == nil {
-		return nil
+// Shutdown the Prometheus HTTP server and local Prometheus process if they were set up.
+func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger) error {
+	// Shutdown prometheus process if running
+	if m.promInstance != nil {
+		m.promInstance.Shutdown(ctx, logger)
 	}
-	return m.server.Shutdown(ctx)
+
+	// Shutdown HTTP server
+	if m.server != nil {
+		return m.server.Shutdown(ctx)
+	}
+	return nil
 }
 
 func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
@@ -228,5 +302,6 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs = pflag.NewFlagSet("metrics_options", pflag.ExitOnError)
 	m.fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
 	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
+	m.fs.AddFlagSet(m.prometheusInstanceOptions.FlagSet(prefix))
 	return m.fs
 }
