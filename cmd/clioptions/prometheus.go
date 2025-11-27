@@ -28,7 +28,7 @@ type PrometheusInstanceOptions struct {
 	ExportWorkerMetricsPath string
 	// Worker job to export.
 	ExportWorkerMetricsJob string
-	// Step interval to sample timeseries metrics.
+	// Step interval when sampling timeseries metrics for the JSON output format.
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
@@ -161,10 +161,10 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context) error {
 
 	encoder := json.NewEncoder(file)
 
-	// TODO(thomas): fix, unsure if queries are correct given custom collector
 	queries := []metricQuery{
-		{"process_cpu_ratio", fmt.Sprintf(`rate(process_cpu_seconds_total{job="%s"}[1m])`, i.opts.ExportWorkerMetricsJob)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
 		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
 	}
 
 	for _, q := range queries {

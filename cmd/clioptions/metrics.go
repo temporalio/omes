@@ -142,22 +142,28 @@ func (m metricsTimer) Record(duration time.Duration) {
 // to collect CPU and memory metrics. The standard ProcessCollector from Prometheus
 // only works on Linux (requires /proc).
 type processCollector struct {
-	pid     int32
-	cpuDesc *prometheus.Desc
-	memDesc *prometheus.Desc
+	pid            int32
+	cpuDesc        *prometheus.Desc
+	memDesc        *prometheus.Desc
+	memPercentDesc *prometheus.Desc
 }
 
 func newProcessCollector() *processCollector {
 	return &processCollector{
 		pid: int32(os.Getpid()),
 		cpuDesc: prometheus.NewDesc(
-			"process_cpu_seconds_total",
-			"Total user and system CPU time spent in seconds.",
+			"process_cpu_percent",
+			"CPU usage as a percentage (100 = 1 core).",
 			nil, nil,
 		),
 		memDesc: prometheus.NewDesc(
 			"process_resident_memory_bytes",
 			"Resident memory size in bytes.",
+			nil, nil,
+		),
+		memPercentDesc: prometheus.NewDesc(
+			"process_memory_percent",
+			"Memory usage as a percentage of total system memory.",
 			nil, nil,
 		),
 	}
@@ -174,14 +180,19 @@ func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	// CPU times (user + system)
-	if times, err := p.Times(); err == nil {
-		ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.CounterValue, times.User+times.System)
+	// CPU percent
+	if cpuPercent, err := p.Percent(0); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.GaugeValue, cpuPercent)
 	}
 
 	// Resident memory (RSS)
 	if memInfo, err := p.MemoryInfo(); err == nil {
 		ch <- prometheus.MustNewConstMetric(c.memDesc, prometheus.GaugeValue, float64(memInfo.RSS))
+	}
+
+	// Percent of total system memory
+	if memPercent, err := p.MemoryPercent(); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.memPercentDesc, prometheus.GaugeValue, float64(memPercent))
 	}
 }
 
