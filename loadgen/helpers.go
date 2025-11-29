@@ -146,11 +146,6 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 		return nil // Export disabled
 	}
 
-	filter := info.ExportOptions.ExportHistoriesFilter
-	if filter == "" {
-		filter = "all" // Default
-	}
-
 	// Create run-specific output directory
 	outputDir := filepath.Join(
 		info.ExportOptions.ExportHistoriesDir,
@@ -161,7 +156,7 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 	}
 
 	query := fmt.Sprintf("%s='%s'", OmesExecutionIDSearchAttribute, info.ExecutionID)
-	query += buildStatusFilter(filter, info.Logger)
+	query += buildStatusFilter(info.ExportOptions.ExportHistoriesFilter, info.Logger)
 
 	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
@@ -238,7 +233,7 @@ func exportSingleWorkflowHistory(
 
 	// Sanitize workflow ID for filename (i.e. for child workflows)
 	safeWorkflowID := strings.ReplaceAll(workflowID, "/", "_")
-	filename := filepath.Join(outputDir, fmt.Sprintf("%s-%s.json", safeWorkflowID, runID))
+	filename := filepath.Join(outputDir, fmt.Sprintf("%s@%s.json", safeWorkflowID, runID))
 
 	if err := os.WriteFile(filename, data, 0644); err != nil {
 		return fmt.Errorf("failed to write history file: %w", err)
