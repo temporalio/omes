@@ -57,7 +57,8 @@ type scenarioRunConfig struct {
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
 	ignoreAlreadyStarted          bool
-	exportFailedHistories         string
+	exportHistoriesDir            string
+	exportHistoriesFilter         string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -85,8 +86,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
-	fs.StringVar(&r.exportFailedHistories, "export-failed-histories", "", "Export failed workflow histories in JSON format. Optionally specify directory (defaults to current directory if flag specified without value)")
-	fs.Lookup("export-failed-histories").NoOptDefVal = "."
+	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
+	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -175,13 +176,18 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
 		ExportOptions: loadgen.ExportOptions{
-			ExportFailedHistories: r.exportFailedHistories,
+			ExportHistoriesDir:    r.exportHistoriesDir,
+			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
 	executor := scenario.ExecutorFn()
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
+	}
+	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
+	if err != nil {
+		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
 }

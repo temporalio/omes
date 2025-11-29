@@ -130,9 +130,10 @@ type ScenarioInfo struct {
 
 // ExportOptions contains configuration for exporting scenario data.
 type ExportOptions struct {
-	// ExportFailedHistories is the directory to export failed workflow histories.
-	// Empty string means disabled.
-	ExportFailedHistories string
+	// Directory to export histories (empty = disabled)
+	ExportHistoriesDir string
+	// Status filter: "failed", "terminated", "failed,terminated", "all"
+	ExportHistoriesFilter string
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {

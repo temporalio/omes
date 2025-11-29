@@ -2,7 +2,6 @@ package loadgen
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -17,6 +16,8 @@ import (
 	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // InitSearchAttribute ensures that a search attribute is defined in the namespace.
@@ -139,62 +140,74 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 	return nil
 }
 
-// WorkflowHistoryExport represents the exported workflow history data.
-type WorkflowHistoryExport struct {
-	WorkflowID string                        `json:"workflowId"`
-	RunID      string                        `json:"runId"`
-	Status     enums.WorkflowExecutionStatus `json:"status"`
-	StartTime  time.Time                     `json:"startTime"`
-	CloseTime  time.Time                     `json:"closeTime"`
-	Events     []*history.HistoryEvent       `json:"events"`
-}
+// ExportWorkflowHistories exports workflow histories based on filter settings.
+func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
+	if info.ExportOptions.ExportHistoriesDir == "" {
+		return nil // Export disabled
+	}
 
-// ExportFailedWorkflowHistories exports histories of failed/terminated workflows to JSON files.
-func ExportFailedWorkflowHistories(ctx context.Context, info ScenarioInfo, searchAttribute string) error {
-	// Create output directory for failed histories
-	historiesDir := filepath.Join(info.ExportOptions.ExportFailedHistories, fmt.Sprintf("failed-histories-%s", info.RunID))
-	if err := os.MkdirAll(historiesDir, 0755); err != nil {
+	filter := info.ExportOptions.ExportHistoriesFilter
+	if filter == "" {
+		filter = "all" // Default
+	}
+
+	// Create run-specific output directory
+	outputDir := filepath.Join(
+		info.ExportOptions.ExportHistoriesDir,
+		fmt.Sprintf("histories-%s", info.ExecutionID),
+	)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create histories directory: %w", err)
 	}
 
-	// Query for failed and terminated workflows
-	statusQuery := fmt.Sprintf(
-		"%s='%s' and (ExecutionStatus = 'Failed' or ExecutionStatus = 'Terminated')",
-		searchAttribute, info.RunID)
+	query := fmt.Sprintf("%s='%s'", OmesExecutionIDSearchAttribute, info.ExecutionID)
+	query += buildStatusFilter(filter, info.Logger)
 
-	// List failed/terminated workflows
 	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
-		Query:     statusQuery,
+		Query:     query,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list failed workflows: %w", err)
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	if len(resp.Executions) == 0 {
+		info.Logger.Info("No workflows found matching export filter")
+		return nil
 	}
 
 	var exportErrors []string
-	totalExported := 0
-	// Export each workflow history
 	for _, execution := range resp.Executions {
-		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, historiesDir); err != nil {
-			exportErrors = append(exportErrors, fmt.Sprintf("failed to export %s: %v", execution.Execution.WorkflowId, err))
-		} else {
-			totalExported++
+		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
+			exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
 		}
 	}
 
-	if totalExported > 0 {
-		info.Logger.Infof("Exported %d failed workflow histories to %s", totalExported, historiesDir)
-	} else {
-		info.Logger.Info("No failed workflows found to export")
-	}
+	info.Logger.Infof("Exported %d workflow histories to %s",
+		len(resp.Executions)-len(exportErrors), outputDir)
 
 	if len(exportErrors) > 0 {
-		return fmt.Errorf("some exports failed: %s", strings.Join(exportErrors, "; "))
+		return fmt.Errorf("%d workflow history exports failed: %s", len(exportErrors), strings.Join(exportErrors, "\n "))
 	}
 	return nil
 }
 
-// exportSingleWorkflowHistory exports a single workflow's history to a JSON file.
+func buildStatusFilter(filter string, logger *zap.SugaredLogger) string {
+	switch filter {
+	case "failed":
+		return " AND ExecutionStatus = 'Failed'"
+	case "terminated":
+		return " AND ExecutionStatus = 'Terminated'"
+	case "failed,terminated", "terminated,failed":
+		return " AND (ExecutionStatus = 'Failed' OR ExecutionStatus = 'Terminated')"
+	case "all":
+		return "" // No status filter
+	default:
+		logger.Errorf("Unexpected status filter: %s", filter)
+		return ""
+	}
+}
+
 func exportSingleWorkflowHistory(
 	ctx context.Context,
 	c client.Client,
@@ -204,7 +217,6 @@ func exportSingleWorkflowHistory(
 	workflowID := execution.Execution.WorkflowId
 	runID := execution.Execution.RunId
 
-	// Fetch full workflow history
 	historyIter := c.GetWorkflowHistory(ctx, workflowID, runID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	var events []*history.HistoryEvent
 	for historyIter.HasNext() {
@@ -215,24 +227,18 @@ func exportSingleWorkflowHistory(
 		events = append(events, event)
 	}
 
-	// Create export structure
-	export := WorkflowHistoryExport{
-		WorkflowID: workflowID,
-		RunID:      runID,
-		Status:     execution.Status,
-		StartTime:  execution.StartTime.AsTime(),
-		CloseTime:  execution.CloseTime.AsTime(),
-		Events:     events,
+	history := &history.History{Events: events}
+	marshaler := protojson.MarshalOptions{
+		Indent: "  ",
 	}
-
-	// Write to JSON file
-	// Sanitize workflow ID to handle IDs with slashes (e.g., parent/child-10)
-	safeWorkflowID := strings.ReplaceAll(workflowID, "/", "_")
-	filename := filepath.Join(outputDir, fmt.Sprintf("workflow-%s-%s.json", safeWorkflowID, runID))
-	data, err := json.MarshalIndent(export, "", "  ")
+	data, err := marshaler.Marshal(history)
 	if err != nil {
 		return fmt.Errorf("failed to marshal history: %w", err)
 	}
+
+	// Sanitize workflow ID for filename (i.e. for child workflows)
+	safeWorkflowID := strings.ReplaceAll(workflowID, "/", "_")
+	filename := filepath.Join(outputDir, fmt.Sprintf("%s-%s.json", safeWorkflowID, runID))
 
 	if err := os.WriteFile(filename, data, 0644); err != nil {
 		return fmt.Errorf("failed to write history file: %w", err)
