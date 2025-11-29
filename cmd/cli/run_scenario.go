@@ -148,9 +148,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	// Generate a random execution ID to ensure no two executions with the same RunID collide
+	executionID, err := generateExecutionID()
+	if err != nil {
+		return fmt.Errorf("failed to generate execution ID: %w", err)
+	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
+		ExecutionID:    executionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,

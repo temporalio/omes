@@ -44,10 +44,6 @@ const (
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
 )
 
-const (
-	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
-)
-
 type tpsState struct {
 	// CompletedIterations is the number of iteration that have been completed.
 	CompletedIterations int `json:"completedIterations"`
@@ -69,6 +65,7 @@ type tpsConfig struct {
 	VisibilityVerificationTimeout time.Duration
 	MinThroughputPerHour          float64
 	ScenarioRunID                 string
+	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
 }
@@ -130,6 +127,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
 		MinThroughputPerHour:    info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
 		ScenarioRunID:           info.RunID,
+		ExecutionID:             info.ExecutionID,
 	}
 
 	// Generate random number generator seed based on the run ID.
@@ -192,12 +190,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Track start time of current run
 	currentRunStartTime := time.Now()
 
-	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
-	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
-	if err := loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
-		return err
-	}
-
 	t.lock.Lock()
 	isResuming := t.isResuming
 	currentState := *t.state
@@ -240,7 +232,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 				// Add search attribute to the workflow options so that it can be used in visibility queries.
 				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
-					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
+					temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(info.ExecutionID),
 				)
 
 				// Start some workflows via Update-with-Start.
@@ -314,7 +306,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query: fmt.Sprintf("%s='%s'",
-				ThroughputStressScenarioIdSearchAttribute, info.RunID),
+				loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
 		},
 		completedWorkflows,
 		t.config.VisibilityVerificationTimeout,
@@ -341,15 +333,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID); err != nil {
+	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
 		tpsErrors = append(tpsErrors, err)
-		// Export failed workflow histories if requested
-		if info.ExportOptions.ExportFailedHistories != "" {
-			info.Logger.Warn("Failed workflows detected, exporting histories...")
-			if exportErr := loadgen.ExportFailedWorkflowHistories(ctx, info, ThroughputStressScenarioIdSearchAttribute); exportErr != nil {
-				info.Logger.Errorf("Failed to export workflow histories: %v", exportErr)
-			}
-		}
 	}
 
 	return errors.Join(tpsErrors...)
@@ -362,7 +347,7 @@ func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioI
 	}
 
 	// Complain if there are already existing workflows with the provided run id; unless resuming.
-	workflowCountQry := fmt.Sprintf("%s='%s'", ThroughputStressScenarioIdSearchAttribute, info.RunID)
+	workflowCountQry := fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID)
 	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: info.Namespace,
 		Query:     workflowCountQry,
@@ -539,9 +524,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				},
 				WorkflowId: fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
 				SearchAttributes: map[string]*common.Payload{
-					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
+					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
-						Data:     []byte(fmt.Sprintf("%q", t.config.ScenarioRunID)), // quoted to be valid JSON string
+						Data:     []byte(fmt.Sprintf("%q", t.config.ExecutionID)), // quoted to be valid JSON string
 					},
 				},
 			},
