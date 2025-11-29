@@ -27,9 +27,6 @@ const (
 	// Default is 1s.
 	SleepTimeFlag     = "sleep-time"
 	NexusEndpointFlag = "nexus-endpoint"
-	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
-	// This should be set to allow resuming from a previous run.
-	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
 	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
@@ -60,7 +57,6 @@ type tpsConfig struct {
 	ContinueAsNewAfterIter        int
 	NexusEndpoint                 string
 	SleepTime                     time.Duration
-	SkipCleanNamespaceCheck       bool
 	SleepActivities               *loadgen.SleepActivityConfig
 	VisibilityVerificationTimeout time.Duration
 	MinThroughputPerHour          float64
@@ -122,12 +118,11 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
-		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
-		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
-		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
-		MinThroughputPerHour:    info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
-		ScenarioRunID:           info.RunID,
-		ExecutionID:             info.ExecutionID,
+		InternalIterTimeout:  info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
+		NexusEndpoint:        info.ScenarioOptions[NexusEndpointFlag],
+		MinThroughputPerHour: info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
+		ScenarioRunID:        info.RunID,
+		ExecutionID:          info.ExecutionID,
 	}
 
 	// Generate random number generator seed based on the run ID.
