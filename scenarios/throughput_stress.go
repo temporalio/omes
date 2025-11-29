@@ -198,10 +198,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
 		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
-	} else {
-		if err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck); err != nil {
-			return err
-		}
 	}
 
 	// Listen to iteration completion events to update the state.
@@ -338,29 +334,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	return errors.Join(tpsErrors...)
-}
-
-func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
-	if skipCleanNamespaceCheck {
-		info.Logger.Info("Skipping check to verify if the namespace is clean")
-		return nil
-	}
-
-	// Complain if there are already existing workflows with the provided run id; unless resuming.
-	workflowCountQry := fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID)
-	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-		Namespace: info.Namespace,
-		Query:     workflowCountQry,
-	})
-	if err != nil {
-		return err
-	}
-	if visibilityCount.Count > 0 {
-		return fmt.Errorf("there are already %d workflows with scenario Run ID '%s'",
-			visibilityCount.Count, info.RunID)
-	}
-
-	return nil
 }
 
 func (t *tpsExecutor) updateStateOnIterationCompletion() {
