@@ -71,19 +71,11 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 
 	// Run scenario
 	scenarioRunner := scenarioRunner{
-		logger:   r.Logger,
-		scenario: r.ScenarioID,
-		scenarioRunConfig: scenarioRunConfig{
-			iterations:                    r.iterations,
-			duration:                      r.duration,
-			maxConcurrent:                 r.maxConcurrent,
-			maxIterationsPerSecond:        r.maxIterationsPerSecond,
-			scenarioOptions:               r.scenarioOptions,
-			timeout:                       r.timeout,
-			doNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-		},
-		clientOptions:  r.ClientOptions,
-		metricsOptions: r.metricsOptions,
+		logger:            r.Logger,
+		scenario:          r.ScenarioID,
+		scenarioRunConfig: r.scenarioRunConfig,
+		clientOptions:     r.ClientOptions,
+		metricsOptions:    r.metricsOptions,
 	}
 	scenarioErr := scenarioRunner.run(ctx)
 	cancel()
