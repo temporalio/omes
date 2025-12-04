@@ -193,11 +193,11 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 
 	// Latency histogram metrics
 	histogramMetrics := []struct{ name, promName string }{
-		{"workflow_task_execution_latency", "temporal_workflow_task_execution_latency"},
-		{"workflow_task_schedule_to_start_latency", "temporal_workflow_task_schedule_to_start_latency"},
-		{"workflow_endtoend_latency", "temporal_workflow_endtoend_latency"},
-		{"activity_execution_latency", "temporal_activity_execution_latency"},
-		{"activity_schedule_to_start_latency", "temporal_activity_schedule_to_start_latency"},
+		{"workflow_task_execution_latency_seconds", "temporal_workflow_task_execution_latency"},
+		{"workflow_task_schedule_to_start_latency_seconds", "temporal_workflow_task_schedule_to_start_latency"},
+		{"workflow_endtoend_latency_seconds", "temporal_workflow_endtoend_latency"},
+		{"activity_execution_latency_seconds", "temporal_activity_execution_latency"},
+		{"activity_schedule_to_start_latency_seconds", "temporal_activity_schedule_to_start_latency"},
 	}
 	for _, m := range histogramMetrics {
 		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.50, "p50"))
