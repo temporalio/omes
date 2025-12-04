@@ -25,13 +25,13 @@ type PrometheusInstanceOptions struct {
 	ConfigPath string
 	// If true, create a TSDB snapshot on shutdown.
 	Snapshot bool
-	// Path to export worker metrics as JSON on shutdown.
+	// Path to export worker metrics on shutdown.
 	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
 	// Worker job to export.
 	ExportWorkerMetricsJob string
-	// Step interval when sampling timeseries metrics for the JSON output format.
+	// Step interval when sampling timeseries metrics for export.
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
@@ -117,7 +117,7 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 }
 
 func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger) {
-	// Export worker metrics as JSON if configured
+	// Export worker metrics if configured
 	if i.opts.ExportWorkerMetricsPath != "" {
 		err := i.exportWorkerMetrics(ctx, logger)
 		if err != nil {
@@ -291,7 +291,7 @@ func (i *PrometheusInstance) getTimeRange() (start, end time.Time, err error) {
 	return start, end, nil
 }
 
-// MetricLine represents a single metric data point in JSONL format.
+// MetricLine represents a single metric data point.
 type MetricLine struct {
 	Timestamp time.Time `json:"timestamp" parquet:"timestamp,timestamp"`
 	Metric    string    `json:"metric" parquet:"metric,dict"`
