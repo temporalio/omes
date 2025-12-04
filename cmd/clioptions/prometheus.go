@@ -186,8 +186,6 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	job := i.opts.ExportWorkerMetricsJob
 
-	job := i.opts.ExportWorkerMetricsJob
-
 	// Process metrics
 	queries := []metricQuery{
 		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, job)},
