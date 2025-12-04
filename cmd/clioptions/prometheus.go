@@ -23,7 +23,8 @@ type PrometheusInstanceOptions struct {
 	ConfigPath string
 	// If true, create a TSDB snapshot on shutdown.
 	Snapshot bool
-	// Path to export worker metrics (CPU/memory) as JSON on shutdown.
+	// Path to export worker metrics as JSON on shutdown.
+	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
 	// Worker job to export.
@@ -161,10 +162,36 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context) error {
 
 	encoder := json.NewEncoder(file)
 
+	job := i.opts.ExportWorkerMetricsJob
+
+	// Process metrics
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
-		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, job)},
+		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, job)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, job)},
+	}
+
+	// Polling/capacity metrics
+	gaugeMetrics := []struct{ name, promName string }{
+		{"num_pollers", "temporal_num_pollers"},
+		{"worker_task_slots_available", "temporal_worker_task_slots_available"},
+		{"worker_task_slots_used", "temporal_worker_task_slots_used"},
+	}
+	for _, m := range gaugeMetrics {
+		queries = append(queries, gaugeQuery(m.name, m.promName, job))
+	}
+
+	// Latency histogram metrics
+	histogramMetrics := []struct{ name, promName string }{
+		{"workflow_task_execution_latency", "temporal_workflow_task_execution_latency"},
+		{"workflow_task_schedule_to_start_latency", "temporal_workflow_task_schedule_to_start_latency"},
+		{"workflow_endtoend_latency", "temporal_workflow_endtoend_latency"},
+		{"activity_execution_latency", "temporal_activity_execution_latency"},
+		{"activity_schedule_to_start_latency", "temporal_activity_schedule_to_start_latency"},
+	}
+	for _, m := range histogramMetrics {
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.50, "p50"))
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.99, "p99"))
 	}
 
 	for _, q := range queries {
@@ -214,6 +241,19 @@ type MetricLine struct {
 type metricQuery struct {
 	name  string
 	query string
+}
+
+// Query builder helpers for different metric types.
+
+func gaugeQuery(name, promName, job string) metricQuery {
+	return metricQuery{name, fmt.Sprintf(`sum(%s{job="%s"})`, promName, job)}
+}
+
+func histogramQuantileQuery(name, promName, job string, quantile float64, percentile string) metricQuery {
+	return metricQuery{
+		name + "_" + percentile,
+		fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`, quantile, promName, job),
+	}
 }
 
 // MetricDataPoint represents a single data point with timestamp and value (internal use).
