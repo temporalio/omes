@@ -145,12 +145,20 @@ public static class App
             }));
         var logger = loggerFactory.CreateLogger(typeof(App));
 
-        // TODO: Configure metrics
+        var promAddr = ctx.ParseResult.GetValueForOption(promAddrOption);
+
         var runtime = new TemporalRuntime(new()
         {
             Telemetry = new TelemetryOptions
             {
-                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) },
+                Metrics = promAddr != null ? new MetricsOptions
+                {
+                    Prometheus = new PrometheusOptions(promAddr)
+                    {
+                        UseSecondsForDuration = true
+                    }
+                } : null
             }
         });
 

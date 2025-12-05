@@ -152,7 +152,7 @@ async def run():
     logger.setLevel(nameToLevel[args.log_level.upper()])
 
     prometheus = (
-        PrometheusConfig(bind_address=args.prom_listen_address)
+        PrometheusConfig(bind_address=args.prom_listen_address, durations_as_seconds=True)
         if args.prom_listen_address
         else None
     )
