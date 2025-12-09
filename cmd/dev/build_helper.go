@@ -86,6 +86,14 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		"--platform", strings.Join(b.platforms, ","),
 	}
 
+	// Add GitHub Actions cache backend if running in CI
+	if os.Getenv("CI") == "true" {
+		dockerArgs = append(dockerArgs,
+			"--cache-from", "type=gha",
+			"--cache-to", "type=gha,mode=max",
+		)
+	}
+
 	// Handle multi-platform build requirements
 	if len(b.platforms) > 1 {
 		if !allowPush {
