@@ -38,13 +38,11 @@ COPY workers/java ./workers/java
 
 # Download Gradle using wrapper to cache it in build layer
 ENV GRADLE_USER_HOME="/gradle"
-RUN --mount=type=cache,target=/gradle \
-    /app/workers/java/gradlew --version
+RUN /app/workers/java/gradlew --version
 
 # Build the worker
 WORKDIR /app
-RUN --mount=type=cache,target=/gradle \
-    CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up
