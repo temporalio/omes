@@ -45,7 +45,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Build kitchen-sink-gen (statically linked)
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,target=/app/loadgen/kitchen-sink-gen/target \
     cd loadgen/kitchen-sink-gen && \
   echo "TARGETARCH: $TARGETARCH" && \
   ARCH=$(uname -m) && \
