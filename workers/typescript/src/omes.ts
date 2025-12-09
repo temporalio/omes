@@ -125,7 +125,9 @@ async function run() {
   // Configure metrics
   const telemetryOptions: TelemetryOptions = {};
   if (opts.promListenAddress) {
-    telemetryOptions.metrics = { prometheus: { bindAddress: opts.promListenAddress } };
+    telemetryOptions.metrics = {
+      prometheus: { bindAddress: opts.promListenAddress, useSecondsForDurations: true },
+    };
   }
 
   Runtime.install({

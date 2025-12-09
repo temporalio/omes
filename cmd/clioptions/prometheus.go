@@ -2,12 +2,14 @@ package clioptions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"time"
 
+	"github.com/parquet-go/parquet-go"
+	"github.com/parquet-go/parquet-go/compress/zstd"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
@@ -23,12 +25,13 @@ type PrometheusInstanceOptions struct {
 	ConfigPath string
 	// If true, create a TSDB snapshot on shutdown.
 	Snapshot bool
-	// Path to export worker metrics (CPU/memory) as JSON on shutdown.
+	// Path to export worker metrics on shutdown.
+	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
 	// Worker job to export.
 	ExportWorkerMetricsJob string
-	// Step interval when sampling timeseries metrics for the JSON output format.
+	// Step interval when sampling timeseries metrics for export.
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
@@ -42,7 +45,7 @@ func (p *PrometheusInstanceOptions) FlagSet(prefix string) *pflag.FlagSet {
 	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "", "Start a local Prometheus instance with the specified config file (default: prom-config.yml)")
 	p.fs.Lookup(prefix + "prom-instance-config").NoOptDefVal = "prom-config.yml"
 	p.fs.BoolVar(&p.Snapshot, prefix+"prom-snapshot", false, "Create a TSDB snapshot on shutdown")
-	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics as JSONL to the specified file on shutdown")
+	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
 	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export metrics for")
 	p.fs.DurationVar(&p.ExportMetricsStep, prefix+"prom-export-metrics-step", 15*time.Second, "Step interval to sample timeseries metrics")
 	return p.fs
@@ -54,6 +57,8 @@ type PrometheusInstance struct {
 	prometheusCmd *exec.Cmd
 	// Prometheus API
 	api v1.API
+	// Time when the instance started
+	startTime time.Time
 }
 
 func (p *PrometheusInstanceOptions) IsConfigured() bool {
@@ -64,6 +69,7 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 	cmd := exec.CommandContext(ctx, "prometheus",
 		"--config.file="+p.ConfigPath,
 		"--web.enable-admin-api", // Required for snapshot API
+		"--web.listen-address="+p.Address,
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -74,7 +80,7 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 
 	logger.Infof("Started local Prometheus instance with config: %s (PID: %d)", p.ConfigPath, cmd.Process.Pid)
 
-	client, err := api.NewClient(api.Config{Address: p.Address})
+	client, err := api.NewClient(api.Config{Address: "http://" + p.Address})
 	if err != nil {
 		logger.Fatalf("Failed to create Prometheus client: %v", err)
 	}
@@ -83,6 +89,7 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 		opts:          p,
 		prometheusCmd: cmd,
 		api:           v1.NewAPI(client),
+		startTime:     time.Now(),
 	}
 
 	if err := instance.waitForReady(ctx, 30*time.Second); err != nil {
@@ -110,9 +117,9 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 }
 
 func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger) {
-	// Export worker metrics as JSON if configured
+	// Export worker metrics if configured
 	if i.opts.ExportWorkerMetricsPath != "" {
-		err := i.exportWorkerMetrics(ctx)
+		err := i.exportWorkerMetrics(ctx, logger)
 		if err != nil {
 			logger.Errorf("Failed to export worker metrics: %v", err)
 		} else {
@@ -147,8 +154,8 @@ func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLo
 	}
 }
 
-func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context) error {
-	start, end, err := i.getTimeRange(ctx)
+func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger) error {
+	start, end, err := i.getTimeRange()
 	if err != nil {
 		return fmt.Errorf("failed to get time range: %w", err)
 	}
@@ -159,43 +166,123 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context) error {
 	}
 	defer file.Close()
 
-	encoder := json.NewEncoder(file)
+	queries := i.buildMetricQueries()
 
+	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, logger)
+}
+
+func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
+	job := i.opts.ExportWorkerMetricsJob
+
+	// Process metrics
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
-		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, i.opts.ExportWorkerMetricsJob)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, job)},
+		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, job)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, job)},
+	}
+
+	// Polling/capacity metrics
+	gaugeMetrics := []struct{ name, promName string }{
+		{"num_pollers", "temporal_num_pollers"},
+		{"worker_task_slots_available", "temporal_worker_task_slots_available"},
+		{"worker_task_slots_used", "temporal_worker_task_slots_used"},
+	}
+	for _, m := range gaugeMetrics {
+		queries = append(queries, gaugeQuery(m.name, m.promName, job))
+	}
+
+	// Latency histogram metrics
+	histogramMetrics := []struct{ name, promName string }{
+		{"workflow_task_execution_latency_seconds", "temporal_workflow_task_execution_latency"},
+		{"workflow_task_schedule_to_start_latency_seconds", "temporal_workflow_task_schedule_to_start_latency"},
+		{"workflow_endtoend_latency_seconds", "temporal_workflow_endtoend_latency"},
+		{"activity_execution_latency_seconds", "temporal_activity_execution_latency"},
+		{"activity_schedule_to_start_latency_seconds", "temporal_activity_schedule_to_start_latency"},
+	}
+	for _, m := range histogramMetrics {
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.50, "p50"))
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.99, "p99"))
+	}
+
+	return queries
+}
+
+const parquetBatchSize = 5000
+
+func (i *PrometheusInstance) exportWorkerMetricsParquet(
+	ctx context.Context,
+	file *os.File,
+	queries []metricQuery,
+	start, end time.Time,
+	logger *zap.SugaredLogger,
+) (err error) {
+	writer := parquet.NewGenericWriter[MetricLine](file,
+		parquet.Compression(&zstd.Codec{}),
+	)
+	defer func() {
+		if closeErr := writer.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close parquet writer: %w", closeErr)
+		}
+	}()
+
+	metricsWithNaN := make(map[string]int)
+	metrics := make([]MetricLine, 0, parquetBatchSize)
+
+	flushBatch := func() error {
+		if len(metrics) == 0 {
+			return nil
+		}
+		if _, err := writer.Write(metrics); err != nil {
+			return fmt.Errorf("failed to write parquet batch: %w", err)
+		}
+		metrics = metrics[:0]
+		return nil
 	}
 
 	for _, q := range queries {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("export cancelled: %w", err)
+		}
+
 		dataPoints, err := i.queryPrometheusRange(ctx, q.query, start, end, i.opts.ExportMetricsStep)
 		if err != nil {
 			return fmt.Errorf("failed to query %s: %w", q.name, err)
 		}
 
 		for _, dp := range dataPoints {
-			err := encoder.Encode(MetricLine{
+			if math.IsNaN(dp.Value) {
+				metricsWithNaN[q.name]++
+				continue
+			}
+			metrics = append(metrics, MetricLine{
 				Timestamp: dp.Timestamp,
 				Metric:    q.name,
 				Value:     dp.Value,
 			})
-			if err != nil {
-				return fmt.Errorf("failed to write prometheus metric %s: %w", q.name, err)
+			if len(metrics) >= parquetBatchSize {
+				if err := flushBatch(); err != nil {
+					return err
+				}
 			}
 		}
+	}
+
+	// Flush remaining metrics
+	if err := flushBatch(); err != nil {
+		return err
+	}
+
+	if len(metricsWithNaN) > 0 {
+		logger.Warnf("Skipped NaN values for metrics (no data in time range): %v", metricsWithNaN)
 	}
 
 	return nil
 }
 
-func (i *PrometheusInstance) getTimeRange(ctx context.Context) (start, end time.Time, err error) {
-	tsdb, err := i.api.TSDB(ctx)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-
-	start = time.UnixMilli(int64(tsdb.HeadStats.MinTime))
-	end = time.UnixMilli(int64(tsdb.HeadStats.MaxTime))
+func (i *PrometheusInstance) getTimeRange() (start, end time.Time, err error) {
+	// Use the instance start time and current time to only export metrics from this run
+	start = i.startTime
+	end = time.Now()
 
 	if start.IsZero() || end.IsZero() || !start.Before(end) {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid time range (start=%v, end=%v)", start, end)
@@ -204,16 +291,29 @@ func (i *PrometheusInstance) getTimeRange(ctx context.Context) (start, end time.
 	return start, end, nil
 }
 
-// MetricLine represents a single metric data point in JSONL format.
+// MetricLine represents a single metric data point.
 type MetricLine struct {
-	Timestamp time.Time `json:"timestamp"`
-	Metric    string    `json:"metric"`
-	Value     float64   `json:"value"`
+	Timestamp time.Time `json:"timestamp" parquet:"timestamp,timestamp"`
+	Metric    string    `json:"metric" parquet:"metric,dict"`
+	Value     float64   `json:"value" parquet:"value"`
 }
 
 type metricQuery struct {
 	name  string
 	query string
+}
+
+// Query builder helpers for different metric types.
+
+func gaugeQuery(name, promName, job string) metricQuery {
+	return metricQuery{name, fmt.Sprintf(`sum(%s{job="%s"})`, promName, job)}
+}
+
+func histogramQuantileQuery(name, promName, job string, quantile float64, percentile string) metricQuery {
+	return metricQuery{
+		name + "_" + percentile,
+		fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`, quantile, promName, job),
+	}
 }
 
 // MetricDataPoint represents a single data point with timestamp and value (internal use).
