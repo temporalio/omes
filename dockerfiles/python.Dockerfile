@@ -25,12 +25,16 @@ COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    /usr/local/go/bin/go mod download
+
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
-COPY go.mod go.sum ./
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \

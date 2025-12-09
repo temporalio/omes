@@ -15,9 +15,7 @@ RUN apt-get update \
 # Install Rust for kitchen-sink-gen
 RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y \
   && . $HOME/.cargo/env \
-  && echo "TARGETARCH: $TARGETARCH" \
   && ARCH=$(uname -m) \
-  && echo "uname -m: $ARCH" \
   && if [ "$TARGETARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then \
        rustup target add aarch64-unknown-linux-musl; \
      else \
@@ -25,12 +23,16 @@ RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y \
      fi
 ENV PATH="$PATH:/root/.cargo/bin"
 
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers ./workers/
-COPY go.mod go.sum ./
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
