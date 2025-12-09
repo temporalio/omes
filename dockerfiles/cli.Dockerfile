@@ -33,13 +33,20 @@ COPY workers ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
 # Install protoc-gen-go for kitchen-sink-gen build
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 # Build kitchen-sink-gen (statically linked)
-RUN cd loadgen/kitchen-sink-gen && \
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/app/loadgen/kitchen-sink-gen/target \
+    cd loadgen/kitchen-sink-gen && \
   echo "TARGETARCH: $TARGETARCH" && \
   ARCH=$(uname -m) && \
   echo "uname -m: $ARCH" && \

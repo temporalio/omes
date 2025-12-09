@@ -28,7 +28,9 @@ COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 
@@ -42,10 +44,14 @@ COPY workers/typescript ./workers/typescript
 
 # Build typescript proto files
 # hadolint ignore=DL3003
-RUN cd workers/typescript && npm install && npm run proto-gen
+RUN --mount=type=cache,target=/root/.npm \
+    cd workers/typescript && npm install && npm run proto-gen
 
 # Build the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/root/.npm \
+    CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.
 # hadolint ignore=DL3006
