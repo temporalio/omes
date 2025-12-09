@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <!-- Library since entry point is in generated temp program.csproj -->
-        <OutputType>Library</OutputType>
+        <OutputType>Exe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFramework>net8.0</TargetFramework>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -10,8 +9,11 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
-        <!-- Exclude temp build directories created by omes -->
-        <DefaultItemExcludes>$(DefaultItemExcludes);omes-temp-*/**</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <!-- When testing/linting, treat this as a library so no Main method is needed. -->
+    <PropertyGroup Condition="'$(Configuration)' == 'Library'">
+        <OutputType>Library</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
