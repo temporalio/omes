@@ -189,14 +189,17 @@ public class Main implements Runnable {
     // Use a custom naming convention that doesn't add _seconds suffix to timers,
     // for consistency with other Temporal SDKs
     PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
-    registry.config().namingConvention(new PrometheusNamingConvention() {
-      @Override
-      public String name(String name, Meter.Type type, String baseUnit) {
-        // Don't add unit suffix - Temporal SDKs report duration values in seconds
-        // but don't include _seconds in the metric name
-        return NamingConvention.snakeCase.name(name, type, null);
-      }
-    });
+    registry
+        .config()
+        .namingConvention(
+            new PrometheusNamingConvention() {
+              @Override
+              public String name(String name, Meter.Type type, String baseUnit) {
+                // Don't add unit suffix - Temporal SDKs report duration values in seconds
+                // but don't include _seconds in the metric name
+                return NamingConvention.snakeCase.name(name, type, null);
+              }
+            });
     StatsReporter reporter = new MicrometerClientStatsReporter(registry);
     // set up a new scope, report every 10 seconds
     Scope scope =
