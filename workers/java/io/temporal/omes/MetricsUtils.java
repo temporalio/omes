@@ -32,6 +32,9 @@ public class MetricsUtils {
           path,
           httpExchange -> {
             String response = registry.scrape();
+            httpExchange
+                .getResponseHeaders()
+                .set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
             httpExchange.sendResponseHeaders(200, response.getBytes(UTF_8).length);
             try (OutputStream os = httpExchange.getResponseBody()) {
               os.write(response.getBytes(UTF_8));
