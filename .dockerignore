@@ -1,0 +1,55 @@
+# Git
+.git
+.gitattributes
+# Note: .gitignore is intentionally NOT excluded because Dockerfiles use it as a default dummy file for SDK_DIR
+
+# CI/CD
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Build artifacts and caches
+workers/*/omes-temp-*/
+workers/*/prepared/
+workers/java/bin
+workers/java/build
+.gradle
+workers/dotnet/obj/
+workers/dotnet/bin/
+loadgen/kitchen-sink-gen/target/
+temporal-omes
+
+# Language-specific
+## Python
+.venv
+*.pyc
+__pycache__/
+.mypy_cache
+*.egg-info/
+
+## Node/TypeScript
+node_modules/
+
+## Go
+go.work
+go.work.sum
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+last_fuzz_run.proto
+workers/dotnet/Temporalio.Omes.temp.csproj
+
+# Documentation (not needed in container)
+*.md
+LICENSE
+docs/
+
+# Mise config (local tooling)
+mise.toml

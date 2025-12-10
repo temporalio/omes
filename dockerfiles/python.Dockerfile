@@ -1,16 +1,18 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
-ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
-FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
+FROM ghcr.io/astral-sh/uv:latest AS uv
+FROM python:3.11-slim-bullseye AS build
 
-# Install protobuf compiler
+ARG TARGETARCH
+
+# Install protobuf compiler and build tools
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1 \
+    build-essential wget ca-certificates
 
 # Get go compiler
-ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 # Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
@@ -25,15 +27,21 @@ COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    /usr/local/go/bin/go mod download
+
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
-COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 
@@ -45,7 +53,12 @@ COPY ${SDK_DIR} ./repo
 COPY workers/python ./workers/python
 
 # Build the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
+    --mount=type=cache,id=uv-cache-${TARGETARCH},target=/root/.cache/uv \
+    CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye

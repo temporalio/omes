@@ -71,7 +71,7 @@ func (b *cliImageBuilder) build(ctx context.Context, allowPush bool) error {
 	}
 
 	// Build docker command args
-	args, err := b.buildDockerArgs("dockerfiles/cli.Dockerfile", allowPush, []string{})
+	args, err := b.buildDockerArgs("dockerfiles/cli.Dockerfile", allowPush, []string{}, "")
 	if err != nil {
 		if !allowPush {
 			return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-cli-image command instead")

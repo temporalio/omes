@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
-ARG TARGETARCH
+FROM golang:1.25 AS build
 
-FROM --platform=linux/$TARGETARCH golang:1.25 AS build
+# TARGETARCH is automatically populated by Docker based on --platform flag
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -25,21 +27,31 @@ RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y \
      fi
 ENV PATH="$PATH:/root/.cargo/bin"
 
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers ./workers/
-COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
 # Install protoc-gen-go for kitchen-sink-gen build
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 # Build kitchen-sink-gen (statically linked)
-RUN cd loadgen/kitchen-sink-gen && \
+RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
+    --mount=type=cache,id=cargo-target-${TARGETARCH},target=/app/loadgen/kitchen-sink-gen/target \
+    cd loadgen/kitchen-sink-gen && \
   echo "TARGETARCH: $TARGETARCH" && \
   ARCH=$(uname -m) && \
   echo "uname -m: $ARCH" && \
@@ -49,13 +61,14 @@ RUN cd loadgen/kitchen-sink-gen && \
     RUST_TARGET=x86_64-unknown-linux-musl; \
   fi && \
   echo "Building for rust target: $RUST_TARGET" && \
-  RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET
+  RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET && \
+  cp target/$RUST_TARGET/release/kitchen-sink-gen /tmp/kitchen-sink-gen
 
 # Copy the CLI to a distroless "run" container
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
+FROM gcr.io/distroless/static-debian11:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
-COPY --from=build /app/loadgen/kitchen-sink-gen/target/*/release/kitchen-sink-gen /app/kitchen-sink-gen
+COPY --from=build /tmp/kitchen-sink-gen /app/kitchen-sink-gen
 
 # Default entrypoint for CLI usage
 ENTRYPOINT ["/app/temporal-omes"]
