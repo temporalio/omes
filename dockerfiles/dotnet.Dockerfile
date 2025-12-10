@@ -1,13 +1,31 @@
-# Build CLI using official golang image
+# Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH golang:1.25 AS go-builder
+FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
+
+# Install protobuf compiler and build tools
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive \
+    apt-get install --no-install-recommends --assume-yes \
+      protobuf-compiler=3.12.4* libprotobuf-dev=3.12.4* build-essential=12.*
+
+# Get go compiler
+ARG TARGETARCH
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
+
+# Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
+# in the "build" container (-y is for non-interactive install)
+# hadolint ignore=DL4006
+RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
+
+ENV PATH="$PATH:/root/.cargo/bin:/usr/local/go/bin"
 
 WORKDIR /app
 
 # Copy dependency files first for better layer caching
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
+    /usr/local/go/bin/go mod download
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
@@ -18,27 +36,7 @@ COPY workers/*.go ./workers/
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o temporal-omes ./cmd
-
-# Build worker using official .NET SDK image
-FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
-
-# Install protobuf compiler and build tools
-RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive \
-    apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.12.4* libprotobuf-dev=3.12.4* build-essential=12.* \
-      curl \
- && rm -rf /var/lib/apt/lists/*
-
-# Install Rust using official rustup installer
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.83.0
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-WORKDIR /app
-
-# Copy the CLI from go-builder stage
-COPY --from=go-builder /app/temporal-omes /app/temporal-omes
+    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 

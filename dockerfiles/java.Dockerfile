@@ -15,21 +15,15 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
 
 WORKDIR /app
 
-# Copy dependency files first for better layer caching
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    /usr/local/go/bin/go mod download
-
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
+COPY go.mod go.sum ./
 
 # Build the CLI
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 
@@ -42,15 +36,11 @@ COPY workers/java ./workers/java
 
 # Download Gradle using wrapper to cache it in build layer
 ENV GRADLE_USER_HOME="/gradle"
-RUN --mount=type=cache,target=/gradle-cache \
-    GRADLE_USER_HOME=/gradle-cache /app/workers/java/gradlew --version && \
-    cp -r /gradle-cache /gradle
+RUN /app/workers/java/gradlew --version
 
 # Build the worker
 WORKDIR /app
-RUN --mount=type=cache,target=/gradle-cache \
-    GRADLE_USER_HOME=/gradle-cache CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION" && \
-    cp -r /gradle-cache /gradle
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up

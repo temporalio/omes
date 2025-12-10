@@ -4,21 +4,15 @@ FROM --platform=linux/$TARGETARCH golang:1.25 AS build
 
 WORKDIR /app
 
-# Copy dependency files first for better layer caching
-COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download
-
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
+COPY go.mod go.sum ./
 
 # Build the CLI
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 
@@ -30,9 +24,7 @@ COPY ${SDK_DIR} ./repo
 COPY workers/go ./workers/go
 
 # Build the worker
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
 FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
