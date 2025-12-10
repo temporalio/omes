@@ -30,7 +30,7 @@ func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {
 	fs.AddFlagSet(b.loggingOptions.FlagSet())
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
-	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")
+	fs.StringSliceVar(&b.platforms, "platform", []string{"linux/amd64"}, "Platforms for use in docker build --platform")
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
 	fs.StringVar(&b.repoPrefix, "repo-prefix", "", "Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.")
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
