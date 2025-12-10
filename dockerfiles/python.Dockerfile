@@ -10,7 +10,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
     protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1 \
-    build-essential=12.9 wget=1.21-1+deb11u1
+    build-essential wget ca-certificates
 
 # Get go compiler
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \

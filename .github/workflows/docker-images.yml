@@ -46,6 +46,7 @@ on:
 
 jobs:
   build-and-push-images:
+    name: Publish ${{ inputs.lang || 'CLI' }} to Docker Hub
     runs-on: ubuntu-latest
     if: inputs.do-push && !github.event.pull_request.head.repo.fork
     timeout-minutes: 30
