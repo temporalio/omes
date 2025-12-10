@@ -1,6 +1,8 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
+FROM golang:1.25 AS build
+
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH golang:1.25 AS build
 
 WORKDIR /app
 

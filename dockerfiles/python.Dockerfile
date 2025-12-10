@@ -1,7 +1,10 @@
+
+
 # Build in a full featured container
+FROM ghcr.io/astral-sh/uv:latest AS uv
+FROM python:3.11-bullseye AS build
+
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
-FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
 
 # Install protobuf compiler
 RUN apt-get update \
@@ -10,7 +13,6 @@ RUN apt-get update \
     protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
 # Get go compiler
-ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 # Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install

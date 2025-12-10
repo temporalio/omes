@@ -1,6 +1,9 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
+FROM node:20-bullseye AS build
+
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH node:20-bullseye AS build
+
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install protobuf compiler
@@ -10,7 +13,6 @@ RUN apt-get update \
       protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
 # Get go compiler
-ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 

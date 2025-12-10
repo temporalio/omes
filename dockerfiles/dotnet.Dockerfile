@@ -1,6 +1,8 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
+FROM mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
+
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
 
 # Install protobuf compiler and build tools
 RUN apt-get update \
@@ -9,7 +11,6 @@ RUN apt-get update \
       protobuf-compiler=3.12.4* libprotobuf-dev=3.12.4* build-essential=12.*
 
 # Get go compiler
-ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 

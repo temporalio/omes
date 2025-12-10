@@ -1,6 +1,8 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
+FROM eclipse-temurin:11-jammy AS build
+
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH eclipse-temurin:11-jammy AS build
 
 # Install protobuf compiler and dependencies
 RUN apt-get update \
@@ -9,21 +11,26 @@ RUN apt-get update \
       protobuf-compiler=3.12.4* git=1:2.34.1-1ubuntu1
 
 # Get go compiler
-ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
 
 WORKDIR /app
+
+# Copy dependency files first for better layer caching
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    /usr/local/go/bin/go mod download
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
-COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
 
@@ -34,13 +41,17 @@ COPY ${SDK_DIR} ./repo
 # Copy the worker files
 COPY workers/java ./workers/java
 
-# Download Gradle using wrapper to cache it in build layer
+# Download Gradle using wrapper and cache it
 ENV GRADLE_USER_HOME="/gradle"
-RUN /app/workers/java/gradlew --version
+RUN --mount=type=cache,target=/gradle-cache \
+    GRADLE_USER_HOME=/gradle-cache /app/workers/java/gradlew --version && \
+    cp -r /gradle-cache /gradle
 
 # Build the worker
 WORKDIR /app
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
+RUN --mount=type=cache,target=/gradle-cache \
+    GRADLE_USER_HOME=/gradle-cache CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION" && \
+    cp -r /gradle-cache /gradle
 
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up

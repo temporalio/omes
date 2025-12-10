@@ -109,6 +109,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose cache mounts for buildkit
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          cache-map: |
+            {
+              "go-pkg": "/go/pkg/mod",
+              "go-build-amd64": "/root/.cache/go-build",
+              "cargo-registry": "/root/.cargo/registry",
+              "cargo-git": "/root/.cargo/git",
+              "uv-cache": "/root/.cache/uv",
+              "npm-cache-amd64": "/root/.npm",
+              "gradle-cache-amd64": "/gradle-cache",
+              "nuget-cache-amd64": "/root/.nuget/packages"
+            }
+          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
       - name: Build ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev build-worker-image \
@@ -258,6 +275,17 @@ jobs:
           cache: true
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Expose cache mounts for buildkit
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          cache-map: |
+            {
+              "go-pkg": "/go/pkg/mod",
+              "go-build-amd64": "/root/.cache/go-build",
+              "cargo-registry": "/root/.cargo/registry",
+              "cargo-git": "/root/.cargo/git"
+            }
+          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
       - name: Build CLI image
         run: |
           go run ./cmd/dev build-cli-image
