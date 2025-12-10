@@ -36,16 +36,6 @@ type PrometheusInstanceOptions struct {
 	ExportMetricsStep time.Duration
 }
 
-type PrometheusInstance struct {
-	opts *PrometheusInstanceOptions
-	// Derived prometheus command based on given options
-	prometheusCmd *exec.Cmd
-	// Prometheus API
-	api v1.API
-	// Time when the instance started
-	startTime time.Time
-}
-
 func (p *PrometheusInstanceOptions) IsConfigured() bool {
 	return p.Address != "" && p.ConfigPath != ""
 }
@@ -82,6 +72,16 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 	}
 
 	return instance
+}
+
+type PrometheusInstance struct {
+	opts *PrometheusInstanceOptions
+	// Derived prometheus command based on given options
+	prometheusCmd *exec.Cmd
+	// Prometheus API
+	api v1.API
+	// Time when the instance started
+	startTime time.Time
 }
 
 func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Duration) error {
@@ -276,37 +276,6 @@ func (i *PrometheusInstance) getTimeRange() (start, end time.Time, err error) {
 	return start, end, nil
 }
 
-// MetricLine represents a single metric data point.
-type MetricLine struct {
-	Timestamp time.Time `json:"timestamp" parquet:"timestamp,timestamp"`
-	Metric    string    `json:"metric" parquet:"metric,dict"`
-	Value     float64   `json:"value" parquet:"value"`
-}
-
-type metricQuery struct {
-	name  string
-	query string
-}
-
-// Query builder helpers for different metric types.
-
-func gaugeQuery(name, promName, job string) metricQuery {
-	return metricQuery{name, fmt.Sprintf(`sum(%s{job="%s"})`, promName, job)}
-}
-
-func histogramQuantileQuery(name, promName, job string, quantile float64, percentile string) metricQuery {
-	return metricQuery{
-		name + "_" + percentile,
-		fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`, quantile, promName, job),
-	}
-}
-
-// MetricDataPoint represents a single data point with timestamp and value (internal use).
-type MetricDataPoint struct {
-	Timestamp time.Time
-	Value     float64
-}
-
 func (i *PrometheusInstance) queryPrometheusRange(ctx context.Context, query string, start, end time.Time, step time.Duration) ([]MetricDataPoint, error) {
 	result, _, err := i.api.QueryRange(ctx, query, v1.Range{
 		Start: start,
@@ -340,4 +309,35 @@ func (i *PrometheusInstance) createPrometheusSnapshot(ctx context.Context) (stri
 		return "", fmt.Errorf("failed to create snapshot: %w", err)
 	}
 	return result.Name, nil
+}
+
+// MetricLine represents a single metric data point.
+type MetricLine struct {
+	Timestamp time.Time `json:"timestamp" parquet:"timestamp,timestamp"`
+	Metric    string    `json:"metric" parquet:"metric,dict"`
+	Value     float64   `json:"value" parquet:"value"`
+}
+
+type metricQuery struct {
+	name  string
+	query string
+}
+
+// Query builder helpers for different metric types.
+
+func gaugeQuery(name, promName, job string) metricQuery {
+	return metricQuery{name, fmt.Sprintf(`sum(%s{job="%s"})`, promName, job)}
+}
+
+func histogramQuantileQuery(name, promName, job string, quantile float64, percentile string) metricQuery {
+	return metricQuery{
+		name + "_" + percentile,
+		fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`, quantile, promName, job),
+	}
+}
+
+// MetricDataPoint represents a single data point with timestamp and value (internal use).
+type MetricDataPoint struct {
+	Timestamp time.Time
+	Value     float64
 }

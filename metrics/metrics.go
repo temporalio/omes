@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Metrics is a component for insrumenting an application with Prometheus metrics.
+// Metrics is a component for instrumenting an application with Prometheus metrics.
 type Metrics struct {
 	Server       *http.Server
 	Registry     *prometheus.Registry
