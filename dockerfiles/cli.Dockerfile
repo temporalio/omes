@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
-ARG TARGETARCH
+FROM golang:1.25 AS build
 
-FROM --platform=linux/$TARGETARCH golang:1.25 AS build
+# TARGETARCH is automatically populated by Docker based on --platform flag
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -62,7 +63,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
   RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET
 
 # Copy the CLI to a distroless "run" container
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
+FROM gcr.io/distroless/static-debian11:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/loadgen/kitchen-sink-gen/target/*/release/kitchen-sink-gen /app/kitchen-sink-gen
