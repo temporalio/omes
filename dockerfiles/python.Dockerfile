@@ -1,34 +1,13 @@
-# Build in a full featured container
+# Build CLI using official golang image
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
-FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
-
-# Install protobuf compiler
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive \
-    apt-get install --no-install-recommends --assume-yes \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
-
-# Get go compiler
-ARG TARGETARCH
-RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
-    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
-# Install Rust for compiling the core bridge - only required for installation from a repo but is cheap enough to install
-# in the "build" container (-y is for non-interactive install)
-# hadolint ignore=DL4006
-RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
-
-ENV PATH="$PATH:/root/.cargo/bin"
-
-# Install uv
-COPY --from=uv /uv /uvx /bin/
+FROM --platform=linux/$TARGETARCH golang:1.25 AS go-builder
 
 WORKDIR /app
 
 # Copy dependency files first for better layer caching
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
-    /usr/local/go/bin/go mod download
+    go mod download
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
@@ -39,7 +18,30 @@ COPY workers/*.go ./workers/
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+    CGO_ENABLED=0 go build -o temporal-omes ./cmd
+
+# Build worker using official rust image (for Python SDK core bridge compilation)
+FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
+FROM --platform=linux/$TARGETARCH rust:1.83-bookworm AS build
+
+# Install Python 3.11
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive \
+    apt-get install --no-install-recommends --assume-yes \
+    python3.11 python3.11-dev python3.11-venv \
+    protobuf-compiler libprotobuf-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.11 as default
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Install uv
+COPY --from=uv /uv /uvx /bin/
+
+WORKDIR /app
+
+# Copy the CLI from go-builder stage
+COPY --from=go-builder /app/temporal-omes /app/temporal-omes
 
 ARG SDK_VERSION
 
@@ -56,8 +58,8 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cache/uv \
     CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and built worker to a distroless "run" container
-FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
+# Copy the CLI and built worker to a "run" container
+FROM --platform=linux/$TARGETARCH python:3.11-slim-bookworm
 
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
