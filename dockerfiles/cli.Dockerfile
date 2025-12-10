@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
 ARG TARGETARCH
 
