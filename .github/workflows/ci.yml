@@ -118,12 +118,16 @@ jobs:
             {
               "go-pkg": "/go/pkg/mod",
               "go-build-amd64": "/root/.cache/go-build",
+              "go-build-arm64": "/root/.cache/go-build",
               "cargo-registry": "/root/.cargo/registry",
               "cargo-git": "/root/.cargo/git",
               "uv-cache": "/root/.cache/uv",
               "npm-cache-amd64": "/root/.npm",
+              "npm-cache-arm64": "/root/.npm",
               "gradle-cache-amd64": "/gradle-cache",
-              "nuget-cache-amd64": "/root/.nuget/packages"
+              "gradle-cache-arm64": "/gradle-cache",
+              "nuget-cache-amd64": "/root/.nuget/packages",
+              "nuget-cache-arm64": "/root/.nuget/packages"
             }
           skip-extraction: ${{ steps.cache.outputs.cache-hit }}
       - name: Build ${{ matrix.sdk }} worker image
@@ -282,6 +286,7 @@ jobs:
             {
               "go-pkg": "/go/pkg/mod",
               "go-build-amd64": "/root/.cache/go-build",
+              "go-build-arm64": "/root/.cache/go-build",
               "cargo-registry": "/root/.cargo/registry",
               "cargo-git": "/root/.cargo/git"
             }

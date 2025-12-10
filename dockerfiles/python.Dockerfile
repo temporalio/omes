@@ -1,5 +1,4 @@
-
-
+# syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
 FROM ghcr.io/astral-sh/uv:latest AS uv
 FROM python:3.11-bullseye AS build
@@ -40,7 +39,7 @@ COPY workers/*.go ./workers/
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
     CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
@@ -53,9 +52,11 @@ COPY ${SDK_DIR} ./repo
 COPY workers/python ./workers/python
 
 # Build the worker
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
+    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
     CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container

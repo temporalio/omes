@@ -29,7 +29,7 @@ COPY workers/*.go ./workers/
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
     CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
@@ -43,13 +43,15 @@ COPY workers/java ./workers/java
 
 # Download Gradle using wrapper and cache it
 ENV GRADLE_USER_HOME="/gradle"
-RUN --mount=type=cache,target=/gradle-cache \
+RUN --mount=type=cache,id=gradle-cache-${TARGETARCH},target=/gradle-cache \
     GRADLE_USER_HOME=/gradle-cache /app/workers/java/gradlew --version && \
     cp -r /gradle-cache /gradle
 
 # Build the worker
 WORKDIR /app
-RUN --mount=type=cache,target=/gradle-cache \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    --mount=type=cache,id=gradle-cache-${TARGETARCH},target=/gradle-cache \
     GRADLE_USER_HOME=/gradle-cache CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION" && \
     cp -r /gradle-cache /gradle
 

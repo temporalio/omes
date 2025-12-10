@@ -36,7 +36,7 @@ COPY workers/*.go ./workers/
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
     CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
@@ -49,9 +49,11 @@ COPY ${SDK_DIR} ./repo
 COPY workers/dotnet ./workers/dotnet
 
 # Prepare the worker
-RUN --mount=type=cache,target=/root/.nuget/packages \
-    --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
+    --mount=type=cache,id=nuget-cache-${TARGETARCH},target=/root/.nuget/packages \
+    --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
     CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a distroless "run" container

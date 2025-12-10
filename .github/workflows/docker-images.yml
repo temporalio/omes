@@ -45,20 +45,10 @@ on:
         type: string
 
 jobs:
-  # Stage 1: Build each platform in parallel
-  build-single-platform:
-    name: Build ${{ inputs.lang || 'CLI' }} (${{ matrix.platform-name }})
+  build-and-push-images:
     runs-on: ubuntu-latest
     if: inputs.do-push && !github.event.pull_request.head.repo.fork
     timeout-minutes: 30
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm64]
-        include:
-          - platform: linux/amd64
-            platform-name: amd64
-          - platform: linux/arm64
-            platform-name: arm64
     steps:
       - name: Checkout omes repo
         uses: actions/checkout@v4
@@ -92,13 +82,17 @@ jobs:
           cache-map: |
             {
               "go-pkg": "/go/pkg/mod",
-              "go-build-${{ matrix.platform-name }}": "/root/.cache/go-build",
+              "go-build-amd64": "/root/.cache/go-build",
+              "go-build-arm64": "/root/.cache/go-build",
               "cargo-registry": "/root/.cargo/registry",
               "cargo-git": "/root/.cargo/git",
               "uv-cache": "/root/.cache/uv",
-              "npm-cache-${{ matrix.platform-name }}": "/root/.npm",
-              "gradle-cache-${{ matrix.platform-name }}": "/gradle-cache",
-              "nuget-cache-${{ matrix.platform-name }}": "/root/.nuget/packages"
+              "npm-cache-amd64": "/root/.npm",
+              "npm-cache-arm64": "/root/.npm",
+              "gradle-cache-amd64": "/gradle-cache",
+              "gradle-cache-arm64": "/gradle-cache",
+              "nuget-cache-amd64": "/root/.nuget/packages",
+              "nuget-cache-arm64": "/root/.nuget/packages"
             }
           skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
@@ -108,60 +102,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Build and push single platform
-        env:
-          LANG: ${{ inputs.lang }}
-          SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
-          LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
-          VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}
-          PUSH_COMMAND: ${{ inputs.push-command }}
-          TEMP_TAG: ${{ inputs.lang || 'cli' }}-temp-${{ github.run_id }}-${{ matrix.platform-name }}
-        run: |
-          go run ./cmd/dev "$PUSH_COMMAND" \
-          --platform ${{ matrix.platform }} \
-          --repo-prefix temporaliotest \
-          --image-tag "$TEMP_TAG" \
-          --force-push \
-          $LANG_ARGS \
-          $VERSION_ARGS
-
-  # Stage 2: Create multi-arch manifest and apply final tags
-  create-manifest:
-    name: Create manifest for ${{ inputs.lang || 'CLI' }}
-    runs-on: ubuntu-latest
-    needs: build-single-platform
-    if: inputs.do-push && !github.event.pull_request.head.repo.fork
-    steps:
-      - name: Checkout omes repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.omes-repo-path }}
-          ref: ${{ inputs.omes-repo-ref || github.head_ref }}
-          submodules: true
-          fetch-depth: 0
-
-      - name: Checkout lang repo
-        if: ${{ inputs.sdk-repo-ref }}
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.sdk-repo-url }}
-          submodules: recursive
-          path: checked-out-sdk/
-          ref: ${{ inputs.sdk-repo-ref }}
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: "go.mod"
-          cache: true
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PAT }}
-
-      - name: Generate final tags and create manifests
+      - name: Build and push
         env:
           LANG: ${{ inputs.lang }}
           SDK_VERSION: ${{ inputs.sdk-version || 'checked-out-sdk/' }}
@@ -170,32 +111,14 @@ jobs:
           LANG_ARGS: ${{ inputs.lang && format('--language {0}', inputs.lang) || '' }}
           VERSION_ARGS: ${{ inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '' }}
           PUSH_COMMAND: ${{ inputs.push-command }}
-          LANG_OR_CLI: ${{ inputs.lang || 'cli' }}
         run: |
-          # Run build command with --dry-run to get the final tags
           go run ./cmd/dev "$PUSH_COMMAND" \
             --platform linux/amd64,linux/arm64 \
             --repo-prefix temporaliotest \
-            --dry-run \
             $LANG_ARGS \
             $VERSION_ARGS \
             $IMAGE_TAG_ARGS \
             $TAG_LATEST_ARGS
-
-          # Get the tags from GitHub env
-          FINAL_TAGS="${BUILT_IMAGE_TAGS}"
-
-          # Split tags by semicolon
-          IFS=';' read -ra TAG_ARRAY <<< "$FINAL_TAGS"
-
-          # Create and push manifest for each final tag
-          for final_tag in "${TAG_ARRAY[@]}"; do
-            echo "Creating manifest for $final_tag"
-            docker manifest create "$final_tag" \
-              "temporaliotest/omes:${LANG_OR_CLI}-temp-${{ github.run_id }}-amd64" \
-              "temporaliotest/omes:${LANG_OR_CLI}-temp-${{ github.run_id }}-arm64"
-            docker manifest push "$final_tag"
-          done
 
       - name: 🐳 Docker Hub image tag
         env:

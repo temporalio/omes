@@ -40,7 +40,7 @@ COPY workers ./workers/
 
 # Build the CLI
 RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
 # Install protoc-gen-go for kitchen-sink-gen build
@@ -48,8 +48,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 # Build kitchen-sink-gen (statically linked)
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
+RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
     cd loadgen/kitchen-sink-gen && \
   echo "TARGETARCH: $TARGETARCH" && \
   ARCH=$(uname -m) && \
