@@ -91,11 +91,11 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 	// Using zstd compression: faster and better compression than gzip
 	// Using OCI media types: standard format for better compatibility
 	if b.repoPrefix != "" {
-		cacheName := b.imageName
+		cacheTag := "buildcache"
 		if cacheKeySuffix != "" {
-			cacheName = fmt.Sprintf("%s-%s", b.imageName, cacheKeySuffix)
+			cacheTag = fmt.Sprintf("buildcache-%s", cacheKeySuffix)
 		}
-		cacheRef := fmt.Sprintf("%s/%s:buildcache", b.repoPrefix, cacheName)
+		cacheRef := fmt.Sprintf("%s/%s:%s", b.repoPrefix, b.imageName, cacheTag)
 		dockerArgs = append(dockerArgs,
 			"--cache-from", fmt.Sprintf("type=registry,ref=%s", cacheRef),
 			"--cache-to", fmt.Sprintf("type=registry,ref=%s,mode=max,compression=zstd,oci-mediatypes=true", cacheRef),
