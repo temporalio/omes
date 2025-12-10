@@ -313,9 +313,14 @@ func (i *PrometheusInstance) createPrometheusSnapshot(ctx context.Context) (stri
 
 // MetricLine represents a single metric data point.
 type MetricLine struct {
-	Timestamp time.Time `json:"timestamp" parquet:"timestamp,timestamp"`
-	Metric    string    `json:"metric" parquet:"metric,dict"`
-	Value     float64   `json:"value" parquet:"value"`
+	Timestamp           time.Time `parquet:"timestamp,timestamp"`
+	Metric              string    `parquet:"metric,dict"`
+	Value               float64   `parquet:"value"`
+	Environment         string    `parquet:"environment,dict"`
+	BuildID             string    `parquet:"build_id,dict"`
+	Scenario            string    `parquet:"scenario,dict"`
+	RunConfigProfile    string    `parquet:"run_profile,dict"`
+	WorkerConfigProfile string    `parquet:"worker_profile,dict"`
 }
 
 type metricQuery struct {
