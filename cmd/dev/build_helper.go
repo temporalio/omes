@@ -86,11 +86,15 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		"--platform", strings.Join(b.platforms, ","),
 	}
 
-	// Add GitHub Actions cache backend if running in CI
-	if os.Getenv("CI") == "true" {
+	// Add registry cache if repoPrefix is set (e.g., temporaliotest)
+	// This provides unlimited cache storage in the registry
+	// Using zstd compression: faster and better compression than gzip
+	// Using OCI media types: standard format for better compatibility
+	if b.repoPrefix != "" {
+		cacheRef := fmt.Sprintf("%s/%s:buildcache", b.repoPrefix, b.imageName)
 		dockerArgs = append(dockerArgs,
-			"--cache-from", "type=gha",
-			"--cache-to", "type=gha,mode=max",
+			"--cache-from", fmt.Sprintf("type=registry,ref=%s", cacheRef),
+			"--cache-to", fmt.Sprintf("type=registry,ref=%s,mode=max,compression=zstd,oci-mediatypes=true", cacheRef),
 		)
 	}
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
-FROM node:20-bullseye AS build
+FROM node:20-bullseye-slim AS build
 
 ARG TARGETARCH
 

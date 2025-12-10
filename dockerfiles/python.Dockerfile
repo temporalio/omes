@@ -1,15 +1,16 @@
 # syntax=docker/dockerfile:1.7-labs
 # Build in a full featured container
 FROM ghcr.io/astral-sh/uv:latest AS uv
-FROM python:3.11-bullseye AS build
+FROM python:3.11-slim-bullseye AS build
 
 ARG TARGETARCH
 
-# Install protobuf compiler
+# Install protobuf compiler and build tools
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1 \
+    build-essential=12.9 wget=1.21-1+deb11u1
 
 # Get go compiler
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
@@ -56,7 +57,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,id=go-build-${TARGETARCH},target=/root/.cache/go-build \
     --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
     --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
-    --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    --mount=type=cache,id=uv-cache-${TARGETARCH},target=/root/.cache/uv \
     CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
