@@ -127,7 +127,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.addLabelIfNotPresent("io.temporal.sdk.version", sdkVersion)
 
 	// Build docker command args
-	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs)
+	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs, lang)
 	if err != nil {
 		if !allowPush {
 			return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")

@@ -77,7 +77,7 @@ func (b *baseImageBuilder) generateImageTags() []string {
 	return imageTagsForPublish
 }
 
-func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, buildArgs []string) (dockerArgs []string, err error) {
+func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, buildArgs []string, cacheKeySuffix string) (dockerArgs []string, err error) {
 	dockerArgs = []string{
 		"buildx",
 		"build",
@@ -91,7 +91,11 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 	// Using zstd compression: faster and better compression than gzip
 	// Using OCI media types: standard format for better compatibility
 	if b.repoPrefix != "" {
-		cacheRef := fmt.Sprintf("%s/%s:buildcache", b.repoPrefix, b.imageName)
+		cacheName := b.imageName
+		if cacheKeySuffix != "" {
+			cacheName = fmt.Sprintf("%s-%s", b.imageName, cacheKeySuffix)
+		}
+		cacheRef := fmt.Sprintf("%s/%s:buildcache", b.repoPrefix, cacheName)
 		dockerArgs = append(dockerArgs,
 			"--cache-from", fmt.Sprintf("type=registry,ref=%s", cacheRef),
 			"--cache-to", fmt.Sprintf("type=registry,ref=%s,mode=max,compression=zstd,oci-mediatypes=true", cacheRef),

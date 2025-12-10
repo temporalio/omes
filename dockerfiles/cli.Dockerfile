@@ -50,6 +50,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Build kitchen-sink-gen (statically linked)
 RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
     --mount=type=cache,id=cargo-git,target=/root/.cargo/git \
+    --mount=type=cache,id=cargo-target-${TARGETARCH},target=/app/loadgen/kitchen-sink-gen/target \
     cd loadgen/kitchen-sink-gen && \
   echo "TARGETARCH: $TARGETARCH" && \
   ARCH=$(uname -m) && \
@@ -60,13 +61,14 @@ RUN --mount=type=cache,id=cargo-registry,target=/root/.cargo/registry \
     RUST_TARGET=x86_64-unknown-linux-musl; \
   fi && \
   echo "Building for rust target: $RUST_TARGET" && \
-  RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET
+  RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET && \
+  cp target/$RUST_TARGET/release/kitchen-sink-gen /tmp/kitchen-sink-gen
 
 # Copy the CLI to a distroless "run" container
 FROM gcr.io/distroless/static-debian11:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
-COPY --from=build /app/loadgen/kitchen-sink-gen/target/*/release/kitchen-sink-gen /app/kitchen-sink-gen
+COPY --from=build /tmp/kitchen-sink-gen /app/kitchen-sink-gen
 
 # Default entrypoint for CLI usage
 ENTRYPOINT ["/app/temporal-omes"]
