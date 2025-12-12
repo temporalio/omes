@@ -7,6 +7,7 @@ permissions:
 
 env:
   MISE_VERSION: v2025.12.1
+  MISE_NODE_VERIFY: no
 
 on: # rebuild any PRs and main branch changes
   pull_request:
