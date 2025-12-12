@@ -126,7 +126,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 func Main() {
 	var app App
 
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "worker",
 		Short: "A generic worker for running omes scenarios",
 		Run:   app.Run,
@@ -135,7 +135,7 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
-	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")

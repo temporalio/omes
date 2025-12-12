@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/metrics"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
@@ -77,7 +78,7 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 }
 
 // MustDial connects to a Temporal server, with logging, metrics and loaded TLS certs.
-func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) client.Client {
+func (c *ClientOptions) MustDial(metrics *metrics.Metrics, logger *zap.SugaredLogger) client.Client {
 	client, err := c.Dial(metrics, logger)
 	if err != nil {
 		logger.Fatal(err)
@@ -86,7 +87,7 @@ func (c *ClientOptions) MustDial(metrics *Metrics, logger *zap.SugaredLogger) cl
 }
 
 // Dial connects to a Temporal server, with logging, metrics, loaded TLS certs and set auth header.
-func (c *ClientOptions) Dial(metrics *Metrics, logger *zap.SugaredLogger) (client.Client, error) {
+func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger) (client.Client, error) {
 	tlsCfg, err := c.loadTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS config: %w", err)

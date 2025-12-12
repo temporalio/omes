@@ -60,7 +60,7 @@ public static class App
         description: "Max concurrent workflow tasks");
 
     private static readonly Option<double?> workerActivitiesPerSecond = new(
-        name: "--worker-activities-per-second",
+        name: "--activities-per-second",
         description: "Per-worker activity rate limit");
 
     private static readonly Option<string> logLevelOption = new Option<string>(
