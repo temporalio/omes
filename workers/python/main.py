@@ -198,23 +198,23 @@ async def run():
             maximum=args.activity_poller_autoscale_max
         )
     elif args.max_concurrent_activity_pollers is not None:
-        worker_kwargs["max_concurrent_activity_task_polls"] = (
-            args.max_concurrent_activity_pollers
-        )
+        worker_kwargs[
+            "max_concurrent_activity_task_polls"
+        ] = args.max_concurrent_activity_pollers
     if args.workflow_poller_autoscale_max is not None:
         worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
             maximum=args.workflow_poller_autoscale_max
         )
     elif args.max_concurrent_workflow_pollers is not None:
-        worker_kwargs["max_concurrent_workflow_task_polls"] = (
-            args.max_concurrent_workflow_pollers
-        )
+        worker_kwargs[
+            "max_concurrent_workflow_task_polls"
+        ] = args.max_concurrent_workflow_pollers
     if args.max_concurrent_activities is not None:
         worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:
-        worker_kwargs["max_concurrent_workflow_tasks"] = (
-            args.max_concurrent_workflow_tasks
-        )
+        worker_kwargs[
+            "max_concurrent_workflow_tasks"
+        ] = args.max_concurrent_workflow_tasks
     if args.activities_per_second is not None:
         worker_kwargs["max_activities_per_second"] = args.activities_per_second
 

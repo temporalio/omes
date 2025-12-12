@@ -108,10 +108,10 @@ async function run() {
       opts.logEncoding === 'json'
         ? winston.format.json()
         : winston.format.combine(
-          winston.format.colorize(),
-          winston.format.simple(),
-          winston.format.metadata()
-        ),
+            winston.format.colorize(),
+            winston.format.simple(),
+            winston.format.metadata()
+          ),
     transports: [new winston.transports.Console()],
   });
   const logger = new DefaultLogger(coerceLogLevel(opts.logLevel), (entry) => {
