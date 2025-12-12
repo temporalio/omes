@@ -6,7 +6,7 @@ permissions:
   checks: write
 
 env:
-  MISE_VERSION: v2025.8.1
+  MISE_VERSION: v2025.12.1
 
 on: # rebuild any PRs and main branch changes
   pull_request:
