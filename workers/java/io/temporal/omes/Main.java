@@ -137,7 +137,7 @@ public class Main implements Runnable {
   private int maxConcurrentWorkflowTasks;
 
   @CommandLine.Option(
-      names = "--worker-activities-per-second",
+      names = "--activities-per-second",
       description = "Per-worker activity rate limit")
   private double workerActivitiesPerSecond;
 

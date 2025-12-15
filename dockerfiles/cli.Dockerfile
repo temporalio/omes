@@ -28,6 +28,7 @@ ENV PATH="$PATH:/root/.cargo/bin"
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
+COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY workers ./workers/
 COPY go.mod go.sum ./

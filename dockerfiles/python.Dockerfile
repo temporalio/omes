@@ -29,6 +29,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
+COPY metrics ./metrics
 COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 

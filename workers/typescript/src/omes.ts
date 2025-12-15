@@ -41,7 +41,7 @@ async function run() {
     )
     .option('--max-concurrent-activities <maxActs>', 'Max concurrent activities')
     .option('--max-concurrent-workflow-tasks <maxWFTs>', 'Max concurrent workflow tasks')
-    .option('--worker-activities-per-second <workerActivityRate>', 'Per-worker activity rate limit')
+    .option('--activities-per-second <workerActivityRate>', 'Per-worker activity rate limit')
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
     .option('--log-encoding <logEncoding>', '(console json)', 'console')
     .option('--tls', 'Enable TLS')

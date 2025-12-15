@@ -126,9 +126,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
 	}
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
-	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthrough(r.WorkerOptions.FlagSet("worker-"), "worker-")...)
+	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)
+	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
 	if err != nil {
