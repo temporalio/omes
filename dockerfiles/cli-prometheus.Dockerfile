@@ -1,4 +1,4 @@
-# CLI image with Prometheus for ECS scenarios that need worker metric scraping
+# CLI image with Prometheus for scenarios that need worker metric scraping
 # Use this instead of cli.Dockerfile when you need to scrape remote worker metrics
 #
 # Build: docker build -f dockerfiles/cli-prometheus.Dockerfile -t omes-cli-prometheus .
@@ -62,7 +62,7 @@ FROM --platform=linux/$TARGETARCH alpine:3.20
 RUN apk add --no-cache ca-certificates bash
 
 # Install Prometheus
-ARG PROMETHEUS_VERSION=3.0.1
+ARG PROMETHEUS_VERSION=3.8.0
 RUN wget -q https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz \
     && tar xzf prometheus-*.tar.gz \
     && mv prometheus-*/prometheus /usr/local/bin/ \
