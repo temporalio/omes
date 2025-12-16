@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +35,19 @@ type PrometheusInstanceOptions struct {
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
+
+	fs *pflag.FlagSet
+}
+
+func (p *PrometheusInstanceOptions) FlagSet(prefix string) *pflag.FlagSet {
+	p.fs = pflag.NewFlagSet(prefix+"prom_instance_options", pflag.ExitOnError)
+	p.fs.StringVar(&p.Address, prefix+"prom-instance-addr", "", "Prometheus instance address")
+	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "prom-config.yml", "Start a local Prometheus instance with the specified config file (default: prom-config.yml)")
+	p.fs.BoolVar(&p.Snapshot, prefix+"prom-snapshot", false, "Create a TSDB snapshot on shutdown")
+	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
+	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export metrics for")
+	p.fs.DurationVar(&p.ExportMetricsStep, prefix+"prom-export-metrics-step", 15*time.Second, "Step interval to sample timeseries metrics")
+	return p.fs
 }
 
 func (p *PrometheusInstanceOptions) IsConfigured() bool {
