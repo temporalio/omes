@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: temporalio/omes
-          ref: main
+          ref: ecs-perf-test
           path: omes
     
       - name: Install jq
