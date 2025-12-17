@@ -73,8 +73,7 @@ jobs:
       # Default values for push/nightly runs
       LANGUAGE: ${{ github.event.inputs.language || 'go' }}
       SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
-      SDK_GITREF: ${{ github.event.inputs.sdk-gitref || 'main' }}
-      IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || false }}
+      IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
       DURATION: ${{ github.event.inputs.duration || '5h' }}
       TIMEOUT: ${{ github.event.inputs.timeout || '5h30m' }}
@@ -92,6 +91,9 @@ jobs:
     
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+    
+      - name: Install GitHub CLI
+        run: sudo apt-get update && sudo apt-get install -y gh
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -101,6 +103,16 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
+    
+      - name: Determine SDK_GITREF
+        id: sdk-gitref
+        run: |
+          if [ -n "${{ github.event.inputs.sdk-gitref }}" ]; then
+            echo "SDK_GITREF=${{ github.event.inputs.sdk-gitref }}" >> $GITHUB_ENV
+          else
+            BRANCH=$(gh repo view "${{ env.SDK_REPO }}" --json defaultBranchRef -q '.defaultBranchRef.name')
+            echo "SDK_GITREF=$BRANCH" >> $GITHUB_ENV
+          fi
 
       - name: Checkout SDK
         uses: actions/checkout@v4
@@ -108,7 +120,7 @@ jobs:
           repository: ${{ env.SDK_REPO }}
           ref: ${{ env.SDK_GITREF }}
           path: omes/sdk
-          # submodules: recursive
+          submodules: recursive
 
       - name: Build SDK (Python)
         if: env.LANGUAGE == 'python'
