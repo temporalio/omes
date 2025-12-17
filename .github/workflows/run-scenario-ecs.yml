@@ -106,6 +106,8 @@ jobs:
     
       - name: Determine SDK_GITREF
         id: sdk-gitref
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "${{ github.event.inputs.sdk-gitref }}" ]; then
             echo "SDK_GITREF=${{ github.event.inputs.sdk-gitref }}" >> $GITHUB_ENV
