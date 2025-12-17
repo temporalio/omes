@@ -105,12 +105,10 @@ jobs:
       - name: Checkout SDK
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
-          ref: ${{ github.event.inputs.sdk-gitref || 'main' }}
-          # repository: ${{ env.SDK_REPO }}
-          # ref: ${{ env.SDK_GITREF }}
+          repository: ${{ env.SDK_REPO }}
+          ref: ${{ env.SDK_GITREF }}
           path: omes/sdk
-          submodules: recursive
+          # submodules: recursive
 
       - name: Build SDK (Python)
         if: env.LANGUAGE == 'python'
