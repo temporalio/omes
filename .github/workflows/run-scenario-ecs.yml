@@ -229,7 +229,7 @@ jobs:
           TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_CLOUD_NAMESPACE }}
           TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
           WORKER_IP: ${{ steps.worker-ip.outputs.ip }}
-          S3_BUCKET_URI: ${{ secrets.S3_BUCKET_URI }}
+          S3_BUCKET_URI: ${{ secrets.AWS_SDK_PERF_TEST_S3_URI }}
           IS_EXPERIMENT: ${{ inputs.is-experiment }}
         run: |
           set -e
