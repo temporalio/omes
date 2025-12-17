@@ -68,6 +68,9 @@ RUN wget -q https://github.com/prometheus/prometheus/releases/download/v${PROMET
     && mv prometheus-*/prometheus /usr/local/bin/ \
     && rm -rf prometheus-*
 
+# Install AWS CLI
+RUN apk add --no-cache aws-cli
+
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/loadgen/kitchen-sink-gen/target/*/release/kitchen-sink-gen /app/kitchen-sink-gen
 
