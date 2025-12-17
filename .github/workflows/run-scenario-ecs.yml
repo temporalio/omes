@@ -210,7 +210,7 @@ jobs:
           OVERRIDES=$(jq -n '
           {
           containerOverrides: [{
-              name: "omes-" + env.LANGUAGE + "-worker-container",
+              name: ("omes-" + env.LANGUAGE + "-worker-container"),
               image: env.WORKER_IMAGE,
               command: [
               "run-worker",
@@ -221,7 +221,7 @@ jobs:
               "--namespace", env.TEMPORAL_NAMESPACE,
               "--server-address", env.TEMPORAL_ADDRESS,
               "--tls",
-              "--auth-header", "Bearer " + env.TEMPORAL_API_KEY
+              "--auth-header", ("Bearer " + env.TEMPORAL_API_KEY)
               ]
           }]
           }
@@ -292,7 +292,7 @@ jobs:
                   "--server-address", env.TEMPORAL_ADDRESS,
                   "--namespace", env.TEMPORAL_NAMESPACE,
                   "--tls",
-                  "--auth-header", "Bearer " + env.TEMPORAL_API_KEY,
+                  "--auth-header", ("Bearer " + env.TEMPORAL_API_KEY),
                   "--scenario", $scenario,
                   "--run-id", env.RUN_ID,
                   "--duration", $duration,
