@@ -1,41 +1,50 @@
 name: Run Omes Scenario on ECS
 
 on:
+  push:
+    branches: [ecs-perf-test]
   workflow_dispatch:
     inputs:
       language:
         description: SDK language (go, java, python, dotnet, typescript)
-        required: true
+        default: go
+        required: false
         type: string
       sdk-repo:
-        description: SDK repository (e.g. temporalio/sdk-go)
-        required: true
+        description: SDK repository (e.g., temporalio/sdk-go)
+        default: temporalio/sdk-go
+        required: false
         type: string
       sdk-gitref:
         description: SDK git ref (commit, tag, branch)
-        required: true
+        default: main
+        required: false
         type: string
       is-experiment:
         description: 'Mark this run as an experiment (excluded from nightly dashboards)'
+        default: true
         required: false
-        default: false
         type: boolean
 
       scenario:
         description: Omes scenario to run
         default: throughput_stress
+        required: false
         type: string
       duration:
         description: Test duration
         default: 5h
+        required: false
         type: string
       timeout:
         description: Scenario timeout
         default: 5h30m
+        required: false
         type: string
       max-concurrent:
         description: Max concurrent workflows
         default: "10"
+        required: false
         type: string
       scenario-options:
         description: JSON array of --option values
@@ -45,6 +54,7 @@ on:
            "sleep-time=1s",
            "visibility-count-timeout=5m",
            "min-throughput-per-hour=1000"]
+        required: false
         type: string
 
 jobs:
@@ -59,7 +69,17 @@ jobs:
       ECS_CLUSTER: worker-perf-test-cluster
       SECURITY_GROUP: ${{ secrets.AWS_ECS_SECURITY_GROUP }}
       SUBNET: ${{ secrets.AWS_ECS_SUBNET }}
-      LANGUAGE: ${{ inputs.language }}
+
+      # Default values for push/nightly runs
+      LANGUAGE: ${{ github.event.inputs.language || 'go' }}
+      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
+      SDK_GITREF: ${{ github.event.inputs.sdk-gitref || 'main' }}
+      IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || false }}
+      SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
+      DURATION: ${{ github.event.inputs.duration || '5h' }}
+      TIMEOUT: ${{ github.event.inputs.timeout || '5h30m' }}
+      MAX_CONCURRENT: ${{ github.event.inputs['max-concurrent'] || '10' }}
+      SCENARIO_OPTIONS: ${{ github.event.inputs['scenario-options'] || '["internal-iterations=10","continue-as-new-after-iterations=3","sleep-time=1s","visibility-count-timeout=5m","min-throughput-per-hour=1000"]' }}
       RUN_ID: ${{ github.run_id }}
 
     steps:
@@ -85,8 +105,8 @@ jobs:
       - name: Checkout SDK
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.sdk-repo }}
-          ref: ${{ inputs.sdk-gitref }}
+          repository: ${{ env.SDK_REPO }}
+          ref: ${{ env.SDK_GITREF }}
           path: omes/sdk
           submodules: recursive
 
@@ -133,7 +153,7 @@ jobs:
         working-directory: omes
         env:
           ECR_REPO: ${{ secrets.AWS_ECR_URI }}
-          GITREF: ${{ inputs.sdk-gitref }}
+          GITREF: ${{ env.SDK_GITREF }}
         run: |
           set -e
           IMAGE_TAG="${LANGUAGE}-worker-${GITREF}"
@@ -230,15 +250,15 @@ jobs:
           TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
           WORKER_IP: ${{ steps.worker-ip.outputs.ip }}
           S3_BUCKET_URI: ${{ secrets.AWS_SDK_PERF_TEST_S3_URI }}
-          IS_EXPERIMENT: ${{ inputs.is-experiment }}
+          IS_EXPERIMENT: ${{ env.IS_EXPERIMENT }}
         run: |
           set -e
           OVERRIDES=$(jq -n \
-          --arg scenario "${{ inputs.scenario }}" \
-          --arg duration "${{ inputs.duration }}" \
-          --arg timeout "${{ inputs.timeout }}" \
-          --arg max_concurrent "${{ inputs.max-concurrent }}" \
-          --argjson options '${{ inputs.scenario-options }}' \
+          --arg scenario "${{ env.SCENARIO }}" \
+          --arg duration "${{ env.DURATION }}" \
+          --arg timeout "${{ env.TIMEOUT }}" \
+          --arg max_concurrent "${{ env.MAX_CONCURRENT }}" \
+          --argjson options '${{ env.SCENARIO_OPTIONS }}' \
           '
           {
           containerOverrides: [{
