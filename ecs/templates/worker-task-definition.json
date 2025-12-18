@@ -5,7 +5,6 @@
     "cpu": "2048",
     "memory": "4096",
     "executionRoleArn": "${EXECUTION_ROLE_ARN}",
-    "taskRoleArn": "${TASK_ROLE_ARN}",
     "runtimePlatform": {
       "cpuArchitecture": "X86_64",
       "operatingSystemFamily": "LINUX"

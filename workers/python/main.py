@@ -111,7 +111,15 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
-    parser.add_argument("--tls", action="store_true", help="Enable TLS")
+    # Allow both --tls (flag style) and --tls=true (omes passthrough style)
+    parser.add_argument(
+        "--tls",
+        type=lambda x: x.lower() in ("true", "1", "yes"),
+        default=False,
+        nargs="?",
+        const=True,
+        help="Enable TLS",
+    )
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"
     )
@@ -120,6 +128,9 @@ async def run():
     parser.add_argument("--prom-listen-address", help="Prometheus listen address")
     parser.add_argument(
         "--prom-handler-path", default="/metrics", help="Prometheus handler path"
+    )
+    parser.add_argument(
+        "--auth-header", default="", help="Authorization header value"
     )
     args = parser.parse_args()
 
@@ -140,6 +151,9 @@ async def run():
         raise ValueError("Client key specified, but not client cert!")
     elif args.tls:
         tls_config = TLSConfig()
+
+    # Configue API key
+    api_key = args.auth_header.removeprefix("Bearer ") if args.auth_header else None
 
     # Configure logging
     logger = logging.getLogger()
@@ -173,6 +187,7 @@ async def run():
     client = await Client.connect(
         target_host=args.server_address,
         namespace=args.namespace,
+        api_key=api_key,
         tls=tls_config,
         runtime=new_runtime,
     )

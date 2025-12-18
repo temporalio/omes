@@ -154,7 +154,6 @@ jobs:
         env:
           WORKER_IMAGE: ${{ env.WORKER_IMAGE }}
           EXECUTION_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
-          TASK_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
         run: |
           set -e
           TASK_DEF=$(envsubst < ecs/templates/worker-task-definition.json)

@@ -1,7 +1,7 @@
 {
     "containerOverrides": [
       {
-        "name": "worker",
+        "name": "omes-${LANGUAGE}-worker-container",
         "command": [
           "run-worker",
           "--language", "${LANGUAGE}",
