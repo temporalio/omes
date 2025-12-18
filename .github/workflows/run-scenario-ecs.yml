@@ -75,8 +75,8 @@ jobs:
 
       # Default values for push/nightly runs
       INPUT_SDK_GITREF: ${{ github.event.inputs.sdk-gitref }}
-      LANGUAGE: ${{ github.event.inputs.language || 'python' }}
-      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-python' }}
+      LANGUAGE: ${{ github.event.inputs.language || 'typescript' }}
+      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-typescript' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
       DURATION: ${{ github.event.inputs.duration || '5h' }}
