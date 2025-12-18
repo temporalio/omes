@@ -75,12 +75,12 @@ jobs:
 
       # Default values for push/nightly runs
       INPUT_SDK_GITREF: ${{ github.event.inputs.sdk-gitref }}
-      LANGUAGE: ${{ github.event.inputs.language || 'go' }}
-      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
+      LANGUAGE: ${{ github.event.inputs.language || 'python' }}
+      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-python' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
-      DURATION: ${{ github.event.inputs.duration || '2m' }}
-      TIMEOUT: ${{ github.event.inputs.timeout || '10m' }}
+      DURATION: ${{ github.event.inputs.duration || '5h' }}
+      TIMEOUT: ${{ github.event.inputs.timeout || '5h30m' }}
       MAX_CONCURRENT: ${{ github.event.inputs['max-concurrent'] || '10' }}
       SCENARIO_OPTIONS: ${{ github.event.inputs['scenario-options'] || '["internal-iterations=10","continue-as-new-after-iterations=3","sleep-time=1s","visibility-count-timeout=5m","min-throughput-per-hour=1000"]' }}
       RUN_ID: ${{ github.run_id }}
