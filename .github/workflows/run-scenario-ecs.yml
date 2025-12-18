@@ -74,8 +74,8 @@ jobs:
       TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
 
       # Default values for push/nightly runs
-      LANGUAGE: ${{ github.event.inputs.language || 'java' }}
-      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-java' }}
+      LANGUAGE: ${{ github.event.inputs.language || 'go' }}
+      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
       DURATION: ${{ github.event.inputs.duration || '2m' }}
@@ -140,11 +140,13 @@ jobs:
           IMAGE_TAG="${LANGUAGE}-worker-${GITREF}"
 
           # BUILD_CORE_RELEASE is for TypeScript core-bridge release build (ignored by other languages)
+          # PREBUILD_WORKER is also for Typescript, see typescript.Dockerfile for reasoning
           docker build \
             -f dockerfiles/${LANGUAGE}.Dockerfile \
             --build-arg SDK_DIR=./sdk \
             --build-arg SDK_VERSION=./repo \
             --build-arg BUILD_CORE_RELEASE=true \
+            --build-arg PREBUILD_WORKER=true \
             -t $ECR_REPO:$IMAGE_TAG \
             .
 

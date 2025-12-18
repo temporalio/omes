@@ -111,14 +111,11 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
-    # Allow both --tls (flag style) and --tls=true (omes passthrough style)
     parser.add_argument(
         "--tls",
         type=lambda x: x.lower() in ("true", "1", "yes"),
         default=False,
-        nargs="?",
-        const=True,
-        help="Enable TLS",
+        help="Enable TLS (true/false)",
     )
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"

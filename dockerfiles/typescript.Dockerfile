@@ -37,6 +37,15 @@ ARG SDK_VERSION
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
+# Pre-build the SDK if requested (needed when SDK uses pnpm and isn't pre-built)
+# Pre-building TS is necessary because features/sdkbuild still uses npm ci, which expects a package-lock.json
+# But we have since transitioned to pnpm, which produces a pnpm-lock.yaml
+# Tracking issue to fix in features: https://github.com/temporalio/features/issues/712
+ARG PREBUILD_WORKER=false
+RUN if [ "$PREBUILD_WORKER" = "true" ]; then \
+      npm install -g pnpm && cd ./repo && CI=true pnpm install && pnpm build; \
+    fi
+
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript

@@ -45,7 +45,7 @@ async function run() {
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
     .option('--log-encoding <logEncoding>', '(console json)', 'console')
     .option('--auth-header <authHeader>', 'Authorization header value')
-    .option('--tls', 'Enable TLS')
+    .option('--tls <tls>', 'Enable TLS (true/false)', 'false')
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')
@@ -73,7 +73,7 @@ async function run() {
     logEncoding: string;
 
     authHeader: string;
-    tls: boolean;
+    tls: string;
     clientCertPath: string;
     clientKeyPath: string;
 
@@ -85,21 +85,23 @@ async function run() {
 
   // Configure TLS
   let tlsConfig: TLSConfig | undefined;
-  if (opts.tls) {
-    if (!opts.clientCertPath) {
+  if (opts.tls === 'true') {
+    if (opts.clientCertPath && opts.clientKeyPath) {
+      const crt = fs.readFileSync(opts.clientCertPath);
+      const key = fs.readFileSync(opts.clientKeyPath);
+      tlsConfig = {
+        clientCertPair: {
+          crt,
+          key,
+        },
+      };
+    } else if (opts.clientCertPath) {
       throw new Error('Client cert path specified but no key path!');
-    }
-    if (!opts.clientKeyPath) {
+    } else if (opts.clientKeyPath) {
       throw new Error('Client key path specified but no cert path!');
+    } else {
+      tlsConfig = {}
     }
-    const crt = fs.readFileSync(opts.clientCertPath);
-    const key = fs.readFileSync(opts.clientKeyPath);
-    tlsConfig = {
-      clientCertPair: {
-        crt,
-        key,
-      },
-    };
   }
 
   // Configure API key
