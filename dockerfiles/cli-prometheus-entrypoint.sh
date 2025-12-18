@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# Cleanup worker on any exit (success, failure, or signal)
+cleanup() {
+  if [ -n "$WORKER_TASK_ARN" ] && [ -n "$ECS_CLUSTER" ]; then
+    echo "Stopping worker task: $WORKER_TASK_ARN"
+    aws ecs stop-task --cluster "$ECS_CLUSTER" --task "$WORKER_TASK_ARN" --region "${AWS_REGION:-us-west-2}" --reason "Client exited" || true
+  fi
+}
+trap cleanup EXIT
+
 # Generate prom-config.yml if WORKER_METRICS_HOST is set
 # This enables scraping metrics from a remote worker (e.g., separate ECS task)
 if [ -n "$WORKER_METRICS_HOST" ]; then
@@ -29,7 +38,7 @@ set -e
 
 if [ -n "$S3_BUCKET_URI" ] && [ $EXIT_CODE -eq 0 ]; then
   DATE=$(date +%Y-%m-%d)
-  S3_KEY="${S3_BUCKET_URI}/is_experiment=${IS_EXPERIMENT}/language=${LANGUAGE}/date=${DATE}/run-id=${RUN_ID}/"
+  S3_KEY="${S3_BUCKET_URI}/is_experiment=${IS_EXPERIMENT:-true}/date=${DATE}/"
 
   echo "Uploading metrics to S3: ${S3_KEY}"
   aws s3 cp /app/metrics/ "${S3_KEY}" --recursive

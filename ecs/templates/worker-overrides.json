@@ -1,0 +1,19 @@
+{
+    "containerOverrides": [
+      {
+        "name": "worker",
+        "command": [
+          "run-worker",
+          "--language", "${LANGUAGE}",
+          "--dir-name", "prepared",
+          "--run-id", "${RUN_ID}",
+          "--worker-prom-listen-address", "0.0.0.0:9092",
+          "--namespace", "${TEMPORAL_NAMESPACE}",
+          "--server-address", "${TEMPORAL_ADDRESS}",
+          "--tls",
+          "--auth-header", "Bearer ${TEMPORAL_API_KEY}"
+        ]
+      }
+    ]
+  }
+  

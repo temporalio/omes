@@ -2,7 +2,7 @@ name: Run Omes Scenario on ECS
 
 on:
   push:
-    branches: [ecs-perf-test]
+    branches: [per-version-taskdefs]
   workflow_dispatch:
     inputs:
       language:
@@ -75,8 +75,8 @@ jobs:
       SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
-      DURATION: ${{ github.event.inputs.duration || '5h' }}
-      TIMEOUT: ${{ github.event.inputs.timeout || '5h30m' }}
+      DURATION: ${{ github.event.inputs.duration || '2m' }}
+      TIMEOUT: ${{ github.event.inputs.timeout || '10m' }}
       MAX_CONCURRENT: ${{ github.event.inputs['max-concurrent'] || '10' }}
       SCENARIO_OPTIONS: ${{ github.event.inputs['scenario-options'] || '["internal-iterations=10","continue-as-new-after-iterations=3","sleep-time=1s","visibility-count-timeout=5m","min-throughput-per-hour=1000"]' }}
       RUN_ID: ${{ github.run_id }}
@@ -86,20 +86,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: temporalio/omes
-          ref: ecs-perf-test
+          ref: per-version-taskdefs
           path: omes
           submodules: recursive
     
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-    
-      - name: Install GitHub CLI
-        run: sudo apt-get update && sudo apt-get install -y gh
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_OMES_PUSH_ECR_ARN }}
+          role-to-assume: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -125,44 +122,10 @@ jobs:
           path: omes/sdk
           submodules: recursive
 
-      - name: Build SDK (Python)
-        if: env.LANGUAGE == 'python'
-        shell: bash
-        working-directory: omes/sdk
-        run: |
-            set -e
-            pip install uv
-            uv sync --all-extras
-            uv run poe build-develop
-
-      - name: Build SDK (TypeScript)
-        if: env.LANGUAGE == 'typescript'
-        shell: bash
-        working-directory: omes/sdk
-        run: |
-            set -e
-            npm install
-            npm run build
-        env:
-            BUILD_CORE_RELEASE: true
-
-      - name: Build SDK (Java)
-        if: env.LANGUAGE == 'java'
-        shell: bash
-        working-directory: omes/sdk
-        run: |
-          set -e
-          ./gradlew build -x test -x virtualThreadTests
-
-      - name: Build SDK (.NET)
-        if: env.LANGUAGE == 'dotnet'
-        shell: bash
-        working-directory: omes/sdk
-        run: |
-          set -e
-          dotnet build
-        env:
-            ImportDirectoryBuildProps: false
+      # TODO(thomas) We need to explicitly build .NET for release mode 
+      # (will need to modify features to allow for --configuration Release flag)
+      # Python is built in release mode by default by sdkbuild in features
+      # Typescript just needs BUILD_CORE_RELEASE env var set (we set as an image build-arg)
 
       - name: Build and push worker image
         working-directory: omes
@@ -173,15 +136,36 @@ jobs:
           set -e
           IMAGE_TAG="${LANGUAGE}-worker-${GITREF}"
 
+          # BUILD_CORE_RELEASE is for TypeScript core-bridge release build (ignored by other languages)
           docker build \
             -f dockerfiles/${LANGUAGE}.Dockerfile \
             --build-arg SDK_DIR=./sdk \
             --build-arg SDK_VERSION=./repo \
+            --build-arg BUILD_CORE_RELEASE=true \
             -t $ECR_REPO:$IMAGE_TAG \
             .
 
           docker push $ECR_REPO:$IMAGE_TAG
           echo "WORKER_IMAGE=$ECR_REPO:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Register worker task definition
+        id: worker-task-def
+        working-directory: omes
+        env:
+          WORKER_IMAGE: ${{ env.WORKER_IMAGE }}
+          EXECUTION_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
+          TASK_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
+        run: |
+          set -e
+          TASK_DEF=$(envsubst < ecs/templates/worker-task-definition.json)
+          
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          
+          echo "arn=$TASK_DEF_ARN" >> "$GITHUB_OUTPUT"
+          echo "Registered task definition: $TASK_DEF_ARN"
 
       - name: Build and push client image
         working-directory: omes
@@ -189,7 +173,7 @@ jobs:
           ECR_REPO: ${{ secrets.AWS_ECR_URI }}
         run: |
           set -e
-          IMAGE_TAG="omes-client-latest"
+          IMAGE_TAG="omes-client"
 
           docker build \
             -f dockerfiles/cli-prometheus.Dockerfile \
@@ -200,6 +184,7 @@ jobs:
           echo "CLIENT_IMAGE=$ECR_REPO:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Start worker task
+        working-directory: omes
         id: worker
         env:
           TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_CLOUD_ADDRESS }}
@@ -207,38 +192,18 @@ jobs:
           TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
         run: |
           set -e
-          OVERRIDES=$(jq -n '
-          {
-          containerOverrides: [{
-              name: ("omes-" + env.LANGUAGE + "-worker-container"),
-              image: env.WORKER_IMAGE,
-              command: [
-              "run-worker",
-              "--language", env.LANGUAGE,
-              "--dir-name", "prepared",
-              "--run-id", env.RUN_ID,
-              "--worker-prom-listen-address", "0.0.0.0:9092",
-              "--namespace", env.TEMPORAL_NAMESPACE,
-              "--server-address", env.TEMPORAL_ADDRESS,
-              "--tls",
-              "--auth-header", ("Bearer " + env.TEMPORAL_API_KEY)
-              ]
-          }]
-          }
-          ')
-
+          OVERRIDES=$(envsubst < ecs/templates/worker-overrides.json)
+          
           TASK_ARN=$(aws ecs run-task \
-          --cluster "$ECS_CLUSTER" \
-          --launch-type FARGATE \
-          --task-definition "omes-${{ env.LANGUAGE }}-worker:latest" \
-          --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --overrides "$OVERRIDES" \
-          --query 'tasks[0].taskArn' \
-          --output text
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition "${{ steps.worker-task-def.outputs.arn }}" \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --overrides "$OVERRIDES" \
+            --query 'tasks[0].taskArn' \
+            --output text
           )
-
           echo "task=$TASK_ARN" >> "$GITHUB_OUTPUT"
-          echo "Started worker: $TASK_ARN"
 
       - name: Wait for worker & get IP
         id: worker-ip
@@ -258,69 +223,37 @@ jobs:
           echo "Worker IP: $IP"
 
       - name: Start client task
+        working-directory: omes
         id: client
         env:
           TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_CLOUD_ADDRESS }}
           TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_CLOUD_NAMESPACE }}
           TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
           WORKER_IP: ${{ steps.worker-ip.outputs.ip }}
+          WORKER_TASK_ARN: ${{ steps.worker.outputs.task }}
           S3_BUCKET_URI: ${{ secrets.AWS_SDK_PERF_TEST_S3_URI }}
-          IS_EXPERIMENT: ${{ env.IS_EXPERIMENT }}
         run: |
           set -e
-          OVERRIDES=$(jq -n \
-          --arg scenario "${{ env.SCENARIO }}" \
-          --arg duration "${{ env.DURATION }}" \
-          --arg timeout "${{ env.TIMEOUT }}" \
-          --arg max_concurrent "${{ env.MAX_CONCURRENT }}" \
-          --argjson options '${{ env.SCENARIO_OPTIONS }}' \
-          '
-          {
-          containerOverrides: [{
-              name: "omes-client",
-              environment: [
-              { name: "WORKER_METRICS_HOST", value: env.WORKER_IP },
-              { name: "WORKER_METRICS_PORT", value: "9092" },
-              { "name": "LANGUAGE", "value": env.LANGUAGE },
-              { "name": "RUN_ID", "value": env.RUN_ID },
-              { "name": "IS_EXPERIMENT", "value": env.IS_EXPERIMENT },
-              { "name": "S3_BUCKET_URI", "value": env.S3_BUCKET_URI }
-              ],
-              command:
-              [
-                  "run-scenario",
-                  "--server-address", env.TEMPORAL_ADDRESS,
-                  "--namespace", env.TEMPORAL_NAMESPACE,
-                  "--tls",
-                  "--auth-header", ("Bearer " + env.TEMPORAL_API_KEY),
-                  "--scenario", $scenario,
-                  "--run-id", env.RUN_ID,
-                  "--duration", $duration,
-                  "--timeout", $timeout,
-                  "--max-concurrent", $max_concurrent,
-                  "--prom-listen-address", "0.0.0.0:9091",
-                  "--prom-instance-addr", "0.0.0.0:9090",
-                  "--prom-instance-config", "/app/prom-config.yml",
-                  "--prom-export-worker-metrics",
-                  ("/app/metrics/" + env.LANGUAGE + "-" + $scenario + "-" + env.RUN_ID + ".parquet"),
-                  "--prom-export-metrics-step", "3s",
-                  "--do-not-register-search-attributes", "true"
-              ]
-              + ($options | map(["--option", .]) | add)
-          }]
-          }
-          ')
-
+          
+          # Substitute static variables
+          BASE_OVERRIDES=$(envsubst < ecs/templates/client-overrides.json)
+          
+          # Append dynamic --option flags
+          OVERRIDES=$(echo "$BASE_OVERRIDES" | jq \
+            --argjson options '${{ env.SCENARIO_OPTIONS }}' \
+            '.containerOverrides[0].command += ($options | map(["--option", .]) | flatten)'
+          )
+          
           TASK_ARN=$(aws ecs run-task \
-          --cluster $ECS_CLUSTER \
-          --launch-type FARGATE \
-          --task-definition omes-client:latest \
-          --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --overrides "$OVERRIDES" \
-          --query 'tasks[0].taskArn' \
-          --output text)
-
-          echo "task=$TASK_ARN" >> $GITHUB_OUTPUT
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition omes-client \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNET],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --overrides "$OVERRIDES" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+          
+          echo "task=$TASK_ARN" >> "$GITHUB_OUTPUT"
           echo "Started client: $TASK_ARN"
 
       - name: Cleanup on failure

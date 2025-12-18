@@ -1,0 +1,36 @@
+{
+    "family": "omes-${LANGUAGE}-worker",
+    "requiresCompatibilities": ["FARGATE"],
+    "networkMode": "awsvpc",
+    "cpu": "2048",
+    "memory": "4096",
+    "executionRoleArn": "${EXECUTION_ROLE_ARN}",
+    "taskRoleArn": "${TASK_ROLE_ARN}",
+    "runtimePlatform": {
+      "cpuArchitecture": "X86_64",
+      "operatingSystemFamily": "LINUX"
+    },
+    "containerDefinitions": [
+      {
+        "name": "omes-${LANGUAGE}-worker-container",
+        "image": "${WORKER_IMAGE}",
+        "essential": true,
+        "portMappings": [
+          {
+            "containerPort": 9092,
+            "protocol": "tcp",
+            "name": "metrics"
+          }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "/ecs/omes-${LANGUAGE}-worker",
+            "awslogs-create-group": "true",
+            "awslogs-region": "us-west-2",
+            "awslogs-stream-prefix": "ecs"
+          }
+        }
+      }
+    ]
+  }
