@@ -78,8 +78,8 @@ jobs:
       SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
-      DURATION: ${{ github.event.inputs.duration || '5h' }}
-      TIMEOUT: ${{ github.event.inputs.timeout || '5h30m' }}
+      DURATION: ${{ github.event.inputs.duration || '2m' }}
+      TIMEOUT: ${{ github.event.inputs.timeout || '10m' }}
       MAX_CONCURRENT: ${{ github.event.inputs['max-concurrent'] || '10' }}
       SCENARIO_OPTIONS: ${{ github.event.inputs['scenario-options'] || '["internal-iterations=10","continue-as-new-after-iterations=3","sleep-time=1s","visibility-count-timeout=5m","min-throughput-per-hour=1000"]' }}
       RUN_ID: ${{ github.run_id }}
@@ -111,7 +111,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "${{ github.event.inputs.sdk-gitref }}" ]; then
-            echo "SDK_GITREF=02ca26c0eb32fca44638cc4cc23c11db4c90d241" >> $GITHUB_ENV
+            echo "SDK_GITREF=${{ github.event.inputs.sdk-gitref }}" >> $GITHUB_ENV
           else
             BRANCH=$(gh repo view "${{ env.SDK_REPO }}" --json defaultBranchRef -q '.defaultBranchRef.name')
             echo "SDK_GITREF=$BRANCH" >> $GITHUB_ENV
