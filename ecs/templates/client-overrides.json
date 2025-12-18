@@ -1,7 +1,7 @@
 {
   "containerOverrides": [
     {
-      "name": "omes-client",
+      "name": "omes-client-container",
       "environment": [
         { "name": "ECS_CLUSTER", "value": "${ECS_CLUSTER}" },
         { "name": "AWS_REGION", "value": "${AWS_REGION}" },

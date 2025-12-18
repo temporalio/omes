@@ -69,6 +69,9 @@ jobs:
       ECS_CLUSTER: worker-perf-test-cluster
       SECURITY_GROUP: ${{ secrets.AWS_ECS_SECURITY_GROUP }}
       SUBNET: ${{ secrets.AWS_ECS_SUBNET }}
+      TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_CLOUD_ADDRESS }}
+      TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_CLOUD_NAMESPACE }}
+      TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
 
       # Default values for push/nightly runs
       LANGUAGE: ${{ github.event.inputs.language || 'go' }}
@@ -153,7 +156,7 @@ jobs:
         working-directory: omes
         env:
           WORKER_IMAGE: ${{ env.WORKER_IMAGE }}
-          EXECUTION_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_AWS_ROLE }}
+          EXECUTION_ROLE_ARN: ${{ secrets.AWS_OMES_SDK_PERF_TASK_AWS_ROLE }}
         run: |
           set -e
           TASK_DEF=$(envsubst < ecs/templates/worker-task-definition.json)
@@ -185,10 +188,6 @@ jobs:
       - name: Start worker task
         working-directory: omes
         id: worker
-        env:
-          TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_CLOUD_ADDRESS }}
-          TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_CLOUD_NAMESPACE }}
-          TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
         run: |
           set -e
           OVERRIDES=$(envsubst < ecs/templates/worker-overrides.json)
@@ -225,9 +224,6 @@ jobs:
         working-directory: omes
         id: client
         env:
-          TEMPORAL_ADDRESS: ${{ secrets.TEMPORAL_CLOUD_ADDRESS }}
-          TEMPORAL_NAMESPACE: ${{ secrets.TEMPORAL_CLOUD_NAMESPACE }}
-          TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
           WORKER_IP: ${{ steps.worker-ip.outputs.ip }}
           WORKER_TASK_ARN: ${{ steps.worker.outputs.task }}
           S3_BUCKET_URI: ${{ secrets.AWS_SDK_PERF_TEST_S3_URI }}

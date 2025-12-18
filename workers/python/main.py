@@ -152,7 +152,7 @@ async def run():
     elif args.tls:
         tls_config = TLSConfig()
 
-    # Configue API key
+    # Configure API key
     api_key = args.auth_header.removeprefix("Bearer ") if args.auth_header else None
 
     # Configure logging
