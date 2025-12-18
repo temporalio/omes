@@ -74,8 +74,8 @@ jobs:
       TEMPORAL_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
 
       # Default values for push/nightly runs
-      LANGUAGE: ${{ github.event.inputs.language || 'go' }}
-      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-go' }}
+      LANGUAGE: ${{ github.event.inputs.language || 'java' }}
+      SDK_REPO: ${{ github.event.inputs.sdk-repo || 'temporalio/sdk-java' }}
       IS_EXPERIMENT: ${{ github.event.inputs.is-experiment || true }}
       SCENARIO: ${{ github.event.inputs.scenario || 'throughput_stress' }}
       DURATION: ${{ github.event.inputs.duration || '2m' }}

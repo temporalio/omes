@@ -44,6 +44,7 @@ async function run() {
     .option('--activities-per-second <workerActivityRate>', 'Per-worker activity rate limit')
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
     .option('--log-encoding <logEncoding>', '(console json)', 'console')
+    .option('--auth-header <authHeader>', 'Authorization header value')
     .option('--tls', 'Enable TLS')
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS')
@@ -71,6 +72,7 @@ async function run() {
     logLevel: string;
     logEncoding: string;
 
+    authHeader: string;
     tls: boolean;
     clientCertPath: string;
     clientKeyPath: string;
@@ -99,6 +101,11 @@ async function run() {
       },
     };
   }
+
+  // Configure API key
+  const apiKey = opts.authHeader != ""
+    ? opts.authHeader.replace(/^Bearer /, '')                
+    : undefined;
 
   // Configure logging (winston doesn't know about trace level which is obnoxious)
   const winstonLevel = opts.logLevel.toLowerCase() === 'trace' ? 'debug' : opts.logLevel;
@@ -140,6 +147,7 @@ async function run() {
   const connection = await NativeConnection.connect({
     address: opts.serverAddress,
     tls: tlsConfig,
+    apiKey: apiKey,
   });
 
   const client = new Client({
