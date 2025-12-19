@@ -126,9 +126,7 @@ async def run():
     parser.add_argument(
         "--prom-handler-path", default="/metrics", help="Prometheus handler path"
     )
-    parser.add_argument(
-        "--auth-header", default="", help="Authorization header value"
-    )
+    parser.add_argument("--auth-header", default="", help="Authorization header value")
     args = parser.parse_args()
 
     if args.task_queue_suffix_index_start > args.task_queue_suffix_index_end:

@@ -100,14 +100,12 @@ async function run() {
     } else if (opts.clientKeyPath) {
       throw new Error('Client key path specified but no cert path!');
     } else {
-      tlsConfig = {}
+      tlsConfig = {};
     }
   }
 
   // Configure API key
-  const apiKey = opts.authHeader != ""
-    ? opts.authHeader.replace(/^Bearer /, '')                
-    : undefined;
+  const apiKey = opts.authHeader != '' ? opts.authHeader.replace(/^Bearer /, '') : undefined;
 
   // Configure logging (winston doesn't know about trace level which is obnoxious)
   const winstonLevel = opts.logLevel.toLowerCase() === 'trace' ? 'debug' : opts.logLevel;
@@ -149,7 +147,7 @@ async function run() {
   const connection = await NativeConnection.connect({
     address: opts.serverAddress,
     tls: tlsConfig,
-    apiKey: apiKey,
+    apiKey,
   });
 
   const client = new Client({
