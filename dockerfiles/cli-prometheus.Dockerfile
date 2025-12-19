@@ -34,6 +34,7 @@ ENV PATH="$PATH:/root/.cargo/bin"
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
+COPY metrics ./metrics
 COPY workers ./workers/
 COPY go.mod go.sum ./
 
