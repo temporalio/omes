@@ -105,8 +105,7 @@ func (p *PrometheusInstanceFlags) FlagSet(prefix string) *pflag.FlagSet {
 	}
 	p.fs = pflag.NewFlagSet(prefix+"prom_instance_options", pflag.ExitOnError)
 	p.fs.StringVar(&p.Address, prefix+"prom-instance-addr", "", "Prometheus instance address")
-	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "", "Start a local Prometheus instance with the specified config file (default: prom-config.yml)")
-	p.fs.Lookup(prefix + "prom-instance-config").NoOptDefVal = "prom-config.yml"
+	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "prom-config.yml", "Start a local Prometheus instance with the specified config file (default: prom-config.yml)")
 	p.fs.BoolVar(&p.Snapshot, "prom-snapshot", false, "Create a TSDB snapshot on shutdown")
 	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
 	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export metrics for")
