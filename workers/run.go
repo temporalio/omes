@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"go.temporal.io/sdk/client"
@@ -59,7 +61,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("failed starting embedded server: %w", err)
 		}
-		r.ClientOptions.Address = server.FrontendHostPort()
+		r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
 		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.Address)
 		defer func() {
 			r.Logger.Info("Stopping embedded local server")
@@ -123,10 +125,10 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
 	}
-	args = append(args, r.ClientOptions.ToFlags()...)
-	args = append(args, r.MetricsOptions.ToFlags()...)
-	args = append(args, r.LoggingOptions.ToFlags()...)
-	args = append(args, r.WorkerOptions.ToFlags()...)
+	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
+	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
+	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)
+	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
 	if err != nil {
@@ -181,6 +183,19 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 		return nil
 	}
+}
+
+func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
+	fs.VisitAll(func(f *pflag.Flag) {
+		if !f.Changed {
+			return
+		}
+		flags = append(flags, fmt.Sprintf("--%s=%s",
+			strings.TrimPrefix(f.Name, prefix),
+			f.Value.String(),
+		))
+	})
+	return
 }
 
 func sendInterrupt(process *os.Process) error {

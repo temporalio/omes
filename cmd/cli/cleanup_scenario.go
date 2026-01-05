@@ -49,9 +49,9 @@ type scenarioCleaner struct {
 func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {
 	c.scenario.AddCLIFlags(fs)
 	fs.DurationVar(&c.pollInterval, "poll-interval", time.Second, "Interval for polling completion of job")
-	c.clientOptions.AddCLIFlags(fs)
-	c.metricsOptions.AddCLIFlags(fs, "")
-	c.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(c.clientOptions.FlagSet())
+	fs.AddFlagSet(c.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(c.loggingOptions.FlagSet())
 }
 
 func (c *scenarioCleaner) run(ctx context.Context) error {
@@ -62,8 +62,8 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 	} else if c.scenario.RunID == "" {
 		return fmt.Errorf("run ID not found")
 	}
-	metrics := c.metricsOptions.MustCreateMetrics(c.logger)
-	defer metrics.Shutdown(ctx)
+	metrics := c.metricsOptions.MustCreateMetrics(ctx, c.logger)
+	defer metrics.Shutdown(ctx, c.logger)
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
 	taskQueue := loadgen.TaskQueueForRun(c.scenario.RunID)

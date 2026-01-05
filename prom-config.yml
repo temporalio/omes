@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+
+scrape_configs:
+  # Scrape omes scenario/client metrics
+  - job_name: 'omes-client'
+    static_configs:
+      - targets: ['localhost:9091']
+
+  # Scrape omes worker metrics
+  - job_name: 'omes-worker'
+    static_configs:
+      - targets: ['localhost:9092']

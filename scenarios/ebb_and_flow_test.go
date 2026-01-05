@@ -56,8 +56,7 @@ func TestEbbAndFlow(t *testing.T) {
 		ScenarioOptions: map[string]string{
 			MinBacklogFlag:                    "0",
 			MaxBacklogFlag:                    "1",
-			PhaseTimeFlag:                     "5s",
-			FairnessReportIntervalFlag:        "5s",
+			PeriodFlag:                        "5s",
 			BacklogLogIntervalFlag:            "5s",
 			VisibilityVerificationTimeoutFlag: "5s",
 			SleepActivityJsonFlag:             sleepActivityJson,
@@ -69,14 +68,11 @@ func TestEbbAndFlow(t *testing.T) {
 	t.Run("Run executor", func(t *testing.T) {
 		executor := newEbbAndFlowExecutor()
 
-		res, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+		_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
 		require.GreaterOrEqual(t, state.TotalCompletedWorkflows, int64(1))
-
-		fairnessStatusLogs := res.ObservedLogs.FilterMessageSnippet("Fairness status").All()
-		require.GreaterOrEqual(t, len(fairnessStatusLogs), 1, "Fairness status logs should be present")
 	})
 
 	t.Run("Run executor again, resuming from previous state", func(t *testing.T) {
@@ -93,14 +89,11 @@ func TestEbbAndFlow(t *testing.T) {
 
 		resumeScenarioInfo := scenarioInfo
 
-		res, err := env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
+		_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state = executor.Snapshot().(ebbAndFlowState)
 		require.Greater(t, state.TotalCompletedWorkflows, previouState.TotalCompletedWorkflows)
-
-		fairnessStatusLogs := res.ObservedLogs.FilterMessageSnippet("Fairness status").All()
-		require.GreaterOrEqual(t, len(fairnessStatusLogs), 1, "Fairness status logs should be present")
 	})
 
 	t.Run("Run executor again, resuming from previous state but without any time left", func(t *testing.T) {

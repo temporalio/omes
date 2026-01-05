@@ -27,7 +27,7 @@ type baseImageBuilder struct {
 }
 
 func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {
-	b.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(b.loggingOptions.FlagSet())
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
 	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")

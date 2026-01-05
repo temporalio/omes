@@ -14,6 +14,7 @@ import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.failure.ChildWorkflowFailure;
+import io.temporal.internal.common.SearchAttributesUtil;
 import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,13 +32,27 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   @Override
   public Payload execute(KitchenSink.WorkflowInput input) {
     // Run all initial input actions
+    Payload initialReturnValue = null;
     if (input != null) {
       for (KitchenSink.ActionSet actionSet : input.getInitialActionsList()) {
         Payload result = handleActionSet(actionSet);
         if (result != null) {
-          return result;
+          // Store return value but continue to check signal deduplication
+          initialReturnValue = result;
+          break;
         }
       }
+    }
+
+    // Check signal deduplication after initial actions
+    // (if initial actions errored, we never reach here)
+    if (input != null && input.getExpectedSignalCount() > 0) {
+      throw ApplicationFailure.newNonRetryableFailure("signal deduplication not implemented", "");
+    }
+
+    // If initial actions returned a value, return it now
+    if (initialReturnValue != null) {
+      return initialReturnValue;
     }
 
     // Run all actions from signals
@@ -55,7 +70,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     if (signalActions.hasDoActionsInMain()) {
       signalActionQueue.put(signalActions.getDoActionsInMain());
     } else if (signalActions.hasDoActions()) {
-      signalActionQueue.put(signalActions.getDoActions());
+      handleActionSet(signalActions.getDoActions());
     } else {
       throw ApplicationFailure.newNonRetryableFailure(
           "Signal actions must have a recognizable variant", "");
@@ -139,7 +154,22 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       throw ApplicationFailure.newFailure(error.getFailure().getMessage(), "");
     } else if (action.hasContinueAsNew()) {
       KitchenSink.ContinueAsNewAction continueAsNew = action.getContinueAsNew();
-      Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
+
+      // Preserve search attributes across continue-as-new
+      io.temporal.common.SearchAttributes currentSearchAttributes =
+          Workflow.getTypedSearchAttributes();
+
+      if (currentSearchAttributes != null && currentSearchAttributes.size() > 0) {
+        // Explicitly preserve search attributes
+        ContinueAsNewOptions options =
+            ContinueAsNewOptions.newBuilder()
+                .setTypedSearchAttributes(currentSearchAttributes)
+                .build();
+        Workflow.continueAsNew(options, continueAsNew.getArgumentsList().get(0));
+      } else {
+        // No search attributes to preserve
+        Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
+      }
     } else if (action.hasTimer()) {
       KitchenSink.TimerAction timer = action.getTimer();
       CancellationScope scope =
@@ -220,6 +250,17 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               ChildWorkflowOptions.Builder optionsBuilder =
                   ChildWorkflowOptions.newBuilder()
                       .setWorkflowId(executeChildWorkflow.getWorkflowId());
+
+              // Add typed search attributes if present
+              if (!executeChildWorkflow.getSearchAttributesMap().isEmpty()) {
+                io.temporal.api.common.v1.SearchAttributes protoSearchAttributes =
+                    io.temporal.api.common.v1.SearchAttributes.newBuilder()
+                        .putAllIndexedFields(executeChildWorkflow.getSearchAttributesMap())
+                        .build();
+                optionsBuilder.setTypedSearchAttributes(
+                    SearchAttributesUtil.decodeTyped(protoSearchAttributes));
+              }
+
               ChildWorkflowStub stub =
                   Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
               Promise result =
@@ -280,6 +321,15 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     } else if (executeActivity.hasClient()) {
       activityType = "client";
       args.add(executeActivity.getClient());
+    } else if (executeActivity.hasRetryableError()) {
+      activityType = "retryable_error";
+      args.add(executeActivity.getRetryableError());
+    } else if (executeActivity.hasTimeout()) {
+      activityType = "timeout";
+      args.add(executeActivity.getTimeout());
+    } else if (executeActivity.hasHeartbeat()) {
+      activityType = "heartbeat";
+      args.add(executeActivity.getHeartbeat());
     } else {
       activityType = "noop";
     }

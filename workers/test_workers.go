@@ -110,14 +110,12 @@ func (w *workerPool) startWorker(
 				Scenario: scenarioInfo.ScenarioName,
 				RunID:    scenarioInfo.RunID,
 			},
-			ClientOptions: clioptions.ClientOptions{
-				Address:   w.env.DevServerAddress(),
-				Namespace: testNamespace,
-			},
 			LoggingOptions: clioptions.LoggingOptions{
 				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
 			},
 		}
+		runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
+		runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
 		workerDone <- runner.Run(ctx, baseDir)
 	}()
 

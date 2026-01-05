@@ -27,19 +27,18 @@ const (
 	// Default is 1s.
 	SleepTimeFlag     = "sleep-time"
 	NexusEndpointFlag = "nexus-endpoint"
-	// SkipCleanNamespaceCheckFlag is a flag to skip the check for existing workflows in the namespace.
-	// This should be set to allow resuming from a previous run.
-	SkipCleanNamespaceCheckFlag = "skip-clean-namespace-check"
 	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
 	// SleepActivityJsonFlag is a JSON string that defines the sleep activity's behavior.
 	// See throughputstress.SleepActivityConfig for details.
 	SleepActivityJsonFlag = "sleep-activity-json"
-)
-
-const (
-	ThroughputStressScenarioIdSearchAttribute = "ThroughputStressScenarioId"
+	// MinThroughputPerHourFlag is the minimum workflow throughput required (workflows/hour).
+	// Default is 0, meaning disabled. The scenario calculates actual throughput and compares.
+	MinThroughputPerHourFlag = "min-throughput-per-hour"
+	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
+	// Default is false.
+	IncludeRetryScenariosFlag = "include-retry-scenarios"
 )
 
 type tpsState struct {
@@ -47,6 +46,9 @@ type tpsState struct {
 	CompletedIterations int `json:"completedIterations"`
 	// LastCompletedIterationAt is the time when the last iteration was completed. Helpful for debugging.
 	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
+	// AccumulatedDuration is the total execution time across all runs (original + resumes).
+	// This excludes any downtime between runs. Used for accurate throughput calculation.
+	AccumulatedDuration time.Duration `json:"accumulatedDuration"`
 }
 
 type tpsConfig struct {
@@ -55,11 +57,13 @@ type tpsConfig struct {
 	ContinueAsNewAfterIter        int
 	NexusEndpoint                 string
 	SleepTime                     time.Duration
-	SkipCleanNamespaceCheck       bool
 	SleepActivities               *loadgen.SleepActivityConfig
 	VisibilityVerificationTimeout time.Duration
+	MinThroughputPerHour          float64
 	ScenarioRunID                 string
+	ExecutionID                   string
 	RngSeed                       int64
+	IncludeRetryScenarios         bool
 }
 
 type tpsExecutor struct {
@@ -77,8 +81,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -111,12 +115,14 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	return nil
 }
 
+// Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
-		InternalIterTimeout:     info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
-		NexusEndpoint:           info.ScenarioOptions[NexusEndpointFlag],
-		SkipCleanNamespaceCheck: info.ScenarioOptionBool(SkipCleanNamespaceCheckFlag, false),
-		ScenarioRunID:           info.RunID,
+		InternalIterTimeout:  info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
+		NexusEndpoint:        info.ScenarioOptions[NexusEndpointFlag],
+		MinThroughputPerHour: info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
+		ScenarioRunID:        info.RunID,
+		ExecutionID:          info.ExecutionID,
 	}
 
 	// Generate random number generator seed based on the run ID.
@@ -141,7 +147,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		config.SleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr)
+		config.SleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, true)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
@@ -155,6 +161,8 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.VisibilityVerificationTimeout <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
 	}
+
+	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -174,11 +182,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 	t.runID = info.RunID
 
-	// Add search attribute, if it doesn't exist yet, to query for workflows by run ID.
-	// Running this on resume, too, in case a previous Omes run crashed before it could add the search attribute.
-	if err := loadgen.InitSearchAttribute(ctx, info, ThroughputStressScenarioIdSearchAttribute); err != nil {
-		return err
-	}
+	// Track start time of current run
+	currentRunStartTime := time.Now()
 
 	t.lock.Lock()
 	isResuming := t.isResuming
@@ -188,10 +193,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
 		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
-	} else {
-		if err := t.verifyFirstRun(ctx, info, t.config.SkipCleanNamespaceCheck); err != nil {
-			return err
-		}
 	}
 
 	// Listen to iteration completion events to update the state.
@@ -222,7 +223,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 				// Add search attribute to the workflow options so that it can be used in visibility queries.
 				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
-					temporal.NewSearchAttributeKeyString(ThroughputStressScenarioIdSearchAttribute).ValueSet(info.RunID),
+					temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(info.ExecutionID),
 				)
 
 				// Start some workflows via Update-with-Start.
@@ -257,6 +258,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	t.lock.Lock()
 	completedIterations := t.state.CompletedIterations
+	t.state.AccumulatedDuration += time.Since(currentRunStartTime)
+	totalDuration := t.state.AccumulatedDuration
 	t.lock.Unlock()
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
@@ -273,6 +276,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var sb strings.Builder
 	sb.WriteString("[Scenario completion summary] ")
+	sb.WriteString(fmt.Sprintf("Run ID: %s, ", info.RunID))
 	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
 	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
 	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
@@ -284,6 +288,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
 	}
 
+	var tpsErrors []error
+
 	// Post-scenario: verify reported workflow completion count from Visibility.
 	if err := loadgen.MinVisibilityCountEventually(
 		ctx,
@@ -291,39 +297,38 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
 			Query: fmt.Sprintf("%s='%s'",
-				ThroughputStressScenarioIdSearchAttribute, info.RunID),
+				loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
 		},
 		completedWorkflows,
 		t.config.VisibilityVerificationTimeout,
 	); err != nil {
-		return err
+		tpsErrors = append(tpsErrors, err)
+	}
+
+	// Post-scenario: check throughput threshold
+	if t.config.MinThroughputPerHour > 0 {
+		actualThroughputPerHour := float64(completedWorkflows) / totalDuration.Hours()
+
+		if actualThroughputPerHour < t.config.MinThroughputPerHour {
+			// Calculate how many workflows we expected given the duration
+			expectedWorkflows := int(totalDuration.Hours() * t.config.MinThroughputPerHour)
+			err := fmt.Errorf("insufficient throughput: %.1f workflows/hour < %.1f required "+
+				"(completed %d workflows, expected %d in %v)",
+				actualThroughputPerHour,
+				t.config.MinThroughputPerHour,
+				completedWorkflows,
+				expectedWorkflows,
+				totalDuration.Round(time.Second))
+			tpsErrors = append(tpsErrors, err)
+		}
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, info, ThroughputStressScenarioIdSearchAttribute, info.RunID)
-}
-
-func (t *tpsExecutor) verifyFirstRun(ctx context.Context, info loadgen.ScenarioInfo, skipCleanNamespaceCheck bool) error {
-	if skipCleanNamespaceCheck {
-		info.Logger.Info("Skipping check to verify if the namespace is clean")
-		return nil
+	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
+		tpsErrors = append(tpsErrors, err)
 	}
 
-	// Complain if there are already existing workflows with the provided run id; unless resuming.
-	workflowCountQry := fmt.Sprintf("%s='%s'", ThroughputStressScenarioIdSearchAttribute, info.RunID)
-	visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-		Namespace: info.Namespace,
-		Query:     workflowCountQry,
-	})
-	if err != nil {
-		return err
-	}
-	if visibilityCount.Count > 0 {
-		return fmt.Errorf("there are already %d workflows with scenario Run ID '%s'",
-			visibilityCount.Count, info.RunID)
-	}
-
-	return nil
+	return errors.Join(tpsErrors...)
 }
 
 func (t *tpsExecutor) updateStateOnIterationCompletion() {
@@ -383,6 +388,20 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+		}
+
+		// Add retry/timeout/heartbeat activities if flag is enabled.
+		if t.config.IncludeRetryScenarios {
+			asyncActions = append(asyncActions,
+				// Add activity cancellation scenario
+				DelayActivityWithCancellation(1*time.Second, 10*time.Second),
+				// Test activity retry: fails, succeeds on retry
+				RetryableErrorActivity(1, RemoteActivityWithRetry(1*time.Second, 2, 500*time.Millisecond, 1.0)),
+				// Test activity timeout with retry: times out on 1st attempt, succeeds on 2nd
+				TimeoutActivity(1, 0*time.Second, 2*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
+				// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
+				HeartbeatActivity(1, 0*time.Second, 2*time.Second, 10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
+			)
 		}
 
 		// Add sleep activities, if configured.
@@ -473,9 +492,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				},
 				WorkflowId: fmt.Sprintf("%s/child-%d", run.DefaultStartWorkflowOptions().ID, childID),
 				SearchAttributes: map[string]*common.Payload{
-					ThroughputStressScenarioIdSearchAttribute: &common.Payload{
-						Metadata: map[string][]byte{"encoding": []byte("json/plain")},
-						Data:     []byte(fmt.Sprintf("%q", t.config.ScenarioRunID)), // quoted to be valid JSON string
+					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
+						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
+						Data:     []byte(fmt.Sprintf("%q", t.config.ExecutionID)), // quoted to be valid JSON string
 					},
 				},
 			},

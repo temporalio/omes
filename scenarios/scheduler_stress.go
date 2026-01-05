@@ -1,0 +1,347 @@
+package scenarios
+
+import (
+	"context"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math/big"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/sdk/client"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
+)
+
+func init() {
+	loadgen.MustRegisterScenario(loadgen.Scenario{
+		Description: fmt.Sprintf("Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently. "+
+			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), '%s' (default: %v), "+
+			"'%s' (default: '%s'), '%s' (default: '%s', options: skip,buffer_one,buffer_all,cancel_other,terminate_other,all), "+
+			"'%s' (default: '%s', options: %s,%s), '%s' (default: %v)",
+			ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration,
+			ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation,
+			ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation,
+			SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration,
+			PayloadSizeFlag, DefaultPayloadSize,
+			WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup,
+			OperationIntervalFlag, DefaultOperationInterval,
+			CronExpressionFlag, DefaultCronExpression,
+			OverlapPolicyFlag, DefaultOverlapPolicy,
+			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType,
+			EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+		ExecutorFn: func() loadgen.Executor {
+			return &loadgen.GenericExecutor{
+				Execute: func(ctx context.Context, run *loadgen.Run) error {
+					executor := SchedulerExecutor{}
+					return executor.Execute(ctx, run)
+				},
+			}
+		},
+	})
+}
+
+type CleanUpScheduleInput struct {
+	ScheduleID  string
+	DeleteAfter time.Duration
+}
+
+type schedulerExecutorConfig struct {
+	ScheduleCreationPerIteration  int
+	ScheduleReadsPerCreation      int
+	ScheduleUpdatesPerCreation    int
+	SchedulerDurationPerIteration time.Duration
+	PayloadSize                   int
+	WaitTimeBeforeCleanup         time.Duration
+	OperationInterval             time.Duration
+	CronExpression                string
+	OverlapPolicy                 []enums.ScheduleOverlapPolicy
+	ScheduledWorkflowType         string
+	EnableChasmScheduler          bool
+}
+
+var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
+
+type SchedulerExecutor struct {
+	config *schedulerExecutorConfig
+}
+
+const (
+	SleepScheduleWorkflowType = "SleepScheduledWorkflow"
+	NoopScheduledWorkflowType = "NoopScheduledWorkflow"
+)
+
+const (
+	// Parameter name constants
+	ScheduleCreationPerIterationFlag  = "schedule-creation-per-iteration"
+	ScheduleReadsPerCreationFlag      = "schedule-reads-per-creation"
+	ScheduleUpdatesPerCreationFlag    = "schedule-updates-per-creation"
+	SchedulerDurationPerIterationFlag = "scheduler-duration-per-iteration"
+	PayloadSizeFlag                   = "payload-size"
+	WaitTimeBeforeCleanupFlag         = "wait-time-before-cleanup"
+	OperationIntervalFlag             = "operation-interval"
+	CronExpressionFlag                = "cron-expression"
+	OverlapPolicyFlag                 = "overlap-policy"
+	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
+	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
+)
+
+const (
+	DefaultScheduleCreationPerIteration = 10
+	DefaultScheduleReadsPerCreation     = 3
+	DefaultScheduleUpdatesPerCreation   = 3
+	DefaultPayloadSize                  = 1024
+	DefaultCronExpression               = "*/5 * * * * *"
+	DefaultScheduledWorkflowType        = NoopScheduledWorkflowType
+	DefaultOverlapPolicy                = "all"
+	DefaultEnableChasmScheduler         = true
+)
+
+// Default duration constants
+var (
+	DefaultSchedulerDurationPerIteration = 30 * time.Second
+	DefaultWaitTimeBeforeCleanup         = 25 * time.Second
+	DefaultOperationInterval             = 50 * time.Millisecond
+)
+
+// Configure implements the loadgen.Configurable interface
+func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
+	config := &schedulerExecutorConfig{
+		ScheduleCreationPerIteration:  info.ScenarioOptionInt(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration),
+		ScheduleReadsPerCreation:      info.ScenarioOptionInt(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation),
+		ScheduleUpdatesPerCreation:    info.ScenarioOptionInt(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation),
+		SchedulerDurationPerIteration: info.ScenarioOptionDuration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration),
+		PayloadSize:                   info.ScenarioOptionInt(PayloadSizeFlag, DefaultPayloadSize),
+		WaitTimeBeforeCleanup:         info.ScenarioOptionDuration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup),
+		OperationInterval:             info.ScenarioOptionDuration(OperationIntervalFlag, DefaultOperationInterval),
+		CronExpression:                info.ScenarioOptionString(CronExpressionFlag, DefaultCronExpression),
+		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
+		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
+		EnableChasmScheduler:          info.ScenarioOptionBool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+	}
+
+	if config.ScheduleCreationPerIteration <= 0 {
+		return fmt.Errorf("schedule-creation-per-iteration must be positive, got %d", config.ScheduleCreationPerIteration)
+	}
+	if config.ScheduleReadsPerCreation < 0 {
+		return fmt.Errorf("schedule-reads-per-creation cannot be negative, got %d", config.ScheduleReadsPerCreation)
+	}
+	if config.ScheduleUpdatesPerCreation < 0 {
+		return fmt.Errorf("schedule-updates-per-creation cannot be negative, got %d", config.ScheduleUpdatesPerCreation)
+	}
+	if config.PayloadSize <= 0 {
+		return fmt.Errorf("payload-size must be positive, got %d", config.PayloadSize)
+	}
+	if config.SchedulerDurationPerIteration <= 0 {
+		return fmt.Errorf("scheduler-duration-per-iteration must be positive, got %v", config.SchedulerDurationPerIteration)
+	}
+	if config.WaitTimeBeforeCleanup < 0 {
+		return fmt.Errorf("wait-time-before-cleanup cannot be negative, got %v", config.WaitTimeBeforeCleanup)
+	}
+	if config.OperationInterval < 0 {
+		return fmt.Errorf("operation-interval cannot be negative, got %v", config.OperationInterval)
+	}
+	s.config = config
+	return nil
+}
+
+func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error {
+	if err := s.Configure(*run.ScenarioInfo); err != nil {
+		return err
+	}
+
+	logger := run.Logger
+	client := run.Client
+
+	// Enable chasm-scheduler experiment if configured
+	if s.config.EnableChasmScheduler {
+		ctx = metadata.AppendToOutgoingContext(ctx, "temporal-experiment", "chasm-scheduler")
+	}
+
+	var wg sync.WaitGroup
+	for i := range s.config.ScheduleCreationPerIteration {
+		wg.Go(func() {
+			ticker := time.NewTicker(s.config.OperationInterval)
+			defer ticker.Stop()
+			start := time.Now()
+
+			sch_id := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
+			sc, err := s.createSchedule(ctx, client, sch_id, run.TaskQueue(), logger)
+			if err != nil {
+				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
+				return
+			}
+			<-ticker.C
+			for range s.config.ScheduleReadsPerCreation {
+				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+					logger.Error("Failed to describe schedule", "scheduleID", sc.ScheduleID, "error", err)
+				}
+				<-ticker.C // Wait between read operations
+			}
+
+			for range s.config.ScheduleUpdatesPerCreation {
+				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+					logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
+				}
+				<-ticker.C // Wait between update operations
+			}
+			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
+			select {
+			case <-time.After(dur):
+				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+					logger.Error("Failed to delete schedule", "scheduleID", sc.ScheduleID, "error", err)
+				}
+			case <-ctx.Done():
+				logger.Info("Context canceled")
+			}
+		})
+	}
+	wg.Wait()
+	return nil
+}
+
+type ScheduleState struct {
+	ScheduleID  string
+	DeleteAfter time.Duration
+}
+
+func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, taskQueue string, logger *zap.SugaredLogger) (ScheduleState, error) {
+	sc := ScheduleState{
+		ScheduleID:  scheduleID,
+		DeleteAfter: s.config.SchedulerDurationPerIteration,
+	}
+	workflowID := fmt.Sprintf("w-%s", scheduleID)
+	action := &client.ScheduleWorkflowAction{
+		ID:        workflowID,
+		Workflow:  s.config.ScheduledWorkflowType,
+		Args:      []any{make([]byte, s.config.PayloadSize)},
+		TaskQueue: taskQueue,
+	}
+
+	dur := (time.Duration(int64(int64(s.config.ScheduleReadsPerCreation)+int64(s.config.ScheduleUpdatesPerCreation))) *
+		s.config.OperationInterval) +
+		(2 * time.Second)
+
+	//Add some time to give the executor enough time to delete the schedule
+	endTime := time.Now().Add(sc.DeleteAfter).Add(dur)
+
+	options := client.ScheduleOptions{
+		ID: scheduleID,
+		Spec: client.ScheduleSpec{
+			CronExpressions: []string{s.config.CronExpression},
+			// defining an end at ensures all schedules will be removed
+			// regardless of errors from this executor
+			EndAt: endTime,
+		},
+		Action:  action,
+		Overlap: pickOverlap(s.config.OverlapPolicy, logger),
+	}
+	_, err := c.ScheduleClient().Create(ctx, options)
+	return sc, err
+}
+
+func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogger) enums.ScheduleOverlapPolicy {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(policies))))
+	if err != nil {
+		logger.Error("Failed to select overlap policy", "error", err)
+		return policies[0]
+	}
+	return policies[n.Int64()]
+}
+
+func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
+	_, err := handle.Describe(ctx)
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during describe operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
+	return err
+}
+
+func (s *SchedulerExecutor) updateSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
+
+	updateFn := func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+		schedule := input.Description.Schedule
+
+		// Keep same cron but update workflow args
+		if action, ok := schedule.Action.(*client.ScheduleWorkflowAction); ok {
+			action.Args = []any{make([]byte, s.config.PayloadSize)}
+		}
+
+		return &client.ScheduleUpdate{
+			Schedule: &schedule,
+		}, nil
+	}
+
+	err := handle.Update(ctx, client.ScheduleUpdateOptions{
+		DoUpdate: updateFn,
+	})
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during update operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
+	return err
+}
+
+func (s *SchedulerExecutor) deleteSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
+	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
+	err := handle.Delete(ctx)
+	if err != nil {
+		var notFoundErr *serviceerror.NotFound
+		if errors.As(err, &notFoundErr) {
+			// Return nil if schedule is not found (already deleted or never existed)
+			logger.Debug("Schedule not found during delete operation", "scheduleID", scheduleID)
+			return nil
+		}
+	}
+	return err
+}
+
+// parseOverlapPolicy converts string overlap policy to enum
+func parseOverlapPolicy(policyStr string) []enums.ScheduleOverlapPolicy {
+	policyStr = strings.ToLower(policyStr)
+	l := []enums.ScheduleOverlapPolicy{}
+	for p := range strings.SplitSeq(policyStr, ",") {
+		p = strings.TrimSpace(p)
+		switch p {
+		case "skip":
+			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_SKIP)
+		case "buffer_one":
+			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ONE)
+		case "buffer_all":
+			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL)
+		case "cancel_other":
+			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER)
+		case "terminate_other":
+			l = append(l, enums.SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER)
+		case "all":
+			return []enums.ScheduleOverlapPolicy{
+				enums.SCHEDULE_OVERLAP_POLICY_SKIP,
+				enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ONE,
+				enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL,
+				enums.SCHEDULE_OVERLAP_POLICY_CANCEL_OTHER,
+				enums.SCHEDULE_OVERLAP_POLICY_TERMINATE_OTHER,
+			}
+		}
+	}
+	if len(l) == 0 {
+		return []enums.ScheduleOverlapPolicy{enums.SCHEDULE_OVERLAP_POLICY_BUFFER_ALL}
+	}
+	return l
+}

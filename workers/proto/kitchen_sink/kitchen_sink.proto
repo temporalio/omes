@@ -65,6 +65,9 @@ message DoSignal {
       // they will then be run.
       ActionSet do_actions_in_main = 2;
     }
+
+    // The id of the signal to send (1-based indexing). This is used to track the signal and ensure that the worker properly deduplicates signals.
+    int32 signal_id = 3;
   }
   oneof variant {
     // A signal handler must exist named `do_actions_signal` which is responsible for handling the
@@ -127,6 +130,13 @@ message WorkflowState {
 
 message WorkflowInput {
   repeated ActionSet initial_actions = 1;
+
+  // Number of signals the client will send to the workflow
+  int32 expected_signal_count = 2;
+
+  // Signal de-duplication state (used when continuing as new). Signal IDs use 1-based indexing.
+  repeated int32 expected_signal_ids = 3;
+  repeated int32 received_signal_ids = 4;
 }
 
 // A set of actions to execute concurrently or sequentially. It is necessary to be able to represent
@@ -211,6 +221,35 @@ message ExecuteActivityAction {
   message ClientActivity {
       ClientSequence client_sequence = 1;
   }
+
+  // Activity that throws retryable errors for N attempts, then succeeds.
+  // Tests activity retry behavior.
+  message RetryableErrorActivity {
+    // How many attempts should fail before succeeding (1-indexed)
+    int32 fail_attempts = 1;
+  }
+
+  // Activity that runs too long for N attempts (causing timeout), then completes.
+  // Tests StartToCloseTimeout behavior with retries.
+  message TimeoutActivity {
+    // How many attempts should timeout before succeeding (1-indexed)
+    int32 fail_attempts = 1;
+    // Duration to run on success, must be less than StartToClose timeout
+    google.protobuf.Duration success_duration = 2;
+    // Duration to run on failure, must be more than StartToClose timeout
+    google.protobuf.Duration failure_duration = 3;
+  }
+
+  // Activity that skips heartbeats for N attempts (causing heartbeat timeout), then sends them.
+  // Tests HeartbeatTimeout behavior with retries.
+  message HeartbeatTimeoutActivity {
+    // How many attempts should skip heartbeats before succeeding (1-indexed)
+    int32 fail_attempts = 1;
+    // Duration to run on success, must be less than HeartbeatTimeout timeout
+    google.protobuf.Duration success_duration = 2;
+    // Duration to run on failure, must be more than HeartbeatTimeout timeout
+    google.protobuf.Duration failure_duration = 3;
+  }
   oneof activity_type {
     GenericActivity generic = 1;
     // There must be an activity named `delay` which accepts some kind of duration and waits
@@ -224,6 +263,12 @@ message ExecuteActivityAction {
     PayloadActivity payload = 18;
     // There must be an activity named `client` which accepts the ClientActivity message as input
     ClientActivity client = 19;
+    // There must be an activity named `retryable_error` which accepts the RetryableErrorActivity message as input
+    RetryableErrorActivity retryable_error = 20;
+    // There must be an activity named `timeout` which accepts the TimeoutActivity message as input
+    TimeoutActivity timeout = 21;
+    // There must be an activity named `heartbeat` which accepts the HeartbeatTimeoutActivity message as input
+    HeartbeatTimeoutActivity heartbeat = 22;
   }
   // The name of the task queue to place this activity request in
   string task_queue = 4;

@@ -9,9 +9,12 @@ import com.uber.m3.tally.RootScopeBuilder;
 import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.util.StringUtils;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheus.PrometheusNamingConvention;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.*;
@@ -23,6 +26,7 @@ import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
 import io.temporal.worker.WorkerOptions;
+import io.temporal.worker.tuning.PollerBehaviorAutoscaling;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -111,6 +115,18 @@ public class Main implements Runnable {
   private int maxConcurrentWorkflowPollers;
 
   @CommandLine.Option(
+      names = "--activity-poller-autoscale-max",
+      description =
+          "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)")
+  private int activityPollerAutoscaleMax;
+
+  @CommandLine.Option(
+      names = "--workflow-poller-autoscale-max",
+      description =
+          "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)")
+  private int workflowPollerAutoscaleMax;
+
+  @CommandLine.Option(
       names = "--max-concurrent-activities",
       description = "Max concurrent activities")
   private int maxConcurrentActivities;
@@ -119,6 +135,18 @@ public class Main implements Runnable {
       names = "--max-concurrent-workflow-tasks",
       description = "Max concurrent workflow tasks")
   private int maxConcurrentWorkflowTasks;
+
+  @CommandLine.Option(
+      names = "--activities-per-second",
+      description = "Per-worker activity rate limit")
+  private double workerActivitiesPerSecond;
+
+  @CommandLine.Option(
+      names = "--err-on-unimplemented",
+      description =
+          "Error when receiving unimplemented actions (currently only affects concurrent client actions)",
+      defaultValue = "false")
+  private boolean errOnUnimplemented;
 
   @Override
   public void run() {
@@ -158,7 +186,20 @@ public class Main implements Runnable {
       logger.addAppender(appender);
     }
     // Configure metrics
+    // Use a custom naming convention that doesn't add _seconds suffix to timers,
+    // for consistency with other Temporal SDKs
     PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+    registry
+        .config()
+        .namingConvention(
+            new PrometheusNamingConvention() {
+              @Override
+              public String name(String name, Meter.Type type, String baseUnit) {
+                // Don't add unit suffix - Temporal SDKs report duration values in seconds
+                // but don't include _seconds in the metric name
+                return NamingConvention.snakeCase.name(name, type, null);
+              }
+            });
     StatsReporter reporter = new MicrometerClientStatsReporter(registry);
     // set up a new scope, report every 10 seconds
     Scope scope =
@@ -214,16 +255,27 @@ public class Main implements Runnable {
     // Create the base worker options
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     // Workflow options
-    workerOptions.setMaxConcurrentWorkflowTaskPollers(maxConcurrentWorkflowPollers);
+    if (workflowPollerAutoscaleMax > 0) {
+      workerOptions.setWorkflowTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, workflowPollerAutoscaleMax, null));
+    } else if (maxConcurrentWorkflowPollers > 0) {
+      workerOptions.setMaxConcurrentWorkflowTaskPollers(maxConcurrentWorkflowPollers);
+    }
     workerOptions.setMaxConcurrentWorkflowTaskExecutionSize(maxConcurrentWorkflowTasks);
     // Activity options
-    workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
+    if (activityPollerAutoscaleMax > 0) {
+      workerOptions.setActivityTaskPollersBehavior(
+          new PollerBehaviorAutoscaling(null, activityPollerAutoscaleMax, null));
+    } else if (maxConcurrentActivityPollers > 0) {
+      workerOptions.setMaxConcurrentActivityTaskPollers(maxConcurrentActivityPollers);
+    }
     workerOptions.setMaxConcurrentActivityExecutionSize(maxConcurrentActivities);
+    workerOptions.setMaxWorkerActivitiesPerSecond(workerActivitiesPerSecond);
     // Start all workers, throwing on first exception
     for (String taskQueue : taskQueues) {
       Worker worker = workerFactory.newWorker(taskQueue, workerOptions.build());
       worker.registerWorkflowImplementationTypes(KitchenSinkWorkflowImpl.class);
-      worker.registerActivitiesImplementations(new ActivitiesImpl(client));
+      worker.registerActivitiesImplementations(new ActivitiesImpl(client, errOnUnimplemented));
     }
     workerFactory.start();
     CountDownLatch latch = new CountDownLatch(1);

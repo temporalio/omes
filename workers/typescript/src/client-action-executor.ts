@@ -16,11 +16,13 @@ export class ClientActionExecutor {
   private workflowType = 'kitchenSink';
   private workflowInput: any = null;
   private taskQueue;
+  private errOnUnimplemented: boolean;
 
-  constructor(client: Client, workflowId: string, taskQueue: string) {
+  constructor(client: Client, workflowId: string, taskQueue: string, errOnUnimplemented = false) {
     this.client = client;
     this.workflowId = workflowId;
     this.taskQueue = taskQueue;
+    this.errOnUnimplemented = errOnUnimplemented;
   }
 
   async executeClientSequence(clientSeq?: IClientSequence | null): Promise<void> {
@@ -31,7 +33,12 @@ export class ClientActionExecutor {
 
   private async executeClientActionSet(actionSet: IClientActionSet): Promise<void> {
     if (actionSet.concurrent) {
-      throw ApplicationFailure.nonRetryable('concurrent client actions are not supported');
+      if (this.errOnUnimplemented) {
+        throw ApplicationFailure.nonRetryable('concurrent client actions are not supported');
+      }
+      // Skip concurrent actions when not erroring on unimplemented
+      console.log('Skipping concurrent client actions (not implemented)');
+      return;
     }
 
     for (const action of actionSet.actions || []) {

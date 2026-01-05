@@ -57,15 +57,17 @@ type scenarioRunConfig struct {
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
 	ignoreAlreadyStarted          bool
+	exportHistoriesDir            string
+	exportHistoriesFilter         string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.scenario.AddCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
 	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
-	r.clientOptions.AddCLIFlags(fs)
-	r.metricsOptions.AddCLIFlags(fs, "")
-	r.loggingOptions.AddCLIFlags(fs)
+	fs.AddFlagSet(r.clientOptions.FlagSet())
+	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(r.loggingOptions.FlagSet())
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
@@ -84,6 +86,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
 	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
+	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
+	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -121,8 +125,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioOptions[key] = value
 	}
 
-	metrics := r.metricsOptions.MustCreateMetrics(r.logger)
-	defer metrics.Shutdown(ctx)
+	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
+	defer metrics.Shutdown(ctx, r.logger)
 	start := time.Now()
 	var client client.Client
 	var err error
@@ -145,9 +149,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	// Generate a random execution ID to ensure no two executions with the same RunID collide
+	executionID, err := generateExecutionID()
+	if err != nil {
+		return fmt.Errorf("failed to generate execution ID: %w", err)
+	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
+		ExecutionID:    executionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
@@ -164,11 +175,19 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		ScenarioOptions: scenarioOptions,
 		Namespace:       r.clientOptions.Namespace,
 		RootPath:        repoDir,
+		ExportOptions: loadgen.ExportOptions{
+			ExportHistoriesDir:    r.exportHistoriesDir,
+			ExportHistoriesFilter: r.exportHistoriesFilter,
+		},
 	}
 	executor := scenario.ExecutorFn()
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
+	}
+	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
+	if err != nil {
+		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
 }

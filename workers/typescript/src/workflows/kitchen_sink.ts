@@ -4,7 +4,6 @@ import {
   ApplicationFailure,
   CancellationScope,
   ChildWorkflowHandle,
-  ChildWorkflowOptions,
   condition,
   continueAsNew,
   defineQuery,
@@ -28,7 +27,8 @@ import {
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
-import { durationConvert, numify } from '../proto_help';
+import { decodeTypedSearchAttributes } from '@temporalio/common/lib/converter/payload-search-attributes';
+import { durationConvert, durationConvertMaybeUndefined, numify } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -118,7 +118,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         await afterCompleted(cancellablePromise);
         cancelScope.cancel();
       } else {
-        await cancellablePromise;
+        await afterCompleted(cancellablePromise);
       }
     }
 
@@ -139,19 +139,18 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         action.execActivity.awaitableChoice
       );
     } else if (action.execChildWorkflow) {
-      const opts: ChildWorkflowOptions = {};
-      if (action.execChildWorkflow.workflowId) {
-        opts.workflowId = action.execChildWorkflow.workflowId;
-      }
       const execChild = action.execChildWorkflow;
-      const childStarter = () => {
-        return startChild(execChild.workflowType ?? 'kitchenSink', {
-          args: execChild.input ?? [],
-          ...opts,
-        });
-      };
       await handleAwaitableChoice(
-        childStarter,
+        () => {
+          return startChild(execChild.workflowType || 'kitchenSink', {
+            args: execChild.input ?? [],
+            // Do not set workflowId field if not supplied
+            ...(execChild.workflowId && { workflowId: execChild.workflowId }),
+            typedSearchAttributes: decodeTypedSearchAttributes(
+              action?.execChildWorkflow?.searchAttributes
+            ),
+          });
+        },
         action.execChildWorkflow.awaitableChoice,
         async (task) => {
           await task;
@@ -232,13 +231,27 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
   );
 
   // Run all initial input actions
+  let initialReturnValue: IPayload | undefined;
   if (input?.initialActions) {
     for (const actionSet of input.initialActions) {
       const rval = await handleActionSet(actionSet);
       if (rval) {
-        return rval;
+        // Store return value but continue to check signal deduplication
+        initialReturnValue = rval;
+        break;
       }
     }
+  }
+
+  // Check signal deduplication after initial actions
+  // (if initial actions errored, we never reach here)
+  if (input && input.expectedSignalCount && input.expectedSignalCount > 0) {
+    throw new ApplicationFailure('signal deduplication not implemented');
+  }
+
+  // If initial actions returned a value, return it now
+  if (initialReturnValue) {
+    return initialReturnValue;
   }
 
   // Run all actions from signals
@@ -277,11 +290,23 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     actType = 'client';
     args.push(execActivity.client);
   }
+  if (execActivity.retryableError) {
+    actType = 'retryable_error';
+    args.push(execActivity.retryableError);
+  }
+  if (execActivity.timeout) {
+    actType = 'timeout';
+    args.push(execActivity.timeout);
+  }
+  if (execActivity.heartbeat) {
+    actType = 'heartbeat';
+    args.push(execActivity.heartbeat);
+  }
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
-    scheduleToCloseTimeout: durationConvert(execActivity.scheduleToCloseTimeout),
-    startToCloseTimeout: durationConvert(execActivity.startToCloseTimeout),
-    scheduleToStartTimeout: durationConvert(execActivity.scheduleToStartTimeout),
+    scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
+    startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
+    scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
     retry: decompileRetryPolicy(execActivity.retryPolicy),
     priority: decodePriority(execActivity.priority),
   };

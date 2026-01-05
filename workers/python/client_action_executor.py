@@ -15,12 +15,19 @@ from protos.kitchen_sink_pb2 import (
 
 
 class ClientActionExecutor:
-    def __init__(self, client: Client, workflow_id: str, task_queue: str):
+    def __init__(
+        self,
+        client: Client,
+        workflow_id: str,
+        task_queue: str,
+        err_on_unimplemented: bool = False,
+    ):
         self.client = client
         self.workflow_id: str = workflow_id
         self.workflow_type: str = "kitchenSink"
         self.workflow_input = None
         self.task_queue: str = task_queue
+        self.err_on_unimplemented: bool = err_on_unimplemented
 
     async def execute_client_sequence(self, client_seq: ClientSequence):
         for action_set in client_seq.action_sets:
@@ -28,9 +35,13 @@ class ClientActionExecutor:
 
     async def _execute_client_action_set(self, action_set: ClientActionSet):
         if action_set.concurrent:
-            raise ApplicationError(
-                "concurrent client actions are not supported", non_retryable=True
-            )
+            if self.err_on_unimplemented:
+                raise ApplicationError(
+                    "concurrent client actions are not supported", non_retryable=True
+                )
+            # Skip concurrent actions when not erroring on unimplemented
+            print("Skipping concurrent client actions (not implemented)")
+            return
 
         for action in action_set.actions:
             await self._execute_client_action(action)

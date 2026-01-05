@@ -8,6 +8,7 @@ import (
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
+	"github.com/temporalio/omes/workers/go/schedulerstress"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -32,7 +33,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		a.logger.Fatal("Task queue suffix start after end")
 	}
 	a.logger = a.loggingOptions.MustCreateLogger()
-	metrics := a.metricsOptions.MustCreateMetrics(a.logger)
+	metrics := a.metricsOptions.MustCreateMetrics(cmd.Context(), a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
 	// If there is an end, we run multiple
@@ -48,9 +49,22 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
-	if err := metrics.Shutdown(cmd.Context()); err != nil {
+	if err := metrics.Shutdown(cmd.Context(), a.logger); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
+}
+
+func makePollerBehavior(simple, auto int) worker.PollerBehavior {
+	if auto > 0 {
+		return worker.NewPollerBehaviorAutoscaling(worker.PollerBehaviorAutoscalingOptions{
+			// TODO: remove InitialNumberOfPollers after https://github.com/temporalio/sdk-go/pull/2105
+			InitialNumberOfPollers: auto,
+			MaximumNumberOfPollers: auto,
+		})
+	}
+	return worker.NewPollerBehaviorSimpleMaximum(worker.PollerBehaviorSimpleMaximumOptions{
+		MaximumNumberOfPollers: simple,
+	})
 }
 
 func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
@@ -73,19 +87,30 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 				UseBuildIDForVersioning:                options.BuildID != "",
 				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
 				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
-				MaxConcurrentActivityTaskPollers:       options.MaxConcurrentActivityPollers,
-				MaxConcurrentWorkflowTaskPollers:       options.MaxConcurrentWorkflowPollers,
+				ActivityTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentActivityPollers,
+					options.ActivityPollerAutoscaleMax,
+				),
+				WorkflowTaskPollerBehavior: makePollerBehavior(
+					options.MaxConcurrentWorkflowPollers,
+					options.WorkflowPollerAutoscaleMax,
+				),
+				WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
 			})
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 			w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
+			w.RegisterActivityWithOptions(kitchensink.RetryableError, activity.RegisterOptions{Name: "retryable_error"})
+			w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
+			w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 			w.RegisterWorkflow(kitchensink.EchoWorkflow)
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
-			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowReportWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowReport"})
 			w.RegisterActivity(&ebbFlowActivities)
+			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
+			w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
@@ -101,16 +126,16 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 func Main() {
 	var app App
 
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "worker",
 		Short: "A generic worker for running omes scenarios",
 		Run:   app.Run,
 	}
 
-	app.loggingOptions.AddCLIFlags(cmd.Flags())
-	app.clientOptions.AddCLIFlags(cmd.Flags())
-	app.metricsOptions.AddCLIFlags(cmd.Flags(), "")
-	app.workerOptions.AddCLIFlags(cmd.Flags(), "")
+	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")

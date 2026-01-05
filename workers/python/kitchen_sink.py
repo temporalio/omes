@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 
 import temporalio.workflow
 from temporalio import exceptions, workflow
-from temporalio.api.common.v1 import Payload
+from temporalio.api.common.v1 import Payload, SearchAttributes
 from temporalio.common import (
     Priority,
     RawValue,
@@ -63,11 +63,25 @@ class KitchenSinkWorkflow:
         workflow.logger.debug("Started kitchen sink workflow")
 
         # Run all initial input actions
+        initial_return_value = None
         if input and input.initial_actions:
             for action_set in input.initial_actions:
                 return_value = await self.handle_action_set(action_set)
                 if return_value is not None:
-                    return return_value
+                    # Store return value but continue to check signal deduplication
+                    initial_return_value = return_value
+                    break
+
+        # Check signal deduplication after initial actions
+        # (if initial actions errored, we never reach here)
+        if input and input.expected_signal_count > 0:
+            raise exceptions.ApplicationError(
+                "signal deduplication not implemented", non_retryable=True
+            )
+
+        # If initial actions returned a value, return it now
+        if initial_return_value is not None:
+            return initial_return_value
 
         # Run all actions from signals
         while True:
@@ -129,9 +143,14 @@ class KitchenSinkWorkflow:
             child_action = action.exec_child_workflow
             child = child_action.workflow_type or "kitchenSink"
             args = [RawValue(i) for i in child_action.input]
+            proto_sa = SearchAttributes(indexed_fields=child_action.search_attributes)
+            typed_attrs = temporalio.converter.decode_typed_search_attributes(proto_sa)
             await handle_awaitable_choice(
                 workflow.start_child_workflow(
-                    child, id=child_action.workflow_id, args=args
+                    child,
+                    id=child_action.workflow_id,
+                    args=args,
+                    search_attributes=typed_attrs,
                 ),
                 child_action.awaitable_choice,
                 after_started_fn=wait_task_complete,
@@ -194,6 +213,15 @@ def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
     elif execute_activity.HasField("client"):
         act_type = "client"
         args.append(execute_activity.client)
+    elif execute_activity.HasField("retryable_error"):
+        act_type = "retryable_error"
+        args.append(execute_activity.retryable_error)
+    elif execute_activity.HasField("timeout"):
+        act_type = "timeout"
+        args.append(execute_activity.timeout)
+    elif execute_activity.HasField("heartbeat"):
+        act_type = "heartbeat"
+        args.append(execute_activity.heartbeat)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
@@ -286,7 +314,7 @@ async def handle_awaitable_choice(
             task.cancel()
             did_cancel = True
         else:
-            await task
+            await after_completed_fn(task)
     except asyncio.CancelledError:
         if not did_cancel:
             raise

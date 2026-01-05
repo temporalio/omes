@@ -1,11 +1,11 @@
-﻿using Temporalio.Runtime;
-using Temporalio.Worker;
-
-namespace Temporalio.Omes;
-
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using Temporalio.Client;
+using Temporalio.Runtime;
+using Temporalio.Worker;
+using Temporalio.Worker.Tuning;
+
+namespace Temporalio.Omes;
 
 /// <summary>
 /// Main application that can parse args and run command.
@@ -43,6 +43,14 @@ public static class App
         name: "--max-concurrent-workflow-pollers",
         description: "Max concurrent workflow pollers");
 
+    private static readonly Option<uint?> activityPollerAutoscaleMaxOption = new(
+        name: "--activity-poller-autoscale-max",
+        description: "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)");
+
+    private static readonly Option<uint?> workflowPollerAutoscaleMaxOption = new(
+        name: "--workflow-poller-autoscale-max",
+        description: "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)");
+
     private static readonly Option<uint?> maxATOption = new(
         name: "--max-concurrent-activities",
         description: "Max concurrent activities");
@@ -50,6 +58,10 @@ public static class App
     private static readonly Option<uint?> maxWFTOption = new(
         name: "--max-concurrent-workflow-tasks",
         description: "Max concurrent workflow tasks");
+
+    private static readonly Option<double?> workerActivitiesPerSecond = new(
+        name: "--activities-per-second",
+        description: "Per-worker activity rate limit");
 
     private static readonly Option<string> logLevelOption = new Option<string>(
         name: "--log-level",
@@ -82,6 +94,11 @@ public static class App
         description: "Prometheus handler path",
         getDefaultValue: () => "/metrics");
 
+    private static readonly Option<bool> errOnUnimplementedOption = new(
+        name: "--err-on-unimplemented",
+        description: "Error when receiving unimplemented actions (currently only affects concurrent client actions)",
+        getDefaultValue: () => false);
+
     /// <summary>
     /// Run Omes worker with the given args.
     /// </summary>
@@ -99,8 +116,11 @@ public static class App
         cmd.Add(taskQSuffixEndOption);
         cmd.Add(maxATPollersOption);
         cmd.Add(maxWFTPollersOption);
+        cmd.Add(activityPollerAutoscaleMaxOption);
+        cmd.Add(workflowPollerAutoscaleMaxOption);
         cmd.Add(maxATOption);
         cmd.Add(maxWFTOption);
+        cmd.Add(workerActivitiesPerSecond);
         cmd.Add(logLevelOption);
         cmd.Add(logEncodingOption);
         cmd.Add(useTLSOption);
@@ -108,6 +128,7 @@ public static class App
         cmd.Add(clientKeyPathOption);
         cmd.Add(promAddrOption);
         cmd.Add(promHandlerPathOption);
+        cmd.Add(errOnUnimplementedOption);
         cmd.SetHandler(RunCommandAsync);
         return cmd;
     }
@@ -124,12 +145,20 @@ public static class App
             }));
         var logger = loggerFactory.CreateLogger(typeof(App));
 
-        // TODO: Configure metrics
+        var promAddr = ctx.ParseResult.GetValueForOption(promAddrOption);
+
         var runtime = new TemporalRuntime(new()
         {
             Telemetry = new TelemetryOptions
             {
-                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) },
+                Metrics = promAddr != null ? new MetricsOptions
+                {
+                    Prometheus = new PrometheusOptions(promAddr)
+                    {
+                        UseSecondsForDuration = true
+                    }
+                } : null
             }
         });
 
@@ -192,13 +221,28 @@ public static class App
             {
                 workerOptions.MaxConcurrentActivities = (int)maxAt;
             }
-            // TODO: Max pollers options aren't in .NET yet
+
+            if (ctx.ParseResult.GetValueForOption(workerActivitiesPerSecond) is { } rate)
+            {
+                workerOptions.MaxActivitiesPerSecond = rate;
+            }
+
+            // Configure poller behaviors with autoscaling support
+            if (ctx.ParseResult.GetValueForOption(activityPollerAutoscaleMaxOption) is { } activityAutoscaleMax)
+            {
+                workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling(maximum: (int)activityAutoscaleMax);
+            }
+            if (ctx.ParseResult.GetValueForOption(workflowPollerAutoscaleMaxOption) is { } workflowAutoscaleMax)
+            {
+                workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling(maximum: (int)workflowAutoscaleMax);
+            }
 
             workerOptions.AddWorkflow<KitchenSinkWorkflow>();
             workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
             workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
             workerOptions.AddActivity(KitchenSinkWorkflow.Payload);
-            var clientActivities = new ClientActivitiesImpl(client);
+            var errOnUnimplemented = ctx.ParseResult.GetValueForOption(errOnUnimplementedOption);
+            var clientActivities = new ClientActivitiesImpl(client, errOnUnimplemented);
             workerOptions.AddActivity(clientActivities.Client);
             var worker = new TemporalWorker(client, workerOptions);
             var workerTask = worker.ExecuteAsync(default);

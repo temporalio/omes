@@ -57,6 +57,7 @@ public class KitchenSinkWorkflow
     public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
     {
         // Run all initial input actions
+        Payload? initialReturnValue = null;
         if (workflowInput?.InitialActions is { } actions)
         {
             foreach (var actionSet in actions)
@@ -64,9 +65,24 @@ public class KitchenSinkWorkflow
                 var returnMe = await HandleActionSetAsync(actionSet);
                 if (returnMe != null)
                 {
-                    return null;
+                    // Store return value but continue to check signal deduplication
+                    initialReturnValue = returnMe;
+                    break;
                 }
             }
+        }
+
+        // Check signal deduplication after initial actions
+        // (if initial actions errored, we never reach here)
+        if (workflowInput?.ExpectedSignalCount > 0)
+        {
+            throw new ApplicationFailureException("signal deduplication not implemented");
+        }
+
+        // If initial actions returned a value, return it now
+        if (initialReturnValue != null)
+        {
+            return initialReturnValue;
         }
 
         // Run all actions from signals
@@ -102,16 +118,20 @@ public class KitchenSinkWorkflow
 
         // If actions are concurrent, run them all, returning early if any action wishes to return
         var tasks = new List<Task>();
+
+        // Local async function to process each action
+        async Task ProcessActionAsync(Temporal.Omes.KitchenSink.Action action)
+        {
+            var result = await HandleActionAsync(action);
+            if (result != null)
+            {
+                returnMe = result;
+            }
+        }
+
         foreach (var action in actionSet.Actions)
         {
-            async void Action()
-            {
-                returnMe = await HandleActionAsync(action);
-            }
-
-            var task = new Task(Action);
-            task.Start();
-            tasks.Add(task);
+            tasks.Add(ProcessActionAsync(action));
         }
 
         var waitReturnSet = Workflow.WaitConditionAsync(() => returnMe != null);
@@ -154,20 +174,25 @@ public class KitchenSinkWorkflow
         }
         else if (action.ExecChildWorkflow is { } execChild)
         {
-            var childType = execChild.WorkflowType ?? "kitchenSink";
+            var childType = string.IsNullOrEmpty(execChild.WorkflowType) ? "kitchenSink" : execChild.WorkflowType;
+            var childId = string.IsNullOrEmpty(execChild.WorkflowId) ? null : execChild.WorkflowId;
+            var tq = string.IsNullOrEmpty(execChild.TaskQueue) ? null : execChild.TaskQueue;
             var args = execChild.Input.Select(p => new RawValue(p)).ToArray();
             var options = new ChildWorkflowOptions
             {
                 CancellationToken = tokenSrc.Token,
-                Id = execChild.WorkflowId == "" ? null : execChild.WorkflowId,
-                TaskQueue = execChild.TaskQueue,
+                Id = childId,
                 ExecutionTimeout = execChild.WorkflowExecutionTimeout?.ToTimeSpan(),
                 TaskTimeout = execChild.WorkflowTaskTimeout?.ToTimeSpan(),
-                RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan()
+                RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan(),
+                TypedSearchAttributes = execChild.SearchAttributes.Count == 0
+                    ? SearchAttributeCollection.Empty
+                    : SearchAttributeCollection.FromProto(new SearchAttributes { IndexedFields = { execChild.SearchAttributes } }),
             };
             var childTask = Workflow.StartChildWorkflowAsync(childType, args, options);
             await HandleAwaitableChoiceAsync(childTask, tokenSrc, execChild.AwaitableChoice,
-                afterStartedFn: t => t, afterCompletedFn: async t =>
+                afterStartedFn: async t => await t,
+                afterCompletedFn: async t =>
                 {
                     var childHandle = await t;
                     await childHandle.GetResultAsync();
@@ -294,7 +319,7 @@ public class KitchenSinkWorkflow
             }
             else
             {
-                await awaitableTask;
+                await afterCompletedFn(awaitableTask);
             }
         }
         catch (Exception e) when (TemporalException.IsCanceledException(e))
@@ -331,6 +356,21 @@ public class KitchenSinkWorkflow
         {
             actType = "client";
             args.Add(client);
+        }
+        else if (eaa.RetryableError is { } retryableError)
+        {
+            actType = "retryable_error";
+            args.Add(retryableError);
+        }
+        else if (eaa.Timeout is { } timeout)
+        {
+            actType = "timeout";
+            args.Add(timeout);
+        }
+        else if (eaa.Heartbeat is { } heartbeat)
+        {
+            actType = "heartbeat";
+            args.Add(heartbeat);
         }
 
         if (eaa.IsLocal != null)
@@ -419,15 +459,61 @@ public class KitchenSinkWorkflow
         new Random().NextBytes(output);
         return output;
     }
+
+    [Activity("retryable_error")]
+    public static void RetryableError(ExecuteActivityAction.Types.RetryableErrorActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        if (info.Attempt <= config.FailAttempts)
+        {
+            throw new ApplicationFailureException("retryable error");
+        }
+    }
+
+    [Activity("timeout")]
+    public static async Task Timeout(ExecuteActivityAction.Types.TimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds activity timeout)
+        if (info.Attempt <= config.FailAttempts)
+        {
+            duration = config.FailureDuration;
+        }
+
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
+    }
+
+    [Activity("heartbeat")]
+    public static async Task Heartbeat(ExecuteActivityAction.Types.HeartbeatTimeoutActivity config)
+    {
+        var info = ActivityExecutionContext.Current.Info;
+        var shouldSendHeartbeats = info.Attempt > config.FailAttempts;
+        var duration = config.SuccessDuration;
+        // Failure case: run failure duration (exceeds heartbeat timeout)
+        if (!shouldSendHeartbeats)
+        {
+            duration = config.FailureDuration;
+        }
+        // Sleep for failure/success timeout duration.
+        // In failure case, this will throw a TaskCancelledException.
+        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
+        // If successful, heartbeat
+        ActivityExecutionContext.Current.Heartbeat();
+    }
 }
 
 public class ClientActivitiesImpl
 {
     private readonly ITemporalClient _client;
+    private readonly bool _errOnUnimplemented;
 
-    public ClientActivitiesImpl(ITemporalClient client)
+    public ClientActivitiesImpl(ITemporalClient client, bool errOnUnimplemented = false)
     {
         _client = client;
+        _errOnUnimplemented = errOnUnimplemented;
     }
 
     [Activity("client")]
@@ -437,7 +523,7 @@ public class ClientActivitiesImpl
         var workflowId = activityInfo.WorkflowId;
         var taskQueue = activityInfo.TaskQueue;
 
-        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue);
+        var executor = new ClientActionsExecutor(_client, workflowId, taskQueue, _errOnUnimplemented);
         await executor.ExecuteClientSequence(clientActivity.ClientSequence);
     }
 }

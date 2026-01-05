@@ -3,6 +3,7 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -14,10 +15,13 @@ import (
 	"go.temporal.io/api/operatorservice/v1"
 
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
+
+const OmesExecutionIDSearchAttribute = "OmesExecutionID"
 
 type Scenario struct {
 	Description string
@@ -86,9 +90,7 @@ func MustRegisterScenario(scenario Scenario) {
 // GetScenarios gets a copy of registered scenarios
 func GetScenarios() map[string]*Scenario {
 	ret := make(map[string]*Scenario, len(registeredScenarios))
-	for k, v := range registeredScenarios {
-		ret[k] = v
-	}
+	maps.Copy(ret, registeredScenarios)
 	return ret
 }
 
@@ -105,6 +107,9 @@ type ScenarioInfo struct {
 	// and workflow ID prefix. This is a single value for the whole scenario, and
 	// not a Workflow RunId.
 	RunID string
+	// ExecutionID is a randomly generated ID that uniquely identifies this particular
+	// execution of the scenario. Combined with RunID, it ensures no two executions collide.
+	ExecutionID string
 	// Metrics component for registering new metrics.
 	MetricsHandler client.MetricsHandler
 	// A zap logger.
@@ -119,6 +124,16 @@ type ScenarioInfo struct {
 	Namespace string
 	// Path to the root of the omes dir
 	RootPath string
+	// ExportOptions contains export-related configuration
+	ExportOptions ExportOptions
+}
+
+// ExportOptions contains configuration for exporting scenario data.
+type ExportOptions struct {
+	// Directory to export histories (empty = disabled)
+	ExportHistoriesDir string
+	// Status filter: "failed", "terminated", "failed,terminated", "all"
+	ExportHistoriesFilter string
 }
 
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
@@ -163,6 +178,13 @@ func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Dur
 		panic(err)
 	}
 	return d
+}
+func (s *ScenarioInfo) ScenarioOptionString(name string, defaultValue string) string {
+	v := s.ScenarioOptions[name]
+	if v == "" {
+		return defaultValue
+	}
+	return v
 }
 
 const DefaultIterations = 10
@@ -269,8 +291,9 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 	// Ensure custom search attributes are registered that many scenarios rely on
 	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
 		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword": enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":     enums.INDEXED_VALUE_TYPE_INT,
+			"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
+			"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
+			OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
 		},
 		Namespace: s.Namespace,
 	})
@@ -307,8 +330,11 @@ func (r *Run) TaskQueue() string {
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
 		TaskQueue:                                TaskQueueForRun(r.RunID),
-		ID:                                       fmt.Sprintf("w-%s-%d", r.RunID, r.Iteration),
+		ID:                                       fmt.Sprintf("w-%s-%s-%d", r.RunID, r.ExecutionID, r.Iteration),
 		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
+		TypedSearchAttributes: temporal.NewSearchAttributes(
+			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).ValueSet(r.ExecutionID),
+		),
 	}
 }
 
@@ -384,7 +410,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
 // returning an error if the execution fails.
-func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow interface{}, valuePtr interface{}, args ...interface{}) error {
+func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow any, valuePtr any, args ...any) error {
 	r.Logger.Debugf("Executing workflow %s with info: %v", workflow, options)
 	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {

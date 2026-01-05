@@ -41,7 +41,7 @@ type workerWithScenarioRunner struct {
 func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.workerRunner.addCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
-	r.metricsOptions.AddCLIFlags(fs, "")
+	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
 }
 
 func (r *workerWithScenarioRunner) preRun() {
@@ -71,19 +71,11 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 
 	// Run scenario
 	scenarioRunner := scenarioRunner{
-		logger:   r.Logger,
-		scenario: r.ScenarioID,
-		scenarioRunConfig: scenarioRunConfig{
-			iterations:                    r.iterations,
-			duration:                      r.duration,
-			maxConcurrent:                 r.maxConcurrent,
-			maxIterationsPerSecond:        r.maxIterationsPerSecond,
-			scenarioOptions:               r.scenarioOptions,
-			timeout:                       r.timeout,
-			doNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-		},
-		clientOptions:  r.ClientOptions,
-		metricsOptions: r.metricsOptions,
+		logger:            r.Logger,
+		scenario:          r.ScenarioID,
+		scenarioRunConfig: r.scenarioRunConfig,
+		clientOptions:     r.ClientOptions,
+		metricsOptions:    r.metricsOptions,
 	}
 	scenarioErr := scenarioRunner.run(ctx)
 	cancel()

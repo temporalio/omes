@@ -49,202 +49,218 @@ namespace Temporal.Omes.KitchenSink {
             "Lm9tZXMua2l0Y2hlbl9zaW5rLkRvUXVlcnlIABI5Cglkb191cGRhdGUYAyAB",
             "KAsyJC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Eb1VwZGF0ZUgAEkUK",
             "Dm5lc3RlZF9hY3Rpb25zGAQgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVu",
-            "X3NpbmsuQ2xpZW50QWN0aW9uU2V0SABCCQoHdmFyaWFudCLeAgoIRG9TaWdu",
+            "X3NpbmsuQ2xpZW50QWN0aW9uU2V0SABCCQoHdmFyaWFudCLxAgoIRG9TaWdu",
             "YWwSUQoRZG9fc2lnbmFsX2FjdGlvbnMYASABKAsyNC50ZW1wb3JhbC5vbWVz",
             "LmtpdGNoZW5fc2luay5Eb1NpZ25hbC5Eb1NpZ25hbEFjdGlvbnNIABI/CgZj",
             "dXN0b20YAiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5IYW5k",
-            "bGVySW52b2NhdGlvbkgAEhIKCndpdGhfc3RhcnQYAyABKAgangEKD0RvU2ln",
+            "bGVySW52b2NhdGlvbkgAEhIKCndpdGhfc3RhcnQYAyABKAgasQEKD0RvU2ln",
             "bmFsQWN0aW9ucxI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9yYWwub21l",
             "cy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASQwoSZG9fYWN0aW9uc19pbl9t",
             "YWluGAIgASgLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9u",
-            "U2V0SABCCQoHdmFyaWFudEIJCgd2YXJpYW50IqkBCgdEb1F1ZXJ5EjgKDHJl",
-            "cG9ydF9zdGF0ZRgBIAEoCzIgLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5",
-            "bG9hZHNIABI/CgZjdXN0b20YAiABKAsyLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5IYW5kbGVySW52b2NhdGlvbkgAEhgKEGZhaWx1cmVfZXhwZWN0",
-            "ZWQYCiABKAhCCQoHdmFyaWFudCLHAQoIRG9VcGRhdGUSQQoKZG9fYWN0aW9u",
-            "cxgBIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkRvQWN0aW9u",
-            "c1VwZGF0ZUgAEj8KBmN1c3RvbRgCIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLkhhbmRsZXJJbnZvY2F0aW9uSAASEgoKd2l0aF9zdGFydBgD",
-            "IAEoCBIYChBmYWlsdXJlX2V4cGVjdGVkGAogASgIQgkKB3ZhcmlhbnQihgEK",
-            "D0RvQWN0aW9uc1VwZGF0ZRI7Cgpkb19hY3Rpb25zGAEgASgLMiUudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASKwoJcmVqZWN0X21l",
-            "GAIgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SABCCQoHdmFyaWFudCJQ",
-            "ChFIYW5kbGVySW52b2NhdGlvbhIMCgRuYW1lGAEgASgJEi0KBGFyZ3MYAiAD",
-            "KAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQifAoNV29ya2Zs",
-            "b3dTdGF0ZRI/CgNrdnMYASADKAsyMi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5Xb3JrZmxvd1N0YXRlLkt2c0VudHJ5GioKCEt2c0VudHJ5EgsKA2tl",
-            "eRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiTwoNV29ya2Zsb3dJbnB1dBI+",
-            "Cg9pbml0aWFsX2FjdGlvbnMYASADKAsyJS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5BY3Rpb25TZXQiVAoJQWN0aW9uU2V0EjMKB2FjdGlvbnMYASAD",
-            "KAsyIi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rpb24SEgoKY29u",
-            "Y3VycmVudBgCIAEoCCL6CAoGQWN0aW9uEjgKBXRpbWVyGAEgASgLMicudGVt",
-            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuVGltZXJBY3Rpb25IABJKCg1leGVj",
-            "X2FjdGl2aXR5GAIgASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
-            "RXhlY3V0ZUFjdGl2aXR5QWN0aW9uSAASVQoTZXhlY19jaGlsZF93b3JrZmxv",
-            "dxgDIAEoCzI2LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVD",
-            "aGlsZFdvcmtmbG93QWN0aW9uSAASTgoUYXdhaXRfd29ya2Zsb3dfc3RhdGUY",
-            "BCABKAsyLi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdFdvcmtm",
-            "bG93U3RhdGVIABJDCgtzZW5kX3NpZ25hbBgFIAEoCzIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlNlbmRTaWduYWxBY3Rpb25IABJLCg9jYW5jZWxf",
-            "d29ya2Zsb3cYBiABKAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5D",
-            "YW5jZWxXb3JrZmxvd0FjdGlvbkgAEkwKEHNldF9wYXRjaF9tYXJrZXIYByAB",
-            "KAsyMC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZXRQYXRjaE1hcmtl",
-            "ckFjdGlvbkgAElwKGHVwc2VydF9zZWFyY2hfYXR0cmlidXRlcxgIIAEoCzI4",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNlYXJjaEF0dHJp",
-            "YnV0ZXNBY3Rpb25IABJDCgt1cHNlcnRfbWVtbxgJIAEoCzIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydE1lbW9BY3Rpb25IABJHChJzZXRf",
-            "d29ya2Zsb3dfc3RhdGUYCiABKAsyKS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5Xb3JrZmxvd1N0YXRlSAASRwoNcmV0dXJuX3Jlc3VsdBgLIAEoCzIu",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlJldHVyblJlc3VsdEFjdGlv",
-            "bkgAEkUKDHJldHVybl9lcnJvchgMIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0",
-            "Y2hlbl9zaW5rLlJldHVybkVycm9yQWN0aW9uSAASSgoPY29udGludWVfYXNf",
-            "bmV3GA0gASgLMi8udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGlu",
-            "dWVBc05ld0FjdGlvbkgAEkIKEW5lc3RlZF9hY3Rpb25fc2V0GA4gASgLMiUu",
-            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0SAASTAoPbmV4",
-            "dXNfb3BlcmF0aW9uGA8gASgLMjEudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
-            "bmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uSABCCQoHdmFyaWFudCKjAgoPQXdh",
-            "aXRhYmxlQ2hvaWNlEi0KC3dhaXRfZmluaXNoGAEgASgLMhYuZ29vZ2xlLnBy",
-            "b3RvYnVmLkVtcHR5SAASKQoHYWJhbmRvbhgCIAEoCzIWLmdvb2dsZS5wcm90",
-            "b2J1Zi5FbXB0eUgAEjcKFWNhbmNlbF9iZWZvcmVfc3RhcnRlZBgDIAEoCzIW",
-            "Lmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEjYKFGNhbmNlbF9hZnRlcl9zdGFy",
-            "dGVkGAQgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASOAoWY2FuY2Vs",
-            "X2FmdGVyX2NvbXBsZXRlZBgFIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0",
-            "eUgAQgsKCWNvbmRpdGlvbiJqCgtUaW1lckFjdGlvbhIUCgxtaWxsaXNlY29u",
-            "ZHMYASABKAQSRQoQYXdhaXRhYmxlX2Nob2ljZRgCIAEoCzIrLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZSLqDAoVRXhlY3V0",
-            "ZUFjdGl2aXR5QWN0aW9uElQKB2dlbmVyaWMYASABKAsyQS50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uR2VuZXJp",
-            "Y0FjdGl2aXR5SAASKgoFZGVsYXkYAiABKAsyGS5nb29nbGUucHJvdG9idWYu",
-            "RHVyYXRpb25IABImCgRub29wGAMgASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVt",
-            "cHR5SAASWAoJcmVzb3VyY2VzGA4gASgLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLlJlc291cmNlc0FjdGl2",
-            "aXR5SAASVAoHcGF5bG9hZBgSIAEoCzJBLnRlbXBvcmFsLm9tZXMua2l0Y2hl",
-            "bl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbi5QYXlsb2FkQWN0aXZpdHlI",
-            "ABJSCgZjbGllbnQYEyABKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uQ2xpZW50QWN0aXZpdHlIABISCgp0",
-            "YXNrX3F1ZXVlGAQgASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1wb3JhbC5v",
-            "bWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uSGVhZGVy",
-            "c0VudHJ5EjwKGXNjaGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiABKAsyGS5n",
-            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9fc3RhcnRf",
-            "dGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI5ChZz",
-            "dGFydF90b19jbG9zZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVm",
-            "LkR1cmF0aW9uEjQKEWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhkuZ29vZ2xl",
-            "LnByb3RvYnVmLkR1cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEoCzIjLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNfbG9jYWwY",
-            "CyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1vdGUYDCAB",
-            "KAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVBY3Rpdml0",
-            "eU9wdGlvbnNIARJFChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIKCHByaW9y",
-            "aXR5GA8gASgLMiAudGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlvcml0eRIU",
-            "CgxmYWlybmVzc19rZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0GBEgASgC",
-            "GlMKD0dlbmVyaWNBY3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFyZ3VtZW50",
-            "cxgCIAMoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBqaAQoR",
-            "UmVzb3VyY2VzQWN0aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdvb2dsZS5w",
-            "cm90b2J1Zi5EdXJhdGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgCIAEoBBIk",
-            "ChxjcHVfeWllbGRfZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgKEGNwdV95",
-            "aWVsZF9mb3JfbXMYBCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgKEGJ5dGVz",
-            "X3RvX3JlY2VpdmUYASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIgASgFGlUK",
-            "DkNsaWVudEFjdGl2aXR5EkMKD2NsaWVudF9zZXF1ZW5jZRgBIAEoCzIqLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNsaWVudFNlcXVlbmNlGk8KDEhl",
-            "YWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1w",
-            "b3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBQg8KDWFjdGl2aXR5X3R5",
-            "cGVCCgoIbG9jYWxpdHkirQoKGkV4ZWN1dGVDaGlsZFdvcmtmbG93QWN0aW9u",
-            "EhEKCW5hbWVzcGFjZRgCIAEoCRITCgt3b3JrZmxvd19pZBgDIAEoCRIVCg13",
-            "b3JrZmxvd190eXBlGAQgASgJEhIKCnRhc2tfcXVldWUYBSABKAkSLgoFaW5w",
-            "dXQYBiADKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQSPQoa",
-            "d29ya2Zsb3dfZXhlY3V0aW9uX3RpbWVvdXQYByABKAsyGS5nb29nbGUucHJv",
-            "dG9idWYuRHVyYXRpb24SNwoUd29ya2Zsb3dfcnVuX3RpbWVvdXQYCCABKAsy",
-            "GS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24SOAoVd29ya2Zsb3dfdGFza190",
-            "aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEkoKE3Bh",
-            "cmVudF9jbG9zZV9wb2xpY3kYCiABKA4yLS50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5QYXJlbnRDbG9zZVBvbGljeRJOChh3b3JrZmxvd19pZF9yZXVz",
-            "ZV9wb2xpY3kYDCABKA4yLC50ZW1wb3JhbC5hcGkuZW51bXMudjEuV29ya2Zs",
-            "b3dJZFJldXNlUG9saWN5EjkKDHJldHJ5X3BvbGljeRgNIAEoCzIjLnRlbXBv",
-            "cmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSFQoNY3Jvbl9zY2hlZHVs",
-            "ZRgOIAEoCRJUCgdoZWFkZXJzGA8gAygLMkMudGVtcG9yYWwub21lcy5raXRj",
-            "aGVuX3NpbmsuRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24uSGVhZGVyc0Vu",
-            "dHJ5Ek4KBG1lbW8YECADKAsyQC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
-            "ay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5NZW1vRW50cnkSZwoRc2Vh",
-            "cmNoX2F0dHJpYnV0ZXMYESADKAsyTC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
-            "c2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbi5TZWFyY2hBdHRyaWJ1",
-            "dGVzRW50cnkSVAoRY2FuY2VsbGF0aW9uX3R5cGUYEiABKA4yOS50ZW1wb3Jh",
-            "bC5vbWVzLmtpdGNoZW5fc2luay5DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
-            "VHlwZRJHChF2ZXJzaW9uaW5nX2ludGVudBgTIAEoDjIsLnRlbXBvcmFsLm9t",
-            "ZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQSRQoQYXdhaXRhYmxl",
-            "X2Nob2ljZRgUIAEoCzIrLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3",
-            "YWl0YWJsZUNob2ljZRpPCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEi4K",
-            "BXZhbHVlGAIgASgLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2Fk",
-            "OgI4ARpMCglNZW1vRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ARpYChVTZWFy",
-            "Y2hBdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEi4KBXZhbHVlGAIgASgL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkOgI4ASIwChJBd2Fp",
-            "dFdvcmtmbG93U3RhdGUSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJIt8C",
-            "ChBTZW5kU2lnbmFsQWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1",
-            "bl9pZBgCIAEoCRITCgtzaWduYWxfbmFtZRgDIAEoCRItCgRhcmdzGAQgAygL",
-            "Mh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5QYXlsb2FkEkoKB2hlYWRlcnMY",
-            "BSADKAsyOS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZW5kU2lnbmFs",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNlGAYgASgL",
-            "MisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNl",
-            "Gk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsy",
-            "Hy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIjsKFENhbmNl",
-            "bFdvcmtmbG93QWN0aW9uEhMKC3dvcmtmbG93X2lkGAEgASgJEg4KBnJ1bl9p",
-            "ZBgCIAEoCSJ2ChRTZXRQYXRjaE1hcmtlckFjdGlvbhIQCghwYXRjaF9pZBgB",
-            "IAEoCRISCgpkZXByZWNhdGVkGAIgASgIEjgKDGlubmVyX2FjdGlvbhgDIAEo",
-            "CzIiLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvbiLjAQocVXBz",
-            "ZXJ0U2VhcmNoQXR0cmlidXRlc0FjdGlvbhJpChFzZWFyY2hfYXR0cmlidXRl",
-            "cxgBIAMoCzJOLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlVwc2VydFNl",
-            "YXJjaEF0dHJpYnV0ZXNBY3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5GlgK",
-            "FVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUY",
-            "AiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBIkcK",
-            "EFVwc2VydE1lbW9BY3Rpb24SMwoNdXBzZXJ0ZWRfbWVtbxgBIAEoCzIcLnRl",
-            "bXBvcmFsLmFwaS5jb21tb24udjEuTWVtbyJKChJSZXR1cm5SZXN1bHRBY3Rp",
-            "b24SNAoLcmV0dXJuX3RoaXMYASABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9u",
-            "LnYxLlBheWxvYWQiRgoRUmV0dXJuRXJyb3JBY3Rpb24SMQoHZmFpbHVyZRgB",
-            "IAEoCzIgLnRlbXBvcmFsLmFwaS5mYWlsdXJlLnYxLkZhaWx1cmUi3gYKE0Nv",
-            "bnRpbnVlQXNOZXdBY3Rpb24SFQoNd29ya2Zsb3dfdHlwZRgBIAEoCRISCgp0",
-            "YXNrX3F1ZXVlGAIgASgJEjIKCWFyZ3VtZW50cxgDIAMoCzIfLnRlbXBvcmFs",
-            "LmFwaS5jb21tb24udjEuUGF5bG9hZBI3ChR3b3JrZmxvd19ydW5fdGltZW91",
-            "dBgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI4ChV3b3JrZmxv",
-            "d190YXNrX3RpbWVvdXQYBSABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRp",
-            "b24SRwoEbWVtbxgGIAMoCzI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
-            "LkNvbnRpbnVlQXNOZXdBY3Rpb24uTWVtb0VudHJ5Ek0KB2hlYWRlcnMYByAD",
-            "KAsyPC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Db250aW51ZUFzTmV3",
-            "QWN0aW9uLkhlYWRlcnNFbnRyeRJgChFzZWFyY2hfYXR0cmlidXRlcxgIIAMo",
-            "CzJFLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdB",
-            "Y3Rpb24uU2VhcmNoQXR0cmlidXRlc0VudHJ5EjkKDHJldHJ5X3BvbGljeRgJ",
-            "IAEoCzIjLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUmV0cnlQb2xpY3kSRwoR",
-            "dmVyc2lvbmluZ19pbnRlbnQYCiABKA4yLC50ZW1wb3JhbC5vbWVzLmtpdGNo",
-            "ZW5fc2luay5WZXJzaW9uaW5nSW50ZW50GkwKCU1lbW9FbnRyeRILCgNrZXkY",
-            "ASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYx",
-            "LlBheWxvYWQ6AjgBGk8KDEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoF",
-            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
-            "AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSLgoF",
-            "dmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6",
-            "AjgBItEBChVSZW1vdGVBY3Rpdml0eU9wdGlvbnMSTwoRY2FuY2VsbGF0aW9u",
-            "X3R5cGUYASABKA4yNC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5BY3Rp",
-            "dml0eUNhbmNlbGxhdGlvblR5cGUSHgoWZG9fbm90X2VhZ2VybHlfZXhlY3V0",
-            "ZRgCIAEoCBJHChF2ZXJzaW9uaW5nX2ludGVudBgDIAEoDjIsLnRlbXBvcmFs",
-            "Lm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25pbmdJbnRlbnQirAIKFUV4ZWN1",
-            "dGVOZXh1c09wZXJhdGlvbhIQCghlbmRwb2ludBgBIAEoCRIRCglvcGVyYXRp",
-            "b24YAiABKAkSDQoFaW5wdXQYAyABKAkSTwoHaGVhZGVycxgEIAMoCzI+LnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlv",
-            "bi5IZWFkZXJzRW50cnkSRQoQYXdhaXRhYmxlX2Nob2ljZRgFIAEoCzIrLnRl",
-            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkF3YWl0YWJsZUNob2ljZRIXCg9l",
-            "eHBlY3RlZF9vdXRwdXQYBiABKAkaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgB",
-            "IAEoCRINCgV2YWx1ZRgCIAEoCToCOAEqpAEKEVBhcmVudENsb3NlUG9saWN5",
-            "EiMKH1BBUkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJF",
-            "TlRfQ0xPU0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9Q",
-            "T0xJQ1lfQUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVT",
-            "VF9DQU5DRUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVE",
-            "EAASDgoKQ09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3Jr",
-            "Zmxvd0NhbmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcK",
-            "E0NISUxEX1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNF",
-            "TExBVElPTl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExB",
-            "VElPTl9SRVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUS",
-            "DgoKVFJZX0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
-            "RBABEgsKB0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIu",
-            "Y29tL3RlbXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90",
-            "bzM="));
+            "U2V0SAASEQoJc2lnbmFsX2lkGAMgASgFQgkKB3ZhcmlhbnRCCQoHdmFyaWFu",
+            "dCKpAQoHRG9RdWVyeRI4CgxyZXBvcnRfc3RhdGUYASABKAsyIC50ZW1wb3Jh",
+            "bC5hcGkuY29tbW9uLnYxLlBheWxvYWRzSAASPwoGY3VzdG9tGAIgASgLMi0u",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuSGFuZGxlckludm9jYXRpb25I",
+            "ABIYChBmYWlsdXJlX2V4cGVjdGVkGAogASgIQgkKB3ZhcmlhbnQixwEKCERv",
+            "VXBkYXRlEkEKCmRvX2FjdGlvbnMYASABKAsyKy50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5Eb0FjdGlvbnNVcGRhdGVIABI/CgZjdXN0b20YAiABKAsy",
+            "LS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5IYW5kbGVySW52b2NhdGlv",
+            "bkgAEhIKCndpdGhfc3RhcnQYAyABKAgSGAoQZmFpbHVyZV9leHBlY3RlZBgK",
+            "IAEoCEIJCgd2YXJpYW50IoYBCg9Eb0FjdGlvbnNVcGRhdGUSOwoKZG9fYWN0",
+            "aW9ucxgBIAEoCzIlLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlv",
+            "blNldEgAEisKCXJlamVjdF9tZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5F",
+            "bXB0eUgAQgkKB3ZhcmlhbnQiUAoRSGFuZGxlckludm9jYXRpb24SDAoEbmFt",
+            "ZRgBIAEoCRItCgRhcmdzGAIgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52",
+            "MS5QYXlsb2FkInwKDVdvcmtmbG93U3RhdGUSPwoDa3ZzGAEgAygLMjIudGVt",
+            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuV29ya2Zsb3dTdGF0ZS5LdnNFbnRy",
+            "eRoqCghLdnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgB",
+            "IqgBCg1Xb3JrZmxvd0lucHV0Ej4KD2luaXRpYWxfYWN0aW9ucxgBIAMoCzIl",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldBIdChVleHBl",
+            "Y3RlZF9zaWduYWxfY291bnQYAiABKAUSGwoTZXhwZWN0ZWRfc2lnbmFsX2lk",
+            "cxgDIAMoBRIbChNyZWNlaXZlZF9zaWduYWxfaWRzGAQgAygFIlQKCUFjdGlv",
+            "blNldBIzCgdhY3Rpb25zGAEgAygLMiIudGVtcG9yYWwub21lcy5raXRjaGVu",
+            "X3NpbmsuQWN0aW9uEhIKCmNvbmN1cnJlbnQYAiABKAgi+ggKBkFjdGlvbhI4",
+            "CgV0aW1lchgBIAEoCzInLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlRp",
+            "bWVyQWN0aW9uSAASSgoNZXhlY19hY3Rpdml0eRgCIAEoCzIxLnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlvbkgAElUK",
+            "E2V4ZWNfY2hpbGRfd29ya2Zsb3cYAyABKAsyNi50ZW1wb3JhbC5vbWVzLmtp",
+            "dGNoZW5fc2luay5FeGVjdXRlQ2hpbGRXb3JrZmxvd0FjdGlvbkgAEk4KFGF3",
+            "YWl0X3dvcmtmbG93X3N0YXRlGAQgASgLMi4udGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuQXdhaXRXb3JrZmxvd1N0YXRlSAASQwoLc2VuZF9zaWduYWwY",
+            "BSABKAsyLC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5TZW5kU2lnbmFs",
+            "QWN0aW9uSAASSwoPY2FuY2VsX3dvcmtmbG93GAYgASgLMjAudGVtcG9yYWwu",
+            "b21lcy5raXRjaGVuX3NpbmsuQ2FuY2VsV29ya2Zsb3dBY3Rpb25IABJMChBz",
+            "ZXRfcGF0Y2hfbWFya2VyGAcgASgLMjAudGVtcG9yYWwub21lcy5raXRjaGVu",
+            "X3NpbmsuU2V0UGF0Y2hNYXJrZXJBY3Rpb25IABJcChh1cHNlcnRfc2VhcmNo",
+            "X2F0dHJpYnV0ZXMYCCABKAsyOC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5VcHNlcnRTZWFyY2hBdHRyaWJ1dGVzQWN0aW9uSAASQwoLdXBzZXJ0X21l",
+            "bW8YCSABKAsyLC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5VcHNlcnRN",
+            "ZW1vQWN0aW9uSAASRwoSc2V0X3dvcmtmbG93X3N0YXRlGAogASgLMikudGVt",
+            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuV29ya2Zsb3dTdGF0ZUgAEkcKDXJl",
+            "dHVybl9yZXN1bHQYCyABKAsyLi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5SZXR1cm5SZXN1bHRBY3Rpb25IABJFCgxyZXR1cm5fZXJyb3IYDCABKAsy",
+            "LS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5SZXR1cm5FcnJvckFjdGlv",
+            "bkgAEkoKD2NvbnRpbnVlX2FzX25ldxgNIAEoCzIvLnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb25IABJCChFuZXN0ZWRf",
+            "YWN0aW9uX3NldBgOIAEoCzIlLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
+            "LkFjdGlvblNldEgAEkwKD25leHVzX29wZXJhdGlvbhgPIAEoCzIxLnRlbXBv",
+            "cmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVOZXh1c09wZXJhdGlvbkgA",
+            "QgkKB3ZhcmlhbnQiowIKD0F3YWl0YWJsZUNob2ljZRItCgt3YWl0X2Zpbmlz",
+            "aBgBIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAEikKB2FiYW5kb24Y",
+            "AiABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIABI3ChVjYW5jZWxfYmVm",
+            "b3JlX3N0YXJ0ZWQYAyABKAsyFi5nb29nbGUucHJvdG9idWYuRW1wdHlIABI2",
+            "ChRjYW5jZWxfYWZ0ZXJfc3RhcnRlZBgEIAEoCzIWLmdvb2dsZS5wcm90b2J1",
+            "Zi5FbXB0eUgAEjgKFmNhbmNlbF9hZnRlcl9jb21wbGV0ZWQYBSABKAsyFi5n",
+            "b29nbGUucHJvdG9idWYuRW1wdHlIAEILCgljb25kaXRpb24iagoLVGltZXJB",
+            "Y3Rpb24SFAoMbWlsbGlzZWNvbmRzGAEgASgEEkUKEGF3YWl0YWJsZV9jaG9p",
+            "Y2UYAiABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Bd2FpdGFi",
+            "bGVDaG9pY2Ui6hEKFUV4ZWN1dGVBY3Rpdml0eUFjdGlvbhJUCgdnZW5lcmlj",
+            "GAEgASgLMkEudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFj",
+            "dGl2aXR5QWN0aW9uLkdlbmVyaWNBY3Rpdml0eUgAEioKBWRlbGF5GAIgASgL",
+            "MhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uSAASJgoEbm9vcBgDIAEoCzIW",
+            "Lmdvb2dsZS5wcm90b2J1Zi5FbXB0eUgAElgKCXJlc291cmNlcxgOIAEoCzJD",
+            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFj",
+            "dGlvbi5SZXNvdXJjZXNBY3Rpdml0eUgAElQKB3BheWxvYWQYEiABKAsyQS50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRlQWN0aXZpdHlBY3Rp",
+            "b24uUGF5bG9hZEFjdGl2aXR5SAASUgoGY2xpZW50GBMgASgLMkAudGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9uLkNs",
+            "aWVudEFjdGl2aXR5SAASYwoPcmV0cnlhYmxlX2Vycm9yGBQgASgLMkgudGVt",
+            "cG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0aW9u",
+            "LlJldHJ5YWJsZUVycm9yQWN0aXZpdHlIABJUCgd0aW1lb3V0GBUgASgLMkEu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZUFjdGl2aXR5QWN0",
+            "aW9uLlRpbWVvdXRBY3Rpdml0eUgAEl8KCWhlYXJ0YmVhdBgWIAEoCzJKLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVBY3Rpdml0eUFjdGlv",
+            "bi5IZWFydGJlYXRUaW1lb3V0QWN0aXZpdHlIABISCgp0YXNrX3F1ZXVlGAQg",
+            "ASgJEk8KB2hlYWRlcnMYBSADKAsyPi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5f",
+            "c2luay5FeGVjdXRlQWN0aXZpdHlBY3Rpb24uSGVhZGVyc0VudHJ5EjwKGXNj",
+            "aGVkdWxlX3RvX2Nsb3NlX3RpbWVvdXQYBiABKAsyGS5nb29nbGUucHJvdG9i",
+            "dWYuRHVyYXRpb24SPAoZc2NoZWR1bGVfdG9fc3RhcnRfdGltZW91dBgHIAEo",
+            "CzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI5ChZzdGFydF90b19jbG9z",
+            "ZV90aW1lb3V0GAggASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uEjQK",
+            "EWhlYXJ0YmVhdF90aW1lb3V0GAkgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1",
+            "cmF0aW9uEjkKDHJldHJ5X3BvbGljeRgKIAEoCzIjLnRlbXBvcmFsLmFwaS5j",
+            "b21tb24udjEuUmV0cnlQb2xpY3kSKgoIaXNfbG9jYWwYCyABKAsyFi5nb29n",
+            "bGUucHJvdG9idWYuRW1wdHlIARJDCgZyZW1vdGUYDCABKAsyMS50ZW1wb3Jh",
+            "bC5vbWVzLmtpdGNoZW5fc2luay5SZW1vdGVBY3Rpdml0eU9wdGlvbnNIARJF",
+            "ChBhd2FpdGFibGVfY2hvaWNlGA0gASgLMisudGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEjIKCHByaW9yaXR5GA8gASgLMiAu",
+            "dGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Qcmlvcml0eRIUCgxmYWlybmVzc19r",
+            "ZXkYECABKAkSFwoPZmFpcm5lc3Nfd2VpZ2h0GBEgASgCGlMKD0dlbmVyaWNB",
+            "Y3Rpdml0eRIMCgR0eXBlGAEgASgJEjIKCWFyZ3VtZW50cxgCIAMoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBqaAQoRUmVzb3VyY2VzQWN0",
+            "aXZpdHkSKgoHcnVuX2ZvchgBIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJh",
+            "dGlvbhIZChFieXRlc190b19hbGxvY2F0ZRgCIAEoBBIkChxjcHVfeWllbGRf",
+            "ZXZlcnlfbl9pdGVyYXRpb25zGAMgASgNEhgKEGNwdV95aWVsZF9mb3JfbXMY",
+            "BCABKA0aRAoPUGF5bG9hZEFjdGl2aXR5EhgKEGJ5dGVzX3RvX3JlY2VpdmUY",
+            "ASABKAUSFwoPYnl0ZXNfdG9fcmV0dXJuGAIgASgFGlUKDkNsaWVudEFjdGl2",
+            "aXR5EkMKD2NsaWVudF9zZXF1ZW5jZRgBIAEoCzIqLnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkNsaWVudFNlcXVlbmNlGi8KFlJldHJ5YWJsZUVycm9y",
+            "QWN0aXZpdHkSFQoNZmFpbF9hdHRlbXB0cxgBIAEoBRqSAQoPVGltZW91dEFj",
+            "dGl2aXR5EhUKDWZhaWxfYXR0ZW1wdHMYASABKAUSMwoQc3VjY2Vzc19kdXJh",
+            "dGlvbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhIzChBmYWls",
+            "dXJlX2R1cmF0aW9uGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9u",
+            "GpsBChhIZWFydGJlYXRUaW1lb3V0QWN0aXZpdHkSFQoNZmFpbF9hdHRlbXB0",
+            "cxgBIAEoBRIzChBzdWNjZXNzX2R1cmF0aW9uGAIgASgLMhkuZ29vZ2xlLnBy",
+            "b3RvYnVmLkR1cmF0aW9uEjMKEGZhaWx1cmVfZHVyYXRpb24YAyABKAsyGS5n",
+            "b29nbGUucHJvdG9idWYuRHVyYXRpb24aTwoMSGVhZGVyc0VudHJ5EgsKA2tl",
+            "eRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24u",
+            "djEuUGF5bG9hZDoCOAFCDwoNYWN0aXZpdHlfdHlwZUIKCghsb2NhbGl0eSKt",
+            "CgoaRXhlY3V0ZUNoaWxkV29ya2Zsb3dBY3Rpb24SEQoJbmFtZXNwYWNlGAIg",
+            "ASgJEhMKC3dvcmtmbG93X2lkGAMgASgJEhUKDXdvcmtmbG93X3R5cGUYBCAB",
+            "KAkSEgoKdGFza19xdWV1ZRgFIAEoCRIuCgVpbnB1dBgGIAMoCzIfLnRlbXBv",
+            "cmFsLmFwaS5jb21tb24udjEuUGF5bG9hZBI9Chp3b3JrZmxvd19leGVjdXRp",
+            "b25fdGltZW91dBgHIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhI3",
+            "ChR3b3JrZmxvd19ydW5fdGltZW91dBgIIAEoCzIZLmdvb2dsZS5wcm90b2J1",
+            "Zi5EdXJhdGlvbhI4ChV3b3JrZmxvd190YXNrX3RpbWVvdXQYCSABKAsyGS5n",
+            "b29nbGUucHJvdG9idWYuRHVyYXRpb24SSgoTcGFyZW50X2Nsb3NlX3BvbGlj",
+            "eRgKIAEoDjItLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlBhcmVudENs",
+            "b3NlUG9saWN5Ek4KGHdvcmtmbG93X2lkX3JldXNlX3BvbGljeRgMIAEoDjIs",
+            "LnRlbXBvcmFsLmFwaS5lbnVtcy52MS5Xb3JrZmxvd0lkUmV1c2VQb2xpY3kS",
+            "OQoMcmV0cnlfcG9saWN5GA0gASgLMiMudGVtcG9yYWwuYXBpLmNvbW1vbi52",
+            "MS5SZXRyeVBvbGljeRIVCg1jcm9uX3NjaGVkdWxlGA4gASgJElQKB2hlYWRl",
+            "cnMYDyADKAsyQy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVjdXRl",
+            "Q2hpbGRXb3JrZmxvd0FjdGlvbi5IZWFkZXJzRW50cnkSTgoEbWVtbxgQIAMo",
+            "CzJALnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVDaGlsZFdv",
+            "cmtmbG93QWN0aW9uLk1lbW9FbnRyeRJnChFzZWFyY2hfYXR0cmlidXRlcxgR",
+            "IAMoCzJMLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkV4ZWN1dGVDaGls",
+            "ZFdvcmtmbG93QWN0aW9uLlNlYXJjaEF0dHJpYnV0ZXNFbnRyeRJUChFjYW5j",
+            "ZWxsYXRpb25fdHlwZRgSIAEoDjI5LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
+            "aW5rLkNoaWxkV29ya2Zsb3dDYW5jZWxsYXRpb25UeXBlEkcKEXZlcnNpb25p",
+            "bmdfaW50ZW50GBMgASgOMiwudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "VmVyc2lvbmluZ0ludGVudBJFChBhd2FpdGFibGVfY2hvaWNlGBQgASgLMisu",
+            "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlGk8K",
+            "DEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50",
+            "ZW1wb3JhbC5hcGkuY29tbW9uLnYxLlBheWxvYWQ6AjgBGkwKCU1lbW9FbnRy",
+            "eRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGku",
+            "Y29tbW9uLnYxLlBheWxvYWQ6AjgBGlgKFVNlYXJjaEF0dHJpYnV0ZXNFbnRy",
+            "eRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy50ZW1wb3JhbC5hcGku",
+            "Y29tbW9uLnYxLlBheWxvYWQ6AjgBIjAKEkF3YWl0V29ya2Zsb3dTdGF0ZRIL",
+            "CgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAki3wIKEFNlbmRTaWduYWxBY3Rp",
+            "b24SEwoLd29ya2Zsb3dfaWQYASABKAkSDgoGcnVuX2lkGAIgASgJEhMKC3Np",
+            "Z25hbF9uYW1lGAMgASgJEi0KBGFyZ3MYBCADKAsyHy50ZW1wb3JhbC5hcGku",
+            "Y29tbW9uLnYxLlBheWxvYWQSSgoHaGVhZGVycxgFIAMoCzI5LnRlbXBvcmFs",
+            "Lm9tZXMua2l0Y2hlbl9zaW5rLlNlbmRTaWduYWxBY3Rpb24uSGVhZGVyc0Vu",
+            "dHJ5EkUKEGF3YWl0YWJsZV9jaG9pY2UYBiABKAsyKy50ZW1wb3JhbC5vbWVz",
+            "LmtpdGNoZW5fc2luay5Bd2FpdGFibGVDaG9pY2UaTwoMSGVhZGVyc0VudHJ5",
+            "EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFsLmFwaS5j",
+            "b21tb24udjEuUGF5bG9hZDoCOAEiOwoUQ2FuY2VsV29ya2Zsb3dBY3Rpb24S",
+            "EwoLd29ya2Zsb3dfaWQYASABKAkSDgoGcnVuX2lkGAIgASgJInYKFFNldFBh",
+            "dGNoTWFya2VyQWN0aW9uEhAKCHBhdGNoX2lkGAEgASgJEhIKCmRlcHJlY2F0",
+            "ZWQYAiABKAgSOAoMaW5uZXJfYWN0aW9uGAMgASgLMiIudGVtcG9yYWwub21l",
+            "cy5raXRjaGVuX3NpbmsuQWN0aW9uIuMBChxVcHNlcnRTZWFyY2hBdHRyaWJ1",
+            "dGVzQWN0aW9uEmkKEXNlYXJjaF9hdHRyaWJ1dGVzGAEgAygLMk4udGVtcG9y",
+            "YWwub21lcy5raXRjaGVuX3NpbmsuVXBzZXJ0U2VhcmNoQXR0cmlidXRlc0Fj",
+            "dGlvbi5TZWFyY2hBdHRyaWJ1dGVzRW50cnkaWAoVU2VhcmNoQXR0cmlidXRl",
+            "c0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRlbXBvcmFs",
+            "LmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEiRwoQVXBzZXJ0TWVtb0FjdGlv",
+            "bhIzCg11cHNlcnRlZF9tZW1vGAEgASgLMhwudGVtcG9yYWwuYXBpLmNvbW1v",
+            "bi52MS5NZW1vIkoKElJldHVyblJlc3VsdEFjdGlvbhI0CgtyZXR1cm5fdGhp",
+            "cxgBIAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZCJGChFS",
+            "ZXR1cm5FcnJvckFjdGlvbhIxCgdmYWlsdXJlGAEgASgLMiAudGVtcG9yYWwu",
+            "YXBpLmZhaWx1cmUudjEuRmFpbHVyZSLeBgoTQ29udGludWVBc05ld0FjdGlv",
+            "bhIVCg13b3JrZmxvd190eXBlGAEgASgJEhIKCnRhc2tfcXVldWUYAiABKAkS",
+            "MgoJYXJndW1lbnRzGAMgAygLMh8udGVtcG9yYWwuYXBpLmNvbW1vbi52MS5Q",
+            "YXlsb2FkEjcKFHdvcmtmbG93X3J1bl90aW1lb3V0GAQgASgLMhkuZ29vZ2xl",
+            "LnByb3RvYnVmLkR1cmF0aW9uEjgKFXdvcmtmbG93X3Rhc2tfdGltZW91dBgF",
+            "IAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbhJHCgRtZW1vGAYgAygL",
+            "MjkudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQ29udGludWVBc05ld0Fj",
+            "dGlvbi5NZW1vRW50cnkSTQoHaGVhZGVycxgHIAMoCzI8LnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLkNvbnRpbnVlQXNOZXdBY3Rpb24uSGVhZGVyc0Vu",
+            "dHJ5EmAKEXNlYXJjaF9hdHRyaWJ1dGVzGAggAygLMkUudGVtcG9yYWwub21l",
+            "cy5raXRjaGVuX3NpbmsuQ29udGludWVBc05ld0FjdGlvbi5TZWFyY2hBdHRy",
+            "aWJ1dGVzRW50cnkSOQoMcmV0cnlfcG9saWN5GAkgASgLMiMudGVtcG9yYWwu",
+            "YXBpLmNvbW1vbi52MS5SZXRyeVBvbGljeRJHChF2ZXJzaW9uaW5nX2ludGVu",
+            "dBgKIAEoDjIsLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLlZlcnNpb25p",
+            "bmdJbnRlbnQaTAoJTWVtb0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgC",
+            "IAEoCzIfLnRlbXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEaTwoM",
+            "SGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEaWAoVU2VhcmNoQXR0",
+            "cmlidXRlc0VudHJ5EgsKA2tleRgBIAEoCRIuCgV2YWx1ZRgCIAEoCzIfLnRl",
+            "bXBvcmFsLmFwaS5jb21tb24udjEuUGF5bG9hZDoCOAEi0QEKFVJlbW90ZUFj",
+            "dGl2aXR5T3B0aW9ucxJPChFjYW5jZWxsYXRpb25fdHlwZRgBIAEoDjI0LnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGl2aXR5Q2FuY2VsbGF0aW9u",
+            "VHlwZRIeChZkb19ub3RfZWFnZXJseV9leGVjdXRlGAIgASgIEkcKEXZlcnNp",
+            "b25pbmdfaW50ZW50GAMgASgOMiwudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
+            "bmsuVmVyc2lvbmluZ0ludGVudCKsAgoVRXhlY3V0ZU5leHVzT3BlcmF0aW9u",
+            "EhAKCGVuZHBvaW50GAEgASgJEhEKCW9wZXJhdGlvbhgCIAEoCRINCgVpbnB1",
+            "dBgDIAEoCRJPCgdoZWFkZXJzGAQgAygLMj4udGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uLkhlYWRlcnNFbnRyeRJF",
+            "ChBhd2FpdGFibGVfY2hvaWNlGAUgASgLMisudGVtcG9yYWwub21lcy5raXRj",
+            "aGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEhcKD2V4cGVjdGVkX291dHB1dBgG",
+            "IAEoCRouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIg",
+            "ASgJOgI4ASqkAQoRUGFyZW50Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NF",
+            "X1BPTElDWV9VTlNQRUNJRklFRBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lf",
+            "VEVSTUlOQVRFEAESHwobUEFSRU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAIS",
+            "JgoiUEFSRU5UX0NMT1NFX1BPTElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZl",
+            "cnNpb25pbmdJbnRlbnQSDwoLVU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxF",
+            "EAESCwoHREVGQVVMVBACKqIBCh1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
+            "VHlwZRIUChBDSElMRF9XRl9BQkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NB",
+            "TkNFTBABEigKJENISUxEX1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
+            "RBACEigKJENISUxEX1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBAD",
+            "KlgKGEFjdGl2aXR5Q2FuY2VsbGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAAS",
+            "HwobV0FJVF9DQU5DRUxMQVRJT05fQ09NUExFVEVEEAESCwoHQUJBTkRPThAC",
+            "QkIKEGlvLnRlbXBvcmFsLm9tZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9v",
+            "bWVzL2xvYWRnZW4va2l0Y2hlbnNpbmtiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -253,21 +269,24 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientActionSet), global::Temporal.Omes.KitchenSink.ClientActionSet.Parser, new[]{ "Actions", "Concurrent", "WaitAtEnd", "WaitForCurrentRunToFinishAtEnd" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WithStartClientAction), global::Temporal.Omes.KitchenSink.WithStartClientAction.Parser, new[]{ "DoSignal", "DoUpdate" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ClientAction), global::Temporal.Omes.KitchenSink.ClientAction.Parser, new[]{ "DoSignal", "DoQuery", "DoUpdate", "NestedActions" }, new[]{ "Variant" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal), global::Temporal.Omes.KitchenSink.DoSignal.Parser, new[]{ "DoSignalActions", "Custom", "WithStart" }, new[]{ "Variant" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions), global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions.Parser, new[]{ "DoActions", "DoActionsInMain" }, new[]{ "Variant" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal), global::Temporal.Omes.KitchenSink.DoSignal.Parser, new[]{ "DoSignalActions", "Custom", "WithStart" }, new[]{ "Variant" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions), global::Temporal.Omes.KitchenSink.DoSignal.Types.DoSignalActions.Parser, new[]{ "DoActions", "DoActionsInMain", "SignalId" }, new[]{ "Variant" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoQuery), global::Temporal.Omes.KitchenSink.DoQuery.Parser, new[]{ "ReportState", "Custom", "FailureExpected" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoUpdate), global::Temporal.Omes.KitchenSink.DoUpdate.Parser, new[]{ "DoActions", "Custom", "WithStart", "FailureExpected" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.DoActionsUpdate), global::Temporal.Omes.KitchenSink.DoActionsUpdate.Parser, new[]{ "DoActions", "RejectMe" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.HandlerInvocation), global::Temporal.Omes.KitchenSink.HandlerInvocation.Parser, new[]{ "Name", "Args" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowState), global::Temporal.Omes.KitchenSink.WorkflowState.Parser, new[]{ "Kvs" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowInput), global::Temporal.Omes.KitchenSink.WorkflowInput.Parser, new[]{ "InitialActions" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.WorkflowInput), global::Temporal.Omes.KitchenSink.WorkflowInput.Parser, new[]{ "InitialActions", "ExpectedSignalCount", "ExpectedSignalIds", "ReceivedSignalIds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ActionSet), global::Temporal.Omes.KitchenSink.ActionSet.Parser, new[]{ "Actions", "Concurrent" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.Action), global::Temporal.Omes.KitchenSink.Action.Parser, new[]{ "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation" }, new[]{ "Variant" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitableChoice), global::Temporal.Omes.KitchenSink.AwaitableChoice.Parser, new[]{ "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted" }, new[]{ "Condition" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.TimerAction), global::Temporal.Omes.KitchenSink.TimerAction.Parser, new[]{ "Milliseconds", "AwaitableChoice" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "Client", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Parser, new[]{ "Generic", "Delay", "Noop", "Resources", "Payload", "Client", "RetryableError", "Timeout", "Heartbeat", "TaskQueue", "Headers", "ScheduleToCloseTimeout", "ScheduleToStartTimeout", "StartToCloseTimeout", "HeartbeatTimeout", "RetryPolicy", "IsLocal", "Remote", "AwaitableChoice", "Priority", "FairnessKey", "FairnessWeight" }, new[]{ "ActivityType", "Locality" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.GenericActivity.Parser, new[]{ "Type", "Arguments" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ResourcesActivity.Parser, new[]{ "RunFor", "BytesToAllocate", "CpuYieldEveryNIterations", "CpuYieldForMs" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.PayloadActivity.Parser, new[]{ "BytesToReceive", "BytesToReturn" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity.Parser, new[]{ "ClientSequence" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity.Parser, new[]{ "FailAttempts" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity.Parser, new[]{ "FailAttempts", "SuccessDuration", "FailureDuration" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity), global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity.Parser, new[]{ "FailAttempts", "SuccessDuration", "FailureDuration" }, null, null, null, null),
             null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction), global::Temporal.Omes.KitchenSink.ExecuteChildWorkflowAction.Parser, new[]{ "Namespace", "WorkflowId", "WorkflowType", "TaskQueue", "Input", "WorkflowExecutionTimeout", "WorkflowRunTimeout", "WorkflowTaskTimeout", "ParentClosePolicy", "WorkflowIdReusePolicy", "RetryPolicy", "CronSchedule", "Headers", "Memo", "SearchAttributes", "CancellationType", "VersioningIntent", "AwaitableChoice" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitWorkflowState), global::Temporal.Omes.KitchenSink.AwaitWorkflowState.Parser, new[]{ "Key", "Value" }, null, null, null, null),
@@ -2218,6 +2237,7 @@ namespace Temporal.Omes.KitchenSink {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
         public DoSignalActions(DoSignalActions other) : this() {
+          signalId_ = other.signalId_;
           switch (other.VariantCase) {
             case VariantOneofCase.DoActions:
               DoActions = other.DoActions.Clone();
@@ -2269,6 +2289,21 @@ namespace Temporal.Omes.KitchenSink {
           }
         }
 
+        /// <summary>Field number for the "signal_id" field.</summary>
+        public const int SignalIdFieldNumber = 3;
+        private int signalId_;
+        /// <summary>
+        /// The id of the signal to send (1-based indexing). This is used to track the signal and ensure that the worker properly deduplicates signals.
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int SignalId {
+          get { return signalId_; }
+          set {
+            signalId_ = value;
+          }
+        }
+
         private object variant_;
         /// <summary>Enum of possible cases for the "variant" oneof.</summary>
         public enum VariantOneofCase {
@@ -2307,6 +2342,7 @@ namespace Temporal.Omes.KitchenSink {
           }
           if (!object.Equals(DoActions, other.DoActions)) return false;
           if (!object.Equals(DoActionsInMain, other.DoActionsInMain)) return false;
+          if (SignalId != other.SignalId) return false;
           if (VariantCase != other.VariantCase) return false;
           return Equals(_unknownFields, other._unknownFields);
         }
@@ -2317,6 +2353,7 @@ namespace Temporal.Omes.KitchenSink {
           int hash = 1;
           if (variantCase_ == VariantOneofCase.DoActions) hash ^= DoActions.GetHashCode();
           if (variantCase_ == VariantOneofCase.DoActionsInMain) hash ^= DoActionsInMain.GetHashCode();
+          if (SignalId != 0) hash ^= SignalId.GetHashCode();
           hash ^= (int) variantCase_;
           if (_unknownFields != null) {
             hash ^= _unknownFields.GetHashCode();
@@ -2344,6 +2381,10 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(18);
             output.WriteMessage(DoActionsInMain);
           }
+          if (SignalId != 0) {
+            output.WriteRawTag(24);
+            output.WriteInt32(SignalId);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(output);
           }
@@ -2362,6 +2403,10 @@ namespace Temporal.Omes.KitchenSink {
             output.WriteRawTag(18);
             output.WriteMessage(DoActionsInMain);
           }
+          if (SignalId != 0) {
+            output.WriteRawTag(24);
+            output.WriteInt32(SignalId);
+          }
           if (_unknownFields != null) {
             _unknownFields.WriteTo(ref output);
           }
@@ -2378,6 +2423,9 @@ namespace Temporal.Omes.KitchenSink {
           if (variantCase_ == VariantOneofCase.DoActionsInMain) {
             size += 1 + pb::CodedOutputStream.ComputeMessageSize(DoActionsInMain);
           }
+          if (SignalId != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeInt32Size(SignalId);
+          }
           if (_unknownFields != null) {
             size += _unknownFields.CalculateSize();
           }
@@ -2389,6 +2437,9 @@ namespace Temporal.Omes.KitchenSink {
         public void MergeFrom(DoSignalActions other) {
           if (other == null) {
             return;
+          }
+          if (other.SignalId != 0) {
+            SignalId = other.SignalId;
           }
           switch (other.VariantCase) {
             case VariantOneofCase.DoActions:
@@ -2438,6 +2489,10 @@ namespace Temporal.Omes.KitchenSink {
                 DoActionsInMain = subBuilder;
                 break;
               }
+              case 24: {
+                SignalId = input.ReadInt32();
+                break;
+              }
             }
           }
         #endif
@@ -2469,6 +2524,10 @@ namespace Temporal.Omes.KitchenSink {
                 }
                 input.ReadMessage(subBuilder);
                 DoActionsInMain = subBuilder;
+                break;
+              }
+              case 24: {
+                SignalId = input.ReadInt32();
                 break;
               }
             }
@@ -3917,6 +3976,9 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public WorkflowInput(WorkflowInput other) : this() {
       initialActions_ = other.initialActions_.Clone();
+      expectedSignalCount_ = other.expectedSignalCount_;
+      expectedSignalIds_ = other.expectedSignalIds_.Clone();
+      receivedSignalIds_ = other.receivedSignalIds_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3937,6 +3999,46 @@ namespace Temporal.Omes.KitchenSink {
       get { return initialActions_; }
     }
 
+    /// <summary>Field number for the "expected_signal_count" field.</summary>
+    public const int ExpectedSignalCountFieldNumber = 2;
+    private int expectedSignalCount_;
+    /// <summary>
+    /// Number of signals the client will send to the workflow
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int ExpectedSignalCount {
+      get { return expectedSignalCount_; }
+      set {
+        expectedSignalCount_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "expected_signal_ids" field.</summary>
+    public const int ExpectedSignalIdsFieldNumber = 3;
+    private static readonly pb::FieldCodec<int> _repeated_expectedSignalIds_codec
+        = pb::FieldCodec.ForInt32(26);
+    private readonly pbc::RepeatedField<int> expectedSignalIds_ = new pbc::RepeatedField<int>();
+    /// <summary>
+    /// Signal de-duplication state (used when continuing as new). Signal IDs use 1-based indexing.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<int> ExpectedSignalIds {
+      get { return expectedSignalIds_; }
+    }
+
+    /// <summary>Field number for the "received_signal_ids" field.</summary>
+    public const int ReceivedSignalIdsFieldNumber = 4;
+    private static readonly pb::FieldCodec<int> _repeated_receivedSignalIds_codec
+        = pb::FieldCodec.ForInt32(34);
+    private readonly pbc::RepeatedField<int> receivedSignalIds_ = new pbc::RepeatedField<int>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<int> ReceivedSignalIds {
+      get { return receivedSignalIds_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3953,6 +4055,9 @@ namespace Temporal.Omes.KitchenSink {
         return true;
       }
       if(!initialActions_.Equals(other.initialActions_)) return false;
+      if (ExpectedSignalCount != other.ExpectedSignalCount) return false;
+      if(!expectedSignalIds_.Equals(other.expectedSignalIds_)) return false;
+      if(!receivedSignalIds_.Equals(other.receivedSignalIds_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3961,6 +4066,9 @@ namespace Temporal.Omes.KitchenSink {
     public override int GetHashCode() {
       int hash = 1;
       hash ^= initialActions_.GetHashCode();
+      if (ExpectedSignalCount != 0) hash ^= ExpectedSignalCount.GetHashCode();
+      hash ^= expectedSignalIds_.GetHashCode();
+      hash ^= receivedSignalIds_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3980,6 +4088,12 @@ namespace Temporal.Omes.KitchenSink {
       output.WriteRawMessage(this);
     #else
       initialActions_.WriteTo(output, _repeated_initialActions_codec);
+      if (ExpectedSignalCount != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(ExpectedSignalCount);
+      }
+      expectedSignalIds_.WriteTo(output, _repeated_expectedSignalIds_codec);
+      receivedSignalIds_.WriteTo(output, _repeated_receivedSignalIds_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3991,6 +4105,12 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
       initialActions_.WriteTo(ref output, _repeated_initialActions_codec);
+      if (ExpectedSignalCount != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(ExpectedSignalCount);
+      }
+      expectedSignalIds_.WriteTo(ref output, _repeated_expectedSignalIds_codec);
+      receivedSignalIds_.WriteTo(ref output, _repeated_receivedSignalIds_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4002,6 +4122,11 @@ namespace Temporal.Omes.KitchenSink {
     public int CalculateSize() {
       int size = 0;
       size += initialActions_.CalculateSize(_repeated_initialActions_codec);
+      if (ExpectedSignalCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ExpectedSignalCount);
+      }
+      size += expectedSignalIds_.CalculateSize(_repeated_expectedSignalIds_codec);
+      size += receivedSignalIds_.CalculateSize(_repeated_receivedSignalIds_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -4015,6 +4140,11 @@ namespace Temporal.Omes.KitchenSink {
         return;
       }
       initialActions_.Add(other.initialActions_);
+      if (other.ExpectedSignalCount != 0) {
+        ExpectedSignalCount = other.ExpectedSignalCount;
+      }
+      expectedSignalIds_.Add(other.expectedSignalIds_);
+      receivedSignalIds_.Add(other.receivedSignalIds_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -4034,6 +4164,20 @@ namespace Temporal.Omes.KitchenSink {
             initialActions_.AddEntriesFrom(input, _repeated_initialActions_codec);
             break;
           }
+          case 16: {
+            ExpectedSignalCount = input.ReadInt32();
+            break;
+          }
+          case 26:
+          case 24: {
+            expectedSignalIds_.AddEntriesFrom(input, _repeated_expectedSignalIds_codec);
+            break;
+          }
+          case 34:
+          case 32: {
+            receivedSignalIds_.AddEntriesFrom(input, _repeated_receivedSignalIds_codec);
+            break;
+          }
         }
       }
     #endif
@@ -4051,6 +4195,20 @@ namespace Temporal.Omes.KitchenSink {
             break;
           case 10: {
             initialActions_.AddEntriesFrom(ref input, _repeated_initialActions_codec);
+            break;
+          }
+          case 16: {
+            ExpectedSignalCount = input.ReadInt32();
+            break;
+          }
+          case 26:
+          case 24: {
+            expectedSignalIds_.AddEntriesFrom(ref input, _repeated_expectedSignalIds_codec);
+            break;
+          }
+          case 34:
+          case 32: {
+            receivedSignalIds_.AddEntriesFrom(ref input, _repeated_receivedSignalIds_codec);
             break;
           }
         }
@@ -6029,6 +6187,15 @@ namespace Temporal.Omes.KitchenSink {
         case ActivityTypeOneofCase.Client:
           Client = other.Client.Clone();
           break;
+        case ActivityTypeOneofCase.RetryableError:
+          RetryableError = other.RetryableError.Clone();
+          break;
+        case ActivityTypeOneofCase.Timeout:
+          Timeout = other.Timeout.Clone();
+          break;
+        case ActivityTypeOneofCase.Heartbeat:
+          Heartbeat = other.Heartbeat.Clone();
+          break;
       }
 
       switch (other.LocalityCase) {
@@ -6134,6 +6301,51 @@ namespace Temporal.Omes.KitchenSink {
       set {
         activityType_ = value;
         activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.Client;
+      }
+    }
+
+    /// <summary>Field number for the "retryable_error" field.</summary>
+    public const int RetryableErrorFieldNumber = 20;
+    /// <summary>
+    /// There must be an activity named `retryable_error` which accepts the RetryableErrorActivity message as input
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity RetryableError {
+      get { return activityTypeCase_ == ActivityTypeOneofCase.RetryableError ? (global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity) activityType_ : null; }
+      set {
+        activityType_ = value;
+        activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.RetryableError;
+      }
+    }
+
+    /// <summary>Field number for the "timeout" field.</summary>
+    public const int TimeoutFieldNumber = 21;
+    /// <summary>
+    /// There must be an activity named `timeout` which accepts the TimeoutActivity message as input
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity Timeout {
+      get { return activityTypeCase_ == ActivityTypeOneofCase.Timeout ? (global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity) activityType_ : null; }
+      set {
+        activityType_ = value;
+        activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.Timeout;
+      }
+    }
+
+    /// <summary>Field number for the "heartbeat" field.</summary>
+    public const int HeartbeatFieldNumber = 22;
+    /// <summary>
+    /// There must be an activity named `heartbeat` which accepts the HeartbeatTimeoutActivity message as input
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity Heartbeat {
+      get { return activityTypeCase_ == ActivityTypeOneofCase.Heartbeat ? (global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity) activityType_ : null; }
+      set {
+        activityType_ = value;
+        activityTypeCase_ = value == null ? ActivityTypeOneofCase.None : ActivityTypeOneofCase.Heartbeat;
       }
     }
 
@@ -6330,6 +6542,9 @@ namespace Temporal.Omes.KitchenSink {
       Resources = 14,
       Payload = 18,
       Client = 19,
+      RetryableError = 20,
+      Timeout = 21,
+      Heartbeat = 22,
     }
     private ActivityTypeOneofCase activityTypeCase_ = ActivityTypeOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -6387,6 +6602,9 @@ namespace Temporal.Omes.KitchenSink {
       if (!object.Equals(Resources, other.Resources)) return false;
       if (!object.Equals(Payload, other.Payload)) return false;
       if (!object.Equals(Client, other.Client)) return false;
+      if (!object.Equals(RetryableError, other.RetryableError)) return false;
+      if (!object.Equals(Timeout, other.Timeout)) return false;
+      if (!object.Equals(Heartbeat, other.Heartbeat)) return false;
       if (TaskQueue != other.TaskQueue) return false;
       if (!Headers.Equals(other.Headers)) return false;
       if (!object.Equals(ScheduleToCloseTimeout, other.ScheduleToCloseTimeout)) return false;
@@ -6415,6 +6633,9 @@ namespace Temporal.Omes.KitchenSink {
       if (activityTypeCase_ == ActivityTypeOneofCase.Resources) hash ^= Resources.GetHashCode();
       if (activityTypeCase_ == ActivityTypeOneofCase.Payload) hash ^= Payload.GetHashCode();
       if (activityTypeCase_ == ActivityTypeOneofCase.Client) hash ^= Client.GetHashCode();
+      if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) hash ^= RetryableError.GetHashCode();
+      if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) hash ^= Timeout.GetHashCode();
+      if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) hash ^= Heartbeat.GetHashCode();
       if (TaskQueue.Length != 0) hash ^= TaskQueue.GetHashCode();
       hash ^= Headers.GetHashCode();
       if (scheduleToCloseTimeout_ != null) hash ^= ScheduleToCloseTimeout.GetHashCode();
@@ -6521,6 +6742,18 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(154, 1);
         output.WriteMessage(Client);
       }
+      if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) {
+        output.WriteRawTag(162, 1);
+        output.WriteMessage(RetryableError);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) {
+        output.WriteRawTag(170, 1);
+        output.WriteMessage(Timeout);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) {
+        output.WriteRawTag(178, 1);
+        output.WriteMessage(Heartbeat);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -6604,6 +6837,18 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(154, 1);
         output.WriteMessage(Client);
       }
+      if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) {
+        output.WriteRawTag(162, 1);
+        output.WriteMessage(RetryableError);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) {
+        output.WriteRawTag(170, 1);
+        output.WriteMessage(Timeout);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) {
+        output.WriteRawTag(178, 1);
+        output.WriteMessage(Heartbeat);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -6631,6 +6876,15 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (activityTypeCase_ == ActivityTypeOneofCase.Client) {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(Client);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(RetryableError);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Timeout);
+      }
+      if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Heartbeat);
       }
       if (TaskQueue.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(TaskQueue);
@@ -6769,6 +7023,24 @@ namespace Temporal.Omes.KitchenSink {
             Client = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.ClientActivity();
           }
           Client.MergeFrom(other.Client);
+          break;
+        case ActivityTypeOneofCase.RetryableError:
+          if (RetryableError == null) {
+            RetryableError = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity();
+          }
+          RetryableError.MergeFrom(other.RetryableError);
+          break;
+        case ActivityTypeOneofCase.Timeout:
+          if (Timeout == null) {
+            Timeout = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity();
+          }
+          Timeout.MergeFrom(other.Timeout);
+          break;
+        case ActivityTypeOneofCase.Heartbeat:
+          if (Heartbeat == null) {
+            Heartbeat = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity();
+          }
+          Heartbeat.MergeFrom(other.Heartbeat);
           break;
       }
 
@@ -6939,6 +7211,33 @@ namespace Temporal.Omes.KitchenSink {
             Client = subBuilder;
             break;
           }
+          case 162: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) {
+              subBuilder.MergeFrom(RetryableError);
+            }
+            input.ReadMessage(subBuilder);
+            RetryableError = subBuilder;
+            break;
+          }
+          case 170: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) {
+              subBuilder.MergeFrom(Timeout);
+            }
+            input.ReadMessage(subBuilder);
+            Timeout = subBuilder;
+            break;
+          }
+          case 178: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) {
+              subBuilder.MergeFrom(Heartbeat);
+            }
+            input.ReadMessage(subBuilder);
+            Heartbeat = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -7089,6 +7388,33 @@ namespace Temporal.Omes.KitchenSink {
             }
             input.ReadMessage(subBuilder);
             Client = subBuilder;
+            break;
+          }
+          case 162: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.RetryableErrorActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.RetryableError) {
+              subBuilder.MergeFrom(RetryableError);
+            }
+            input.ReadMessage(subBuilder);
+            RetryableError = subBuilder;
+            break;
+          }
+          case 170: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.TimeoutActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Timeout) {
+              subBuilder.MergeFrom(Timeout);
+            }
+            input.ReadMessage(subBuilder);
+            Timeout = subBuilder;
+            break;
+          }
+          case 178: {
+            global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Types.HeartbeatTimeoutActivity();
+            if (activityTypeCase_ == ActivityTypeOneofCase.Heartbeat) {
+              subBuilder.MergeFrom(Heartbeat);
+            }
+            input.ReadMessage(subBuilder);
+            Heartbeat = subBuilder;
             break;
           }
         }
@@ -8044,6 +8370,793 @@ namespace Temporal.Omes.KitchenSink {
                   ClientSequence = new global::Temporal.Omes.KitchenSink.ClientSequence();
                 }
                 input.ReadMessage(ClientSequence);
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      /// <summary>
+      /// Activity that throws retryable errors for N attempts, then succeeds.
+      /// Tests activity retry behavior.
+      /// </summary>
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class RetryableErrorActivity : pb::IMessage<RetryableErrorActivity>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<RetryableErrorActivity> _parser = new pb::MessageParser<RetryableErrorActivity>(() => new RetryableErrorActivity());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<RetryableErrorActivity> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Descriptor.NestedTypes[4]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public RetryableErrorActivity() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public RetryableErrorActivity(RetryableErrorActivity other) : this() {
+          failAttempts_ = other.failAttempts_;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public RetryableErrorActivity Clone() {
+          return new RetryableErrorActivity(this);
+        }
+
+        /// <summary>Field number for the "fail_attempts" field.</summary>
+        public const int FailAttemptsFieldNumber = 1;
+        private int failAttempts_;
+        /// <summary>
+        /// How many attempts should fail before succeeding (1-indexed)
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int FailAttempts {
+          get { return failAttempts_; }
+          set {
+            failAttempts_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as RetryableErrorActivity);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(RetryableErrorActivity other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (FailAttempts != other.FailAttempts) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (FailAttempts != 0) hash ^= FailAttempts.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (FailAttempts != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeInt32Size(FailAttempts);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(RetryableErrorActivity other) {
+          if (other == null) {
+            return;
+          }
+          if (other.FailAttempts != 0) {
+            FailAttempts = other.FailAttempts;
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      /// <summary>
+      /// Activity that runs too long for N attempts (causing timeout), then completes.
+      /// Tests StartToCloseTimeout behavior with retries.
+      /// </summary>
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class TimeoutActivity : pb::IMessage<TimeoutActivity>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<TimeoutActivity> _parser = new pb::MessageParser<TimeoutActivity>(() => new TimeoutActivity());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<TimeoutActivity> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Descriptor.NestedTypes[5]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public TimeoutActivity() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public TimeoutActivity(TimeoutActivity other) : this() {
+          failAttempts_ = other.failAttempts_;
+          successDuration_ = other.successDuration_ != null ? other.successDuration_.Clone() : null;
+          failureDuration_ = other.failureDuration_ != null ? other.failureDuration_.Clone() : null;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public TimeoutActivity Clone() {
+          return new TimeoutActivity(this);
+        }
+
+        /// <summary>Field number for the "fail_attempts" field.</summary>
+        public const int FailAttemptsFieldNumber = 1;
+        private int failAttempts_;
+        /// <summary>
+        /// How many attempts should timeout before succeeding (1-indexed)
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int FailAttempts {
+          get { return failAttempts_; }
+          set {
+            failAttempts_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "success_duration" field.</summary>
+        public const int SuccessDurationFieldNumber = 2;
+        private global::Google.Protobuf.WellKnownTypes.Duration successDuration_;
+        /// <summary>
+        /// Duration to run on success, must be less than StartToClose timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration SuccessDuration {
+          get { return successDuration_; }
+          set {
+            successDuration_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "failure_duration" field.</summary>
+        public const int FailureDurationFieldNumber = 3;
+        private global::Google.Protobuf.WellKnownTypes.Duration failureDuration_;
+        /// <summary>
+        /// Duration to run on failure, must be more than StartToClose timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration FailureDuration {
+          get { return failureDuration_; }
+          set {
+            failureDuration_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as TimeoutActivity);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(TimeoutActivity other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (FailAttempts != other.FailAttempts) return false;
+          if (!object.Equals(SuccessDuration, other.SuccessDuration)) return false;
+          if (!object.Equals(FailureDuration, other.FailureDuration)) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (FailAttempts != 0) hash ^= FailAttempts.GetHashCode();
+          if (successDuration_ != null) hash ^= SuccessDuration.GetHashCode();
+          if (failureDuration_ != null) hash ^= FailureDuration.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (FailAttempts != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeInt32Size(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(TimeoutActivity other) {
+          if (other == null) {
+            return;
+          }
+          if (other.FailAttempts != 0) {
+            FailAttempts = other.FailAttempts;
+          }
+          if (other.successDuration_ != null) {
+            if (successDuration_ == null) {
+              SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            SuccessDuration.MergeFrom(other.SuccessDuration);
+          }
+          if (other.failureDuration_ != null) {
+            if (failureDuration_ == null) {
+              FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            FailureDuration.MergeFrom(other.FailureDuration);
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+      /// <summary>
+      /// Activity that skips heartbeats for N attempts (causing heartbeat timeout), then sends them.
+      /// Tests HeartbeatTimeout behavior with retries.
+      /// </summary>
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class HeartbeatTimeoutActivity : pb::IMessage<HeartbeatTimeoutActivity>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<HeartbeatTimeoutActivity> _parser = new pb::MessageParser<HeartbeatTimeoutActivity>(() => new HeartbeatTimeoutActivity());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<HeartbeatTimeoutActivity> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Temporal.Omes.KitchenSink.ExecuteActivityAction.Descriptor.NestedTypes[6]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public HeartbeatTimeoutActivity() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public HeartbeatTimeoutActivity(HeartbeatTimeoutActivity other) : this() {
+          failAttempts_ = other.failAttempts_;
+          successDuration_ = other.successDuration_ != null ? other.successDuration_.Clone() : null;
+          failureDuration_ = other.failureDuration_ != null ? other.failureDuration_.Clone() : null;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public HeartbeatTimeoutActivity Clone() {
+          return new HeartbeatTimeoutActivity(this);
+        }
+
+        /// <summary>Field number for the "fail_attempts" field.</summary>
+        public const int FailAttemptsFieldNumber = 1;
+        private int failAttempts_;
+        /// <summary>
+        /// How many attempts should skip heartbeats before succeeding (1-indexed)
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int FailAttempts {
+          get { return failAttempts_; }
+          set {
+            failAttempts_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "success_duration" field.</summary>
+        public const int SuccessDurationFieldNumber = 2;
+        private global::Google.Protobuf.WellKnownTypes.Duration successDuration_;
+        /// <summary>
+        /// Duration to run on success, must be less than HeartbeatTimeout timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration SuccessDuration {
+          get { return successDuration_; }
+          set {
+            successDuration_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "failure_duration" field.</summary>
+        public const int FailureDurationFieldNumber = 3;
+        private global::Google.Protobuf.WellKnownTypes.Duration failureDuration_;
+        /// <summary>
+        /// Duration to run on failure, must be more than HeartbeatTimeout timeout
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Google.Protobuf.WellKnownTypes.Duration FailureDuration {
+          get { return failureDuration_; }
+          set {
+            failureDuration_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as HeartbeatTimeoutActivity);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(HeartbeatTimeoutActivity other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (FailAttempts != other.FailAttempts) return false;
+          if (!object.Equals(SuccessDuration, other.SuccessDuration)) return false;
+          if (!object.Equals(FailureDuration, other.FailureDuration)) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (FailAttempts != 0) hash ^= FailAttempts.GetHashCode();
+          if (successDuration_ != null) hash ^= SuccessDuration.GetHashCode();
+          if (failureDuration_ != null) hash ^= FailureDuration.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (FailAttempts != 0) {
+            output.WriteRawTag(8);
+            output.WriteInt32(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            output.WriteRawTag(18);
+            output.WriteMessage(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            output.WriteRawTag(26);
+            output.WriteMessage(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (FailAttempts != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeInt32Size(FailAttempts);
+          }
+          if (successDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(SuccessDuration);
+          }
+          if (failureDuration_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(FailureDuration);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(HeartbeatTimeoutActivity other) {
+          if (other == null) {
+            return;
+          }
+          if (other.FailAttempts != 0) {
+            FailAttempts = other.FailAttempts;
+          }
+          if (other.successDuration_ != null) {
+            if (successDuration_ == null) {
+              SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            SuccessDuration.MergeFrom(other.SuccessDuration);
+          }
+          if (other.failureDuration_ != null) {
+            if (failureDuration_ == null) {
+              FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+            }
+            FailureDuration.MergeFrom(other.FailureDuration);
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+            switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 8: {
+                FailAttempts = input.ReadInt32();
+                break;
+              }
+              case 18: {
+                if (successDuration_ == null) {
+                  SuccessDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(SuccessDuration);
+                break;
+              }
+              case 26: {
+                if (failureDuration_ == null) {
+                  FailureDuration = new global::Google.Protobuf.WellKnownTypes.Duration();
+                }
+                input.ReadMessage(FailureDuration);
                 break;
               }
             }
