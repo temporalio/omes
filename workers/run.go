@@ -125,6 +125,12 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
 	}
+	args = append(args, "--language", string(r.SdkOptions.Language))
+	if r.SdkOptions.Version != "" {
+		args = append(args, "--version", r.SdkOptions.Version)
+	}
+	args = append(args, "--scenario", r.ScenarioID.Scenario)
+	args = append(args, "--run-id", r.ScenarioID.RunID)
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)

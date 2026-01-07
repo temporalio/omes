@@ -25,7 +25,7 @@ func (m *WorkerOptions) FlagSet() *pflag.FlagSet {
 		return m.fs
 	}
 	m.fs = pflag.NewFlagSet("worker_options", pflag.ExitOnError)
-	m.fs.StringVar(&m.BuildID, "worker-build-id", "", "Build ID")
+	m.fs.StringVar(&m.BuildID, "build-id", "", "Build ID")
 	m.fs.IntVar(&m.MaxConcurrentActivityPollers, "worker-max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, "worker-max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
 	m.fs.IntVar(&m.MaxConcurrentActivities, "worker-max-concurrent-activities", 0, "Max concurrent activities")

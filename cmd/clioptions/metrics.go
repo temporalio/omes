@@ -2,6 +2,7 @@ package clioptions
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"net/http"
 	"time"
@@ -12,6 +13,13 @@ import (
 	"github.com/temporalio/omes/metrics"
 	"go.uber.org/zap"
 )
+
+// InfoResponse is returned by the /info endpoint on worker metrics servers
+type InfoResponse struct {
+	SdkOptions      SdkOptions `json:"sdk_options"`
+	ScenarioOptions ScenarioID `json:"scenario_options"`
+	BuildID         string     `json:"build_id"`
+}
 
 // MetricsOptions for setting up Prometheus metrics.
 type MetricsOptions struct {
@@ -46,6 +54,18 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 // MustCreateMetrics sets up Prometheus based metrics and starts an HTTP server
 // for serving metrics.
 func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.SugaredLogger) *metrics.Metrics {
+	return m.MustCreateWorkerMetrics(ctx, logger, SdkOptions{}, ScenarioID{}, "")
+}
+
+// MustCreateWorkerMetrics creates metrics with worker metadata for the /info endpoint.
+// This is used by worker processes that need to expose worker information.
+func (m *MetricsOptions) MustCreateWorkerMetrics(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	sdkOpts SdkOptions,
+	scenarioOpts ScenarioID,
+	buildID string,
+) *metrics.Metrics {
 	registry := prometheus.NewRegistry()
 	var server *http.Server
 	if m.PrometheusListenAddress != "" {
@@ -54,7 +74,7 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 			logger.Fatalf("Unable to setup process collector for Prometheus: %v", err)
 		}
 		registry.MustRegister(procCollector)
-		server = m.mustInitPrometheusServer(logger, registry)
+		server = m.mustInitPrometheusServer(logger, registry, sdkOpts, scenarioOpts, buildID)
 	}
 	var promInstance *metrics.PrometheusInstance
 	if m.prometheusInstanceOptions.IsConfigured() {
@@ -68,7 +88,13 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 	}
 }
 
-func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
+func (m *MetricsOptions) mustInitPrometheusServer(
+	logger *zap.SugaredLogger,
+	registry *prometheus.Registry,
+	sdkOpts SdkOptions,
+	scenarioOpts ScenarioID,
+	buildID string,
+) *http.Server {
 	address := m.PrometheusListenAddress
 	handlerPath := m.PrometheusHandlerPath
 	if handlerPath == "" {
@@ -77,6 +103,20 @@ func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, reg
 
 	handler := http.NewServeMux()
 	handler.Handle(handlerPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+
+	// Add /info endpoint
+	handler.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		resp := InfoResponse{
+			SdkOptions:      sdkOpts,
+			ScenarioOptions: scenarioOpts,
+			BuildID:         buildID,
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			logger.Errorf("failed to encode /info response: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+	})
 
 	server := &http.Server{Addr: address, Handler: handler}
 	listener, err := net.Listen("tcp", address)

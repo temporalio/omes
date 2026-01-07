@@ -22,6 +22,8 @@ type App struct {
 	taskQueueIndexSuffixStart int
 	taskQueueIndexSuffixEnd   int
 
+	sdkOptions     clioptions.SdkOptions
+	scenarioID     clioptions.ScenarioID
 	loggingOptions clioptions.LoggingOptions
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
@@ -33,7 +35,14 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		a.logger.Fatal("Task queue suffix start after end")
 	}
 	a.logger = a.loggingOptions.MustCreateLogger()
-	metrics := a.metricsOptions.MustCreateMetrics(cmd.Context(), a.logger)
+
+	metrics := a.metricsOptions.MustCreateWorkerMetrics(
+		cmd.Context(),
+		a.logger,
+		a.sdkOptions,
+		a.scenarioID,
+		a.workerOptions.BuildID,
+	)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
 	// If there is an end, we run multiple
@@ -136,6 +145,8 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
 	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
+	app.sdkOptions.AddCLIFlags(cmd.Flags())
+	app.scenarioID.AddCLIFlags(cmd.Flags())
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
