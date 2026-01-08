@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -125,9 +126,11 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
 		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
 	}
+	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
+	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-")...)
+	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address")...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -147,6 +150,20 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+
+	// Start process metrics sidecar if configured (monitors worker PID)
+	var sidecar *http.Server
+	if r.MetricsOptions.WorkerProcessMetricsAddress != "" {
+		sidecar = clioptions.StartProcessMetricsSidecar(
+			r.Logger,
+			r.MetricsOptions.WorkerProcessMetricsAddress,
+			cmd.Process.Pid,
+			r.SdkOptions.Version,
+			r.WorkerOptions.BuildID,
+		)
+		defer sidecar.Shutdown(context.Background())
+	}
+
 	if r.OnWorkerStarted != nil {
 		r.OnWorkerStarted()
 	}
@@ -194,6 +211,24 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 			strings.TrimPrefix(f.Name, prefix),
 			f.Value.String(),
 		))
+	})
+	return
+}
+
+func passthroughExcluding(fs *pflag.FlagSet, prefix string, exclude ...string) (flags []string) {
+	excludeSet := make(map[string]bool)
+	for _, e := range exclude {
+		excludeSet[e] = true
+	}
+	fs.VisitAll(func(f *pflag.Flag) {
+		if !f.Changed {
+			return
+		}
+		name := strings.TrimPrefix(f.Name, prefix)
+		if excludeSet[name] {
+			return
+		}
+		flags = append(flags, fmt.Sprintf("--%s=%s", name, f.Value.String()))
 	})
 	return
 }
