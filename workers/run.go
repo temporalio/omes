@@ -130,7 +130,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address")...)
+	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -154,11 +154,16 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// Start process metrics sidecar if configured (monitors worker PID)
 	var sidecar *http.Server
 	if r.MetricsOptions.WorkerProcessMetricsAddress != "" {
+		// Use MetricsVersionTag if set, otherwise fall back to SdkOptions.Version
+		sdkVersion := r.MetricsOptions.MetricsVersionTag
+		if sdkVersion == "" {
+			sdkVersion = r.SdkOptions.Version
+		}
 		sidecar = clioptions.StartProcessMetricsSidecar(
 			r.Logger,
 			r.MetricsOptions.WorkerProcessMetricsAddress,
 			cmd.Process.Pid,
-			r.SdkOptions.Version,
+			sdkVersion,
 			r.WorkerOptions.BuildID,
 			r.SdkOptions.Language.String(),
 		)
