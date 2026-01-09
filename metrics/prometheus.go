@@ -30,8 +30,10 @@ type PrometheusInstanceOptions struct {
 	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
-	// Worker job to export.
+	// Worker job to export SDK metrics (temporal_*).
 	ExportWorkerMetricsJob string
+	// Process metrics job to export (process_cpu_percent, process_memory_*, etc).
+	ExportProcessMetricsJob string
 	// Step interval when sampling timeseries metrics for export.
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
@@ -163,7 +165,7 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 		if err != nil {
 			logger.Warnf("Failed to fetch worker info from %s: %v (continuing without worker metadata)", i.opts.ExportWorkerInfoAddress, err)
 		} else {
-			logger.Infof("Fetched worker info: sdk_version=%s, build_id=%s", workerInfo.SDKVersion, workerInfo.BuildID)
+			logger.Infof("Fetched worker info: sdk_version=%s, build_id=%s, language=%s", workerInfo.SDKVersion, workerInfo.BuildID, workerInfo.Language)
 		}
 	}
 
@@ -174,12 +176,13 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 
 func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	job := i.opts.ExportWorkerMetricsJob
+	processJob := i.opts.ExportProcessMetricsJob
 
-	// Process metrics
+	// Process metrics (from sidecar)
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, job)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, job)},
-		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, job)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob)},
+		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, processJob)},
 	}
 
 	// Polling/capacity metrics
@@ -228,10 +231,11 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 		}
 	}()
 
-	// Extract build_id from worker info (empty string if not available)
-	var buildID string
+	// Extract fields from worker info (empty string if not available)
+	var buildID, language string
 	if workerInfo != nil {
 		buildID = workerInfo.BuildID
+		language = workerInfo.Language
 	}
 
 	metricsWithNaN := make(map[string]int)
@@ -268,6 +272,7 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 				Metric:    q.name,
 				Value:     dp.Value,
 				BuildID:   buildID,
+				Language:  language,
 				Scenario:  scenario,
 				RunID:     runID,
 			})
@@ -343,6 +348,7 @@ func (i *PrometheusInstance) createPrometheusSnapshot(ctx context.Context) (stri
 type WorkerInfo struct {
 	SDKVersion string `json:"sdk_version"`
 	BuildID    string `json:"build_id"`
+	Language   string `json:"language"`
 }
 
 // fetchWorkerInfo fetches worker metadata from the /info endpoint.
@@ -371,6 +377,7 @@ type MetricLine struct {
 	Value               float64   `parquet:"value"`
 	Environment         string    `parquet:"environment,dict"`
 	BuildID             string    `parquet:"build_id,dict"`
+	Language            string    `parquet:"language,dict"`
 	Scenario            string    `parquet:"scenario,dict"`
 	RunID               string    `parquet:"run_id,dict"`
 	RunConfigProfile    string    `parquet:"run_profile,dict"`

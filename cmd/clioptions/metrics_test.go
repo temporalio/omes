@@ -77,6 +77,7 @@ func TestProcessMetricsSidecar(t *testing.T) {
 			os.Getpid(),
 			"v1.24.0",
 			"test-build-123",
+			"go",
 		)
 		defer sidecar.Shutdown(ctx)
 
@@ -97,13 +98,14 @@ func TestProcessMetricsSidecar(t *testing.T) {
 		}
 	})
 
-	t.Run("info endpoint returns sdk_version and build_id", func(t *testing.T) {
+	t.Run("info endpoint returns sdk_version, build_id, and language", func(t *testing.T) {
 		sidecar := StartProcessMetricsSidecar(
 			logger,
 			":19093",
 			os.Getpid(),
 			"v1.24.0",
 			"test-build-456",
+			"python",
 		)
 		defer sidecar.Shutdown(ctx)
 
@@ -130,6 +132,9 @@ func TestProcessMetricsSidecar(t *testing.T) {
 		if info.BuildID != "test-build-456" {
 			t.Errorf("Expected build_id test-build-456, got %s", info.BuildID)
 		}
+		if info.Language != "python" {
+			t.Errorf("Expected language python, got %s", info.Language)
+		}
 	})
 
 	t.Run("sidecar shutdown", func(t *testing.T) {
@@ -139,6 +144,7 @@ func TestProcessMetricsSidecar(t *testing.T) {
 			os.Getpid(),
 			"v1.24.0",
 			"test-build",
+			"typescript",
 		)
 
 		time.Sleep(100 * time.Millisecond)

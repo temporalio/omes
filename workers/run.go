@@ -160,6 +160,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			cmd.Process.Pid,
 			r.SdkOptions.Version,
 			r.WorkerOptions.BuildID,
+			r.SdkOptions.Language.String(),
 		)
 		defer sidecar.Shutdown(context.Background())
 	}
