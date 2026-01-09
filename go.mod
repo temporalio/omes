@@ -13,8 +13,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20251218214540-e36ee9b474e2
-	go.temporal.io/api v1.53.0
-	go.temporal.io/sdk v1.37.0
+	go.temporal.io/api v1.59.0
+	go.temporal.io/sdk v1.39.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.28.0
 	golang.org/x/sync v0.17.0
@@ -46,7 +46,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nexus-rpc/sdk-go v0.4.0 // indirect
+	github.com/nexus-rpc/sdk-go v0.5.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
