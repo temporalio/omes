@@ -232,8 +232,9 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 	}()
 
 	// Extract fields from worker info (empty string if not available)
-	var buildID, language string
+	var sdkVersion, buildID, language string
 	if workerInfo != nil {
+		sdkVersion = workerInfo.SDKVersion
 		buildID = workerInfo.BuildID
 		language = workerInfo.Language
 	}
@@ -268,13 +269,14 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 				continue
 			}
 			metrics = append(metrics, MetricLine{
-				Timestamp: dp.Timestamp,
-				Metric:    q.name,
-				Value:     dp.Value,
-				BuildID:   buildID,
-				Language:  language,
-				Scenario:  scenario,
-				RunID:     runID,
+				Timestamp:  dp.Timestamp,
+				Metric:     q.name,
+				Value:      dp.Value,
+				SDKVersion: sdkVersion,
+				BuildID:    buildID,
+				Language:   language,
+				Scenario:   scenario,
+				RunID:      runID,
 			})
 			if len(metrics) >= parquetBatchSize {
 				if err := flushBatch(); err != nil {
@@ -376,6 +378,7 @@ type MetricLine struct {
 	Metric              string    `parquet:"metric,dict"`
 	Value               float64   `parquet:"value"`
 	Environment         string    `parquet:"environment,dict"`
+	SDKVersion          string    `parquet:"sdk_version,dict"`
 	BuildID             string    `parquet:"build_id,dict"`
 	Language            string    `parquet:"language,dict"`
 	Scenario            string    `parquet:"scenario,dict"`
