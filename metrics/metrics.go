@@ -32,11 +32,11 @@ func (m *Metrics) NewHandler() client.MetricsHandler {
 }
 
 // Shutdown the Prometheus HTTP server and local Prometheus process if they were set up.
-// scenario and runID are passed to the export function for metrics metadata.
-func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID string) error {
+// scenario, runID, and runFamily are passed to the export function for metrics metadata.
+func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
 	// Shutdown prometheus process if running
 	if m.PromInstance != nil {
-		m.PromInstance.Shutdown(ctx, logger, scenario, runID)
+		m.PromInstance.Shutdown(ctx, logger, scenario, runID, runFamily)
 	}
 
 	var err error

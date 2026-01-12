@@ -108,10 +108,10 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 	}
 }
 
-func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID string) {
+func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) {
 	// Export worker metrics if configured
 	if i.opts.ExportWorkerMetricsPath != "" {
-		err := i.exportWorkerMetrics(ctx, logger, scenario, runID)
+		err := i.exportWorkerMetrics(ctx, logger, scenario, runID, runFamily)
 		if err != nil {
 			logger.Errorf("Failed to export worker metrics: %v", err)
 		} else {
@@ -146,7 +146,7 @@ func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLo
 	}
 }
 
-func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger, scenario, runID string) error {
+func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
 	start, end, err := i.getTimeRange()
 	if err != nil {
 		return fmt.Errorf("failed to get time range: %w", err)
@@ -171,7 +171,7 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 
 	queries := i.buildMetricQueries()
 
-	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, workerInfo, logger, scenario, runID)
+	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, workerInfo, logger, scenario, runID, runFamily)
 }
 
 func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
@@ -220,7 +220,7 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 	start, end time.Time,
 	workerInfo *WorkerInfo,
 	logger *zap.SugaredLogger,
-	scenario, runID string,
+	scenario, runID, runFamily string,
 ) (err error) {
 	writer := parquet.NewGenericWriter[MetricLine](file,
 		parquet.Compression(&zstd.Codec{}),
@@ -277,6 +277,7 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 				Language:   language,
 				Scenario:   scenario,
 				RunID:      runID,
+				RunFamily:  runFamily,
 			})
 			if len(metrics) >= parquetBatchSize {
 				if err := flushBatch(); err != nil {
@@ -383,6 +384,7 @@ type MetricLine struct {
 	Language            string    `parquet:"language,dict"`
 	Scenario            string    `parquet:"scenario,dict"`
 	RunID               string    `parquet:"run_id,dict"`
+	RunFamily           string    `parquet:"run_family,dict"`
 	RunConfigProfile    string    `parquet:"run_profile,dict"`
 	WorkerConfigProfile string    `parquet:"worker_profile,dict"`
 }

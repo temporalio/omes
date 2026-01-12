@@ -23,7 +23,7 @@ func TestMetricsServer(t *testing.T) {
 		}
 
 		metrics := opts.MustCreateMetrics(ctx, logger)
-		defer metrics.Shutdown(ctx, logger, "", "")
+		defer metrics.Shutdown(ctx, logger, "", "", "")
 
 		time.Sleep(100 * time.Millisecond)
 
@@ -49,7 +49,7 @@ func TestMetricsServer(t *testing.T) {
 		fetchMetrics(t, "http://localhost:19091/metrics")
 
 		// Shutdown
-		err := metrics.Shutdown(ctx, logger, "", "")
+		err := metrics.Shutdown(ctx, logger, "", "", "")
 		if err != nil {
 			t.Errorf("Shutdown returned error: %v", err)
 		}
