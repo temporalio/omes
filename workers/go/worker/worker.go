@@ -50,7 +50,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
-	if err := metrics.Shutdown(cmd.Context(), a.logger, "", ""); err != nil {
+	if err := metrics.Shutdown(cmd.Context(), a.logger, "", "", ""); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
 }
