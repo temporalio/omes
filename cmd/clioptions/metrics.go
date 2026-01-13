@@ -33,7 +33,6 @@ func StartProcessMetricsSidecar(
 	buildID string,
 	language string,
 ) *http.Server {
-	// Create registry with process collector for worker PID
 	registry := prometheus.NewRegistry()
 	procCollector, err := metrics.NewProcessCollector(workerPID)
 	if err != nil {
@@ -41,7 +40,6 @@ func StartProcessMetricsSidecar(
 	}
 	registry.MustRegister(procCollector)
 
-	// HTTP handler for /metrics and /info
 	handler := http.NewServeMux()
 	handler.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	handler.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +51,6 @@ func StartProcessMetricsSidecar(
 		})
 	})
 
-	// Start server
 	server := &http.Server{Addr: address, Handler: handler}
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
