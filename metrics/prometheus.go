@@ -2,8 +2,10 @@ package metrics
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"os"
 	"os/exec"
 	"time"
@@ -28,12 +30,17 @@ type PrometheusInstanceOptions struct {
 	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
-	// Worker job to export.
+	// Worker job to export SDK metrics (temporal_*).
 	ExportWorkerMetricsJob string
+	// Process metrics job to export (process_cpu_percent, process_memory_*, etc).
+	ExportProcessMetricsJob string
 	// Step interval when sampling timeseries metrics for export.
 	// If not provided a default interval of 15s will be used.
 	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
+	// Address to fetch worker info from during export (e.g., "localhost:9091").
+	// If provided, /info will be fetched and used to populate build_id in export.
+	ExportWorkerInfoAddress string
 }
 
 func (p *PrometheusInstanceOptions) IsConfigured() bool {
@@ -101,10 +108,10 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 	}
 }
 
-func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger) {
+func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) {
 	// Export worker metrics if configured
 	if i.opts.ExportWorkerMetricsPath != "" {
-		err := i.exportWorkerMetrics(ctx, logger)
+		err := i.exportWorkerMetrics(ctx, logger, scenario, runID, runFamily)
 		if err != nil {
 			logger.Errorf("Failed to export worker metrics: %v", err)
 		} else {
@@ -139,7 +146,7 @@ func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLo
 	}
 }
 
-func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger) error {
+func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
 	start, end, err := i.getTimeRange()
 	if err != nil {
 		return fmt.Errorf("failed to get time range: %w", err)
@@ -151,19 +158,31 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 	}
 	defer file.Close()
 
+	// Fetch worker info if address is configured
+	var workerInfo *WorkerInfo
+	if i.opts.ExportWorkerInfoAddress != "" {
+		workerInfo, err = fetchWorkerInfo(i.opts.ExportWorkerInfoAddress)
+		if err != nil {
+			logger.Warnf("Failed to fetch worker info from %s: %v (continuing without worker metadata)", i.opts.ExportWorkerInfoAddress, err)
+		} else {
+			logger.Infof("Fetched worker info: sdk_version=%s, build_id=%s, language=%s", workerInfo.SDKVersion, workerInfo.BuildID, workerInfo.Language)
+		}
+	}
+
 	queries := i.buildMetricQueries()
 
-	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, logger)
+	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, workerInfo, logger, scenario, runID, runFamily)
 }
 
 func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	job := i.opts.ExportWorkerMetricsJob
+	processJob := i.opts.ExportProcessMetricsJob
 
-	// Process metrics
+	// Process metrics (from sidecar)
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, job)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, job)},
-		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, job)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob)},
+		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, processJob)},
 	}
 
 	// Polling/capacity metrics
@@ -199,7 +218,9 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 	file *os.File,
 	queries []metricQuery,
 	start, end time.Time,
+	workerInfo *WorkerInfo,
 	logger *zap.SugaredLogger,
+	scenario, runID, runFamily string,
 ) (err error) {
 	writer := parquet.NewGenericWriter[MetricLine](file,
 		parquet.Compression(&zstd.Codec{}),
@@ -209,6 +230,14 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 			err = fmt.Errorf("failed to close parquet writer: %w", closeErr)
 		}
 	}()
+
+	// Extract fields from worker info (empty string if not available)
+	var sdkVersion, buildID, language string
+	if workerInfo != nil {
+		sdkVersion = workerInfo.SDKVersion
+		buildID = workerInfo.BuildID
+		language = workerInfo.Language
+	}
 
 	metricsWithNaN := make(map[string]int)
 	metrics := make([]MetricLine, 0, parquetBatchSize)
@@ -240,9 +269,15 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 				continue
 			}
 			metrics = append(metrics, MetricLine{
-				Timestamp: dp.Timestamp,
-				Metric:    q.name,
-				Value:     dp.Value,
+				Timestamp:  dp.Timestamp,
+				Metric:     q.name,
+				Value:      dp.Value,
+				SDKVersion: sdkVersion,
+				BuildID:    buildID,
+				Language:   language,
+				Scenario:   scenario,
+				RunID:      runID,
+				RunFamily:  runFamily,
 			})
 			if len(metrics) >= parquetBatchSize {
 				if err := flushBatch(); err != nil {
@@ -311,14 +346,45 @@ func (i *PrometheusInstance) createPrometheusSnapshot(ctx context.Context) (stri
 	return result.Name, nil
 }
 
+// WorkerInfo represents the response from the /info endpoint.
+// Only contains fields that run-scenario doesn't already know.
+type WorkerInfo struct {
+	SDKVersion string `json:"sdk_version"`
+	BuildID    string `json:"build_id"`
+	Language   string `json:"language"`
+}
+
+// fetchWorkerInfo fetches worker metadata from the /info endpoint.
+func fetchWorkerInfo(address string) (*WorkerInfo, error) {
+	resp, err := http.Get("http://" + address + "/info")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to %s: %w", address, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code %d from /info", resp.StatusCode)
+	}
+
+	var info WorkerInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		return nil, fmt.Errorf("failed to decode /info response: %w", err)
+	}
+	return &info, nil
+}
+
 // MetricLine represents a single metric data point.
 type MetricLine struct {
 	Timestamp           time.Time `parquet:"timestamp,timestamp"`
 	Metric              string    `parquet:"metric,dict"`
 	Value               float64   `parquet:"value"`
 	Environment         string    `parquet:"environment,dict"`
+	SDKVersion          string    `parquet:"sdk_version,dict"`
 	BuildID             string    `parquet:"build_id,dict"`
+	Language            string    `parquet:"language,dict"`
 	Scenario            string    `parquet:"scenario,dict"`
+	RunID               string    `parquet:"run_id,dict"`
+	RunFamily           string    `parquet:"run_family,dict"`
 	RunConfigProfile    string    `parquet:"run_profile,dict"`
 	WorkerConfigProfile string    `parquet:"worker_profile,dict"`
 }

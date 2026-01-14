@@ -90,6 +90,12 @@ public class Main implements Runnable {
   @CommandLine.Option(names = "--tls-key-path", description = "Path to a client key for TLS")
   private String clientKeyPath;
 
+  @CommandLine.Option(names = "--auth-header", description = "Authorization header value")
+  private String authHeader;
+
+  @CommandLine.Option(names = "--build-id", description = "Build ID")
+  private String buildId;
+
   // Metric parameters
   @CommandLine.Option(
       names = "--prom-listen-address",
@@ -212,14 +218,23 @@ public class Main implements Runnable {
     // Stopping the starter will stop the http server that exposes the
     // scrape endpoint.
     Runtime.getRuntime().addShutdownHook(new Thread(() -> scrapeEndpoint.stop(1)));
+    // Configure API key
+    String apiKey =
+        (authHeader != null && authHeader.startsWith("Bearer "))
+            ? authHeader.substring("Bearer ".length())
+            : authHeader;
+
     // Configure client
+    WorkflowServiceStubsOptions.Builder serviceOptionsBuilder =
+        WorkflowServiceStubsOptions.newBuilder()
+            .setTarget(serverAddress)
+            .setSslContext(sslContext)
+            .setMetricsScope(scope);
+    if (apiKey != null && !apiKey.isEmpty()) {
+      serviceOptionsBuilder.addApiKey(() -> apiKey);
+    }
     WorkflowServiceStubs service =
-        WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder()
-                .setTarget(serverAddress)
-                .setSslContext(sslContext)
-                .setMetricsScope(scope)
-                .build());
+        WorkflowServiceStubs.newServiceStubs(serviceOptionsBuilder.build());
 
     PayloadConverter[] arr = {
       new NullPayloadConverter(),
