@@ -158,6 +158,21 @@ func PayloadActivity(inSize, outSize int, factory ActionFactory[ExecuteActivityA
 	return factory(activity)
 }
 
+// StandaloneActivity creates an action that invokes another activity via the standalone activity API
+// (StartActivityExecution + PollActivityExecution).
+func StandaloneActivity(innerType string, inSize, outSize int, factory ActionFactory[ExecuteActivityAction]) *Action {
+	activity := &ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Standalone{
+			Standalone: &ExecuteActivityAction_StandaloneActivity{
+				ActivityType:   innerType,
+				BytesToReceive: int32(inSize),
+				BytesToReturn:  int32(outSize),
+			},
+		},
+	}
+	return factory(activity)
+}
+
 func GenericActivity(activityType string, factory ActionFactory[ExecuteActivityAction]) *Action {
 	activity := &ExecuteActivityAction{
 		ActivityType: &ExecuteActivityAction_Generic{

@@ -250,6 +250,17 @@ message ExecuteActivityAction {
     // Duration to run on failure, must be more than HeartbeatTimeout timeout
     google.protobuf.Duration failure_duration = 3;
   }
+
+  // Activity invoked as a standalone activity.
+  message StandaloneActivity {
+    // The activity type to invoke as a standalone activity (e.g., "payload", "noop", "delay")
+    string activity_type = 1;
+    // For payload activity: bytes to receive as input
+    int32 bytes_to_receive = 2;
+    // For payload activity: bytes to return as output
+    int32 bytes_to_return = 3;
+  }
+
   oneof activity_type {
     GenericActivity generic = 1;
     // There must be an activity named `delay` which accepts some kind of duration and waits
@@ -269,6 +280,8 @@ message ExecuteActivityAction {
     TimeoutActivity timeout = 21;
     // There must be an activity named `heartbeat` which accepts the HeartbeatTimeoutActivity message as input
     HeartbeatTimeoutActivity heartbeat = 22;
+    // There must be an activity named `standalone` which invokes another activity via standalone activity API
+    StandaloneActivity standalone = 23;
   }
   // The name of the task queue to place this activity request in
   string task_queue = 4;

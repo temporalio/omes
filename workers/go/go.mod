@@ -7,9 +7,10 @@ require github.com/temporalio/omes v1.0.0
 require (
 	github.com/nexus-rpc/sdk-go v0.5.1
 	github.com/spf13/cobra v1.8.0
-	go.temporal.io/api v1.59.0
+	go.temporal.io/api v1.59.1-0.20251216002936-21609242e511
 	go.temporal.io/sdk v1.39.0
 	go.uber.org/zap v1.27.0
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
@@ -57,7 +58,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/grpc v1.67.1 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

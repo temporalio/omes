@@ -39,6 +39,10 @@ const (
 	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
+	// EnableStandaloneActivityFlag enables standalone activity testing in throughput_stress.
+	// When enabled, workflows will invoke activities via the standalone activity API
+	// (StartActivityExecution + PollActivityExecution). Default is false.
+	EnableStandaloneActivityFlag = "enable-standalone-activity"
 )
 
 type tpsState struct {
@@ -64,6 +68,7 @@ type tpsConfig struct {
 	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
+	EnableStandaloneActivity      bool
 }
 
 type tpsExecutor struct {
@@ -81,8 +86,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, EnableStandaloneActivityFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -163,6 +168,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
+	config.EnableStandaloneActivity = info.ScenarioOptionBool(EnableStandaloneActivityFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -401,6 +407,13 @@ func (t *tpsExecutor) createActionsChunk(
 				TimeoutActivity(1, 0*time.Second, 2*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
 				// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
 				HeartbeatActivity(1, 0*time.Second, 2*time.Second, 10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
+			)
+		}
+
+		// Add standalone activity if enabled.
+		if t.config.EnableStandaloneActivity {
+			asyncActions = append(asyncActions,
+				StandaloneActivity("payload", 256, 256, DefaultRemoteActivity),
 			)
 		}
 

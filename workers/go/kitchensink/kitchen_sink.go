@@ -10,11 +10,17 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	commonpb "go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
@@ -35,6 +41,82 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 		WorkflowInput: &kitchensink.WorkflowInput{},
 	}
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
+}
+
+// ExecuteStandaloneActivity invokes a standalone activity (StartActivityExecution +
+// PollActivityExecution).
+func (ca *ClientActivities) ExecuteStandaloneActivity(ctx context.Context, config *kitchensink.ExecuteActivityAction_StandaloneActivity) ([]byte, error) {
+	info := activity.GetInfo(ctx)
+	dc := converter.GetDefaultDataConverter()
+
+	// Build arguments based on the inner activity type
+	var args []interface{}
+	innerActivityType := config.ActivityType
+	switch innerActivityType {
+	case "payload":
+		inputData := make([]byte, config.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		args = append(args, inputData, config.BytesToReturn)
+	case "noop":
+		// No arguments needed
+	case "delay":
+		// Use a short delay for testing
+		args = append(args, time.Second)
+	default:
+		// For unknown types, try to invoke with no args
+	}
+
+	input, err := dc.ToPayloads(args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode standalone activity input: %w", err)
+	}
+
+	// Generate unique activity ID
+	activityId := fmt.Sprintf("standalone-%s-%s-%d", info.WorkflowExecution.ID, info.ActivityID, info.Attempt)
+
+	// Start the standalone activity
+	_, err = ca.Client.WorkflowService().StartActivityExecution(ctx, &workflowservice.StartActivityExecutionRequest{
+		Namespace:           info.WorkflowNamespace,
+		ActivityId:          activityId,
+		ActivityType:        &commonpb.ActivityType{Name: innerActivityType},
+		TaskQueue:           &taskqueuepb.TaskQueue{Name: info.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+		Input:               input,
+		StartToCloseTimeout: durationpb.New(30 * time.Second),
+		RetryPolicy: &commonpb.RetryPolicy{
+			MaximumAttempts:    1,
+			InitialInterval:    durationpb.New(100 * time.Millisecond),
+			BackoffCoefficient: 1,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to start standalone activity: %w", err)
+	}
+
+	// Poll for the result
+	pollResp, err := ca.Client.WorkflowService().PollActivityExecution(ctx, &workflowservice.PollActivityExecutionRequest{
+		Namespace:  info.WorkflowNamespace,
+		ActivityId: activityId,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to poll standalone activity: %w", err)
+	}
+
+	outcome := pollResp.GetOutcome()
+	if outcome == nil {
+		return nil, fmt.Errorf("PollActivityExecution timed out waiting for activity outcome")
+	}
+	if failure := outcome.GetFailure(); failure != nil {
+		return nil, fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
+	}
+
+	var result []byte
+	if err := dc.FromPayloads(outcome.GetResult(), &result); err != nil {
+		return nil, fmt.Errorf("failed to deserialize standalone activity result: %w", err)
+	}
+
+	return result, nil
 }
 
 type KSWorkflowState struct {
@@ -370,6 +452,9 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
 		actType = "heartbeat"
 		args = append(args, heartbeat)
+	} else if standalone := act.GetStandalone(); standalone != nil {
+		actType = "standalone"
+		args = append(args, standalone)
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
