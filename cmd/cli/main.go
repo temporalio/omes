@@ -15,6 +15,7 @@ func Main() {
 	}
 
 	rootCmd.AddCommand(cleanupScenarioCmd())
+	rootCmd.AddCommand(execCmd())
 	rootCmd.AddCommand(listScenariosCmd())
 	rootCmd.AddCommand(prepareWorkerCmd())
 	rootCmd.AddCommand(runScenarioCmd())
