@@ -21,6 +21,7 @@ func Main() {
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
+	rootCmd.AddCommand(workflowCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

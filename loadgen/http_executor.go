@@ -180,13 +180,14 @@ func (c *ClientStarter) Execute(ctx context.Context, iteration int, runID string
 	return nil
 }
 
-// Shutdown sends a shutdown request (best-effort).
-func (c *ClientStarter) Shutdown(ctx context.Context) {
+// Shutdown sends a shutdown request. Returns error if the request fails.
+func (c *ClientStarter) Shutdown(ctx context.Context) error {
 	req := ShutdownRequest{DrainTimeoutMs: 30000}
 	var resp struct{ Status string }
-	if err := c.doPost(ctx, "/shutdown", req, &resp); err != nil && c.logger != nil {
-		c.logger.Warnf("Client shutdown request failed: %v", err)
+	if err := c.doPost(ctx, "/shutdown", req, &resp); err != nil {
+		return fmt.Errorf("client shutdown request failed: %w", err)
 	}
+	return nil
 }
 
 // Info retrieves SDK metadata.
@@ -209,13 +210,14 @@ func NewWorkerStarter(url string, logger *zap.SugaredLogger) *WorkerStarter {
 	return &WorkerStarter{starterBase: newStarterBase(url, logger)}
 }
 
-// Shutdown sends a shutdown request (best-effort).
-func (w *WorkerStarter) Shutdown(ctx context.Context) {
+// Shutdown sends a shutdown request. Returns error if the request fails.
+func (w *WorkerStarter) Shutdown(ctx context.Context) error {
 	req := ShutdownRequest{DrainTimeoutMs: 30000}
 	var resp struct{ Status string }
-	if err := w.doPost(ctx, "/shutdown", req, &resp); err != nil && w.logger != nil {
-		w.logger.Warnf("Worker shutdown request failed: %v", err)
+	if err := w.doPost(ctx, "/shutdown", req, &resp); err != nil {
+		return fmt.Errorf("worker shutdown request failed: %w", err)
 	}
+	return nil
 }
 
 // Info retrieves SDK metadata.
