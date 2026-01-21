@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
 
@@ -219,9 +219,10 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}
 
 	scenarioInfo := loadgen.ScenarioInfo{
-		ScenarioName: "workflow-test",
-		RunID:        r.runID,
-		Logger:       r.logger,
+		ScenarioName:   "workflow-test",
+		RunID:          r.runID,
+		Logger:         r.logger,
+		MetricsHandler: client.MetricsNopHandler,
 		Configuration: loadgen.RunConfiguration{
 			Iterations:             r.iterations,
 			Duration:               r.duration,
@@ -274,7 +275,7 @@ func (r *workflowRunner) setupClient(ctx context.Context, buildDir, taskQueue st
 		"--namespace", r.clientOptions.Namespace,
 	)
 
-	cmd, err := loadgen.BuildCommandWithOverride(r.language, buildDir, args[0], args[1:])
+	cmd, err := loadgen.BuildCommandWithOverride(r.language, buildDir, r.sdkVersion, args[0], args[1:])
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build command: %w", err)
 	}
@@ -419,15 +420,3 @@ func parseCommand(command string) []string {
 	return strings.Fields(command)
 }
 
-// buildCommand creates an exec.Cmd from the given command and args.
-// This is a helper for local mode when we don't need SDK override.
-func buildCommand(command string, args []string) *exec.Cmd {
-	parts := parseCommand(command)
-	if len(args) > 0 {
-		parts = append(parts, args...)
-	}
-	if len(parts) == 0 {
-		return nil
-	}
-	return exec.Command(parts[0], parts[1:]...)
-}

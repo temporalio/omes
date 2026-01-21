@@ -85,7 +85,7 @@ func (s *WorkerLifecycleServer) Kill() {
 
 func (s *WorkerLifecycleServer) spawnWorker() error {
 	// Command args are complete from CLI (user passes --task-queue, --server-address, etc.)
-	cmd, err := BuildCommandWithOverride(s.Language, s.BuildDir, s.Command[0], s.Command[1:])
+	cmd, err := BuildCommandWithOverride(s.Language, s.BuildDir, s.SDKVersion, s.Command[0], s.Command[1:])
 	if err != nil {
 		return err
 	}

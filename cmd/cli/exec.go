@@ -66,7 +66,7 @@ Example:
 			}
 
 			// Normal mode: run command once and exit
-			return loadgen.RunCommandWithOverride(cmd.Context(), sugar, language, resolvedBuildDir, args)
+			return loadgen.RunCommandWithOverride(cmd.Context(), sugar, language, resolvedBuildDir, sdkVersion, args)
 		},
 	}
 
