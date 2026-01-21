@@ -23,41 +23,16 @@ type HTTPExecutor struct {
 func (e *HTTPExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	ge := &GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			return e.Client.Execute(ctx, run.Iteration)
+			return e.Client.Execute(ctx, run.Iteration, info.RunID)
 		},
 	}
 	return ge.Run(ctx, info)
 }
 
-// InitRequest is sent to both client and worker starters on /init.
-type InitRequest struct {
-	RunID         string `json:"run_id"`
-	TaskQueue     string `json:"task_queue"`
-	ServerAddress string `json:"server_address"`
-	Namespace     string `json:"namespace"`
-}
-
-// WorkerInitRequest extends InitRequest with worker-specific fields.
-type WorkerInitRequest struct {
-	InitRequest
-	PromListenAddress string `json:"prom_listen_address,omitempty"`
-}
-
-// InitResponse is returned from /init endpoint.
-type InitResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error,omitempty"`
-}
-
-// WorkerInitResponse extends InitResponse with worker-specific fields.
-type WorkerInitResponse struct {
-	InitResponse
-	WorkerPID int `json:"worker_pid,omitempty"`
-}
-
 // ExecuteRequest is sent to client starter on /execute.
 type ExecuteRequest struct {
-	Iteration int `json:"iteration"`
+	Iteration int    `json:"iteration"`
+	RunID     string `json:"run_id"`
 }
 
 // ExecuteResponse is returned from /execute endpoint.
@@ -189,21 +164,9 @@ func NewClientStarter(url string, logger *zap.SugaredLogger) *ClientStarter {
 	return &ClientStarter{starterBase: newStarterBase(url, logger)}
 }
 
-// Init initializes the client starter.
-func (c *ClientStarter) Init(ctx context.Context, req InitRequest) (*InitResponse, error) {
-	var resp InitResponse
-	if err := c.doPost(ctx, "/init", req, &resp); err != nil {
-		return nil, fmt.Errorf("client init failed: %w", err)
-	}
-	if !resp.Success {
-		return &resp, fmt.Errorf("client init returned error: %s", resp.Error)
-	}
-	return &resp, nil
-}
-
 // Execute calls /execute for a single iteration.
-func (c *ClientStarter) Execute(ctx context.Context, iteration int) error {
-	req := ExecuteRequest{Iteration: iteration}
+func (c *ClientStarter) Execute(ctx context.Context, iteration int, runID string) error {
+	req := ExecuteRequest{Iteration: iteration, RunID: runID}
 	var resp ExecuteResponse
 	if err := c.doPost(ctx, "/execute", req, &resp); err != nil {
 		return fmt.Errorf("execute request failed: %w", err)
@@ -244,19 +207,6 @@ type WorkerStarter struct {
 // NewWorkerStarter creates a new WorkerStarter.
 func NewWorkerStarter(url string, logger *zap.SugaredLogger) *WorkerStarter {
 	return &WorkerStarter{starterBase: newStarterBase(url, logger)}
-}
-
-// Init initializes the worker starter.
-func (w *WorkerStarter) Init(ctx context.Context, req WorkerInitRequest) (*WorkerInitResponse, error) {
-	var resp WorkerInitResponse
-	if err := w.doPost(ctx, "/init", req, &resp); err != nil {
-		return nil, fmt.Errorf("worker init failed: %w", err)
-	}
-	if !resp.Success {
-		return &resp, fmt.Errorf("worker init returned error: %s", resp.Error)
-	}
-	w.WorkerPID = resp.WorkerPID
-	return &resp, nil
 }
 
 // Shutdown sends a shutdown request (best-effort).

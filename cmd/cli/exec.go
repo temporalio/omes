@@ -2,15 +2,18 @@ package cli
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"syscall"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
-	"github.com/temporalio/features/sdkbuild"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/metrics"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +22,7 @@ func execCmd() *cobra.Command {
 	var sdkVersion string
 	var buildDir string
 	var useExisting bool
+	var remoteWorkerPort int
 
 	cmd := &cobra.Command{
 		Use:   "exec [flags] -- <command...>",
@@ -26,19 +30,54 @@ func execCmd() *cobra.Command {
 		Long: `Build the SDK (if needed) and run a command with the built SDK.
 
 If no command is provided after --, just builds and exits (useful for Dockerfiles).
-With --use-existing, skips build and fails if build doesn't exist.`,
+With --use-existing, skips build and fails if build doesn't exist.
+
+With --remote-worker <port>, starts an HTTP server for lifecycle management:
+  - Worker spawns immediately with the command after --
+  - POST /shutdown - Graceful shutdown via SIGTERM
+  - GET /metrics   - Process CPU/memory metrics (Prometheus format)
+  - GET /info      - SDK metadata and worker PID
+
+Example:
+  omes exec --language python --sdk-version 1.9.0 --remote-worker 8081 -- \
+    python worker.py --task-queue my-queue --server-address localhost:7233`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, _ := zap.NewDevelopment()
 			sugar := logger.Sugar()
 
-			e := &execRunner{
-				language:    language,
-				sdkVersion:  sdkVersion,
-				buildDir:    buildDir,
-				useExisting: useExisting,
-				logger:      sugar,
+			runner := &loadgen.SDKRunner{
+				Language:    language,
+				SDKVersion:  sdkVersion,
+				BuildDir:    buildDir,
+				UseExisting: useExisting,
+				Logger:      sugar,
 			}
-			return e.run(cmd.Context(), args)
+
+			resolvedBuildDir, err := runner.EnsureBuild(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			if len(args) == 0 {
+				sugar.Infof("Build complete at %s", resolvedBuildDir)
+				return nil
+			}
+
+			// Remote worker mode: spawn worker immediately and start HTTP server
+			if remoteWorkerPort > 0 {
+				s := &remoteWorkerServer{
+					language:   language,
+					sdkVersion: sdkVersion,
+					buildDir:   resolvedBuildDir,
+					command:    args,
+					port:       remoteWorkerPort,
+					logger:     sugar,
+				}
+				return s.serve(cmd.Context())
+			}
+
+			// Normal mode: run command once and exit
+			return loadgen.RunCommandWithOverride(cmd.Context(), sugar, language, resolvedBuildDir, args)
 		},
 	}
 
@@ -46,152 +85,149 @@ With --use-existing, skips build and fails if build doesn't exist.`,
 	cmd.Flags().StringVar(&sdkVersion, "sdk-version", "", "SDK version or local path")
 	cmd.Flags().StringVar(&buildDir, "build-dir", "", "Directory for SDK build output")
 	cmd.Flags().BoolVar(&useExisting, "use-existing", false, "Use existing build, fail if not found")
+	cmd.Flags().IntVar(&remoteWorkerPort, "remote-worker", 0, "Run as remote worker with HTTP server on specified port (0 = disabled)")
 
 	cmd.MarkFlagRequired("language")
 
 	return cmd
 }
 
-type execRunner struct {
-	language    string
-	sdkVersion  string
-	buildDir    string
-	useExisting bool
-	logger      *zap.SugaredLogger
+type remoteWorkerServer struct {
+	language   string
+	sdkVersion string
+	buildDir   string
+	command    []string
+	port       int
+	logger     *zap.SugaredLogger
+
+	process    *os.Process
+	pid        int
+	server     *http.Server
+	shutdownCh chan struct{}
 }
 
-func (e *execRunner) run(ctx context.Context, command []string) error {
-	// Determine build directory
-	buildDir := e.buildDir
-	if buildDir == "" {
-		if e.sdkVersion == "" {
-			return fmt.Errorf("--sdk-version required when --build-dir not specified")
-		}
-		buildDir = filepath.Join(os.TempDir(), "omes-sdk-cache", hashVersion(e.language, e.sdkVersion))
+func (s *remoteWorkerServer) serve(ctx context.Context) error {
+	// Spawn worker IMMEDIATELY (command includes --task-queue, --server-address, etc.)
+	if err := s.spawnWorker(); err != nil {
+		return fmt.Errorf("failed to spawn worker: %w", err)
 	}
 
-	// Handle --use-existing
-	if e.useExisting {
-		if !buildExists(buildDir) {
-			return fmt.Errorf("--use-existing specified but no build found at %s", buildDir)
-		}
-		e.logger.Infof("Using existing build at %s", buildDir)
-	} else {
-		// Build if needed
-		if e.sdkVersion == "" {
-			return fmt.Errorf("--sdk-version required for building")
-		}
-		if !buildExists(buildDir) {
-			if err := e.buildSDK(ctx, buildDir); err != nil {
-				return fmt.Errorf("failed to build SDK: %w", err)
-			}
-		} else {
-			e.logger.Infof("Using cached build at %s", buildDir)
-		}
-	}
+	s.shutdownCh = make(chan struct{})
 
-	// If no command, just exit (build-only mode)
-	if len(command) == 0 {
-		e.logger.Infof("Build complete at %s", buildDir)
+	// Set up HTTP server WITHOUT /init endpoint
+	mux := http.NewServeMux()
+	mux.HandleFunc("/shutdown", s.handleShutdown)
+	mux.HandleFunc("/metrics", s.handleMetrics)
+	mux.HandleFunc("/info", s.handleInfo)
+
+	addr := fmt.Sprintf(":%d", s.port)
+	s.server = &http.Server{Addr: addr, Handler: mux}
+
+	s.logger.Infof("Remote worker server listening on %s (worker PID: %d)", addr, s.pid)
+
+	errCh := make(chan error, 1)
+	go func() {
+		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		s.shutdownWorker()
+		s.server.Shutdown(context.Background())
+		return ctx.Err()
+	case <-s.shutdownCh:
+		s.shutdownWorker()
+		s.server.Shutdown(context.Background())
 		return nil
 	}
-
-	// Run command with built SDK
-	return e.runWithOverride(ctx, buildDir, command)
 }
 
-func buildExists(buildDir string) bool {
-	_, err := os.Stat(buildDir)
-	return err == nil
-}
-
-func hashVersion(language, version string) string {
-	h := sha256.New()
-	h.Write([]byte(language))
-	h.Write([]byte(version))
-	return hex.EncodeToString(h.Sum(nil))[:16]
-}
-
-func (e *execRunner) buildSDK(ctx context.Context, buildDir string) error {
-	baseDir := filepath.Dir(buildDir)
-	dirName := filepath.Base(buildDir)
-
-	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		return fmt.Errorf("failed to create base directory: %w", err)
-	}
-
-	e.logger.Infof("Building %s SDK at %s (version: %s)", e.language, buildDir, e.sdkVersion)
-
-	switch e.language {
-	case "python":
-		_, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
-			BaseDir: baseDir,
-			DirName: dirName,
-			Version: e.sdkVersion,
-			Stdout:  os.Stdout,
-			Stderr:  os.Stderr,
-		})
+func (s *remoteWorkerServer) spawnWorker() error {
+	// Command args are complete from CLI (user passes --task-queue, --server-address, etc.)
+	cmd, err := loadgen.BuildCommandWithOverride(s.language, s.buildDir, s.command[0], s.command[1:])
+	if err != nil {
 		return err
-
-	case "typescript":
-		_, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-			BaseDir: baseDir,
-			DirName: dirName,
-			Version: e.sdkVersion,
-			Stdout:  os.Stdout,
-			Stderr:  os.Stderr,
-		})
-		return err
-
-	default:
-		return fmt.Errorf("unsupported language: %s", e.language)
 	}
-}
 
-func (e *execRunner) runWithOverride(ctx context.Context, buildDir string, command []string) error {
-	switch e.language {
-	case "python":
-		return e.runPythonWithOverride(ctx, buildDir, command)
-	case "typescript":
-		return e.runTypeScriptWithOverride(ctx, buildDir, command)
-	default:
-		return fmt.Errorf("unsupported language: %s", e.language)
-	}
-}
-
-func (e *execRunner) runPythonWithOverride(ctx context.Context, buildDir string, command []string) error {
-	// Find the wheel file
-	wheelPattern := filepath.Join(buildDir, "dist", "temporalio-*.whl")
-	wheels, err := filepath.Glob(wheelPattern)
-	if err != nil || len(wheels) == 0 {
-		return fmt.Errorf("no wheel found at %s", wheelPattern)
-	}
-	wheelPath := wheels[0]
-
-	// Build uv command with override
-	override := fmt.Sprintf("temporalio @ file://%s", wheelPath)
-	args := append([]string{"run", "--override", override}, command...)
-
-	e.logger.Infof("Running: uv %v", args)
-	cmd := exec.CommandContext(ctx, "uv", args...)
-	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	s.process = cmd.Process
+	s.pid = cmd.Process.Pid
+	s.logger.Infof("Started worker process with PID %d", s.pid)
+	return nil
 }
 
-func (e *execRunner) runTypeScriptWithOverride(ctx context.Context, buildDir string, command []string) error {
-	// TypeScript: use NODE_PATH to make Node resolve @temporalio from buildDir's node_modules
-	// This allows user code in any directory to use the built SDK version
-	nodeModules := filepath.Join(buildDir, "node_modules")
+func (s *remoteWorkerServer) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-	e.logger.Infof("Running with NODE_PATH=%s: %v", nodeModules, command)
-	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("NODE_PATH=%s", nodeModules))
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "shutting_down"})
 
-	return cmd.Run()
+	// Signal the serve() loop to initiate shutdown
+	close(s.shutdownCh)
+}
+
+func (s *remoteWorkerServer) shutdownWorker() {
+	if s.process == nil {
+		return
+	}
+
+	s.logger.Infof("Sending SIGTERM to worker PID %d", s.pid)
+	s.process.Signal(syscall.SIGTERM)
+
+	// Wait up to 10s for process to exit
+	done := make(chan struct{})
+	go func() {
+		s.process.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		s.logger.Info("Worker process exited")
+	case <-time.After(10 * time.Second):
+		s.logger.Warn("Worker process did not exit in 10s, killing")
+		s.process.Kill()
+	}
+}
+
+func (s *remoteWorkerServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	if s.pid == 0 {
+		w.Write([]byte("# No process running\n"))
+		return
+	}
+
+	collector, err := metrics.NewProcessCollector(s.pid)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("# Error creating collector: %v\n", err)))
+		return
+	}
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collector)
+
+	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+	h.ServeHTTP(w, r)
+}
+
+func (s *remoteWorkerServer) handleInfo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(loadgen.InfoResponse{
+		SDKLanguage:    s.language,
+		SDKVersion:     s.sdkVersion,
+		StarterVersion: "omes-remote-worker",
+		WorkerPID:      s.pid,
+	})
 }
