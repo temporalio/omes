@@ -19,6 +19,7 @@ workers/java/build
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/
+workflowtests/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
 
