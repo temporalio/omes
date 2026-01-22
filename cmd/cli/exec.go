@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/internal/sdkbuild"
 	"github.com/temporalio/omes/internal/utils"
-	"github.com/temporalio/omes/loadgen"
 	"go.uber.org/zap"
 )
 
@@ -43,7 +43,7 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 			}
 
 			// Build the program
-			builder := &loadgen.ProgramBuilder{
+			builder := &sdkbuild.ProgramBuilder{
 				Language:   sdkOpts.Language.String(),
 				SDKVersion: sdkOpts.Version,
 				ProjectDir: execOpts.ProjectDir,
@@ -73,7 +73,7 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 
 			// Remote worker mode: spawn worker and start HTTP lifecycle server
 			if execOpts.RemoteWorkerPort > 0 && execOpts.Mode == "worker" {
-				s := &loadgen.WorkerLifecycleServer{
+				s := &sdkbuild.WorkerLifecycleServer{
 					Program: prog,
 					Args:    runtimeArgs,
 					Port:    execOpts.RemoteWorkerPort,

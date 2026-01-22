@@ -1,4 +1,4 @@
-package loadgen
+package sdkbuild
 
 import (
 	"context"
@@ -323,5 +323,11 @@ func findOmesStarterPath() string {
 	}
 
 	return ""
+}
+
+// buildExists checks if a build directory exists.
+func buildExists(buildDir string) bool {
+	_, err := os.Stat(buildDir)
+	return err == nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
+	progbuild "github.com/temporalio/omes/internal/sdkbuild"
 	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
@@ -141,7 +142,7 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	// Build program if needed (single program handles both client and worker via subcommand)
 	var prog sdkbuild.Program
 	if r.needsBuild() {
-		builder := &loadgen.ProgramBuilder{
+		builder := &progbuild.ProgramBuilder{
 			Language:   r.sdkOpts.Language.String(),
 			SDKVersion: r.sdkOpts.Version,
 			ProjectDir: r.workflowOpts.ProjectDir,
@@ -312,7 +313,7 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 		"--namespace", r.clientOpts.Namespace,
 	}
 
-	server := &loadgen.WorkerLifecycleServer{
+	server := &progbuild.WorkerLifecycleServer{
 		Program: prog,
 		Args:    runtimeArgs,
 		Port:    port,

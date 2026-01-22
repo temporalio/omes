@@ -1,4 +1,4 @@
-package loadgen
+package sdkbuild
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"syscall"
 	"time"
 
@@ -19,18 +18,10 @@ import (
 
 // WorkerLifecycleServer manages a worker subprocess with HTTP lifecycle endpoints.
 type WorkerLifecycleServer struct {
-	// New sdkbuild-based fields
 	Program sdkbuild.Program // Built program to run
 	Args    []string         // Runtime args (--task-queue, etc.)
-
-	// Legacy fields (deprecated, kept for backward compatibility)
-	Language   string
-	SDKVersion string
-	BuildDir   string
-	Command    []string
-
-	Port   int
-	Logger *zap.SugaredLogger
+	Port    int
+	Logger  *zap.SugaredLogger
 
 	process    *os.Process
 	pid        int
@@ -92,21 +83,13 @@ func (s *WorkerLifecycleServer) Kill() {
 }
 
 func (s *WorkerLifecycleServer) spawnWorker() error {
-	var cmd *exec.Cmd
-	var err error
+	if s.Program == nil {
+		return fmt.Errorf("Program is required")
+	}
 
-	// Use Program if available (new sdkbuild approach)
-	if s.Program != nil {
-		cmd, err = s.Program.NewCommand(context.Background(), s.Args...)
-		if err != nil {
-			return fmt.Errorf("failed to create command from program: %w", err)
-		}
-	} else {
-		// Legacy: use BuildCommandWithOverride
-		cmd, err = BuildCommandWithOverride(s.Language, s.BuildDir, s.SDKVersion, s.Command[0], s.Command[1:])
-		if err != nil {
-			return err
-		}
+	cmd, err := s.Program.NewCommand(context.Background(), s.Args...)
+	if err != nil {
+		return fmt.Errorf("failed to create command from program: %w", err)
 	}
 
 	cmd.Stdout = os.Stdout
@@ -180,10 +163,8 @@ func (s *WorkerLifecycleServer) handleMetrics(w http.ResponseWriter, r *http.Req
 
 func (s *WorkerLifecycleServer) handleInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(InfoResponse{
-		SDKLanguage:    s.Language,
-		SDKVersion:     s.SDKVersion,
-		StarterVersion: "omes-remote-worker",
-		WorkerPID:      s.pid,
+	json.NewEncoder(w).Encode(map[string]any{
+		"starter_version": "omes-remote-worker",
+		"worker_pid":      s.pid,
 	})
 }
