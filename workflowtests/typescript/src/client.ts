@@ -1,11 +1,18 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { Connection, Client, ClientOptions } from '@temporalio/client';
 import { parseArgs } from 'node:util';
-import { ExecuteContext, ExecuteFunction } from './common';
+import { ClientConfig, ClientFunction, ExecuteFunction } from './common';
+
+export interface ClientStarterArgs {
+    port: number;
+    taskQueue: string;
+    serverAddress: string;
+    namespace: string;
+}
 
 export class OmesClientStarter {
     private clientOptions: Partial<ClientOptions>;
-    private executeFn?: ExecuteFunction;
+    private executeFn?: ClientFunction;
     private client?: Client;
     private taskQueue?: string;
     private server?: ReturnType<express.Application['listen']>;
@@ -16,7 +23,7 @@ export class OmesClientStarter {
         this.clientOptions = clientOptions;
     }
 
-    onExecute(fn: ExecuteFunction): void {
+    onExecute(fn: ClientFunction): void {
         this.executeFn = fn;
     }
 
@@ -31,14 +38,14 @@ export class OmesClientStarter {
 
         this.activeRequests++;
         try {
-            const ctx: ExecuteContext = {
-                iteration: req.body.iteration,
-                runId: req.body.run_id,
-                taskQueue: this.taskQueue!,
+            const config: ClientConfig = {
                 client: this.client!,
+                taskQueue: this.taskQueue!,
+                runId: req.body.run_id,
+                iteration: req.body.iteration,
             };
 
-            await this.executeFn!(ctx);
+            await this.executeFn!(config);
             res.json({ success: true });
         } catch (error) {
             res.json({
@@ -107,17 +114,29 @@ export class OmesClientStarter {
             throw new Error('--task-queue is required');
         }
 
-        const port = parseInt(values.port!, 10);
-        this.taskQueue = values['task-queue'];
+        await this._runWithArgs({
+            port: parseInt(values.port!, 10),
+            taskQueue: values['task-queue'],
+            serverAddress: values['server-address']!,
+            namespace: values.namespace!,
+        });
+    }
+
+    /**
+     * Start the HTTP server with pre-parsed args.
+     * Used by cli.ts's run() function to pass already-parsed arguments.
+     */
+    async _runWithArgs(args: ClientStarterArgs): Promise<void> {
+        this.taskQueue = args.taskQueue;
 
         // Create Temporal client at startup
         const connection = await Connection.connect({
-            address: values['server-address'],
+            address: args.serverAddress,
         });
 
         this.client = new Client({
             connection,
-            namespace: values.namespace,
+            namespace: args.namespace,
             ...this.clientOptions,
         });
 
@@ -136,8 +155,38 @@ export class OmesClientStarter {
         app.post('/shutdown', asyncHandler(this.handleShutdown));
         app.get('/info', asyncHandler(this.handleInfo));
 
-        this.server = app.listen(port, () => {
-            console.log(`Client starter listening on port ${port}`);
+        this.server = app.listen(args.port, () => {
+            console.log(`Client starter listening on port ${args.port}`);
         });
     }
+}
+
+/**
+ * Convenience function to run a client with the given execute handler.
+ *
+ * Note: Prefer using run() from cli.ts with the new subcommand pattern.
+ *
+ * @example
+ * // src/client.ts - user exports function
+ * export async function clientMain(config: ClientConfig): Promise<void> {
+ *     const handle = await config.client.workflow.start(...);
+ *     await handle.result();
+ * }
+ *
+ * // Call directly:
+ * runClient(clientMain);
+ *
+ * @param handler - Async function called for each /execute request
+ * @param clientOptions - Options passed to Client constructor
+ */
+export function runClient(
+    handler: ClientFunction,
+    clientOptions: Partial<ClientOptions> = {}
+): void {
+    const starter = new OmesClientStarter(clientOptions);
+    starter.onExecute(handler);
+    starter.run().catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
 }
