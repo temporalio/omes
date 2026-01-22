@@ -4,24 +4,15 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.uber.org/zap"
 )
 
 func execCmd() *cobra.Command {
-	var language string
-	var sdkVersion string
-	var projectDir string
-	var entry string
-	var mode string
-	var buildDir string
-	var remoteWorkerPort int
-
-	// Runtime args passed to the entry point
-	var port int
-	var taskQueue string
-	var serverAddress string
-	var namespace string
+	var sdkOpts clioptions.SdkOptions
+	var clientOpts clioptions.ClientOptions
+	var execOpts clioptions.ExecOptions
 
 	cmd := &cobra.Command{
 		Use:   "exec [flags]",
@@ -40,12 +31,12 @@ With --remote-worker <port>, starts an HTTP server for lifecycle management:
 
 Example:
   # Run client
-  omes exec --language python --sdk-version 1.21.0 \
+  omes exec --language python --version 1.21.0 \
     --project-dir ./my-test --entry main.py --mode client \
     --port 8080 --task-queue my-queue
 
   # Run worker
-  omes exec --language python --sdk-version 1.21.0 \
+  omes exec --language python --version 1.21.0 \
     --project-dir ./my-test --entry main.py --mode worker \
     --task-queue my-queue --server-address localhost:7233`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,20 +44,20 @@ Example:
 			sugar := logger.Sugar()
 
 			// Validate flags
-			if mode == "" {
+			if execOpts.Mode == "" {
 				return fmt.Errorf("--mode is required (client or worker)")
 			}
-			if mode != "client" && mode != "worker" {
+			if execOpts.Mode != "client" && execOpts.Mode != "worker" {
 				return fmt.Errorf("--mode must be 'client' or 'worker'")
 			}
 
 			// Set default entry file based on language
-			if entry == "" {
-				switch language {
-				case "python":
-					entry = "main.py"
-				case "typescript":
-					entry = "main.ts"
+			if execOpts.Entry == "" {
+				switch sdkOpts.Language {
+				case clioptions.LangPython:
+					execOpts.Entry = "main.py"
+				case clioptions.LangTypeScript:
+					execOpts.Entry = "main.ts"
 				default:
 					return fmt.Errorf("--entry is required")
 				}
@@ -74,39 +65,39 @@ Example:
 
 			// Build the program
 			builder := &loadgen.ProgramBuilder{
-				Language:   language,
-				SDKVersion: sdkVersion,
-				ProjectDir: projectDir,
-				BuildDir:   buildDir,
+				Language:   sdkOpts.Language.String(),
+				SDKVersion: sdkOpts.Version,
+				ProjectDir: execOpts.ProjectDir,
+				BuildDir:   execOpts.BuildDir,
 				Logger:     sugar,
 			}
 
-			prog, err := builder.BuildProgram(cmd.Context(), entry)
+			prog, err := builder.BuildProgram(cmd.Context(), execOpts.Entry)
 			if err != nil {
 				return fmt.Errorf("failed to build program: %w", err)
 			}
 
 			// Build runtime args - mode is first arg (subcommand)
-			runtimeArgs := []string{mode}
-			if port > 0 {
-				runtimeArgs = append(runtimeArgs, "--port", fmt.Sprintf("%d", port))
+			runtimeArgs := []string{execOpts.Mode}
+			if execOpts.Port > 0 {
+				runtimeArgs = append(runtimeArgs, "--port", fmt.Sprintf("%d", execOpts.Port))
 			}
-			if taskQueue != "" {
-				runtimeArgs = append(runtimeArgs, "--task-queue", taskQueue)
+			if execOpts.TaskQueue != "" {
+				runtimeArgs = append(runtimeArgs, "--task-queue", execOpts.TaskQueue)
 			}
-			if serverAddress != "" {
-				runtimeArgs = append(runtimeArgs, "--server-address", serverAddress)
+			if clientOpts.Address != "" {
+				runtimeArgs = append(runtimeArgs, "--server-address", clientOpts.Address)
 			}
-			if namespace != "" {
-				runtimeArgs = append(runtimeArgs, "--namespace", namespace)
+			if clientOpts.Namespace != "" {
+				runtimeArgs = append(runtimeArgs, "--namespace", clientOpts.Namespace)
 			}
 
 			// Remote worker mode: spawn worker and start HTTP lifecycle server
-			if remoteWorkerPort > 0 && mode == "worker" {
+			if execOpts.RemoteWorkerPort > 0 && execOpts.Mode == "worker" {
 				s := &loadgen.WorkerLifecycleServer{
 					Program: prog,
 					Args:    runtimeArgs,
-					Port:    remoteWorkerPort,
+					Port:    execOpts.RemoteWorkerPort,
 					Logger:  sugar,
 				}
 				return s.Serve(cmd.Context())
@@ -123,23 +114,13 @@ Example:
 		},
 	}
 
-	// SDK and project flags
-	cmd.Flags().StringVar(&language, "language", "", "SDK language (python, typescript)")
-	cmd.Flags().StringVar(&sdkVersion, "sdk-version", "", "SDK version or local path")
-	cmd.Flags().StringVar(&projectDir, "project-dir", ".", "Path to user's test project")
-	cmd.Flags().StringVar(&entry, "entry", "", "Path to entry file (e.g., main.py). Defaults: main.py (python), main.ts (typescript)")
-	cmd.Flags().StringVar(&mode, "mode", "", "Mode to run: client or worker")
-	cmd.Flags().StringVar(&buildDir, "build-dir", "", "Directory for SDK build output (cached)")
-	cmd.Flags().IntVar(&remoteWorkerPort, "remote-worker", 0, "Run worker with HTTP lifecycle server on specified port")
-
-	// Runtime args
-	cmd.Flags().IntVar(&port, "port", 0, "HTTP port for client entry point")
-	cmd.Flags().StringVar(&taskQueue, "task-queue", "", "Temporal task queue name")
-	cmd.Flags().StringVar(&serverAddress, "server-address", "", "Temporal server address")
-	cmd.Flags().StringVar(&namespace, "namespace", "", "Temporal namespace")
+	// Add flag sets
+	sdkOpts.AddCLIFlags(cmd.Flags())
+	cmd.Flags().AddFlagSet(clientOpts.FlagSet())
+	cmd.Flags().AddFlagSet(execOpts.FlagSet())
 
 	cmd.MarkFlagRequired("language")
-	cmd.MarkFlagRequired("sdk-version")
+	cmd.MarkFlagRequired("version")
 	cmd.MarkFlagRequired("mode")
 
 	return cmd

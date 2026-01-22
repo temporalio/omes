@@ -242,9 +242,10 @@ func (p *pythonProgram) Dir() string {
 
 func (p *pythonProgram) NewCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
 	// Run the user's entry file with the provided args
-	// e.g., uv run python /path/to/project/main.py client --port 8080 ...
+	// Use --project to force uv to use our build directory's pyproject.toml,
+	// not any pyproject.toml in the user's project directory.
 	mainFile := filepath.Join(p.projectDir, p.entryFile)
-	allArgs := append([]string{"run", "python", mainFile}, args...)
+	allArgs := append([]string{"run", "--project", p.buildDir, "python", mainFile}, args...)
 	cmd := exec.CommandContext(ctx, "uv", allArgs...)
 
 	// Run from the venv directory where sdkbuild installed dependencies

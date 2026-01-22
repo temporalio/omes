@@ -38,7 +38,7 @@ User code pattern:
 Examples:
   # Local mode - builds and runs both client and worker
   omes workflow \
-    --language python --sdk-version 1.21.0 \
+    --language python --version 1.21.0 \
     --project-dir ./my-test \
     --entry main.py \
     --iterations 100 --max-concurrent 10
@@ -51,7 +51,7 @@ Examples:
 
   # Hybrid mode - local client, remote worker
   omes workflow \
-    --language python --sdk-version 1.21.0 \
+    --language python --version 1.21.0 \
     --project-dir ./my-test \
     --entry main.py \
     --client-only \
@@ -71,109 +71,69 @@ Examples:
 }
 
 type workflowRunner struct {
-	// Local build flags
-	language   string
-	sdkVersion string
-	projectDir string
-	entry      string // main.py or main.ts (calls run(client=..., worker=...))
-	buildDir   string
-	clientOnly bool // Only run client locally (use --worker-url for worker)
-	workerOnly bool // Only run worker locally (use --client-url for client)
-
-	// Remote mode flags
-	clientURL string
-	workerURL string
-
-	// Load config
-	iterations          int
-	duration            time.Duration
-	maxConcurrent       int
-	maxIterationsPerSec float64
-	timeout             time.Duration
-	runID               string
-
-	// Composed options
-	clientOptions  clioptions.ClientOptions
-	loggingOptions clioptions.LoggingOptions
+	sdkOpts      clioptions.SdkOptions
+	clientOpts   clioptions.ClientOptions
+	loggingOpts  clioptions.LoggingOptions
+	workflowOpts clioptions.WorkflowOptions
 
 	logger *zap.SugaredLogger
 }
 
 func (r *workflowRunner) addCLIFlags(fs *pflag.FlagSet) {
-	// Local build flags
-	fs.StringVar(&r.language, "language", "", "SDK language (python, typescript)")
-	fs.StringVar(&r.sdkVersion, "sdk-version", "", "SDK version or local path")
-	fs.StringVar(&r.projectDir, "project-dir", ".", "Path to user's test project")
-	fs.StringVar(&r.entry, "entry", "", "Path to entry file (e.g., main.py). Defaults: main.py (python), main.ts (typescript)")
-	fs.StringVar(&r.buildDir, "build-dir", "", "Directory for SDK build output (cached)")
-	fs.BoolVar(&r.clientOnly, "client-only", false, "Only run client locally (requires --worker-url)")
-	fs.BoolVar(&r.workerOnly, "worker-only", false, "Only run worker locally (requires --client-url)")
-
-	// Remote mode flags
-	fs.StringVar(&r.clientURL, "client-url", "", "URL of running client starter")
-	fs.StringVar(&r.workerURL, "worker-url", "", "URL of running worker starter")
-
-	// Load config flags
-	fs.IntVar(&r.iterations, "iterations", 0, "Number of iterations (cannot be used with --duration)")
-	fs.DurationVar(&r.duration, "duration", 0, "Test duration (cannot be used with --iterations)")
-	fs.IntVar(&r.maxConcurrent, "max-concurrent", 10, "Max concurrent iterations")
-	fs.Float64Var(&r.maxIterationsPerSec, "max-iterations-per-second", 0, "Max iterations per second rate limit")
-	fs.DurationVar(&r.timeout, "timeout", 0, "Test timeout (0 = no timeout)")
-	fs.StringVar(&r.runID, "run-id", "", "Run ID (auto-generated if not provided)")
-
-	// Inherited flags
-	fs.AddFlagSet(r.clientOptions.FlagSet())
-	fs.AddFlagSet(r.loggingOptions.FlagSet())
+	r.sdkOpts.AddCLIFlags(fs)
+	fs.AddFlagSet(r.clientOpts.FlagSet())
+	fs.AddFlagSet(r.loggingOpts.FlagSet())
+	fs.AddFlagSet(r.workflowOpts.FlagSet())
 }
 
 func (r *workflowRunner) preRun() {
-	r.logger = r.loggingOptions.MustCreateLogger()
+	r.logger = r.loggingOpts.MustCreateLogger()
 }
 
 func (r *workflowRunner) validate() error {
 	// Determine if we're running locally
-	runningLocally := r.language != "" || r.entry != ""
+	runningLocally := r.sdkOpts.Language != "" || r.workflowOpts.Entry != ""
 
 	// Cannot specify both --client-only and --worker-only
-	if r.clientOnly && r.workerOnly {
+	if r.workflowOpts.ClientOnly && r.workflowOpts.WorkerOnly {
 		return errors.New("cannot specify both --client-only and --worker-only")
 	}
 
-	// If running locally, need language and sdk-version
+	// If running locally, need language and version
 	if runningLocally {
-		if r.language == "" {
+		if r.sdkOpts.Language == "" {
 			return errors.New("--language required when building locally")
 		}
-		if r.sdkVersion == "" {
-			return errors.New("--sdk-version required when building locally")
+		if r.sdkOpts.Version == "" {
+			return errors.New("--version required when building locally")
 		}
 	}
 
 	// Hybrid mode validation
-	if r.clientOnly && r.workerURL == "" {
+	if r.workflowOpts.ClientOnly && r.workflowOpts.WorkerURL == "" {
 		return errors.New("--client-only requires --worker-url")
 	}
-	if r.workerOnly && r.clientURL == "" {
+	if r.workflowOpts.WorkerOnly && r.workflowOpts.ClientURL == "" {
 		return errors.New("--worker-only requires --client-url")
 	}
 
 	// Full remote mode: need both URLs
 	if !runningLocally {
-		if r.clientURL == "" {
+		if r.workflowOpts.ClientURL == "" {
 			return errors.New("must specify --client-url or build locally with --language and --entry")
 		}
-		if r.workerURL == "" {
+		if r.workflowOpts.WorkerURL == "" {
 			return errors.New("must specify --worker-url or build locally with --language and --entry")
 		}
 	}
 
 	// Cannot specify both iterations and duration
-	if r.iterations > 0 && r.duration > 0 {
+	if r.workflowOpts.Iterations > 0 && r.workflowOpts.Duration > 0 {
 		return errors.New("cannot specify both --iterations and --duration")
 	}
 
 	// Must specify at least one of iterations or duration
-	if r.iterations == 0 && r.duration == 0 {
+	if r.workflowOpts.Iterations == 0 && r.workflowOpts.Duration == 0 {
 		return errors.New("must specify --iterations or --duration")
 	}
 
@@ -186,24 +146,25 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}
 
 	// Generate run ID if not provided
-	if r.runID == "" {
+	runID := r.workflowOpts.RunID
+	if runID == "" {
 		id, err := generateExecutionID()
 		if err != nil {
 			return fmt.Errorf("failed to generate run ID: %w", err)
 		}
-		r.runID = id
+		runID = id
 	}
-	taskQueue := fmt.Sprintf("omes-%s", r.runID)
+	taskQueue := fmt.Sprintf("omes-%s", runID)
 
-	r.logger.Infof("Starting workflow load test (run-id: %s, task-queue: %s)", r.runID, taskQueue)
+	r.logger.Infof("Starting workflow load test (run-id: %s, task-queue: %s)", runID, taskQueue)
 
 	// Set default entry file based on language
-	entryFile := r.entry
-	if entryFile == "" && r.language != "" {
-		switch r.language {
-		case "python":
+	entryFile := r.workflowOpts.Entry
+	if entryFile == "" && r.sdkOpts.Language != "" {
+		switch r.sdkOpts.Language {
+		case clioptions.LangPython:
 			entryFile = "main.py"
-		case "typescript":
+		case clioptions.LangTypeScript:
 			entryFile = "main.ts"
 		}
 	}
@@ -212,10 +173,10 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	var prog sdkbuild.Program
 	if r.needsBuild() {
 		builder := &loadgen.ProgramBuilder{
-			Language:   r.language,
-			SDKVersion: r.sdkVersion,
-			ProjectDir: r.projectDir,
-			BuildDir:   r.buildDir,
+			Language:   r.sdkOpts.Language.String(),
+			SDKVersion: r.sdkOpts.Version,
+			ProjectDir: r.workflowOpts.ProjectDir,
+			BuildDir:   r.workflowOpts.BuildDir,
 			Logger:     r.logger,
 		}
 
@@ -235,8 +196,8 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}()
 
 	// Determine what to run locally vs remotely
-	runClientLocally := prog != nil && !r.workerOnly
-	runWorkerLocally := prog != nil && !r.clientOnly
+	runClientLocally := prog != nil && !r.workflowOpts.WorkerOnly
+	runWorkerLocally := prog != nil && !r.workflowOpts.ClientOnly
 
 	// Setup client
 	clientStarter, clientCleanup, err := r.setupClient(ctx, prog, runClientLocally, taskQueue)
@@ -261,19 +222,19 @@ func (r *workflowRunner) run(ctx context.Context) error {
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   "workflow-test",
-		RunID:          r.runID,
+		RunID:          runID,
 		Logger:         r.logger,
 		MetricsHandler: client.MetricsNopHandler,
 		Configuration: loadgen.RunConfiguration{
-			Iterations:             r.iterations,
-			Duration:               r.duration,
-			MaxConcurrent:          r.maxConcurrent,
-			MaxIterationsPerSecond: r.maxIterationsPerSec,
-			Timeout:                r.timeout,
+			Iterations:             r.workflowOpts.Iterations,
+			Duration:               r.workflowOpts.Duration,
+			MaxConcurrent:          r.workflowOpts.MaxConcurrent,
+			MaxIterationsPerSecond: r.workflowOpts.MaxIterationsPerSec,
+			Timeout:                r.workflowOpts.Timeout,
 		},
 	}
 
-	r.logger.Infof("Running load test with %d max concurrent", r.maxConcurrent)
+	r.logger.Infof("Running load test with %d max concurrent", r.workflowOpts.MaxConcurrent)
 	if err := executor.Run(ctx, scenarioInfo); err != nil {
 		return fmt.Errorf("load test failed: %w", err)
 	}
@@ -283,18 +244,18 @@ func (r *workflowRunner) run(ctx context.Context) error {
 }
 
 func (r *workflowRunner) needsBuild() bool {
-	return r.language != ""
+	return r.sdkOpts.Language != ""
 }
 
 func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program, runLocally bool, taskQueue string) (*loadgen.ClientStarter, func(), error) {
-	if !runLocally || r.clientURL != "" {
+	if !runLocally || r.workflowOpts.ClientURL != "" {
 		// Remote mode
-		if r.clientURL == "" {
+		if r.workflowOpts.ClientURL == "" {
 			return nil, nil, fmt.Errorf("no client URL specified for remote mode")
 		}
-		r.logger.Infof("Connecting to remote client at %s", r.clientURL)
-		starter := loadgen.NewClientStarter(r.clientURL, r.logger)
-		if err := r.waitForReady(ctx, r.clientURL+"/info", 30*time.Second); err != nil {
+		r.logger.Infof("Connecting to remote client at %s", r.workflowOpts.ClientURL)
+		starter := loadgen.NewClientStarter(r.workflowOpts.ClientURL, r.logger)
+		if err := r.waitForReady(ctx, r.workflowOpts.ClientURL+"/info", 30*time.Second); err != nil {
 			return nil, nil, fmt.Errorf("client not ready: %w", err)
 		}
 		cleanup := func() {
@@ -316,8 +277,8 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		"client", // subcommand
 		"--port", strconv.Itoa(port),
 		"--task-queue", taskQueue,
-		"--server-address", r.clientOptions.Address,
-		"--namespace", r.clientOptions.Namespace,
+		"--server-address", r.clientOpts.Address,
+		"--namespace", r.clientOpts.Namespace,
 	}
 
 	cmd, err := prog.NewCommand(ctx, runtimeArgs...)
@@ -350,14 +311,14 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 }
 
 func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program, runLocally bool, taskQueue string) (*loadgen.WorkerStarter, func(), error) {
-	if !runLocally || r.workerURL != "" {
+	if !runLocally || r.workflowOpts.WorkerURL != "" {
 		// Remote mode
-		if r.workerURL == "" {
+		if r.workflowOpts.WorkerURL == "" {
 			return nil, nil, fmt.Errorf("no worker URL specified for remote mode")
 		}
-		r.logger.Infof("Connecting to remote worker at %s", r.workerURL)
-		starter := loadgen.NewWorkerStarter(r.workerURL, r.logger)
-		if err := r.waitForReady(ctx, r.workerURL+"/info", 30*time.Second); err != nil {
+		r.logger.Infof("Connecting to remote worker at %s", r.workflowOpts.WorkerURL)
+		starter := loadgen.NewWorkerStarter(r.workflowOpts.WorkerURL, r.logger)
+		if err := r.waitForReady(ctx, r.workflowOpts.WorkerURL+"/info", 30*time.Second); err != nil {
 			return nil, nil, fmt.Errorf("worker not ready: %w", err)
 		}
 		cleanup := func() {
@@ -378,8 +339,8 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	runtimeArgs := []string{
 		"worker", // subcommand
 		"--task-queue", taskQueue,
-		"--server-address", r.clientOptions.Address,
-		"--namespace", r.clientOptions.Namespace,
+		"--server-address", r.clientOpts.Address,
+		"--namespace", r.clientOpts.Namespace,
 	}
 
 	server := &loadgen.WorkerLifecycleServer{
