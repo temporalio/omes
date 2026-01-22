@@ -6,23 +6,31 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/metrics"
 	"go.uber.org/zap"
 )
 
 // WorkerLifecycleServer manages a worker subprocess with HTTP lifecycle endpoints.
 type WorkerLifecycleServer struct {
+	// New sdkbuild-based fields
+	Program sdkbuild.Program // Built program to run
+	Args    []string         // Runtime args (--task-queue, etc.)
+
+	// Legacy fields (deprecated, kept for backward compatibility)
 	Language   string
 	SDKVersion string
 	BuildDir   string
 	Command    []string
-	Port       int
-	Logger     *zap.SugaredLogger
+
+	Port   int
+	Logger *zap.SugaredLogger
 
 	process    *os.Process
 	pid        int
@@ -84,10 +92,21 @@ func (s *WorkerLifecycleServer) Kill() {
 }
 
 func (s *WorkerLifecycleServer) spawnWorker() error {
-	// Command args are complete from CLI (user passes --task-queue, --server-address, etc.)
-	cmd, err := BuildCommandWithOverride(s.Language, s.BuildDir, s.SDKVersion, s.Command[0], s.Command[1:])
-	if err != nil {
-		return err
+	var cmd *exec.Cmd
+	var err error
+
+	// Use Program if available (new sdkbuild approach)
+	if s.Program != nil {
+		cmd, err = s.Program.NewCommand(context.Background(), s.Args...)
+		if err != nil {
+			return fmt.Errorf("failed to create command from program: %w", err)
+		}
+	} else {
+		// Legacy: use BuildCommandWithOverride
+		cmd, err = BuildCommandWithOverride(s.Language, s.BuildDir, s.SDKVersion, s.Command[0], s.Command[1:])
+		if err != nil {
+			return err
+		}
 	}
 
 	cmd.Stdout = os.Stdout

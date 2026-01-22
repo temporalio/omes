@@ -4,19 +4,37 @@ from temporalio.client import Client
 
 
 @dataclass
-class ExecuteContext:
-    """Context passed to client's execute function."""
+class ClientConfig:
+    """Config passed to client's execute function.
 
-    iteration: int
-    run_id: str
+    Attributes:
+        client: Pre-created Temporal client connection
+        task_queue: Task queue for workflows
+        run_id: Unique ID for this load test run (from /execute request)
+        iteration: Current iteration number (from /execute request)
+    """
+
+    client: Client
     task_queue: str
-    client: Client  # Pre-created Temporal client
+    run_id: str
+    iteration: int
 
 
 @dataclass
-class WorkerContext:
-    """Context passed to worker's configure function."""
+class WorkerConfig:
+    """Config passed to worker's configure function.
 
+    Attributes:
+        client: Pre-created Temporal client connection
+        task_queue: Task queue for the worker
+        prom_listen_address: Optional Prometheus metrics endpoint address
+    """
+
+    client: Client
     task_queue: str
-    client: Client  # Pre-created Temporal client
-    prom_listen_address: str | None
+    prom_listen_address: str | None = None
+
+
+# Backwards compatibility aliases
+ExecuteContext = ClientConfig
+WorkerContext = WorkerConfig

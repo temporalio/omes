@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
@@ -27,16 +27,20 @@ func workflowCmd() *cobra.Command {
 		Long: `Run workflow load tests using user-defined client and worker code.
 
 Supports three modes:
-  - Local: Spawns client and worker as subprocesses (use --client-command, --worker-command)
+  - Local: Build and run entry point (use --project-dir, --entry)
   - Remote: Connects to pre-running client/worker via HTTP (use --client-url, --worker-url)
   - Hybrid: Mix local and remote (e.g., local client + remote worker)
 
+User code pattern:
+  - User writes main.py/main.ts that calls: run(client=client_main, worker=worker_main)
+  - The program is invoked with subcommand: python main.py client --port 8080 ...
+
 Examples:
-  # Local mode - spawns both client and worker
+  # Local mode - builds and runs both client and worker
   omes workflow \
     --language python --sdk-version 1.21.0 \
-    --client-command "python client.py" \
-    --worker-command "python worker.py" \
+    --project-dir ./my-test \
+    --entry main.py \
     --iterations 100 --max-concurrent 10
 
   # Remote mode - connect to pre-running starters
@@ -48,7 +52,9 @@ Examples:
   # Hybrid mode - local client, remote worker
   omes workflow \
     --language python --sdk-version 1.21.0 \
-    --client-command "python client.py" \
+    --project-dir ./my-test \
+    --entry main.py \
+    --client-only \
     --worker-url http://worker.ecs.internal:8081 \
     --iterations 100`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -65,15 +71,18 @@ Examples:
 }
 
 type workflowRunner struct {
-	// Mode flags
-	language      string
-	sdkVersion    string
-	buildDir      string
-	useExisting   bool
-	clientCommand string
-	workerCommand string
-	clientURL     string
-	workerURL     string
+	// Local build flags
+	language   string
+	sdkVersion string
+	projectDir string
+	entry      string // main.py or main.ts (calls run(client=..., worker=...))
+	buildDir   string
+	clientOnly bool // Only run client locally (use --worker-url for worker)
+	workerOnly bool // Only run worker locally (use --client-url for client)
+
+	// Remote mode flags
+	clientURL string
+	workerURL string
 
 	// Load config
 	iterations          int
@@ -91,13 +100,14 @@ type workflowRunner struct {
 }
 
 func (r *workflowRunner) addCLIFlags(fs *pflag.FlagSet) {
-	// Local mode flags
+	// Local build flags
 	fs.StringVar(&r.language, "language", "", "SDK language (python, typescript)")
 	fs.StringVar(&r.sdkVersion, "sdk-version", "", "SDK version or local path")
-	fs.StringVar(&r.buildDir, "build-dir", "", "Directory for SDK build output")
-	fs.BoolVar(&r.useExisting, "use-existing", false, "Use existing build, fail if not found")
-	fs.StringVar(&r.clientCommand, "client-command", "", "Command to run client (e.g., 'python client.py')")
-	fs.StringVar(&r.workerCommand, "worker-command", "", "Command to run worker (e.g., 'python worker.py')")
+	fs.StringVar(&r.projectDir, "project-dir", ".", "Path to user's test project")
+	fs.StringVar(&r.entry, "entry", "", "Path to entry file (e.g., main.py). Defaults: main.py (python), main.ts (typescript)")
+	fs.StringVar(&r.buildDir, "build-dir", "", "Directory for SDK build output (cached)")
+	fs.BoolVar(&r.clientOnly, "client-only", false, "Only run client locally (requires --worker-url)")
+	fs.BoolVar(&r.workerOnly, "worker-only", false, "Only run worker locally (requires --client-url)")
 
 	// Remote mode flags
 	fs.StringVar(&r.clientURL, "client-url", "", "URL of running client starter")
@@ -121,25 +131,40 @@ func (r *workflowRunner) preRun() {
 }
 
 func (r *workflowRunner) validate() error {
-	// Cannot mix command and URL for same component
-	if r.clientCommand != "" && r.clientURL != "" {
-		return errors.New("cannot specify both --client-command and --client-url")
-	}
-	if r.workerCommand != "" && r.workerURL != "" {
-		return errors.New("cannot specify both --worker-command and --worker-url")
+	// Determine if we're running locally
+	runningLocally := r.language != "" || r.entry != ""
+
+	// Cannot specify both --client-only and --worker-only
+	if r.clientOnly && r.workerOnly {
+		return errors.New("cannot specify both --client-only and --worker-only")
 	}
 
-	// Must have at least one of each
-	if r.clientCommand == "" && r.clientURL == "" {
-		return errors.New("must specify --client-command or --client-url")
-	}
-	if r.workerCommand == "" && r.workerURL == "" {
-		return errors.New("must specify --worker-command or --worker-url")
+	// If running locally, need language and sdk-version
+	if runningLocally {
+		if r.language == "" {
+			return errors.New("--language required when building locally")
+		}
+		if r.sdkVersion == "" {
+			return errors.New("--sdk-version required when building locally")
+		}
 	}
 
-	// Language required if spawning locally
-	if (r.clientCommand != "" || r.workerCommand != "") && r.language == "" {
-		return errors.New("--language required when using --client-command or --worker-command")
+	// Hybrid mode validation
+	if r.clientOnly && r.workerURL == "" {
+		return errors.New("--client-only requires --worker-url")
+	}
+	if r.workerOnly && r.clientURL == "" {
+		return errors.New("--worker-only requires --client-url")
+	}
+
+	// Full remote mode: need both URLs
+	if !runningLocally {
+		if r.clientURL == "" {
+			return errors.New("must specify --client-url or build locally with --language and --entry")
+		}
+		if r.workerURL == "" {
+			return errors.New("must specify --worker-url or build locally with --language and --entry")
+		}
 	}
 
 	// Cannot specify both iterations and duration
@@ -172,20 +197,32 @@ func (r *workflowRunner) run(ctx context.Context) error {
 
 	r.logger.Infof("Starting workflow load test (run-id: %s, task-queue: %s)", r.runID, taskQueue)
 
-	// Build SDK if needed
-	var buildDir string
-	if r.needsBuild() {
-		runner := &loadgen.SDKRunner{
-			Language:    r.language,
-			SDKVersion:  r.sdkVersion,
-			BuildDir:    r.buildDir,
-			UseExisting: r.useExisting,
-			Logger:      r.logger,
+	// Set default entry file based on language
+	entryFile := r.entry
+	if entryFile == "" && r.language != "" {
+		switch r.language {
+		case "python":
+			entryFile = "main.py"
+		case "typescript":
+			entryFile = "main.ts"
 		}
+	}
+
+	// Build program if needed (single program handles both client and worker via subcommand)
+	var prog sdkbuild.Program
+	if r.needsBuild() {
+		builder := &loadgen.ProgramBuilder{
+			Language:   r.language,
+			SDKVersion: r.sdkVersion,
+			ProjectDir: r.projectDir,
+			BuildDir:   r.buildDir,
+			Logger:     r.logger,
+		}
+
 		var err error
-		buildDir, err = runner.EnsureBuild(ctx)
+		prog, err = builder.BuildProgram(ctx, entryFile)
 		if err != nil {
-			return fmt.Errorf("failed to build SDK: %w", err)
+			return fmt.Errorf("failed to build program: %w", err)
 		}
 	}
 
@@ -197,15 +234,19 @@ func (r *workflowRunner) run(ctx context.Context) error {
 		}
 	}()
 
+	// Determine what to run locally vs remotely
+	runClientLocally := prog != nil && !r.workerOnly
+	runWorkerLocally := prog != nil && !r.clientOnly
+
 	// Setup client
-	clientStarter, clientCleanup, err := r.setupClient(ctx, buildDir, taskQueue)
+	clientStarter, clientCleanup, err := r.setupClient(ctx, prog, runClientLocally, taskQueue)
 	if err != nil {
 		return fmt.Errorf("failed to setup client: %w", err)
 	}
 	cleanups = append(cleanups, clientCleanup)
 
 	// Setup worker
-	workerStarter, workerCleanup, err := r.setupWorker(ctx, buildDir, taskQueue)
+	workerStarter, workerCleanup, err := r.setupWorker(ctx, prog, runWorkerLocally, taskQueue)
 	if err != nil {
 		return fmt.Errorf("failed to setup worker: %w", err)
 	}
@@ -242,12 +283,15 @@ func (r *workflowRunner) run(ctx context.Context) error {
 }
 
 func (r *workflowRunner) needsBuild() bool {
-	return r.clientCommand != "" || r.workerCommand != ""
+	return r.language != ""
 }
 
-func (r *workflowRunner) setupClient(ctx context.Context, buildDir, taskQueue string) (*loadgen.ClientStarter, func(), error) {
-	if r.clientURL != "" {
+func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program, runLocally bool, taskQueue string) (*loadgen.ClientStarter, func(), error) {
+	if !runLocally || r.clientURL != "" {
 		// Remote mode
+		if r.clientURL == "" {
+			return nil, nil, fmt.Errorf("no client URL specified for remote mode")
+		}
 		r.logger.Infof("Connecting to remote client at %s", r.clientURL)
 		starter := loadgen.NewClientStarter(r.clientURL, r.logger)
 		if err := r.waitForReady(ctx, r.clientURL+"/info", 30*time.Second); err != nil {
@@ -261,29 +305,30 @@ func (r *workflowRunner) setupClient(ctx context.Context, buildDir, taskQueue st
 		return starter, cleanup, nil
 	}
 
-	// Local mode
+	// Local mode - spawn client process with "client" subcommand
 	port, err := findAvailablePort()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	args := parseCommand(r.clientCommand)
-	args = append(args,
+	// First arg is subcommand "client", then runtime flags
+	runtimeArgs := []string{
+		"client", // subcommand
 		"--port", strconv.Itoa(port),
 		"--task-queue", taskQueue,
 		"--server-address", r.clientOptions.Address,
 		"--namespace", r.clientOptions.Namespace,
-	)
+	}
 
-	cmd, err := loadgen.BuildCommandWithOverride(r.language, buildDir, r.sdkVersion, args[0], args[1:])
+	cmd, err := prog.NewCommand(ctx, runtimeArgs...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build command: %w", err)
+		return nil, nil, fmt.Errorf("failed to create command: %w", err)
 	}
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	r.logger.Infof("Starting local client on port %d: %s", port, r.clientCommand)
+	r.logger.Infof("Starting local client on port %d", port)
 	if err := cmd.Start(); err != nil {
 		return nil, nil, fmt.Errorf("failed to start client: %w", err)
 	}
@@ -304,9 +349,12 @@ func (r *workflowRunner) setupClient(ctx context.Context, buildDir, taskQueue st
 	return starter, cleanup, nil
 }
 
-func (r *workflowRunner) setupWorker(ctx context.Context, buildDir, taskQueue string) (*loadgen.WorkerStarter, func(), error) {
-	if r.workerURL != "" {
+func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program, runLocally bool, taskQueue string) (*loadgen.WorkerStarter, func(), error) {
+	if !runLocally || r.workerURL != "" {
 		// Remote mode
+		if r.workerURL == "" {
+			return nil, nil, fmt.Errorf("no worker URL specified for remote mode")
+		}
 		r.logger.Infof("Connecting to remote worker at %s", r.workerURL)
 		starter := loadgen.NewWorkerStarter(r.workerURL, r.logger)
 		if err := r.waitForReady(ctx, r.workerURL+"/info", 30*time.Second); err != nil {
@@ -320,29 +368,28 @@ func (r *workflowRunner) setupWorker(ctx context.Context, buildDir, taskQueue st
 		return starter, cleanup, nil
 	}
 
-	// Local mode - use WorkerLifecycleServer
+	// Local mode - use WorkerLifecycleServer with Program
 	port, err := findAvailablePort()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	args := parseCommand(r.workerCommand)
-	args = append(args,
+	// First arg is subcommand "worker", then runtime flags
+	runtimeArgs := []string{
+		"worker", // subcommand
 		"--task-queue", taskQueue,
 		"--server-address", r.clientOptions.Address,
 		"--namespace", r.clientOptions.Namespace,
-	)
-
-	server := &loadgen.WorkerLifecycleServer{
-		Language:   r.language,
-		SDKVersion: r.sdkVersion,
-		BuildDir:   buildDir,
-		Command:    args,
-		Port:       port,
-		Logger:     r.logger,
 	}
 
-	r.logger.Infof("Starting local worker on port %d: %s", port, r.workerCommand)
+	server := &loadgen.WorkerLifecycleServer{
+		Program: prog,
+		Args:    runtimeArgs,
+		Port:    port,
+		Logger:  r.logger,
+	}
+
+	r.logger.Infof("Starting local worker on port %d", port)
 
 	// Start server in background
 	errCh := make(chan error, 1)
@@ -413,10 +460,3 @@ func findAvailablePort() (int, error) {
 	listener.Close()
 	return port, nil
 }
-
-func parseCommand(command string) []string {
-	// Simple space-based splitting - doesn't handle quoted strings
-	// For more complex cases, users should use shell wrapper scripts
-	return strings.Fields(command)
-}
-

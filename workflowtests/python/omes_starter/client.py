@@ -9,7 +9,7 @@ import temporalio
 from aiohttp import web
 from temporalio.client import Client
 
-from .common import ExecuteContext
+from .common import ClientConfig
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class OmesClientStarter:
                               (data_converter, interceptors, etc.)
         """
         self._client_options = client_options
-        self._execute_fn: Callable[[ExecuteContext], Awaitable[None]] | None = None
+        self._execute_fn: Callable[[ClientConfig], Awaitable[None]] | None = None
         self._client: Client | None = None
         self._task_queue: str | None = None
         self._runner: web.AppRunner | None = None
@@ -40,13 +40,13 @@ class OmesClientStarter:
         self._shutting_down = False
 
     def on_execute(
-        self, fn: Callable[[ExecuteContext], Awaitable[None]]
-    ) -> Callable[[ExecuteContext], Awaitable[None]]:
+        self, fn: Callable[[ClientConfig], Awaitable[None]]
+    ) -> Callable[[ClientConfig], Awaitable[None]]:
         """Decorator to register the execute function.
 
         Example:
             @starter.on_execute
-            async def execute(ctx: ExecuteContext):
+            async def execute(ctx: ClientConfig):
                 handle = await ctx.client.start_workflow(...)
                 await handle.result()
         """
@@ -65,13 +65,13 @@ class OmesClientStarter:
 
         try:
             data = await request.json()
-            ctx = ExecuteContext(
-                iteration=data["iteration"],
-                run_id=data["run_id"],
-                task_queue=self._task_queue,
+            config = ClientConfig(
                 client=self._client,
+                task_queue=self._task_queue,
+                run_id=data["run_id"],
+                iteration=data["iteration"],
             )
-            await self._execute_fn(ctx)
+            await self._execute_fn(config)
             return web.json_response({"success": True})
         except Exception as e:
             return web.json_response(
@@ -127,7 +127,13 @@ class OmesClientStarter:
         parser.add_argument("--server-address", default="localhost:7233")
         parser.add_argument("--namespace", default="default")
         args = parser.parse_args()
+        self._run_with_args(args)
 
+    def _run_with_args(self, args):
+        """Start the HTTP server with pre-parsed args.
+
+        Used by cli.py's run() function to pass already-parsed arguments.
+        """
         self._task_queue = args.task_queue
 
         app = web.Application()
@@ -154,3 +160,29 @@ class OmesClientStarter:
                 await asyncio.sleep(1)
 
         asyncio.run(start())
+
+
+def run_client(
+    handler: Callable[[ClientConfig], Awaitable[None]],
+    **client_options,
+) -> None:
+    """Convenience function to run a client with the given execute handler.
+
+    Note: Prefer using omes_starter.run() with the new subcommand pattern.
+
+    Example:
+        # src/client.py
+        async def client_main(config: ClientConfig):
+            handle = await config.client.start_workflow(...)
+            await handle.result()
+
+        # Call directly:
+        run_client(client_main)
+
+    Args:
+        handler: Async function called for each /execute request
+        **client_options: Options passed to Client.connect()
+    """
+    starter = OmesClientStarter(**client_options)
+    starter._execute_fn = handler
+    starter.run()
