@@ -18,28 +18,10 @@ func execCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "exec [flags]",
 		Short: "Build SDK and run entry point",
-		Long: `Build the SDK using sdkbuild and run a client or worker entry point.
+		Long: `Build SDK and run a client or worker entry point.
 
-User code pattern:
-  - User writes main.py/main.ts that calls: run(client=client_main, worker=worker_main)
-  - The program is invoked with --mode to select client or worker
-
-With --remote-worker <port>, starts an HTTP server for lifecycle management:
-  - Worker spawns immediately
-  - POST /shutdown - Graceful shutdown via SIGTERM
-  - GET /metrics   - Process CPU/memory metrics (Prometheus format)
-  - GET /info      - SDK metadata and worker PID
-
-Example:
-  # Run client
-  omes exec --language python --version 1.21.0 \
-    --project-dir ./my-test --entry main.py --mode client \
-    --port 8080 --task-queue my-queue
-
-  # Run worker
-  omes exec --language python --version 1.21.0 \
-    --project-dir ./my-test --entry main.py --mode worker \
-    --task-queue my-queue --server-address localhost:7233`,
+Use --mode to select client or worker execution.
+Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, _ := zap.NewDevelopment()
 			sugar := logger.Sugar()

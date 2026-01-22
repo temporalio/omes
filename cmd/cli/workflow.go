@@ -25,37 +25,12 @@ func workflowCmd() *cobra.Command {
 		Short: "Run workflow load tests",
 		Long: `Run workflow load tests using user-defined client and worker code.
 
-Supports three modes:
-  - Local: Build and run entry point (use --project-dir, --entry)
-  - Remote: Connects to pre-running client/worker via HTTP (use --client-url, --worker-url)
-  - Hybrid: Mix local and remote (e.g., local client + remote worker)
+Modes:
+  Local:  Build and run locally (--language, --project-dir)
+  Remote: Connect to pre-running endpoints (--client-url, --worker-url)
+  Hybrid: Mix local and remote (--client-only or --worker-only)
 
-User code pattern:
-  - User writes main.py/main.ts that calls: run(client=client_main, worker=worker_main)
-  - The program is invoked with subcommand: python main.py client --port 8080 ...
-
-Examples:
-  # Local mode - builds and runs both client and worker
-  omes workflow \
-    --language python --version 1.21.0 \
-    --project-dir ./my-test \
-    --entry main.py \
-    --iterations 100 --max-concurrent 10
-
-  # Remote mode - connect to pre-running starters
-  omes workflow \
-    --client-url http://localhost:8080 \
-    --worker-url http://localhost:8081 \
-    --iterations 100
-
-  # Hybrid mode - local client, remote worker
-  omes workflow \
-    --language python --version 1.21.0 \
-    --project-dir ./my-test \
-    --entry main.py \
-    --client-only \
-    --worker-url http://worker.ecs.internal:8081 \
-    --iterations 100`,
+Specify load with --iterations or --duration.`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			r.preRun()
 		},
