@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
 	"go.uber.org/zap"
 )
@@ -53,12 +54,8 @@ Example:
 
 			// Set default entry file based on language
 			if execOpts.Entry == "" {
-				switch sdkOpts.Language {
-				case clioptions.LangPython:
-					execOpts.Entry = "main.py"
-				case clioptions.LangTypeScript:
-					execOpts.Entry = "main.ts"
-				default:
+				execOpts.Entry = utils.DefaultEntryFile(sdkOpts.Language)
+				if execOpts.Entry == "" {
 					return fmt.Errorf("--entry is required")
 				}
 			}

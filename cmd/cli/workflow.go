@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -14,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -161,12 +160,7 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	// Set default entry file based on language
 	entryFile := r.workflowOpts.Entry
 	if entryFile == "" && r.sdkOpts.Language != "" {
-		switch r.sdkOpts.Language {
-		case clioptions.LangPython:
-			entryFile = "main.py"
-		case clioptions.LangTypeScript:
-			entryFile = "main.ts"
-		}
+		entryFile = utils.DefaultEntryFile(r.sdkOpts.Language)
 	}
 
 	// Build program if needed (single program handles both client and worker via subcommand)
@@ -255,7 +249,7 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		}
 		r.logger.Infof("Connecting to remote client at %s", r.workflowOpts.ClientURL)
 		starter := loadgen.NewClientStarter(r.workflowOpts.ClientURL, r.logger)
-		if err := r.waitForReady(ctx, r.workflowOpts.ClientURL+"/info", 30*time.Second); err != nil {
+		if err := utils.WaitForReady(ctx, r.workflowOpts.ClientURL+"/info", 30*time.Second); err != nil {
 			return nil, nil, fmt.Errorf("client not ready: %w", err)
 		}
 		cleanup := func() {
@@ -267,7 +261,7 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 	}
 
 	// Local mode - spawn client process with "client" subcommand
-	port, err := findAvailablePort()
+	port, err := utils.FindAvailablePort()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
@@ -295,7 +289,7 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 	}
 
 	clientURL := fmt.Sprintf("http://localhost:%d", port)
-	if err := r.waitForReady(ctx, clientURL+"/info", 30*time.Second); err != nil {
+	if err := utils.WaitForReady(ctx, clientURL+"/info", 30*time.Second); err != nil {
 		cmd.Process.Kill()
 		return nil, nil, fmt.Errorf("client not ready: %w", err)
 	}
@@ -318,7 +312,7 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 		}
 		r.logger.Infof("Connecting to remote worker at %s", r.workflowOpts.WorkerURL)
 		starter := loadgen.NewWorkerStarter(r.workflowOpts.WorkerURL, r.logger)
-		if err := r.waitForReady(ctx, r.workflowOpts.WorkerURL+"/info", 30*time.Second); err != nil {
+		if err := utils.WaitForReady(ctx, r.workflowOpts.WorkerURL+"/info", 30*time.Second); err != nil {
 			return nil, nil, fmt.Errorf("worker not ready: %w", err)
 		}
 		cleanup := func() {
@@ -330,7 +324,7 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	}
 
 	// Local mode - use WorkerLifecycleServer with Program
-	port, err := findAvailablePort()
+	port, err := utils.FindAvailablePort()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
@@ -359,7 +353,7 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	}()
 
 	// Wait for ready or error
-	if err := r.waitForReadyWithErrCh(ctx, server.URL()+"/info", 30*time.Second, errCh); err != nil {
+	if err := utils.WaitForReadyWithErrCh(ctx, server.URL()+"/info", 30*time.Second, errCh); err != nil {
 		server.Kill()
 		return nil, nil, fmt.Errorf("worker not ready: %w", err)
 	}
@@ -374,50 +368,3 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	return starter, cleanup, nil
 }
 
-func (r *workflowRunner) waitForReady(ctx context.Context, url string, timeout time.Duration) error {
-	return r.waitForReadyWithErrCh(ctx, url, timeout, nil)
-}
-
-func (r *workflowRunner) waitForReadyWithErrCh(ctx context.Context, url string, timeout time.Duration, errCh <-chan error) error {
-	deadline := time.Now().Add(timeout)
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	for time.Now().Before(deadline) {
-		// Check for startup error
-		if errCh != nil {
-			select {
-			case err := <-errCh:
-				if err != nil {
-					return fmt.Errorf("process failed to start: %w", err)
-				}
-			default:
-			}
-		}
-
-		resp, err := client.Get(url)
-		if err == nil && resp.StatusCode == 200 {
-			resp.Body.Close()
-			return nil
-		}
-		if resp != nil {
-			resp.Body.Close()
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(100 * time.Millisecond):
-		}
-	}
-	return fmt.Errorf("timeout waiting for %s", url)
-}
-
-func findAvailablePort() (int, error) {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	listener.Close()
-	return port, nil
-}
