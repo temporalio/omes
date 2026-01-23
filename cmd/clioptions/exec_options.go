@@ -20,7 +20,7 @@ func (e *ExecOptions) FlagSet() *pflag.FlagSet {
 		return e.fs
 	}
 	e.fs = pflag.NewFlagSet("exec_options", pflag.ExitOnError)
-	e.fs.StringVar(&e.ProjectDir, "project-dir", ".", "Path to user's test project")
+	e.fs.StringVar(&e.ProjectDir, "project-dir", "", "Path to test project directory (required)")
 	e.fs.StringVar(&e.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
 	return e.fs
 }

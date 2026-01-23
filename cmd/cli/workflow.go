@@ -28,21 +28,21 @@ func workflowCmd() *cobra.Command {
 		Short: "Run workflow load tests",
 		Long: `Run workflow load tests using user-defined client and worker code.
 
-The --project-dir flag specifies the path to the test project directory
-containing your workflow code and project file (pyproject.toml, package.json).
-Defaults to the current directory.
+When building locally (--language), --project-dir is required and specifies the
+path to the test project directory containing your workflow code and project
+file (pyproject.toml, package.json).
 
 Mode is inferred from flags:
   --language only           → Build and run both client and worker locally
   --language + --worker-url → Run client locally, connect to remote worker
   --language + --client-url → Run worker locally, connect to remote client
-  --client-url + --worker-url → Pure remote mode (no local build)
+  --client-url + --worker-url → Pure remote mode (no local build, no --project-dir needed)
 
 Version is auto-detected from project files. Use --version to override
 or specify a local SDK path (e.g., --version ../sdk-python).
 
 Examples:
-  omes workflow --language python --iterations 100
+  omes workflow --language python --project-dir . --iterations 100
   omes workflow --language python --project-dir ./my-test --iterations 100
   omes workflow --client-url http://... --worker-url http://... --iterations 100`,
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -88,6 +88,11 @@ func (r *workflowRunner) validate() error {
 		if !hasClientURL || !hasWorkerURL {
 			return errors.New("must specify --language to build locally, or both --client-url and --worker-url for remote mode")
 		}
+	}
+
+	// Require --project-dir when building locally
+	if hasLanguage && r.workflowOpts.ProjectDir == "" {
+		return errors.New("--project-dir is required when building locally")
 	}
 
 	// Cannot specify both iterations and duration
