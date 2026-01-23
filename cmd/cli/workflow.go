@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
-	progbuild "github.com/temporalio/omes/internal/sdkbuild"
+	"github.com/temporalio/omes/internal/progbuild"
 	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
@@ -343,4 +343,3 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	}
 	return starter, cleanup, nil
 }
-

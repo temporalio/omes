@@ -1,4 +1,4 @@
-package sdkbuild
+package progbuild
 
 import (
 	"context"
@@ -73,69 +73,20 @@ func (b *ProgramBuilder) BuildProgram(ctx context.Context, entryFile string) (sd
 }
 
 func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir, entryFile string) (sdkbuild.Program, error) {
-	// Check if SDK is already built (venv exists)
-	venvDir := ".venv"
-	venvPath := filepath.Join(b.BuildDir, venvDir)
+	b.Logger.Infof("Building Python SDK (version: %s)", b.SDKVersion)
 
-	if !buildExists(venvPath) {
-		b.Logger.Infof("Building %s SDK at %s (version: %s)", b.Language, b.BuildDir, b.SDKVersion)
-
-		// Find omes_starter path
-		omesStarterPath := findOmesStarterPath()
-
-		// Generate pyproject.toml for sdkbuild
-		var pyprojectContent string
-		if omesStarterPath != "" {
-			pyprojectContent = fmt.Sprintf(`[project]
-name = "omes-wrapper"
-version = "0.1.0"
-requires-python = ">=3.10"
-dependencies = [
-    "aiohttp>=3.9.0",
-    "omes-starter",
-]
-
-[tool.uv.sources]
-omes-starter = { path = %q }
-`, omesStarterPath)
-		} else {
-			pyprojectContent = `[project]
-name = "omes-wrapper"
-version = "0.1.0"
-requires-python = ">=3.10"
-dependencies = [
-    "aiohttp>=3.9.0",
-]
-`
-		}
-
-		pyprojectPath := filepath.Join(b.BuildDir, "pyproject.toml")
-		if err := os.WriteFile(pyprojectPath, []byte(pyprojectContent), 0644); err != nil {
-			return nil, fmt.Errorf("failed to write pyproject.toml: %w", err)
-		}
-
-		// Create the venv directory (sdkbuild expects it to exist)
-		if err := os.MkdirAll(venvPath, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create venv directory: %w", err)
-		}
-
-		_, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
-			BaseDir: b.BuildDir,
-			DirName: venvDir,
-			Version: b.SDKVersion,
-			Stdout:  os.Stdout,
-			Stderr:  os.Stderr,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to build Python program: %w", err)
-		}
-	} else {
-		b.Logger.Infof("Using cached SDK build at %s", b.BuildDir)
+	_, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
+		BaseDir: absProjectDir,
+		DirName: ".venv",
+		Version: b.SDKVersion,
+		Stdout:  os.Stdout,
+		Stderr:  os.Stderr,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Python program: %w", err)
 	}
 
 	return &pythonProgram{
-		buildDir:   b.BuildDir,
-		venvDir:    venvPath,
 		projectDir: absProjectDir,
 		entryFile:  entryFile,
 	}, nil
@@ -228,29 +179,21 @@ func findOmesStarterTSPath() string {
 	return ""
 }
 
-// pythonProgram runs the user's entry file from the venv created by sdkbuild
+// pythonProgram runs the user's entry file using uv
 type pythonProgram struct {
-	buildDir   string
-	venvDir    string
 	projectDir string
-	entryFile  string // user's main.py
+	entryFile  string
 }
 
 func (p *pythonProgram) Dir() string {
-	return p.buildDir
+	return p.projectDir
 }
 
 func (p *pythonProgram) NewCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
-	// Run the user's entry file with the provided args
-	// Use --project to force uv to use our build directory's pyproject.toml,
-	// not any pyproject.toml in the user's project directory.
 	mainFile := filepath.Join(p.projectDir, p.entryFile)
-	allArgs := append([]string{"run", "--project", p.buildDir, "python", mainFile}, args...)
+	allArgs := append([]string{"run", "python", mainFile}, args...)
 	cmd := exec.CommandContext(ctx, "uv", allArgs...)
-
-	// Run from the venv directory where sdkbuild installed dependencies
-	cmd.Dir = p.venvDir
-
+	cmd.Dir = p.projectDir
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -291,43 +234,8 @@ func hashDir(dir string) string {
 	return fmt.Sprintf("%x", h[:8])
 }
 
-// findOmesStarterPath attempts to locate the omes_starter Python package.
-// It checks several common locations relative to the omes binary or current directory.
-func findOmesStarterPath() string {
-	// Try to find the omes_starter package in common locations
-	candidates := []string{
-		// Relative to current working directory (when running from omes repo)
-		"workflowtests/python",
-		"./workflowtests/python",
-	}
-
-	// Also try relative to the executable
-	if execPath, err := os.Executable(); err == nil {
-		execDir := filepath.Dir(execPath)
-		candidates = append(candidates,
-			filepath.Join(execDir, "workflowtests/python"),
-			filepath.Join(execDir, "../workflowtests/python"),
-		)
-	}
-
-	for _, candidate := range candidates {
-		absPath, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		// Check if omes_starter/__init__.py exists
-		initPath := filepath.Join(absPath, "omes_starter", "__init__.py")
-		if _, err := os.Stat(initPath); err == nil {
-			return absPath
-		}
-	}
-
-	return ""
-}
-
 // buildExists checks if a build directory exists.
 func buildExists(buildDir string) bool {
 	_, err := os.Stat(buildDir)
 	return err == nil
 }
-

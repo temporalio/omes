@@ -1,4 +1,4 @@
-package sdkbuild
+package progbuild
 
 import (
 	"context"
