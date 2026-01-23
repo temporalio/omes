@@ -26,3 +26,17 @@ workers/*/omes-temp-*/
 workers/*/prepared/
 
 temporal-omes
+
+# omes binary
+/omes
+
+# Generated program directories (test workers)
+workflowtests/*/tests/**/program-*/
+
+# Test directory build artifacts
+workflowtests/*/tests/**/dist/
+workflowtests/*/tests/**/node_modules/
+workflowtests/*/tests/**/package-lock.json
+
+# Python egg-info
+workflowtests/python/**/*.egg-info/
