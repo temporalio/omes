@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -240,23 +238,10 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// Build runtime args based on language
-	var runtimeArgs []string
-	absProjectDir, err := filepath.Abs(r.workflowOpts.ProjectDir)
+	// Build runtime args with language-specific prefix
+	runtimeArgs, err := progbuild.BuildRuntimeArgs(r.sdkOpts.Language, r.workflowOpts.ProjectDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve project directory: %w", err)
-	}
-	projectName := filepath.Base(absProjectDir)
-	switch r.sdkOpts.Language {
-	case clioptions.LangPython:
-		// Python: first arg is module name
-		runtimeArgs = []string{projectName}
-	case clioptions.LangTypeScript:
-		// TypeScript: first arg is compiled entry point (preserves dir structure)
-		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
-	case clioptions.LangGo:
-		// Go: compiled binary, subcommand is first arg
-		runtimeArgs = []string{}
+		return nil, nil, err
 	}
 	runtimeArgs = append(runtimeArgs,
 		"client", // subcommand
@@ -320,24 +305,10 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// Build runtime args based on language
-	var runtimeArgs []string
-	absProjectDir, err := filepath.Abs(r.workflowOpts.ProjectDir)
+	// Build runtime args with language-specific prefix
+	runtimeArgs, err := progbuild.BuildRuntimeArgs(r.sdkOpts.Language, r.workflowOpts.ProjectDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve project directory: %w", err)
-	}
-	projectName := filepath.Base(absProjectDir)
-	switch r.sdkOpts.Language {
-	case clioptions.LangPython:
-		// Python: first arg is module name (derive: "simple-test" → "simple_test")
-		moduleName := strings.ReplaceAll(projectName, "-", "_")
-		runtimeArgs = []string{moduleName}
-	case clioptions.LangTypeScript:
-		// TypeScript: first arg is compiled entry point (preserves dir structure)
-		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
-	case clioptions.LangGo:
-		// Go: compiled binary, subcommand is first arg
-		runtimeArgs = []string{}
+		return nil, nil, err
 	}
 	runtimeArgs = append(runtimeArgs,
 		"worker", // subcommand

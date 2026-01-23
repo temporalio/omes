@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -60,20 +58,10 @@ Examples:
 				return fmt.Errorf("failed to build program: %w", err)
 			}
 
-			// Build runtime args: for Python, prepend module name derived from project dir
-			// For TypeScript, prepend path to compiled entry point
-			var runtimeArgs []string
-			absProjectDir, err := filepath.Abs(execOpts.ProjectDir)
+			// Build runtime args with language-specific prefix
+			runtimeArgs, err := progbuild.BuildRuntimeArgs(sdkOpts.Language, execOpts.ProjectDir)
 			if err != nil {
-				return fmt.Errorf("failed to resolve project directory: %w", err)
-			}
-			projectName := filepath.Base(absProjectDir)
-			switch sdkOpts.Language {
-			case clioptions.LangPython:
-				moduleName := strings.ReplaceAll(projectName, "-", "_")
-				runtimeArgs = []string{moduleName}
-			case clioptions.LangTypeScript:
-				runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
+				return err
 			}
 			runtimeArgs = append(runtimeArgs, args...)
 
