@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -34,12 +36,10 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 				return fmt.Errorf("--mode must be 'client' or 'worker'")
 			}
 
-			// Set default entry file based on language
-			if execOpts.Entry == "" {
-				execOpts.Entry = utils.DefaultEntryFile(sdkOpts.Language)
-				if execOpts.Entry == "" {
-					return fmt.Errorf("--entry is required")
-				}
+			// For TypeScript, use entry file; for Python, uses src/__main__.py convention
+			entryFile := execOpts.Entry
+			if entryFile == "" && sdkOpts.Language == clioptions.LangTypeScript {
+				entryFile = utils.DefaultEntryFile(sdkOpts.Language)
 			}
 
 			// Build the program
@@ -51,13 +51,19 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 				Logger:     sugar,
 			}
 
-			prog, err := builder.BuildProgram(cmd.Context(), execOpts.Entry)
+			prog, err := builder.BuildProgram(cmd.Context(), entryFile)
 			if err != nil {
 				return fmt.Errorf("failed to build program: %w", err)
 			}
 
-			// Build runtime args - mode is first arg (subcommand)
-			runtimeArgs := []string{execOpts.Mode}
+			// Build runtime args: for Python, first arg is module name derived from project dir
+			var runtimeArgs []string
+			if sdkOpts.Language == clioptions.LangPython {
+				// Derive module name: "simple-test" → "simple_test"
+				moduleName := strings.ReplaceAll(filepath.Base(execOpts.ProjectDir), "-", "_")
+				runtimeArgs = []string{moduleName}
+			}
+			runtimeArgs = append(runtimeArgs, execOpts.Mode)
 			if execOpts.Port > 0 {
 				runtimeArgs = append(runtimeArgs, "--port", fmt.Sprintf("%d", execOpts.Port))
 			}

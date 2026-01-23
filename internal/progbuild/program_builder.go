@@ -14,22 +14,19 @@ import (
 )
 
 // ProgramBuilder builds programs using sdkbuild.
-// The user writes their own main.py/main.ts that calls omes_starter.run(client=..., worker=...).
-// This builder just builds the SDK and returns a program that can run the user's entry file.
+// For Python: user project must have src/__main__.py as entry point
+// For TypeScript: user provides entry file path
 type ProgramBuilder struct {
 	Language   string
 	SDKVersion string
 	ProjectDir string // User's project directory
-	BuildDir   string // Output build directory (cached)
+	BuildDir   string // Output build directory (TypeScript only)
 	Logger     *zap.SugaredLogger
 }
 
-// BuildProgram creates a sdkbuild.Program for the given entry file.
-// The entryFile is the path to the user's main file (e.g., "main.py" or "main.ts").
-// The returned program can run the entry file with any subcommand:
-//
-//	prog.NewCommand(ctx, "client", "--port", "8080", ...)  // runs: python main.py client --port 8080 ...
-//	prog.NewCommand(ctx, "worker", "--task-queue", "q")    // runs: python main.py worker --task-queue q
+// BuildProgram creates a sdkbuild.Program for the user's project.
+// For Python: uses src/__main__.py convention, run with prog.NewCommand(ctx, "src", "client", ...)
+// For TypeScript: uses entryFile parameter, run with prog.NewCommand(ctx, "client", ...)
 func (b *ProgramBuilder) BuildProgram(ctx context.Context, entryFile string) (sdkbuild.Program, error) {
 	// Get absolute path to user's project
 	absProjectDir, err := filepath.Abs(b.ProjectDir)
@@ -37,47 +34,38 @@ func (b *ProgramBuilder) BuildProgram(ctx context.Context, entryFile string) (sd
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Compute cache directory
-	// For TypeScript, place build dir adjacent to project for simpler relative paths
-	// For other languages, use /tmp/omes-sdk-cache/{language}/{version}/{hash(projectDir)}
-	if b.BuildDir == "" {
-		projectHash := hashDir(absProjectDir)
-		if b.Language == "typescript" {
-			// Place build dir as sibling to project: {projectParent}/.omes-build-{hash}
-			b.BuildDir = filepath.Join(filepath.Dir(absProjectDir), ".omes-build-"+projectHash)
-		} else {
-			b.BuildDir = filepath.Join(os.TempDir(), "omes-sdk-cache", b.Language, b.SDKVersion, projectHash)
-		}
-	} else {
-		// Ensure explicit build dir is absolute
-		absBuildDir, err := filepath.Abs(b.BuildDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get absolute build dir: %w", err)
-		}
-		b.BuildDir = absBuildDir
-	}
-
-	// Create build directory if needed
-	if err := os.MkdirAll(b.BuildDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create build directory: %w", err)
-	}
-
 	switch b.Language {
 	case "python":
-		return b.buildPython(ctx, absProjectDir, entryFile)
+		return b.buildPython(ctx, absProjectDir)
 	case "typescript":
+		// TypeScript needs build directory for compilation output
+		if b.BuildDir == "" {
+			projectHash := hashDir(absProjectDir)
+			b.BuildDir = filepath.Join(filepath.Dir(absProjectDir), ".omes-build-"+projectHash)
+		} else {
+			absBuildDir, err := filepath.Abs(b.BuildDir)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get absolute build dir: %w", err)
+			}
+			b.BuildDir = absBuildDir
+		}
+		if err := os.MkdirAll(b.BuildDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create build directory: %w", err)
+		}
 		return b.buildTypeScript(ctx, absProjectDir, entryFile)
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", b.Language)
 	}
 }
 
-func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir, entryFile string) (sdkbuild.Program, error) {
+func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building Python SDK (version: %s)", b.SDKVersion)
 
-	_, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
+	// Use sdkbuild directly - it creates temp dir, installs SDK, adds user project as editable
+	// User project must have src/__main__.py as entry point
+	prog, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
 		BaseDir: absProjectDir,
-		DirName: ".venv",
+		// No DirName - let sdkbuild create temp dir (no caching for now)
 		Version: b.SDKVersion,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
@@ -86,10 +74,7 @@ func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir, entryFi
 		return nil, fmt.Errorf("failed to build Python program: %w", err)
 	}
 
-	return &pythonProgram{
-		projectDir: absProjectDir,
-		entryFile:  entryFile,
-	}, nil
+	return prog, nil
 }
 
 func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, entryFile string) (sdkbuild.Program, error) {
@@ -177,27 +162,6 @@ func findOmesStarterTSPath() string {
 	}
 
 	return ""
-}
-
-// pythonProgram runs the user's entry file using uv
-type pythonProgram struct {
-	projectDir string
-	entryFile  string
-}
-
-func (p *pythonProgram) Dir() string {
-	return p.projectDir
-}
-
-func (p *pythonProgram) NewCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
-	mainFile := filepath.Join(p.projectDir, p.entryFile)
-	allArgs := append([]string{"run", "python", mainFile}, args...)
-	cmd := exec.CommandContext(ctx, "uv", allArgs...)
-	cmd.Dir = p.projectDir
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd, nil
 }
 
 // typescriptProgram runs the user's compiled entry file

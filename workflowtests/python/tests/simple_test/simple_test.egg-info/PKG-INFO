@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: simple-test
+Version: 0.1.0
+Summary: Simple workflow load test example
+Requires-Python: >=3.10
+Requires-Dist: temporalio<2,>=1.21.0
+Requires-Dist: omes-starter

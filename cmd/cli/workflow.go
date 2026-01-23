@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -67,7 +69,7 @@ func (r *workflowRunner) preRun() {
 
 func (r *workflowRunner) validate() error {
 	// Determine if we're running locally
-	runningLocally := r.sdkOpts.Language != "" || r.workflowOpts.Entry != ""
+	runningLocally := r.sdkOpts.Language != ""
 
 	// Cannot specify both --client-only and --worker-only
 	if r.workflowOpts.ClientOnly && r.workflowOpts.WorkerOnly {
@@ -76,11 +78,8 @@ func (r *workflowRunner) validate() error {
 
 	// If running locally, need language and version
 	if runningLocally {
-		if r.sdkOpts.Language == "" {
-			return errors.New("--language required when building locally")
-		}
 		if r.sdkOpts.Version == "" {
-			return errors.New("--version required when building locally")
+			return errors.New("--sdk-version required when building locally")
 		}
 	}
 
@@ -95,10 +94,10 @@ func (r *workflowRunner) validate() error {
 	// Full remote mode: need both URLs
 	if !runningLocally {
 		if r.workflowOpts.ClientURL == "" {
-			return errors.New("must specify --client-url or build locally with --language and --entry")
+			return errors.New("must specify --client-url or build locally with --language")
 		}
 		if r.workflowOpts.WorkerURL == "" {
-			return errors.New("must specify --worker-url or build locally with --language and --entry")
+			return errors.New("must specify --worker-url or build locally with --language")
 		}
 	}
 
@@ -133,12 +132,6 @@ func (r *workflowRunner) run(ctx context.Context) error {
 
 	r.logger.Infof("Starting workflow load test (run-id: %s, task-queue: %s)", runID, taskQueue)
 
-	// Set default entry file based on language
-	entryFile := r.workflowOpts.Entry
-	if entryFile == "" && r.sdkOpts.Language != "" {
-		entryFile = utils.DefaultEntryFile(r.sdkOpts.Language)
-	}
-
 	// Build program if needed (single program handles both client and worker via subcommand)
 	var prog sdkbuild.Program
 	if r.needsBuild() {
@@ -148,6 +141,12 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			ProjectDir: r.workflowOpts.ProjectDir,
 			BuildDir:   r.workflowOpts.BuildDir,
 			Logger:     r.logger,
+		}
+
+		// For TypeScript, use entry file; for Python, uses src/__main__.py convention
+		entryFile := r.workflowOpts.Entry
+		if entryFile == "" && r.sdkOpts.Language == clioptions.LangTypeScript {
+			entryFile = utils.DefaultEntryFile(r.sdkOpts.Language)
 		}
 
 		var err error
@@ -242,14 +241,20 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// First arg is subcommand "client", then runtime flags
-	runtimeArgs := []string{
+	// Build runtime args: for Python, first arg is module name derived from project dir
+	// For TypeScript, first arg is subcommand directly
+	var runtimeArgs []string
+	if r.sdkOpts.Language == clioptions.LangPython {
+		moduleName := filepath.Base(r.workflowOpts.ProjectDir)
+		runtimeArgs = []string{moduleName}
+	}
+	runtimeArgs = append(runtimeArgs,
 		"client", // subcommand
 		"--port", strconv.Itoa(port),
 		"--task-queue", taskQueue,
 		"--server-address", r.clientOpts.Address,
 		"--namespace", r.clientOpts.Namespace,
-	}
+	)
 
 	cmd, err := prog.NewCommand(ctx, runtimeArgs...)
 	if err != nil {
@@ -305,13 +310,20 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// First arg is subcommand "worker", then runtime flags
-	runtimeArgs := []string{
+	// Build runtime args: for Python, first arg is module name derived from project dir
+	// For TypeScript, first arg is subcommand directly
+	var runtimeArgs []string
+	if r.sdkOpts.Language == clioptions.LangPython {
+		// Derive module name: "simple-test" → "simple_test"
+		moduleName := strings.ReplaceAll(filepath.Base(r.workflowOpts.ProjectDir), "-", "_")
+		runtimeArgs = []string{moduleName}
+	}
+	runtimeArgs = append(runtimeArgs,
 		"worker", // subcommand
 		"--task-queue", taskQueue,
 		"--server-address", r.clientOpts.Address,
 		"--namespace", r.clientOpts.Namespace,
-	}
+	)
 
 	server := &progbuild.WorkerLifecycleServer{
 		Program: prog,
