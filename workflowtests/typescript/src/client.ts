@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { Command } from 'commander';
 import { Connection, Client, ClientOptions } from '@temporalio/client';
-import { parseArgs } from 'node:util';
 import { ClientConfig, ClientFunction, ExecuteFunction } from './common';
 
 export interface ClientStarterArgs {
@@ -101,24 +101,20 @@ export class OmesClientStarter {
     }
 
     async run(): Promise<void> {
-        const { values } = parseArgs({
-            options: {
-                port: { type: 'string', default: '8080' },
-                'task-queue': { type: 'string' },
-                'server-address': { type: 'string', default: 'localhost:7233' },
-                namespace: { type: 'string', default: 'default' },
-            },
-        });
+        const program = new Command();
+        program
+            .option('--port <port>', 'HTTP port', '8080')
+            .requiredOption('--task-queue <queue>', 'Task queue name')
+            .option('--server-address <addr>', 'Temporal server address', 'localhost:7233')
+            .option('--namespace <ns>', 'Temporal namespace', 'default')
+            .parse();
 
-        if (!values['task-queue']) {
-            throw new Error('--task-queue is required');
-        }
-
+        const opts = program.opts();
         await this._runWithArgs({
-            port: parseInt(values.port!, 10),
-            taskQueue: values['task-queue'],
-            serverAddress: values['server-address']!,
-            namespace: values.namespace!,
+            port: parseInt(opts.port, 10),
+            taskQueue: opts.taskQueue,
+            serverAddress: opts.serverAddress,
+            namespace: opts.namespace,
         });
     }
 

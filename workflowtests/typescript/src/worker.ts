@@ -1,5 +1,5 @@
+import { Command } from 'commander';
 import { Connection, Client, ClientOptions } from '@temporalio/client';
-import { parseArgs } from 'node:util';
 import { WorkerConfig, WorkerFunction } from './common';
 
 export class OmesWorkerStarter {
@@ -15,37 +15,34 @@ export class OmesWorkerStarter {
     }
 
     async run(): Promise<void> {
-        const { values } = parseArgs({
-            options: {
-                'task-queue': { type: 'string' },
-                'server-address': { type: 'string', default: 'localhost:7233' },
-                namespace: { type: 'string', default: 'default' },
-                'prom-listen-address': { type: 'string' },
-            },
-        });
+        const program = new Command();
+        program
+            .requiredOption('--task-queue <queue>', 'Task queue name')
+            .option('--server-address <addr>', 'Temporal server address', 'localhost:7233')
+            .option('--namespace <ns>', 'Temporal namespace', 'default')
+            .option('--prom-listen-address <addr>', 'Prometheus metrics address')
+            .parse();
 
-        if (!values['task-queue']) {
-            throw new Error('--task-queue is required');
-        }
+        const opts = program.opts();
 
         const connection = await Connection.connect({
-            address: values['server-address'],
+            address: opts.serverAddress,
         });
 
         const client = new Client({
             connection,
-            namespace: values.namespace,
+            namespace: opts.namespace,
             ...this.clientOptions,
         });
 
         const config: WorkerConfig = {
             client,
-            taskQueue: values['task-queue'],
-            promListenAddress: values['prom-listen-address'],
+            taskQueue: opts.taskQueue,
+            promListenAddress: opts.promListenAddress,
         };
 
         const worker = await this.configureFn!(config);
-        console.log(`Worker started on task queue: ${values['task-queue']}`);
+        console.log(`Worker started on task queue: ${opts.taskQueue}`);
         await worker.run();
     }
 }

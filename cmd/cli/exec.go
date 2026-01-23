@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/internal/progbuild"
-	"github.com/temporalio/omes/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -36,12 +35,6 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 				return fmt.Errorf("--mode must be 'client' or 'worker'")
 			}
 
-			// For TypeScript, use entry file; for Python, uses src/__main__.py convention
-			entryFile := execOpts.Entry
-			if entryFile == "" && sdkOpts.Language == clioptions.LangTypeScript {
-				entryFile = utils.DefaultEntryFile(sdkOpts.Language)
-			}
-
 			// Build the program
 			builder := &progbuild.ProgramBuilder{
 				Language:   sdkOpts.Language.String(),
@@ -51,7 +44,7 @@ Use --remote-worker <port> to run worker with HTTP lifecycle endpoints.`,
 				Logger:     sugar,
 			}
 
-			prog, err := builder.BuildProgram(cmd.Context(), entryFile)
+			prog, err := builder.BuildProgram(cmd.Context())
 			if err != nil {
 				return fmt.Errorf("failed to build program: %w", err)
 			}

@@ -143,14 +143,8 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			Logger:     r.logger,
 		}
 
-		// For TypeScript, use entry file; for Python, uses src/__main__.py convention
-		entryFile := r.workflowOpts.Entry
-		if entryFile == "" && r.sdkOpts.Language == clioptions.LangTypeScript {
-			entryFile = utils.DefaultEntryFile(r.sdkOpts.Language)
-		}
-
 		var err error
-		prog, err = builder.BuildProgram(ctx, entryFile)
+		prog, err = builder.BuildProgram(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to build program: %w", err)
 		}
@@ -241,12 +235,16 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// Build runtime args: for Python, first arg is module name derived from project dir
-	// For TypeScript, first arg is subcommand directly
+	// Build runtime args based on language
 	var runtimeArgs []string
-	if r.sdkOpts.Language == clioptions.LangPython {
-		moduleName := filepath.Base(r.workflowOpts.ProjectDir)
-		runtimeArgs = []string{moduleName}
+	projectName := filepath.Base(r.workflowOpts.ProjectDir)
+	switch r.sdkOpts.Language {
+	case clioptions.LangPython:
+		// Python: first arg is module name
+		runtimeArgs = []string{projectName}
+	case clioptions.LangTypeScript:
+		// TypeScript: first arg is compiled entry point (preserves dir structure)
+		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
 	}
 	runtimeArgs = append(runtimeArgs,
 		"client", // subcommand
@@ -310,13 +308,17 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// Build runtime args: for Python, first arg is module name derived from project dir
-	// For TypeScript, first arg is subcommand directly
+	// Build runtime args based on language
 	var runtimeArgs []string
-	if r.sdkOpts.Language == clioptions.LangPython {
-		// Derive module name: "simple-test" → "simple_test"
-		moduleName := strings.ReplaceAll(filepath.Base(r.workflowOpts.ProjectDir), "-", "_")
+	projectName := filepath.Base(r.workflowOpts.ProjectDir)
+	switch r.sdkOpts.Language {
+	case clioptions.LangPython:
+		// Python: first arg is module name (derive: "simple-test" → "simple_test")
+		moduleName := strings.ReplaceAll(projectName, "-", "_")
 		runtimeArgs = []string{moduleName}
+	case clioptions.LangTypeScript:
+		// TypeScript: first arg is compiled entry point (preserves dir structure)
+		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
 	}
 	runtimeArgs = append(runtimeArgs,
 		"worker", // subcommand

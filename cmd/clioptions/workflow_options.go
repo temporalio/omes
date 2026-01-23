@@ -10,7 +10,6 @@ import (
 type WorkflowOptions struct {
 	// Local build flags
 	ProjectDir string
-	Entry      string
 	BuildDir   string
 	ClientOnly bool // Only run client locally (use --worker-url for worker)
 	WorkerOnly bool // Only run worker locally (use --client-url for client)
@@ -39,7 +38,6 @@ func (w *WorkflowOptions) FlagSet() *pflag.FlagSet {
 
 	// Local build flags
 	w.fs.StringVar(&w.ProjectDir, "project-dir", ".", "Path to user's test project")
-	w.fs.StringVar(&w.Entry, "entry", "", "Entry file (e.g., main.py). Defaults: main.py (python), main.ts (typescript)")
 	w.fs.StringVar(&w.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
 	w.fs.BoolVar(&w.ClientOnly, "client-only", false, "Only run client locally (requires --worker-url)")
 	w.fs.BoolVar(&w.WorkerOnly, "worker-only", false, "Only run worker locally (requires --client-url)")

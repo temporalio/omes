@@ -5,7 +5,7 @@
  * client or worker mode based on the first command-line argument.
  */
 
-import { parseArgs } from 'node:util';
+import { Command } from 'commander';
 import { Connection, Client } from '@temporalio/client';
 import type { ClientFunction, WorkerFunction, WorkerConfig } from './common';
 import { OmesClientStarter } from './client';
@@ -37,96 +37,61 @@ export interface RunOptions {
  * ```
  */
 export function run(options: RunOptions): void {
-    const args = process.argv.slice(2);
+    const program = new Command();
 
-    if (args.length === 0) {
-        console.error('Usage: node main.js <client|worker> [options]');
-        console.error('  client  - Run as HTTP client starter');
-        console.error('  worker  - Run as Temporal worker');
-        process.exit(1);
-    }
-
-    const mode = args[0];
-
-    if (mode === 'client') {
-        runClientMode(options.client, args.slice(1));
-    } else if (mode === 'worker') {
-        runWorkerMode(options.worker, args.slice(1));
-    } else {
-        console.error(`Unknown mode: ${mode}. Expected 'client' or 'worker'.`);
-        process.exit(1);
-    }
-}
-
-function runClientMode(handler: ClientFunction, argv: string[]): void {
-    const { values } = parseArgs({
-        args: argv,
-        options: {
-            port: { type: 'string', default: '8080' },
-            'task-queue': { type: 'string' },
-            'server-address': { type: 'string', default: 'localhost:7233' },
-            namespace: { type: 'string', default: 'default' },
-        },
-    });
-
-    if (!values['task-queue']) {
-        console.error('Error: --task-queue is required');
-        process.exit(1);
-    }
-
-    const starter = new OmesClientStarter();
-    starter.onExecute(handler);
-    starter._runWithArgs({
-        port: parseInt(values.port!, 10),
-        taskQueue: values['task-queue'],
-        serverAddress: values['server-address']!,
-        namespace: values.namespace!,
-    }).catch((err) => {
-        console.error(err);
-        process.exit(1);
-    });
-}
-
-async function runWorkerMode(
-    handler: WorkerFunction,
-    argv: string[]
-): Promise<void> {
-    const { values } = parseArgs({
-        args: argv,
-        options: {
-            'task-queue': { type: 'string' },
-            'server-address': { type: 'string', default: 'localhost:7233' },
-            namespace: { type: 'string', default: 'default' },
-            'prom-listen-address': { type: 'string' },
-        },
-    });
-
-    if (!values['task-queue']) {
-        console.error('Error: --task-queue is required');
-        process.exit(1);
-    }
-
-    try {
-        const connection = await Connection.connect({
-            address: values['server-address'],
+    program
+        .command('client')
+        .description('Run as HTTP client starter')
+        .option('--port <port>', 'HTTP port', '8080')
+        .requiredOption('--task-queue <queue>', 'Task queue name')
+        .option('--server-address <addr>', 'Temporal server address', 'localhost:7233')
+        .option('--namespace <ns>', 'Temporal namespace', 'default')
+        .action((opts) => {
+            const starter = new OmesClientStarter();
+            starter.onExecute(options.client);
+            starter._runWithArgs({
+                port: parseInt(opts.port, 10),
+                taskQueue: opts.taskQueue,
+                serverAddress: opts.serverAddress,
+                namespace: opts.namespace,
+            }).catch((err) => {
+                console.error(err);
+                process.exit(1);
+            });
         });
 
-        const client = new Client({
-            connection,
-            namespace: values.namespace,
+    program
+        .command('worker')
+        .description('Run as Temporal worker')
+        .requiredOption('--task-queue <queue>', 'Task queue name')
+        .option('--server-address <addr>', 'Temporal server address', 'localhost:7233')
+        .option('--namespace <ns>', 'Temporal namespace', 'default')
+        .option('--prom-listen-address <addr>', 'Prometheus metrics address')
+        .action(async (opts) => {
+            try {
+                const connection = await Connection.connect({
+                    address: opts.serverAddress,
+                });
+
+                const client = new Client({
+                    connection,
+                    namespace: opts.namespace,
+                });
+
+                const config: WorkerConfig = {
+                    client,
+                    taskQueue: opts.taskQueue,
+                    promListenAddress: opts.promListenAddress,
+                };
+
+                const worker = await options.worker(config);
+                console.log(`Worker started on task queue: ${opts.taskQueue}`);
+                await worker.run();
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            }
         });
 
-        const config: WorkerConfig = {
-            client,
-            taskQueue: values['task-queue'],
-            promListenAddress: values['prom-listen-address'],
-        };
-
-        const worker = await handler(config);
-        console.log(`Worker started on task queue: ${values['task-queue']}`);
-        await worker.run();
-    } catch (err) {
-        console.error(err);
-        process.exit(1);
-    }
+    program.parse();
 }

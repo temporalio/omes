@@ -8,8 +8,6 @@ import (
 type ExecOptions struct {
 	// Path to user's test project directory
 	ProjectDir string
-	// Entry file name (e.g., main.py, main.ts)
-	Entry string
 	// Mode to run: "client" or "worker"
 	Mode string
 	// Directory for SDK build output (cached)
@@ -31,7 +29,6 @@ func (e *ExecOptions) FlagSet() *pflag.FlagSet {
 	}
 	e.fs = pflag.NewFlagSet("exec_options", pflag.ExitOnError)
 	e.fs.StringVar(&e.ProjectDir, "project-dir", ".", "Path to user's test project")
-	e.fs.StringVar(&e.Entry, "entry", "", "Entry file (e.g., main.py). Defaults: main.py (python), main.ts (typescript)")
 	e.fs.StringVar(&e.Mode, "mode", "", "Mode to run: client or worker")
 	e.fs.StringVar(&e.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
 	e.fs.IntVar(&e.RemoteWorkerPort, "remote-worker", 0, "Run worker with HTTP lifecycle server on specified port")

@@ -2,7 +2,6 @@ package progbuild
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,8 +13,8 @@ import (
 )
 
 // ProgramBuilder builds programs using sdkbuild.
-// For Python: user project must have src/__main__.py as entry point
-// For TypeScript: user provides entry file path
+// For Python: user project must have <module>/__main__.py as entry point
+// For TypeScript: sdkbuild compiles user project + shared omes-starter source
 type ProgramBuilder struct {
 	Language   string
 	SDKVersion string
@@ -25,9 +24,9 @@ type ProgramBuilder struct {
 }
 
 // BuildProgram creates a sdkbuild.Program for the user's project.
-// For Python: uses src/__main__.py convention, run with prog.NewCommand(ctx, "src", "client", ...)
-// For TypeScript: uses entryFile parameter, run with prog.NewCommand(ctx, "client", ...)
-func (b *ProgramBuilder) BuildProgram(ctx context.Context, entryFile string) (sdkbuild.Program, error) {
+// For Python: uses <module>/__main__.py convention, run with prog.NewCommand(ctx, "module", "client", ...)
+// For TypeScript: compiles user project with shared source, run with prog.NewCommand(ctx, "tslib/main.js", "client", ...)
+func (b *ProgramBuilder) BuildProgram(ctx context.Context) (sdkbuild.Program, error) {
 	// Get absolute path to user's project
 	absProjectDir, err := filepath.Abs(b.ProjectDir)
 	if err != nil {
@@ -38,21 +37,7 @@ func (b *ProgramBuilder) BuildProgram(ctx context.Context, entryFile string) (sd
 	case "python":
 		return b.buildPython(ctx, absProjectDir)
 	case "typescript":
-		// TypeScript needs build directory for compilation output
-		if b.BuildDir == "" {
-			projectHash := hashDir(absProjectDir)
-			b.BuildDir = filepath.Join(filepath.Dir(absProjectDir), ".omes-build-"+projectHash)
-		} else {
-			absBuildDir, err := filepath.Abs(b.BuildDir)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get absolute build dir: %w", err)
-			}
-			b.BuildDir = absBuildDir
-		}
-		if err := os.MkdirAll(b.BuildDir, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create build directory: %w", err)
-		}
-		return b.buildTypeScript(ctx, absProjectDir, entryFile)
+		return b.buildTypeScript(ctx, absProjectDir)
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", b.Language)
 	}
@@ -77,129 +62,103 @@ func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir string) 
 	return prog, nil
 }
 
-func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, entryFile string) (sdkbuild.Program, error) {
-	// Check if SDK is already built (node_modules exists)
-	nodeModulesPath := filepath.Join(b.BuildDir, "node_modules")
+func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
+	b.Logger.Infof("Building TypeScript SDK (version: %s)", b.SDKVersion)
 
-	if !buildExists(nodeModulesPath) {
-		b.Logger.Infof("Building %s SDK at %s (version: %s)", b.Language, b.BuildDir, b.SDKVersion)
-
-		// Find omes-starter path
-		omesStarterPath := findOmesStarterTSPath()
-
-		// Build using sdkbuild
-		baseDir := filepath.Dir(b.BuildDir)
-		dirName := filepath.Base(b.BuildDir)
-
-		// Compute relative path from build dir to project dir for includes
-		relProjectDir, err := filepath.Rel(b.BuildDir, absProjectDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute relative path: %w", err)
-		}
-
-		// Set up dependencies - add omes-starter as file dependency if found
-		moreDeps := map[string]string{}
-		if omesStarterPath != "" {
-			moreDeps["@temporalio/omes-starter"] = "file:" + omesStarterPath
-		}
-
-		// TSConfigPaths - sdkbuild requires at least one entry
-		// Don't override @temporalio/omes-starter - let TypeScript resolve it from node_modules
-		// Just provide a dummy entry to satisfy sdkbuild's requirement
-		tsConfigPaths := map[string][]string{
-			"@temporalio/omes-dummy": {"node_modules/@temporalio/client"},
-		}
-
-		_, err = sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-			BaseDir:          baseDir,
-			DirName:          dirName,
-			Version:          b.SDKVersion,
-			TSConfigPaths:    tsConfigPaths,
-			Includes:         []string{relProjectDir + "/**/*.ts"},
-			MoreDependencies: moreDeps,
-			Stdout:           os.Stdout,
-			Stderr:           os.Stderr,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to build TypeScript program: %w", err)
-		}
-	} else {
-		b.Logger.Infof("Using cached SDK build at %s", b.BuildDir)
-	}
-
-	return &typescriptProgram{
-		buildDir:   b.BuildDir,
-		projectDir: absProjectDir,
-		entryFile:  entryFile,
-	}, nil
-}
-
-// findOmesStarterTSPath attempts to locate the omes-starter TypeScript package.
-func findOmesStarterTSPath() string {
-	candidates := []string{
-		"workflowtests/typescript",
-		"./workflowtests/typescript",
-	}
-
-	if execPath, err := os.Executable(); err == nil {
-		execDir := filepath.Dir(execPath)
-		candidates = append(candidates,
-			filepath.Join(execDir, "workflowtests/typescript"),
-			filepath.Join(execDir, "../workflowtests/typescript"),
-		)
-	}
-
-	for _, candidate := range candidates {
-		absPath, err := filepath.Abs(candidate)
-		if err != nil {
-			continue
-		}
-		// Check if package.json exists
-		pkgPath := filepath.Join(absPath, "package.json")
-		if _, err := os.Stat(pkgPath); err == nil {
-			return absPath
+	// TODO(thomas): If version is a local path, pre-build if needed (handles pnpm projects), sdkbuild still tries to build with npm
+	if strings.ContainsAny(b.SDKVersion, `/\`) {
+		if err := b.preBuildLocalTypeScriptSDK(ctx); err != nil {
+			return nil, err
 		}
 	}
 
-	return ""
+	// Build dir will be a temp sibling to project dir (both in tests/)
+	// Project: tests/<project-name>/, Build: tests/<temp>/
+	baseDir := filepath.Dir(absProjectDir)
+	projectName := filepath.Base(absProjectDir)
+
+	// Paths relative to build dir (which is a child of baseDir)
+	relProjectDir := "../" + projectName // One level up, into project
+	relSharedSrc := "../../src"          // Two levels up, into src
+
+	// Set up TSConfigPaths and Includes
+	// Paths point to compiled output for runtime resolution via tsconfig-paths
+	// TypeScript compiler finds types via the includes, not the paths
+	tsConfigPaths := map[string][]string{
+		"@temporalio/omes-starter":   {"./tslib/src/index.js"},
+		"@temporalio/omes-starter/*": {"./tslib/src/*"},
+	}
+	includes := []string{
+		relProjectDir + "/**/*.ts",
+		relSharedSrc + "/**/*.ts",
+	}
+
+	// Add dependencies used by omes-starter
+	moreDeps := map[string]string{
+		"express":        "^4.18.0",
+		"@types/express": "^4.17.0",
+		"commander":      "^8.3.0",
+	}
+
+	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
+		BaseDir: baseDir,
+		// No DirName - let sdkbuild create temp dir (no caching for now)
+		Version:          b.SDKVersion,
+		TSConfigPaths:    tsConfigPaths,
+		Includes:         includes,
+		MoreDependencies: moreDeps,
+		Stdout:           os.Stdout,
+		Stderr:           os.Stderr,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to build TypeScript program: %w", err)
+	}
+
+	return prog, nil
 }
 
-// typescriptProgram runs the user's compiled entry file
-type typescriptProgram struct {
-	buildDir   string
-	projectDir string
-	entryFile  string // user's main.ts (will run compiled .js)
-}
+// preBuildLocalTypeScriptSDK builds a local TypeScript SDK if it uses pnpm and isn't built yet.
+// This is needed because sdkbuild assumes npm, but sdk-typescript uses pnpm.
+func (b *ProgramBuilder) preBuildLocalTypeScriptSDK(ctx context.Context) error {
+	sdkPath, err := filepath.Abs(b.SDKVersion)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute SDK path: %w", err)
+	}
 
-func (p *typescriptProgram) Dir() string {
-	return p.buildDir
-}
+	buildOutput := filepath.Join(sdkPath, "packages", "client", "lib", "index.js")
+	nodeModules := filepath.Join(sdkPath, "node_modules")
 
-func (p *typescriptProgram) NewCommand(ctx context.Context, args ...string) (*exec.Cmd, error) {
-	// Run the compiled entry file from sdkbuild's tslib output
-	// sdkbuild compiles to tslib/ with the common prefix stripped
-	// so main.ts compiles to tslib/main.js
-	jsFile := strings.TrimSuffix(p.entryFile, ".ts") + ".js"
-	mainFile := filepath.Join("tslib", jsFile)
+	// Check if we need to install dependencies
+	needsInstall := false
+	if _, err := os.Stat(nodeModules); os.IsNotExist(err) {
+		needsInstall = true
+	}
 
-	// Use tsconfig-paths/register to resolve path aliases at runtime
-	allArgs := append([]string{"-r", "tsconfig-paths/register", mainFile}, args...)
-	cmd := exec.CommandContext(ctx, "node", allArgs...)
-	cmd.Dir = p.buildDir
-	cmd.Stdin = os.Stdin
+	if needsInstall {
+		b.Logger.Info("Installing dependencies for local TypeScript SDK...")
+		cmd := exec.CommandContext(ctx, "pnpm", "install")
+		cmd.Dir = sdkPath
+		cmd.Env = append(os.Environ(), "CI=true")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to run pnpm install: %w", err)
+		}
+	}
+
+	// Check if already fully built
+	if _, err := os.Stat(buildOutput); err == nil {
+		return nil // Already built
+	}
+
+	b.Logger.Info("Building local TypeScript SDK...")
+	cmd := exec.CommandContext(ctx, "pnpm", "build")
+	cmd.Dir = sdkPath
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd, nil
-}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run pnpm build: %w", err)
+	}
 
-// hashDir returns a short hash of the directory path for cache keying
-func hashDir(dir string) string {
-	h := sha256.Sum256([]byte(dir))
-	return fmt.Sprintf("%x", h[:8])
-}
-
-// buildExists checks if a build directory exists.
-func buildExists(buildDir string) bool {
-	_, err := os.Stat(buildDir)
-	return err == nil
+	return nil
 }
