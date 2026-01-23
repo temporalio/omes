@@ -10,6 +10,8 @@ type ExecOptions struct {
 	ProjectDir string
 	// Directory for SDK build output (cached)
 	BuildDir string
+	// Remote worker mode: when > 0, wrap subprocess with HTTP lifecycle server on this port
+	RemoteWorkerPort int
 
 	fs *pflag.FlagSet
 }
@@ -22,5 +24,6 @@ func (e *ExecOptions) FlagSet() *pflag.FlagSet {
 	e.fs = pflag.NewFlagSet("exec_options", pflag.ExitOnError)
 	e.fs.StringVar(&e.ProjectDir, "project-dir", "", "Path to test project directory (required)")
 	e.fs.StringVar(&e.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
+	e.fs.IntVar(&e.RemoteWorkerPort, "remote-worker", 0, "Wrap subprocess with HTTP lifecycle server on this port")
 	return e.fs
 }

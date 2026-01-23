@@ -1,7 +1,11 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -27,7 +31,8 @@ or specify a local SDK path (e.g., --version ../sdk-python).
 Examples:
   omes exec --language python --project-dir . -- worker --task-queue my-queue
   omes exec --language ts --project-dir ./my-test -- client --port 8080
-  omes exec --language python --project-dir . --version ../sdk-python -- worker -q q`,
+  omes exec --language python --project-dir . --version ../sdk-python -- worker -q q
+  omes exec --language python --project-dir . --remote-worker 8081 -- worker --task-queue myqueue`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, _ := zap.NewDevelopment()
@@ -64,6 +69,32 @@ Examples:
 				return err
 			}
 			runtimeArgs = append(runtimeArgs, args...)
+
+			// Remote worker mode: spawn worker immediately and start HTTP server
+			if execOpts.RemoteWorkerPort > 0 {
+				// Set up signal handling for graceful shutdown
+				ctx, cancel := context.WithCancel(cmd.Context())
+				defer cancel()
+
+				sigCh := make(chan os.Signal, 1)
+				signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+				go func() {
+					select {
+					case sig := <-sigCh:
+						sugar.Infof("Received signal %v, initiating shutdown", sig)
+						cancel()
+					case <-ctx.Done():
+					}
+				}()
+
+				server := &progbuild.WorkerLifecycleServer{
+					Program: prog,
+					Args:    runtimeArgs,
+					Port:    execOpts.RemoteWorkerPort,
+					Logger:  sugar,
+				}
+				return server.Serve(ctx)
+			}
 
 			// Run the program
 			execCmd, err := prog.NewCommand(cmd.Context(), runtimeArgs...)

@@ -23,17 +23,26 @@ type WorkerLifecycleServer struct {
 	Port    int
 	Logger  *zap.SugaredLogger
 
-	process    *os.Process
-	pid        int
-	server     *http.Server
-	shutdownCh chan struct{}
+	process         *os.Process
+	pid             int
+	server          *http.Server
+	shutdownCh      chan struct{}
+	metricsRegistry *prometheus.Registry
 }
 
 // Serve spawns the worker and starts the HTTP server. Blocks until shutdown.
 func (s *WorkerLifecycleServer) Serve(ctx context.Context) error {
-	// Spawn worker IMMEDIATELY (command includes --task-queue, --server-address, etc.)
+	// Spawn worker first (command includes --task-queue, --server-address, etc.)
 	if err := s.spawnWorker(); err != nil {
 		return fmt.Errorf("failed to spawn worker: %w", err)
+	}
+
+	// Set up metrics collector once after process spawns
+	s.metricsRegistry = prometheus.NewRegistry()
+	if collector, err := metrics.NewProcessCollector(s.pid); err == nil {
+		s.metricsRegistry.MustRegister(collector)
+	} else {
+		s.Logger.Warnf("Failed to create process collector: %v", err)
 	}
 
 	s.shutdownCh = make(chan struct{})
@@ -143,21 +152,7 @@ func (s *WorkerLifecycleServer) shutdownWorker() {
 }
 
 func (s *WorkerLifecycleServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	if s.pid == 0 {
-		w.Write([]byte("# No process running\n"))
-		return
-	}
-
-	collector, err := metrics.NewProcessCollector(s.pid)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("# Error creating collector: %v\n", err)))
-		return
-	}
-
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(collector)
-
-	h := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+	h := promhttp.HandlerFor(s.metricsRegistry, promhttp.HandlerOpts{})
 	h.ServeHTTP(w, r)
 }
 
