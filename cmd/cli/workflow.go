@@ -28,12 +28,18 @@ func workflowCmd() *cobra.Command {
 		Short: "Run workflow load tests",
 		Long: `Run workflow load tests using user-defined client and worker code.
 
-Modes:
-  Local:  Build and run locally (--language, --project-dir)
-  Remote: Connect to pre-running endpoints (--client-url, --worker-url)
-  Hybrid: Mix local and remote (--client-only or --worker-only)
+Mode is inferred from flags:
+  --language only          → Build and run both client and worker locally
+  --language + --worker-url → Run client locally, connect to remote worker
+  --language + --client-url → Run worker locally, connect to remote client
+  --client-url + --worker-url → Pure remote mode (no local build)
 
-Specify load with --iterations or --duration.`,
+Version is auto-detected from project files. Use --version to override.
+
+Examples:
+  omes workflow --language python --iterations 100
+  omes workflow --language python --worker-url http://... --iterations 100
+  omes workflow --client-url http://... --worker-url http://... --iterations 100`,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			r.preRun()
 		},
@@ -68,36 +74,14 @@ func (r *workflowRunner) preRun() {
 }
 
 func (r *workflowRunner) validate() error {
-	// Determine if we're running locally
-	runningLocally := r.sdkOpts.Language != ""
+	hasLanguage := r.sdkOpts.Language != ""
+	hasClientURL := r.workflowOpts.ClientURL != ""
+	hasWorkerURL := r.workflowOpts.WorkerURL != ""
 
-	// Cannot specify both --client-only and --worker-only
-	if r.workflowOpts.ClientOnly && r.workflowOpts.WorkerOnly {
-		return errors.New("cannot specify both --client-only and --worker-only")
-	}
-
-	// If running locally, need language and version
-	if runningLocally {
-		if r.sdkOpts.Version == "" {
-			return errors.New("--sdk-version required when building locally")
-		}
-	}
-
-	// Hybrid mode validation
-	if r.workflowOpts.ClientOnly && r.workflowOpts.WorkerURL == "" {
-		return errors.New("--client-only requires --worker-url")
-	}
-	if r.workflowOpts.WorkerOnly && r.workflowOpts.ClientURL == "" {
-		return errors.New("--worker-only requires --client-url")
-	}
-
-	// Full remote mode: need both URLs
-	if !runningLocally {
-		if r.workflowOpts.ClientURL == "" {
-			return errors.New("must specify --client-url or build locally with --language")
-		}
-		if r.workflowOpts.WorkerURL == "" {
-			return errors.New("must specify --worker-url or build locally with --language")
+	// Must have language for local build, or both URLs for pure remote
+	if !hasLanguage {
+		if !hasClientURL || !hasWorkerURL {
+			return errors.New("must specify --language to build locally, or both --client-url and --worker-url for remote mode")
 		}
 	}
 
@@ -135,9 +119,20 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	// Build program if needed (single program handles both client and worker via subcommand)
 	var prog sdkbuild.Program
 	if r.needsBuild() {
+		// Auto-detect version if not provided
+		version := r.sdkOpts.Version
+		if version == "" {
+			var err error
+			version, err = progbuild.DetectSDKVersion(ctx, r.sdkOpts.Language.String(), r.workflowOpts.ProjectDir)
+			if err != nil {
+				return fmt.Errorf("failed to detect SDK version (use --version to specify): %w", err)
+			}
+			r.logger.Infof("Auto-detected SDK version: %s", version)
+		}
+
 		builder := &progbuild.ProgramBuilder{
 			Language:   r.sdkOpts.Language.String(),
-			SDKVersion: r.sdkOpts.Version,
+			SDKVersion: version,
 			ProjectDir: r.workflowOpts.ProjectDir,
 			BuildDir:   r.workflowOpts.BuildDir,
 			Logger:     r.logger,
@@ -158,9 +153,9 @@ func (r *workflowRunner) run(ctx context.Context) error {
 		}
 	}()
 
-	// Determine what to run locally vs remotely
-	runClientLocally := prog != nil && !r.workflowOpts.WorkerOnly
-	runWorkerLocally := prog != nil && !r.workflowOpts.ClientOnly
+	// Determine what to run locally vs remotely (inferred from URLs)
+	runClientLocally := prog != nil && r.workflowOpts.ClientURL == ""
+	runWorkerLocally := prog != nil && r.workflowOpts.WorkerURL == ""
 
 	// Setup client
 	clientStarter, clientCleanup, err := r.setupClient(ctx, prog, runClientLocally, taskQueue)
@@ -237,7 +232,11 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 
 	// Build runtime args based on language
 	var runtimeArgs []string
-	projectName := filepath.Base(r.workflowOpts.ProjectDir)
+	absProjectDir, err := filepath.Abs(r.workflowOpts.ProjectDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve project directory: %w", err)
+	}
+	projectName := filepath.Base(absProjectDir)
 	switch r.sdkOpts.Language {
 	case clioptions.LangPython:
 		// Python: first arg is module name
@@ -313,7 +312,11 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 
 	// Build runtime args based on language
 	var runtimeArgs []string
-	projectName := filepath.Base(r.workflowOpts.ProjectDir)
+	absProjectDir, err := filepath.Abs(r.workflowOpts.ProjectDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve project directory: %w", err)
+	}
+	projectName := filepath.Base(absProjectDir)
 	switch r.sdkOpts.Language {
 	case clioptions.LangPython:
 		// Python: first arg is module name (derive: "simple-test" → "simple_test")

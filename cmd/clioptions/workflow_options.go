@@ -11,10 +11,8 @@ type WorkflowOptions struct {
 	// Local build flags
 	ProjectDir string
 	BuildDir   string
-	ClientOnly bool // Only run client locally (use --worker-url for worker)
-	WorkerOnly bool // Only run worker locally (use --client-url for client)
 
-	// Remote mode flags
+	// Remote mode flags (presence determines hybrid/remote mode)
 	ClientURL string
 	WorkerURL string
 
@@ -39,10 +37,8 @@ func (w *WorkflowOptions) FlagSet() *pflag.FlagSet {
 	// Local build flags
 	w.fs.StringVar(&w.ProjectDir, "project-dir", ".", "Path to user's test project")
 	w.fs.StringVar(&w.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
-	w.fs.BoolVar(&w.ClientOnly, "client-only", false, "Only run client locally (requires --worker-url)")
-	w.fs.BoolVar(&w.WorkerOnly, "worker-only", false, "Only run worker locally (requires --client-url)")
 
-	// Remote mode flags
+	// Remote mode flags (presence determines hybrid/remote mode)
 	w.fs.StringVar(&w.ClientURL, "client-url", "", "URL of running client starter")
 	w.fs.StringVar(&w.WorkerURL, "worker-url", "", "URL of running worker starter")
 
