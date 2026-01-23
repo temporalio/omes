@@ -38,6 +38,8 @@ func (b *ProgramBuilder) BuildProgram(ctx context.Context) (sdkbuild.Program, er
 		return b.buildPython(ctx, absProjectDir)
 	case "typescript":
 		return b.buildTypeScript(ctx, absProjectDir)
+	case "go":
+		return b.buildGo(ctx, absProjectDir)
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", b.Language)
 	}
@@ -112,6 +114,63 @@ func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir stri
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build TypeScript program: %w", err)
+	}
+
+	return prog, nil
+}
+
+func (b *ProgramBuilder) buildGo(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
+	b.Logger.Infof("Building Go SDK (version: %s)", b.SDKVersion)
+
+	projectName := filepath.Base(absProjectDir)
+	baseDir := filepath.Dir(absProjectDir) // tests/
+	pkgName := strings.ReplaceAll(projectName, "-", "")
+
+	// Module path for user's test
+	testModule := fmt.Sprintf("github.com/temporalio/omes-workflow-tests/workflowtests/go/tests/%s", projectName)
+
+	// go.mod with replace directives for starter and user's test
+	goModContents := fmt.Sprintf(`module github.com/temporalio/omes-workflow-tests/build
+
+go 1.22
+
+require %s v0.0.0
+require github.com/temporalio/omes-workflow-tests/workflowtests/go/starter v0.0.0
+
+replace %s => ../%s
+replace github.com/temporalio/omes-workflow-tests/workflowtests/go/starter => ../../starter
+`, testModule, testModule, projectName)
+
+	// Generated main.go imports user's package and calls Main()
+	goMainContents := fmt.Sprintf(`package main
+
+import %s "%s"
+
+func main() {
+	%s.Main()
+}
+`, pkgName, testModule, pkgName)
+
+	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
+		BaseDir:        baseDir,
+		Version:        b.SDKVersion,
+		GoModContents:  goModContents,
+		GoMainContents: goMainContents,
+		ApplyToCommand: func(_ context.Context, cmd *exec.Cmd) error {
+			// Add -buildvcs=false to avoid VCS stamping issues in temp directories
+			for i, arg := range cmd.Args {
+				if arg == "build" {
+					cmd.Args = append(cmd.Args[:i+1], append([]string{"-buildvcs=false"}, cmd.Args[i+1:]...)...)
+					break
+				}
+			}
+			return nil
+		},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Go program: %w", err)
 	}
 
 	return prog, nil

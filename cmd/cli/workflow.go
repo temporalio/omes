@@ -245,6 +245,9 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 	case clioptions.LangTypeScript:
 		// TypeScript: first arg is compiled entry point (preserves dir structure)
 		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
+	case clioptions.LangGo:
+		// Go: compiled binary, subcommand is first arg
+		runtimeArgs = []string{}
 	}
 	runtimeArgs = append(runtimeArgs,
 		"client", // subcommand
@@ -319,6 +322,9 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	case clioptions.LangTypeScript:
 		// TypeScript: first arg is compiled entry point (preserves dir structure)
 		runtimeArgs = []string{fmt.Sprintf("tslib/tests/%s/main.js", projectName)}
+	case clioptions.LangGo:
+		// Go: compiled binary, subcommand is first arg
+		runtimeArgs = []string{}
 	}
 	runtimeArgs = append(runtimeArgs,
 		"worker", // subcommand
