@@ -20,12 +20,17 @@ func execCmd() *cobra.Command {
 		Short: "Build SDK and run program",
 		Long: `Build SDK and run program with the given arguments.
 
-Version is auto-detected from project files (pyproject.toml, package.json).
-Use --version to override or specify a local SDK path.
+The --project-dir flag specifies the path to the test project directory
+containing your workflow code and project file (pyproject.toml, package.json).
+Defaults to the current directory.
 
-Example:
+Version is auto-detected from project files. Use --version to override
+or specify a local SDK path (e.g., --version ../sdk-python).
+
+Examples:
   omes exec --language python -- worker --task-queue my-queue
-  omes exec --language ts --version 1.11.0 -- client --port 8080`,
+  omes exec --language ts --project-dir ./my-test -- client --port 8080
+  omes exec --language python --version ../sdk-python -- worker --task-queue q`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger, _ := zap.NewDevelopment()
