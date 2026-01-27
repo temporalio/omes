@@ -26,13 +26,13 @@ func workflowCmd() *cobra.Command {
 		Short: "Run workflow load tests",
 		Long: `Run workflow load tests using user-defined client and worker code.
 
-When building locally (--language), --project-dir is required and specifies the
+When building locally --language and --project-dir are required, --project-dir specifies the
 path to the test project directory containing your workflow code and project
 file (pyproject.toml, package.json).
 
 Mode is inferred from flags:
-  --language only           → Build and run both client and worker locally
-  --language + --worker-url → Run client locally, connect to remote worker
+  --language (and --project-dir) only           → Build and run both client and worker locally
+  --language (and --project-dir) + --worker-url → Run client locally, connect to remote worker
   --language + --client-url → Run worker locally, connect to remote client
   --client-url + --worker-url → Pure remote mode (no local build, no --project-dir needed)
 
@@ -138,11 +138,10 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			r.logger.Infof("Auto-detected SDK version: %s", version)
 		}
 
-		builder := &progbuild.ProgramBuilder{
+		builder := &progbuild.ProjectBuilder{
 			Language:   r.sdkOpts.Language.String(),
 			SDKVersion: version,
 			ProjectDir: r.workflowOpts.ProjectDir,
-			BuildDir:   r.workflowOpts.BuildDir,
 			Logger:     r.logger,
 		}
 

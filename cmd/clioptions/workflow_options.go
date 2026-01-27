@@ -10,7 +10,6 @@ import (
 type WorkflowOptions struct {
 	// Local build flags
 	ProjectDir string
-	BuildDir   string
 
 	// Remote mode flags (presence determines hybrid/remote mode)
 	ClientURL string
@@ -36,7 +35,6 @@ func (w *WorkflowOptions) FlagSet() *pflag.FlagSet {
 
 	// Local build flags
 	w.fs.StringVar(&w.ProjectDir, "project-dir", "", "Path to test project directory (required when building locally)")
-	w.fs.StringVar(&w.BuildDir, "build-dir", "", "Directory for SDK build output (cached)")
 
 	// Remote mode flags (presence determines hybrid/remote mode)
 	w.fs.StringVar(&w.ClientURL, "client-url", "", "URL of running client starter")

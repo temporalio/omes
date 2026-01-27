@@ -12,6 +12,7 @@ import (
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/internal/progbuild"
 	"go.uber.org/zap"
 )
 
@@ -93,18 +94,10 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 	// If version not provided, try to read it from pyproject.toml
 	version := b.SdkOptions.Version
 	if version == "" {
-		cmd := exec.CommandContext(ctx, "uv", "tree", "--quiet", "--depth", "0", "--package", "temporalio")
-		cmd.Dir = baseDir
-		out, err := cmd.Output()
+		var err error
+		version, err = progbuild.DetectPythonVersion(ctx, baseDir)
 		if err != nil {
-			return nil, fmt.Errorf("failed running uv tree: %w", err)
-		}
-		outStr := strings.TrimSpace(string(out))
-		if strings.HasPrefix(outStr, "temporalio v") {
-			version = outStr[len("temporalio v"):]
-		}
-		if version == "" {
-			return nil, fmt.Errorf("version not found in uv tree output")
+			return nil, err
 		}
 	}
 
@@ -142,20 +135,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	// If version not provided, try to read it from package.json
 	version := b.SdkOptions.Version
 	if version == "" {
-		b, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
+		var err error
+		version, err = progbuild.DetectTypeScriptVersion(baseDir)
 		if err != nil {
-			return nil, fmt.Errorf("failed reading package.json: %w", err)
-		}
-		for line := range strings.SplitSeq(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "\"temporalio:\"") || strings.HasPrefix(line, "\"@temporalio/") {
-				split := strings.Split(line, "\"")
-				version = split[len(split)-2]
-				break
-			}
-		}
-		if version == "" {
-			return nil, fmt.Errorf("version not found in package.json")
+			return nil, err
 		}
 	}
 

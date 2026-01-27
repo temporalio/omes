@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"syscall"
 	"time"
 
@@ -77,6 +78,23 @@ func (s *WorkerLifecycleServer) Serve(ctx context.Context) error {
 		s.server.Shutdown(context.Background())
 		return nil
 	}
+}
+
+func (s *WorkerLifecycleServer) setup(ctx context.Context) {
+	// Set up signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		select {
+		case sig := <-sigCh:
+			s.Logger.Infof("Received signal %v, initiating shutdown", sig)
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 }
 
 // URL returns the server's HTTP URL.
