@@ -5,4 +5,5 @@ from temporalio import workflow
 class SimpleWorkflow:
     @workflow.run
     async def run(self) -> str:
+        print("WORKFLOW")
         return "Hello from SimpleWorkflow!"

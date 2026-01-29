@@ -1,7 +1,6 @@
 from .cli import run
 from .client import OmesClientStarter, run_client
-from .common import ClientConfig, ExecuteContext, WorkerConfig, WorkerContext
-from .worker import OmesWorkerStarter, run_worker
+from .common import ClientConfig, WorkerConfig
 
 __all__ = [
     # Main entry point
@@ -9,12 +8,7 @@ __all__ = [
     # Config types
     "ClientConfig",
     "WorkerConfig",
-    # Backwards compatibility aliases
-    "ExecuteContext",
-    "WorkerContext",
     # Class-based API (less preferred)
     "OmesClientStarter",
-    "OmesWorkerStarter",
     "run_client",
-    "run_worker",
 ]

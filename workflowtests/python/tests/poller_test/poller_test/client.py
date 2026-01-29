@@ -1,11 +1,9 @@
 from omes_starter import ClientConfig
 
-
 async def client_main(config: ClientConfig):
     """Called for each iteration - start a workflow and wait for result."""
-    print("IN CLIENT MAIN")
     handle = await config.client.start_workflow(
-        "SimpleWorkflow",
+        "MyWorkflow",
         id=f"wf-{config.run_id}-{config.iteration}",
         task_queue=config.task_queue,
     )

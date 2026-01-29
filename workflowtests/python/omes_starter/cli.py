@@ -6,14 +6,27 @@ client or worker mode based on the first command-line argument.
 
 import argparse
 import asyncio
+import os
 import sys
 from typing import Awaitable, Callable
 
 from temporalio.client import Client
+from temporalio.runtime import (
+    LoggingConfig,
+    PrometheusConfig,
+    Runtime,
+    TelemetryConfig,
+    TelemetryFilter,
+)
 from temporalio.worker import Worker
 
 from .common import ClientConfig, WorkerConfig
 
+print()
+print()
+print("=== CLI.PY LOADED ===")
+print()
+print()
 
 def run(
     *,
@@ -90,11 +103,35 @@ def _run_worker_mode(
     parser.add_argument("--prom-listen-address")
     args = parser.parse_args(sys.argv[2:])
 
+    print("*************************")
+    print("PROM LISTEN ADDRESS", args.prom_listen_address)
+    print("*************************")
+    prometheus = (
+        PrometheusConfig(
+            bind_address=args.prom_listen_address, durations_as_seconds=True
+        )
+        if args.prom_listen_address
+        else None
+    )
+
+    new_runtime = Runtime(
+        telemetry=TelemetryConfig(
+            metrics=prometheus,
+            logging=LoggingConfig(
+                filter=TelemetryFilter(
+                    core_level=os.getenv("TEMPORAL_CORE_LOG_LEVEL", "INFO"),
+                    other_level="WARN",
+                )
+            ),
+        ),
+    )
+
     async def start():
         temporal_client = await Client.connect(
             args.server_address,
             namespace=args.namespace,
             **client_options,
+            runtime=new_runtime,
         )
 
         config = WorkerConfig(

@@ -12,21 +12,21 @@ import (
 	"go.uber.org/zap"
 )
 
-// ProjectBuilder builds programs using sdkbuild.
+// ProgramBuilder builds programs using sdkbuild.
 // For Python: user project must have <module>/__main__.py as entry point
 // For TypeScript: sdkbuild compiles user project + shared omes-starter source
-type ProjectBuilder struct {
+type ProgramBuilder struct {
 	Language   string
 	SDKVersion string
 	ProjectDir string // User's project directory
+	BuildDir   string // Output build directory (TypeScript only)
 	Logger     *zap.SugaredLogger
 }
 
 // BuildProgram creates a sdkbuild.Program for the user's project.
 // For Python: uses <module>/__main__.py convention, run with prog.NewCommand(ctx, "module", "client", ...)
 // For TypeScript: compiles user project with shared source, run with prog.NewCommand(ctx, "tslib/main.js", "client", ...)
-func (b *ProjectBuilder) BuildProgram(ctx context.Context) (sdkbuild.Program, error) {
-
+func (b *ProgramBuilder) BuildProgram(ctx context.Context) (sdkbuild.Program, error) {
 	// Get absolute path to user's project
 	absProjectDir, err := filepath.Abs(b.ProjectDir)
 	if err != nil {
@@ -45,22 +45,14 @@ func (b *ProjectBuilder) BuildProgram(ctx context.Context) (sdkbuild.Program, er
 	}
 }
 
-func (b *ProjectBuilder) resolveSDKVersion(ctx context.Context) (string, error) {
-	version, err := DetectSDKVersion(ctx, b.Language, b.ProjectDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to detect SDK version (use --version to specify): %w", err)
-	}
-	b.Logger.Infof("Auto-detected SDK version: %s", version)
-	return version, nil
-}
-
-func (b *ProjectBuilder) buildPython(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
+func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building Python SDK (version: %s)", b.SDKVersion)
 
 	// Use sdkbuild directly - it creates temp dir, installs SDK, adds user project as editable
 	// User project must have src/__main__.py as entry point
 	prog, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
 		BaseDir: absProjectDir,
+		// No DirName - let sdkbuild create temp dir (no caching for now)
 		Version: b.SDKVersion,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
@@ -72,7 +64,7 @@ func (b *ProjectBuilder) buildPython(ctx context.Context, absProjectDir string) 
 	return prog, nil
 }
 
-func (b *ProjectBuilder) buildTypeScript(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
+func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building TypeScript SDK (version: %s)", b.SDKVersion)
 
 	// TODO(thomas): If version is a local path, pre-build if needed (handles pnpm projects), sdkbuild still tries to build with npm
@@ -127,7 +119,7 @@ func (b *ProjectBuilder) buildTypeScript(ctx context.Context, absProjectDir stri
 	return prog, nil
 }
 
-func (b *ProjectBuilder) buildGo(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
+func (b *ProgramBuilder) buildGo(ctx context.Context, absProjectDir string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building Go SDK (version: %s)", b.SDKVersion)
 
 	projectName := filepath.Base(absProjectDir)
@@ -186,7 +178,7 @@ func main() {
 
 // preBuildLocalTypeScriptSDK builds a local TypeScript SDK if it uses pnpm and isn't built yet.
 // This is needed because sdkbuild assumes npm, but sdk-typescript uses pnpm.
-func (b *ProjectBuilder) preBuildLocalTypeScriptSDK(ctx context.Context) error {
+func (b *ProgramBuilder) preBuildLocalTypeScriptSDK(ctx context.Context) error {
 	sdkPath, err := filepath.Abs(b.SDKVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute SDK path: %w", err)

@@ -30,6 +30,7 @@ class OmesClientStarter:
             **client_options: Options passed to Client.connect()
                               (data_converter, interceptors, etc.)
         """
+        print("OMES STARTER CLIENT INIT")
         self._client_options = client_options
         self._execute_fn: Callable[[ClientConfig], Awaitable[None]] | None = None
         self._client: Client | None = None
@@ -55,6 +56,7 @@ class OmesClientStarter:
 
     async def _handle_execute(self, request: web.Request) -> web.Response:
         """POST /execute - call user's execute function."""
+        print("HANDLING EXECUTE")
         if self._shutting_down:
             return web.json_response(
                 {"success": False, "error": "Starter is shutting down"}
@@ -71,6 +73,7 @@ class OmesClientStarter:
                 run_id=data["run_id"],
                 iteration=data["iteration"],
             )
+            print("CALLIN EXECUTE FN")
             await self._execute_fn(config)
             return web.json_response({"success": True})
         except Exception as e:

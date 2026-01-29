@@ -13,6 +13,7 @@ import (
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/internal/progbuild"
+	"github.com/temporalio/omes/internal/promconfig"
 	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
@@ -26,13 +27,13 @@ func workflowCmd() *cobra.Command {
 		Short: "Run workflow load tests",
 		Long: `Run workflow load tests using user-defined client and worker code.
 
-When building locally --language and --project-dir are required, --project-dir specifies the
+When building locally (--language), --project-dir is required and specifies the
 path to the test project directory containing your workflow code and project
 file (pyproject.toml, package.json).
 
 Mode is inferred from flags:
-  --language (and --project-dir) only           → Build and run both client and worker locally
-  --language (and --project-dir) + --worker-url → Run client locally, connect to remote worker
+  --language only           → Build and run both client and worker locally
+  --language + --worker-url → Run client locally, connect to remote worker
   --language + --client-url → Run worker locally, connect to remote client
   --client-url + --worker-url → Pure remote mode (no local build, no --project-dir needed)
 
@@ -62,6 +63,10 @@ type workflowRunner struct {
 	loggingOpts  clioptions.LoggingOptions
 	workflowOpts clioptions.WorkflowOptions
 
+	// TODO(thomas): wire this up properly
+	metricsOpts       clioptions.MetricsOptions
+	workerMetricsOpts clioptions.MetricsOptions
+
 	logger *zap.SugaredLogger
 }
 
@@ -70,6 +75,8 @@ func (r *workflowRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.AddFlagSet(r.clientOpts.FlagSet())
 	fs.AddFlagSet(r.loggingOpts.FlagSet())
 	fs.AddFlagSet(r.workflowOpts.FlagSet())
+	fs.AddFlagSet(r.metricsOpts.FlagSet(""))
+	fs.AddFlagSet(r.workerMetricsOpts.FlagSet("worker-"))
 }
 
 func (r *workflowRunner) preRun() {
@@ -138,10 +145,11 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			r.logger.Infof("Auto-detected SDK version: %s", version)
 		}
 
-		builder := &progbuild.ProjectBuilder{
+		builder := &progbuild.ProgramBuilder{
 			Language:   r.sdkOpts.Language.String(),
 			SDKVersion: version,
 			ProjectDir: r.workflowOpts.ProjectDir,
+			BuildDir:   r.workflowOpts.BuildDir,
 			Logger:     r.logger,
 		}
 
@@ -198,6 +206,50 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			Timeout:                r.workflowOpts.Timeout,
 		},
 	}
+
+	// TODO(thomas): cleanup all this metrics setup garbo
+
+	// Setup metrics
+	configBytes, err := promconfig.Generate(promconfig.Config{
+		WorkerHosts: []string{r.workerMetricsOpts.PrometheusListenAddress},
+		// ProcessHosts: []string{strings.TrimPrefix(workerStarter.URL, "http://")},
+	})
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp("", "temp-prom-config-*.yaml")
+	if err != nil {
+		return err
+	}
+
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	if _, err := f.Write(configBytes); err != nil {
+		return err
+	}
+
+	// TODO(thomas): hacky setting the config path
+	r.metricsOpts.PrometheusInstanceOptions.ConfigPath = f.Name()
+	r.metricsOpts.PrometheusInstanceOptions.Address = "127.0.0.1:9090"
+	// Path to export worker metrics on shutdown.
+	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
+	// If empty, no export will be performed.
+	r.metricsOpts.PrometheusInstanceOptions.ExportWorkerMetricsPath = "poller-test-20m.parquet"
+	// Step interval when sampling timeseries metrics for export.
+	// If not provided a default interval of 15s will be used.
+	// (only used if ExportWorkerMetricsPath is provided)
+	r.metricsOpts.PrometheusInstanceOptions.ExportMetricsStep, err = time.ParseDuration("1s")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("*******************************")
+	fmt.Printf("PROM INSTANCE OPTIONS\n%v", r.metricsOpts.PrometheusInstanceOptions)
+	fmt.Println("*******************************")
+
+	metrics := r.metricsOpts.MustCreateMetrics(ctx, r.logger)
+	defer metrics.Shutdown(ctx, r.logger, scenarioInfo.ScenarioName, scenarioInfo.RunID, "")
 
 	r.logger.Infof("Running load test with %d max concurrent", r.workflowOpts.MaxConcurrent)
 	if err := executor.Run(ctx, scenarioInfo); err != nil {
@@ -263,7 +315,7 @@ func (r *workflowRunner) setupClient(ctx context.Context, prog sdkbuild.Program,
 		return nil, nil, fmt.Errorf("failed to start client: %w", err)
 	}
 
-	clientURL := fmt.Sprintf("http://localhost:%d", port)
+	clientURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	if err := utils.WaitForReady(ctx, clientURL+"/info", 30*time.Second); err != nil {
 		cmd.Process.Kill()
 		return nil, nil, fmt.Errorf("client not ready: %w", err)
@@ -309,11 +361,17 @@ func (r *workflowRunner) setupWorker(ctx context.Context, prog sdkbuild.Program,
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO(thomas): hacked together
+	fmt.Println("*!*!*!*!*!*!*!*!")
+	fmt.Printf("PROM LISTEN ADDRESS: %s\n", r.workerMetricsOpts.PrometheusListenAddress)
+	fmt.Println("*!*!*!*!*!*!*!*!")
 	runtimeArgs = append(runtimeArgs,
 		"worker", // subcommand
 		"--task-queue", taskQueue,
 		"--server-address", r.clientOpts.Address,
 		"--namespace", r.clientOpts.Namespace,
+		"--prom-listen-address", r.workerMetricsOpts.PrometheusListenAddress,
 	)
 
 	server := &progbuild.WorkerLifecycleServer{
