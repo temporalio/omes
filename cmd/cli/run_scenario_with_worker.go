@@ -35,13 +35,15 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 type workerWithScenarioRunner struct {
 	workerRunner
 	scenarioRunConfig
-	metricsOptions clioptions.MetricsOptions
+	sdkMetrics   clioptions.SDKMetricsOptions
+	promInstance clioptions.PrometheusInstanceFlags
 }
 
 func (r *workerWithScenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.workerRunner.addCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
-	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(r.sdkMetrics.FlagSet(""))
+	fs.AddFlagSet(r.promInstance.FlagSet(""))
 }
 
 func (r *workerWithScenarioRunner) preRun() {
@@ -75,7 +77,8 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 		scenario:          r.ScenarioID,
 		scenarioRunConfig: r.scenarioRunConfig,
 		clientOptions:     r.ClientOptions,
-		metricsOptions:    r.metricsOptions,
+		sdkMetrics:        r.sdkMetrics,
+		promInstance:      r.promInstance,
 	}
 	scenarioErr := scenarioRunner.run(ctx)
 	cancel()

@@ -30,7 +30,8 @@ type Runner struct {
 	TaskQueueIndexSuffixEnd   int
 	ScenarioID                clioptions.ScenarioID
 	ClientOptions             clioptions.ClientOptions
-	MetricsOptions            clioptions.MetricsOptions
+	SDKMetricsOptions         clioptions.SDKMetricsOptions
+	SidecarOptions            clioptions.SidecarOptions
 	WorkerOptions             clioptions.WorkerOptions
 	LoggingOptions            clioptions.LoggingOptions
 	OnWorkerStarted           func()
@@ -128,9 +129,10 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	}
 	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
+	// SidecarOptions are not passed through - they're only used by the runner.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	args = append(args, passthrough(r.SDKMetricsOptions.FlagSet("worker-"), "worker-")...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -153,15 +155,15 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Start process metrics sidecar if configured (monitors worker PID)
 	var sidecar *http.Server
-	if r.MetricsOptions.WorkerProcessMetricsAddress != "" {
+	if r.SidecarOptions.ProcessMetricsAddress != "" {
 		// Use MetricsVersionTag if set, otherwise fall back to SdkOptions.Version
-		sdkVersion := r.MetricsOptions.MetricsVersionTag
+		sdkVersion := r.SidecarOptions.MetricsVersionTag
 		if sdkVersion == "" {
 			sdkVersion = r.SdkOptions.Version
 		}
 		sidecar = clioptions.StartProcessMetricsSidecar(
 			r.Logger,
-			r.MetricsOptions.WorkerProcessMetricsAddress,
+			r.SidecarOptions.ProcessMetricsAddress,
 			cmd.Process.Pid,
 			sdkVersion,
 			r.WorkerOptions.BuildID,
@@ -221,23 +223,6 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 	return
 }
 
-func passthroughExcluding(fs *pflag.FlagSet, prefix string, exclude ...string) (flags []string) {
-	excludeSet := make(map[string]bool)
-	for _, e := range exclude {
-		excludeSet[e] = true
-	}
-	fs.VisitAll(func(f *pflag.Flag) {
-		if !f.Changed {
-			return
-		}
-		name := strings.TrimPrefix(f.Name, prefix)
-		if excludeSet[name] {
-			return
-		}
-		flags = append(flags, fmt.Sprintf("--%s=%s", name, f.Value.String()))
-	})
-	return
-}
 
 func sendInterrupt(process *os.Process) error {
 	if runtime.GOOS == "windows" {

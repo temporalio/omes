@@ -32,12 +32,12 @@ func TestMetricsServer(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("SDK metrics server has no process metrics", func(t *testing.T) {
-		opts := &MetricsOptions{
+		opts := &SDKMetricsOptions{
 			PrometheusListenAddress: ":19090",
 		}
 
 		metrics := opts.MustCreateMetrics(ctx, logger)
-		defer metrics.Shutdown(ctx, logger, "", "", "")
+		defer metrics.Shutdown(ctx, logger)
 
 		eventually(t, 2*time.Second, func() error {
 			sdkMetrics, err := tryFetchMetrics("http://localhost:19090/metrics")
@@ -55,7 +55,7 @@ func TestMetricsServer(t *testing.T) {
 	})
 
 	t.Run("SDK server shutdown", func(t *testing.T) {
-		opts := &MetricsOptions{
+		opts := &SDKMetricsOptions{
 			PrometheusListenAddress: ":19091",
 		}
 
@@ -66,7 +66,7 @@ func TestMetricsServer(t *testing.T) {
 			return err
 		})
 
-		err := metrics.Shutdown(ctx, logger, "", "", "")
+		err := metrics.Shutdown(ctx, logger)
 		if err != nil {
 			t.Errorf("Shutdown returned error: %v", err)
 		}

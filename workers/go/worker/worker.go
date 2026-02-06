@@ -24,7 +24,7 @@ type App struct {
 
 	loggingOptions clioptions.LoggingOptions
 	clientOptions  clioptions.ClientOptions
-	metricsOptions clioptions.MetricsOptions
+	sdkMetrics     clioptions.SDKMetricsOptions
 	workerOptions  clioptions.WorkerOptions
 }
 
@@ -34,7 +34,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	}
 	a.logger = a.loggingOptions.MustCreateLogger()
 
-	metrics := a.metricsOptions.MustCreateMetrics(cmd.Context(), a.logger)
+	metrics := a.sdkMetrics.MustCreateMetrics(cmd.Context(), a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
 	// If there is an end, we run multiple
@@ -50,7 +50,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
-	if err := metrics.Shutdown(cmd.Context(), a.logger, "", "", ""); err != nil {
+	if err := metrics.Shutdown(cmd.Context(), a.logger); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
 }
@@ -135,7 +135,7 @@ func Main() {
 
 	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
-	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.sdkMetrics.FlagSet(""))
 	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,

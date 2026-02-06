@@ -16,12 +16,10 @@ import (
 
 // Metrics is a component for instrumenting an application with Prometheus metrics.
 type Metrics struct {
-	Server               *http.Server
-	ProcessMetricsServer *http.Server // Separate server for process metrics (CPU/memory)
-	Registry             *prometheus.Registry
-	Cache                map[string]any
-	mutex                sync.Mutex
-	PromInstance         *PrometheusInstance
+	Server   *http.Server
+	Registry *prometheus.Registry
+	Cache    map[string]any
+	mutex    sync.Mutex
 }
 
 // Handler returns a new Temporal-client-compatible metrics handler.
@@ -31,32 +29,14 @@ func (m *Metrics) NewHandler() client.MetricsHandler {
 	}
 }
 
-// Shutdown the Prometheus HTTP server and local Prometheus process if they were set up.
-// scenario, runID, and runFamily are passed to the export function for metrics metadata.
-func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
-	// Shutdown prometheus process if running
-	if m.PromInstance != nil {
-		m.PromInstance.Shutdown(ctx, logger, scenario, runID, runFamily)
-	}
-
-	var err error
-	// Shutdown main HTTP server
+// Shutdown the Prometheus HTTP server for SDK metrics.
+func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger) error {
 	if m.Server != nil {
-		if shutdownErr := m.Server.Shutdown(ctx); shutdownErr != nil {
-			err = fmt.Errorf("main metrics server: %w", shutdownErr)
+		if err := m.Server.Shutdown(ctx); err != nil {
+			return fmt.Errorf("metrics server: %w", err)
 		}
 	}
-	// Shutdown process metrics server
-	if m.ProcessMetricsServer != nil {
-		if shutdownErr := m.ProcessMetricsServer.Shutdown(ctx); shutdownErr != nil {
-			if err != nil {
-				err = fmt.Errorf("%w; process metrics server: %w", err, shutdownErr)
-			} else {
-				err = fmt.Errorf("process metrics server: %w", shutdownErr)
-			}
-		}
-	}
-	return err
+	return nil
 }
 
 type metricsHandler struct {

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
+	omemetrics "github.com/temporalio/omes/metrics"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -43,7 +44,8 @@ type scenarioRunner struct {
 	logger         *zap.SugaredLogger
 	connectTimeout time.Duration
 	clientOptions  clioptions.ClientOptions
-	metricsOptions clioptions.MetricsOptions
+	sdkMetrics     clioptions.SDKMetricsOptions
+	promInstance   clioptions.PrometheusInstanceFlags
 	loggingOptions clioptions.LoggingOptions
 }
 
@@ -66,7 +68,8 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.scenarioRunConfig.addCLIFlags(fs)
 	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
 	fs.AddFlagSet(r.clientOptions.FlagSet())
-	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
+	fs.AddFlagSet(r.sdkMetrics.FlagSet(""))
+	fs.AddFlagSet(r.promInstance.FlagSet(""))
 	fs.AddFlagSet(r.loggingOptions.FlagSet())
 }
 
@@ -125,8 +128,15 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioOptions[key] = value
 	}
 
-	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	metrics := r.sdkMetrics.MustCreateMetrics(ctx, r.logger)
+	defer metrics.Shutdown(ctx, r.logger)
+
+	// Start local Prometheus instance if configured (for scraping and export)
+	var promInstance *omemetrics.PrometheusInstance
+	if r.promInstance.IsConfigured() {
+		promInstance = r.promInstance.StartPrometheusInstance(ctx, r.logger)
+		defer promInstance.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	}
 	start := time.Now()
 	var client client.Client
 	var err error
