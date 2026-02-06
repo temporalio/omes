@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
+	omemetrics "github.com/temporalio/omes/metrics"
 	"github.com/temporalio/omes/workers"
 )
 
@@ -69,6 +70,22 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	case err := <-workerErrCh:
 		return fmt.Errorf("worker did not start: %w", err)
 	case <-workerStartCh:
+	}
+
+	// Populate scrape targets from known addresses for Prometheus auto-generation
+	if r.promInstance.Address != "" && r.promInstance.ConfigPath == "" {
+		if addr := r.sdkMetrics.PrometheusListenAddress; addr != "" {
+			r.promInstance.ScrapeTargets = append(r.promInstance.ScrapeTargets,
+				omemetrics.ScrapeTarget{JobName: omemetrics.JobClient, Address: addr})
+		}
+		if addr := r.SDKMetricsOptions.PrometheusListenAddress; addr != "" {
+			r.promInstance.ScrapeTargets = append(r.promInstance.ScrapeTargets,
+				omemetrics.ScrapeTarget{JobName: omemetrics.JobWorker, Address: addr})
+		}
+		if addr := r.SidecarOptions.ProcessMetricsAddress; addr != "" {
+			r.promInstance.ScrapeTargets = append(r.promInstance.ScrapeTargets,
+				omemetrics.ScrapeTarget{JobName: omemetrics.JobWorkerProcess, Address: addr})
+		}
 	}
 
 	// Run scenario

@@ -18,38 +18,59 @@ import (
 	"go.uber.org/zap"
 )
 
+// Well-known Prometheus job names for omes scrape targets.
+const (
+	JobClient        = "omes-client"
+	JobWorker        = "omes-worker"
+	JobWorkerProcess = "omes-worker-process"
+)
+
+// ScrapeTarget represents a Prometheus scrape target with a job name and address.
+type ScrapeTarget struct {
+	JobName string
+	Address string
+}
+
 type PrometheusInstanceOptions struct {
-	// Address to run the Prometheus instance
+	// Address to run the Prometheus instance.
 	Address string
 	// Path to Prometheus config file for starting a local Prometheus instance.
-	// If empty, no local Prometheus will be started.
+	// If empty and ScrapeTargets is populated, a config will be auto-generated.
 	ConfigPath string
+	// Scrape targets for auto-generating a Prometheus config.
+	// Populated by the caller from known metrics addresses.
+	ScrapeTargets []ScrapeTarget
 	// If true, create a TSDB snapshot on shutdown.
 	Snapshot bool
 	// Path to export worker metrics on shutdown.
-	// Includes process metrics (CPU/memory), task latencies, polling metrics, and throughput.
 	// If empty, no export will be performed.
 	ExportWorkerMetricsPath string
-	// Worker job to export SDK metrics (temporal_*).
-	ExportWorkerMetricsJob string
-	// Process metrics job to export (process_cpu_percent, process_memory_*, etc).
-	ExportProcessMetricsJob string
 	// Step interval when sampling timeseries metrics for export.
 	// If not provided a default interval of 15s will be used.
-	// (only used if ExportWorkerMetricsPath is provided)
 	ExportMetricsStep time.Duration
-	// Address to fetch worker info from during export (e.g., "localhost:9091").
-	// If provided, /info will be fetched and used to populate build_id in export.
-	ExportWorkerInfoAddress string
 }
 
 func (p *PrometheusInstanceOptions) IsConfigured() bool {
-	return p.Address != "" && p.ConfigPath != ""
+	return p.Address != "" && (p.ConfigPath != "" || len(p.ScrapeTargets) > 0)
 }
 
 func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context, logger *zap.SugaredLogger) *PrometheusInstance {
+	configPath := p.ConfigPath
+	var generatedConfigPath string
+
+	// Auto-generate config if no explicit config is provided
+	if configPath == "" && len(p.ScrapeTargets) > 0 {
+		var err error
+		generatedConfigPath, err = p.generateConfig()
+		if err != nil {
+			logger.Fatalf("Failed to generate Prometheus config: %v", err)
+		}
+		configPath = generatedConfigPath
+		logger.Infof("Auto-generated Prometheus config at %s with %d scrape targets", configPath, len(p.ScrapeTargets))
+	}
+
 	cmd := exec.CommandContext(ctx, "prometheus",
-		"--config.file="+p.ConfigPath,
+		"--config.file="+configPath,
 		"--web.enable-admin-api", // Required for snapshot API
 		"--web.listen-address="+p.Address,
 	)
@@ -57,10 +78,10 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		logger.Fatalf("Failed to start Prometheus with config %s: %v", p.ConfigPath, err)
+		logger.Fatalf("Failed to start Prometheus with config %s: %v", configPath, err)
 	}
 
-	logger.Infof("Started local Prometheus instance with config: %s (PID: %d)", p.ConfigPath, cmd.Process.Pid)
+	logger.Infof("Started local Prometheus instance with config: %s (PID: %d)", configPath, cmd.Process.Pid)
 
 	client, err := api.NewClient(api.Config{Address: "http://" + p.Address})
 	if err != nil {
@@ -68,10 +89,11 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 	}
 
 	instance := &PrometheusInstance{
-		opts:          p,
-		prometheusCmd: cmd,
-		api:           v1.NewAPI(client),
-		startTime:     time.Now(),
+		opts:                p,
+		prometheusCmd:       cmd,
+		api:                 v1.NewAPI(client),
+		startTime:           time.Now(),
+		generatedConfigPath: generatedConfigPath,
 	}
 
 	if err := instance.waitForReady(ctx, 30*time.Second); err != nil {
@@ -79,6 +101,28 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 	}
 
 	return instance
+}
+
+// generateConfig writes a temporary Prometheus config file from the ScrapeTargets.
+func (p *PrometheusInstanceOptions) generateConfig() (string, error) {
+	f, err := os.CreateTemp("", "omes-prom-config-*.yml")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp config file: %w", err)
+	}
+	defer f.Close()
+
+	fmt.Fprintln(f, "global:")
+	fmt.Fprintln(f, "  scrape_interval: 1s")
+	fmt.Fprintln(f, "  evaluation_interval: 1s")
+	fmt.Fprintln(f, "")
+	fmt.Fprintln(f, "scrape_configs:")
+	for _, t := range p.ScrapeTargets {
+		fmt.Fprintf(f, "  - job_name: '%s'\n", t.JobName)
+		fmt.Fprintln(f, "    static_configs:")
+		fmt.Fprintf(f, "      - targets: ['%s']\n", t.Address)
+	}
+
+	return f.Name(), nil
 }
 
 type PrometheusInstance struct {
@@ -89,6 +133,8 @@ type PrometheusInstance struct {
 	api v1.API
 	// Time when the instance started
 	startTime time.Time
+	// Path to auto-generated config file (empty if user-provided)
+	generatedConfigPath string
 }
 
 func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Duration) error {
@@ -144,6 +190,11 @@ func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLo
 		logger.Warn("Prometheus didn't shut down gracefully, killing")
 		i.prometheusCmd.Process.Kill()
 	}
+
+	// Clean up auto-generated config file
+	if i.generatedConfigPath != "" {
+		os.Remove(i.generatedConfigPath)
+	}
 }
 
 func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
@@ -158,12 +209,12 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 	}
 	defer file.Close()
 
-	// Fetch worker info if address is configured
+	// Derive worker info address from the worker-process scrape target
 	var workerInfo *WorkerInfo
-	if i.opts.ExportWorkerInfoAddress != "" {
-		workerInfo, err = fetchWorkerInfo(i.opts.ExportWorkerInfoAddress)
+	if infoAddr := i.workerInfoAddress(); infoAddr != "" {
+		workerInfo, err = fetchWorkerInfo(infoAddr)
 		if err != nil {
-			logger.Warnf("Failed to fetch worker info from %s: %v (continuing without worker metadata)", i.opts.ExportWorkerInfoAddress, err)
+			logger.Warnf("Failed to fetch worker info from %s: %v (continuing without worker metadata)", infoAddr, err)
 		} else {
 			logger.Infof("Fetched worker info: sdk_version=%s, build_id=%s, language=%s", workerInfo.SDKVersion, workerInfo.BuildID, workerInfo.Language)
 		}
@@ -174,15 +225,23 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, workerInfo, logger, scenario, runID, runFamily)
 }
 
-func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
-	job := i.opts.ExportWorkerMetricsJob
-	processJob := i.opts.ExportProcessMetricsJob
+// workerInfoAddress returns the address of the worker-process scrape target,
+// which serves both /metrics and /info endpoints.
+func (i *PrometheusInstance) workerInfoAddress() string {
+	for _, t := range i.opts.ScrapeTargets {
+		if t.JobName == JobWorkerProcess {
+			return t.Address
+		}
+	}
+	return ""
+}
 
+func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	// Process metrics (from sidecar)
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob)},
-		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, processJob)},
+		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, JobWorkerProcess)},
+		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, JobWorkerProcess)},
+		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, JobWorkerProcess)},
 	}
 
 	// Polling/capacity metrics
@@ -192,7 +251,7 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 		{"worker_task_slots_used", "temporal_worker_task_slots_used"},
 	}
 	for _, m := range gaugeMetrics {
-		queries = append(queries, gaugeQuery(m.name, m.promName, job))
+		queries = append(queries, gaugeQuery(m.name, m.promName, JobWorker))
 	}
 
 	// Latency histogram metrics
@@ -204,8 +263,8 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 		{"activity_schedule_to_start_latency_seconds", "temporal_activity_schedule_to_start_latency"},
 	}
 	for _, m := range histogramMetrics {
-		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.50, "p50"))
-		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.99, "p99"))
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, JobWorker, 0.50, "p50"))
+		queries = append(queries, histogramQuantileQuery(m.name, m.promName, JobWorker, 0.99, "p99"))
 	}
 
 	return queries

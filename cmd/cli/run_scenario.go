@@ -131,6 +131,16 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	metrics := r.sdkMetrics.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger)
 
+	// Populate scrape targets from known addresses for Prometheus auto-generation.
+	// In standalone mode only the client address is known; worker/process targets
+	// require a custom --prom-instance-config.
+	if r.promInstance.Address != "" && r.promInstance.ConfigPath == "" {
+		if addr := r.sdkMetrics.PrometheusListenAddress; addr != "" {
+			r.promInstance.ScrapeTargets = append(r.promInstance.ScrapeTargets,
+				omemetrics.ScrapeTarget{JobName: omemetrics.JobClient, Address: addr})
+		}
+	}
+
 	// Start local Prometheus instance if configured (for scraping and export)
 	var promInstance *omemetrics.PrometheusInstance
 	if r.promInstance.IsConfigured() {
