@@ -11,6 +11,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 )
 
+const StateTransitionsPerSecondFlag = "state-transitions-per-second"
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Run a certain number of state transitions per second. This requires duration option to be set " +
@@ -39,9 +41,9 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	if s.Configuration.Duration == 0 {
 		return fmt.Errorf("duration required for this scenario")
 	}
-	stateTransitionsPerSecond := s.ScenarioOptionInt("state-transitions-per-second", 0)
+	stateTransitionsPerSecond := s.ScenarioOptionInt(StateTransitionsPerSecondFlag, 0)
 	if stateTransitionsPerSecond == 0 {
-		return fmt.Errorf("state-transitions-per-second scenario option required")
+		return fmt.Errorf("%s scenario option required", StateTransitionsPerSecondFlag)
 	}
 	durationPerStateTransition := time.Second / time.Duration(stateTransitionsPerSecond)
 	s.Logger.Infof(

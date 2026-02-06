@@ -8,6 +8,8 @@ import (
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
+const TaskQueueCountFlag = "task-queue-count"
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Each iteration executes a single workflow on one of the task queues. " +
@@ -24,7 +26,7 @@ func init() {
 				},
 				PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
 					// Require task queue count
-					if opts.ScenarioOptionInt("task-queue-count", 0) == 0 {
+					if opts.ScenarioOptionInt(TaskQueueCountFlag, 0) == 0 {
 						return fmt.Errorf("task-queue-count option required")
 					}
 					return nil
@@ -32,7 +34,7 @@ func init() {
 				UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
 					// Add suffix to the task queue based on modulus of iteration
 					options.StartOptions.TaskQueue +=
-						fmt.Sprintf("-%v", run.Iteration%run.ScenarioInfo.ScenarioOptionInt("task-queue-count", 0))
+						fmt.Sprintf("-%v", run.Iteration%run.ScenarioInfo.ScenarioOptionInt(TaskQueueCountFlag, 0))
 					return nil
 				},
 			}

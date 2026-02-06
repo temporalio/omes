@@ -223,7 +223,6 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 	return
 }
 
-
 func sendInterrupt(process *os.Process) error {
 	if runtime.GOOS == "windows" {
 		return process.Kill()
