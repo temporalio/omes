@@ -21,9 +21,19 @@ omes.sln
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/
+workflowtests/python/**/__pycache__/
+workflowtests/typescript/node_modules/
+workflowtests/typescript/lib/
 workers/*/omes-temp-*/
 workers/*/prepared/
 
-tsconfig.tsbuildinfo
+# Generated program directories (test workers)
+workflowtests/*/tests/**/program-*/
 
-temporal-omes
+# Test directory build artifacts
+workflowtests/*/tests/**/dist/
+workflowtests/*/tests/**/node_modules/
+workflowtests/*/tests/**/package-lock.json
+
+# Python egg-info
+workflowtests/python/**/*.egg-info/

@@ -81,8 +81,8 @@ type MetricsOptions struct {
 	// MetricsVersionTag is the SDK version/ref to report in metrics.
 	// This is used by the sidecar's /info endpoint and is NOT passed to the worker.
 	// If empty, falls back to the --version flag value.
-	MetricsVersionTag           string
-	prometheusInstanceOptions   PrometheusInstanceFlags
+	MetricsVersionTag         string
+	PrometheusInstanceOptions PrometheusInstanceFlags
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -102,7 +102,7 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
 	m.fs.StringVar(&m.WorkerProcessMetricsAddress, prefix+"process-metrics-address", "", "Address for separate process metrics server (CPU/memory only)")
 	m.fs.StringVar(&m.MetricsVersionTag, prefix+"metrics-version-tag", "", "SDK version/ref to report in metrics (sidecar only, not passed to worker)")
-	m.fs.AddFlagSet(m.prometheusInstanceOptions.FlagSet(prefix))
+	m.fs.AddFlagSet(m.PrometheusInstanceOptions.FlagSet(prefix))
 	return m.fs
 }
 
@@ -117,8 +117,8 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 	}
 
 	var promInstance *metrics.PrometheusInstance
-	if m.prometheusInstanceOptions.IsConfigured() {
-		promInstance = m.prometheusInstanceOptions.StartPrometheusInstance(ctx, logger)
+	if m.PrometheusInstanceOptions.IsConfigured() {
+		promInstance = m.PrometheusInstanceOptions.StartPrometheusInstance(ctx, logger)
 	}
 	return &metrics.Metrics{
 		Server:       server,
