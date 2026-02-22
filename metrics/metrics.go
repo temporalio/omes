@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -183,10 +184,12 @@ func (m metricsTimer) Record(duration time.Duration) {
 // to collect CPU and memory metrics. The standard ProcessCollector from Prometheus
 // only works on Linux (requires /proc).
 type processCollector struct {
-	process        *process.Process
-	cpuDesc        *prometheus.Desc
-	memDesc        *prometheus.Desc
-	memPercentDesc *prometheus.Desc
+	rootProcess     *process.Process
+	pidProcessCache map[int32]*process.Process
+	cpuDesc         *prometheus.Desc
+	memDesc         *prometheus.Desc
+	memPercentDesc  *prometheus.Desc
+	mutex           sync.Mutex
 }
 
 func NewProcessCollector(pid int) (*processCollector, error) {
@@ -195,7 +198,8 @@ func NewProcessCollector(pid int) (*processCollector, error) {
 		return nil, fmt.Errorf("failed to create process for PID %d: %w", pid, err)
 	}
 	return &processCollector{
-		process: p,
+		rootProcess:     p,
+		pidProcessCache: map[int32]*process.Process{p.Pid: p},
 		cpuDesc: prometheus.NewDesc(
 			"process_cpu_percent",
 			"CPU usage as a percentage (100 = 1 core).",
@@ -217,21 +221,52 @@ func NewProcessCollector(pid int) (*processCollector, error) {
 func (c *processCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.cpuDesc
 	ch <- c.memDesc
+	ch <- c.memPercentDesc
 }
 
 func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
-	// CPU percent
-	if cpuPercent, err := c.process.Percent(0); err == nil {
-		ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.GaugeValue, cpuPercent)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	children, _ := c.rootProcess.Children()
+
+	seen := map[int32]bool{
+		c.rootProcess.Pid: true,
+	}
+	procs := make([]*process.Process, 0, len(children)+1)
+	procs = append(procs, c.rootProcess)
+	for _, child := range children {
+		if child == nil || seen[child.Pid] {
+			continue
+		}
+		seen[child.Pid] = true
+		if _, ok := c.pidProcessCache[child.Pid]; !ok {
+			c.pidProcessCache[child.Pid] = child
+		}
+		procs = append(procs, c.pidProcessCache[child.Pid])
+	}
+	for pid := range c.pidProcessCache {
+		if !seen[pid] {
+			delete(c.pidProcessCache, pid)
+		}
 	}
 
-	// Resident memory (RSS)
-	if memInfo, err := c.process.MemoryInfo(); err == nil {
-		ch <- prometheus.MustNewConstMetric(c.memDesc, prometheus.GaugeValue, float64(memInfo.RSS))
+	var totalCPU float64
+	var totalRSS uint64
+	for _, p := range procs {
+		if cpuPercent, err := p.Percent(0); err == nil {
+			totalCPU += cpuPercent
+		}
+		if memInfo, err := p.MemoryInfo(); err == nil && memInfo != nil {
+			totalRSS += memInfo.RSS
+		}
 	}
 
-	// Percent of total system memory
-	if memPercent, err := c.process.MemoryPercent(); err == nil {
-		ch <- prometheus.MustNewConstMetric(c.memPercentDesc, prometheus.GaugeValue, float64(memPercent))
+	ch <- prometheus.MustNewConstMetric(c.cpuDesc, prometheus.GaugeValue, totalCPU)
+	ch <- prometheus.MustNewConstMetric(c.memDesc, prometheus.GaugeValue, float64(totalRSS))
+
+	if vm, err := mem.VirtualMemory(); err == nil && vm.Total > 0 {
+		memPercent := (float64(totalRSS) / float64(vm.Total)) * 100
+		ch <- prometheus.MustNewConstMetric(c.memPercentDesc, prometheus.GaugeValue, memPercent)
 	}
 }
