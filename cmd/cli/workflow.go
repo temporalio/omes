@@ -3,9 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
+	"os/exec"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -141,22 +140,24 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}
 
 	// Spawn worker (if requested)
-	var workerProcess *os.Process
+	var workerCmd *exec.Cmd
 	if r.workflowOpts.SpawnWorker {
-		workerProcess, err = r.spawnLocalWorker(ctx, prog)
+		workerCtx, workerCancel := context.WithCancel(ctx)
+		workerCmd, err = r.spawnLocalWorker(workerCtx, prog)
 		if err != nil {
+			workerCancel()
 			return fmt.Errorf("failed to spawn worker: %w", err)
 		}
-		defer r.killProcess("worker", workerProcess)
+		defer r.stopCommand("worker", workerCancel, workerCmd)
 	}
 
 	// Spawn worker process monitoring server (if requested)
-	spawnSidecar := workerProcess != nil && r.metricsOpts.WorkerProcessMetricsAddress != ""
+	spawnSidecar := workerCmd != nil && r.metricsOpts.WorkerProcessMetricsAddress != ""
 	if spawnSidecar {
 		sidecar := clioptions.StartProcessMetricsSidecar(
 			r.logger,
 			r.metricsOpts.WorkerProcessMetricsAddress,
-			workerProcess.Pid,
+			workerCmd.Process.Pid,
 			r.resolvedMetricsVersionTag(),
 			"",
 			r.sdkOpts.Language.String(),
@@ -169,11 +170,13 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}
 
 	// Spawn client
-	clientProcess, err := r.spawnLocalClient(ctx, prog)
+	clientCtx, clientCancel := context.WithCancel(ctx)
+	clientCmd, err := r.spawnLocalClient(clientCtx, prog)
 	if err != nil {
+		clientCancel()
 		return fmt.Errorf("failed to spawn client: %w", err)
 	}
-	defer r.killProcess("client", clientProcess)
+	defer r.stopCommand("client", clientCancel, clientCmd)
 
 	clientURL := fmt.Sprintf("http://127.0.0.1:%d", r.clientPort)
 	clientHandle := loadgen.NewClientHandle(clientURL)
@@ -236,7 +239,7 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	return nil
 }
 
-func (r *workflowRunner) spawnLocalClient(ctx context.Context, program sdkbuild.Program) (*os.Process, error) {
+func (r *workflowRunner) spawnLocalClient(ctx context.Context, program sdkbuild.Program) (*exec.Cmd, error) {
 	clientArgs := []string{
 		"client",
 		"--task-queue", r.taskQueue,
@@ -255,7 +258,7 @@ func (r *workflowRunner) spawnLocalClient(ctx context.Context, program sdkbuild.
 	return programbuild.StartProgramProcess(ctx, program, runtimeArgs)
 }
 
-func (r *workflowRunner) spawnLocalWorker(ctx context.Context, program sdkbuild.Program) (*os.Process, error) {
+func (r *workflowRunner) spawnLocalWorker(ctx context.Context, program sdkbuild.Program) (*exec.Cmd, error) {
 	workerArgs := []string{
 		"worker",
 		"--task-queue", r.taskQueue,
@@ -292,22 +295,15 @@ func (r *workflowRunner) connectionRuntimeArgs() []string {
 	return args
 }
 
-func (r *workflowRunner) killProcess(name string, process *os.Process) {
-	r.logger.Infof("Sending SIGTERM to %s (PID %d)", name, process.Pid)
-	if err := process.Signal(syscall.SIGTERM); err != nil {
-		r.logger.Warnf("SIGTERM failed for %s: %v, killing", name, err)
-		process.Kill()
-		process.Wait()
+func (r *workflowRunner) stopCommand(name string, cancel context.CancelFunc, cmd *exec.Cmd) {
+	if cancel != nil {
+		cancel()
+	}
+	if cmd == nil {
 		return
 	}
-	done := make(chan struct{})
-	go func() { process.Wait(); close(done) }()
-	select {
-	case <-done:
-		r.logger.Infof("%s process exited", name)
-	case <-time.After(15 * time.Second):
-		r.logger.Warnf("%s did not exit in 15s, killing", name)
-		process.Kill()
+	if err := cmd.Wait(); err != nil && cmd.ProcessState == nil {
+		r.logger.Warnf("Failed waiting for %s process shutdown: %v", name, err)
 	}
 }
 

@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 )
+
+const DefaultShutdownWaitDelay = 15 * time.Second
 
 // BuildRuntimeArgs returns the initial runtime args for a program based on language.
 // For Python: returns module name (with dashes replaced by underscores)
@@ -37,7 +42,7 @@ func BuildRuntimeArgs(language clioptions.Language, projectDir string, extraArgs
 	return args, nil
 }
 
-func StartProgramProcess(ctx context.Context, program sdkbuild.Program, args []string) (*os.Process, error) {
+func StartProgramProcess(ctx context.Context, program sdkbuild.Program, args []string) (*exec.Cmd, error) {
 	if program == nil {
 		return nil, fmt.Errorf("Program is required")
 	}
@@ -48,10 +53,17 @@ func StartProgramProcess(ctx context.Context, program sdkbuild.Program, args []s
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Cancel = func() error {
+		if cmd.Process == nil {
+			return os.ErrProcessDone
+		}
+		return cmd.Process.Signal(syscall.SIGTERM)
+	}
+	cmd.WaitDelay = DefaultShutdownWaitDelay
 
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 
-	return cmd.Process, nil
+	return cmd, nil
 }
