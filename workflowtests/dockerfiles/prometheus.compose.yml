@@ -1,5 +1,5 @@
 # Prometheus config for workflowtests compose mode.
-# Scrapes:
+# Default scrape:
 # 1) worker SDK/application metrics
 # 2) worker process sidecar metrics
 
@@ -15,7 +15,8 @@ scrape_configs:
     static_configs:
       - targets: ["omes-worker:19090"]
 
-  # Worker process metrics sidecar endpoint.
+  # Worker process metrics, available when:
+  #   --worker-process-metrics-address 0.0.0.0:9091
   - job_name: "omes_worker_process"
     metrics_path: /metrics
     static_configs:

@@ -1,65 +1,29 @@
-# Workflowtests Docker + Compose
+# Workflowtests Docker Setup
 
-This directory contains Dockerfiles and compose assets for workflow test runs.
+This directory contains Dockerfiles and Compose assets for running workflow tests with Temporal and Prometheus.
 
-Files:
+## Files
 
-1. `docker-compose.workflowtests.yml`: Temporal dev server + UI + metrics infra + language runner/worker services
-2. `workflowtest-*.Dockerfile`: reusable language base images
-3. `workflowtest-project.Dockerfile`: thin project overlay image
-4. `prometheus.compose.yml`: Prometheus scrape config for Docker Compose setup
-5. `prometheus.host.yml`: Prometheus scrape config for local setup
-6. `.env.example`: optional compose env overrides
+1. `docker-compose.workflowtests.yml`: Temporal dev server, UI, Prometheus, and language runner/worker services.
+2. `workflowtest-*.Dockerfile`: reusable language base images.
+3. `workflowtest-project.Dockerfile`: thin project overlay image.
+4. `prometheus.compose.yml`: Prometheus scrape targets for a Docker worker container (`omes-worker`).
+5. `prometheus.host.yml`: Prometheus scrape targets for a worker running on the host machine.
 
-## Local Setup
+## Recommended Modes
 
-Local setup is intentionally minimal:
+Use one of these two setups.
 
-1. Run Temporal + worker + runner on host.
-2. Expose worker metrics on `localhost:19090` (`--prom-listen-address`).
-3. Run local Prometheus with this template config:
-   - `workflowtests/dockerfiles/prometheus.host.yml`
+1. **All Docker**: run infra in Docker and run runner/worker in Docker.
+2. **Docker infra + local omes**: run infra in Docker but run `omes` from your machine.
 
-### Start Prometheus
+Important worker-mode rule:
 
-```bash
-prometheus \
-  --config.file=workflowtests/dockerfiles/prometheus.host.yml \
-  --web.listen-address=:9090
-```
+- Choose one worker source per run: runner-managed (`--spawn-worker`) or a dedicated worker (container/local process).
+- Avoid using both against the same task queue in one run. Both workers will poll tasks, so load and metrics are split across processes and harder to attribute.
+- Temporal SDK metrics (`temporal_*`) are available in either mode. Dedicated worker mode is primarily for cleaner `process_*` attribution across repeated runs.
 
-### View Metrics
-
-1. Prometheus UI: `http://localhost:9090`
-2. Worker endpoint: `http://localhost:19090/metrics`
-3. Targets API quick check:
-
-```bash
-curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_app|omes_worker_process'
-```
-
-### Optional JSON Export
-
-```bash
-curl -sG http://localhost:9090/api/v1/query_range \
-  --data-urlencode 'query=rate(temporal_request_latency_count{job="omes_worker_app"}[1m])' \
-  --data-urlencode "start=$(date -u -v-10M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
-  --data-urlencode "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --data-urlencode 'step=15s' \
-  > worker-sdk-metrics.json
-```
-
-## Docker Compose Setup
-
-Default flow:
-
-1. Start infra once
-2. Start a dedicated worker container
-3. Run one or many runner passes against that worker
-
-This keeps worker metrics stable and avoids worker rebuild/restart churn during repeated test runs.
-
-### Prerequisite: Build Base Images
+## Shared Prerequisite (Docker image build)
 
 Build the language image(s) you plan to run:
 
@@ -74,27 +38,31 @@ docker build -f workflowtests/dockerfiles/workflowtest-typescript.Dockerfile \
   -t omes-workflowtest-typescript-base:local .
 ```
 
-### Optional Shell Setup
-
-Optional once per shell (avoid repeating `-f ...`):
+Optional shell setup:
 
 ```bash
 export COMPOSE_FILE=workflowtests/dockerfiles/docker-compose.workflowtests.yml
 ```
 
-If you do not set `COMPOSE_FILE`, add
-`-f workflowtests/dockerfiles/docker-compose.workflowtests.yml` to each compose command.
+If you do not set `COMPOSE_FILE`, add `-f workflowtests/dockerfiles/docker-compose.workflowtests.yml` to each compose command.
 
-### Start Infra
+## Mode 1: All Docker
+
+Use this when runner and worker both run in containers.
+
+### 1) Start infra
+
+Use Compose scrape config (`prometheus.compose.yml`):
 
 ```bash
 docker compose up -d temporal-dev temporal-ui prometheus
 ```
 
-### Start Dedicated Worker (Default)
+### 2) Pick worker strategy
 
-Compose mounts the repo writable at `/app/workflowtests` so `omes` can create
-temporary `program-*` SDK build directories under test projects.
+#### Option A (recommended for process-metrics analysis): dedicated worker container
+
+SDK metrics are available in both worker strategies. This option is mainly for stable, repeatable `process_*` attribution.
 
 Go example:
 
@@ -108,15 +76,11 @@ docker compose run -d --name omes-worker --service-ports worker-go \
   --task-queue omes-compose-q \
   --server-address temporal-dev:7233 \
   --namespace default \
-  --prom-listen-address 0.0.0.0:19090
+  --prom-listen-address 0.0.0.0:19090 \
+  --worker-process-metrics-address 0.0.0.0:9091
 ```
 
-For Python/TypeScript, switch to `worker-python` / `worker-typescript` and update
-`--language` + `--project-dir`.
-
-### Run Test Passes
-
-Go example:
+Run tests from runner container:
 
 ```bash
 docker compose run --rm runner-go \
@@ -126,27 +90,12 @@ docker compose run --rm runner-go \
   --iterations 10 \
   --task-queue omes-compose-q \
   --server-address temporal-dev:7233 \
-  --namespace default \
-  --client-port 18180
+  --namespace default
 ```
 
-Python example:
+#### Option B: runner-managed worker with `--spawn-worker`
 
-```bash
-docker compose run --rm runner-python \
-  workflow \
-  --language python \
-  --project-dir /app/workflowtests/python/tests/simple_test \
-  --iterations 10 \
-  --task-queue omes-compose-q \
-  --server-address temporal-dev:7233 \
-  --namespace default \
-  --client-port 18180
-```
-
-### Convenience Path: `--spawn-worker`
-
-One-shot correctness run (no dedicated worker container):
+Use for quick correctness runs and SDK metrics collection. For process-metrics comparisons across runs, dedicated worker mode is usually cleaner.
 
 ```bash
 docker compose run --rm runner-go \
@@ -160,27 +109,47 @@ docker compose run --rm runner-go \
   --namespace default
 ```
 
-This is fine for quick checks, but dedicated worker mode is preferred for stable compose worker metrics.
+## Mode 2: Docker infra + Local omes
 
-### Metrics Flow
+Use this when Temporal/Prometheus run in Docker but you run `omes` locally.
 
-1. Worker SDK/application metrics: Prometheus scrapes `omes-worker:19090` as job `omes_worker_app`.
-2. Worker process sidecar metrics: Prometheus scrapes `omes-worker:9091` as job `omes_worker_process`.
-3. Process metrics are available when the worker process sidecar is running on port `9091`.
+### 1) Start infra with host scrape config
 
-### Endpoints and Checks
+When worker runs on host, use `prometheus.host.yml` (not `prometheus.compose.yml`):
+
+```bash
+PROM_CONFIG_FILE=prometheus.host.yml docker compose up -d --force-recreate temporal-dev temporal-ui prometheus
+```
+
+Use `--force-recreate` when changing `PROM_CONFIG_FILE` so Prometheus remounts the selected config.
+
+### 2) Run tests locally
+
+You can run locally with either:
+
+1. `omes workflow ... --spawn-worker`
+2. a separate local worker process + `omes workflow ...` without `--spawn-worker`
+
+If you need stable `process_*` attribution, prefer the dedicated local worker process path.
+
+For host scraping, expose worker metrics on host ports used by `prometheus.host.yml`:
+
+1. worker SDK metrics: `--prom-listen-address 0.0.0.0:19090`
+2. optional process metrics: `--worker-process-metrics-address 0.0.0.0:9091`
+
+## Endpoints and Quick Checks
 
 1. Temporal UI: `http://localhost:8080`
 2. Prometheus: `http://localhost:9090`
-3. Worker metrics (while dedicated worker is running): `http://localhost:19090/metrics`
-4. Worker process metrics (when sidecar is running): `http://localhost:9091/metrics`
+3. Worker SDK metrics: `http://localhost:19090/metrics`
+4. Optional worker process metrics: `http://localhost:9091/metrics`
 
 ```bash
-curl -s http://localhost:19090/metrics | rg '^temporal_' | head
-curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_app|omes_worker_process'
+curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_app'
+curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_process'
 ```
 
-### Cleanup
+## Cleanup
 
 ```bash
 docker rm -f omes-worker

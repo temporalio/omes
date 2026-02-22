@@ -94,7 +94,9 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./prometheus.compose.yml:/etc/prometheus/prometheus.yml:ro
+      - ./${PROM_CONFIG_FILE:-prometheus.compose.yml}:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
