@@ -67,6 +67,7 @@ type workflowRunner struct {
 type workflowMetricsFlags struct {
 	PrometheusAddress           string
 	ExportParquetPath           string
+	MetricsVersionTag           string
 	WorkerPromListenAddress     string
 	WorkerProcessMetricsAddress string
 }
@@ -85,6 +86,7 @@ func (r *workflowRunner) addCLIFlags(cmd *cobra.Command) {
 	fs.IntVar(&r.clientPort, "client-port", 0, "Port for local client HTTP server (0 = auto)")
 	fs.StringVar(&r.metricsOpts.PrometheusAddress, "prometheus-address", "http://localhost:9090", "Prometheus API address")
 	fs.StringVar(&r.metricsOpts.ExportParquetPath, "export-parquet-path", "", "Export metrics to parquet at this path")
+	fs.StringVar(&r.metricsOpts.MetricsVersionTag, "metrics-version-tag", "", "SDK version/ref label for exported metrics")
 	fs.StringVar(&r.metricsOpts.WorkerPromListenAddress, "worker-prom-listen-address", "", "Worker Prometheus listen address")
 	fs.StringVar(&r.metricsOpts.WorkerProcessMetricsAddress, "worker-process-metrics-address", "", "Worker process metrics sidecar address")
 }
@@ -155,7 +157,7 @@ func (r *workflowRunner) run(ctx context.Context) error {
 			r.logger,
 			r.metricsOpts.WorkerProcessMetricsAddress,
 			workerProcess.Pid,
-			r.sdkOpts.Version,
+			r.resolvedMetricsVersionTag(),
 			"",
 			r.sdkOpts.Language.String(),
 		)
@@ -206,19 +208,20 @@ func (r *workflowRunner) run(ctx context.Context) error {
 
 	// Export metrics (if requested)
 	if r.metricsOpts.ExportParquetPath != "" {
-		stats, err := metrics.ExportMetricLineParquetFromPrometheus(
+		err := metrics.ExportMetricLineParquetFromPrometheus(
 			ctx,
 			metrics.PromQueryConfig{
 				Address: r.metricsOpts.PrometheusAddress,
 				Start:   loadStart,
 				End:     loadEnd,
+				Queries: metrics.DefaultDerivedQueries(),
 			},
 			r.metricsOpts.ExportParquetPath,
 			metrics.MetricLineMetadata{
 				Scenario:   scenarioInfo.ScenarioName,
 				RunID:      scenarioInfo.RunID,
 				RunFamily:  r.runFamily,
-				SDKVersion: r.sdkOpts.Version,
+				SDKVersion: r.resolvedMetricsVersionTag(),
 				BuildID:    "",
 				Language:   r.sdkOpts.Language.String(),
 			},
@@ -226,12 +229,7 @@ func (r *workflowRunner) run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		r.logger.Infof(
-			"Exported parquet metrics to %s (read=%d handled=%d)",
-			r.metricsOpts.ExportParquetPath,
-			stats.SamplesRead,
-			stats.SamplesHandled,
-		)
+		r.logger.Infof("Exported parquet metrics to %s", r.metricsOpts.ExportParquetPath)
 	}
 
 	r.logger.Info("Load test completed successfully")
@@ -311,4 +309,11 @@ func (r *workflowRunner) killProcess(name string, process *os.Process) {
 		r.logger.Warnf("%s did not exit in 15s, killing", name)
 		process.Kill()
 	}
+}
+
+func (r *workflowRunner) resolvedMetricsVersionTag() string {
+	if r.metricsOpts.MetricsVersionTag != "" {
+		return r.metricsOpts.MetricsVersionTag
+	}
+	return r.sdkOpts.Version
 }
