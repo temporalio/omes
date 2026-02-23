@@ -13,8 +13,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20251218214540-e36ee9b474e2
-	go.temporal.io/api v1.59.0
-	go.temporal.io/sdk v1.39.0
+	go.temporal.io/api v1.62.1
+	go.temporal.io/sdk v1.40.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.28.0
 	golang.org/x/sync v0.17.0
