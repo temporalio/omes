@@ -142,7 +142,7 @@ The same image can run either role by command override:
 We support two clean local modes:
 
 1. Local setup: worker/runner + Prometheus all on host
-2. Docker Compose setup: Temporal dev server + UI + Prometheus + cAdvisor in Docker, with worker/runner started explicitly
+2. Docker Compose setup: Temporal dev server + UI + Prometheus in Docker, with worker/runner started explicitly
 
 ### Mode A: Local Setup Metrics
 

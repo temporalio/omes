@@ -1,6 +1,7 @@
 # Prometheus config for workflowtests host mode.
 # Scrapes:
 # 1) worker SDK/application metrics from host
+# 2) worker process sidecar metrics from host
 
 global:
   scrape_interval: 5s
@@ -8,7 +9,13 @@ global:
 
 scrape_configs:
   # Worker metrics endpoint when worker is running on host.
-  - job_name: "omes-worker-host"
+  - job_name: "omes_worker_app"
     metrics_path: /metrics
     static_configs:
       - targets: ["localhost:19090"]
+
+  # Worker process metrics sidecar endpoint when worker is running on host.
+  - job_name: "omes_worker_process"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:9091"]

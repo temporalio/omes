@@ -35,14 +35,14 @@ prometheus \
 3. Targets API quick check:
 
 ```bash
-curl -s http://localhost:9090/api/v1/targets | rg 'omes-worker-host'
+curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_app|omes_worker_process'
 ```
 
 ### Optional JSON Export
 
 ```bash
 curl -sG http://localhost:9090/api/v1/query_range \
-  --data-urlencode 'query=rate(temporal_request_latency_count{job="omes-worker-host"}[1m])' \
+  --data-urlencode 'query=rate(temporal_request_latency_count{job="omes_worker_app"}[1m])' \
   --data-urlencode "start=$(date -u -v-10M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
   --data-urlencode "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --data-urlencode 'step=15s' \
@@ -85,22 +85,10 @@ export COMPOSE_FILE=workflowtests/dockerfiles/docker-compose.workflowtests.yml
 If you do not set `COMPOSE_FILE`, add
 `-f workflowtests/dockerfiles/docker-compose.workflowtests.yml` to each compose command.
 
-### Optional macOS Socket Override
-
-If cAdvisor cannot read Docker metadata on macOS Docker Desktop:
-
-```bash
-cp workflowtests/dockerfiles/.env.example workflowtests/dockerfiles/.env
-echo "DOCKER_SOCKET=$HOME/.docker/run/docker.sock" >> workflowtests/dockerfiles/.env
-docker compose --env-file workflowtests/dockerfiles/.env up -d temporal-dev temporal-ui cadvisor prometheus
-```
-
-On Linux, the default `/var/run/docker.sock` usually works without overrides.
-
 ### Start Infra
 
 ```bash
-docker compose up -d temporal-dev temporal-ui cadvisor prometheus
+docker compose up -d temporal-dev temporal-ui prometheus
 ```
 
 ### Start Dedicated Worker (Default)
@@ -176,21 +164,20 @@ This is fine for quick checks, but dedicated worker mode is preferred for stable
 
 ### Metrics Flow
 
-1. Worker SDK/application metrics: Prometheus scrapes `omes-worker:19090` via `prometheus.compose.yml`.
-2. Container CPU/memory metrics: cAdvisor exposes `/metrics`; Prometheus scrapes `cadvisor:8080`.
-3. cAdvisor gathers container stats using mounted host paths + Docker socket from compose.
-4. cAdvisor metrics include all Docker containers it can see from the mounted socket/runtime paths, not just `omes-worker`.
+1. Worker SDK/application metrics: Prometheus scrapes `omes-worker:19090` as job `omes_worker_app`.
+2. Worker process sidecar metrics: Prometheus scrapes `omes-worker:9091` as job `omes_worker_process`.
+3. Process metrics are available when the worker process sidecar is running on port `9091`.
 
 ### Endpoints and Checks
 
 1. Temporal UI: `http://localhost:8080`
 2. Prometheus: `http://localhost:9090`
 3. Worker metrics (while dedicated worker is running): `http://localhost:19090/metrics`
-4. cAdvisor metrics: `http://localhost:8081/metrics`
+4. Worker process metrics (when sidecar is running): `http://localhost:9091/metrics`
 
 ```bash
 curl -s http://localhost:19090/metrics | rg '^temporal_' | head
-curl -s http://localhost:9090/api/v1/targets | rg 'omes-worker|cadvisor'
+curl -s http://localhost:9090/api/v1/targets | rg 'omes_worker_app|omes_worker_process'
 ```
 
 ### Cleanup

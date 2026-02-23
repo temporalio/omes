@@ -1,7 +1,7 @@
 # Prometheus config for workflowtests compose mode.
 # Scrapes:
 # 1) worker SDK/application metrics
-# 2) cAdvisor container CPU/memory metrics
+# 2) worker process sidecar metrics
 
 global:
   scrape_interval: 5s
@@ -10,13 +10,13 @@ global:
 scrape_configs:
   # Worker metrics endpoint for the default compose UX:
   # run a dedicated detached worker named `omes-worker`.
-  - job_name: "omes-worker"
+  - job_name: "omes_worker_app"
     metrics_path: /metrics
     static_configs:
       - targets: ["omes-worker:19090"]
 
-  # Container resource metrics exposed by cAdvisor.
-  - job_name: "cadvisor"
+  # Worker process metrics sidecar endpoint.
+  - job_name: "omes_worker_process"
     metrics_path: /metrics
     static_configs:
-      - targets: ["cadvisor:8080"]
+      - targets: ["omes-worker:9091"]

@@ -1,5 +1,5 @@
 # Reusable workflowtests compose stack.
-# Default `docker compose up` is infra-only (temporal-dev, temporal-ui, cadvisor, prometheus).
+# Default `docker compose up` is infra-only (temporal-dev, temporal-ui, prometheus).
 # Worker/runner language services require explicit command overrides.
 
 services:
@@ -65,6 +65,7 @@ services:
         condition: service_healthy
     ports:
       - "${OMES_WORKER_PROM_PORT:-19090}:19090"
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
 
   worker-python:
     image: omes-workflowtest-python-base:local
@@ -75,6 +76,7 @@ services:
         condition: service_healthy
     ports:
       - "${OMES_WORKER_PROM_PORT:-19090}:19090"
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
 
   worker-typescript:
     image: omes-workflowtest-typescript-base:local
@@ -85,19 +87,7 @@ services:
         condition: service_healthy
     ports:
       - "${OMES_WORKER_PROM_PORT:-19090}:19090"
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    privileged: true
-    ports:
-      - "8081:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      # Override DOCKER_SOCKET in .env when host socket is not /var/run/docker.sock.
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
 
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -106,7 +96,5 @@ services:
       - "--storage.tsdb.path=/prometheus"
     volumes:
       - ./prometheus.compose.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on:
-      - cadvisor
     ports:
       - "9090:9090"

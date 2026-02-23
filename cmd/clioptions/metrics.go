@@ -168,8 +168,8 @@ func (p *PrometheusInstanceFlags) FlagSet(prefix string) *pflag.FlagSet {
 	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "prom-config.yml", "Start a local Prometheus instance with the specified config file")
 	p.fs.BoolVar(&p.Snapshot, "prom-snapshot", false, "Create a TSDB snapshot on shutdown")
 	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
-	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export SDK metrics for")
-	p.fs.StringVar(&p.ExportProcessMetricsJob, prefix+"prom-export-process-job", "omes-worker-process", "Name of the process metrics job to export")
+	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", metrics.JobWorkerApp, "Name of the worker job to export SDK metrics for")
+	p.fs.StringVar(&p.ExportProcessMetricsJob, prefix+"prom-export-process-job", metrics.JobWorkerProcess, "Name of the process metrics job to export")
 	p.fs.DurationVar(&p.ExportMetricsStep, prefix+"prom-export-metrics-step", 15*time.Second, "Step interval to sample timeseries metrics")
 	p.fs.StringVar(&p.ExportWorkerInfoAddress, prefix+"prom-export-worker-info-address", "", "Address to fetch /info from during export (e.g., localhost:9091)")
 	return p.fs

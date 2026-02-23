@@ -14,6 +14,7 @@ import (
 	"github.com/temporalio/omes/internal/programbuild"
 	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/metrics"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -48,18 +49,26 @@ Examples:
 }
 
 type workflowRunner struct {
-	sdkOpts           clioptions.SdkOptions
-	clientOpts        clioptions.ClientOptions
-	loggingOpts       clioptions.LoggingOptions
-	loadOpts          clioptions.LoadOptions
-	programOpts       clioptions.ProgramOptions
-	workflowOpts      clioptions.WorkflowOptions
-	workerMetricsOpts clioptions.MetricsOptions
-	runID             string
-	taskQueue         string
-	clientPort        int
+	sdkOpts      clioptions.SdkOptions
+	clientOpts   clioptions.ClientOptions
+	loggingOpts  clioptions.LoggingOptions
+	loadOpts     clioptions.LoadOptions
+	programOpts  clioptions.ProgramOptions
+	workflowOpts clioptions.WorkflowOptions
+	metricsOpts  workflowMetricsFlags
+	runID        string
+	runFamily    string
+	taskQueue    string
+	clientPort   int
 
 	logger *zap.SugaredLogger
+}
+
+type workflowMetricsFlags struct {
+	PrometheusAddress           string
+	ExportParquetPath           string
+	WorkerPromListenAddress     string
+	WorkerProcessMetricsAddress string
 }
 
 func (r *workflowRunner) addCLIFlags(cmd *cobra.Command) {
@@ -71,9 +80,13 @@ func (r *workflowRunner) addCLIFlags(cmd *cobra.Command) {
 	r.programOpts.AddFlags(fs)
 	r.workflowOpts.AddCLIFlags(fs)
 	fs.StringVar(&r.runID, "run-id", "", "Run ID (auto-generated if not provided)")
+	fs.StringVar(&r.runFamily, "run-family", "", "Human-readable identifier for grouping related runs")
 	fs.StringVar(&r.taskQueue, "task-queue", "", "Task queue name (default: omes-<run-id>)")
 	fs.IntVar(&r.clientPort, "client-port", 0, "Port for local client HTTP server (0 = auto)")
-	fs.AddFlagSet(r.workerMetricsOpts.FlagSet("worker-"))
+	fs.StringVar(&r.metricsOpts.PrometheusAddress, "prometheus-address", "http://localhost:9090", "Prometheus API address")
+	fs.StringVar(&r.metricsOpts.ExportParquetPath, "export-parquet-path", "", "Export metrics to parquet at this path")
+	fs.StringVar(&r.metricsOpts.WorkerPromListenAddress, "worker-prom-listen-address", "", "Worker Prometheus listen address")
+	fs.StringVar(&r.metricsOpts.WorkerProcessMetricsAddress, "worker-process-metrics-address", "", "Worker process metrics sidecar address")
 }
 
 func (r *workflowRunner) preRun() error {
@@ -99,7 +112,13 @@ func (r *workflowRunner) validate(cmd *cobra.Command) error {
 		return fmt.Errorf("--project-dir is required")
 	}
 	if !r.workflowOpts.SpawnWorker && !cmd.Flags().Changed("task-queue") {
-		return fmt.Errorf("--task-queue is required when --spawn-worker is false (runner does not own worker lifecycle)")
+		return fmt.Errorf("--task-queue is required when --spawn-worker is false")
+	}
+	if r.metricsOpts.ExportParquetPath != "" && r.metricsOpts.PrometheusAddress == "" {
+		return fmt.Errorf("--prometheus-address is required when --export-parquet-path is set")
+	}
+	if r.metricsOpts.WorkerProcessMetricsAddress != "" && !r.workflowOpts.SpawnWorker {
+		return fmt.Errorf("--spawn-worker is required when --worker-process-metrics-address is set")
 	}
 	return nil
 }
@@ -120,14 +139,31 @@ func (r *workflowRunner) run(ctx context.Context) error {
 	}
 
 	// Spawn worker (if requested)
-	// TODO: add worker readiness gate (e.g. DescribeTaskQueue poller check) to avoid
-	// race where load starts before worker is polling. Currently relies on worker starting fast enough.
+	var workerProcess *os.Process
 	if r.workflowOpts.SpawnWorker {
-		workerProcess, err := r.spawnLocalWorker(ctx, prog)
+		workerProcess, err = r.spawnLocalWorker(ctx, prog)
 		if err != nil {
 			return fmt.Errorf("failed to spawn worker: %w", err)
 		}
 		defer r.killProcess("worker", workerProcess)
+	}
+
+	// Spawn worker process monitoring server (if requested)
+	spawnSidecar := workerProcess != nil && r.metricsOpts.WorkerProcessMetricsAddress != ""
+	if spawnSidecar {
+		sidecar := clioptions.StartProcessMetricsSidecar(
+			r.logger,
+			r.metricsOpts.WorkerProcessMetricsAddress,
+			workerProcess.Pid,
+			r.sdkOpts.Version,
+			"",
+			r.sdkOpts.Language.String(),
+		)
+		defer func() {
+			if err := sidecar.Shutdown(context.Background()); err != nil {
+				r.logger.Warnf("Failed to stop worker process metrics sidecar: %v", err)
+			}
+		}()
 	}
 
 	// Spawn client
@@ -161,9 +197,41 @@ func (r *workflowRunner) run(ctx context.Context) error {
 		},
 	}
 
+	loadStart := time.Now()
 	r.logger.Infof("Running load test with %d max concurrent", r.loadOpts.MaxConcurrent)
 	if err := executor.Run(ctx, scenarioInfo); err != nil {
 		return fmt.Errorf("load test failed: %w", err)
+	}
+	loadEnd := time.Now()
+
+	// Export metrics (if requested)
+	if r.metricsOpts.ExportParquetPath != "" {
+		stats, err := metrics.ExportMetricLineParquetFromPrometheus(
+			ctx,
+			metrics.PromQueryConfig{
+				Address: r.metricsOpts.PrometheusAddress,
+				Start:   loadStart,
+				End:     loadEnd,
+			},
+			r.metricsOpts.ExportParquetPath,
+			metrics.MetricLineMetadata{
+				Scenario:   scenarioInfo.ScenarioName,
+				RunID:      scenarioInfo.RunID,
+				RunFamily:  r.runFamily,
+				SDKVersion: r.sdkOpts.Version,
+				BuildID:    "",
+				Language:   r.sdkOpts.Language.String(),
+			},
+		)
+		if err != nil {
+			return err
+		}
+		r.logger.Infof(
+			"Exported parquet metrics to %s (read=%d handled=%d)",
+			r.metricsOpts.ExportParquetPath,
+			stats.SamplesRead,
+			stats.SamplesHandled,
+		)
 	}
 
 	r.logger.Info("Load test completed successfully")
@@ -195,7 +263,7 @@ func (r *workflowRunner) spawnLocalWorker(ctx context.Context, program sdkbuild.
 		"--task-queue", r.taskQueue,
 	}
 	workerArgs = append(workerArgs, r.connectionRuntimeArgs()...)
-	if addr := r.workerMetricsOpts.PrometheusListenAddress; addr != "" {
+	if addr := r.metricsOpts.WorkerPromListenAddress; addr != "" {
 		workerArgs = append(workerArgs, "--prom-listen-address", addr)
 	}
 	runtimeArgs, err := programbuild.BuildRuntimeArgs(
