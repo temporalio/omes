@@ -52,6 +52,24 @@ async def client_main(config: ClientConfig) -> None:
     await handle.result()
 ```
 
+Optional helper for sharing a client across execute calls:
+
+```python
+from omes_starter import ClientPool
+
+_pool = ClientPool()
+
+async def client_main(config: ClientConfig) -> None:
+    client = await _pool.get_or_connect(
+        "default",
+        config.server_address,
+        **config.connect_kwargs(),
+    )
+    ...
+```
+
+Using `ClientPool` is optional; direct `Client.connect(...)` remains the default pattern.
+
 ## Worker handler API
 
 `worker_main(config: WorkerConfig) -> Worker` receives:

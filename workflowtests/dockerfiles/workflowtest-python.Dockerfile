@@ -1,7 +1,9 @@
-# Workflow testing image for Python
-# Build with: docker build -f dockerfiles/workflowtest-python.Dockerfile \
-#   --build-arg TEST_PROJECT=workflowtests/python/tests/simple_test \
-#   -t workflowtest-python:test .
+# Workflow testing base image for Python.
+# This image contains omes + Python runtime deps + starter library only.
+# Test projects are copied by a thin overlay image (see workflowtest-project.Dockerfile).
+#
+# Build with:
+#   docker build -f workflowtests/dockerfiles/workflowtest-python.Dockerfile -t omes-workflowtest-python-base:latest .
 
 ARG TARGETARCH
 FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
@@ -11,7 +13,9 @@ FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Get go compiler
 ARG TARGETARCH
@@ -59,13 +63,11 @@ COPY workflowtests/python/omes_starter ./workflowtests/python/omes_starter
 COPY workflowtests/python/pyproject.toml ./workflowtests/python/pyproject.toml
 COPY workflowtests/python/uv.lock ./workflowtests/python/uv.lock
 
-# Copy test project (path like: workflowtests/python/tests/simple_test)
-ARG TEST_PROJECT
-COPY ${TEST_PROJECT} ./${TEST_PROJECT}
+# Use omes as entrypoint; role and project are provided at runtime.
+ENTRYPOINT ["/app/omes"]
 
-# Set the test project path for easy reference
-ENV TEST_PROJECT_PATH=/app/${TEST_PROJECT}
-
-# No fixed entrypoint - command provided at runtime
-# Example orchestrator: /app/omes workflow --language python --project-dir $TEST_PROJECT_PATH ...
-# Example worker: /app/omes exec --language python --project-dir $TEST_PROJECT_PATH --remote-worker 8081 ...
+# Example runner command:
+#   workflow --language python --project-dir /app/workflowtests/python/tests/simple_test ...
+#
+# Example worker command:
+#   exec --language python --project-dir /app/workflowtests/python/tests/simple_test -- worker ...

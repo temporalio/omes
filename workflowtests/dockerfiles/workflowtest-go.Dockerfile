@@ -1,7 +1,9 @@
-# Workflow testing image for Go
-# Build with: docker build -f dockerfiles/workflowtest-go.Dockerfile \
-#   --build-arg TEST_PROJECT=workflowtests/go/tests/simple-test \
-#   -t workflowtest-go:test .
+# Workflow testing base image for Go.
+# This image contains omes + Go toolchain + starter library only.
+# Test projects are copied by a thin overlay image (see workflowtest-project.Dockerfile).
+#
+# Build with:
+#   docker build -f workflowtests/dockerfiles/workflowtest-go.Dockerfile -t omes-workflowtest-go-base:latest .
 
 ARG TARGETARCH
 FROM --platform=linux/$TARGETARCH golang:1.25-bookworm AS build
@@ -11,7 +13,8 @@ RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
       protobuf-compiler libprotobuf-dev \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 WORKDIR /app
 
@@ -37,13 +40,11 @@ WORKDIR /app
 # Copy starter library (maintains relative path structure for replace directives)
 COPY workflowtests/go/starter ./workflowtests/go/starter
 
-# Copy test project (path like: workflowtests/go/tests/simpletest)
-ARG TEST_PROJECT
-COPY ${TEST_PROJECT} ./${TEST_PROJECT}
+# Use omes as entrypoint; role and project are provided at runtime.
+ENTRYPOINT ["/app/omes"]
 
-# Set the test project path for easy reference
-ENV TEST_PROJECT_PATH=/app/${TEST_PROJECT}
-
-# No fixed entrypoint - command provided at runtime
-# Example orchestrator: /app/omes workflow --language go --project-dir $TEST_PROJECT_PATH ...
-# Example worker: /app/omes exec --language go --project-dir $TEST_PROJECT_PATH --remote-worker 8081 ...
+# Example runner command:
+#   workflow --language go --project-dir /app/workflowtests/go/tests/simpletest ...
+#
+# Example worker command:
+#   exec --language go --project-dir /app/workflowtests/go/tests/simpletest -- worker ...

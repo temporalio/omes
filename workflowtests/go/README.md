@@ -65,6 +65,25 @@ func clientMain(config *starter.ClientConfig) error
 - `RunID`
 - `Iteration`
 
+Core pattern is direct client creation per execute call in `clientMain`.
+
+Optional helper for sharing a client across execute calls:
+
+```go
+var pool = starter.NewClientPool()
+
+func clientMain(config *starter.ClientConfig) error {
+	c, err := pool.GetOrDial("default", config.ConnectionOptions)
+	if err != nil {
+		return err
+	}
+	// use c...
+	return nil
+}
+```
+
+Using `ClientPool` is optional; direct `client.Dial(...)` remains the default pattern.
+
 Worker handler:
 
 ```go
@@ -90,3 +109,52 @@ omes exec --language go --project-dir ./tests/simpletest -- worker --task-queue 
 # Run a load test (spawns client, optionally spawns worker)
 omes workflow --language go --project-dir ./tests/simpletest --spawn-worker --iterations 100
 ```
+
+## Docker Images
+
+Workflowtest Docker packaging is split into:
+
+1. A language base image (omes + toolchain + starter library)
+2. A thin project overlay image (copies one test project)
+
+Build Go base image:
+
+```bash
+docker build -f workflowtests/dockerfiles/workflowtest-go.Dockerfile -t omes-workflowtest-go-base:latest .
+```
+
+Build a thin project image:
+
+```bash
+docker build -f workflowtests/dockerfiles/workflowtest-project.Dockerfile \
+  --build-arg BASE_IMAGE=omes-workflowtest-go-base:latest \
+  --build-arg TEST_PROJECT=workflowtests/go/tests/simpletest \
+  -t omes-workflowtest-go-simpletest:latest .
+```
+
+The same image can run either role by command override:
+
+1. Runner: `omes workflow ...`
+2. Worker: `omes exec ... -- worker ...`
+
+## Local Modes
+
+We support two clean local modes:
+
+1. Local setup: worker/runner + Prometheus all on host
+2. Docker Compose setup: Temporal dev server + UI + Prometheus + cAdvisor in Docker, with worker/runner started explicitly
+
+### Mode A: Local Setup Metrics
+
+Local setup metrics setup and export flow live in:
+
+- `workflowtests/dockerfiles/README.md` under `Local Setup`
+
+### Mode B: Docker Compose Setup + Metrics + UI
+
+Docker Compose setup docs (image builds, compose commands, and metrics flow) live in:
+
+- `workflowtests/dockerfiles/README.md`
+
+Docker Compose setup defaults to a dedicated worker container plus explicit runner invocations.
+That keeps worker metrics stable and avoids rebuilding/restarting the worker for each test pass.
