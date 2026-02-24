@@ -56,11 +56,11 @@ async function compileProtos(dtsOutputFile, ...args) {
     let tempFileContent = await readFile(tempFile, 'utf8');
     tempFileContent = tempFileContent.replace(
       /(@(?:yearly|monthly|weekly|daily|hourly|every))/g,
-      '`$1`'
+      '`$1`',
     );
     tempFileContent = tempFileContent.replace(
       /<((?:interval|phase|timezone)(?: [^>]+)?)>/g,
-      '`<$1>`'
+      '`<$1>`',
     );
     await writeFile(tempFile, tempFileContent, 'utf-8');
 
@@ -87,7 +87,7 @@ async function main() {
     '--path',
     resolve(protoBaseDir, 'kitchen_sink'),
     '--path',
-    resolve(protoBaseDir, 'api_upstream')
+    resolve(protoBaseDir, 'api_upstream'),
   );
 
   console.log('Done');

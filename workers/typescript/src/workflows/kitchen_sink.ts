@@ -71,7 +71,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
           if (actionRval) {
             rval = actionRval;
           }
-        })
+        }),
       );
     }
     const allComplete = Promise.all(promises);
@@ -89,7 +89,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       },
       afterCompleted: (_: Promise<PRR | void>) => Promise<void> = async (task) => {
         await task;
-      }
+      },
     ) {
       const cancelScope = new CancellationScope();
       let didCancel = false;
@@ -136,7 +136,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
       const execAct = action.execActivity;
       await handleAwaitableChoice(
         () => launchActivity(execAct),
-        action.execActivity.awaitableChoice
+        action.execActivity.awaitableChoice,
       );
     } else if (action.execChildWorkflow) {
       const execChild = action.execChildWorkflow;
@@ -147,7 +147,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
             // Do not set workflowId field if not supplied
             ...(execChild.workflowId && { workflowId: execChild.workflowId }),
             typedSearchAttributes: decodeTypedSearchAttributes(
-              action?.execChildWorkflow?.searchAttributes
+              action?.execChildWorkflow?.searchAttributes,
             ),
           });
         },
@@ -160,7 +160,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
           if (handle) {
             await handle.result();
           }
-        }
+        },
       );
     } else if (action.setPatchMarker) {
       let wasPatched: boolean;
@@ -185,9 +185,10 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.upsertMemo) {
       // no upsert memo in ts
     } else if (action.upsertSearchAttributes) {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       const searchAttributes: SearchAttributes = {};
       for (const [key, value] of Object.entries(
-        action.upsertSearchAttributes.searchAttributes ?? {}
+        action.upsertSearchAttributes.searchAttributes ?? {},
       )) {
         if (key.includes('Keyword')) {
           searchAttributes[key] = [value.data![0].toString()];
@@ -227,7 +228,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
           throw new ApplicationFailure('Rejected');
         }
       },
-    }
+    },
   );
 
   // Run all initial input actions
@@ -323,7 +324,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
 }
 
 function convertCancelType(
-  ct: ActivityCancellationType | null | undefined
+  ct: ActivityCancellationType | null | undefined,
 ): WFActivityCancellationType | undefined {
   if (ct === ActivityCancellationType.TRY_CANCEL) {
     return WFActivityCancellationType.TRY_CANCEL;
