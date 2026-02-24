@@ -12,9 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ProgramBuilder builds programs using sdkbuild.
-// For Python: user project must have <module>/__main__.py as entry point
-// For TypeScript: sdkbuild compiles user project + shared omes-starter source
+// ProgramBuilder builds test projects into runnable programs using sdkbuild.
 type ProgramBuilder struct {
 	Language   string
 	ProjectDir string // User's project directory
@@ -29,10 +27,8 @@ func displayVersion(version string) string {
 	return version
 }
 
-// BuildProgram creates a sdkbuild.Program for the user's project.
-// For Python: uses <module>/__main__.py convention, run with prog.NewCommand(ctx, "module", "client", ...)
-// For TypeScript: compiles user project with shared source, run with prog.NewCommand(ctx, "tslib/main.js", "client", ...)
-// BuildProgram builds the program and returns it along with the resolved SDK version.
+// BuildProgram builds the project and returns a runnable program.
+// If version is empty, it is auto-detected from project files.
 func (b *ProgramBuilder) BuildProgram(ctx context.Context, version string) (sdkbuild.Program, error) {
 	resolvedVersion, err := b.resolveSDKVersion(ctx, version)
 	if err != nil {
@@ -73,23 +69,11 @@ func (b *ProgramBuilder) resolveSDKVersion(ctx context.Context, version string) 
 	return detectedVersion, nil
 }
 
-// buildPython builds via sdkbuild in a temp directory adjacent to the project.
-//
-// sdkbuild creates a temp environment, installs the resolved temporalio version (or local
-// wheel), and installs the test project as editable. Transitive dependencies (including
-// omes-starter, if declared by the test project) are resolved by uv during sync.
-//
-// Version is pre-resolved by BuildProgram before this function is called:
-//   - version="1.21.0" → sdkbuild runs: uv add temporalio==1.21.0
-//   - version="../sdk-python" → sdkbuild builds a wheel from the local SDK and installs it
 func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir, version string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building Python SDK (version: %s)", displayVersion(version))
 
-	// Use sdkbuild directly - it creates temp dir, installs SDK, adds user project as editable
-	// User project must have src/__main__.py as entry point
 	prog, err := sdkbuild.BuildPythonProgram(ctx, sdkbuild.BuildPythonProgramOptions{
 		BaseDir: absProjectDir,
-		// No DirName - let sdkbuild create temp dir
 		Version: version,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
@@ -101,38 +85,28 @@ func (b *ProgramBuilder) buildPython(ctx context.Context, absProjectDir, version
 	return prog, nil
 }
 
-// buildTypeScript builds via sdkbuild in a temp directory. The shared starter source
-// is compiled alongside the test project via tsconfig paths and includes.
-//
-// Version is pre-resolved by BuildProgram (detected from project when --version flag not
-// provided). sdkbuild then pins generated @temporalio/* deps to that resolved version:
-//   - version="1.3.0" → sdkbuild generates package.json with @temporalio/*: "1.3.0"
-//   - version="../sdk-typescript" → sdkbuild pre-builds the local SDK, then generates
-//     package.json with file: URLs pointing to local SDK packages
-//
-// Local SDK paths using pnpm are pre-built before sdkbuild (which assumes npm).
+// buildTypeScript compiles the test project and shared omes-starter source together.
+// The starter is included via tsconfig path aliases (not a real npm dependency).
+// Local SDK paths are pre-built with pnpm since sdkbuild assumes npm.
 func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, version string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building TypeScript SDK (version: %s)", displayVersion(version))
 
-	// TODO(thomas): If version is a local path, pre-build if needed (handles pnpm projects), sdkbuild still tries to build with npm
+	// Pre-build local SDK if needed (sdk-typescript uses pnpm, sdkbuild assumes npm)
 	if strings.ContainsAny(version, `/\`) {
 		if err := b.preBuildLocalTypeScriptSDK(ctx, version); err != nil {
 			return nil, err
 		}
 	}
 
-	// Build dir will be a temp sibling to project dir (both in tests/)
-	// Project: tests/<project-name>/, Build: tests/<temp>/
 	baseDir := filepath.Dir(absProjectDir)
 	projectName := filepath.Base(absProjectDir)
 
-	// Paths relative to build dir (which is a child of baseDir)
-	relProjectDir := "../" + projectName // One level up, into project
-	relSharedSrc := "../../src"          // Two levels up, into src
+	// Paths are relative to the sdkbuild temp dir (a sibling of the project dir under tests/)
+	relProjectDir := "../" + projectName
+	relSharedSrc := "../../src"
 
-	// Set up TSConfigPaths and Includes
-	// Paths point to compiled output for runtime resolution via tsconfig-paths
-	// TypeScript compiler finds types via the includes, not the paths
+	// TSConfigPaths: runtime alias resolution (node -r tsconfig-paths/register)
+	// Includes: TypeScript compiler scope (which .ts files to compile)
 	tsConfigPaths := map[string][]string{
 		"@temporalio/omes-starter":   {"./tslib/src/index.js"},
 		"@temporalio/omes-starter/*": {"./tslib/src/*"},
@@ -142,7 +116,7 @@ func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, ver
 		relSharedSrc + "/**/*.ts",
 	}
 
-	// Add dependencies used by omes-starter
+	// Dependencies required by the shared omes-starter source
 	moreDeps := map[string]string{
 		"express":        "^4.18.0",
 		"@types/express": "^4.17.0",
@@ -150,8 +124,7 @@ func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, ver
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-		BaseDir: baseDir,
-		// No DirName - let sdkbuild create temp dir
+		BaseDir:          baseDir,
 		Version:          version,
 		TSConfigPaths:    tsConfigPaths,
 		Includes:         includes,
@@ -166,24 +139,13 @@ func (b *ProgramBuilder) buildTypeScript(ctx context.Context, absProjectDir, ver
 	return prog, nil
 }
 
-// buildGo creates a temporary Go module that composes the test project and shared starter.
-//
-// Build graph: generated build module → test module + starter module (via replace directives).
-// Both test and starter have their own go.temporal.io/sdk requirement. go mod tidy resolves
-// a single effective SDK version across both via Go's MVS (minimum version selection).
-//
-// SDK version precedence:
-//   - version="" → go mod tidy resolves from test/starter go.mod requirements
-//   - version="1.31.0" → sdkbuild appends: replace go.temporal.io/sdk => go.temporal.io/sdk v1.31.0
-//   - version="../sdk-go" → sdkbuild appends: replace go.temporal.io/sdk => <relative path>
-//
-// No hard check that starter and test SDK versions match. The effective SDK version is
-// whatever the final module graph resolves to (or what --version forces via replace).
+// buildGo generates a temporary Go module that imports both the test project and shared starter,
+// linked via replace directives. sdkbuild handles SDK version pinning via go.mod replace.
 func (b *ProgramBuilder) buildGo(ctx context.Context, absProjectDir, version string) (sdkbuild.Program, error) {
 	b.Logger.Infof("Building Go SDK (version: %s)", displayVersion(version))
 
 	projectName := filepath.Base(absProjectDir)
-	baseDir := filepath.Dir(absProjectDir) // tests/
+	baseDir := filepath.Dir(absProjectDir)
 	pkgName := strings.ReplaceAll(projectName, "-", "")
 
 	testModule := fmt.Sprintf("github.com/temporalio/omes-workflow-tests/workflowtests/go/tests/%s", projectName)
@@ -199,7 +161,6 @@ replace %s => ../%s
 replace github.com/temporalio/omes-workflow-tests/workflowtests/go/starter => ../../starter
 `, testModule, testModule, projectName)
 
-	// Generated main.go imports user's package and calls Main()
 	goMainContents := fmt.Sprintf(`package main
 
 import %s "%s"
