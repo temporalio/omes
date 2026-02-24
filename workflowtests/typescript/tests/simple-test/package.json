@@ -1,0 +1,19 @@
+{
+  "name": "simple-test",
+  "version": "0.1.0",
+  "description": "Simple workflow load test for omes",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@temporalio/omes-starter": "file:../..",
+    "@temporalio/client": ">=1.0.0",
+    "@temporalio/worker": ">=1.0.0",
+    "@temporalio/workflow": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

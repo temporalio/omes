@@ -19,12 +19,9 @@ func getRepoDir() (string, error) {
 	return repoDir, nil
 }
 
-// generateExecutionID generates a random execution ID to uniquely identify this particular
-// execution of a scenario. This ensures no two executions with the same RunID collide.
-func generateExecutionID() (string, error) {
-	bytes := make([]byte, 8) // 8 bytes = 16 hex characters
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
+// generateExecutionID generates a random hex string to uniquely identify an execution.
+func generateExecutionID() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }

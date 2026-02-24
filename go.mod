@@ -9,8 +9,8 @@ require (
 	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/shirou/gopsutil/v4 v4.25.10
-	github.com/spf13/cobra v1.7.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20251218214540-e36ee9b474e2
 	go.temporal.io/api v1.62.1

@@ -1,0 +1,15 @@
+[project]
+name = "omes-starter"
+version = "0.1.0"
+description = "Omes starter library for Python workflow load testing"
+authors = [{ name = "Temporal Technologies Inc", email = "sdk@temporal.io" }]
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "temporalio>=1.21.0,<2",
+    "aiohttp>=3.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

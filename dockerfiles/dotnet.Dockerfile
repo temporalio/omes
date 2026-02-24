@@ -28,6 +28,7 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
+COPY internal ./internal
 COPY go.mod go.sum ./
 
 # Build the CLI

@@ -1,0 +1,102 @@
+# Reusable workflowtests compose stack.
+# Default `docker compose up` is infra-only (temporal-dev, temporal-ui, prometheus).
+# Worker/runner language services require explicit command overrides.
+
+services:
+  temporal-dev:
+    image: temporalio/temporal:latest
+    command:
+      [
+        "server",
+        "start-dev",
+        "--ip",
+        "0.0.0.0",
+        "--namespace",
+        "default",
+      ]
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal-dev:7233
+    ports:
+      - "8080:8080"
+
+  runner-go:
+    image: omes-workflowtest-go-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+
+  runner-python:
+    image: omes-workflowtest-python-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+
+  runner-typescript:
+    image: omes-workflowtest-typescript-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+
+  worker-go:
+    image: omes-workflowtest-go-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+    ports:
+      - "${OMES_WORKER_PROM_PORT:-19090}:19090"
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
+
+  worker-python:
+    image: omes-workflowtest-python-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+    ports:
+      - "${OMES_WORKER_PROM_PORT:-19090}:19090"
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
+
+  worker-typescript:
+    image: omes-workflowtest-typescript-base:local
+    volumes:
+      - ../:/app/workflowtests
+    depends_on:
+      temporal-dev:
+        condition: service_healthy
+    ports:
+      - "${OMES_WORKER_PROM_PORT:-19090}:19090"
+      - "${OMES_WORKER_PROCESS_PROM_PORT:-9091}:9091"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./${PROM_CONFIG_FILE:-prometheus.compose.yml}:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
