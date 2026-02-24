@@ -21,23 +21,23 @@ async function run() {
     .option(
       '--task-queue-suffix-index-start <tqSufStart>',
       'Inclusive start for task queue suffix range',
-      '0'
+      '0',
     )
     .option(
       '--task-queue-suffix-index-end <tqSufEnd>',
       'Inclusive end for task queue suffix range',
-      '0'
+      '0',
     )
     .option('-n, --namespace <namespace>', 'The namespace to use', 'default')
     .option('--max-concurrent-activity-pollers <maxActPollers>', 'Max concurrent activity pollers')
     .option('--max-concurrent-workflow-pollers <maxWfPollers>', 'Max concurrent workflow pollers')
     .option(
       '--activity-poller-autoscale-max <actPollerAutoscaleMax>',
-      'Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)'
+      'Max for activity poller autoscaling (overrides max-concurrent-activity-pollers)',
     )
     .option(
       '--workflow-poller-autoscale-max <wfPollerAutoscaleMax>',
-      'Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)'
+      'Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)',
     )
     .option('--max-concurrent-activities <maxActs>', 'Max concurrent activities')
     .option('--max-concurrent-workflow-tasks <maxWFTs>', 'Max concurrent workflow tasks')
@@ -53,7 +53,7 @@ async function run() {
     .option('--build-id <buildId>', 'Build ID', '')
     .option(
       '--err-on-unimplemented <errOnImplemented>',
-      'Error when receiving unimplemented actions (currently only affects concurrent client actions)'
+      'Error when receiving unimplemented actions (currently only affects concurrent client actions)',
     );
 
   const opts = program.parse(process.argv).opts<{
@@ -118,7 +118,7 @@ async function run() {
         : winston.format.combine(
             winston.format.colorize(),
             winston.format.simple(),
-            winston.format.metadata()
+            winston.format.metadata(),
           ),
     transports: [new winston.transports.Console()],
   });
