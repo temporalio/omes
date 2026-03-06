@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
@@ -96,7 +97,7 @@ const (
 	DefaultScheduleReadsPerCreation     = 3
 	DefaultScheduleUpdatesPerCreation   = 3
 	DefaultPayloadSize                  = 1024
-	DefaultCronExpression               = "* * * * * *"
+	DefaultCronExpression               = "*/5 * * * * *"
 	DefaultScheduledWorkflowType        = NoopScheduledWorkflowType
 	DefaultOverlapPolicy                = "all"
 	DefaultEnableChasmScheduler         = true
@@ -104,8 +105,8 @@ const (
 
 // Default duration constants
 var (
-	DefaultSchedulerDurationPerIteration = time.Minute
-	DefaultWaitTimeBeforeCleanup         = 5 * time.Second
+	DefaultSchedulerDurationPerIteration = 30 * time.Second
+	DefaultWaitTimeBeforeCleanup         = 25 * time.Second
 	DefaultOperationInterval             = 50 * time.Millisecond
 )
 
@@ -165,15 +166,13 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 
 	var wg sync.WaitGroup
 	for i := range s.config.ScheduleCreationPerIteration {
-		sc := ScheduleState{
-			ScheduleID: fmt.Sprintf("sched-%s-%d-%d", run.RunID, run.Iteration, i),
-		}
 		wg.Go(func() {
 			ticker := time.NewTicker(s.config.OperationInterval)
 			defer ticker.Stop()
 			start := time.Now()
 
-			sc, err := s.createSchedule(ctx, client, sc.ScheduleID, logger)
+			sch_id := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
+			sc, err := s.createSchedule(ctx, client, sch_id, run.TaskQueue(), logger)
 			if err != nil {
 				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
 				return
@@ -212,13 +211,12 @@ type ScheduleState struct {
 	DeleteAfter time.Duration
 }
 
-func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) (ScheduleState, error) {
+func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, taskQueue string, logger *zap.SugaredLogger) (ScheduleState, error) {
 	sc := ScheduleState{
 		ScheduleID:  scheduleID,
 		DeleteAfter: s.config.SchedulerDurationPerIteration,
 	}
-	workflowID := fmt.Sprintf("scheduled-%s", scheduleID)
-	taskQueue := fmt.Sprintf("scheduler-test-%s", scheduleID)
+	workflowID := fmt.Sprintf("w-%s", scheduleID)
 	action := &client.ScheduleWorkflowAction{
 		ID:        workflowID,
 		Workflow:  s.config.ScheduledWorkflowType,

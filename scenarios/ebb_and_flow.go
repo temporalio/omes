@@ -13,10 +13,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/ebbandflow"
 	"go.temporal.io/api/workflowservice/v1"
-)
-
-const (
-	EbbAndFlowScenarioIdSearchAttribute = "EbbAndFlowScenarioId"
+	"go.temporal.io/sdk/temporal"
 )
 
 const (
@@ -150,7 +147,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	e.ScenarioInfo = info
-	e.id = fmt.Sprintf("ebb_and_flow_%s", e.RunID)
+	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
 
@@ -158,16 +155,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	config := e.config
 	if config == nil {
 		return fmt.Errorf("configuration not parsed - Parse must be called before run")
-	}
-
-	// Initialize search attribute for visibility tracking
-	err := loadgen.InitSearchAttribute(
-		ctx,
-		e.ScenarioInfo,
-		EbbAndFlowScenarioIdSearchAttribute,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize search attribute %s: %w", EbbAndFlowScenarioIdSearchAttribute, err)
 	}
 
 	var consecutiveErrCount int
@@ -244,7 +231,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: e.Namespace,
 			Query: fmt.Sprintf("%s='%s'",
-				EbbAndFlowScenarioIdSearchAttribute, e.id),
+				loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID),
 		},
 		totalCompletedWorkflows,
 		config.VisibilityVerificationTimeout,
@@ -253,7 +240,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, EbbAndFlowScenarioIdSearchAttribute, e.ScenarioInfo.RunID)
+	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -294,12 +281,13 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Start workflow.
 	run := e.NewRun(int(iteration))
+	e.RegisterDefaultSearchAttributes(ctx)
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
-	options.SearchAttributes = map[string]interface{}{
-		EbbAndFlowScenarioIdSearchAttribute: e.id,
-	}
+	options.TypedSearchAttributes = temporal.NewSearchAttributes(
+		temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(e.ExecutionID),
+	)
 
 	workflowInput := &ebbandflow.WorkflowParams{
 		SleepActivities: &config,

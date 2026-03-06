@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
+COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
 COPY go.mod go.sum ./

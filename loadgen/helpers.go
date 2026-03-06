@@ -4,13 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/api/workflow/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // InitSearchAttribute ensures that a search attribute is defined in the namespace.
@@ -130,5 +137,107 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 	if len(errors) > 0 {
 		return fmt.Errorf("workflow verification failed: %s", strings.Join(errors, "; "))
 	}
+	return nil
+}
+
+// ExportWorkflowHistories exports workflow histories based on filter settings.
+func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
+	if info.ExportOptions.ExportHistoriesDir == "" {
+		return nil // Export disabled
+	}
+
+	// Create run-specific output directory
+	outputDir := filepath.Join(
+		info.ExportOptions.ExportHistoriesDir,
+		fmt.Sprintf("histories-%s", info.ExecutionID),
+	)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create histories directory: %w", err)
+	}
+
+	query := fmt.Sprintf("%s='%s'", OmesExecutionIDSearchAttribute, info.ExecutionID)
+	query += buildStatusFilter(info.ExportOptions.ExportHistoriesFilter, info.Logger)
+
+	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
+		Namespace: info.Namespace,
+		Query:     query,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list workflows: %w", err)
+	}
+
+	if len(resp.Executions) == 0 {
+		info.Logger.Info("No workflows found matching export filter")
+		return nil
+	}
+
+	var exportErrors []string
+	for _, execution := range resp.Executions {
+		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
+			exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
+		}
+	}
+
+	info.Logger.Infof("Exported %d workflow histories to %s",
+		len(resp.Executions)-len(exportErrors), outputDir)
+
+	if len(exportErrors) > 0 {
+		return fmt.Errorf("%d workflow history exports failed: %s", len(exportErrors), strings.Join(exportErrors, "\n "))
+	}
+	return nil
+}
+
+func buildStatusFilter(filter string, logger *zap.SugaredLogger) string {
+	switch filter {
+	case "failed":
+		return " AND ExecutionStatus = 'Failed'"
+	case "terminated":
+		return " AND ExecutionStatus = 'Terminated'"
+	case "failed,terminated", "terminated,failed":
+		return " AND (ExecutionStatus = 'Failed' OR ExecutionStatus = 'Terminated')"
+	case "all":
+		return "" // No status filter
+	default:
+		logger.Errorf("Unexpected status filter: %s", filter)
+		return ""
+	}
+}
+
+func exportSingleWorkflowHistory(
+	ctx context.Context,
+	c client.Client,
+	execution *workflow.WorkflowExecutionInfo,
+	outputDir string,
+) error {
+	workflowID := execution.Execution.WorkflowId
+	runID := execution.Execution.RunId
+
+	historyIter := c.GetWorkflowHistory(ctx, workflowID, runID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	var events []*history.HistoryEvent
+	for historyIter.HasNext() {
+		event, err := historyIter.Next()
+		if err != nil {
+			return fmt.Errorf("failed to read history event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	history := &history.History{Events: events}
+	marshaler := protojson.MarshalOptions{
+		Indent: "  ",
+	}
+	data, err := marshaler.Marshal(history)
+	if err != nil {
+		return fmt.Errorf("failed to marshal history: %w", err)
+	}
+
+	// Sanitize workflow ID for filename (i.e. for child workflows)
+	safeWorkflowID := strings.ReplaceAll(workflowID, "/", "_")
+	filename := filepath.Join(outputDir, fmt.Sprintf("%s@%s.json", safeWorkflowID, runID))
+
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return fmt.Errorf("failed to write history file: %w", err)
+	}
+
 	return nil
 }

@@ -53,7 +53,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&r.TaskQueueIndexSuffixEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
 	fs.AddFlagSet(r.ClientOptions.FlagSet())
 	fs.AddFlagSet(r.MetricsOptions.FlagSet("worker-"))
-	fs.AddFlagSet(r.WorkerOptions.FlagSet("worker-"))
+	fs.AddFlagSet(r.WorkerOptions.FlagSet())
 }
 
 func (r *workerRunner) preRun() {

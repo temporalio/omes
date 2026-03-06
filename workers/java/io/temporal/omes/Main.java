@@ -9,9 +9,12 @@ import com.uber.m3.tally.RootScopeBuilder;
 import com.uber.m3.tally.Scope;
 import com.uber.m3.tally.StatsReporter;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.util.StringUtils;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheus.PrometheusNamingConvention;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.*;
@@ -87,6 +90,12 @@ public class Main implements Runnable {
   @CommandLine.Option(names = "--tls-key-path", description = "Path to a client key for TLS")
   private String clientKeyPath;
 
+  @CommandLine.Option(names = "--auth-header", description = "Authorization header value")
+  private String authHeader;
+
+  @CommandLine.Option(names = "--build-id", description = "Build ID")
+  private String buildId;
+
   // Metric parameters
   @CommandLine.Option(
       names = "--prom-listen-address",
@@ -134,7 +143,7 @@ public class Main implements Runnable {
   private int maxConcurrentWorkflowTasks;
 
   @CommandLine.Option(
-      names = "--worker-activities-per-second",
+      names = "--activities-per-second",
       description = "Per-worker activity rate limit")
   private double workerActivitiesPerSecond;
 
@@ -183,7 +192,20 @@ public class Main implements Runnable {
       logger.addAppender(appender);
     }
     // Configure metrics
+    // Use a custom naming convention that doesn't add _seconds suffix to timers,
+    // for consistency with other Temporal SDKs
     PrometheusMeterRegistry registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+    registry
+        .config()
+        .namingConvention(
+            new PrometheusNamingConvention() {
+              @Override
+              public String name(String name, Meter.Type type, String baseUnit) {
+                // Don't add unit suffix - Temporal SDKs report duration values in seconds
+                // but don't include _seconds in the metric name
+                return NamingConvention.snakeCase.name(name, type, null);
+              }
+            });
     StatsReporter reporter = new MicrometerClientStatsReporter(registry);
     // set up a new scope, report every 10 seconds
     Scope scope =
@@ -196,14 +218,23 @@ public class Main implements Runnable {
     // Stopping the starter will stop the http server that exposes the
     // scrape endpoint.
     Runtime.getRuntime().addShutdownHook(new Thread(() -> scrapeEndpoint.stop(1)));
+    // Configure API key
+    String apiKey =
+        (authHeader != null && authHeader.startsWith("Bearer "))
+            ? authHeader.substring("Bearer ".length())
+            : authHeader;
+
     // Configure client
+    WorkflowServiceStubsOptions.Builder serviceOptionsBuilder =
+        WorkflowServiceStubsOptions.newBuilder()
+            .setTarget(serverAddress)
+            .setSslContext(sslContext)
+            .setMetricsScope(scope);
+    if (apiKey != null && !apiKey.isEmpty()) {
+      serviceOptionsBuilder.addApiKey(() -> apiKey);
+    }
     WorkflowServiceStubs service =
-        WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder()
-                .setTarget(serverAddress)
-                .setSslContext(sslContext)
-                .setMetricsScope(scope)
-                .build());
+        WorkflowServiceStubs.newServiceStubs(serviceOptionsBuilder.build());
 
     PayloadConverter[] arr = {
       new NullPayloadConverter(),

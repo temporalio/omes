@@ -60,7 +60,7 @@ public static class App
         description: "Max concurrent workflow tasks");
 
     private static readonly Option<double?> workerActivitiesPerSecond = new(
-        name: "--worker-activities-per-second",
+        name: "--activities-per-second",
         description: "Per-worker activity rate limit");
 
     private static readonly Option<string> logLevelOption = new Option<string>(
@@ -89,10 +89,18 @@ public static class App
         name: "--prom-listen-address",
         description: "Prometheus listen address");
 
+    private static readonly Option<string> authHeader = new Option<string>(
+        name: "--auth-header",
+        description: "Authorization header value");
+
     private static readonly Option<string> promHandlerPathOption = new Option<string>(
         name: "--prom-handler-path",
         description: "Prometheus handler path",
         getDefaultValue: () => "/metrics");
+
+    private static readonly Option<string> buildIdOption = new Option<string>(
+        name: "--build-id",
+        description: "Build ID");
 
     private static readonly Option<bool> errOnUnimplementedOption = new(
         name: "--err-on-unimplemented",
@@ -128,6 +136,8 @@ public static class App
         cmd.Add(clientKeyPathOption);
         cmd.Add(promAddrOption);
         cmd.Add(promHandlerPathOption);
+        cmd.Add(authHeader);
+        cmd.Add(buildIdOption);
         cmd.Add(errOnUnimplementedOption);
         cmd.SetHandler(RunCommandAsync);
         return cmd;
@@ -145,12 +155,20 @@ public static class App
             }));
         var logger = loggerFactory.CreateLogger(typeof(App));
 
-        // TODO: Configure metrics
+        var promAddr = ctx.ParseResult.GetValueForOption(promAddrOption);
+
         var runtime = new TemporalRuntime(new()
         {
             Telemetry = new TelemetryOptions
             {
-                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) }
+                Logging = new() { Filter = new(TelemetryFilterOptions.Level.Info) },
+                Metrics = promAddr != null ? new MetricsOptions
+                {
+                    Prometheus = new PrometheusOptions(promAddr)
+                    {
+                        UseSecondsForDuration = true
+                    }
+                } : null
             }
         });
 
@@ -168,6 +186,12 @@ public static class App
             };
         }
 
+        // Configure API key
+        var authHeaderValue = ctx.ParseResult.GetValueForOption(authHeader);
+        var apiKey = authHeaderValue?.StartsWith("Bearer ") == true
+            ? authHeaderValue.Substring("Bearer ".Length)
+            : authHeaderValue;
+
         var serverAddr = ctx.ParseResult.GetValueForOption(serverOption)!;
         logger.LogInformation(".NET Omes will connect to server at {}", serverAddr);
 
@@ -177,6 +201,7 @@ public static class App
                 Runtime = runtime,
                 Namespace = ctx.ParseResult.GetValueForOption(namespaceOption)!,
                 Tls = tls,
+                ApiKey = apiKey,
                 LoggerFactory = loggerFactory
             });
 

@@ -20,8 +20,11 @@ from temporalio.worker import PollerBehaviorAutoscaling, Worker
 from activities import (
     create_client_activity,
     delay_activity,
+    heartbeat_activity,
     noop_activity,
     payload_activity,
+    retryable_error_activity,
+    timeout_activity,
 )
 from kitchen_sink import KitchenSinkWorkflow
 
@@ -83,7 +86,7 @@ async def run():
         help="Max concurrent workflow tasks",
     )
     parser.add_argument(
-        "--worker-activities-per-second",
+        "--activities-per-second",
         type=float,
         help="Per-worker activity rate limit",
     )
@@ -108,7 +111,12 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
-    parser.add_argument("--tls", action="store_true", help="Enable TLS")
+    parser.add_argument(
+        "--tls",
+        type=lambda x: x.lower() in ("true", "1", "yes"),
+        default=False,
+        help="Enable TLS (true/false)",
+    )
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"
     )
@@ -118,6 +126,8 @@ async def run():
     parser.add_argument(
         "--prom-handler-path", default="/metrics", help="Prometheus handler path"
     )
+    parser.add_argument("--auth-header", default="", help="Authorization header value")
+    parser.add_argument("--build-id", default="", help="Build ID")
     args = parser.parse_args()
 
     if args.task_queue_suffix_index_start > args.task_queue_suffix_index_end:
@@ -138,6 +148,9 @@ async def run():
     elif args.tls:
         tls_config = TLSConfig()
 
+    # Configure API key
+    api_key = args.auth_header.removeprefix("Bearer ") if args.auth_header else None
+
     # Configure logging
     logger = logging.getLogger()
     logHandler = logging.StreamHandler(stream=sys.stderr)
@@ -149,7 +162,9 @@ async def run():
     logger.setLevel(nameToLevel[args.log_level.upper()])
 
     prometheus = (
-        PrometheusConfig(bind_address=args.prom_listen_address)
+        PrometheusConfig(
+            bind_address=args.prom_listen_address, durations_as_seconds=True
+        )
         if args.prom_listen_address
         else None
     )
@@ -168,6 +183,7 @@ async def run():
     client = await Client.connect(
         target_host=args.server_address,
         namespace=args.namespace,
+        api_key=api_key,
         tls=tls_config,
         runtime=new_runtime,
     )
@@ -210,8 +226,8 @@ async def run():
         worker_kwargs[
             "max_concurrent_workflow_tasks"
         ] = args.max_concurrent_workflow_tasks
-    if args.worker_activities_per_second is not None:
-        worker_kwargs["max_activities_per_second"] = args.worker_activities_per_second
+    if args.activities_per_second is not None:
+        worker_kwargs["max_activities_per_second"] = args.activities_per_second
 
     # Start all workers, throwing on first exception
     workers = [
@@ -223,6 +239,9 @@ async def run():
                 noop_activity,
                 delay_activity,
                 payload_activity,
+                retryable_error_activity,
+                timeout_activity,
+                heartbeat_activity,
                 create_client_activity(client, args.err_on_unimplemented),
             ],
             **worker_kwargs,

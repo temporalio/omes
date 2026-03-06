@@ -321,6 +321,15 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
     } else if (executeActivity.hasClient()) {
       activityType = "client";
       args.add(executeActivity.getClient());
+    } else if (executeActivity.hasRetryableError()) {
+      activityType = "retryable_error";
+      args.add(executeActivity.getRetryableError());
+    } else if (executeActivity.hasTimeout()) {
+      activityType = "timeout";
+      args.add(executeActivity.getTimeout());
+    } else if (executeActivity.hasHeartbeat()) {
+      activityType = "heartbeat";
+      args.add(executeActivity.getHeartbeat());
     } else {
       activityType = "noop";
     }
