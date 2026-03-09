@@ -118,8 +118,8 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
-		// This scenario overrides "count" so do not require it.
-		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false)
+		// This scenario overrides "count" and "sleepDuration" so do not require them.
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false, false)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
@@ -172,7 +172,7 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
 		config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 
-	var started, completed, backlog, target, rate int64
+	var started, completed, backlog, target, activities int64
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
 		select {
@@ -194,20 +194,20 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			backlog = started - completed
 
 			target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
-			activities := target - backlog
+			activities = target - backlog
 			activities = max(activities, 0)
 			activities = min(activities, config.MaxRate)
 			if activities > 0 {
 				startWG.Add(1)
-				go func(iter, rate int64) {
+				go func(iter, activities int64) {
 					defer startWG.Done()
 					errCh <- e.spawnWorkflowWithActivities(ctx, iter, activities, config.SleepActivityConfig)
-				}(iter, rate)
+				}(iter, activities)
 				iter++
 			}
 		case <-backlogTicker.C:
-			e.Logger.Debugf("Backlog: %d, target: %d, rate: %d/s, started: %d, completed: %d",
-				backlog, target, rate, started, completed)
+			e.Logger.Debugf("Backlog: %d, target: %d, last iter: %d, started: %d, completed: %d",
+				backlog, target, activities, started, completed)
 		}
 	}
 
