@@ -16,6 +16,7 @@ from temporalio.common import (
 )
 from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
+from nexus_service import KITCHEN_SINK_SERVICE_NAME
 from protos.kitchen_sink_pb2 import (
     Action,
     ActionSet,
@@ -24,6 +25,7 @@ from protos.kitchen_sink_pb2 import (
     DoActionsUpdate,
     DoSignal,
     ExecuteActivityAction,
+    ExecuteNexusOperation,
     WorkflowInput,
     WorkflowState,
 )
@@ -189,7 +191,7 @@ class KitchenSinkWorkflow:
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
-            raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
+            await handle_nexus_operation(action.nexus_operation)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -283,6 +285,50 @@ async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
     await res
 
 
+async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
+    client = workflow.create_nexus_client(
+        endpoint=nexus_op.endpoint,
+        service=KITCHEN_SINK_SERVICE_NAME,
+    )
+    headers = dict(nexus_op.headers) if nexus_op.headers else None
+    choice = nexus_op.awaitable_choice
+
+    op_input = nexus_op.input
+    output_type = str
+
+    # Track whether the operation has started so we can wait for it
+    op_started = False
+
+    # Wrap in a coroutine that starts and then awaits the result.
+    # This keeps the task alive so cancellation can propagate to the operation.
+    async def start_and_complete():
+        nonlocal op_started
+        handle = await client.start_operation(
+            nexus_op.operation,
+            op_input,
+            output_type=output_type,
+            headers=headers,
+        )
+        op_started = True
+        result = await handle
+        if nexus_op.expected_output and result != nexus_op.expected_output:
+            raise exceptions.ApplicationError(
+                f"expected output {nexus_op.expected_output!r}, got {result!r}"
+            )
+
+    async def after_nexus_started(task: asyncio.Task):
+        # Wait until the operation has started (but the task is still alive,
+        # awaiting the result, so it can be cancelled).
+        await workflow.wait_condition(lambda: op_started)
+
+    await handle_awaitable_choice(
+        start_and_complete(),
+        choice,
+        after_started_fn=after_nexus_started,
+        after_completed_fn=wait_task_complete,
+    )
+
+
 async def handle_awaitable_choice(
     awaitable: Union[Coroutine, asyncio.Task],
     choice: AwaitableChoice,
@@ -315,7 +361,7 @@ async def handle_awaitable_choice(
             did_cancel = True
         else:
             await after_completed_fn(task)
-    except asyncio.CancelledError:
+    except (asyncio.CancelledError, exceptions.NexusOperationError):
         if not did_cancel:
             raise
 

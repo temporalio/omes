@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -35,6 +36,12 @@ var (
 	}
 	onlySDK   = os.Getenv("SDK")
 	javaMutex sync.Mutex
+
+	nexusUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangJava:       "executenexusoperation is not supported",
+		clioptions.LangTypeScript: "executenexusoperation is not supported",
+		clioptions.LangDotNet:     "executenexusoperation is not supported",
+	}
 )
 
 type testCase struct {
@@ -850,6 +857,109 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
+			name: "NexusOperation/EchoSync",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation: "echo-sync",
+									Input:     "hello",
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitFinish{
+											WaitFinish: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"echo-sync"}
+				NexusOperationCompleted`),
+			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/EchoAsync",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation: "echo-async",
+									Input:     "world",
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitFinish{
+											WaitFinish: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"echo-async"}
+				NexusOperationStarted
+				NexusOperationCompleted`),
+			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/WaitForCancel",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation: "wait-for-cancel",
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_CancelAfterStarted{
+											CancelAfterStarted: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"wait-for-cancel"}
+				NexusOperationStarted
+				NexusOperationCancelRequested
+				NexusOperationCanceled`),
+			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/EchoSync/Abandon",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation: "echo-sync",
+									Input:     "abandoned",
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_Abandon{
+											Abandon: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"echo-sync"}
+				...
+				WorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -902,18 +1012,36 @@ func testForSDK(
 		defer javaMutex.Unlock()
 	}
 
+	scenarioInfo := ScenarioInfo{
+		ScenarioName: "kitchenSinkTest",
+		RunID:        fmt.Sprintf("%s-%d", sanitizeRunID(t.Name()), time.Now().Unix()),
+		Configuration: RunConfiguration{
+			Iterations: 1,
+		},
+	}
+
+	// Create a nexus endpoint targeting the task queue for this test run.
+	taskQueue := TaskQueueForRun(scenarioInfo.RunID)
+	nexusEndpoint, err := env.CreateNexusEndpoint(t.Context(), taskQueue)
+	require.NoError(t, err, "Failed to create Nexus endpoint")
+
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
+		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
+			if input.WorkflowInput != nil {
+				for _, actionSet := range input.WorkflowInput.InitialActions {
+					for _, action := range actionSet.Actions {
+						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
+							nexusOp.Endpoint = nexusEndpoint
+						}
+					}
+				}
+			}
+			return nil
+		},
 		UpdateWorkflowOptions: func(_ context.Context, _ *Run, opts *KitchenSinkWorkflowOptions) error {
 			opts.StartOptions.WorkflowExecutionTimeout = workflowTimeout
 			return nil
-		},
-	}
-	scenarioInfo := ScenarioInfo{
-		ScenarioName: "kitchenSinkTest",
-		RunID:        fmt.Sprintf("%s-%d", t.Name(), time.Now().Unix()),
-		Configuration: RunConfiguration{
-			Iterations: 1,
 		},
 	}
 
@@ -1004,7 +1132,7 @@ func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient clien
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
-			Query:     fmt.Sprintf("TaskQueue = '%s'", taskQueueName),
+			Query:     fmt.Sprintf("TaskQueue = '%s' AND WorkflowType = 'kitchenSink'", taskQueueName),
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflow executions: %w", err)
@@ -1013,7 +1141,7 @@ func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient clien
 		return nil, fmt.Errorf("no workflow executions found for task queue %s", taskQueueName)
 	}
 	if len(executions.Executions) > 1 {
-		t.Logf("Warning: found %d workflow executions for task queue %s, using the first one", len(executions.Executions), taskQueueName)
+		t.Logf("Warning: found %d kitchenSink workflow executions for task queue %s, using the first one", len(executions.Executions), taskQueueName)
 	}
 
 	execution := executions.Executions[0]
@@ -1027,4 +1155,12 @@ func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient clien
 		historyEvents = append(historyEvents, event)
 	}
 	return historyEvents, nil
+}
+
+var nonAlphanumericOrHyphen = regexp.MustCompile(`[^a-zA-Z0-9-]`)
+
+// sanitizeRunID replaces characters that are not valid in Nexus endpoint names.
+func sanitizeRunID(name string) string {
+	name = strings.ReplaceAll(name, "/", "-")
+	return nonAlphanumericOrHyphen.ReplaceAllString(name, "")
 }
