@@ -8,9 +8,9 @@ use crate::protos::temporal::{
         do_signal::do_signal_actions, do_signal::DoSignalActions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
-        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
-        WorkflowInput, WorkflowState,
+        ExecuteNexusOperation, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
+        SetPatchMarkerAction, TestInput, TimerAction, UpsertMemoAction,
+        UpsertSearchAttributesAction, WithStartClientAction, WorkflowInput, WorkflowState,
         execute_activity_action::{ClientActivity, PayloadActivity},
     },
 };
@@ -55,6 +55,10 @@ struct GenerateCmd {
     /// file.
     #[arg(long)]
     generator_config_override: Option<PathBuf>,
+
+    /// Nexus endpoint name for generated nexus operations.
+    #[arg(long)]
+    nexus_endpoint: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -76,6 +80,8 @@ struct GeneratorConfig {
     action_chances: ActionChances,
     /// Maximum number of initial actions in a workflow input
     max_initial_actions: usize,
+    /// Whether to generate local activities
+    local_activities: bool,
 }
 
 impl Default for GeneratorConfig {
@@ -89,6 +95,7 @@ impl Default for GeneratorConfig {
             max_client_action_set_wait: Duration::from_secs(1),
             action_chances: Default::default(),
             max_initial_actions: 10,
+            local_activities: false,
         }
     }
 }
@@ -127,19 +134,21 @@ struct ActionChances {
     upsert_memo: f32,
     upsert_search_attributes: f32,
     nested_action_set: f32,
+    nexus_operation: f32,
 }
 impl Default for ActionChances {
     fn default() -> Self {
         Self {
-            timer: 25.0,
-            activity: 25.0,
-            child_workflow: 25.0,
-            nested_action_set: 12.5,
+            timer: 20.0,
+            activity: 20.0,
+            child_workflow: 20.0,
+            nested_action_set: 10.0,
             patch_marker: 2.5,
             set_workflow_state: 2.5,
             await_workflow_state: 2.5,
             upsert_memo: 2.5,
             upsert_search_attributes: 2.5,
+            nexus_operation: 17.5,
         }
     }
 }
@@ -153,7 +162,8 @@ impl ActionChances {
             + self.await_workflow_state
             + self.upsert_memo
             + self.upsert_search_attributes
-            + self.nested_action_set;
+            + self.nested_action_set
+            + self.nexus_operation;
         sum == 100.0
     }
 }
@@ -187,7 +197,8 @@ define_action_chances!(
     set_workflow_state,
     await_workflow_state,
     upsert_memo,
-    upsert_search_attributes
+    upsert_search_attributes,
+    nexus_operation
 );
 
 fn main() -> Result<(), Error> {
@@ -280,6 +291,7 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
     eprintln!("Using config: {:?}", serde_json::to_string(&config)?);
     let context = ArbContext {
         config,
+        nexus_endpoint: args.nexus_endpoint,
         cur_workflow_state: Default::default(),
         action_set_nest_level: 0,
         next_signal_id: 0,
@@ -307,6 +319,7 @@ static WF_TYPE_NAME: &str = "kitchenSink";
 #[derive(Default)]
 struct ArbContext {
     config: GeneratorConfig,
+    nexus_endpoint: String,
     cur_workflow_state: WorkflowState,
     action_set_nest_level: usize,
     /// Tracks the next signal ID to assign. Signal IDs are consecutive integers starting from 0,
@@ -601,6 +614,12 @@ impl<'a> Arbitrary<'a> for Action {
             action::Variant::UpsertSearchAttributes(u.arbitrary()?)
         } else if chances.nested_action_set(action_kind) {
             action::Variant::NestedActionSet(u.arbitrary()?)
+        } else if chances.nexus_operation(action_kind) {
+            if ARB_CONTEXT.with_borrow(|c| c.action_set_nest_level >= 1) {
+                action::Variant::Timer(u.arbitrary()?)
+            } else {
+                action::Variant::NexusOperation(u.arbitrary()?)
+            }
         } else {
             unreachable!()
         };
@@ -623,7 +642,8 @@ impl<'a> Arbitrary<'a> for TimerAction {
 
 impl<'a> Arbitrary<'a> for ExecuteActivityAction {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let locality = if u.ratio(50, 100)? {
+        let local_activities = ARB_CONTEXT.with_borrow(|c| c.config.local_activities);
+        let locality = if !local_activities || u.ratio(50, 100)? {
             execute_activity_action::Locality::Remote(u.arbitrary()?)
         } else {
             execute_activity_action::Locality::IsLocal(())
@@ -688,6 +708,51 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
             input: vec![input],
             awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
+        })
+    }
+}
+
+static NEXUS_OPERATIONS: [&str; 2] = ["echo-sync", "echo-async"];
+
+impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let endpoint = ARB_CONTEXT.with_borrow(|c| c.nexus_endpoint.clone());
+        let &operation = u.choose(&NEXUS_OPERATIONS)?;
+        let val = format!("nexus-test-{}", u.int_in_range(1..=1000)?);
+        let (input, expected_output) = (val.clone(), val);
+
+        // Randomly generate before_actions for echo-async operations
+        let before_actions = if operation == "echo-async" && u.ratio(1, 3)? {
+            ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level += 1);
+            let num_actions = u.int_in_range(1..=ARB_CONTEXT.with_borrow(|c| c.config.max_actions_per_set))?;
+            let mut actions: Vec<Action> = Vec::with_capacity(num_actions);
+            for _ in 0..num_actions {
+                actions.push(u.arbitrary()?);
+            }
+            ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level -= 1);
+            vec![ActionSet { actions, concurrent: false }]
+        } else {
+            vec![]
+        };
+
+        // echo-sync completes immediately, so only WaitFinish is valid.
+        // echo-async supports all awaitable choices including cancellation.
+        let awaitable_choice = if operation == "echo-sync" {
+            Some(AwaitableChoice {
+                condition: Some(awaitable_choice::Condition::WaitFinish(())),
+            })
+        } else {
+            Some(u.arbitrary()?)
+        };
+
+        Ok(Self {
+            endpoint,
+            operation: operation.to_string(),
+            input,
+            headers: Default::default(),
+            awaitable_choice,
+            expected_output,
+            before_actions,
         })
     }
 }

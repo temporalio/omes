@@ -29,6 +29,11 @@ func init() {
 					if ok && config != "" {
 						args = append(args, "--generator-config-override", config)
 					}
+					nexusEndpoint := info.ScenarioOptions["nexus-endpoint"]
+					if nexusEndpoint == "" {
+						nexusEndpoint = loadgen.NexusEndpointForRun(info.RunID)
+					}
+					args = append(args, "--nexus-endpoint", nexusEndpoint)
 					_, ok = info.ScenarioOptions["no-output-file"]
 					if !ok {
 						args = append(args, "--output-path", "last_fuzz_run.proto")
