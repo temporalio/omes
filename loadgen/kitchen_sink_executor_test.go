@@ -38,7 +38,6 @@ var (
 
 	nexusUnsupportedSDKs = map[clioptions.Language]string{
 		clioptions.LangJava:       "executenexusoperation is not supported",
-		clioptions.LangPython:     "executenexusoperation is not supported",
 		clioptions.LangTypeScript: "executenexusoperation is not supported",
 		clioptions.LangDotNet:     "executenexusoperation is not supported",
 	}

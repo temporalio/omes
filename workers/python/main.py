@@ -27,6 +27,7 @@ from activities import (
     timeout_activity,
 )
 from kitchen_sink import KitchenSinkWorkflow
+from nexus_service import KitchenSinkNexusServiceHandler, NexusHandlerWorkflow
 
 nameToLevel = {
     "PANIC": logging.FATAL,
@@ -234,7 +235,7 @@ async def run():
         Worker(
             client,
             task_queue=task_queue,
-            workflows=[KitchenSinkWorkflow],
+            workflows=[KitchenSinkWorkflow, NexusHandlerWorkflow],
             activities=[
                 noop_activity,
                 delay_activity,
@@ -244,6 +245,7 @@ async def run():
                 heartbeat_activity,
                 create_client_activity(client, args.err_on_unimplemented),
             ],
+            nexus_service_handlers=[KitchenSinkNexusServiceHandler()],
             **worker_kwargs,
         )
         for task_queue in task_queues
