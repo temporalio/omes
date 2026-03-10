@@ -8,9 +8,9 @@ use crate::protos::temporal::{
         do_signal::do_signal_actions, do_signal::DoSignalActions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
         AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
         DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
-        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
-        WorkflowInput, WorkflowState,
+        ExecuteNexusOperation, HandlerInvocation, RemoteActivityOptions, ReturnResultAction,
+        SetPatchMarkerAction, TestInput, TimerAction, UpsertMemoAction,
+        UpsertSearchAttributesAction, WithStartClientAction, WorkflowInput, WorkflowState,
         execute_activity_action::{ClientActivity, PayloadActivity},
     },
 };
@@ -76,6 +76,9 @@ struct GeneratorConfig {
     action_chances: ActionChances,
     /// Maximum number of initial actions in a workflow input
     max_initial_actions: usize,
+    /// Nexus endpoint name to use for nexus operations. If empty, nexus operations are not generated.
+    #[serde(default)]
+    nexus_endpoint: String,
 }
 
 impl Default for GeneratorConfig {
@@ -89,6 +92,7 @@ impl Default for GeneratorConfig {
             max_client_action_set_wait: Duration::from_secs(1),
             action_chances: Default::default(),
             max_initial_actions: 10,
+            nexus_endpoint: String::new(),
         }
     }
 }
@@ -127,6 +131,8 @@ struct ActionChances {
     upsert_memo: f32,
     upsert_search_attributes: f32,
     nested_action_set: f32,
+    #[serde(default)]
+    nexus_operation: f32,
 }
 impl Default for ActionChances {
     fn default() -> Self {
@@ -140,6 +146,7 @@ impl Default for ActionChances {
             await_workflow_state: 2.5,
             upsert_memo: 2.5,
             upsert_search_attributes: 2.5,
+            nexus_operation: 0.0,
         }
     }
 }
@@ -153,7 +160,8 @@ impl ActionChances {
             + self.await_workflow_state
             + self.upsert_memo
             + self.upsert_search_attributes
-            + self.nested_action_set;
+            + self.nested_action_set
+            + self.nexus_operation;
         sum == 100.0
     }
 }
@@ -187,7 +195,8 @@ define_action_chances!(
     set_workflow_state,
     await_workflow_state,
     upsert_memo,
-    upsert_search_attributes
+    upsert_search_attributes,
+    nexus_operation
 );
 
 fn main() -> Result<(), Error> {
@@ -283,6 +292,7 @@ fn generate(args: GenerateCmd) -> Result<(), Error> {
         cur_workflow_state: Default::default(),
         action_set_nest_level: 0,
         next_signal_id: 0,
+        nexus_depth: 0,
     };
     ARB_CONTEXT.set(context);
 
@@ -312,6 +322,9 @@ struct ArbContext {
     /// Tracks the next signal ID to assign. Signal IDs are consecutive integers starting from 0,
     /// scoped to each ClientActionSet. This counter is reset at the start of each ClientActionSet.
     next_signal_id: i32,
+    /// Tracks nexus handler nesting depth to prevent infinite recursion.
+    /// Handler-side actions can themselves contain nexus operations, but only up to depth 1.
+    nexus_depth: usize,
 }
 
 impl<'a> Arbitrary<'a> for TestInput {
@@ -601,6 +614,16 @@ impl<'a> Arbitrary<'a> for Action {
             action::Variant::UpsertSearchAttributes(u.arbitrary()?)
         } else if chances.nested_action_set(action_kind) {
             action::Variant::NestedActionSet(u.arbitrary()?)
+        } else if chances.nexus_operation(action_kind) {
+            let (endpoint, nexus_depth) = ARB_CONTEXT.with_borrow(|c| {
+                (c.config.nexus_endpoint.clone(), c.nexus_depth)
+            });
+            if endpoint.is_empty() || nexus_depth > 1 {
+                // No endpoint configured or too deep, fall back to a timer
+                action::Variant::Timer(u.arbitrary()?)
+            } else {
+                action::Variant::NexusOperation(u.arbitrary()?)
+            }
         } else {
             unreachable!()
         };
@@ -688,6 +711,91 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
             input: vec![input],
             awaitable_choice: Some(u.arbitrary()?),
             ..Default::default()
+        })
+    }
+}
+
+// (operation_name, has_string_output, is_handler_actions)
+static NEXUS_OPERATIONS: [(&str, bool, bool); 4] = [
+    ("echo-sync", true, false),
+    ("echo-async", true, false),
+    ("wait-for-cancel", false, false),
+    ("run-handler-actions", false, true),
+];
+
+/// Generate random handler-side actions for a kitchenSink workflow.
+/// Increments nexus_depth while generating so nested nexus ops are depth-limited.
+fn generate_handler_workflow_input(u: &mut Unstructured) -> arbitrary::Result<WorkflowInput> {
+    // Bump depth so nested Action generation won't recurse nexus infinitely
+    ARB_CONTEXT.with_borrow_mut(|c| c.nexus_depth += 1);
+
+    let num_actions = u.int_in_range(1..=ARB_CONTEXT.with_borrow(|c| c.config.max_actions_per_set))?;
+    let mut actions: Vec<Action> = Vec::with_capacity(num_actions + 1);
+    for _ in 0..num_actions {
+        actions.push(u.arbitrary()?);
+    }
+    // Always end with a return so the handler workflow completes
+    actions.push(Action {
+        variant: Some(action::Variant::ReturnResult(ReturnResultAction {
+            return_this: Some(empty_payload()),
+        })),
+    });
+
+    let handler_input = WorkflowInput {
+        initial_actions: vec![ActionSet {
+            actions,
+            concurrent: false,
+        }],
+        expected_signal_count: 0,
+        expected_signal_ids: vec![],
+        received_signal_ids: vec![],
+    };
+
+    ARB_CONTEXT.with_borrow_mut(|c| c.nexus_depth -= 1);
+    Ok(handler_input)
+}
+
+impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let endpoint = ARB_CONTEXT.with_borrow(|c| c.config.nexus_endpoint.clone());
+        let &(operation, has_output, is_handler_actions) = u.choose(&NEXUS_OPERATIONS)?;
+
+        let (input, expected_output, handler_workflow_input) = if is_handler_actions {
+            let handler_input = generate_handler_workflow_input(u)?;
+            (String::new(), String::new(), Some(handler_input))
+        } else if has_output {
+            let val = format!("nexus-test-{}", u.int_in_range(1..=1000)?);
+            (val.clone(), val, None)
+        } else {
+            (String::new(), String::new(), None)
+        };
+
+        // For wait-for-cancel, only use cancel-related awaitable choices
+        let awaitable_choice = if operation == "wait-for-cancel" {
+            let choices = [
+                awaitable_choice::Condition::CancelBeforeStarted(()),
+                awaitable_choice::Condition::CancelAfterStarted(()),
+                awaitable_choice::Condition::Abandon(()),
+            ];
+            Some(AwaitableChoice {
+                condition: Some(u.choose(&choices)?.clone()),
+            })
+        } else if is_handler_actions {
+            // For handler actions, include all awaitable choices including cancellation
+            // to test cancelling while the handler workflow is mid-execution
+            Some(u.arbitrary()?)
+        } else {
+            Some(u.arbitrary()?)
+        };
+
+        Ok(Self {
+            endpoint,
+            operation: operation.to_string(),
+            input,
+            headers: Default::default(),
+            awaitable_choice,
+            expected_output,
+            handler_workflow_input,
         })
     }
 }
