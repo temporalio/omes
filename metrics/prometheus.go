@@ -180,7 +180,10 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 
 	// Process metrics (from sidecar)
 	queries := []metricQuery{
-		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob)},
+		{
+			"process_cpu_percent",
+			fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob),
+		},
 		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob)},
 		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, processJob)},
 	}

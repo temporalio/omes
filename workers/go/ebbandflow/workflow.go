@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/ebbandflow"
+	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers/go/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
@@ -15,15 +15,15 @@ import (
 var activityStub = Activities{}
 
 // EbbAndFlowTrackWorkflow executes activities and returns their schedule-to-start times with fairness data
-func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowParams) (*ebbandflow.WorkflowOutput, error) {
+func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *loadgen.WorkflowParams) (*loadgen.WorkflowOutput, error) {
 	rng := rand.New(rand.NewSource(workflow.Now(ctx).UnixNano()))
 	activities := params.SleepActivities.Sample(rng)
 
 	if len(activities) == 0 {
-		return &ebbandflow.WorkflowOutput{Timings: []ebbandflow.ActivityTiming{}}, nil
+		return &loadgen.WorkflowOutput{Timings: []loadgen.ActivityTiming{}}, nil
 	}
 
-	var results []ebbandflow.ActivityTiming
+	var results []loadgen.ActivityTiming
 	var resultsMutex sync.Mutex
 
 	var activityFuncs []func(workflow.Context) error
@@ -60,7 +60,7 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 			// Calculate schedule-to-start time using accurate activity timing
 			scheduleToStartMS := activityResult.ActualStartTime.Sub(activityResult.ScheduledTime)
 
-			result := ebbandflow.ActivityTiming{
+			result := loadgen.ActivityTiming{
 				ScheduleToStart: scheduleToStartMS,
 			}
 
@@ -83,5 +83,5 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 		return nil, fmt.Errorf("failed to start any of the %d activities", len(activities))
 	}
 
-	return &ebbandflow.WorkflowOutput{Timings: results}, nil
+	return &loadgen.WorkflowOutput{Timings: results}, nil
 }

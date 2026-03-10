@@ -6,7 +6,7 @@ require github.com/temporalio/omes v1.0.0
 
 require (
 	github.com/nexus-rpc/sdk-go v0.5.1
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.10.2
 	go.temporal.io/api v1.62.1
 	go.temporal.io/sdk v1.40.0
 	go.uber.org/zap v1.27.0
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.10 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
