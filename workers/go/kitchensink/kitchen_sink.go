@@ -594,8 +594,8 @@ func EchoWorkflow(ctx workflow.Context, s string) (string, error) {
 	return s, nil
 }
 
-func WaitForCancelWorkflow(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
-	return nil, workflow.Await(ctx, func() bool {
+func WaitForCancelWorkflow(ctx workflow.Context, _ string) (string, error) {
+	return "", workflow.Await(ctx, func() bool {
 		return false
 	})
 }
@@ -606,7 +606,7 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Ech
 	}, nil
 })
 
-var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
 	}, nil

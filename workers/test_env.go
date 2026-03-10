@@ -119,7 +119,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 
 	// Optionally create a Nexus endpoint
 	if cfg.nexusTaskQueue != "" {
-		endpointName, err := env.createNexusEndpoint(t.Context(), cfg.nexusTaskQueue)
+		endpointName, err := env.CreateNexusEndpoint(t.Context(), cfg.nexusTaskQueue)
 		require.NoError(t, err, "Failed to create Nexus endpoint")
 		env.nexusEndpointName = endpointName
 	}
@@ -141,8 +141,8 @@ func (env *TestEnvironment) cleanup() {
 	env.workerPool.cleanup()
 }
 
-func (env *TestEnvironment) createNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
-	endpointName := fmt.Sprintf("test-nexus-endpoint-%d", time.Now().Unix())
+func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
+	endpointName := fmt.Sprintf("test-nexus-endpoint-%s", taskQueueName)
 	_, err := env.temporalClient.OperatorService().CreateNexusEndpoint(ctx,
 		&operatorservice.CreateNexusEndpointRequest{
 			Spec: &nexus.EndpointSpec{
