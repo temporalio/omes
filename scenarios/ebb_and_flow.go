@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/ebbandflow"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 )
@@ -289,7 +288,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 		temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(e.ExecutionID),
 	)
 
-	workflowInput := &ebbandflow.WorkflowParams{
+	workflowInput := &loadgen.WorkflowParams{
 		SleepActivities: &config,
 	}
 
@@ -301,7 +300,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	e.scheduledActivities.Add(activities)
 
 	// Wait for workflow completion
-	var result ebbandflow.WorkflowOutput
+	var result loadgen.WorkflowOutput
 	err = wf.Get(ctx, &result)
 	if err != nil {
 		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)

@@ -73,7 +73,7 @@ go run ./cmd run-worker --language python --run-id my-run \
 When using the Prometheus instance (`--prom-instance-addr`), sidecar metrics can be exported to parquet files on shutdown. The export includes SDK version, build ID, and language from the `/info` endpoint.
 
 - `--prom-export-worker-metrics` - Path to export metrics parquet file
-- `--prom-export-process-job` - Prometheus job name for process metrics (default: `omes-worker-process`)
+- `--prom-export-process-job` - Prometheus job name for process metrics (default: `omes_worker_process`)
 - `--prom-export-worker-info-address` - Address to fetch `/info` from during export (e.g., `localhost:9091`)
 
 ## Usage
@@ -279,11 +279,6 @@ A scenario can only fail if an `Execute` method returns an error, that means the
 authors's hands. For enforcing a timeout for a scenario, use options like workflow execution timeouts or write a
 workflow that waits for a signal for a configurable amount of time.
 
-## TODO
-
-- Nicer output that includes resource utilization for the worker (when running all-in-one)
-- Ruby worker
-
 ## Development
 
 Use the dev command for development tasks:
@@ -307,3 +302,8 @@ All versions are defined in `versions.env`.
 * Core cancel-before-start on abandon activities: [PR](https://github.com/temporalio/sdk-core/pull/652)
 * Core panic on evicting run with buffered tasks: [PR](https://github.com/temporalio/sdk-core/pull/660)
 * Out of order replay for local activity + cancel: [PR](https://github.com/temporalio/sdk-core/issues/803)
+
+## TODO
+
+- Nicer output that includes resource utilization for the worker (when running all-in-one)
+- Ruby worker

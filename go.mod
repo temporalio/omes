@@ -9,9 +9,10 @@ require (
 	github.com/parquet-go/parquet-go v0.25.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/shirou/gopsutil/v4 v4.25.10
-	github.com/spf13/cobra v1.7.0
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/stretchr/testify v1.11.1
+	github.com/temporalio/omes/projecttests/go/harness v0.0.0
 	github.com/temporalio/features v0.0.0-20251218214540-e36ee9b474e2
 	go.temporal.io/api v1.62.1
 	go.temporal.io/sdk v1.40.0
@@ -68,6 +69,7 @@ require (
 // This is dumb, but necesary because Go (for some commands) can't figure out the transitive
 // local-replace inside of the features module itself, so we have to help it.
 replace (
+	github.com/temporalio/omes/projecttests/go/harness => ./projecttests/go/harness
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20251218214540-e36ee9b474e2
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20251218214540-e36ee9b474e2
 )
