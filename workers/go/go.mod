@@ -5,10 +5,10 @@ go 1.25.0
 require github.com/temporalio/omes v1.0.0
 
 require (
-	github.com/nexus-rpc/sdk-go v0.5.1
+	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/spf13/cobra v1.8.0
-	go.temporal.io/api v1.62.1
-	go.temporal.io/sdk v1.40.0
+	go.temporal.io/api v1.62.2
+	go.temporal.io/sdk v1.41.0
 	go.uber.org/zap v1.27.0
 )
 
