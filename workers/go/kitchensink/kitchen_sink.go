@@ -479,7 +479,14 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
-		return client.ExecuteOperation(ctx, nexusOp.Operation, nexusOp.Input, nexusOptions)
+		// Use handler_workflow_input if present, otherwise use string input
+		var input interface{}
+		if nexusOp.GetHandlerWorkflowInput() != nil {
+			input = nexusOp.GetHandlerWorkflowInput()
+		} else {
+			input = nexusOp.Input
+		}
+		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
@@ -607,6 +614,12 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Ech
 })
 
 var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
+})
+
+var RunHandlerActionsOperation = temporalnexus.NewWorkflowRunOperation("run-handler-actions", KitchenSinkWorkflow, func(ctx context.Context, input *kitchensink.WorkflowInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
 	}, nil
