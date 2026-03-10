@@ -81,8 +81,8 @@ type MetricsOptions struct {
 	// MetricsVersionTag is the SDK version/ref to report in metrics.
 	// This is used by the sidecar's /info endpoint and is NOT passed to the worker.
 	// If empty, falls back to the --version flag value.
-	MetricsVersionTag           string
-	prometheusInstanceOptions   PrometheusInstanceFlags
+	MetricsVersionTag         string
+	PrometheusInstanceOptions PrometheusInstanceFlags
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -102,7 +102,7 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
 	m.fs.StringVar(&m.WorkerProcessMetricsAddress, prefix+"process-metrics-address", "", "Address for separate process metrics server (CPU/memory only)")
 	m.fs.StringVar(&m.MetricsVersionTag, prefix+"metrics-version-tag", "", "SDK version/ref to report in metrics (sidecar only, not passed to worker)")
-	m.fs.AddFlagSet(m.prometheusInstanceOptions.FlagSet(prefix))
+	m.fs.AddFlagSet(m.PrometheusInstanceOptions.FlagSet(prefix))
 	return m.fs
 }
 
@@ -117,8 +117,8 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 	}
 
 	var promInstance *metrics.PrometheusInstance
-	if m.prometheusInstanceOptions.IsConfigured() {
-		promInstance = m.prometheusInstanceOptions.StartPrometheusInstance(ctx, logger)
+	if m.PrometheusInstanceOptions.IsConfigured() {
+		promInstance = m.PrometheusInstanceOptions.StartPrometheusInstance(ctx, logger)
 	}
 	return &metrics.Metrics{
 		Server:       server,
@@ -168,8 +168,8 @@ func (p *PrometheusInstanceFlags) FlagSet(prefix string) *pflag.FlagSet {
 	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "prom-config.yml", "Start a local Prometheus instance with the specified config file")
 	p.fs.BoolVar(&p.Snapshot, "prom-snapshot", false, "Create a TSDB snapshot on shutdown")
 	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
-	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export SDK metrics for")
-	p.fs.StringVar(&p.ExportProcessMetricsJob, prefix+"prom-export-process-job", "omes-worker-process", "Name of the process metrics job to export")
+	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", metrics.JobWorkerApp, "Name of the worker job to export SDK metrics for")
+	p.fs.StringVar(&p.ExportProcessMetricsJob, prefix+"prom-export-process-job", metrics.JobWorkerProcess, "Name of the process metrics job to export")
 	p.fs.DurationVar(&p.ExportMetricsStep, prefix+"prom-export-metrics-step", 15*time.Second, "Step interval to sample timeseries metrics")
 	p.fs.StringVar(&p.ExportWorkerInfoAddress, prefix+"prom-export-worker-info-address", "", "Address to fetch /info from during export (e.g., localhost:9091)")
 	return p.fs

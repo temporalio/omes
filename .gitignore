@@ -1,4 +1,5 @@
 .vscode
+.env
 .venv
 .mypy_cache
 go.work
@@ -21,9 +22,19 @@ omes.sln
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/
+projecttests/python/**/__pycache__/
+projecttests/typescript/node_modules/
+projecttests/typescript/lib/
 workers/*/omes-temp-*/
 workers/*/prepared/
 
-tsconfig.tsbuildinfo
+# Generated program directories (test workers)
+projecttests/*/tests/**/program-*/
 
-temporal-omes
+# Test directory build artifacts
+projecttests/*/tests/**/dist/
+projecttests/*/tests/**/node_modules/
+projecttests/*/tests/**/package-lock.json
+
+# Python egg-info
+projecttests/python/**/*.egg-info/

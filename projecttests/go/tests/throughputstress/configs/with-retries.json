@@ -1,0 +1,7 @@
+{
+    "internal_iterations": 10,
+    "continue_as_new_after_iter": 3,
+    "sleep_duration": "1s",
+    "include_retry_scenarios": true,
+    "payload_size_bytes": 256
+}

@@ -72,9 +72,11 @@ go 1.20
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
+require github.com/temporalio/omes/projecttests/go/harness v0.0.0
 
 replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../`,
+replace github.com/temporalio/omes/workers/go => ../
+replace github.com/temporalio/omes/projecttests/go/harness => ../../../projecttests/go/harness`,
 		GoMainContents: `package main
 
 import "github.com/temporalio/omes/workers/go/worker"

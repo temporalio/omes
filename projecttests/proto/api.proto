@@ -1,0 +1,33 @@
+syntax = "proto3";
+package temporal.omes.projecttests.v1;
+
+option go_package = "github.com/temporalio/omes/projecttests/api";
+
+message ConnectOptions {
+    string namespace = 3;
+    string server_address = 4;
+    string auth_header = 5;
+}
+
+message InitRequest {
+    string execution_id = 1;
+    string run_id = 2;
+    string task_queue = 3;
+    ConnectOptions connect_options = 4;
+    bytes config = 5;  // opaque project config (JSON)
+    bool register_search_attributes = 6;
+}
+
+message InitResponse {}
+
+message ExecuteRequest {
+    int64 iteration = 1;
+    bytes payload = 2;  // opaque per-iteration data
+}
+
+message ExecuteResponse {}
+
+service ProjectService {
+    rpc Init(InitRequest) returns (InitResponse) {}
+    rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
+}
