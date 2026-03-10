@@ -73,7 +73,7 @@ go run ./cmd run-worker --language python --run-id my-run \
 When using the Prometheus instance (`--prom-instance-addr`), sidecar metrics can be exported to parquet files on shutdown. The export includes SDK version, build ID, and language from the `/info` endpoint.
 
 - `--prom-export-worker-metrics` - Path to export metrics parquet file
-- `--prom-export-process-job` - Prometheus job name for process metrics (default: `omes-worker-process`)
+- `--prom-export-process-job` - Prometheus job name for process metrics (default: `omes_worker_process`)
 - `--prom-export-worker-info-address` - Address to fetch `/info` from during export (e.g., `localhost:9091`)
 
 ## Usage

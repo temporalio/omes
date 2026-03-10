@@ -1,0 +1,12 @@
+[project]
+name = "simple-test"
+version = "0.1.0"
+description = "Simple workflow load test example"
+requires-python = ">=3.10"
+dependencies = [
+    "temporalio>=1.21.0,<2",
+    "omes-starter",
+]
+
+[tool.uv.sources]
+omes-starter = { path = "../../", editable = true }

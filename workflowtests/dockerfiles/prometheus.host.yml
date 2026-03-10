@@ -1,0 +1,23 @@
+# Prometheus config for workflowtests host-worker mode.
+# Intended for dockerized Prometheus scraping worker metrics exposed on host.
+# Default scrape:
+# 1) worker SDK/application metrics from host
+# 2) worker process sidecar metrics from host
+
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Worker metrics endpoint when worker is running on host.
+  - job_name: "omes_worker_app"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:19090"]
+
+  # Worker process metrics, available when:
+  #   --worker-process-metrics-address 0.0.0.0:9091
+  - job_name: "omes_worker_process"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9091"]
