@@ -40,6 +40,55 @@ jobs:
           annotate_only: true
           skip_annotations: true
 
+  test-go-projecttests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+      - name: Run Go project tests
+        run: |
+          go test -v -race -timeout 10m ./projecttests/... 2>&1 | \
+            go run github.com/jstemmer/go-junit-report/v2@latest \
+            -set-exit-code -iocopy -out junit-projecttests-go.xml
+      - name: Publish Test Results
+        uses: mikepenz/action-junit-report@v5.6.2
+        if: failure()
+        with:
+          report_paths: "junit-projecttests-go.xml"
+          check_name: "Go Project Test Failures"
+          detailed_summary: true
+          check_annotations: false
+          annotate_only: true
+          skip_annotations: true
+
+  build-go-projecttest-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Go base workflow test image
+        run: |
+          docker build \
+            -f projecttests/dockerfiles/workflowtest-go.Dockerfile \
+            -t omes-workflowtest-go-base:ci \
+            .
+      - name: Build helloworld project overlay
+        run: |
+          docker build \
+            -f projecttests/dockerfiles/workflowtest-project.Dockerfile \
+            --build-arg BASE_IMAGE=omes-workflowtest-go-base:ci \
+            --build-arg TEST_PROJECT=go/tests/helloworld \
+            -t omes-workflowtest-helloworld:ci \
+            .
+      - name: Smoke test overlay image
+        run: |
+          docker run --rm omes-workflowtest-helloworld:ci --help
+
   check-worker:
     runs-on: ubuntu-latest
     strategy:
@@ -187,6 +236,16 @@ jobs:
       - name: Build proto
         run: |
           go run ./cmd/dev build-proto
+      - name: Install buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: Generate project protos
+        run: |
+          cd projecttests/proto && buf generate
+      - name: Lint project protos
+        run: |
+          cd projecttests/proto && buf lint
       - name: Check diff
         run: |
           git config --global core.safecrlf false
