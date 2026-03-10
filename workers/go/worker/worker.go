@@ -75,7 +75,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 		Client: client,
 	}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
+	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation, kitchensink.RunHandlerActionsOperation)
 	if err != nil {
 		panic(fmt.Sprintf("failed to register operations: %v", err))
 	}

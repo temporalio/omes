@@ -498,5 +498,7 @@ message ExecuteNexusOperation {
   AwaitableChoice awaitable_choice = 5;
   // Expected output for verification
   string expected_output = 6;
+  // WorkflowInput to pass to a handler-side kitchenSink workflow (for run-handler-actions operation)
+  WorkflowInput handler_workflow_input = 7;
 }
 

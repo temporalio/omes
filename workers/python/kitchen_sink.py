@@ -16,6 +16,7 @@ from temporalio.common import (
 )
 from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
+from nexus_service import KITCHEN_SINK_SERVICE_NAME
 from protos.kitchen_sink_pb2 import (
     Action,
     ActionSet,
@@ -24,6 +25,7 @@ from protos.kitchen_sink_pb2 import (
     DoActionsUpdate,
     DoSignal,
     ExecuteActivityAction,
+    ExecuteNexusOperation,
     WorkflowInput,
     WorkflowState,
 )
@@ -189,7 +191,7 @@ class KitchenSinkWorkflow:
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
-            raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
+            await handle_nexus_operation(action.nexus_operation)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -281,6 +283,57 @@ async def wait_task_complete(task: asyncio.Task):
 async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
     res = await task
     await res
+
+
+async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
+    client = workflow.create_nexus_client(
+        endpoint=nexus_op.endpoint,
+        service=KITCHEN_SINK_SERVICE_NAME,
+    )
+    headers = dict(nexus_op.headers) if nexus_op.headers else None
+    choice = nexus_op.awaitable_choice
+
+    # Determine input and output type based on operation
+    if nexus_op.HasField("handler_workflow_input"):
+        op_input = nexus_op.handler_workflow_input
+        output_type = RawValue
+    elif nexus_op.input:
+        op_input = nexus_op.input
+        output_type = str
+    else:
+        op_input = None
+        output_type = str
+
+    # Wrap in a coroutine that starts and waits for completion
+    async def start_and_complete():
+        handle = await client.start_operation(
+            nexus_op.operation,
+            op_input,
+            output_type=output_type,
+            headers=headers,
+        )
+        return handle
+
+    # Use handle_awaitable_choice with nexus-appropriate callbacks
+    async def after_nexus_started(task: asyncio.Task):
+        # Wait for start_operation to complete (operation is "started")
+        await task
+
+    async def after_nexus_completed(task: asyncio.Task):
+        # Wait for start, then wait for the operation result
+        handle = await task
+        result = await handle
+        if nexus_op.expected_output and result != nexus_op.expected_output:
+            raise exceptions.ApplicationError(
+                f"expected output {nexus_op.expected_output!r}, got {result!r}"
+            )
+
+    await handle_awaitable_choice(
+        start_and_complete(),
+        choice,
+        after_started_fn=after_nexus_started,
+        after_completed_fn=after_nexus_completed,
+    )
 
 
 async def handle_awaitable_choice(
