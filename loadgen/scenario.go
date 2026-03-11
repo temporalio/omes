@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -20,6 +21,8 @@ import (
 
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
+
+var sanitizeRunID = regexp.MustCompile(`[^a-zA-Z0-9-]`)
 
 const OmesExecutionIDSearchAttribute = "OmesExecutionID"
 
@@ -320,6 +323,12 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 // TaskQueueForRun returns the task queue name for the given run ID.
 func TaskQueueForRun(runID string) string {
 	return "omes-" + runID
+}
+
+// NexusEndpointForRun returns a sanitized Nexus endpoint name for the given run ID.
+func NexusEndpointForRun(runID string) string {
+	sanitized := sanitizeRunID.ReplaceAllString(strings.ReplaceAll(runID, "/", "-"), "")
+	return "test-nexus-endpoint-" + sanitized
 }
 
 func (r *Run) TaskQueue() string {

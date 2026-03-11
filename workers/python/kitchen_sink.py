@@ -189,7 +189,9 @@ class KitchenSinkWorkflow:
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
-            raise exceptions.ApplicationError("ExecuteNexusOperation is not supported")
+            raise exceptions.ApplicationError(
+                "ExecuteNexusOperation is not supported", non_retryable=True
+            )
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 

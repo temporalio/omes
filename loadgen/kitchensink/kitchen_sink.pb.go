@@ -2909,6 +2909,8 @@ type ExecuteNexusOperation struct {
 	AwaitableChoice *AwaitableChoice `protobuf:"bytes,5,opt,name=awaitable_choice,json=awaitableChoice,proto3" json:"awaitable_choice,omitempty"`
 	// Expected output for verification
 	ExpectedOutput string `protobuf:"bytes,6,opt,name=expected_output,json=expectedOutput,proto3" json:"expected_output,omitempty"`
+	// Actions to execute before returning from the handler workflow
+	BeforeActions []*ActionSet `protobuf:"bytes,7,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
 }
 
 func (x *ExecuteNexusOperation) Reset() {
@@ -2985,6 +2987,69 @@ func (x *ExecuteNexusOperation) GetExpectedOutput() string {
 	return ""
 }
 
+func (x *ExecuteNexusOperation) GetBeforeActions() []*ActionSet {
+	if x != nil {
+		return x.BeforeActions
+	}
+	return nil
+}
+
+// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
+type HandlerWorkflowInput struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Input         string       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
+	BeforeActions []*ActionSet `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
+}
+
+func (x *HandlerWorkflowInput) Reset() {
+	*x = HandlerWorkflowInput{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_kitchen_sink_proto_msgTypes[29]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *HandlerWorkflowInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HandlerWorkflowInput) ProtoMessage() {}
+
+func (x *HandlerWorkflowInput) ProtoReflect() protoreflect.Message {
+	mi := &file_kitchen_sink_proto_msgTypes[29]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HandlerWorkflowInput.ProtoReflect.Descriptor instead.
+func (*HandlerWorkflowInput) Descriptor() ([]byte, []int) {
+	return file_kitchen_sink_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *HandlerWorkflowInput) GetInput() string {
+	if x != nil {
+		return x.Input
+	}
+	return ""
+}
+
+func (x *HandlerWorkflowInput) GetBeforeActions() []*ActionSet {
+	if x != nil {
+		return x.BeforeActions
+	}
+	return nil
+}
+
 type DoSignal_DoSignalActions struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3002,7 +3067,7 @@ type DoSignal_DoSignalActions struct {
 func (x *DoSignal_DoSignalActions) Reset() {
 	*x = DoSignal_DoSignalActions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[29]
+		mi := &file_kitchen_sink_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3015,7 +3080,7 @@ func (x *DoSignal_DoSignalActions) String() string {
 func (*DoSignal_DoSignalActions) ProtoMessage() {}
 
 func (x *DoSignal_DoSignalActions) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[29]
+	mi := &file_kitchen_sink_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3092,7 +3157,7 @@ type ExecuteActivityAction_GenericActivity struct {
 func (x *ExecuteActivityAction_GenericActivity) Reset() {
 	*x = ExecuteActivityAction_GenericActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[31]
+		mi := &file_kitchen_sink_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3105,7 +3170,7 @@ func (x *ExecuteActivityAction_GenericActivity) String() string {
 func (*ExecuteActivityAction_GenericActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_GenericActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[31]
+	mi := &file_kitchen_sink_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3149,7 +3214,7 @@ type ExecuteActivityAction_ResourcesActivity struct {
 func (x *ExecuteActivityAction_ResourcesActivity) Reset() {
 	*x = ExecuteActivityAction_ResourcesActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[32]
+		mi := &file_kitchen_sink_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3162,7 +3227,7 @@ func (x *ExecuteActivityAction_ResourcesActivity) String() string {
 func (*ExecuteActivityAction_ResourcesActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_ResourcesActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[32]
+	mi := &file_kitchen_sink_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3218,7 +3283,7 @@ type ExecuteActivityAction_PayloadActivity struct {
 func (x *ExecuteActivityAction_PayloadActivity) Reset() {
 	*x = ExecuteActivityAction_PayloadActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[33]
+		mi := &file_kitchen_sink_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3231,7 +3296,7 @@ func (x *ExecuteActivityAction_PayloadActivity) String() string {
 func (*ExecuteActivityAction_PayloadActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_PayloadActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[33]
+	mi := &file_kitchen_sink_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3272,7 +3337,7 @@ type ExecuteActivityAction_ClientActivity struct {
 func (x *ExecuteActivityAction_ClientActivity) Reset() {
 	*x = ExecuteActivityAction_ClientActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[34]
+		mi := &file_kitchen_sink_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3285,7 +3350,7 @@ func (x *ExecuteActivityAction_ClientActivity) String() string {
 func (*ExecuteActivityAction_ClientActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_ClientActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[34]
+	mi := &file_kitchen_sink_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3322,7 +3387,7 @@ type ExecuteActivityAction_RetryableErrorActivity struct {
 func (x *ExecuteActivityAction_RetryableErrorActivity) Reset() {
 	*x = ExecuteActivityAction_RetryableErrorActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[35]
+		mi := &file_kitchen_sink_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3335,7 +3400,7 @@ func (x *ExecuteActivityAction_RetryableErrorActivity) String() string {
 func (*ExecuteActivityAction_RetryableErrorActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_RetryableErrorActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[35]
+	mi := &file_kitchen_sink_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3376,7 +3441,7 @@ type ExecuteActivityAction_TimeoutActivity struct {
 func (x *ExecuteActivityAction_TimeoutActivity) Reset() {
 	*x = ExecuteActivityAction_TimeoutActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[36]
+		mi := &file_kitchen_sink_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3389,7 +3454,7 @@ func (x *ExecuteActivityAction_TimeoutActivity) String() string {
 func (*ExecuteActivityAction_TimeoutActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_TimeoutActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[36]
+	mi := &file_kitchen_sink_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3444,7 +3509,7 @@ type ExecuteActivityAction_HeartbeatTimeoutActivity struct {
 func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) Reset() {
 	*x = ExecuteActivityAction_HeartbeatTimeoutActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[37]
+		mi := &file_kitchen_sink_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3457,7 +3522,7 @@ func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) String() string {
 func (*ExecuteActivityAction_HeartbeatTimeoutActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[37]
+	mi := &file_kitchen_sink_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4241,7 +4306,7 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x5f,
 	0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49,
 	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x52, 0x10, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e,
-	0x67, 0x49, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0xfe, 0x02, 0x0a, 0x15, 0x45, 0x78, 0x65, 0x63,
+	0x67, 0x49, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0xcc, 0x03, 0x0a, 0x15, 0x45, 0x78, 0x65, 0x63,
 	0x75, 0x74, 0x65, 0x4e, 0x65, 0x78, 0x75, 0x73, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f,
 	0x6e, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x6e, 0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x1c, 0x0a,
@@ -4261,46 +4326,59 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x63, 0x65, 0x52, 0x0f, 0x61, 0x77, 0x61, 0x69, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x43, 0x68, 0x6f,
 	0x69, 0x63, 0x65, 0x12, 0x27, 0x0a, 0x0f, 0x65, 0x78, 0x70, 0x65, 0x63, 0x74, 0x65, 0x64, 0x5f,
 	0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x65, 0x78,
-	0x70, 0x65, 0x63, 0x74, 0x65, 0x64, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x1a, 0x3a, 0x0a, 0x0c,
-	0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03,
-	0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14,
-	0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76,
-	0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x2a, 0xa4, 0x01, 0x0a, 0x11, 0x50, 0x61, 0x72,
-	0x65, 0x6e, 0x74, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x23,
-	0x0a, 0x1f, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50,
-	0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45,
-	0x44, 0x10, 0x00, 0x12, 0x21, 0x0a, 0x1d, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c,
-	0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x54, 0x45, 0x52, 0x4d, 0x49,
-	0x4e, 0x41, 0x54, 0x45, 0x10, 0x01, 0x12, 0x1f, 0x0a, 0x1b, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54,
-	0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x41, 0x42,
-	0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x41, 0x52, 0x45, 0x4e,
-	0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x52,
-	0x45, 0x51, 0x55, 0x45, 0x53, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10, 0x03, 0x2a,
-	0x40, 0x0a, 0x10, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49, 0x6e, 0x74,
-	0x65, 0x6e, 0x74, 0x12, 0x0f, 0x0a, 0x0b, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49,
-	0x45, 0x44, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x4d, 0x50, 0x41, 0x54, 0x49, 0x42,
-	0x4c, 0x45, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x46, 0x41, 0x55, 0x4c, 0x54, 0x10,
-	0x02, 0x2a, 0xa2, 0x01, 0x0a, 0x1d, 0x43, 0x68, 0x69, 0x6c, 0x64, 0x57, 0x6f, 0x72, 0x6b, 0x66,
-	0x6c, 0x6f, 0x77, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54,
-	0x79, 0x70, 0x65, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f,
-	0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x00, 0x12, 0x17, 0x0a, 0x13, 0x43, 0x48, 0x49,
-	0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c,
-	0x10, 0x01, 0x12, 0x28, 0x0a, 0x24, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x57,
-	0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e,
-	0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x28, 0x0a, 0x24,
+	0x70, 0x65, 0x63, 0x74, 0x65, 0x64, 0x4f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x12, 0x4c, 0x0a, 0x0e,
+	0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x07,
+	0x20, 0x03, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e,
+	0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e,
+	0x6b, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65, 0x74, 0x52, 0x0d, 0x62, 0x65, 0x66,
+	0x6f, 0x72, 0x65, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x3a, 0x0a, 0x0c, 0x48, 0x65,
+	0x61, 0x64, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
+	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x7a, 0x0a, 0x14, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65,
+	0x72, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x6e, 0x70, 0x75, 0x74, 0x12, 0x14,
+	0x0a, 0x05, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69,
+	0x6e, 0x70, 0x75, 0x74, 0x12, 0x4c, 0x0a, 0x0e, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x5f, 0x61,
+	0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x74,
+	0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74,
+	0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x53, 0x65, 0x74, 0x52, 0x0d, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x41, 0x63, 0x74, 0x69, 0x6f,
+	0x6e, 0x73, 0x2a, 0xa4, 0x01, 0x0a, 0x11, 0x50, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6c, 0x6f,
+	0x73, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x23, 0x0a, 0x1f, 0x50, 0x41, 0x52, 0x45,
+	0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f,
+	0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x21, 0x0a,
+	0x1d, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f,
+	0x4c, 0x49, 0x43, 0x59, 0x5f, 0x54, 0x45, 0x52, 0x4d, 0x49, 0x4e, 0x41, 0x54, 0x45, 0x10, 0x01,
+	0x12, 0x1f, 0x0a, 0x1b, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45,
+	0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10,
+	0x02, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53,
+	0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53, 0x54,
+	0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10, 0x03, 0x2a, 0x40, 0x0a, 0x10, 0x56, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x0f, 0x0a,
+	0x0b, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0e,
+	0x0a, 0x0a, 0x43, 0x4f, 0x4d, 0x50, 0x41, 0x54, 0x49, 0x42, 0x4c, 0x45, 0x10, 0x01, 0x12, 0x0b,
+	0x0a, 0x07, 0x44, 0x45, 0x46, 0x41, 0x55, 0x4c, 0x54, 0x10, 0x02, 0x2a, 0xa2, 0x01, 0x0a, 0x1d,
+	0x43, 0x68, 0x69, 0x6c, 0x64, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x43, 0x61, 0x6e,
+	0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x14, 0x0a,
+	0x10, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f,
+	0x4e, 0x10, 0x00, 0x12, 0x17, 0x0a, 0x13, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f,
+	0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10, 0x01, 0x12, 0x28, 0x0a, 0x24,
 	0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41,
-	0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45,
-	0x53, 0x54, 0x45, 0x44, 0x10, 0x03, 0x2a, 0x58, 0x0a, 0x18, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69,
-	0x74, 0x79, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79,
-	0x70, 0x65, 0x12, 0x0e, 0x0a, 0x0a, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c,
-	0x10, 0x00, 0x12, 0x1f, 0x0a, 0x1b, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45,
-	0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45,
-	0x44, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02,
-	0x42, 0x42, 0x0a, 0x10, 0x69, 0x6f, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e,
-	0x6f, 0x6d, 0x65, 0x73, 0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
-	0x2f, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x69, 0x6f, 0x2f, 0x6f, 0x6d, 0x65, 0x73,
-	0x2f, 0x6c, 0x6f, 0x61, 0x64, 0x67, 0x65, 0x6e, 0x2f, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e,
-	0x73, 0x69, 0x6e, 0x6b, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c,
+	0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x28, 0x0a, 0x24, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f,
+	0x57, 0x46, 0x5f, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41,
+	0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53, 0x54, 0x45, 0x44, 0x10, 0x03,
+	0x2a, 0x58, 0x0a, 0x18, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x43, 0x61, 0x6e, 0x63,
+	0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0e, 0x0a, 0x0a,
+	0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10, 0x00, 0x12, 0x1f, 0x0a, 0x1b,
+	0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f,
+	0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0b, 0x0a,
+	0x07, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02, 0x42, 0x42, 0x0a, 0x10, 0x69, 0x6f,
+	0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x5a, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x74, 0x65, 0x6d, 0x70, 0x6f,
+	0x72, 0x61, 0x6c, 0x69, 0x6f, 0x2f, 0x6f, 0x6d, 0x65, 0x73, 0x2f, 0x6c, 0x6f, 0x61, 0x64, 0x67,
+	0x65, 0x6e, 0x2f, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x73, 0x69, 0x6e, 0x6b, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -4316,7 +4394,7 @@ func file_kitchen_sink_proto_rawDescGZIP() []byte {
 }
 
 var file_kitchen_sink_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_kitchen_sink_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
+var file_kitchen_sink_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
 var file_kitchen_sink_proto_goTypes = []interface{}{
 	(ParentClosePolicy)(0),                                 // 0: temporal.omes.kitchen_sink.ParentClosePolicy
 	(VersioningIntent)(0),                                  // 1: temporal.omes.kitchen_sink.VersioningIntent
@@ -4351,34 +4429,35 @@ var file_kitchen_sink_proto_goTypes = []interface{}{
 	(*ContinueAsNewAction)(nil),                            // 30: temporal.omes.kitchen_sink.ContinueAsNewAction
 	(*RemoteActivityOptions)(nil),                          // 31: temporal.omes.kitchen_sink.RemoteActivityOptions
 	(*ExecuteNexusOperation)(nil),                          // 32: temporal.omes.kitchen_sink.ExecuteNexusOperation
-	(*DoSignal_DoSignalActions)(nil),                       // 33: temporal.omes.kitchen_sink.DoSignal.DoSignalActions
-	nil,                                                    // 34: temporal.omes.kitchen_sink.WorkflowState.KvsEntry
-	(*ExecuteActivityAction_GenericActivity)(nil),          // 35: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
-	(*ExecuteActivityAction_ResourcesActivity)(nil),        // 36: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
-	(*ExecuteActivityAction_PayloadActivity)(nil),          // 37: temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
-	(*ExecuteActivityAction_ClientActivity)(nil),           // 38: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
-	(*ExecuteActivityAction_RetryableErrorActivity)(nil),   // 39: temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
-	(*ExecuteActivityAction_TimeoutActivity)(nil),          // 40: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
-	(*ExecuteActivityAction_HeartbeatTimeoutActivity)(nil), // 41: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
-	nil,                            // 42: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
-	nil,                            // 43: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
-	nil,                            // 44: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
-	nil,                            // 45: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
-	nil,                            // 46: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
-	nil,                            // 47: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
-	nil,                            // 48: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
-	nil,                            // 49: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
-	nil,                            // 50: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
-	nil,                            // 51: temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
-	(*durationpb.Duration)(nil),    // 52: google.protobuf.Duration
-	(*v1.Payloads)(nil),            // 53: temporal.api.common.v1.Payloads
-	(*emptypb.Empty)(nil),          // 54: google.protobuf.Empty
-	(*v1.Payload)(nil),             // 55: temporal.api.common.v1.Payload
-	(*v1.RetryPolicy)(nil),         // 56: temporal.api.common.v1.RetryPolicy
-	(*v1.Priority)(nil),            // 57: temporal.api.common.v1.Priority
-	(v11.WorkflowIdReusePolicy)(0), // 58: temporal.api.enums.v1.WorkflowIdReusePolicy
-	(*v1.Memo)(nil),                // 59: temporal.api.common.v1.Memo
-	(*v12.Failure)(nil),            // 60: temporal.api.failure.v1.Failure
+	(*HandlerWorkflowInput)(nil),                           // 33: temporal.omes.kitchen_sink.HandlerWorkflowInput
+	(*DoSignal_DoSignalActions)(nil),                       // 34: temporal.omes.kitchen_sink.DoSignal.DoSignalActions
+	nil,                                                    // 35: temporal.omes.kitchen_sink.WorkflowState.KvsEntry
+	(*ExecuteActivityAction_GenericActivity)(nil),          // 36: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
+	(*ExecuteActivityAction_ResourcesActivity)(nil),        // 37: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
+	(*ExecuteActivityAction_PayloadActivity)(nil),          // 38: temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
+	(*ExecuteActivityAction_ClientActivity)(nil),           // 39: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
+	(*ExecuteActivityAction_RetryableErrorActivity)(nil),   // 40: temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
+	(*ExecuteActivityAction_TimeoutActivity)(nil),          // 41: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
+	(*ExecuteActivityAction_HeartbeatTimeoutActivity)(nil), // 42: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
+	nil,                            // 43: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
+	nil,                            // 44: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
+	nil,                            // 45: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
+	nil,                            // 46: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
+	nil,                            // 47: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
+	nil,                            // 48: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
+	nil,                            // 49: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
+	nil,                            // 50: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
+	nil,                            // 51: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
+	nil,                            // 52: temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
+	(*durationpb.Duration)(nil),    // 53: google.protobuf.Duration
+	(*v1.Payloads)(nil),            // 54: temporal.api.common.v1.Payloads
+	(*emptypb.Empty)(nil),          // 55: google.protobuf.Empty
+	(*v1.Payload)(nil),             // 56: temporal.api.common.v1.Payload
+	(*v1.RetryPolicy)(nil),         // 57: temporal.api.common.v1.RetryPolicy
+	(*v1.Priority)(nil),            // 58: temporal.api.common.v1.Priority
+	(v11.WorkflowIdReusePolicy)(0), // 59: temporal.api.enums.v1.WorkflowIdReusePolicy
+	(*v1.Memo)(nil),                // 60: temporal.api.common.v1.Memo
+	(*v12.Failure)(nil),            // 61: temporal.api.failure.v1.Failure
 }
 var file_kitchen_sink_proto_depIdxs = []int32{
 	15,  // 0: temporal.omes.kitchen_sink.TestInput.workflow_input:type_name -> temporal.omes.kitchen_sink.WorkflowInput
@@ -4386,23 +4465,23 @@ var file_kitchen_sink_proto_depIdxs = []int32{
 	7,   // 2: temporal.omes.kitchen_sink.TestInput.with_start_action:type_name -> temporal.omes.kitchen_sink.WithStartClientAction
 	6,   // 3: temporal.omes.kitchen_sink.ClientSequence.action_sets:type_name -> temporal.omes.kitchen_sink.ClientActionSet
 	8,   // 4: temporal.omes.kitchen_sink.ClientActionSet.actions:type_name -> temporal.omes.kitchen_sink.ClientAction
-	52,  // 5: temporal.omes.kitchen_sink.ClientActionSet.wait_at_end:type_name -> google.protobuf.Duration
+	53,  // 5: temporal.omes.kitchen_sink.ClientActionSet.wait_at_end:type_name -> google.protobuf.Duration
 	9,   // 6: temporal.omes.kitchen_sink.WithStartClientAction.do_signal:type_name -> temporal.omes.kitchen_sink.DoSignal
 	11,  // 7: temporal.omes.kitchen_sink.WithStartClientAction.do_update:type_name -> temporal.omes.kitchen_sink.DoUpdate
 	9,   // 8: temporal.omes.kitchen_sink.ClientAction.do_signal:type_name -> temporal.omes.kitchen_sink.DoSignal
 	10,  // 9: temporal.omes.kitchen_sink.ClientAction.do_query:type_name -> temporal.omes.kitchen_sink.DoQuery
 	11,  // 10: temporal.omes.kitchen_sink.ClientAction.do_update:type_name -> temporal.omes.kitchen_sink.DoUpdate
 	6,   // 11: temporal.omes.kitchen_sink.ClientAction.nested_actions:type_name -> temporal.omes.kitchen_sink.ClientActionSet
-	33,  // 12: temporal.omes.kitchen_sink.DoSignal.do_signal_actions:type_name -> temporal.omes.kitchen_sink.DoSignal.DoSignalActions
+	34,  // 12: temporal.omes.kitchen_sink.DoSignal.do_signal_actions:type_name -> temporal.omes.kitchen_sink.DoSignal.DoSignalActions
 	13,  // 13: temporal.omes.kitchen_sink.DoSignal.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
-	53,  // 14: temporal.omes.kitchen_sink.DoQuery.report_state:type_name -> temporal.api.common.v1.Payloads
+	54,  // 14: temporal.omes.kitchen_sink.DoQuery.report_state:type_name -> temporal.api.common.v1.Payloads
 	13,  // 15: temporal.omes.kitchen_sink.DoQuery.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
 	12,  // 16: temporal.omes.kitchen_sink.DoUpdate.do_actions:type_name -> temporal.omes.kitchen_sink.DoActionsUpdate
 	13,  // 17: temporal.omes.kitchen_sink.DoUpdate.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
 	16,  // 18: temporal.omes.kitchen_sink.DoActionsUpdate.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	54,  // 19: temporal.omes.kitchen_sink.DoActionsUpdate.reject_me:type_name -> google.protobuf.Empty
-	55,  // 20: temporal.omes.kitchen_sink.HandlerInvocation.args:type_name -> temporal.api.common.v1.Payload
-	34,  // 21: temporal.omes.kitchen_sink.WorkflowState.kvs:type_name -> temporal.omes.kitchen_sink.WorkflowState.KvsEntry
+	55,  // 19: temporal.omes.kitchen_sink.DoActionsUpdate.reject_me:type_name -> google.protobuf.Empty
+	56,  // 20: temporal.omes.kitchen_sink.HandlerInvocation.args:type_name -> temporal.api.common.v1.Payload
+	35,  // 21: temporal.omes.kitchen_sink.WorkflowState.kvs:type_name -> temporal.omes.kitchen_sink.WorkflowState.KvsEntry
 	16,  // 22: temporal.omes.kitchen_sink.WorkflowInput.initial_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
 	17,  // 23: temporal.omes.kitchen_sink.ActionSet.actions:type_name -> temporal.omes.kitchen_sink.Action
 	19,  // 24: temporal.omes.kitchen_sink.Action.timer:type_name -> temporal.omes.kitchen_sink.TimerAction
@@ -4420,87 +4499,89 @@ var file_kitchen_sink_proto_depIdxs = []int32{
 	30,  // 36: temporal.omes.kitchen_sink.Action.continue_as_new:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction
 	16,  // 37: temporal.omes.kitchen_sink.Action.nested_action_set:type_name -> temporal.omes.kitchen_sink.ActionSet
 	32,  // 38: temporal.omes.kitchen_sink.Action.nexus_operation:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation
-	54,  // 39: temporal.omes.kitchen_sink.AwaitableChoice.wait_finish:type_name -> google.protobuf.Empty
-	54,  // 40: temporal.omes.kitchen_sink.AwaitableChoice.abandon:type_name -> google.protobuf.Empty
-	54,  // 41: temporal.omes.kitchen_sink.AwaitableChoice.cancel_before_started:type_name -> google.protobuf.Empty
-	54,  // 42: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_started:type_name -> google.protobuf.Empty
-	54,  // 43: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_completed:type_name -> google.protobuf.Empty
+	55,  // 39: temporal.omes.kitchen_sink.AwaitableChoice.wait_finish:type_name -> google.protobuf.Empty
+	55,  // 40: temporal.omes.kitchen_sink.AwaitableChoice.abandon:type_name -> google.protobuf.Empty
+	55,  // 41: temporal.omes.kitchen_sink.AwaitableChoice.cancel_before_started:type_name -> google.protobuf.Empty
+	55,  // 42: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_started:type_name -> google.protobuf.Empty
+	55,  // 43: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_completed:type_name -> google.protobuf.Empty
 	18,  // 44: temporal.omes.kitchen_sink.TimerAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	35,  // 45: temporal.omes.kitchen_sink.ExecuteActivityAction.generic:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
-	52,  // 46: temporal.omes.kitchen_sink.ExecuteActivityAction.delay:type_name -> google.protobuf.Duration
-	54,  // 47: temporal.omes.kitchen_sink.ExecuteActivityAction.noop:type_name -> google.protobuf.Empty
-	36,  // 48: temporal.omes.kitchen_sink.ExecuteActivityAction.resources:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
-	37,  // 49: temporal.omes.kitchen_sink.ExecuteActivityAction.payload:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
-	38,  // 50: temporal.omes.kitchen_sink.ExecuteActivityAction.client:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
-	39,  // 51: temporal.omes.kitchen_sink.ExecuteActivityAction.retryable_error:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
-	40,  // 52: temporal.omes.kitchen_sink.ExecuteActivityAction.timeout:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
-	41,  // 53: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
-	42,  // 54: temporal.omes.kitchen_sink.ExecuteActivityAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
-	52,  // 55: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_close_timeout:type_name -> google.protobuf.Duration
-	52,  // 56: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_start_timeout:type_name -> google.protobuf.Duration
-	52,  // 57: temporal.omes.kitchen_sink.ExecuteActivityAction.start_to_close_timeout:type_name -> google.protobuf.Duration
-	52,  // 58: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat_timeout:type_name -> google.protobuf.Duration
-	56,  // 59: temporal.omes.kitchen_sink.ExecuteActivityAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
-	54,  // 60: temporal.omes.kitchen_sink.ExecuteActivityAction.is_local:type_name -> google.protobuf.Empty
+	36,  // 45: temporal.omes.kitchen_sink.ExecuteActivityAction.generic:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
+	53,  // 46: temporal.omes.kitchen_sink.ExecuteActivityAction.delay:type_name -> google.protobuf.Duration
+	55,  // 47: temporal.omes.kitchen_sink.ExecuteActivityAction.noop:type_name -> google.protobuf.Empty
+	37,  // 48: temporal.omes.kitchen_sink.ExecuteActivityAction.resources:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
+	38,  // 49: temporal.omes.kitchen_sink.ExecuteActivityAction.payload:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
+	39,  // 50: temporal.omes.kitchen_sink.ExecuteActivityAction.client:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
+	40,  // 51: temporal.omes.kitchen_sink.ExecuteActivityAction.retryable_error:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
+	41,  // 52: temporal.omes.kitchen_sink.ExecuteActivityAction.timeout:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
+	42,  // 53: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
+	43,  // 54: temporal.omes.kitchen_sink.ExecuteActivityAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
+	53,  // 55: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_close_timeout:type_name -> google.protobuf.Duration
+	53,  // 56: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_start_timeout:type_name -> google.protobuf.Duration
+	53,  // 57: temporal.omes.kitchen_sink.ExecuteActivityAction.start_to_close_timeout:type_name -> google.protobuf.Duration
+	53,  // 58: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat_timeout:type_name -> google.protobuf.Duration
+	57,  // 59: temporal.omes.kitchen_sink.ExecuteActivityAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	55,  // 60: temporal.omes.kitchen_sink.ExecuteActivityAction.is_local:type_name -> google.protobuf.Empty
 	31,  // 61: temporal.omes.kitchen_sink.ExecuteActivityAction.remote:type_name -> temporal.omes.kitchen_sink.RemoteActivityOptions
 	18,  // 62: temporal.omes.kitchen_sink.ExecuteActivityAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	57,  // 63: temporal.omes.kitchen_sink.ExecuteActivityAction.priority:type_name -> temporal.api.common.v1.Priority
-	55,  // 64: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.input:type_name -> temporal.api.common.v1.Payload
-	52,  // 65: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_execution_timeout:type_name -> google.protobuf.Duration
-	52,  // 66: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_run_timeout:type_name -> google.protobuf.Duration
-	52,  // 67: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_task_timeout:type_name -> google.protobuf.Duration
+	58,  // 63: temporal.omes.kitchen_sink.ExecuteActivityAction.priority:type_name -> temporal.api.common.v1.Priority
+	56,  // 64: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.input:type_name -> temporal.api.common.v1.Payload
+	53,  // 65: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_execution_timeout:type_name -> google.protobuf.Duration
+	53,  // 66: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_run_timeout:type_name -> google.protobuf.Duration
+	53,  // 67: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_task_timeout:type_name -> google.protobuf.Duration
 	0,   // 68: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.parent_close_policy:type_name -> temporal.omes.kitchen_sink.ParentClosePolicy
-	58,  // 69: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_id_reuse_policy:type_name -> temporal.api.enums.v1.WorkflowIdReusePolicy
-	56,  // 70: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
-	43,  // 71: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
-	44,  // 72: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.memo:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
-	45,  // 73: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
+	59,  // 69: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_id_reuse_policy:type_name -> temporal.api.enums.v1.WorkflowIdReusePolicy
+	57,  // 70: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	44,  // 71: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
+	45,  // 72: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.memo:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
+	46,  // 73: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
 	2,   // 74: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.cancellation_type:type_name -> temporal.omes.kitchen_sink.ChildWorkflowCancellationType
 	1,   // 75: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
 	18,  // 76: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	55,  // 77: temporal.omes.kitchen_sink.SendSignalAction.args:type_name -> temporal.api.common.v1.Payload
-	46,  // 78: temporal.omes.kitchen_sink.SendSignalAction.headers:type_name -> temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
+	56,  // 77: temporal.omes.kitchen_sink.SendSignalAction.args:type_name -> temporal.api.common.v1.Payload
+	47,  // 78: temporal.omes.kitchen_sink.SendSignalAction.headers:type_name -> temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
 	18,  // 79: temporal.omes.kitchen_sink.SendSignalAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
 	17,  // 80: temporal.omes.kitchen_sink.SetPatchMarkerAction.inner_action:type_name -> temporal.omes.kitchen_sink.Action
-	47,  // 81: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.search_attributes:type_name -> temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
-	59,  // 82: temporal.omes.kitchen_sink.UpsertMemoAction.upserted_memo:type_name -> temporal.api.common.v1.Memo
-	55,  // 83: temporal.omes.kitchen_sink.ReturnResultAction.return_this:type_name -> temporal.api.common.v1.Payload
-	60,  // 84: temporal.omes.kitchen_sink.ReturnErrorAction.failure:type_name -> temporal.api.failure.v1.Failure
-	55,  // 85: temporal.omes.kitchen_sink.ContinueAsNewAction.arguments:type_name -> temporal.api.common.v1.Payload
-	52,  // 86: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_run_timeout:type_name -> google.protobuf.Duration
-	52,  // 87: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_task_timeout:type_name -> google.protobuf.Duration
-	48,  // 88: temporal.omes.kitchen_sink.ContinueAsNewAction.memo:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
-	49,  // 89: temporal.omes.kitchen_sink.ContinueAsNewAction.headers:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
-	50,  // 90: temporal.omes.kitchen_sink.ContinueAsNewAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
-	56,  // 91: temporal.omes.kitchen_sink.ContinueAsNewAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	48,  // 81: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.search_attributes:type_name -> temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
+	60,  // 82: temporal.omes.kitchen_sink.UpsertMemoAction.upserted_memo:type_name -> temporal.api.common.v1.Memo
+	56,  // 83: temporal.omes.kitchen_sink.ReturnResultAction.return_this:type_name -> temporal.api.common.v1.Payload
+	61,  // 84: temporal.omes.kitchen_sink.ReturnErrorAction.failure:type_name -> temporal.api.failure.v1.Failure
+	56,  // 85: temporal.omes.kitchen_sink.ContinueAsNewAction.arguments:type_name -> temporal.api.common.v1.Payload
+	53,  // 86: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_run_timeout:type_name -> google.protobuf.Duration
+	53,  // 87: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_task_timeout:type_name -> google.protobuf.Duration
+	49,  // 88: temporal.omes.kitchen_sink.ContinueAsNewAction.memo:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
+	50,  // 89: temporal.omes.kitchen_sink.ContinueAsNewAction.headers:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
+	51,  // 90: temporal.omes.kitchen_sink.ContinueAsNewAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
+	57,  // 91: temporal.omes.kitchen_sink.ContinueAsNewAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
 	1,   // 92: temporal.omes.kitchen_sink.ContinueAsNewAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
 	3,   // 93: temporal.omes.kitchen_sink.RemoteActivityOptions.cancellation_type:type_name -> temporal.omes.kitchen_sink.ActivityCancellationType
 	1,   // 94: temporal.omes.kitchen_sink.RemoteActivityOptions.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
-	51,  // 95: temporal.omes.kitchen_sink.ExecuteNexusOperation.headers:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
+	52,  // 95: temporal.omes.kitchen_sink.ExecuteNexusOperation.headers:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
 	18,  // 96: temporal.omes.kitchen_sink.ExecuteNexusOperation.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	16,  // 97: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	16,  // 98: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions_in_main:type_name -> temporal.omes.kitchen_sink.ActionSet
-	55,  // 99: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity.arguments:type_name -> temporal.api.common.v1.Payload
-	52,  // 100: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity.run_for:type_name -> google.protobuf.Duration
-	5,   // 101: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.client_sequence:type_name -> temporal.omes.kitchen_sink.ClientSequence
-	52,  // 102: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.success_duration:type_name -> google.protobuf.Duration
-	52,  // 103: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
-	52,  // 104: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.success_duration:type_name -> google.protobuf.Duration
-	52,  // 105: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
-	55,  // 106: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 107: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 108: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 109: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 110: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 111: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 112: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 113: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	55,  // 114: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	115, // [115:115] is the sub-list for method output_type
-	115, // [115:115] is the sub-list for method input_type
-	115, // [115:115] is the sub-list for extension type_name
-	115, // [115:115] is the sub-list for extension extendee
-	0,   // [0:115] is the sub-list for field type_name
+	16,  // 97: temporal.omes.kitchen_sink.ExecuteNexusOperation.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	16,  // 98: temporal.omes.kitchen_sink.HandlerWorkflowInput.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	16,  // 99: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	16,  // 100: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions_in_main:type_name -> temporal.omes.kitchen_sink.ActionSet
+	56,  // 101: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity.arguments:type_name -> temporal.api.common.v1.Payload
+	53,  // 102: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity.run_for:type_name -> google.protobuf.Duration
+	5,   // 103: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.client_sequence:type_name -> temporal.omes.kitchen_sink.ClientSequence
+	53,  // 104: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.success_duration:type_name -> google.protobuf.Duration
+	53,  // 105: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
+	53,  // 106: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.success_duration:type_name -> google.protobuf.Duration
+	53,  // 107: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
+	56,  // 108: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 109: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 110: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 111: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 112: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 113: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 114: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 115: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	56,  // 116: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	117, // [117:117] is the sub-list for method output_type
+	117, // [117:117] is the sub-list for method input_type
+	117, // [117:117] is the sub-list for extension type_name
+	117, // [117:117] is the sub-list for extension extendee
+	0,   // [0:117] is the sub-list for field type_name
 }
 
 func init() { file_kitchen_sink_proto_init() }
@@ -4858,6 +4939,18 @@ func file_kitchen_sink_proto_init() {
 			}
 		}
 		file_kitchen_sink_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*HandlerWorkflowInput); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_kitchen_sink_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DoSignal_DoSignalActions); i {
 			case 0:
 				return &v.state
@@ -4869,7 +4962,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_GenericActivity); i {
 			case 0:
 				return &v.state
@@ -4881,7 +4974,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_ResourcesActivity); i {
 			case 0:
 				return &v.state
@@ -4893,7 +4986,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_PayloadActivity); i {
 			case 0:
 				return &v.state
@@ -4905,7 +4998,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_ClientActivity); i {
 			case 0:
 				return &v.state
@@ -4917,7 +5010,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_RetryableErrorActivity); i {
 			case 0:
 				return &v.state
@@ -4929,7 +5022,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_TimeoutActivity); i {
 			case 0:
 				return &v.state
@@ -4941,7 +5034,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_HeartbeatTimeoutActivity); i {
 			case 0:
 				return &v.state
@@ -5017,7 +5110,7 @@ func file_kitchen_sink_proto_init() {
 		(*ExecuteActivityAction_IsLocal)(nil),
 		(*ExecuteActivityAction_Remote)(nil),
 	}
-	file_kitchen_sink_proto_msgTypes[29].OneofWrappers = []interface{}{
+	file_kitchen_sink_proto_msgTypes[30].OneofWrappers = []interface{}{
 		(*DoSignal_DoSignalActions_DoActions)(nil),
 		(*DoSignal_DoSignalActions_DoActionsInMain)(nil),
 	}
@@ -5027,7 +5120,7 @@ func file_kitchen_sink_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kitchen_sink_proto_rawDesc,
 			NumEnums:      4,
-			NumMessages:   48,
+			NumMessages:   49,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
