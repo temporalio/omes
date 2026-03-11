@@ -178,8 +178,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 
-	e.RegisterDefaultSearchAttributes(ctx)
-
 	e.ScenarioInfo = info
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -214,7 +212,10 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 	}
 
-	var started, completed, backlog, target, activities int64
+	e.RegisterDefaultSearchAttributes(ctx)
+
+	var started, completed, backlog, target int64
+	lastIteration := time.Now()
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
 		select {
@@ -235,20 +236,21 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			completed = e.completedActivities.Load()
 			backlog = started - completed
 
+			backlogTarget := calculateSineTarget(
+				elapsed, config.BacklogPeriod, float64(config.MinBacklog), float64(config.MaxBacklog))
+			target = int64(math.Round(backlogTarget))
+			deficit := math.Max(0, backlogTarget-float64(backlog))
+
 			if config.RateMode {
 				rateTarget := calculateSineTarget(elapsed, config.RatePeriod, config.MinAddRate, config.MaxAddRate)
-				backlogTarget := calculateSineTarget(elapsed, config.BacklogPeriod, float64(config.MinBacklog), float64(config.MaxBacklog))
-				rateActivities := rateTarget * config.ControlInterval.Seconds()
-				backlogDeficit := math.Max(0, backlogTarget-float64(backlog))
-				activities = int64(math.Round(math.Max(rateActivities, backlogDeficit)))
-				target = int64(math.Round(backlogTarget))
-			} else {
-				target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
-				activities = target - backlog
-				activities = max(activities, 0)
-				activities = min(activities, config.MaxRate)
+				now := time.Now()
+				rateActivities := rateTarget * now.Sub(lastIteration).Seconds()
+				lastIteration = now
+				deficit = math.Max(deficit, rateActivities)
 			}
-			for batch := range batches(activities, config.BatchSize) {
+			toStart := int64(math.Round(deficit))
+			toStart = min(toStart, config.MaxRate)
+			for batch := range batches(toStart, config.BatchSize) {
 				startWG.Go(func() {
 					errCh <- e.spawnWorkflowWithActivities(ctx, iter, batch, config.SleepActivityConfig)
 				})
