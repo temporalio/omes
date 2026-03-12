@@ -75,9 +75,10 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 		Client: client,
 	}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
-	if err != nil {
-		panic(fmt.Sprintf("failed to register operations: %v", err))
+	for _, op := range []nexus.RegisterableOperation{kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation} {
+		if err := service.Register(op); err != nil {
+			panic(fmt.Sprintf("failed to register operation: %v", err))
+		}
 	}
 
 	for _, taskQueue := range taskQueues {
@@ -106,8 +107,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
 			w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
-			w.RegisterWorkflow(kitchensink.EchoWorkflow)
-			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
+			w.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})

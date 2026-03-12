@@ -32,7 +32,7 @@ const (
 // Functional options configuration
 type testEnvConfig struct {
 	executorTimeout time.Duration
-	nexusTaskQueue  string
+	runID string
 }
 
 type TestEnvOption func(*testEnvConfig)
@@ -45,9 +45,9 @@ func WithExecutorTimeout(d time.Duration) TestEnvOption {
 }
 
 // WithNexusEndpoint instructs the test environment to create a Nexus endpoint.
-func WithNexusEndpoint(taskQueue string) TestEnvOption {
+func WithNexusEndpoint(runID string) TestEnvOption {
 	return func(c *testEnvConfig) {
-		c.nexusTaskQueue = taskQueue
+		c.runID = runID
 	}
 }
 
@@ -118,8 +118,8 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	env.workerPool = NewWorkerPool(env)
 
 	// Optionally create a Nexus endpoint
-	if cfg.nexusTaskQueue != "" {
-		endpointName, err := env.createNexusEndpoint(t.Context(), cfg.nexusTaskQueue)
+	if cfg.runID != "" {
+		endpointName, err := env.CreateNexusEndpoint(t.Context(), cfg.runID)
 		require.NoError(t, err, "Failed to create Nexus endpoint")
 		env.nexusEndpointName = endpointName
 	}
@@ -141,8 +141,9 @@ func (env *TestEnvironment) cleanup() {
 	env.workerPool.cleanup()
 }
 
-func (env *TestEnvironment) createNexusEndpoint(ctx context.Context, taskQueueName string) (string, error) {
-	endpointName := fmt.Sprintf("test-nexus-endpoint-%d", time.Now().Unix())
+func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, runID string) (string, error) {
+	endpointName := loadgen.NexusEndpointForRun(runID)
+	taskQueueName := loadgen.TaskQueueForRun(runID)
 	_, err := env.temporalClient.OperatorService().CreateNexusEndpoint(ctx,
 		&operatorservice.CreateNexusEndpointRequest{
 			Spec: &nexus.EndpointSpec{
