@@ -604,6 +604,9 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 
 // EchoSyncOperation returns the input synchronously without starting a workflow.
 var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
+	if len(input.BeforeActions) > 0 {
+		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
+	}
 	return input.Input, nil
 })
 
