@@ -51904,8 +51904,8 @@ java.lang.String defaultValue) {
 
   }
 
-  public interface HandlerWorkflowInputOrBuilder extends
-      // @@protoc_insertion_point(interface_extends:temporal.omes.kitchen_sink.HandlerWorkflowInput)
+  public interface NexusHandlerInputOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:temporal.omes.kitchen_sink.NexusHandlerInput)
       com.google.protobuf.MessageOrBuilder {
 
     /**
@@ -51949,18 +51949,18 @@ java.lang.String defaultValue) {
    * Input for the Nexus handler workflow that backs echo-sync and echo-async operations
    * </pre>
    *
-   * Protobuf type {@code temporal.omes.kitchen_sink.HandlerWorkflowInput}
+   * Protobuf type {@code temporal.omes.kitchen_sink.NexusHandlerInput}
    */
-  public static final class HandlerWorkflowInput extends
+  public static final class NexusHandlerInput extends
       com.google.protobuf.GeneratedMessageV3 implements
-      // @@protoc_insertion_point(message_implements:temporal.omes.kitchen_sink.HandlerWorkflowInput)
-      HandlerWorkflowInputOrBuilder {
+      // @@protoc_insertion_point(message_implements:temporal.omes.kitchen_sink.NexusHandlerInput)
+      NexusHandlerInputOrBuilder {
   private static final long serialVersionUID = 0L;
-    // Use HandlerWorkflowInput.newBuilder() to construct.
-    private HandlerWorkflowInput(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    // Use NexusHandlerInput.newBuilder() to construct.
+    private NexusHandlerInput(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
     }
-    private HandlerWorkflowInput() {
+    private NexusHandlerInput() {
       input_ = "";
       beforeActions_ = java.util.Collections.emptyList();
     }
@@ -51969,20 +51969,20 @@ java.lang.String defaultValue) {
     @SuppressWarnings({"unused"})
     protected java.lang.Object newInstance(
         UnusedPrivateParameter unused) {
-      return new HandlerWorkflowInput();
+      return new NexusHandlerInput();
     }
 
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor;
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor;
     }
 
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_fieldAccessorTable
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.temporal.omes.KitchenSink.HandlerWorkflowInput.class, io.temporal.omes.KitchenSink.HandlerWorkflowInput.Builder.class);
+              io.temporal.omes.KitchenSink.NexusHandlerInput.class, io.temporal.omes.KitchenSink.NexusHandlerInput.Builder.class);
     }
 
     public static final int INPUT_FIELD_NUMBER = 1;
@@ -52111,10 +52111,10 @@ java.lang.String defaultValue) {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof io.temporal.omes.KitchenSink.HandlerWorkflowInput)) {
+      if (!(obj instanceof io.temporal.omes.KitchenSink.NexusHandlerInput)) {
         return super.equals(obj);
       }
-      io.temporal.omes.KitchenSink.HandlerWorkflowInput other = (io.temporal.omes.KitchenSink.HandlerWorkflowInput) obj;
+      io.temporal.omes.KitchenSink.NexusHandlerInput other = (io.temporal.omes.KitchenSink.NexusHandlerInput) obj;
 
       if (!getInput()
           .equals(other.getInput())) return false;
@@ -52142,44 +52142,44 @@ java.lang.String defaultValue) {
       return hash;
     }
 
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         java.nio.ByteBuffer data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         java.nio.ByteBuffer data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(byte[] data)
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(java.io.InputStream input)
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -52187,26 +52187,26 @@ java.lang.String defaultValue) {
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseDelimitedFrom(java.io.InputStream input)
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
 
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseDelimitedFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput parseFrom(
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -52219,7 +52219,7 @@ java.lang.String defaultValue) {
     public static Builder newBuilder() {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(io.temporal.omes.KitchenSink.HandlerWorkflowInput prototype) {
+    public static Builder newBuilder(io.temporal.omes.KitchenSink.NexusHandlerInput prototype) {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
     @java.lang.Override
@@ -52239,26 +52239,26 @@ java.lang.String defaultValue) {
      * Input for the Nexus handler workflow that backs echo-sync and echo-async operations
      * </pre>
      *
-     * Protobuf type {@code temporal.omes.kitchen_sink.HandlerWorkflowInput}
+     * Protobuf type {@code temporal.omes.kitchen_sink.NexusHandlerInput}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-        // @@protoc_insertion_point(builder_implements:temporal.omes.kitchen_sink.HandlerWorkflowInput)
-        io.temporal.omes.KitchenSink.HandlerWorkflowInputOrBuilder {
+        // @@protoc_insertion_point(builder_implements:temporal.omes.kitchen_sink.NexusHandlerInput)
+        io.temporal.omes.KitchenSink.NexusHandlerInputOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor;
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor;
       }
 
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_fieldAccessorTable
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                io.temporal.omes.KitchenSink.HandlerWorkflowInput.class, io.temporal.omes.KitchenSink.HandlerWorkflowInput.Builder.class);
+                io.temporal.omes.KitchenSink.NexusHandlerInput.class, io.temporal.omes.KitchenSink.NexusHandlerInput.Builder.class);
       }
 
-      // Construct using io.temporal.omes.KitchenSink.HandlerWorkflowInput.newBuilder()
+      // Construct using io.temporal.omes.KitchenSink.NexusHandlerInput.newBuilder()
       private Builder() {
 
       }
@@ -52286,17 +52286,17 @@ java.lang.String defaultValue) {
       @java.lang.Override
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor;
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor;
       }
 
       @java.lang.Override
-      public io.temporal.omes.KitchenSink.HandlerWorkflowInput getDefaultInstanceForType() {
-        return io.temporal.omes.KitchenSink.HandlerWorkflowInput.getDefaultInstance();
+      public io.temporal.omes.KitchenSink.NexusHandlerInput getDefaultInstanceForType() {
+        return io.temporal.omes.KitchenSink.NexusHandlerInput.getDefaultInstance();
       }
 
       @java.lang.Override
-      public io.temporal.omes.KitchenSink.HandlerWorkflowInput build() {
-        io.temporal.omes.KitchenSink.HandlerWorkflowInput result = buildPartial();
+      public io.temporal.omes.KitchenSink.NexusHandlerInput build() {
+        io.temporal.omes.KitchenSink.NexusHandlerInput result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
@@ -52304,15 +52304,15 @@ java.lang.String defaultValue) {
       }
 
       @java.lang.Override
-      public io.temporal.omes.KitchenSink.HandlerWorkflowInput buildPartial() {
-        io.temporal.omes.KitchenSink.HandlerWorkflowInput result = new io.temporal.omes.KitchenSink.HandlerWorkflowInput(this);
+      public io.temporal.omes.KitchenSink.NexusHandlerInput buildPartial() {
+        io.temporal.omes.KitchenSink.NexusHandlerInput result = new io.temporal.omes.KitchenSink.NexusHandlerInput(this);
         buildPartialRepeatedFields(result);
         if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
       }
 
-      private void buildPartialRepeatedFields(io.temporal.omes.KitchenSink.HandlerWorkflowInput result) {
+      private void buildPartialRepeatedFields(io.temporal.omes.KitchenSink.NexusHandlerInput result) {
         if (beforeActionsBuilder_ == null) {
           if (((bitField0_ & 0x00000002) != 0)) {
             beforeActions_ = java.util.Collections.unmodifiableList(beforeActions_);
@@ -52324,7 +52324,7 @@ java.lang.String defaultValue) {
         }
       }
 
-      private void buildPartial0(io.temporal.omes.KitchenSink.HandlerWorkflowInput result) {
+      private void buildPartial0(io.temporal.omes.KitchenSink.NexusHandlerInput result) {
         int from_bitField0_ = bitField0_;
         if (((from_bitField0_ & 0x00000001) != 0)) {
           result.input_ = input_;
@@ -52365,16 +52365,16 @@ java.lang.String defaultValue) {
       }
       @java.lang.Override
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof io.temporal.omes.KitchenSink.HandlerWorkflowInput) {
-          return mergeFrom((io.temporal.omes.KitchenSink.HandlerWorkflowInput)other);
+        if (other instanceof io.temporal.omes.KitchenSink.NexusHandlerInput) {
+          return mergeFrom((io.temporal.omes.KitchenSink.NexusHandlerInput)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(io.temporal.omes.KitchenSink.HandlerWorkflowInput other) {
-        if (other == io.temporal.omes.KitchenSink.HandlerWorkflowInput.getDefaultInstance()) return this;
+      public Builder mergeFrom(io.temporal.omes.KitchenSink.NexusHandlerInput other) {
+        if (other == io.temporal.omes.KitchenSink.NexusHandlerInput.getDefaultInstance()) return this;
         if (!other.getInput().isEmpty()) {
           input_ = other.input_;
           bitField0_ |= 0x00000001;
@@ -52791,23 +52791,23 @@ java.lang.String defaultValue) {
       }
 
 
-      // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.HandlerWorkflowInput)
+      // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.NexusHandlerInput)
     }
 
-    // @@protoc_insertion_point(class_scope:temporal.omes.kitchen_sink.HandlerWorkflowInput)
-    private static final io.temporal.omes.KitchenSink.HandlerWorkflowInput DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:temporal.omes.kitchen_sink.NexusHandlerInput)
+    private static final io.temporal.omes.KitchenSink.NexusHandlerInput DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new io.temporal.omes.KitchenSink.HandlerWorkflowInput();
+      DEFAULT_INSTANCE = new io.temporal.omes.KitchenSink.NexusHandlerInput();
     }
 
-    public static io.temporal.omes.KitchenSink.HandlerWorkflowInput getDefaultInstance() {
+    public static io.temporal.omes.KitchenSink.NexusHandlerInput getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<HandlerWorkflowInput>
-        PARSER = new com.google.protobuf.AbstractParser<HandlerWorkflowInput>() {
+    private static final com.google.protobuf.Parser<NexusHandlerInput>
+        PARSER = new com.google.protobuf.AbstractParser<NexusHandlerInput>() {
       @java.lang.Override
-      public HandlerWorkflowInput parsePartialFrom(
+      public NexusHandlerInput parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
@@ -52826,17 +52826,17 @@ java.lang.String defaultValue) {
       }
     };
 
-    public static com.google.protobuf.Parser<HandlerWorkflowInput> parser() {
+    public static com.google.protobuf.Parser<NexusHandlerInput> parser() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.google.protobuf.Parser<HandlerWorkflowInput> getParserForType() {
+    public com.google.protobuf.Parser<NexusHandlerInput> getParserForType() {
       return PARSER;
     }
 
     @java.lang.Override
-    public io.temporal.omes.KitchenSink.HandlerWorkflowInput getDefaultInstanceForType() {
+    public io.temporal.omes.KitchenSink.NexusHandlerInput getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -53083,10 +53083,10 @@ java.lang.String defaultValue) {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor;
+    internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_fieldAccessorTable;
+      internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -53349,24 +53349,24 @@ java.lang.String defaultValue) {
       "waitableChoice\022\027\n\017expected_output\030\006 \001(\t\022" +
       "=\n\016before_actions\030\007 \003(\0132%.temporal.omes." +
       "kitchen_sink.ActionSet\032.\n\014HeadersEntry\022\013" +
-      "\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"d\n\024Handle" +
-      "rWorkflowInput\022\r\n\005input\030\001 \001(\t\022=\n\016before_" +
-      "actions\030\002 \003(\0132%.temporal.omes.kitchen_si" +
-      "nk.ActionSet*\244\001\n\021ParentClosePolicy\022#\n\037PA" +
-      "RENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PAREN" +
-      "T_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLO" +
-      "SE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLI" +
-      "CY_REQUEST_CANCEL\020\003*@\n\020VersioningIntent\022" +
-      "\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFA" +
-      "ULT\020\002*\242\001\n\035ChildWorkflowCancellationType\022" +
-      "\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CA" +
-      "NCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COM" +
-      "PLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_R" +
-      "EQUESTED\020\003*X\n\030ActivityCancellationType\022\016" +
-      "\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMP" +
-      "LETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omes" +
-      "Z.github.com/temporalio/omes/loadgen/kit" +
-      "chensinkb\006proto3"
+      "\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"a\n\021NexusH" +
+      "andlerInput\022\r\n\005input\030\001 \001(\t\022=\n\016before_act" +
+      "ions\030\002 \003(\0132%.temporal.omes.kitchen_sink." +
+      "ActionSet*\244\001\n\021ParentClosePolicy\022#\n\037PAREN" +
+      "T_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_C" +
+      "LOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_" +
+      "POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_" +
+      "REQUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013" +
+      "UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT" +
+      "\020\002*\242\001\n\035ChildWorkflowCancellationType\022\024\n\020" +
+      "CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCE" +
+      "L\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLE" +
+      "TED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQU" +
+      "ESTED\020\003*X\n\030ActivityCancellationType\022\016\n\nT" +
+      "RY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLET" +
+      "ED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.g" +
+      "ithub.com/temporalio/omes/loadgen/kitche" +
+      "nsinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -53665,11 +53665,11 @@ java.lang.String defaultValue) {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
-    internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor =
+    internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor =
       getDescriptor().getMessageTypes().get(29);
-    internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_fieldAccessorTable = new
+    internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_temporal_omes_kitchen_sink_HandlerWorkflowInput_descriptor,
+        internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor,
         new java.lang.String[] { "Input", "BeforeActions", });
     com.google.protobuf.DurationProto.getDescriptor();
     com.google.protobuf.EmptyProto.getDescriptor();

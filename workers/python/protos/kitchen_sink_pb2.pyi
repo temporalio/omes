@@ -574,7 +574,7 @@ class ExecuteNexusOperation(_message.Message):
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
     def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
 
-class HandlerWorkflowInput(_message.Message):
+class NexusHandlerInput(_message.Message):
     __slots__ = ("input", "before_actions")
     INPUT_FIELD_NUMBER: _ClassVar[int]
     BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]

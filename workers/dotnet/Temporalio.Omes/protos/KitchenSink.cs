@@ -249,22 +249,22 @@ namespace Temporal.Omes.KitchenSink {
             "aGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEhcKD2V4cGVjdGVkX291dHB1dBgG",
             "IAEoCRI9Cg5iZWZvcmVfYWN0aW9ucxgHIAMoCzIlLnRlbXBvcmFsLm9tZXMu",
             "a2l0Y2hlbl9zaW5rLkFjdGlvblNldBouCgxIZWFkZXJzRW50cnkSCwoDa2V5",
-            "GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJkChRIYW5kbGVyV29ya2Zsb3dJ",
-            "bnB1dBINCgVpbnB1dBgBIAEoCRI9Cg5iZWZvcmVfYWN0aW9ucxgCIAMoCzIl",
-            "LnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldCqkAQoRUGFy",
-            "ZW50Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQRUNJ",
-            "RklFRBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAESHwob",
-            "UEFSRU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NMT1NF",
-            "X1BPTElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRlbnQS",
-            "DwoLVU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVMVBAC",
-            "KqIBCh1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElMRF9X",
-            "Rl9BQkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENISUxE",
-            "X1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxEX1dG",
-            "X1dBSVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5Q2Fu",
-            "Y2VsbGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5DRUxM",
-            "QVRJT05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBvcmFs",
-            "Lm9tZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4va2l0",
-            "Y2hlbnNpbmtiBnByb3RvMw=="));
+            "GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJhChFOZXh1c0hhbmRsZXJJbnB1",
+            "dBINCgVpbnB1dBgBIAEoCRI9Cg5iZWZvcmVfYWN0aW9ucxgCIAMoCzIlLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldCqkAQoRUGFyZW50",
+            "Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQRUNJRklF",
+            "RBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAESHwobUEFS",
+            "RU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NMT1NFX1BP",
+            "TElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRlbnQSDwoL",
+            "VU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVMVBACKqIB",
+            "Ch1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElMRF9XRl9B",
+            "QkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENISUxEX1dG",
+            "X1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxEX1dGX1dB",
+            "SVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5Q2FuY2Vs",
+            "bGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5DRUxMQVRJ",
+            "T05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBvcmFsLm9t",
+            "ZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4va2l0Y2hl",
+            "bnNpbmtiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -304,7 +304,7 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ContinueAsNewAction), global::Temporal.Omes.KitchenSink.ContinueAsNewAction.Parser, new[]{ "WorkflowType", "TaskQueue", "Arguments", "WorkflowRunTimeout", "WorkflowTaskTimeout", "Memo", "Headers", "SearchAttributes", "RetryPolicy", "VersioningIntent" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.HandlerWorkflowInput), global::Temporal.Omes.KitchenSink.HandlerWorkflowInput.Parser, new[]{ "Input", "BeforeActions" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerInput), global::Temporal.Omes.KitchenSink.NexusHandlerInput.Parser, new[]{ "Input", "BeforeActions" }, null, null, null, null)
           }));
     }
     #endregion
@@ -13174,16 +13174,16 @@ namespace Temporal.Omes.KitchenSink {
   /// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class HandlerWorkflowInput : pb::IMessage<HandlerWorkflowInput>
+  public sealed partial class NexusHandlerInput : pb::IMessage<NexusHandlerInput>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<HandlerWorkflowInput> _parser = new pb::MessageParser<HandlerWorkflowInput>(() => new HandlerWorkflowInput());
+    private static readonly pb::MessageParser<NexusHandlerInput> _parser = new pb::MessageParser<NexusHandlerInput>(() => new NexusHandlerInput());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<HandlerWorkflowInput> Parser { get { return _parser; } }
+    public static pb::MessageParser<NexusHandlerInput> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13199,7 +13199,7 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public HandlerWorkflowInput() {
+    public NexusHandlerInput() {
       OnConstruction();
     }
 
@@ -13207,7 +13207,7 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public HandlerWorkflowInput(HandlerWorkflowInput other) : this() {
+    public NexusHandlerInput(NexusHandlerInput other) : this() {
       input_ = other.input_;
       beforeActions_ = other.beforeActions_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -13215,8 +13215,8 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public HandlerWorkflowInput Clone() {
-      return new HandlerWorkflowInput(this);
+    public NexusHandlerInput Clone() {
+      return new NexusHandlerInput(this);
     }
 
     /// <summary>Field number for the "input" field.</summary>
@@ -13245,12 +13245,12 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as HandlerWorkflowInput);
+      return Equals(other as NexusHandlerInput);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(HandlerWorkflowInput other) {
+    public bool Equals(NexusHandlerInput other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -13328,7 +13328,7 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(HandlerWorkflowInput other) {
+    public void MergeFrom(NexusHandlerInput other) {
       if (other == null) {
         return;
       }

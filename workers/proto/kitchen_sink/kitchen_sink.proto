@@ -503,7 +503,7 @@ message ExecuteNexusOperation {
 }
 
 // Input for the Nexus handler workflow that backs echo-sync and echo-async operations
-message HandlerWorkflowInput {
+message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
 }

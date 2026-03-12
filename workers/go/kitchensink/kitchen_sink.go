@@ -479,7 +479,7 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
-		input := &kitchensink.HandlerWorkflowInput{
+		input := &kitchensink.NexusHandlerInput{
 			Input:         nexusOp.Input,
 			BeforeActions: nexusOp.BeforeActions,
 		}
@@ -590,7 +590,7 @@ type ReturnOrErr struct {
 	err   error
 }
 
-func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.HandlerWorkflowInput) (string, error) {
+func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerInput) (string, error) {
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},
 	}
@@ -603,13 +603,13 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.HandlerWorkfl
 }
 
 // EchoSyncOperation returns the input synchronously without starting a workflow.
-var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.HandlerWorkflowInput, opts nexus.StartOperationOptions) (string, error) {
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
 	return input.Input, nil
 })
 
 // EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
 // Cancel is handled automatically by the SDK via the backing workflow.
-var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.HandlerWorkflowInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
 	}, nil
