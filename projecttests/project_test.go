@@ -22,6 +22,10 @@ func TestHelloworld(t *testing.T) {
 	runProjectTest(t, "helloworld", nil)
 }
 
+func TestEbbandflow(t *testing.T) {
+	runProjectTest(t, "ebbandflow", nil)
+}
+
 func TestThroughputstress(t *testing.T) {
 	config := []byte(`{
 		"internal_iterations": 2,

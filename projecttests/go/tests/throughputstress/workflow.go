@@ -15,6 +15,7 @@ type ThroughputStressInput struct {
 	IncludeRetryScenarios  bool          `json:"include_retry_scenarios"`
 	NexusEndpoint          string        `json:"nexus_endpoint"`
 	PayloadSizeBytes       int           `json:"payload_size_bytes"`
+	ExecutionID            string        `json:"execution_id"`
 	// Continue-as-new state
 	CompletedIterations int `json:"completed_iterations"`
 }
@@ -106,6 +107,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, input ThroughputStressInput)
 		// Child workflow
 		childOpts := workflow.ChildWorkflowOptions{
 			WorkflowID: fmt.Sprintf("%s-child-%d", wfInfo.WorkflowExecution.ID, currentIter),
+			TypedSearchAttributes: temporal.NewSearchAttributes(
+				temporal.NewSearchAttributeKeyString("OmesExecutionID").ValueSet(input.ExecutionID),
+			),
 		}
 		childCtx := workflow.WithChildOptions(ctx, childOpts)
 		futures = append(futures, workflow.ExecuteChildWorkflow(childCtx, ChildWorkflow, payload))
@@ -140,6 +144,28 @@ func ThroughputStressWorkflow(ctx workflow.Context, input ThroughputStressInput)
 			workflow.ExecuteActivity(remoteCtx, ClientUpdateActivity, wfInfo.WorkflowExecution.ID, "update-with-payload-local", payload),
 		)
 
+		// Optional retry scenarios (run concurrently with other parallel ops)
+		if input.IncludeRetryScenarios {
+			retryCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+				StartToCloseTimeout: 30 * time.Second,
+				RetryPolicy:         &temporal.RetryPolicy{InitialInterval: 100 * time.Millisecond, BackoffCoefficient: 1.0, MaximumAttempts: 3},
+			})
+			futures = append(futures, workflow.ExecuteActivity(retryCtx, RetryableErrorActivity))
+
+			timeoutCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+				StartToCloseTimeout: 2 * time.Second,
+				RetryPolicy:         &temporal.RetryPolicy{InitialInterval: 100 * time.Millisecond, BackoffCoefficient: 1.0, MaximumAttempts: 3},
+			})
+			futures = append(futures, workflow.ExecuteActivity(timeoutCtx, TimeoutActivity))
+
+			heartbeatCtx := workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+				StartToCloseTimeout: 30 * time.Second,
+				HeartbeatTimeout:    5 * time.Second,
+				RetryPolicy:         &temporal.RetryPolicy{InitialInterval: 100 * time.Millisecond, BackoffCoefficient: 1.0, MaximumAttempts: 3},
+			})
+			futures = append(futures, workflow.ExecuteActivity(heartbeatCtx, HeartbeatActivity))
+		}
+
 		// Wait for all parallel futures
 		for fi, f := range futures {
 			if err := f.Get(ctx, nil); err != nil {
@@ -149,52 +175,6 @@ func ThroughputStressWorkflow(ctx workflow.Context, input ThroughputStressInput)
 
 		// Consume the self-signal
 		signalCh.Receive(ctx, nil)
-
-		// === Optional retry scenarios ===
-		if input.IncludeRetryScenarios {
-			retryOpts := workflow.ActivityOptions{
-				StartToCloseTimeout: 30 * time.Second,
-				RetryPolicy: &temporal.RetryPolicy{
-					InitialInterval:    100 * time.Millisecond,
-					BackoffCoefficient: 1.0,
-					MaximumAttempts:    3,
-				},
-			}
-			retryCtx := workflow.WithActivityOptions(ctx, retryOpts)
-
-			if err := workflow.ExecuteActivity(retryCtx, RetryableErrorActivity).Get(retryCtx, nil); err != nil {
-				return fmt.Errorf("retryable error activity failed at iter %d: %w", currentIter, err)
-			}
-
-			timeoutOpts := workflow.ActivityOptions{
-				StartToCloseTimeout: 2 * time.Second,
-				RetryPolicy: &temporal.RetryPolicy{
-					InitialInterval:    100 * time.Millisecond,
-					BackoffCoefficient: 1.0,
-					MaximumAttempts:    3,
-				},
-			}
-			timeoutCtx := workflow.WithActivityOptions(ctx, timeoutOpts)
-
-			if err := workflow.ExecuteActivity(timeoutCtx, TimeoutActivity).Get(timeoutCtx, nil); err != nil {
-				return fmt.Errorf("timeout activity failed at iter %d: %w", currentIter, err)
-			}
-
-			heartbeatOpts := workflow.ActivityOptions{
-				StartToCloseTimeout: 30 * time.Second,
-				HeartbeatTimeout:    5 * time.Second,
-				RetryPolicy: &temporal.RetryPolicy{
-					InitialInterval:    100 * time.Millisecond,
-					BackoffCoefficient: 1.0,
-					MaximumAttempts:    3,
-				},
-			}
-			heartbeatCtx := workflow.WithActivityOptions(ctx, heartbeatOpts)
-
-			if err := workflow.ExecuteActivity(heartbeatCtx, HeartbeatActivity).Get(heartbeatCtx, nil); err != nil {
-				return fmt.Errorf("heartbeat activity failed at iter %d: %w", currentIter, err)
-			}
-		}
 
 		// Check for continue-as-new
 		if input.ContinueAsNewAfterIter > 0 && (i+1)%input.ContinueAsNewAfterIter == 0 && currentIter+1 < input.InternalIterations {

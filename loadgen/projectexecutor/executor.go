@@ -8,6 +8,7 @@ import (
 
 	"github.com/temporalio/omes/internal/utils"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/metrics"
 	"github.com/temporalio/omes/projecttests/go/harness/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,9 +23,13 @@ const (
 
 	// steady-rate project executor (wrapper over generic executor)
 	SteadyRateProjectExecutor = "steady-rate"
+	// ebb-and-flow project executor (sine-wave backlog targeting)
+	EbbAndFlowProjectExecutor = "ebb-and-flow"
+	// saturation project executor (fills slots while staying below CPU ceiling)
+	SaturationProjectExecutor = "saturation"
 )
 
-func NewProjectTestExecutor(executorType string, c *ProjectHandle) (loadgen.Executor, error) {
+func NewProjectTestExecutor(executorType string, c *ProjectHandle, prometheusAddress string) (loadgen.Executor, error) {
 	switch executorType {
 	case SteadyRateProjectExecutor:
 		ge := &loadgen.GenericExecutor{
@@ -36,8 +41,48 @@ func NewProjectTestExecutor(executorType string, c *ProjectHandle) (loadgen.Exec
 			},
 		}
 		return ge, nil
+	case EbbAndFlowProjectExecutor:
+		return &ebbAndFlowProjectExecutor{client: c}, nil
+	case SaturationProjectExecutor:
+		if prometheusAddress == "" {
+			return nil, fmt.Errorf("prometheus address required for saturation executor")
+		}
+		return &saturationExecutor{
+			Execute: func(ctx context.Context, run *loadgen.Run) error {
+				_, err := c.Execute(ctx, &api.ExecuteRequest{
+					Iteration: int64(run.Iteration),
+				})
+				return err
+			},
+			Sample: func(ctx context.Context) (SaturationSample, error) {
+				results, err := metrics.QueryInstant(ctx, metrics.PromInstantQueryConfig{
+					Address: prometheusAddress,
+					Queries: []metrics.PromQuery{
+						{Name: "cpu", Query: fmt.Sprintf(`sum(process_cpu_percent{job="%s"})`, metrics.JobWorkerProcess)},
+						{Name: "slots_used", Query: fmt.Sprintf(`sum(temporal_worker_task_slots_used{job="%s"})`, metrics.JobWorkerApp)},
+						{Name: "slots_available", Query: fmt.Sprintf(`sum(temporal_worker_task_slots_available{job="%s"})`, metrics.JobWorkerApp)},
+					},
+				})
+				if err != nil {
+					return SaturationSample{}, err
+				}
+				return SaturationSample{
+					CPUPercentRaw:  results["cpu"],
+					SlotsUsed:      results["slots_used"],
+					SlotsAvailable: results["slots_available"],
+				}, nil
+			},
+			Config:            DefaultSaturationConfig(),
+			PrometheusAddress: prometheusAddress,
+		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported --executor %q (supported: %s)", executorType, SteadyRateProjectExecutor)
+		return nil, fmt.Errorf(
+			"unsupported --executor %q (supported: %s, %s, %s)",
+			executorType,
+			SteadyRateProjectExecutor,
+			EbbAndFlowProjectExecutor,
+			SaturationProjectExecutor,
+		)
 	}
 }
 

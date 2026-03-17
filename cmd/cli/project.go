@@ -138,10 +138,22 @@ func (r *projectRunner) validate(cmd *cobra.Command) error {
 		return fmt.Errorf("--spawn-worker is required when --worker-process-metrics-address is set")
 	}
 	switch r.executor {
-	case projectexecutor.SteadyRateProjectExecutor:
+	case projectexecutor.SteadyRateProjectExecutor,
+		projectexecutor.EbbAndFlowProjectExecutor,
+		projectexecutor.SaturationProjectExecutor:
 	default:
-		return fmt.Errorf("--executor must be one of: %s",
-			projectexecutor.SteadyRateProjectExecutor)
+		return fmt.Errorf("--executor must be one of: %s, %s, %s",
+			projectexecutor.SteadyRateProjectExecutor,
+			projectexecutor.EbbAndFlowProjectExecutor,
+			projectexecutor.SaturationProjectExecutor)
+	}
+	if r.executor == projectexecutor.SaturationProjectExecutor {
+		if r.metricsOpts.PrometheusAddress == "" {
+			return fmt.Errorf("--prometheus-address is required for the saturation executor")
+		}
+		if r.metricsOpts.WorkerProcessMetricsAddress == "" {
+			return fmt.Errorf("--worker-process-metrics-address is required for the saturation executor (process sidecar must be running)")
+		}
 	}
 	return nil
 }
@@ -231,7 +243,7 @@ func (r *projectRunner) run(ctx context.Context) error {
 		return fmt.Errorf("Error getting new client handle: %v", err)
 	}
 	defer projectHandle.Close()
-	executor, err := projectexecutor.NewProjectTestExecutor(r.executor, &projectHandle)
+	executor, err := projectexecutor.NewProjectTestExecutor(r.executor, &projectHandle, r.metricsOpts.PrometheusAddress)
 	if err != nil {
 		return err
 	}

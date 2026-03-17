@@ -22,6 +22,7 @@ func clientMain(ctx context.Context, config *harness.Config) error {
 		IncludeRetryScenarios:  cfg.IncludeRetryScenarios,
 		NexusEndpoint:          cfg.NexusEndpoint,
 		PayloadSizeBytes:       cfg.PayloadSizeBytes,
+		ExecutionID:            config.ExecutionID,
 	}
 
 	wf, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
