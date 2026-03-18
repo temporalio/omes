@@ -54,7 +54,7 @@ jobs:
           docker build \
             -f projecttests/dockerfiles/workflowtest-project.Dockerfile \
             --build-arg BASE_IMAGE=omes-workflowtest-go-base:ci \
-            --build-arg TEST_PROJECT=go/tests/helloworld \
+            --build-arg TEST_PROJECT=projecttests/go/tests/helloworld \
             -t omes-workflowtest-helloworld:ci \
             .
       - name: Smoke test overlay image

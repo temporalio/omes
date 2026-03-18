@@ -59,8 +59,9 @@ func ThroughputStressWorkflow(ctx workflow.Context, input ThroughputStressInput)
 		return err
 	}
 	err = workflow.SetUpdateHandler(ctx, "update-with-payload-local", func(ctx workflow.Context, payload []byte) (string, error) {
+		lCtx := workflow.WithLocalActivityOptions(ctx, localOpts)
 		var result []byte
-		if err := workflow.ExecuteLocalActivity(localCtx, PayloadActivity, payload).Get(localCtx, &result); err != nil {
+		if err := workflow.ExecuteLocalActivity(lCtx, PayloadActivity, payload).Get(lCtx, &result); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("local-received-%d-bytes", len(payload)), nil
