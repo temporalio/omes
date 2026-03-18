@@ -268,7 +268,7 @@ public class KitchenSinkWorkflow
         }
         else if (action.NexusOperation is { })
         {
-            throw new ApplicationFailureException("ExecuteNexusOperation is not supported");
+            throw new ApplicationFailureException("ExecuteNexusOperation is not supported", nonRetryable: true);
         }
         else
         {

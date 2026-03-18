@@ -550,7 +550,7 @@ class RemoteActivityOptions(_message.Message):
     def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
-    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output")
+    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output", "before_actions")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -564,10 +564,20 @@ class ExecuteNexusOperation(_message.Message):
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     endpoint: str
     operation: str
     input: str
     headers: _containers.ScalarMap[str, str]
     awaitable_choice: AwaitableChoice
     expected_output: str
-    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ...) -> None: ...
+    before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
+    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+
+class NexusHandlerInput(_message.Message):
+    __slots__ = ("input", "before_actions")
+    INPUT_FIELD_NUMBER: _ClassVar[int]
+    BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    input: str
+    before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
+    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...

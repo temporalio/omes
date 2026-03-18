@@ -479,7 +479,11 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
-		return client.ExecuteOperation(ctx, nexusOp.Operation, nexusOp.Input, nexusOptions)
+		input := &kitchensink.NexusHandlerInput{
+			Input:         nexusOp.Input,
+			BeforeActions: nexusOp.BeforeActions,
+		}
+		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
@@ -586,27 +590,29 @@ type ReturnOrErr struct {
 	err   error
 }
 
-var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, s string, opts nexus.StartOperationOptions) (string, error) {
-	return s, nil
-})
-
-func EchoWorkflow(ctx workflow.Context, s string) (string, error) {
-	return s, nil
+func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerInput) (string, error) {
+	state := KSWorkflowState{
+		workflowState: &kitchensink.WorkflowState{},
+	}
+	for _, actionSet := range input.BeforeActions {
+		if _, err := state.handleActionSet(ctx, actionSet); err != nil {
+			return "", err
+		}
+	}
+	return input.Input, nil
 }
 
-func WaitForCancelWorkflow(ctx workflow.Context, input nexus.NoValue) (nexus.NoValue, error) {
-	return nil, workflow.Await(ctx, func() bool {
-		return false
-	})
-}
-
-var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", EchoWorkflow, func(ctx context.Context, s string, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	return client.StartWorkflowOptions{
-		ID: opts.RequestID,
-	}, nil
+// EchoSyncOperation returns the input synchronously without starting a workflow.
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
+	if len(input.BeforeActions) > 0 {
+		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
+	}
+	return input.Input, nil
 })
 
-var WaitForCancelOperation = temporalnexus.NewWorkflowRunOperation("wait-for-cancel", WaitForCancelWorkflow, func(ctx context.Context, _ nexus.NoValue, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+// EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
+// Cancel is handled automatically by the SDK via the backing workflow.
+var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
 	}, nil
