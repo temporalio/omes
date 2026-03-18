@@ -313,6 +313,10 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		if !isAlreadyExistsErr {
 			return fmt.Errorf("failed to register search attributes: %w", err)
 		}
+	} else {
+		// TODO: Alan, remove this after new search attributed mapper change is implemented.
+		s.Logger.Infof("Search attributes registered, waiting 2 minutes for propagation before starting load")
+		time.Sleep(2 * time.Minute)
 	}
 	return nil
 }
