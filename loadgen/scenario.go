@@ -315,8 +315,8 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		}
 	} else {
 		// TODO: Alan, remove this after new search attributed mapper change is implemented.
-		s.Logger.Infof("Search attributes registered, waiting 2 minutes for propagation before starting load")
-		time.Sleep(2 * time.Minute)
+		s.Logger.Infof("Search attributes registered, waiting 1 minute for propagation before starting load")
+		time.Sleep(time.Minute)
 	}
 	return nil
 }
