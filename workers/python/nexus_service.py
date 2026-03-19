@@ -4,10 +4,8 @@ import nexusrpc
 import nexusrpc.handler
 from temporalio import nexus
 
-from kitchen_sink import NexusHandlerWorkflow
+from kitchen_sink import KITCHEN_SINK_SERVICE_NAME, NexusHandlerWorkflow
 from protos.kitchen_sink_pb2 import NexusHandlerInput
-
-KITCHEN_SINK_SERVICE_NAME = "kitchen-sink"
 
 
 @nexusrpc.service(name=KITCHEN_SINK_SERVICE_NAME)
