@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import nexusrpc
 import nexusrpc.handler
-from temporalio import nexus, workflow
+from temporalio import nexus
 
-from kitchen_sink import KitchenSinkWorkflow
+from kitchen_sink import NexusHandlerWorkflow
 from protos.kitchen_sink_pb2 import NexusHandlerInput
 
 KITCHEN_SINK_SERVICE_NAME = "kitchen-sink"
@@ -42,13 +42,3 @@ class KitchenSinkNexusServiceHandler:
             input,
             id=ctx.request_id,
         )
-
-
-@workflow.defn
-class NexusHandlerWorkflow:
-    @workflow.run
-    async def run(self, input: NexusHandlerInput) -> str:
-        state = KitchenSinkWorkflow()
-        for action_set in input.before_actions:
-            await state.handle_action_set(action_set)
-        return input.input

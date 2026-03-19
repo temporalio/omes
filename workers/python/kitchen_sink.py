@@ -30,6 +30,8 @@ from protos.kitchen_sink_pb2 import (
     WorkflowState,
 )
 
+KITCHEN_SINK_SERVICE_NAME = "kitchen-sink"
+
 
 @workflow.defn(name="kitchenSink")
 class KitchenSinkWorkflow:
@@ -288,7 +290,7 @@ async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
 async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
     client = workflow.create_nexus_client(
         endpoint=nexus_op.endpoint,
-        service="kitchen-sink",
+        service=KITCHEN_SINK_SERVICE_NAME,
     )
     headers = dict(nexus_op.headers) if nexus_op.headers else None
     choice = nexus_op.awaitable_choice
@@ -394,3 +396,13 @@ def convert_act_cancel_type(
         return temporalio.workflow.ActivityCancellationType.ABANDON
     else:
         raise NotImplementedError("Unknown cancellation type " + str(ctype))
+
+
+@workflow.defn
+class NexusHandlerWorkflow:
+    @workflow.run
+    async def run(self, input: NexusHandlerInput) -> str:
+        state = KitchenSinkWorkflow()
+        for action_set in input.before_actions:
+            await state.handle_action_set(action_set)
+        return input.input

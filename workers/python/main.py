@@ -26,8 +26,8 @@ from activities import (
     retryable_error_activity,
     timeout_activity,
 )
-from kitchen_sink import KitchenSinkWorkflow
-from nexus_service import KitchenSinkNexusServiceHandler, NexusHandlerWorkflow
+from kitchen_sink import KitchenSinkWorkflow, NexusHandlerWorkflow
+from nexus_service import KitchenSinkNexusServiceHandler
 
 nameToLevel = {
     "PANIC": logging.FATAL,
