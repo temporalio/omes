@@ -221,7 +221,7 @@
           "refId": "A"
         }
       ],
-      "title": "Frontend RPC by method",
+      "title": "Frontend RPC by method (req/s)",
       "type": "timeseries"
     },
     {
@@ -279,7 +279,7 @@
           "refId": "A"
         }
       ],
-      "title": "History RPC by method",
+      "title": "History RPC by method (req/s)",
       "type": "timeseries"
     },
     {
@@ -337,7 +337,7 @@
           "refId": "A"
         }
       ],
-      "title": "Matching RPC by method",
+      "title": "Matching RPC by method (req/s)",
       "type": "timeseries"
     },
     {
@@ -403,7 +403,7 @@
           "refId": "B"
         }
       ],
-      "title": "Astra writes by table",
+      "title": "Astra writes by table (req/s)",
       "description": "Validate r_Cass = 3/7 for writes. cassandra_query filtered to verb!=select; cassandra_batch is always writes.",
       "type": "timeseries"
     },
@@ -462,7 +462,7 @@
           "refId": "A"
         }
       ],
-      "title": "Astra reads by table",
+      "title": "Astra reads by table (req/s)",
       "description": "Reads are not expected to differ much between SAW and SAA (similar caching, ~1 read on creation).",
       "type": "timeseries"
     },
@@ -521,7 +521,7 @@
           "refId": "A"
         }
       ],
-      "title": "WAL operation rate by type",
+      "title": "WAL operation rate by type (ops/s)",
       "description": "Covers both reads and writes (no separate write-only metric). Expect HISTORY_EVENT_WAL activity for SAW only; both use MUTABLE_STATE_WAL.",
       "type": "timeseries"
     },
@@ -580,7 +580,7 @@
           "refId": "A"
         }
       ],
-      "title": "Visibility persistence rate by operation",
+      "title": "Visibility persistence rate by operation (ops/s)",
       "description": "OSS visibility_persistence_requests counter, tagged by operation (RecordWorkflowExecutionStarted, RecordWorkflowExecutionClosed, UpsertWorkflowExecution, DeleteWorkflowExecution).",
       "type": "timeseries"
     },
@@ -647,7 +647,7 @@
           "refId": "B"
         }
       ],
-      "title": "Sync vs async match rate",
+      "title": "Sync vs async match rate (matches/s)",
       "description": "Health check on experimental conditions. Async match means tasks went through persistence/backlog rather than being dispatched directly to a waiting poller.",
       "type": "timeseries"
     }
