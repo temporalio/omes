@@ -20,11 +20,20 @@ payload activity (256B in, 256B out), no retry, no heartbeat. Very close to
 Both use the same task queue (derived from run-id) and the same Go worker (which already registers
 the `payload` activity).
 
-### Why GenericExecutor for SAA
+### Why different executor types
 
-`KitchenSinkExecutor` always starts a kitchen-sink workflow. The SAA scenario must call
-`client.ExecuteActivity` directly — no workflow. `GenericExecutor` gives us the `Execute` function
-hook, plus all the concurrency/rate-limiting/duration infrastructure.
+`KitchenSinkExecutor` always starts a kitchen-sink workflow — this is inherently what SAW needs.
+SAA must call `client.ExecuteActivity` directly (no workflow). `GenericExecutor` gives us the
+`Execute` function hook for this.
+
+Both executor types share the same iteration-driving machinery: `KitchenSinkExecutor` wraps
+`GenericExecutor`, so concurrency control, rate limiting, and duration handling are identical.
+The only difference between the scenarios is what each iteration *does*, which is exactly the
+variable under test.
+
+The activity configuration (256B payload, no retry, 60s timeout) is specified independently in each
+scenario. These are simple literal values; sharing them via an abstraction would add indirection
+without meaningful deduplication.
 
 ### SDK version
 
@@ -37,99 +46,52 @@ Both scenarios use the `payload` activity type (already registered in the Go wor
 Arguments: `inputData []byte` (256 bytes), `bytesToReturn int32` (256). No heartbeat. Retry policy
 `MaximumAttempts: 1` (no retries). `ScheduleToCloseTimeout: 60s`.
 
-## Implementation
+## Implementation steps
 
 ### Step 1: Create `scenarios/saa_cogs_saw.go`
 
-```go
-package scenarios
-
-func init() {
-    loadgen.MustRegisterScenario(loadgen.Scenario{
-        Description: "SAW baseline for COGS: single workflow executing one payload activity.",
-        ExecutorFn: func() loadgen.Executor {
-            return loadgen.KitchenSinkExecutor{
-                TestInput: &kitchensink.TestInput{
-                    WorkflowInput: &kitchensink.WorkflowInput{
-                        InitialActions: []*kitchensink.ActionSet{
-                            payloadActivityActionSet(),
-                        },
-                    },
-                },
-            }
-        },
-    })
-}
-```
-
-Where `payloadActivityActionSet()` creates a `PayloadActivity(256, 256, ...)` plus
-`ReturnResultAction`, with `MaximumAttempts: 1`, `ScheduleToCloseTimeout: 60s`.
+`KitchenSinkExecutor` with a single `ActionSet` containing a `PayloadActivity(256, 256)` action
+(with `MaximumAttempts: 1`, `ScheduleToCloseTimeout: 60s`) followed by a `ReturnResultAction`.
 
 ### Step 2: Create `scenarios/saa_cogs_saa.go`
 
-```go
-package scenarios
+`GenericExecutor` whose `Execute` function:
+1. Calls `run.Client.ExecuteActivity()` with `StartActivityOptions` (ID derived from
+   run/execution/iteration, task queue from `run.TaskQueue()`, same timeout and retry policy as SAW).
+2. Passes activity type `"payload"` by name with `[]byte` (256 zeros) and `int32(256)` as args.
+3. Calls `handle.Get()` to wait for the result.
 
-func init() {
-    loadgen.MustRegisterScenario(loadgen.Scenario{
-        Description: "SAA for COGS: standalone activity with payload, no workflow.",
-        ExecutorFn: func() loadgen.Executor {
-            return &loadgen.GenericExecutor{
-                Execute: executeSAA,
-            }
-        },
-    })
-}
+### Step 3: Create `commands.sh`
 
-func executeSAA(ctx context.Context, run *loadgen.Run) error {
-    inputData := make([]byte, 256)
-    handle, err := run.Client.ExecuteActivity(ctx, client.StartActivityOptions{
-        ID:                     fmt.Sprintf("a-%s-%s-%d", run.RunID, run.ExecutionID, run.Iteration),
-        TaskQueue:              run.TaskQueue(),
-        ScheduleToCloseTimeout: 60 * time.Second,
-        RetryPolicy:            &temporal.RetryPolicy{MaximumAttempts: 1},
-    }, "payload", inputData, int32(256))
-    if err != nil {
-        return err
-    }
-    var result []byte
-    return handle.Get(ctx, &result)
-}
-```
-
-This calls `"payload"` by name (string) so the SDK dispatches it to the worker which has it
-registered as `activity.RegisterOptions{Name: "payload"}`.
-
-### Step 3: Create `commands.sh` — useful shell commands
-
-A file with terse comments documenting how to run the scenarios locally and against the cloud cell.
+Useful shell commands with terse comments for:
+- Local testing with `--embedded-server`
+- Cloud cell verification via `ct`
+- Running scenarios against `s-saa-cogs`
 
 ### Step 4: Test locally
 
-Run against local dev server using `run-scenario-with-worker`:
-
-```sh
-# SAW
-go run ./cmd run-scenario-with-worker \
-    --scenario saa_cogs_saw --language go \
-    --iterations 5
-
-# SAA
-go run ./cmd run-scenario-with-worker \
-    --scenario saa_cogs_saa --language go \
-    --iterations 5
-```
+- `go build ./...` and `go vet ./...`
+- `go run ./cmd list-scenarios` shows both new scenarios
+- SAW: `go run ./cmd run-scenario-with-worker --scenario saa_cogs_saw --language go --iterations 5 --embedded-server`
+- SAA: same command with `saa_cogs_saa` — will get "Standalone activity is disabled" from the dev
+  server (v1.30.1 doesn't have the feature flag), confirming the code path reaches
+  `StartActivityExecution`. Will succeed on the cloud cell.
 
 ### Step 5: Connect to cloud cell
 
-Use `omni admintools` to verify cell state, then obtain credentials. Run scenarios against
-`s-saa-cogs-marathon.e2e.tmprl-test.cloud:7233` with TLS.
+1. Verify cell: `ct kubectl --context s-saa-cogs get pods -n temporal`
+2. Check namespace: `ct admintools --context s-saa-cogs -- temporal operator namespace describe s-saa-cogs-marathon.e2e`
+3. Obtain operator TLS certs (from k8s secrets via `ct`, or ask Stephen)
+4. Point Grafana dashboard at `s-saa-cogs`, observe idle state
+5. Run worker + SAW scenario against the cell, observe activity in dashboard
+6. Run worker + SAA scenario, observe activity
 
 ## Verification
 
 1. **Build**: `go build ./...` succeeds.
-2. **Lint/vet**: `go vet ./...` succeeds.
-3. **Local test — SAW**: `go run ./cmd run-scenario-with-worker --scenario saa_cogs_saw --language go --iterations 5` completes successfully.
-4. **Local test — SAA**: `go run ./cmd run-scenario-with-worker --scenario saa_cogs_saa --language go --iterations 5` completes successfully.
-5. **List scenarios**: `go run ./cmd list-scenarios` includes both `saa_cogs_saw` and `saa_cogs_saa`.
-6. **Cloud cell proof-of-concept**: Point dashboard at `s-saa-cogs`, run one scenario, observe metrics increase.
+2. **Lint/vet**: `go vet ./...` clean on our files.
+3. **List scenarios**: `go run ./cmd list-scenarios` includes both `saa_cogs_saw` and `saa_cogs_saa`.
+4. **Local test — SAW**: `run-scenario-with-worker --embedded-server --iterations 5` completes.
+5. **Local test — SAA**: Same command hits `StartActivityExecution` on the server (expected to fail
+   on dev server with "disabled" error; succeeds on cloud cell with CHASM enabled).
+6. **Cloud cell proof-of-concept**: Dashboard shows idle → run scenario → dashboard shows activity.
