@@ -113,7 +113,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 			w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
-			w.RegisterWorkflow(singleactivityworkflow.SingleActivityWorkflow)
+			w.RegisterWorkflowWithOptions(singleactivityworkflow.SingleActivityWorkflow, workflow.RegisterOptions{Name: "singleActivityWorkflow"})
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
