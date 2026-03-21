@@ -1,4 +1,4 @@
-# Implementation Plan: SAA COGS Load Generation
+# Implementation Plan: SAA Load Generation
 
 ## Goal
 
@@ -13,31 +13,27 @@ Both scenarios use `GenericExecutor` with a simple `Execute` function. This keep
 implementations symmetric — the only difference is what each iteration does, which is exactly the
 variable under test.
 
-**`saw`** — Single Activity Workflow baseline. Each iteration calls `client.ExecuteWorkflow` with a
-dedicated minimal workflow (`saw`) that executes one payload activity and returns. Then
-`handle.Get()` to wait for the result.
+**`workflow_with_single_activity`** — Each iteration calls `client.ExecuteWorkflow` with a dedicated
+minimal workflow that executes one `payload` activity and returns. Then `handle.Get()`.
 
-**`saa`** — Standalone Activity. Each iteration calls `client.ExecuteActivity` with the same payload
-activity. Then `handle.Get()` to wait for the result. No workflow involved.
+**`standalone_activity`** — Each iteration calls `client.ExecuteActivity` with the same `payload`
+activity. Then `handle.Get()`. No workflow involved.
 
 Both use the same task queue (derived from run-id) and the same Go worker.
 
 ### Worker code
 
-A dedicated activity (`payload`) and a dedicated workflow (`saw`), both minimal:
+Reuse the existing `payload` activity at [kitchen_sink.go:511-516](workers/go/kitchensink/kitchen_sink.go#L511-L516),
+already registered as `"payload"` at [worker.go:105](workers/go/worker/worker.go#L105).
 
-- **`payload` activity**: Takes `[]byte` input and `int32` output size, returns `[]byte` of
-  requested size. (This activity already exists in the kitchen-sink worker as `"payload"` with
-  exactly this signature. We write our own to avoid depending on the kitchen-sink worker.)
-- **`saw` workflow**: Executes the `payload` activity with the input it receives, returns the
-  result. No signals, queries, updates, or other machinery.
-
-Both are registered on the Go worker alongside the existing kitchen-sink registrations.
+Add one new workflow: a minimal function that executes the `payload` activity with its input and
+returns the result. Register it on the existing Go worker at [worker.go:102](workers/go/worker/worker.go#L102)
+alongside the existing registrations. No new worker binary needed.
 
 ### Activity configuration
 
-Both scenarios use: `inputData []byte` (256 bytes), `bytesToReturn int32` (256). No heartbeat.
-Retry policy `MaximumAttempts: 1` (no retries). `ScheduleToCloseTimeout: 60s`.
+Both scenarios: `inputData []byte` (256 bytes), `bytesToReturn int32` (256). No heartbeat.
+`MaximumAttempts: 1` (no retries). `ScheduleToCloseTimeout: 60s`.
 
 ### SDK version
 
@@ -45,30 +41,18 @@ Retry policy `MaximumAttempts: 1` (no retries). `ScheduleToCloseTimeout: 60s`.
 
 ## Implementation steps
 
-### Step 1: Add worker code
+### Step 1: Add workflow to worker
 
-In `workers/go/`, add a small file registering:
-- Activity `"payload"` — takes `(ctx, []byte, int32)`, returns `([]byte, error)`
-- Workflow `"saw"` — executes `"payload"` activity with its input, returns result
+Add a small file under `workers/go/` with the minimal workflow function. Register it in
+[worker.go](workers/go/worker/worker.go) alongside existing registrations.
 
-These are registered on the worker alongside existing kitchen-sink registrations.
-
-**Wait — the existing worker already registers `"payload"` with the same signature.** We should
-reuse that registration rather than duplicate it. The question is whether we also need a separate
-worker binary or can share the existing one. The existing Go worker registers the kitchen-sink
-workflow plus all activities including `"payload"`. For SAW we just need to also register our `saw`
-workflow. For SAA we need no workflow at all — just the `"payload"` activity, which is already
-registered.
-
-Decision: add `saw` workflow registration to the existing Go worker. No new worker binary needed.
-
-### Step 2: Create `scenarios/saw.go`
+### Step 2: Create `scenarios/workflow_with_single_activity.go`
 
 `GenericExecutor` whose `Execute` function:
-1. Calls `run.Client.ExecuteWorkflow()` starting workflow `"saw"` with the payload input.
+1. Calls `run.Client.ExecuteWorkflow()` starting the new workflow with the payload input.
 2. Calls `handle.Get()` to wait for result.
 
-### Step 3: Create `scenarios/saa.go`
+### Step 3: Create `scenarios/standalone_activity.go`
 
 `GenericExecutor` whose `Execute` function:
 1. Calls `run.Client.ExecuteActivity()` with `StartActivityOptions` (ID derived from
@@ -87,9 +71,9 @@ Useful shell commands with terse comments for:
 
 - `go build ./...` and `go vet ./...`
 - `go run ./cmd list-scenarios` shows both new scenarios
-- SAW: `go run ./cmd run-scenario-with-worker --scenario saw --language go --iterations 5 --embedded-server`
-- SAA: same command with `saa` — will get "Standalone activity is disabled" from the embedded dev
-  server (v1.30.1 doesn't have the feature flag), confirming the code path reaches
+- SAW: `go run ./cmd run-scenario-with-worker --scenario workflow_with_single_activity --language go --iterations 5 --embedded-server`
+- SAA: same command with `standalone_activity` — will get "Standalone activity is disabled" from the
+  embedded dev server (v1.30.1 doesn't have the feature flag), confirming the code path reaches
   `StartActivityExecution`. Will succeed on the cloud cell.
 
 ### Step 6: Connect to cloud cell
@@ -105,8 +89,8 @@ Useful shell commands with terse comments for:
 
 1. **Build**: `go build ./...` succeeds.
 2. **Lint/vet**: `go vet ./...` clean on our files.
-3. **List scenarios**: `go run ./cmd list-scenarios` includes both `saw` and `saa`.
+3. **List scenarios**: `go run ./cmd list-scenarios` includes both names.
 4. **Local test — SAW**: `run-scenario-with-worker --embedded-server --iterations 5` completes.
 5. **Local test — SAA**: Same command hits `StartActivityExecution` on the server (expected to fail
    on dev server with "disabled" error; succeeds on cloud cell with CHASM enabled).
-6. **Cloud cell proof-of-concept**: Dashboard shows idle → run scenario → dashboard shows activity.
+6. **Cloud cell proof-of-concept**: Dashboard shows idle -> run scenario -> dashboard shows activity.
