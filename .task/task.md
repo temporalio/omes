@@ -721,3 +721,5 @@ I am not familiar with performing operations against cloud cells, so you will ne
 Initial grafana dashboard JSON is at .task/saacogs.json.
 
 Important: I'd like an early aim to be to get an end-to-end proof-of-principle of this working. Therefore let's not make the omes component sophisticated initially; just the bare minimum to run an SAW and SAA workload. But I am a bit intimidated by doing anything with the cloud cell since I don't know how. So I guess one early aim is to be able to point our metrics dashboard at s-saa-cogs, and see idle state, then run one of our omes commands, and see activity increase in the dashboard. Please maintain a file of useful shell commands with terse comments where necessary. I will run them and show you the outut. Don't do operations against cloud or observability yourself unless I explicitly ask you to.
+
+In the omes work, we must use the latest version of the SDK with Standalone Activity support, such that our code is consistent with what Temporal Docs (use MCP) and the samples-go repo show.
