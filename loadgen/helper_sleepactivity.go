@@ -134,3 +134,15 @@ func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.Execute
 	}
 	return actions
 }
+
+type WorkflowParams struct {
+	SleepActivities *SleepActivityConfig `json:"sleepActivities"`
+}
+
+type WorkflowOutput struct {
+	Timings []ActivityTiming `json:"timings"`
+}
+
+type ActivityTiming struct {
+	ScheduleToStart time.Duration `json:"d"`
+}

@@ -3,8 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -104,25 +102,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("cannot provide both iterations and duration")
 	}
 
-	// Parse options
-	scenarioOptions := make(map[string]string, len(r.scenarioOptions))
-	for _, v := range r.scenarioOptions {
-		pieces := strings.SplitN(v, "=", 2)
-		if len(pieces) != 2 {
-			return fmt.Errorf("option does not have '='")
-		}
-		key, value := pieces[0], pieces[1]
-
-		// If the value starts with '@', read the file and use its contents as the value.
-		if strings.HasPrefix(value, "@") {
-			filePath := strings.TrimPrefix(value, "@")
-			data, err := os.ReadFile(filePath)
-			if err != nil {
-				return fmt.Errorf("failed to read file %s: %w", filePath, err)
-			}
-			value = string(data)
-		}
-		scenarioOptions[key] = value
+	scenarioOptions, parseErr := parseOptionValues(r.scenarioOptions)
+	if parseErr != nil {
+		return parseErr
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
@@ -149,11 +131,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
-	// Generate a random execution ID to ensure no two executions with the same RunID collide
-	executionID, err := generateExecutionID()
-	if err != nil {
-		return fmt.Errorf("failed to generate execution ID: %w", err)
-	}
+	executionID := generateExecutionID()
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,

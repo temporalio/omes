@@ -51,8 +51,9 @@ type ClientOptions struct {
 	fs *pflag.FlagSet
 }
 
-// loadTLSConfig inits a TLS config from the provided cert and key files.
-func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
+// LoadTLSConfig inits a TLS config from the provided cert and key files.
+// Returns nil if TLS is not enabled.
+func (c *ClientOptions) LoadTLSConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.DisableHostVerification,
 		ServerName:         c.TLSServerName,
@@ -86,9 +87,43 @@ func (c *ClientOptions) MustDial(metrics *metrics.Metrics, logger *zap.SugaredLo
 	return client
 }
 
+// DialLite connects to a Temporal server with TLS and auth but no metrics or custom data converter.
+// Useful for lightweight clients (e.g., post-run verification queries).
+func (c *ClientOptions) DialLite(logger *zap.SugaredLogger) (client.Client, error) {
+	tlsCfg, err := c.LoadTLSConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load TLS config: %w", err)
+	}
+	var clientOptions client.Options
+	clientOptions.HostPort = c.Address
+	clientOptions.Namespace = c.Namespace
+	clientOptions.ConnectionOptions.TLS = tlsCfg
+	clientOptions.Logger = NewZapAdapter(logger.Desugar())
+	clientOptions.MetricsHandler = client.MetricsNopHandler
+
+	var authHeader string
+	if c.AuthHeader == "" {
+		authHeader = os.Getenv(AUTH_HEADER_ENV_VAR)
+	} else {
+		authHeader = c.AuthHeader
+	}
+	if authHeader != "" {
+		clientOptions.HeadersProvider = newHeadersProvider(map[string]string{
+			"Authorization": authHeader,
+		})
+	}
+
+	cl, err := client.Dial(clientOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial: %w", err)
+	}
+	logger.Infof("Client connected to %s, namespace: %s", c.Address, c.Namespace)
+	return cl, nil
+}
+
 // Dial connects to a Temporal server, with logging, metrics, loaded TLS certs and set auth header.
 func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger) (client.Client, error) {
-	tlsCfg, err := c.loadTLSConfig()
+	tlsCfg, err := c.LoadTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS config: %w", err)
 	}
