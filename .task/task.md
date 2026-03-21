@@ -716,6 +716,45 @@ Your task is to help me design and build the omes-based tooling that we will use
 (1) Add any missing omes functionality that will be needed in order to be able to use omes to generate the SAA and SAW load for the experiments.
 (2) Run the experiments against the cloud cell that Stephen has prepared: its name is s-saa-cogs.
 
+Stephen linked to the 'scaffold' run that created the cell. I see it had the following input:
+
+{
+  "CellConfig": {
+    "Identity": {
+      "Location": {
+        "CloudProvider": "aws",
+        "AccountID": "124355634071",
+        "Region": "us-west-2"
+      },
+      "ID": "s-saa-cogs"
+    },
+    "Template": "v5-aws-dev",
+    "ServerVersion": "v3.151.9_oss1.31.0_151.6",
+    "AgentVersion": "v3.151.9_oss1.31.0_151.6",
+    "WebVersion": "v2.47.0",
+    "GoCanaryVersion": "v1.35.0",
+    "ComponentVersion": "v2026-03-20.00",
+    "WalVersion": "v10.0.3",
+    "EnableMetering": false
+  },
+  "FailurePolicy": 1
+}
+
+and output:
+
+{
+  "Cell": {
+    "Identity": {
+      "Location": {
+        "CloudProvider": "aws",
+        "AccountID": "124355634071",
+        "Region": "us-west-2"
+      },
+      "ID": "s-saa-cogs"
+    }
+  }
+}
+
 I am not familiar with performing operations against cloud cells, so you will need to resarch and help me during this. But we have several good resources: study the contents of the 'oncall' and 'runbooks' repos, and also use the /agent-slack skill. You also have Notion and Temporal Docs MCP. Use the more modern 'ct' rather than its alias 'omni'.
 
 Initial grafana dashboard JSON is at .task/saacogs.json.
