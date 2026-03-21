@@ -22,6 +22,9 @@ ct kubectl --context s-saa-cogs get pods -n temporal
 # Web: https://staging.thundergun.io/support/cells/s-saa-cogs
 ct admintools --context s-saa-cogs -- temporal operator namespace list -o json
 
+# Create a namespace
+ct admintools --context s-saa-cogs -- temporal operator namespace create saa-cogs
+
 # Grafana dashboards
 # Overview: https://grafana.tmprl-internal.cloud/d/e613c827-243e-4759-a5ca-3e334201c124/temporal-cloud-overview
 # By namespace: https://grafana.tmprl-internal.cloud/d/iyRCOBD4z/temporal-cloud-external-metrics-by-namespace
@@ -32,14 +35,14 @@ ct admintools --context s-saa-cogs -- temporal operator namespace list -o json
 # Run worker (in one terminal)
 go run ./workers/go --task-queue omes \
   --server-address TODO \
-  --namespace s-saa-cogs-marathon.e2e \
+  --namespace saa-cogs \
   --tls-cert-path TODO \
   --tls-key-path TODO
 
 # Run SAW scenario
 go run ./cmd run-scenario --scenario workflow_with_single_activity \
   --server-address TODO \
-  --namespace s-saa-cogs-marathon.e2e \
+  --namespace saa-cogs \
   --tls-cert-path TODO \
   --tls-key-path TODO \
   --iterations 100 --max-concurrent 10
@@ -47,7 +50,7 @@ go run ./cmd run-scenario --scenario workflow_with_single_activity \
 # Run SAA scenario
 go run ./cmd run-scenario --scenario standalone_activity \
   --server-address TODO \
-  --namespace s-saa-cogs-marathon.e2e \
+  --namespace saa-cogs \
   --tls-cert-path TODO \
   --tls-key-path TODO \
   --iterations 100 --max-concurrent 10
