@@ -20,7 +20,7 @@ ct kubectl --context s-saa-cogs get pods -n temporal
 
 # List Temporal namespaces on this cell
 # Web: https://staging.thundergun.io/support/cells/s-saa-cogs
-ct ocld namespace db list --active-cluster s-saa-cogs
+ct admintools --context s-saa-cogs -- temporal operator namespace list -o json
 
 # Grafana dashboards
 # Overview: https://grafana.tmprl-internal.cloud/d/e613c827-243e-4759-a5ca-3e334201c124/temporal-cloud-overview
