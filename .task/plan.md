@@ -41,6 +41,20 @@ Both scenarios: `inputData []byte` (256 bytes), `bytesToReturn int32` (256). No 
 
 ## Implementation steps
 
+IMPORTANT: Rather than doing the implementation yourself, please "teach" the user to do the
+implementation themselves. Take a "painting by numbers" approach: Decide on the first component they
+should write, and insert a comment in the code indicating what they should do. Then pause and give
+them a clickable links to the comment, and to any existing prior art in the codebase they might want
+to refer to. Don't output code directly to them. Work with them to complete the stage; review their
+work carefully. Do not consider the stage complete until the work is done to an equal or greater
+standard than you yourself would have achieved. When that stage is completed by them, or with
+further assistance from you, move on to the next component to be implemented and repeat this
+procedure.
+
+Regarding names: we will not use "cogs" anywhere in omes code itself. Conceptually, the omes code is
+defining SAW and SAA workloads. What those are used for (to run an experiment) and why (COGS
+investigation) is not the concern of the omes code.
+
 ### Step 1: Add workflow to worker
 
 Add a small file under `workers/go/` with the minimal workflow function. Register it in
