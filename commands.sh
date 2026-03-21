@@ -8,8 +8,8 @@ go run ./cmd run-scenario-with-worker --scenario standalone_activity --language 
 
 # --- Cloud cell: s-saa-cogs ---
 
-# Cell support page: https://cloud.temporal.io/support/cells/s-saa-cogs
-#   (may not resolve for dev-template cells; use ct ocld / ct kubectl instead)
+# Cell support page: https://staging.thundergun.io/support/cells/s-saa-cogs
+#   (s-saa* cells are staging/test cells on thundergun, not cloud.temporal.io)
 # K8s access: ct k9s --readonly --context s-saa-cogs
 
 # List all k8s namespaces on the cell
@@ -19,7 +19,7 @@ ct kubectl --context s-saa-cogs get namespaces
 ct kubectl --context s-saa-cogs get pods -n temporal
 
 # List Temporal namespaces on this cell
-# Web: https://cloud.temporal.io/support/cells/s-saa-cogs (if cell is registered in UI)
+# Web: https://staging.thundergun.io/support/cells/s-saa-cogs
 ct ocld namespace db list --active-cluster s-saa-cogs
 
 # Grafana dashboards
