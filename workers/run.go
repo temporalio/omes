@@ -131,7 +131,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
 	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
-	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
+	args = append(args, passthrough(r.WorkerOptions.FlagSet("worker-"), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
 	if err != nil {
