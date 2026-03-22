@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/schedulerstress"
+	"github.com/temporalio/omes/workers/go/visibility"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -110,6 +111,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterActivity(&ebbFlowActivities)
+			w.RegisterWorkflowWithOptions(visibility.VisibilityStressWorkerWorkflow, workflow.RegisterOptions{Name: "visibilityStressWorker"})
 			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 			w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
 			w.RegisterNexusService(service)
