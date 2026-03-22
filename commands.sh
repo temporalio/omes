@@ -50,21 +50,16 @@ export TEMPORAL_TLS_DISABLE_HOST_VERIFICATION=true
 ct admintools --context s-saa-cogs -- temporal operator search-attribute create \
   --namespace saa-cogs-4.temporal-dev --name OmesExecutionID --type Keyword
 
-# Run worker (in one terminal)
-go run ./cmd run-worker \
-  --run-id run-1 \
+# SAW
+go run ./cmd run-scenario-with-worker \
   --scenario workflow_with_single_activity \
   --language go \
-  --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
-  --namespace saa-cogs-4.temporal-dev \
-  --tls \
-  --disable-tls-host-verification \
-  --auth-header "Bearer $TEMPORAL_API_KEY"
-
-# Run SAW scenario
-go run ./cmd run-scenario --scenario workflow_with_single_activity \
   --run-id run-1 \
-  --iterations 100 --max-concurrent 10 \
+  --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
+  --worker-max-concurrent-workflow-pollers 40 \
+  --worker-max-concurrent-workflow-tasks 500 \
+  --worker-max-concurrent-activity-pollers 40 \
+  --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
   --namespace saa-cogs-4.temporal-dev \
@@ -72,10 +67,14 @@ go run ./cmd run-scenario --scenario workflow_with_single_activity \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
 
-# Run SAA scenario
-go run ./cmd run-scenario --scenario standalone_activity \
+# SAA
+go run ./cmd run-scenario-with-worker \
+  --scenario standalone_activity \
+  --language go \
   --run-id run-1 \
-  --iterations 100 --max-concurrent 10 \
+  --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
+  --worker-max-concurrent-activity-pollers 40 \
+  --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
   --namespace saa-cogs-4.temporal-dev \
@@ -89,3 +88,8 @@ go run ./cmd run-scenario --scenario standalone_activity \
 # Frontend: https://grafana.tmprl-internal.cloud/d/SxRYJXZMz/frontend
 # Matching: https://grafana.tmprl-internal.cloud/d/wuh-8uZGk/matching
 # History: https://grafana.tmprl-internal.cloud/d/jh_LXEin2/history
+
+ct ocld test dynamic-config namespace get -n saa-cogs-4.temporal-dev
+
+# 88ms RTT
+for i in $(seq 10); do curl -s -o /dev/null -w '%{time_connect}\n' https://us-west-2.aws.api.tmprl-test.cloud:7233; done
