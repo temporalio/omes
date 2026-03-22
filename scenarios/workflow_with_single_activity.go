@@ -2,8 +2,10 @@ package scenarios
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/sdk/client"
 )
 
 func init() {
@@ -16,7 +18,7 @@ func init() {
 					payloadSize := r.ScenarioOptionInt("payload-size", 0)
 					handle, err := r.Client.ExecuteWorkflow(
 						ctx,
-						r.DefaultStartWorkflowOptions(),
+						startWorkflowOptions(r),
 						"singleActivityWorkflow",
 						make([]byte, payloadSize),
 						int32(payloadSize),
@@ -29,4 +31,17 @@ func init() {
 			}
 		},
 	})
+}
+
+func startWorkflowOptions(r *loadgen.Run) client.StartWorkflowOptions {
+	return client.StartWorkflowOptions{
+		TaskQueue: loadgen.TaskQueueForRun(r.RunID),
+		ID: fmt.Sprintf(
+			"w-%s-%s-%d",
+			r.RunID,
+			r.ExecutionID,
+			r.Iteration,
+		),
+		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
+	}
 }
