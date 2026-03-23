@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/omes/workers/go/ebbandflow"
 	"github.com/temporalio/omes/workers/go/kitchensink"
 	"github.com/temporalio/omes/workers/go/schedulerstress"
+	"github.com/temporalio/omes/workers/go/singleactivityworkflow"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -112,6 +113,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 			w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+			w.RegisterWorkflowWithOptions(singleactivityworkflow.SingleActivityWorkflow, workflow.RegisterOptions{Name: "singleActivityWorkflow"})
 			w.RegisterNexusService(service)
 			errCh <- w.Run(worker.InterruptCh())
 		}()
@@ -136,7 +138,7 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
-	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")

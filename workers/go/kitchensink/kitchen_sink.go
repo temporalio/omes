@@ -508,6 +508,7 @@ func Noop(_ context.Context) error {
 	return nil
 }
 
+// Payload is an activity that takes arbitrary bytes input and returns a bytes result of size `bytesToReturn`.
 func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
 	output := make([]byte, bytesToReturn)
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
