@@ -640,8 +640,7 @@ func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen
 }
 
 // runDeleterForNamespace periodically lists terminal workflows (via the visibility store)
-// and deletes them at the configured rate. The list query itself is a visibility read,
-// which is realistic — any production system cleaning up old workflows queries visibility first.
+// and deletes them at the configured rate.
 // The query is scoped by TaskQueue to avoid touching workflows from other runs.
 func (e *visibilityStressExecutor) runDeleterForNamespace(
 	ctx context.Context, info loadgen.ScenarioInfo,
@@ -683,6 +682,7 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 			continue
 		}
 
+		tickDeleteErrors := 0
 		for _, exec := range resp.Executions {
 			wfExec := exec.Execution
 			_, err := e.clients[nsIdx].WorkflowService().DeleteWorkflowExecution(ctx,
@@ -695,11 +695,15 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 				})
 			if err != nil {
 				// TODO: better error handling
+				tickDeleteErrors++
 				info.Logger.Warnf("[deleter/%s] Delete %s failed: %v", ns, wfExec.WorkflowId, err)
 				continue
 			}
 			e.totalDeleted.Add(1)
 		}
+
+		info.Logger.Infof("[deleter/%s] deleted=%d errors=%d found=%d",
+			ns, e.totalDeleted.Load(), tickDeleteErrors, len(resp.Executions))
 	}
 }
 
