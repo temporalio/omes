@@ -566,6 +566,18 @@ func (e *visibilityStressExecutor) runSteadyState(ctx context.Context, info load
 
 	<-ctx.Done()
 
+	// Wait for in-flight workflows to complete before returning. This is a pragmatic
+	// workaround: run-scenario-with-worker kills the worker as soon as Run() returns,
+	// but workflows started near the end of --duration haven't finished yet. Sleeping
+	// here delays Run()'s return, keeping the worker alive for the drain period.
+	// The writer/deleter/querier goroutines have already exited (their ctx is cancelled).
+	if e.config.Load != nil {
+		drainTime := time.Duration(math.Ceil(e.config.Load.UpdatesPerWF)) * e.config.Load.UpdateDelay
+		drainTime += 5 * time.Second // buffer for scheduling delays
+		info.Logger.Infof("Draining: waiting %v for in-flight workflows to complete...", drainTime)
+		time.Sleep(drainTime)
+	}
+
 	info.Logger.Infof("Run complete. Created: %d, Deleted: %d, Queries: %d, Errors: %d",
 		e.totalCreated.Load(), e.totalDeleted.Load(), e.totalQueries.Load(), e.totalErrors.Load())
 	return nil
