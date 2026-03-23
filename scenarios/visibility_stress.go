@@ -703,9 +703,15 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 
 	limiter := rate.NewLimiter(rate.Limit(totalRPS), 1)
 	var nsIndex int
+	startTime := time.Now()
+	var queryErrors atomic.Int64
 
 	totalWeight := q.ListNoFilterWeight + q.ListOpenWeight + q.ListClosedWeight +
 		q.ListSimpleCSAWeight + q.ListCompoundCSAWeight
+
+	// Log every ~1 second worth of queries, with a minimum of every 1s.
+	logInterval := int64(math.Max(1, totalRPS))
+	lastLogTime := time.Now()
 
 	for {
 		if err := limiter.Wait(ctx); err != nil {
@@ -719,23 +725,28 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 		isCount := e.rng.Float64() < q.CountRPS/totalRPS
 		filter := e.generateFilter(isCount, totalWeight)
 
+		var queryType string
 		if isCount {
+			queryType = "count"
 			_, err := e.clients[nsIdx].CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 				Namespace: ns,
 				Query:     filter,
 			})
 			if err != nil {
 				// TODO: better error handling
-				info.Logger.Warnf("[querier] Count failed: %v", err)
+				queryErrors.Add(1)
+				info.Logger.Warnf("[querier] Count failed (filter=%s): %v", filter, err)
 			}
 		} else {
+			queryType = "list"
 			resp, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 				Namespace: ns,
 				Query:     filter,
 			})
 			if err != nil {
 				// TODO: better error handling
-				info.Logger.Warnf("[querier] List failed: %v", err)
+				queryErrors.Add(1)
+				info.Logger.Warnf("[querier] List failed (filter=%s): %v", filter, err)
 			} else if len(resp.NextPageToken) > 0 {
 				resp2, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 					Namespace:     ns,
@@ -751,7 +762,18 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 				}
 			}
 		}
-		e.totalQueries.Add(1)
+		_ = queryType // used in debug logging below
+
+		total := e.totalQueries.Add(1)
+
+		// Periodic logging.
+		if total%logInterval == 0 || time.Since(lastLogTime) >= 5*time.Second {
+			elapsed := time.Since(startTime)
+			info.Logger.Infof("[querier] t=%v queries=%d errors=%d actual_rps=%.1f last=%s filter=%s",
+				elapsed.Round(time.Second), total, queryErrors.Load(),
+				float64(total)/elapsed.Seconds(), queryType, filter)
+			lastLogTime = time.Now()
+		}
 	}
 }
 
