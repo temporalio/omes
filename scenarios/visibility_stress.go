@@ -90,12 +90,17 @@ var vsLoadPresets = map[string]vsLoadPreset{
 
 var vsQueryPresets = map[string]vsQueryPreset{
 	"light": {
+		CountRPS: 1, ListRPS: 2,
+		ListNoFilterWeight: 3, ListOpenWeight: 2, ListClosedWeight: 2,
+		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1,
+	},
+	"moderate": {
 		CountRPS: 5, ListRPS: 10,
 		ListNoFilterWeight: 3, ListOpenWeight: 2, ListClosedWeight: 2,
 		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1,
 	},
-	"read-heavy": {
-		CountRPS: 50, ListRPS: 200,
+	"heavy": {
+		CountRPS: 10, ListRPS: 25,
 		ListNoFilterWeight: 1, ListOpenWeight: 2, ListClosedWeight: 2,
 		ListSimpleCSAWeight: 3, ListCompoundCSAWeight: 2,
 	},
@@ -431,6 +436,16 @@ func (e *visibilityStressExecutor) Run(ctx context.Context, info loadgen.Scenari
 		return err
 	}
 
+	// Wait for at least one worker to be polling each namespace's task queue
+	// before starting the steady-state phase. This lets users start the scenario
+	// before the workers (e.g., for multi-namespace where the scenario creates
+	// namespaces that workers need).
+	if e.config.Load != nil {
+		if err := e.waitForWorkers(ctx, info); err != nil {
+			return err
+		}
+	}
+
 	e.logConfig(info)
 	return e.runSteadyState(ctx, info)
 }
@@ -513,6 +528,41 @@ func (e *visibilityStressExecutor) registerCSAs(ctx context.Context, info loadge
 		time.Sleep(500 * time.Millisecond)
 	}
 	return fmt.Errorf("CSAs did not propagate within 30s")
+}
+
+// waitForWorkers polls DescribeTaskQueue on each namespace until at least one workflow
+// poller is detected. This allows the scenario to be started before workers (useful for
+// multi-namespace where the scenario creates namespaces that workers need to connect to).
+// Times out after 2 minutes.
+func (e *visibilityStressExecutor) waitForWorkers(ctx context.Context, info loadgen.ScenarioInfo) error {
+	deadline := time.Now().Add(2 * time.Minute)
+	info.Logger.Infof("Waiting for workers to start polling task queue %s on %d namespace(s)...", e.taskQueue, len(e.namespaces))
+
+	for time.Now().Before(deadline) {
+		allReady := true
+		for i, ns := range e.namespaces {
+			resp, err := e.clients[i].DescribeTaskQueue(ctx, e.taskQueue, enums.TASK_QUEUE_TYPE_WORKFLOW)
+			if err != nil {
+				info.Logger.Debugf("DescribeTaskQueue failed for %s: %v", ns, err)
+				allReady = false
+				break
+			}
+			if len(resp.Pollers) == 0 {
+				allReady = false
+				break
+			}
+		}
+		if allReady {
+			info.Logger.Infof("Workers detected on all %d namespace(s)", len(e.namespaces))
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for workers")
+		case <-time.After(1 * time.Second):
+		}
+	}
+	return fmt.Errorf("timed out waiting for workers after 2m; ensure workers are running with --task-queue %s on each namespace", e.taskQueue)
 }
 
 func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
