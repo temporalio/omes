@@ -1,3 +1,15 @@
+// Package scenarios
+// Visibility stress test scenario.
+//
+// This scenario stress-tests the Temporal visibility store (Elasticsearch or SQL) by
+// generating controlled read and write traffic. It uses a hybrid executor + workflow model:
+// the executor spawns short-lived workflows with instructions baked into their input (no
+// signals), and separate goroutines handle deletes and queries.
+//
+// Three independent presets control behavior:
+//   - loadPreset:  write traffic (workflow starts, CSA updates, deletes, failure rates)
+//   - queryPreset: read traffic (List/Count queries with varying filter complexity)
+//   - csaPreset:   which custom search attributes to register and use
 package scenarios
 
 import (
@@ -9,8 +21,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/temporalio/omes/loadgen"
-	vstypes "github.com/temporalio/omes/loadgen/visibility"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
@@ -18,31 +28,41 @@ import (
 	"go.temporal.io/sdk/client"
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"github.com/temporalio/omes/loadgen"
+	vstypes "github.com/temporalio/omes/loadgen/visibility"
 )
 
 // ---------------------------------------------------------------------------
 // Presets
+//
+// Three preset types control the scenario's behavior. Each can be selected
+// via --option flags and overridden with individual --option key=value pairs.
 // ---------------------------------------------------------------------------
 
+// vsLoadPreset controls write-side traffic: workflow creation rate, CSA update
+// frequency, explicit deletion rate, and the distribution of terminal statuses.
 type vsLoadPreset struct {
-	WfRPS          float64
-	UpdatesPerWF   float64
-	UpdateDelay    time.Duration
-	DeleteRPS      float64
-	FailPercent    float64
-	TimeoutPercent float64
+	WfRPS          float64       // Workflow starts per second.
+	UpdatesPerWF   float64       // CSA upsert calls per workflow (can be fractional, e.g., 0.5).
+	UpdateDelay    time.Duration // Sleep between consecutive CSA updates within a workflow.
+	DeleteRPS      float64       // Explicit deletes per second (0 = rely on retention only).
+	FailPercent    float64       // Fraction of WFs that intentionally fail (0.10 = 10%).
+	TimeoutPercent float64       // Fraction of WFs that intentionally timeout (0.05 = 5%).
 	// TODO: MemoUpdatesPerWF float64
 	// TODO: MemoSizeBytes    int
 }
 
+// vsQueryPreset controls read-side traffic: query rate and the weighted distribution
+// of query complexity (no-filter, open, closed, simple CSA, compound CSA).
 type vsQueryPreset struct {
-	CountRPS              float64
-	ListRPS               float64
-	ListNoFilterWeight    int
-	ListOpenWeight        int
-	ListClosedWeight      int
-	ListSimpleCSAWeight   int
-	ListCompoundCSAWeight int
+	CountRPS              float64 // CountWorkflowExecutions calls per second.
+	ListRPS               float64 // ListWorkflowExecutions calls per second.
+	ListNoFilterWeight    int     // Weight for unfiltered list queries.
+	ListOpenWeight        int     // Weight for ExecutionStatus = 'Running' queries.
+	ListClosedWeight      int     // Weight for closed + time range queries.
+	ListSimpleCSAWeight   int     // Weight for single CSA filter queries.
+	ListCompoundCSAWeight int     // Weight for multi-CSA compound filter queries.
 }
 
 var vsLoadPresets = map[string]vsLoadPreset{
@@ -122,6 +142,11 @@ var keywordVocabulary = []string{
 
 // ---------------------------------------------------------------------------
 // CSA Definition
+//
+// CSA (Custom Search Attribute) names follow the convention VS_<Type>_<N>,
+// e.g., "VS_Int_01", "VS_Keyword_02". The type is inferred from the prefix,
+// which is the same convention used by the workflow's type dispatch helper
+// and the query generator.
 // ---------------------------------------------------------------------------
 
 type csaType int
@@ -249,6 +274,8 @@ func init() {
 	})
 }
 
+// Configure parses and validates all scenario options (presets + overrides).
+// Called before Run. In cleanup mode, preset validation is skipped.
 func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	cfg := &vsConfig{
 		NamespaceCount:   info.ScenarioOptionInt("namespaceCount", 1),
@@ -359,6 +386,8 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	return nil
 }
 
+// Run is the main entry point. It configures the executor, sets up namespaces and CSAs,
+// then runs the steady-state phase (writer + deleter + querier goroutines) for --duration.
 func (e *visibilityStressExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	if err := e.Configure(info); err != nil {
 		return fmt.Errorf("configuration error: %w", err)
@@ -436,6 +465,9 @@ func (e *visibilityStressExecutor) setupNamespaces(ctx context.Context, info loa
 	return nil
 }
 
+// registerCSAs registers all CSAs from the csaPreset on every namespace, then polls
+// ListSearchAttributes until they're visible (propagation can take time on Elasticsearch).
+// "Already exists" errors are treated as success (idempotent).
 func (e *visibilityStressExecutor) registerCSAs(ctx context.Context, info loadgen.ScenarioInfo) error {
 	saMap := make(map[string]enums.IndexedValueType, len(e.config.CSADefs))
 	for _, csa := range e.config.CSADefs {
@@ -539,6 +571,9 @@ func (e *visibilityStressExecutor) runSteadyState(ctx context.Context, info load
 	return nil
 }
 
+// runWriter starts workflows at the configured wfRPS rate. Each workflow is fire-and-forget:
+// we don't wait for completion. The workflow input encodes all CSA update instructions,
+// failure/timeout behavior, and delay between updates.
 func (e *visibilityStressExecutor) runWriter(ctx context.Context, info loadgen.ScenarioInfo) {
 	limiter := rate.NewLimiter(rate.Limit(e.config.Load.WfRPS), 1)
 	var nsIndex int
@@ -592,6 +627,10 @@ func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen
 	}
 }
 
+// runDeleterForNamespace periodically lists terminal workflows (via the visibility store)
+// and deletes them at the configured rate. The list query itself is a visibility read,
+// which is realistic — any production system cleaning up old workflows queries visibility first.
+// The query is scoped by TaskQueue to avoid touching workflows from other runs.
 func (e *visibilityStressExecutor) runDeleterForNamespace(
 	ctx context.Context, info loadgen.ScenarioInfo,
 	nsIdx int, ns string, deleteRPS float64,
@@ -652,6 +691,9 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 	}
 }
 
+// runQuerier issues List and Count workflow queries at the configured RPS.
+// Query type is chosen by weighted random from the queryPreset distribution.
+// List queries fetch up to 3 pages (page 1, 2, 3) to exercise pagination.
 func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.ScenarioInfo) {
 	q := e.config.Query
 	totalRPS := q.CountRPS + q.ListRPS
@@ -827,6 +869,9 @@ func (e *visibilityStressExecutor) csasByType(t csaType) []csaDef {
 // Workflow Input Builder
 // ---------------------------------------------------------------------------
 
+// buildWorkflowInput constructs a VisibilityWorkerInput for one workflow.
+// It resolves fractional updatesPerWF probabilistically, rolls the failure/timeout
+// dice, and builds randomized CSA update groups from the csaPreset.
 func (e *visibilityStressExecutor) buildWorkflowInput() *vstypes.VisibilityWorkerInput {
 	cfg := e.config.Load
 
@@ -876,6 +921,8 @@ func vsComputeTimeout(numCSAUpdates int) time.Duration {
 // Cleanup
 // ---------------------------------------------------------------------------
 
+// runCleanup terminates all running workflows and deletes all workflows (terminal and running)
+// for this scenario's task queue across all namespaces. Used with --option cleanup=true.
 func (e *visibilityStressExecutor) runCleanup(ctx context.Context, info loadgen.ScenarioInfo) error {
 	info.Logger.Info("Running cleanup mode...")
 
