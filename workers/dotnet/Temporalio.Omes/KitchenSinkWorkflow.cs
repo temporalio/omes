@@ -520,7 +520,7 @@ public class ClientActivitiesImpl
     public async Task Client(ExecuteActivityAction.Types.ClientActivity clientActivity)
     {
         var activityInfo = ActivityExecutionContext.Current.Info;
-        var workflowId = activityInfo.WorkflowId;
+        var workflowId = activityInfo.WorkflowId ?? throw new InvalidOperationException("Expected non-null workflow ID in client activity");
         var taskQueue = activityInfo.TaskQueue;
 
         var executor = new ClientActionsExecutor(_client, workflowId, taskQueue, _errOnUnimplemented);
