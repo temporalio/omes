@@ -1,0 +1,51 @@
+syntax = "proto3";
+package temporal.omes.projects.v1;
+
+option go_package = "github.com/temporalio/omes/workers/projects/api";
+
+message ConnectOptions {
+    string namespace = 1;
+    string server_address = 2;
+    string auth_header = 3;
+    bool enable_tls = 4;
+    string tls_cert_path = 5;
+    string tls_key_path = 6;
+    string tls_server_name = 7;
+    bool disable_host_verification = 8;
+}
+
+message InitRequest {
+    string execution_id = 1;
+    string run_id = 2;
+    string task_queue = 3;
+    ConnectOptions connect_options = 4;
+
+    // Optional JSON project configuration as bytes, read from the
+    // --config-file project scenario option and passed to the project's 
+    // InitFunc.
+    //
+    // Note: this is currently not used. Subject to change/removal
+    bytes config_json = 5;
+
+    bool register_search_attributes = 6;
+}
+
+message InitResponse {}
+
+message ExecuteRequest {
+    int64 iteration = 1;
+
+    // Per-iteration data from the executor. The structure is defined by the
+    // executor and the project must match what the executor provides. Enables
+    // Currently unused by the steady-rate executor.
+    //
+    // Note: this is currently not used. Subject to change/removal
+    bytes payload = 2;
+}
+
+message ExecuteResponse {}
+
+service ProjectService {
+    rpc Init(InitRequest) returns (InitResponse) {}
+    rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
+}

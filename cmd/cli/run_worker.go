@@ -43,6 +43,7 @@ type workerRunner struct {
 func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.builder.addCLIFlags(fs)
 	r.ScenarioID.AddCLIFlags(fs)
+	fs.StringVar(&r.ProjectDir, "project-dir", "", "Path to project directory (builds a project worker instead of standard worker)")
 	fs.BoolVar(&r.RetainTempDir, "retain-temp-dir", false,
 		"If set, retain the temp directory created if one wasn't given")
 	fs.DurationVar(&r.GracefulShutdownDuration, "graceful-shutdown-duration", 30*time.Second,

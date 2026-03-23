@@ -23,7 +23,9 @@ workers/dotnet/Temporalio.Omes.temp.csproj
 workers/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
+workers/*/projects/tests/project-build-*/
 
 tsconfig.tsbuildinfo
 
 temporal-omes
+.gocache/
