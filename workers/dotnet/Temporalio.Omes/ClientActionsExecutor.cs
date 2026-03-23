@@ -16,7 +16,7 @@ public class ClientActionsExecutor
 
     public string? WorkflowId { get; set; }
 
-    public ClientActionsExecutor(ITemporalClient client, string workflowId, string taskQueue, bool errOnUnimplemented = false)
+    public ClientActionsExecutor(ITemporalClient client, string? workflowId, string taskQueue, bool errOnUnimplemented = false)
     {
         _client = client;
         WorkflowId = workflowId;
