@@ -3,13 +3,11 @@
 # --- Local testing (embedded dev server) ---
 
 go run ./cmd run-scenario-with-worker --scenario workflow_with_single_activity --language go --iterations 5 --embedded-server --option payload-size=1024
-
 go run ./cmd run-scenario-with-worker --scenario standalone_activity --language go --iterations 5 --embedded-server --option payload-size=1024
 
 # --- Cloud cell: s-saa-cogs ---
 
 # Cell support page: https://staging.thundergun.io/support/cells/s-saa-cogs
-#   (s-saa* cells are staging/test cells on thundergun, not cloud.temporal.io)
 # K8s access: ct k9s --readonly --context s-saa-cogs
 
 # List all k8s namespaces on the cell
@@ -55,7 +53,7 @@ go run ./cmd run-scenario-with-worker \
   --scenario workflow_with_single_activity \
   --language go \
   --run-id run-1 \
-  --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
+  --duration 1h --max-concurrent 500 --max-iterations-per-second 50 \
   --worker-max-concurrent-workflow-pollers 40 \
   --worker-max-concurrent-workflow-tasks 500 \
   --worker-max-concurrent-activity-pollers 40 \
@@ -81,13 +79,6 @@ go run ./cmd run-scenario-with-worker \
   --tls \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
-
-# Grafana dashboards
-# Overview: https://grafana.tmprl-internal.cloud/d/e613c827-243e-4759-a5ca-3e334201c124/temporal-cloud-overview
-# By namespace: https://grafana.tmprl-internal.cloud/d/iyRCOBD4z/temporal-cloud-external-metrics-by-namespace
-# Frontend: https://grafana.tmprl-internal.cloud/d/SxRYJXZMz/frontend
-# Matching: https://grafana.tmprl-internal.cloud/d/wuh-8uZGk/matching
-# History: https://grafana.tmprl-internal.cloud/d/jh_LXEin2/history
 
 ct ocld test dynamic-config namespace get -n saa-cogs-4.temporal-dev
 
