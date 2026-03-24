@@ -230,7 +230,7 @@ func installProtoc(ctx context.Context) error {
 func installViaMise(ctx context.Context, tool, version string, extraArgs ...string) error {
 	fmt.Println("Installing", tool, version)
 
-	args := []string{"use", "-g", fmt.Sprintf("%s@%s", tool, version)}
+	args := []string{"use", fmt.Sprintf("%s@%s", tool, version)}
 	args = append(args, extraArgs...)
 	cmd := exec.CommandContext(ctx, "mise", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
