@@ -11,69 +11,71 @@ import (
 
 func lintAndFormatCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "lint-and-format [language...]",
-		Short: "Lint-and-format worker for specified language(s)",
-		Long: fmt.Sprintf(`Lint and format worker for specified language(s)
+		Use:   "lint-and-format [target...]",
+		Short: "Lint-and-format target(s)",
+		Long: fmt.Sprintf(`Lint and format target(s)
 
-Supported languages: %s
+Supported targets: %s
 
 Examples:
-  dev lint-and-format                    # All languages (default)
-  dev lint-and-format all                # All languages
-  dev lint-and-format go                 # Single language
-  dev lint-and-format go java python     # Multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev lint-and-format                    # All targets (default)
+  dev lint-and-format all                # All targets
+  dev lint-and-format go                 # Single target
+  dev lint-and-format go java python     # Multiple targets`, strings.Join(supportedTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var languages []string
+			var targets []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
-				languages = supportedLanguages
+				targets = supportedTargets
 			} else {
-				for _, lang := range args {
-					if !slices.Contains(supportedLanguages, lang) {
-						return fmt.Errorf("unsupported language: %s", lang)
+				for _, target := range args {
+					if !slices.Contains(supportedTargets, target) {
+						return fmt.Errorf("unsupported target: %s", target)
 					}
 				}
-				languages = args
+				targets = args
 			}
-			return runLintAndFormatWorkers(cmd.Context(), languages)
+			return runLintAndFormat(cmd.Context(), targets)
 		},
 	}
 }
 
-func runLintAndFormatWorkers(ctx context.Context, languages []string) error {
-	fmt.Println("Linting and formatting", strings.Join(languages, ", "), "worker(s)...")
+func runLintAndFormat(ctx context.Context, targets []string) error {
+	fmt.Println("Linting and formatting", strings.Join(targets, ", "), "target(s)...")
 
-	for _, lang := range languages {
-		if err := lintAndFormatWorker(ctx, lang); err != nil {
-			return fmt.Errorf("failed to lint-and-format %s: %v", lang, err)
+	for _, target := range targets {
+		if err := lintAndFormat(ctx, target); err != nil {
+			return fmt.Errorf("failed to lint-and-format %s: %v", target, err)
 		}
 	}
 
 	return nil
 }
 
-func lintAndFormatWorker(ctx context.Context, language string) error {
+func lintAndFormat(ctx context.Context, target string) error {
 	fmt.Println("\n===========================================")
-	fmt.Println("Linting and formatting", language, "worker")
+	fmt.Printf("Linting and formatting %s\n", target)
 	fmt.Println("===========================================")
 
-	workerDir, err := getWorkerDir(language)
+	targetDir, err := getTargetDir(target)
 	if err != nil {
 		return err
 	}
 
-	switch language {
+	switch target {
 	case "go":
-		return lintAndFormatGoWorker(ctx, workerDir)
+		return lintAndFormatGoWorker(ctx, targetDir)
 	case "java":
-		return lintAndFormatJavaWorker(ctx, workerDir)
+		return lintAndFormatJavaWorker(ctx, targetDir)
 	case "python":
-		return lintAndFormatPythonWorker(ctx, workerDir)
+		return lintAndFormatPythonWorker(ctx, targetDir)
 	case "typescript":
-		return lintAndFormatTypescriptWorker(ctx, workerDir)
+		return lintAndFormatTypescriptWorker(ctx, targetDir)
 	case "dotnet":
-		return lintAndFormatDotnetWorker(ctx, workerDir)
+		return lintAndFormatDotnetWorker(ctx, targetDir)
+	case "kitchensink-gen":
+		return lintAndFormatRustKitchenSinkGen(ctx)
 	default:
-		return fmt.Errorf("unsupported language: %s", language)
+		return fmt.Errorf("unsupported target: %s", target)
 	}
 }
 
@@ -159,6 +161,26 @@ func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error 
 	}
 
 	fmt.Println("✅ TypeScript lint-and-format completed successfully!")
+	return nil
+}
+
+func lintAndFormatRustKitchenSinkGen(ctx context.Context) error {
+	if err := checkTool(ctx, "cargo"); err != nil {
+		return err
+	}
+
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return err
+	}
+	kitchenSinkGenDir := getKitchenSinkGenDir(repoDir)
+
+	fmt.Println("Formatting Rust kitchensink-gen...")
+	if err := runCommandInDir(ctx, kitchenSinkGenDir, "cargo", "fmt"); err != nil {
+		return err
+	}
+
+	fmt.Println("✅ Rust kitchensink-gen lint-and-format completed successfully!")
 	return nil
 }
 

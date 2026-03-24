@@ -45,18 +45,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        target: [go, java, python, typescript, dotnet, kitchensink-gen]
         include:
-          - sdk: go
+          - target: go
             tools: go
-          - sdk: java
+          - target: java
             tools: java go
-          - sdk: python
+          - target: python
             tools: python go
-          - sdk: typescript
+          - target: typescript
             tools: rust go node protoc
-          - sdk: dotnet
+          - target: dotnet
             tools: dotnet go
+          - target: kitchensink-gen
+            tools: rust go protoc
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -69,18 +71,22 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Ensure rustfmt
+        if: matrix.target == 'kitchensink-gen'
+        run: |
+          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: Lint and format ${{ matrix.sdk }} worker
+      - name: Lint and format ${{ matrix.target }} worker
         run: |
-          go run ./cmd/dev lint-and-format ${{ matrix.sdk }}
+          go run ./cmd/dev lint-and-format ${{ matrix.target }}
       - name: Check formatting
         run: |
-          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
-      - name: Test ${{ matrix.sdk }} worker
+          git diff --exit-code || (echo "${{ matrix.target }} worker has uncommitted formatting changes" && exit 1)
+      - name: Test ${{ matrix.target }} worker
         run: |
-          go run ./cmd/dev test ${{ matrix.sdk }}
+          go run ./cmd/dev test ${{ matrix.target }}
 
   build-worker:
     runs-on: ubuntu-latest
@@ -120,7 +126,6 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
-        
 
   test-kitchensink:
     runs-on: ubuntu-latest
@@ -151,6 +156,10 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Ensure rustfmt
+        if: matrix.target == 'kitchensink-gen'
+        run: |
+          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \

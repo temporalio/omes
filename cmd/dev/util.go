@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	supportedLanguages = []string{
-		"dotnet", "go", "java", "python", "typescript",
+	supportedTargets = []string{
+		"dotnet", "go", "java", "kitchensink-gen", "python", "typescript",
 	}
 	supportedTools = []string{
 		"dotnet", "go", "java", "node", "protoc", "python", "rust",
@@ -101,13 +101,21 @@ func getRepoDir() (string, error) {
 	return repoDir, nil
 }
 
-// getWorkerDir returns the worker directory for the given language
-func getWorkerDir(language string) (string, error) {
+// getKitchenSinkGenDir returns the path to the kitchen-sink-gen crate directory.
+func getKitchenSinkGenDir(repoDir string) string {
+	return filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
+}
+
+// getTargetDir returns the directory for the given target
+func getTargetDir(target string) (string, error) {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(repoDir, "workers", language), nil
+	if target == "kitchensink-gen" {
+		return getKitchenSinkGenDir(repoDir), nil
+	}
+	return filepath.Join(repoDir, "workers", target), nil
 }
 
 // loadVersions parses versions.env file and returns a map of version variables
