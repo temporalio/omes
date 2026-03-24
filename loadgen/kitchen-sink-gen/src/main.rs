@@ -5,13 +5,16 @@ use crate::protos::temporal::{
     api::common::v1::{Memo, Payload, Payloads},
     omes::kitchen_sink::{
         action, awaitable_choice, client_action, do_actions_update, do_query, do_signal,
-        do_signal::do_signal_actions, do_signal::DoSignalActions, do_update, execute_activity_action, with_start_client_action, Action, ActionSet,
-        AwaitWorkflowState, AwaitableChoice, ClientAction, ClientActionSet, ClientSequence,
-        DoQuery, DoSignal, DoUpdate, ExecuteActivityAction, ExecuteChildWorkflowAction,
-        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
-        TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction,
-        WorkflowInput, WorkflowState,
+        do_signal::do_signal_actions,
+        do_signal::DoSignalActions,
+        do_update, execute_activity_action,
         execute_activity_action::{ClientActivity, PayloadActivity},
+        with_start_client_action, Action, ActionSet, AwaitWorkflowState, AwaitableChoice,
+        ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
+        ExecuteActivityAction, ExecuteChildWorkflowAction, HandlerInvocation,
+        RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction, TestInput, TimerAction,
+        UpsertMemoAction, UpsertSearchAttributesAction, WithStartClientAction, WorkflowInput,
+        WorkflowState,
     },
 };
 use anyhow::Error;
@@ -237,7 +240,9 @@ fn example(args: ExampleCmd) -> Result<(), Error> {
                         .into(),
                         ExecuteActivityAction {
                             activity_type: Some(execute_activity_action::ActivityType::Noop(())),
-                            start_to_close_timeout: Some(Duration::from_secs(1).try_into().unwrap()),
+                            start_to_close_timeout: Some(
+                                Duration::from_secs(1).try_into().unwrap(),
+                            ),
                             ..Default::default()
                         }
                         .into(),
@@ -357,7 +362,7 @@ impl<'a> Arbitrary<'a> for WorkflowInput {
             // received_signal_ids: Populated by workflow as signals arrive; copied to new workflow on continue-as-new.
             expected_signal_count: 0,
             expected_signal_ids: vec![],
-            received_signal_ids: vec![]
+            received_signal_ids: vec![],
         })
     }
 }
@@ -392,7 +397,7 @@ impl<'a> Arbitrary<'a> for ClientActionSet {
                         )])],
                         expected_signal_count: 0,
                         expected_signal_ids: vec![],
-                        received_signal_ids: vec![]
+                        received_signal_ids: vec![],
                     },
                     "temporal.omes.kitchen_sink.WorkflowInput",
                 )],
@@ -456,7 +461,9 @@ impl<'a> Arbitrary<'a> for WithStartClientAction {
             }),
             _ => unreachable!(),
         };
-        Ok(Self { variant: Some(variant) })
+        Ok(Self {
+            variant: Some(variant),
+        })
     }
 }
 
@@ -475,19 +482,15 @@ impl<'a> Arbitrary<'a> for DoSignal {
 
             // Half of that in the handler half in main
             if u.ratio(50, 100)? {
-                do_signal::Variant::DoSignalActions(
-                    DoSignalActions {
-                        signal_id,
-                        variant: Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)),
-                    }
-                )
+                do_signal::Variant::DoSignalActions(DoSignalActions {
+                    signal_id,
+                    variant: Some(do_signal_actions::Variant::DoActions(u.arbitrary()?)),
+                })
             } else {
-                do_signal::Variant::DoSignalActions(
-                    DoSignalActions {
-                        signal_id,
-                        variant: Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)),
-                    }
-                )
+                do_signal::Variant::DoSignalActions(DoSignalActions {
+                    signal_id,
+                    variant: Some(do_signal_actions::Variant::DoActionsInMain(u.arbitrary()?)),
+                })
             }
         } else {
             // Sometimes do a not found signal
@@ -628,7 +631,7 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
         } else {
             execute_activity_action::Locality::IsLocal(())
         };
-        
+
         let activity_type_choice = u.int_in_range(1..=100)?;
         let activity_type = match activity_type_choice {
             1..=85 => {
@@ -639,15 +642,11 @@ impl<'a> Arbitrary<'a> for ExecuteActivityAction {
                         .expect("proto duration works"),
                 )
             }
-            86..=90 => {
-                execute_activity_action::ActivityType::Payload(u.arbitrary()?)
-            }
-            91..=100 => {
-                execute_activity_action::ActivityType::Client(u.arbitrary()?)
-            }
+            86..=90 => execute_activity_action::ActivityType::Payload(u.arbitrary()?),
+            91..=100 => execute_activity_action::ActivityType::Client(u.arbitrary()?),
             _ => unreachable!(),
         };
-        
+
         Ok(Self {
             activity_type: Some(activity_type),
             start_to_close_timeout: Some(Duration::from_secs(5).try_into().unwrap()),
@@ -679,7 +678,7 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
             }],
             expected_signal_count: 0,
             expected_signal_ids: vec![],
-            received_signal_ids: vec![]
+            received_signal_ids: vec![],
         };
         let input = to_proto_payload(input, "temporal.omes.kitchen_sink.WorkflowInput");
         Ok(Self {
@@ -766,25 +765,23 @@ impl<'a> Arbitrary<'a> for ClientActivity {
                 wait_for_current_run_to_finish_at_end: false,
             }],
         };
-        
+
         Ok(Self {
             client_sequence: Some(client_sequence),
         })
     }
 }
 
-
 impl<'a> Arbitrary<'a> for PayloadActivity {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
         let max_payload_size = ARB_CONTEXT.with_borrow(|c| c.config.max_payload_size) as i32;
-        
+
         Ok(Self {
             bytes_to_receive: u.int_in_range(0..=max_payload_size)?,
             bytes_to_return: u.int_in_range(0..=max_payload_size)?,
         })
     }
 }
-
 
 impl<'a> Arbitrary<'a> for RemoteActivityOptions {
     fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
@@ -906,14 +903,12 @@ fn mk_client_signal_action(actions: impl IntoIterator<Item = action::Variant>) -
 
     ClientAction {
         variant: Some(client_action::Variant::DoSignal(DoSignal {
-            variant: Some(do_signal::Variant::DoSignalActions(
-                DoSignalActions {
-                    signal_id,
-                    variant: Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
-                        actions,
-                    ))),
-                }
-            )),
+            variant: Some(do_signal::Variant::DoSignalActions(DoSignalActions {
+                signal_id,
+                variant: Some(do_signal_actions::Variant::DoActionsInMain(mk_action_set(
+                    actions,
+                ))),
+            })),
             with_start: false,
         })),
     }

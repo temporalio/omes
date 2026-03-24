@@ -85,7 +85,7 @@ func installDotnet(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("dotnet")
+	workerDir, err := getTargetDir("dotnet")
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func installDotnet(ctx context.Context) error {
 }
 
 func installGo(ctx context.Context) error {
-	workerDir, err := getWorkerDir("go")
+	workerDir, err := getTargetDir("go")
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func installJava(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("java")
+	workerDir, err := getTargetDir("java")
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func installPython(ctx context.Context) error {
 	}
 	fmt.Println("✅ poethepoet installed successfully!")
 
-	workerDir, err := getWorkerDir("python")
+	workerDir, err := getTargetDir("python")
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func installNode(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("typescript")
+	workerDir, err := getTargetDir("typescript")
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,8 @@ func installRust(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "rust", version)
+	// Use --profile default to ensure rustfmt is included
+	return installViaMise(ctx, "rust", version, "--profile", "default")
 }
 
 func installProtoc(ctx context.Context) error {
@@ -226,18 +227,12 @@ func installProtoc(ctx context.Context) error {
 	return nil
 }
 
-func installUv(ctx context.Context) error {
-	version, err := getVersion("uv")
-	if err != nil {
-		return err
-	}
-	return installViaMise(ctx, "uv", version)
-}
-
-func installViaMise(ctx context.Context, tool, version string) error {
+func installViaMise(ctx context.Context, tool, version string, extraArgs ...string) error {
 	fmt.Println("Installing", tool, version)
 
-	cmd := exec.CommandContext(ctx, "mise", "use", fmt.Sprintf("%s@%s", tool, version))
+	args := []string{"use", "-g", fmt.Sprintf("%s@%s", tool, version)}
+	args = append(args, extraArgs...)
+	cmd := exec.CommandContext(ctx, "mise", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("mise command failed: %v\nOutput: %s", err, output)
 	}

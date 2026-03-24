@@ -18,31 +18,31 @@ func testCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "test [language...]",
 		Short: "Test worker for specified language(s) locally",
-		Long: fmt.Sprintf(`Test worker for specified language(s) locally
+		Long: fmt.Sprintf(`Test worker for specified target(s) locally
 
-Supported languages: %s
+Supported targets: %s
 
 Examples:
-  dev test                           # All languages (default)
-  dev test all                       # All languages
-  dev test go                        # Single language
-  dev test go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev test                           # All targets (default)
+  dev test all                       # All targets
+  dev test go                        # Single target
+  dev test go java python            # Multiple targets`, strings.Join(supportedTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var languages []string
+			var targets []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
-				languages = supportedLanguages
+				targets = supportedTargets
 			} else {
-				for _, lang := range args {
-					if !slices.Contains(supportedLanguages, lang) {
-						return fmt.Errorf("unsupported language: %s", lang)
+				for _, target := range args {
+					if !slices.Contains(supportedTargets, target) {
+						return fmt.Errorf("unsupported target: %s", target)
 					}
 				}
-				languages = args
+				targets = args
 			}
 
-			for _, language := range languages {
-				if err := runTestWorker(cmd.Context(), language); err != nil {
-					return fmt.Errorf("failed to test %s: %v", language, err)
+			for _, target := range targets {
+				if err := runTestWorker(cmd.Context(), target); err != nil {
+					return fmt.Errorf("failed to test %s: %v", target, err)
 				}
 			}
 			return nil
@@ -56,6 +56,12 @@ func runTestWorker(ctx context.Context, language string) error {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return err
+	}
+
+	// kitchensink-gen cannot be tested as a worker.
+	if language == "kitchensink-gen" {
+		fmt.Println("Skipping test for generator target:", language)
+		return nil
 	}
 
 	sdkVersion, err := getVersion(language + "-sdk")
