@@ -56,7 +56,7 @@ Examples:
 	return cmd
 }
 
-func cleanLanguage(ctx context.Context, target string) error {
+func cleanTarget(ctx context.Context, target string) error {
 	targetDir, err := getTargetDir(target)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func runClean(ctx context.Context, targets []string, cleanAll bool) error {
 	}
 
 	for _, target := range targets {
-		if err := cleanLanguage(ctx, target); err != nil {
+		if err := cleanTarget(ctx, target); err != nil {
 			if cleanAll {
 				fmt.Printf("Warning: failed to clean %s: %v\n", target, err)
 			} else {
