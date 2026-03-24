@@ -61,14 +61,13 @@ class ClientActionExecutor
     end
 
     if signal.with_start
-      @client.start_workflow(
-        @workflow_type,
-        nil,
-        id: @workflow_id,
-        task_queue: @task_queue,
-        id_conflict_policy: :use_existing,
-        start_signal: signal_name,
-        start_signal_args: signal_args
+      start_op = Temporalio::Client::WithStartWorkflowOperation.new(
+        @workflow_type, nil,
+        id: @workflow_id, task_queue: @task_queue, id_conflict_policy: Temporalio::WorkflowIDConflictPolicy::USE_EXISTING
+      )
+      @client.signal_with_start_workflow(
+        signal_name, *signal_args,
+        start_workflow_operation: start_op
       )
     else
       handle = @client.workflow_handle(@workflow_id)
@@ -91,15 +90,11 @@ class ClientActionExecutor
     begin
       if update.with_start
         start_op = Temporalio::Client::WithStartWorkflowOperation.new(
-          workflow: @workflow_type,
-          args: [nil],
-          id: @workflow_id,
-          task_queue: @task_queue,
-          id_conflict_policy: :use_existing
+          @workflow_type, nil,
+          id: @workflow_id, task_queue: @task_queue, id_conflict_policy: Temporalio::WorkflowIDConflictPolicy::USE_EXISTING
         )
         @client.execute_update_with_start_workflow(
-          update_name,
-          *update_args,
+          update_name, *update_args,
           start_workflow_operation: start_op
         )
       else
