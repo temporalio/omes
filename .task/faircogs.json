@@ -1,0 +1,799 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 971,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(service_requests{cluster=\"s-oss-dnr-faircogs3\",temporal_service_type=\"matching\"}[1m]))",
+          "legendFormat": "Matching RPS",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Matching RPS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": ["Value"],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(service_requests{cluster=\"s-oss-dnr-faircogs3\",temporal_service_type=\"history\"}[1m]))",
+          "legendFormat": "History RPS",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "History RPS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "quantile(0.5, sum by (pod) (container_memory_working_set_bytes{cluster=\"s-oss-dnr-faircogs3\",container!=\"\",image!=\"\",namespace=\"temporal\"} * on (namespace, pod) group_left (workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"s-oss-dnr-faircogs3\",namespace=\"temporal\",workload=\"matching\",workload_type=\"deployment\"}))",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "p50",
+          "range": true,
+          "refId": "D",
+          "step": 10
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "quantile(0.5, sum by (pod) (container_memory_working_set_bytes{cluster=\"s-oss-dnr-faircogs3\",container!=\"\",image!=\"\",namespace=\"temporal\"} * on (namespace, pod) group_left (workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"s-oss-dnr-faircogs3\",namespace=\"temporal\",workload=\"frontend\",workload_type=\"deployment\"}))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "quantile(0.5, sum by (pod) (container_memory_working_set_bytes{cluster=\"s-oss-dnr-faircogs3\",container!=\"\",image!=\"\",namespace=\"temporal\"} * on (namespace, pod) group_left (workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"s-oss-dnr-faircogs3\",namespace=\"temporal\",workload=\"history\",workload_type=\"deployment\"}))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "p50 mem usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(cassandra_query{cluster=\"s-oss-dnr-faircogs3\"} [$__rate_interval])) + sum(rate(cassandra_batch{cluster=\"s-oss-dnr-faircogs3\"} [$__rate_interval]))",
+          "interval": "",
+          "key": "Q-348416b5-2a03-42f3-bdc8-5fbd4a2f6bcf-0",
+          "legendFormat": "rps",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(cassandra_query{cluster=\"s-oss-dnr-faircogs3\",table=\"tasks\"} [$__rate_interval])) + sum(rate(cassandra_batch{cluster=\"s-oss-dnr-faircogs3\",table=\"tasks\"} [$__rate_interval]))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "key": "Q-ca13377f-be45-41e0-af3b-4bc8861ee6fb-1",
+          "legendFormat": "tasks rps",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(\n  sum(\n    rate(\n      cassandra_query{\n        cluster=\"s-oss-dnr-faircogs3\",\n        table=\"tasks_v2\"\n      }[$__rate_interval]\n    )\n  )\n+\n  sum(\n    rate(\n      cassandra_batch{\n        cluster=\"s-oss-dnr-faircogs3\",\n        table=\"tasks_v2\"\n      }[$__rate_interval]\n    )\n  )\n) OR on() vector(0)",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "tasks_v2 rps",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "name": "Expression",
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "$B + $C",
+          "hide": false,
+          "refId": "tasks + tasks_v2 RPS",
+          "type": "math"
+        }
+      ],
+      "title": "Astra RPS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(cassandra_query{cluster=\"s-oss-dnr-faircogs3\",table=\"tasks_v2\"} [$__rate_interval])) + sum(rate(cassandra_batch{cluster=\"s-oss-dnr-faircogs3\",table=\"tasks_v2\"} [$__rate_interval]))",
+          "hide": true,
+          "interval": "",
+          "key": "Q-348416b5-2a03-42f3-bdc8-5fbd4a2f6bcf-0",
+          "legendFormat": "rps",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "sum by (temporal_namespace, task_priority)(\n  rate(\n    approximate_backlog_count{\n      cluster=\"s-oss-dnr-faircogs3\",\n      temporal_service_type=\"matching\",\n      task_type=\"Activity\",\n      temporal_namespace=~\"faircogs.*\"\n    }[$__rate_interval]\n  )\n)\n",
+          "hide": true,
+          "instant": false,
+          "interval": "",
+          "key": "Q-ca13377f-be45-41e0-af3b-4bc8861ee6fb-1",
+          "legendFormat": "backlog count rate",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "name": "Expression",
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "$A / $B",
+          "hide": false,
+          "refId": "tasks_v2_divided_by_backlog_size",
+          "type": "math"
+        }
+      ],
+      "title": "tasks_v2 RPS vs backlog increase rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": ["matching avg CPU"],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.4.0",
+      "targets": [
+        {
+          "adhocFilters": [],
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "avg(sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"s-oss-dnr-faircogs3\", pod=~\"matching-.*\"}) by (node))",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "legendFormat": "matching avg CPU",
+          "range": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "avg(sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"s-oss-dnr-faircogs3\", pod=~\"frontend-.*\"}) by (node))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "frontend avg CPU",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ef667c0e-d08c-4b40-9761-479514828632"
+          },
+          "editorMode": "code",
+          "expr": "avg(sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_rate{cluster=\"s-oss-dnr-faircogs3\", pod=~\"history-.*\"}) by (node))",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "history avg CPU",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Avg CPU usage",
+      "type": "timeseries"
+    }
+  ],
+  "preload": false,
+  "schemaVersion": 40,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "faircogs",
+  "uid": "df6pldpkiy1vka",
+  "version": 31,
+  "weekStart": ""
+}
