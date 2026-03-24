@@ -13,7 +13,10 @@ import (
 	"time"
 
 	"go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -329,6 +332,33 @@ func TaskQueueForRun(runID string) string {
 func NexusEndpointForRun(runID string) string {
 	sanitized := sanitizeRunID.ReplaceAllString(strings.ReplaceAll(runID, "/", "-"), "")
 	return "test-nexus-endpoint-" + sanitized
+}
+
+// ensureNexusEndpoint creates a Nexus endpoint for the given run, or returns nil if it already exists.
+func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID string) (string, error) {
+	endpointName := NexusEndpointForRun(runID)
+	taskQueue := TaskQueueForRun(runID)
+	_, err := cl.OperatorService().CreateNexusEndpoint(ctx,
+		&operatorservice.CreateNexusEndpointRequest{
+			Spec: &nexus.EndpointSpec{
+				Name: endpointName,
+				Target: &nexus.EndpointTarget{
+					Variant: &nexus.EndpointTarget_Worker_{
+						Worker: &nexus.EndpointTarget_Worker{
+							Namespace: namespace,
+							TaskQueue: taskQueue,
+						},
+					},
+				},
+			},
+		})
+	if err != nil {
+		if status.Code(err) == codes.AlreadyExists {
+			return endpointName, nil
+		}
+		return "", err
+	}
+	return endpointName, nil
 }
 
 func (r *Run) TaskQueue() string {

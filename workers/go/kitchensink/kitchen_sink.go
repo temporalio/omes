@@ -140,7 +140,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	} else {
 		// Otherwise wait for return/error from signals
 		for {
-			retOrErrChan.Receive(ctx, retOrErr)
+			retOrErrChan.Receive(ctx, &retOrErr)
 			workflow.GetLogger(ctx).Info("Received return/error from signal", "retOrErr", retOrErr)
 			if retOrErr.retme != nil || retOrErr.err != nil {
 				break
