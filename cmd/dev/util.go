@@ -172,11 +172,9 @@ func checkMise() error {
 // checkTool checks that the tool and its dependencies are available;
 // and prints version and path information.
 func checkTool(ctx context.Context, tool string) error {
-	var toolsToCheck []string
+	toolsToCheck := []string{tool}
 	if dependencies, hasDeps := toolDependencies[tool]; hasDeps {
-		toolsToCheck = dependencies
-	} else {
-		toolsToCheck = []string{tool}
+		toolsToCheck = append(dependencies, tool)
 	}
 
 	for _, tool := range toolsToCheck {
