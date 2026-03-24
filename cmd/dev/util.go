@@ -13,7 +13,7 @@ import (
 
 var (
 	supportedTargets = []string{
-		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen"
+		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen",
 	}
 	supportedTools = []string{
 		"dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",

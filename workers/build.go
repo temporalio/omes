@@ -273,23 +273,27 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 }
 
 func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	// If version not provided, read the resolved version from Gemfile.lock.
-	// Look for "    temporalio (X.Y.Z)" (no platform suffix).
+	// If version not provided, read the version constraint from the gemspec.
+	// Parses: s.add_dependency 'temporalio', '~> 1.3'
 	version := b.SdkOptions.Version
 	if version == "" {
-		lockBytes, err := os.ReadFile(filepath.Join(baseDir, "Gemfile.lock"))
+		gemspecBytes, err := os.ReadFile(filepath.Join(baseDir, "omes.gemspec"))
 		if err != nil {
-			return nil, fmt.Errorf("failed reading Gemfile.lock: %w", err)
+			return nil, fmt.Errorf("failed reading omes.gemspec: %w", err)
 		}
-		for _, line := range strings.Split(string(lockBytes), "\n") {
-			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "temporalio (") && !strings.Contains(trimmed, "-") {
-				version = trimmed[len("temporalio (") : len(trimmed)-1]
+		for _, line := range strings.Split(string(gemspecBytes), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.Contains(line, "'temporalio'") || strings.Contains(line, `"temporalio"`) {
+				parts := strings.Split(line, ",")
+				if len(parts) >= 2 {
+					version = strings.TrimSpace(parts[1])
+					version = strings.Trim(version, `"'`)
+				}
 				break
 			}
 		}
 		if version == "" {
-			return nil, fmt.Errorf("version not found in Gemfile.lock")
+			return nil, fmt.Errorf("version not found in omes.gemspec")
 		}
 	}
 

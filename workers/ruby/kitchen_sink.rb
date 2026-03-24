@@ -99,6 +99,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
     end
   end
 
+  # rubocop:disable Metrics
   def handle_action(action)
     case action.variant
     when :return_result
@@ -188,7 +189,9 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
 
     nil
   end
+  # rubocop:enable Metrics
 
+  # rubocop:disable Metrics
   def launch_activity(exec_activity)
     act_type = 'noop'
     args = []
@@ -250,6 +253,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
       Temporalio::Workflow.execute_activity(act_type, *args, **options)
     end
   end
+  # rubocop:enable Metrics
 
   def handle_awaitable_choice(
     start_fn,
