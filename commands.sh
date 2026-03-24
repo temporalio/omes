@@ -48,6 +48,16 @@ export TEMPORAL_TLS_DISABLE_HOST_VERIFICATION=true
 ct admintools --context s-saa-cogs -- temporal operator search-attribute create \
   --namespace saa-cogs-4.temporal-dev --name OmesExecutionID --type Keyword
 
+# Dyanamic config
+# https://staging.thundergun.io/support/namespaces/saa-cogs-4.temporal-devo
+{
+  "activity.enableStandalone": true,
+  "history.enableChasm": true
+}
+
+# scale canary to 0
+ct kubectl --context s-saa-cogs patch deployment/temporal-go-canary -n temporal -p '{"spec":{"replicas":0}}'
+
 # SAW
 go run ./cmd run-scenario-with-worker \
   --scenario workflow_with_single_activity \
