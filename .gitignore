@@ -17,7 +17,7 @@ workers/java/build
 omes.sln
 /workers/dotnet/obj/
 /workers/dotnet/bin/
-/last_fuzz_run.proto
+/last_fuzz_run.proto*
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/

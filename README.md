@@ -242,7 +242,8 @@ go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --languag
 ```
 
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated
-actions. To re-run the same set of actions, you can pass in such a file like so:
+actions, along with a human-readable `last_fuzz_run.proto.txt` companion. To re-run the same
+set of actions, you can pass in such a file like so:
 
 ```sh
 go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option input-file=last_fuzz_run.proto

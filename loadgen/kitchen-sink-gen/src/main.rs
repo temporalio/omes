@@ -21,11 +21,15 @@ use anyhow::Error;
 use arbitrary::{Arbitrary, Unstructured};
 use clap::Parser;
 use prost::Message;
+use prost_reflect::{DescriptorPool, DynamicMessage};
+
 use rand::{Rng, SeedableRng};
 use std::{
     cell::RefCell, collections::HashMap, io::Write, ops::RangeInclusive, path::PathBuf,
     time::Duration,
 };
+
+const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/descriptor.bin"));
 
 /// A tool for generating client actions and inputs to the kitchen sink workflows in omes.
 #[derive(Parser, Debug)]
@@ -108,7 +112,8 @@ struct OutputConfig {
     #[clap(long, default_value_t = true)]
     use_stdout: bool,
     /// Output goes to the provided file path as protobuf binary. Not exclusive with stdout. Both
-    /// may be used if desired.
+    /// may be used if desired. A textproto companion is also written to the same path
+    /// with a `.txt` suffix.
     #[clap(long)]
     output_path: Option<PathBuf>,
     /// Output will be in Rust debug format if set true. JSON is obnoxious to use with prost at
@@ -883,8 +888,19 @@ fn output_proto(generated_input: TestInput, output_kind: OutputConfig) -> Result
         generated_input.encode(&mut buf)?;
     }
     if let Some(path) = output_kind.output_path {
-        let mut file = std::fs::File::create(path)?;
+        let mut file = std::fs::File::create(&path)?;
         file.write_all(&buf)?;
+        // Also write a textproto companion at <path>.txt
+        let text_path = PathBuf::from(format!("{}.txt", path.display()));
+        let pool = DescriptorPool::decode(FILE_DESCRIPTOR_SET)?;
+        let msg_desc = pool
+            .get_message_by_name("temporal.omes.kitchen_sink.TestInput")
+            .ok_or_else(|| anyhow::anyhow!("TestInput descriptor not found"))?;
+        let dynamic = DynamicMessage::decode(msg_desc, generated_input.encode_to_vec().as_slice())?;
+        let text = dynamic.to_text_format_with_options(
+            &prost_reflect::text_format::FormatOptions::new().pretty(true),
+        );
+        std::fs::write(text_path, text)?;
     }
     if output_kind.use_stdout {
         std::io::stdout().write_all(&buf)?;

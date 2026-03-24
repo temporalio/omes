@@ -33,6 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "temporal.omes.kitchen_sink.DoSignal.DoSignalActions",
         "#[derive(::derive_more::From)]",
     );
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    cfg.file_descriptor_set_path(format!("{out_dir}/descriptor.bin"));
     cfg.compile_protos(&ks_protos, &include_paths)?;
 
     // Compile for python
