@@ -71,7 +71,9 @@ func lintAndFormat(ctx context.Context, target string) error {
 	case "typescript":
 		return lintAndFormatTypescriptWorker(ctx, targetDir)
 	case "dotnet":
-		return lintAndFormatDotnetWorker(ctx, targetDir)
+		return lintAndFormatDotnetWorker(ctx, workerDir)
+	case "ruby":
+		return lintAndFormatRubyWorker(ctx, workerDir)
 	case "kitchensink-gen":
 		return lintAndFormatRustKitchenSinkGen(ctx)
 	default:
@@ -181,6 +183,25 @@ func lintAndFormatRustKitchenSinkGen(ctx context.Context) error {
 	}
 
 	fmt.Println("✅ Rust kitchensink-gen lint-and-format completed successfully!")
+	return nil
+}
+
+func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
+	if err := checkTool(ctx, "ruby"); err != nil {
+		return err
+	}
+
+	fmt.Println("Formatting Ruby worker...")
+	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "rubocop", "-A"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting Ruby worker...")
+	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "rubocop"); err != nil {
+		return err
+	}
+
+	fmt.Println("✅ Ruby lint-and-format completed successfully!")
 	return nil
 }
 

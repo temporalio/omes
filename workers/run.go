@@ -104,6 +104,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			prog, err = sdkbuild.TypeScriptProgramFromDir(loadDir)
 		case clioptions.LangDotNet:
 			prog, err = sdkbuild.DotNetProgramFromDir(loadDir)
+		case clioptions.LangRuby:
+			prog, err = sdkbuild.RubyProgramFromDir(loadDir, baseDir)
 		default:
 			return fmt.Errorf("unrecognized language %v", r.SdkOptions.Language)
 		}

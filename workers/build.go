@@ -54,6 +54,8 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return b.buildTypeScript(ctx, baseDir)
 	case clioptions.LangDotNet:
 		return b.buildDotNet(ctx, baseDir)
+	case clioptions.LangRuby:
+		return b.buildRuby(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", b.SdkOptions.Language)
 	}
@@ -263,6 +265,41 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 		</Project>`,
 		Stdout: b.stdout,
 		Stderr: b.stderr,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed preparing: %w", err)
+	}
+	return prog, nil
+}
+
+func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	// If version not provided, read the resolved version from Gemfile.lock.
+	// Look for "    temporalio (X.Y.Z)" (no platform suffix).
+	version := b.SdkOptions.Version
+	if version == "" {
+		lockBytes, err := os.ReadFile(filepath.Join(baseDir, "Gemfile.lock"))
+		if err != nil {
+			return nil, fmt.Errorf("failed reading Gemfile.lock: %w", err)
+		}
+		for _, line := range strings.Split(string(lockBytes), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "temporalio (") && !strings.Contains(trimmed, "-") {
+				version = trimmed[len("temporalio (") : len(trimmed)-1]
+				break
+			}
+		}
+		if version == "" {
+			return nil, fmt.Errorf("version not found in Gemfile.lock")
+		}
+	}
+
+	prog, err := sdkbuild.BuildRubyProgram(ctx, sdkbuild.BuildRubyProgramOptions{
+		BaseDir:   baseDir,
+		SourceDir: baseDir,
+		DirName:   b.DirName,
+		Version:   version,
+		Stdout:    b.stdout,
+		Stderr:    b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)

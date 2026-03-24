@@ -1,0 +1,46 @@
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  Exclude:
+    - "protos/**/*"
+    - "vendor/**/*"
+    - "omes-temp-*/**/*"
+
+Layout/LineLength:
+  Max: 120
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+# The kitchen sink workflow dispatches protobuf action types via large case
+# statements. These are inherently branchy and long — the complexity metrics
+# reflect the proto schema, not poor design.
+Metrics/MethodLength:
+  Max: 85
+
+Metrics/ClassLength:
+  Max: 300
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Max: 30
+
+Metrics/PerceivedComplexity:
+  Max: 30
+
+Metrics/AbcSize:
+  Max: 95
+
+Style/Documentation:
+  Enabled: false
+
+Style/OneClassPerFile:
+  Enabled: false
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Style/GuardClause:
+  Enabled: false

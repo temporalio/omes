@@ -30,6 +30,7 @@ var (
 		clioptions.LangGo,
 		clioptions.LangJava,
 		clioptions.LangPython,
+		clioptions.LangRuby,
 		clioptions.LangTypeScript,
 		clioptions.LangDotNet,
 	}
@@ -38,6 +39,7 @@ var (
 
 	nexusUnsupportedSDKs = map[clioptions.Language]string{
 		clioptions.LangJava:       "executenexusoperation is not supported",
+		clioptions.LangRuby:       "executenexusoperation is not supported",
 		clioptions.LangTypeScript: "executenexusoperation is not supported",
 		clioptions.LangDotNet:     "executenexusoperation is not supported",
 	}
@@ -517,6 +519,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangRuby:       "signal deduplication not implemented",
 				clioptions.LangTypeScript: "signal deduplication not implemented",
 				clioptions.LangDotNet:     "signal deduplication not implemented",
 			},
@@ -546,6 +549,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangRuby:       "signal deduplication not implemented",
 				clioptions.LangTypeScript: "signal deduplication not implemented",
 				clioptions.LangDotNet:     "signal deduplication not implemented",
 			},
@@ -576,6 +580,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
+				clioptions.LangRuby:       "signal deduplication not implemented",
 				clioptions.LangTypeScript: "signal deduplication not implemented",
 				clioptions.LangDotNet:     "signal deduplication not implemented",
 			},
@@ -976,6 +981,7 @@ func TestKitchenSink(t *testing.T) {
 				clioptions.LangGo:         "unrecognized action",
 				clioptions.LangJava:       "unrecognized action",
 				clioptions.LangPython:     "unrecognized action",
+				clioptions.LangRuby:       "unrecognized action",
 				clioptions.LangTypeScript: "unrecognized action",
 				clioptions.LangDotNet:     "unrecognized action",
 			},
