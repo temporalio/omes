@@ -241,6 +241,12 @@ You can run the fuzzer with new random actions like so:
 go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
 ```
 
+The fuzzer automatically creates a Nexus endpoint and generates Nexus operations. To use an existing endpoint instead:
+
+```sh
+go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
+```
+
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated
 actions. To re-run the same set of actions, you can pass in such a file like so:
 
@@ -252,12 +258,6 @@ Or you can run with a specific seed (seeds are printed at the start of the scena
 
 ```sh
 go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
-```
-
-The fuzzer automatically creates a Nexus endpoint and generates Nexus operations. To use an existing endpoint instead:
-
-```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
 ```
 
 However, the fuzzer is also sensitive to its configuration, and thus the seed will only produce
