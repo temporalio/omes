@@ -31,17 +31,17 @@ Examples:
   dev clean                          # Clean all languages (default)
   dev clean all                      # Clean all languages
   dev clean go                       # Clean Go only
-  dev clean go java python           # Clean multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev clean go java python           # Clean multiple languages`, strings.Join(supportedTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var languages []string
 			cleanAll := len(args) == 0 || (len(args) == 1 && args[0] == "all")
 
 			if cleanAll {
-				languages = supportedLanguages
+				languages = supportedTargets
 			} else {
 				// Validate languages
 				for _, lang := range args {
-					if !slices.Contains(supportedLanguages, lang) {
+					if !slices.Contains(supportedTargets, lang) {
 						return fmt.Errorf("unsupported language: %s", lang)
 					}
 				}

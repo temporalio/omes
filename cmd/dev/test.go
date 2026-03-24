@@ -26,14 +26,14 @@ Examples:
   dev test                           # All languages (default)
   dev test all                       # All languages
   dev test go                        # Single language
-  dev test go java python            # Multiple languages`, strings.Join(supportedLanguages, ", ")),
+  dev test go java python            # Multiple languages`, strings.Join(supportedTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var languages []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
-				languages = supportedLanguages
+				languages = supportedTargets
 			} else {
 				for _, lang := range args {
-					if !slices.Contains(supportedLanguages, lang) {
+					if !slices.Contains(supportedTargets, lang) {
 						return fmt.Errorf("unsupported language: %s", lang)
 					}
 				}
@@ -85,5 +85,3 @@ func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string
 	}
 	return runCommandInDir(ctx, repoDir, args[0], args[1:]...)
 }
-
-

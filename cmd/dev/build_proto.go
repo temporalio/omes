@@ -40,7 +40,7 @@ func runBuildKitchensink(ctx context.Context) error {
 	}
 
 	fmt.Println("Building kitchen-sink-gen...")
-	kitchenSinkGenDir := filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
+	kitchenSinkGenDir := getKitchenSinkGenDir(repoDir)
 
 	// Set PROTOC environment variable to use the correct protoc
 	protocPath, _ := exec.LookPath("protoc") // already validated earlier

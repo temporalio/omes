@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	supportedLanguages = []string{
-		"dotnet", "go", "java", "python", "typescript",
+	supportedTargets = []string{
+		"dotnet", "go", "java", "kitchensink-gen", "python", "typescript",
 	}
 	supportedTools = []string{
 		"dotnet", "go", "java", "node", "protoc", "python", "rust",
@@ -99,6 +99,11 @@ func getRepoDir() (string, error) {
 	cmdDir := filepath.Dir(sourceDir)   // cmd
 	repoDir := filepath.Dir(cmdDir)     // project root
 	return repoDir, nil
+}
+
+// getKitchenSinkGenDir returns the path to the kitchen-sink-gen crate directory.
+func getKitchenSinkGenDir(repoDir string) string {
+	return filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
 }
 
 // getWorkerDir returns the worker directory for the given language
