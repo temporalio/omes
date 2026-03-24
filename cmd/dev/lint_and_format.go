@@ -77,7 +77,7 @@ func lintAndFormat(ctx context.Context, target string) error {
 	case "dotnet":
 		return lintAndFormatDotnetWorker(ctx, workerDir)
 	default:
-		return fmt.Errorf("unsupported language: %s", target)
+		return fmt.Errorf("unsupported target: %s", target)
 	}
 }
 

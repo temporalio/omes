@@ -106,13 +106,13 @@ func getKitchenSinkGenDir(repoDir string) string {
 	return filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
 }
 
-// getWorkerDir returns the worker directory for the given language
-func getWorkerDir(language string) (string, error) {
+// getWorkerDir returns the worker directory for the given target
+func getWorkerDir(target string) (string, error) {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(repoDir, "workers", language), nil
+	return filepath.Join(repoDir, "workers", target), nil
 }
 
 // loadVersions parses versions.env file and returns a map of version variables

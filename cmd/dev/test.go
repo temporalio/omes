@@ -16,33 +16,33 @@ var (
 
 func testCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "test [language...]",
-		Short: "Test worker for specified language(s) locally",
-		Long: fmt.Sprintf(`Test worker for specified language(s) locally
+		Use:   "test [target...]",
+		Short: "Test worker for specified target(s) locally",
+		Long: fmt.Sprintf(`Test worker for specified target(s) locally
 
-Supported languages: %s
+Supported targets: %s
 
 Examples:
-  dev test                           # All languages (default)
-  dev test all                       # All languages
-  dev test go                        # Single language
-  dev test go java python            # Multiple languages`, strings.Join(supportedTargets, ", ")),
+  dev test                           # All targets (default)
+  dev test all                       # All targets
+  dev test go                        # Single target
+  dev test go java python            # Multiple targets`, strings.Join(supportedTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var languages []string
+			var targets []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
-				languages = supportedTargets
+				targets = supportedTargets
 			} else {
-				for _, lang := range args {
-					if !slices.Contains(supportedTargets, lang) {
-						return fmt.Errorf("unsupported language: %s", lang)
+				for _, target := range args {
+					if !slices.Contains(supportedTargets, target) {
+						return fmt.Errorf("unsupported target: %s", target)
 					}
 				}
-				languages = args
+				targets = args
 			}
 
-			for _, language := range languages {
-				if err := runTestWorker(cmd.Context(), language); err != nil {
-					return fmt.Errorf("failed to test %s: %v", language, err)
+			for _, target := range targets {
+				if err := runTestWorker(cmd.Context(), target); err != nil {
+					return fmt.Errorf("failed to test %s: %v", target, err)
 				}
 			}
 			return nil
@@ -52,33 +52,33 @@ Examples:
 	return cmd
 }
 
-func runTestWorker(ctx context.Context, language string) error {
+func runTestWorker(ctx context.Context, target string) error {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return err
 	}
 
-	sdkVersion, err := getVersion(language + "-sdk")
+	sdkVersion, err := getVersion(target + "-sdk")
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("\n===========================================")
-	fmt.Println("Testing", language, "worker")
+	fmt.Println("Testing", target, "worker")
 	fmt.Println("===========================================")
 
-	if err := checkTool(ctx, language); err != nil {
+	if err := checkTool(ctx, target); err != nil {
 		return err
 	}
-	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
+	return testWorkerLocally(ctx, repoDir, target, sdkVersion)
 }
 
-func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string) error {
+func testWorkerLocally(ctx context.Context, repoDir, target, sdkVersion string) error {
 	args := []string{
 		"go", "run", "./cmd", "run-scenario-with-worker",
 		"--scenario", testScenario,
 		"--log-level", "debug",
-		"--language", language,
+		"--target", target,
 		"--embedded-server",
 		"--iterations", testIterations,
 		"--version", "v" + sdkVersion,

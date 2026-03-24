@@ -25,7 +25,7 @@ func buildWorkerImageCmd() *cobra.Command {
 		},
 	}
 	b.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("language")
+	cmd.MarkFlagRequired("target")
 	return cmd
 }
 
@@ -41,7 +41,7 @@ func buildPushWorkerImageCmd() *cobra.Command {
 		},
 	}
 	b.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("language")
+	cmd.MarkFlagRequired("target")
 	return cmd
 }
 
@@ -57,15 +57,15 @@ func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 
 func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.logger = b.loggingOptions.MustCreateLogger()
-	lang := b.sdkOptions.Language.String()
+	target := b.sdkOptions.Language.String()
 	sdkVersion := b.sdkOptions.Version
 
 	// If no version provided, load from versions.env
 	if sdkVersion == "" {
-		if loadedVersion, err := getVersion(lang + "_sdk"); err == nil {
+		if loadedVersion, err := getVersion(target + "_sdk"); err == nil {
 			sdkVersion = loadedVersion
 		} else {
-			return fmt.Errorf("no version specified and failed to load from versions.env for %s: %w", lang, err)
+			return fmt.Errorf("no version specified and failed to load from versions.env for %s: %w", target, err)
 		}
 	}
 
@@ -106,28 +106,28 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 			return fmt.Errorf("expected valid semver")
 		}
 
-		// Add tag for lang-fullsemver without leading "v". We are intentionally
+		// Add tag for target-fullsemver without leading "v". We are intentionally
 		// including semver build metadata.
-		langTagComponent := lang + "-" + strings.TrimPrefix(sdkVersion, "v")
-		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
-		b.tags = append(b.tags, lang+"-"+omesVersion)
+		targetTagComponent := target + "-" + strings.TrimPrefix(sdkVersion, "v")
+		b.tags = append(b.tags, omesVersion+"-"+targetTagComponent)
+		b.tags = append(b.tags, target+"-"+omesVersion)
 		if b.tagAsLatest {
-			b.tags = append(b.tags, langTagComponent)
-			b.tags = append(b.tags, lang+"-latest")
+			b.tags = append(b.tags, targetTagComponent)
+			b.tags = append(b.tags, target+"-latest")
 		}
 	}
 	imageTagsForPublish := b.generateImageTags()
 
 	// Set OCI labels
-	err = b.addDefaultLabels(ctx, omesVersion, "Load testing for "+lang)
+	err = b.addDefaultLabels(ctx, omesVersion, "Load testing for "+target)
 	if err != nil {
 		return err
 	}
-	b.addLabelIfNotPresent("io.temporal.sdk.name", lang)
+	b.addLabelIfNotPresent("io.temporal.sdk.name", target)
 	b.addLabelIfNotPresent("io.temporal.sdk.version", sdkVersion)
 
 	// Build docker command args
-	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs)
+	args, err := b.buildDockerArgs("dockerfiles/"+target+".Dockerfile", allowPush, buildArgs)
 	if err != nil {
 		if !allowPush {
 			return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")
