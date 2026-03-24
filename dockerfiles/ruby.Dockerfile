@@ -35,6 +35,10 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ruby --dir-name prep
 # Copy the CLI and built worker to a slim "run" container
 FROM --platform=linux/$TARGETARCH ruby:3.3-slim-bullseye
 
+# Override BUNDLE_APP_CONFIG so bundler reads .bundle/config from the prepared dir
+# (the Ruby Docker image sets this to /usr/local/bundle by default)
+ENV BUNDLE_APP_CONFIG=.bundle
+
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/ruby /app/workers/ruby
 
