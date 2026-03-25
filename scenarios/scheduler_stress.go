@@ -238,11 +238,14 @@ func (s *SchedulerExecutor) executeWithNewSchedules(ctx context.Context, run *lo
 					if !s.config.SkipDeletion {
 						defer func(id string, startTime time.Time) {
 							dur := time.Until(startTime.Add(s.config.WaitTimeBeforeCleanup))
+							logger.Debugw("Waiting for deletion", "scheduleID", id, "duration", dur)
 							select {
 							case <-time.After(dur):
+								logger.Debugw("deleting", "scheduleID", id, "duration", dur)
 								if err := s.deleteSchedule(ctx, client, id, logger); err != nil {
 									logger.Errorw("Failed to delete schedule", "scheduleID", id, "error", err)
 								}
+								logger.Debugw("deleted", "scheduleID", id)
 							case <-ctx.Done():
 								logger.Infow("Context canceled")
 							}
@@ -253,6 +256,7 @@ func (s *SchedulerExecutor) executeWithNewSchedules(ctx context.Context, run *lo
 					s.performScheduleOperations(ctx, client, sc.ScheduleID, ticker, logger)
 					ticker.Stop()
 				}()
+				logger.Debug("worker exited")
 			}
 		})
 	}
