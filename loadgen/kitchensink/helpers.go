@@ -367,6 +367,15 @@ func NewErrorAction(errorMessage string) *Action {
 	}
 }
 
+// DescribeClientAction creates a ClientAction that calls DescribeWorkflowExecution.
+func DescribeClientAction() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoDescribe{
+			DoDescribe: &DoDescribe{},
+		},
+	}
+}
+
 func ConvertToPayload(newInput any) *common.Payload {
 	payload, err := jsonPayloadConverter.ToPayload(newInput)
 	if err != nil {

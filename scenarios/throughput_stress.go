@@ -383,6 +383,7 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, 256, DefaultLocalActivity),
 			GenericActivity("noop", DefaultLocalActivity),
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			ClientActivity(ClientActions(DescribeClientAction()), DefaultRemoteActivity),
 			ClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
 			ClientActivity(ClientActions(t.createSelfUpdateWithTimer()), DefaultRemoteActivity),
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
