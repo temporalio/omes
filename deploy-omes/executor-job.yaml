@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: omes-executor
+  namespace: omes
+  labels:
+    app.kubernetes.io/name: omes-executor
+    app.kubernetes.io/instance: omes
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: omes-executor
+        app.kubernetes.io/instance: omes
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: omes
+        image: placeholder
+        imagePullPolicy: IfNotPresent
+        command:
+        - /app/temporal-omes
+        args: []
+        ports:
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+      volumes:
+      - name: certs
+        secret:
+          secretName: placeholder
