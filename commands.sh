@@ -62,9 +62,10 @@ ct kubectl --context s-saa-cogs patch deployment/temporal-go-canary -n temporal 
 go run ./cmd run-scenario-with-worker \
   --scenario workflow_with_single_activity \
   --language go \
-  --run-id run-1 \
+  --run-id run-2 \
   --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
   --option payload-size=1024 \
+  --option fail-for-attempts=9 \
   --worker-max-concurrent-workflow-pollers 40 \
   --worker-max-concurrent-workflow-tasks 500 \
   --worker-max-concurrent-activity-pollers 40 \
@@ -80,9 +81,10 @@ go run ./cmd run-scenario-with-worker \
 go run ./cmd run-scenario-with-worker \
   --scenario standalone_activity \
   --language go \
-  --run-id run-1 \
+  --run-id run-2 \
   --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
   --option payload-size=1024 \
+  --option fail-for-attempts=9 \
   --worker-max-concurrent-activity-pollers 40 \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
