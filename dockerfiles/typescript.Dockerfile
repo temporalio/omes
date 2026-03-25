@@ -41,6 +41,9 @@ COPY ${SDK_DIR} ./repo
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
 
+# Install pnpm (sdkbuild uses pnpm to build typescript programs)
+RUN npm install -g pnpm
+
 # Build typescript proto files
 # hadolint ignore=DL3003
 RUN cd workers/typescript && npm install && npm run proto-gen
