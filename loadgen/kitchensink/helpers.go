@@ -376,6 +376,15 @@ func DescribeClientAction() *ClientAction {
 	}
 }
 
+// CreateScheduleClientAction creates a ClientAction that creates a Temporal schedule.
+func CreateScheduleClientAction() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoCreateSchedule{
+			DoCreateSchedule: &DoCreateSchedule{},
+		},
+	}
+}
+
 func ConvertToPayload(newInput any) *common.Payload {
 	payload, err := jsonPayloadConverter.ToPayload(newInput)
 	if err != nil {

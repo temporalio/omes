@@ -130,9 +130,42 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			err = nil
 		}
 		return err
+	} else if action.GetDoCreateSchedule() != nil {
+		return e.executeCreateSchedule(ctx)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
+}
+
+func (e *ClientActionsExecutor) executeCreateSchedule(ctx context.Context) error {
+	scheduleID := fmt.Sprintf("omes-schedule-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
+	workflowID := fmt.Sprintf("omes-scheduled-wf-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
+	_, err := e.Client.ScheduleClient().Create(ctx, client.ScheduleOptions{
+		ID: scheduleID,
+		Spec: client.ScheduleSpec{
+			Intervals: []client.ScheduleIntervalSpec{
+				{Every: 5 * time.Second},
+			},
+		},
+		Action: &client.ScheduleWorkflowAction{
+			ID:        workflowID,
+			Workflow:  "kitchenSink",
+			TaskQueue: e.WorkflowOptions.TaskQueue,
+			Args: []any{&WorkflowInput{
+				InitialActions: []*ActionSet{
+					{
+						Actions: []*Action{NewEmptyReturnResultAction()},
+					},
+				},
+			}},
+		},
+		RemainingActions:   5,
+		TriggerImmediately: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create schedule: %w", err)
+	}
+	return nil
 }
 
 func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {
