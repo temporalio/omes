@@ -88,16 +88,18 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")
+    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    DO_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
     nested_actions: ClientActionSet
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
+    do_describe: DoDescribe
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")
@@ -581,3 +583,9 @@ class NexusHandlerInput(_message.Message):
     input: str
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
     def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+
+class DoDescribe(_message.Message):
+    __slots__ = ("failure_expected",)
+    FAILURE_EXPECTED_FIELD_NUMBER: _ClassVar[int]
+    failure_expected: bool
+    def __init__(self, failure_expected: bool = ...) -> None: ...

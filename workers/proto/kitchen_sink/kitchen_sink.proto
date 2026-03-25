@@ -51,6 +51,7 @@ message ClientAction {
     DoQuery do_query = 2;
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
+    DoDescribe do_describe = 5;
   }
 }
 
@@ -506,5 +507,10 @@ message ExecuteNexusOperation {
 message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
+}
+
+message DoDescribe {
+  // If set, the client should expect the describe to fail
+  bool failure_expected = 1;
 }
 
