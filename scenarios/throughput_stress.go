@@ -425,6 +425,10 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 		}
 
+		asyncActions = append(asyncActions,
+			ClientActivity(ClientActions(CreateScheduleClientAction()), DefaultRemoteActivity),
+		)
+
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{
 			Variant: &Action_NestedActionSet{

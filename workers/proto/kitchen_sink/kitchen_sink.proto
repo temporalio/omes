@@ -52,6 +52,7 @@ message ClientAction {
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
+    DoCreateSchedule do_create_schedule = 7;
   }
 }
 
@@ -513,4 +514,7 @@ message DoDescribe {
   // If set, the client should expect the describe to fail
   bool failure_expected = 1;
 }
+
+// Create a Temporal schedule that periodically executes the kitchen sink workflow.
+message DoCreateSchedule {}
 
