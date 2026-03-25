@@ -339,6 +339,8 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if attachCallbacks := action.GetNexusOperationAttachCallbacks(); attachCallbacks != nil {
+		return nil, handleNexusOperationAttachCallbacks(ctx, attachCallbacks)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -477,13 +479,13 @@ func withAwaitableChoiceCustom[F workflow.Future](
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
-		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
+		nexusClient := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
 		input := &kitchensink.NexusHandlerInput{
 			Input:         nexusOp.Input,
 			BeforeActions: nexusOp.BeforeActions,
 		}
-		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
+		return nexusClient.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
@@ -617,3 +619,87 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Nex
 		ID: opts.RequestID,
 	}, nil
 })
+
+// UnblockSignalName is the signal name used to unblock EchoAsyncWithSignalWorkflow.
+const UnblockSignalName = "unblock-nexus-operation"
+
+// echoWithSignalInput is the input for EchoAsyncWithSignalOperation.
+// WorkflowID allows the caller to pre-determine the handler's workflow ID so it can signal it.
+type echoWithSignalInput struct {
+	Value      string
+	WorkflowID string
+}
+
+// EchoAsyncWithSignalWorkflow is a Nexus handler workflow that waits for an "unblock" signal
+// before completing. Used to test callback attachment: the caller starts the op, attaches a
+// callback via GetNexusOperationExecution, then signals this workflow to complete.
+func EchoAsyncWithSignalWorkflow(ctx workflow.Context, input echoWithSignalInput) (string, error) {
+	workflow.GetSignalChannel(ctx, UnblockSignalName).Receive(ctx, nil)
+	return input.Value, nil
+}
+
+var EchoAsyncWithSignalOperation = temporalnexus.NewWorkflowRunOperation(
+	"echo-async-with-signal",
+	EchoAsyncWithSignalWorkflow,
+	func(ctx context.Context, input echoWithSignalInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+		return client.StartWorkflowOptions{
+			ID: input.WorkflowID,
+		}, nil
+	},
+)
+
+// handleNexusOperationAttachCallbacks starts numOps async Nexus operations in parallel, attaches
+// completion callbacks by calling GetNexusOperationExecution on each, then signals the handler
+// workflows to complete, and finally waits for all operations to finish.
+func handleNexusOperationAttachCallbacks(ctx workflow.Context, action *kitchensink.ExecuteNexusOperationAttachCallbacks) error {
+	numOps := int(action.NumOps)
+	if numOps <= 0 {
+		numOps = 3
+	}
+	nexusClient := workflow.NewNexusClient(action.Endpoint, KitchenSinkServiceName)
+
+	// Pre-generate workflow IDs so we can signal the handler workflows later.
+	// SideEffect is used to ensure the UUIDs are deterministic during replay.
+	wfIDs := make([]string, numOps)
+	for i := 0; i < numOps; i++ {
+		encodedUID := workflow.SideEffect(ctx, func(_ workflow.Context) interface{} {
+			return fmt.Sprintf("echo-signal-%s-%d", workflow.GetInfo(ctx).WorkflowExecution.ID, rand.Int63())
+		})
+		if err := encodedUID.Get(&wfIDs[i]); err != nil {
+			return fmt.Errorf("failed to generate workflow ID %d: %w", i, err)
+		}
+	}
+
+	// Start N parallel async operations.
+	futures := make([]workflow.NexusOperationFuture, numOps)
+	for i := 0; i < numOps; i++ {
+		input := echoWithSignalInput{Value: "hello", WorkflowID: wfIDs[i]}
+		futures[i] = nexusClient.ExecuteOperation(ctx, "echo-async-with-signal", input, workflow.NexusOperationOptions{})
+	}
+
+	// Attach callbacks by waiting for each operation to be scheduled (started).
+	for i, fut := range futures {
+		if err := fut.GetNexusOperationExecution().Get(ctx, nil); err != nil {
+			return fmt.Errorf("failed to attach callback to nexus operation %d: %w", i, err)
+		}
+	}
+
+	// Signal each handler workflow to complete.
+	for i := 0; i < numOps; i++ {
+		sigFut := workflow.SignalExternalWorkflow(ctx, wfIDs[i], "", UnblockSignalName, nil)
+		if err := sigFut.Get(ctx, nil); err != nil {
+			var notFound *temporal.UnknownExternalWorkflowExecutionError
+			if !errors.As(err, &notFound) {
+				return fmt.Errorf("failed to signal nexus handler workflow %d: %w", i, err)
+			}
+		}
+	}
+
+	// Wait for all operations to complete.
+	for i, fut := range futures {
+		if err := fut.Get(ctx, nil); err != nil {
+			return fmt.Errorf("nexus operation %d failed: %w", i, err)
+		}
+	}
+	return nil
+}

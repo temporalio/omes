@@ -421,8 +421,11 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add Nexus operations, if configured.
 		if t.config.NexusEndpoint != "" {
-			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
-			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			asyncActions = append(asyncActions,
+				t.createNexusEchoSyncAction(),
+				t.createNexusEchoAsyncAction(),
+				NexusOperationAttachCallbacksAction(t.config.NexusEndpoint, 3),
+			)
 		}
 
 		asyncActions = append(asyncActions,

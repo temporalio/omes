@@ -88,16 +88,20 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions")
+    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_create_schedule")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    DO_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
+    DO_CREATE_SCHEDULE_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
     nested_actions: ClientActionSet
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ...) -> None: ...
+    do_describe: DoDescribe
+    do_create_schedule: DoCreateSchedule
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_create_schedule: _Optional[_Union[DoCreateSchedule, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")
@@ -190,7 +194,7 @@ class ActionSet(_message.Message):
     def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., concurrent: bool = ...) -> None: ...
 
 class Action(_message.Message):
-    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation")
+    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation", "nexus_operation_attach_callbacks")
     TIMER_FIELD_NUMBER: _ClassVar[int]
     EXEC_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     EXEC_CHILD_WORKFLOW_FIELD_NUMBER: _ClassVar[int]
@@ -206,6 +210,7 @@ class Action(_message.Message):
     CONTINUE_AS_NEW_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTION_SET_FIELD_NUMBER: _ClassVar[int]
     NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
+    NEXUS_OPERATION_ATTACH_CALLBACKS_FIELD_NUMBER: _ClassVar[int]
     timer: TimerAction
     exec_activity: ExecuteActivityAction
     exec_child_workflow: ExecuteChildWorkflowAction
@@ -221,7 +226,8 @@ class Action(_message.Message):
     continue_as_new: ContinueAsNewAction
     nested_action_set: ActionSet
     nexus_operation: ExecuteNexusOperation
-    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ...) -> None: ...
+    nexus_operation_attach_callbacks: ExecuteNexusOperationAttachCallbacks
+    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ..., nexus_operation_attach_callbacks: _Optional[_Union[ExecuteNexusOperationAttachCallbacks, _Mapping]] = ...) -> None: ...
 
 class AwaitableChoice(_message.Message):
     __slots__ = ("wait_finish", "abandon", "cancel_before_started", "cancel_after_started", "cancel_after_completed")
@@ -581,3 +587,21 @@ class NexusHandlerInput(_message.Message):
     input: str
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
     def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+
+class DoDescribe(_message.Message):
+    __slots__ = ("failure_expected",)
+    FAILURE_EXPECTED_FIELD_NUMBER: _ClassVar[int]
+    failure_expected: bool
+    def __init__(self, failure_expected: bool = ...) -> None: ...
+
+class DoCreateSchedule(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ExecuteNexusOperationAttachCallbacks(_message.Message):
+    __slots__ = ("endpoint", "num_ops")
+    ENDPOINT_FIELD_NUMBER: _ClassVar[int]
+    NUM_OPS_FIELD_NUMBER: _ClassVar[int]
+    endpoint: str
+    num_ops: int
+    def __init__(self, endpoint: _Optional[str] = ..., num_ops: _Optional[int] = ...) -> None: ...

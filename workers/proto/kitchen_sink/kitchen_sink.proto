@@ -172,6 +172,7 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
+    ExecuteNexusOperationAttachCallbacks nexus_operation_attach_callbacks = 16;
   }
 }
 
@@ -517,4 +518,13 @@ message DoDescribe {
 
 // Create a Temporal schedule that periodically executes the kitchen sink workflow.
 message DoCreateSchedule {}
+
+// Start num_ops async Nexus operations in parallel, attach completion callbacks
+// by calling GetNexusOperationExecution on each, signal the handler workflows
+// to complete, then wait for all operations to finish.
+message ExecuteNexusOperationAttachCallbacks {
+  string endpoint = 1;
+  // Number of parallel async operations to start (default: 3)
+  int32 num_ops = 2;
+}
 
