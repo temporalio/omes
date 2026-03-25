@@ -16,12 +16,14 @@ func init() {
 			return &loadgen.GenericExecutor{
 				Execute: func(ctx context.Context, r *loadgen.Run) error {
 					payloadSize := r.ScenarioOptionInt("payload-size", 0)
+					failForAttempts := r.ScenarioOptionInt("fail-for-attempts", 0)
 					handle, err := r.Client.ExecuteWorkflow(
 						ctx,
 						startWorkflowOptions(r),
 						"singleActivityWorkflow",
 						make([]byte, payloadSize),
 						int32(payloadSize),
+						int32(failForAttempts),
 					)
 					if err != nil {
 						return err

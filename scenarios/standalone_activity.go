@@ -18,12 +18,20 @@ func init() {
 			return &loadgen.GenericExecutor{
 				Execute: func(ctx context.Context, r *loadgen.Run) error {
 					payloadSize := r.ScenarioOptionInt("payload-size", 0)
+					failForAttempts := r.ScenarioOptionInt("fail-for-attempts", 0)
+					activityName := "payload"
+					var args []any
+					if failForAttempts > 0 {
+						activityName = "payloadWithRetries"
+						args = []any{make([]byte, payloadSize), int32(payloadSize), int32(failForAttempts)}
+					} else {
+						args = []any{make([]byte, payloadSize), int32(payloadSize)}
+					}
 					handle, err := r.Client.ExecuteActivity(
 						ctx,
-						activityOptions(r),
-						"payload",
-						make([]byte, payloadSize),
-						int32(payloadSize),
+						activityOptions(r, int32(failForAttempts)),
+						activityName,
+						args...,
 					)
 					if err != nil {
 						return err
@@ -35,7 +43,7 @@ func init() {
 	})
 }
 
-func activityOptions(r *loadgen.Run) client.StartActivityOptions {
+func activityOptions(r *loadgen.Run, failForAttempts int32) client.StartActivityOptions {
 	return client.StartActivityOptions{
 		ID: fmt.Sprintf(
 			"a-%s-%s-%d",
@@ -45,6 +53,10 @@ func activityOptions(r *loadgen.Run) client.StartActivityOptions {
 		),
 		TaskQueue:           r.TaskQueue(),
 		StartToCloseTimeout: 5 * time.Second,
-		RetryPolicy:         &temporal.RetryPolicy{MaximumAttempts: 1},
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts:    failForAttempts + 1,
+			InitialInterval:    1 * time.Millisecond,
+			BackoffCoefficient: 1.0,
+		},
 	}
 }
