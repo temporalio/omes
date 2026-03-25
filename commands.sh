@@ -22,7 +22,7 @@ ct admintools --context s-saa-cogs -- temporal operator namespace list -o json
 
 # Create namespace pinned to the cell
 ct ocld test namespace create \
-  --namespace saa-cogs-4.temporal-dev \
+  --namespace $NS.temporal-dev \
   --region us-west-2 \
   --cloud-provider aws \
   --retention 1 \
@@ -98,6 +98,9 @@ ct ocld test dynamic-config namespace get -n saa-cogs-4.temporal-dev
 for i in $(seq 10); do curl -s -o /dev/null -w '%{time_connect}\n' https://us-west-2.aws.api.tmprl-test.cloud:7233; done
 
 # parameterized
+
+CELL=s-saa-cogs
+NS=saa-cogs-4
 
 ct admintools --context $CELL -- temporal operator namespace list
 ct ocld test namespace create \
