@@ -385,6 +385,19 @@ func CreateScheduleClientAction() *ClientAction {
 	}
 }
 
+// StandaloneActivityClientAction creates a ClientAction that invokes a payload activity
+// directly via the low-level StartActivityExecution / PollActivityExecution RPCs.
+func StandaloneActivityClientAction(bytesToReceive, bytesToReturn int32) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				BytesToReceive: bytesToReceive,
+				BytesToReturn:  bytesToReturn,
+			},
+		},
+	}
+}
+
 // NexusOperationAttachCallbacksAction creates a workflow-level Action that starts numOps
 // async Nexus operations in parallel, attaches callbacks via GetNexusOperationExecution,
 // signals the handler workflows to complete, then waits for all operations to finish.

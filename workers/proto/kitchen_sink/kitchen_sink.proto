@@ -52,6 +52,7 @@ message ClientAction {
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
+    DoStandaloneActivity do_standalone_activity = 6;
     DoCreateSchedule do_create_schedule = 7;
   }
 }
@@ -514,6 +515,13 @@ message NexusHandlerInput {
 message DoDescribe {
   // If set, the client should expect the describe to fail
   bool failure_expected = 1;
+}
+
+// Invoke an activity directly via the low-level StartActivityExecution /
+// PollActivityExecution RPCs, bypassing normal workflow activity scheduling.
+message DoStandaloneActivity {
+  int32 bytes_to_receive = 1;
+  int32 bytes_to_return = 2;
 }
 
 // Create a Temporal schedule that periodically executes the kitchen sink workflow.

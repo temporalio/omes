@@ -6,10 +6,15 @@ import (
 	"fmt"
 	"time"
 
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type ClientActionsExecutor struct {
@@ -17,6 +22,7 @@ type ClientActionsExecutor struct {
 	WorkflowOptions client.StartWorkflowOptions
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
+	Namespace       string
 	Handle          client.WorkflowRun
 	runID           string
 }
@@ -130,11 +136,52 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			err = nil
 		}
 		return err
+	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
+		return e.executeStandaloneActivity(ctx, sa)
 	} else if action.GetDoCreateSchedule() != nil {
 		return e.executeCreateSchedule(ctx)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
+}
+
+func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
+	activityID := fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
+	dc := converter.GetDefaultDataConverter()
+	input, err := dc.ToPayloads(make([]byte, sa.BytesToReceive), sa.BytesToReturn)
+	if err != nil {
+		return fmt.Errorf("failed to encode standalone activity input: %w", err)
+	}
+	_, err = e.Client.WorkflowService().StartActivityExecution(ctx, &workflowservicepb.StartActivityExecutionRequest{
+		Namespace:  e.Namespace,
+		ActivityId: activityID,
+		ActivityType: &commonpb.ActivityType{
+			Name: "payload",
+		},
+		TaskQueue: &taskqueuepb.TaskQueue{
+			Name: e.WorkflowOptions.TaskQueue,
+			Kind: enumspb.TASK_QUEUE_KIND_NORMAL,
+		},
+		Input:               input,
+		StartToCloseTimeout: durationpb.New(30 * time.Second),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to start standalone activity: %w", err)
+	}
+
+	resp, err := e.Client.WorkflowService().PollActivityExecution(ctx, &workflowservicepb.PollActivityExecutionRequest{
+		Namespace:  e.Namespace,
+		ActivityId: activityID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to poll standalone activity: %w", err)
+	}
+	if outcome := resp.GetOutcome(); outcome != nil {
+		if failure := outcome.GetFailure(); failure != nil {
+			return fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
+		}
+	}
+	return nil
 }
 
 func (e *ClientActionsExecutor) executeCreateSchedule(ctx context.Context) error {

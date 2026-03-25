@@ -39,6 +39,10 @@ const (
 	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
+	// EnableStandaloneActivityFlag enables standalone activity execution via the low-level
+	// StartActivityExecution / PollActivityExecution RPCs. Requires server-side support
+	// for workflow-independent activities. Default is false.
+	EnableStandaloneActivityFlag = "enable-standalone-activity"
 )
 
 type tpsState struct {
@@ -64,6 +68,7 @@ type tpsConfig struct {
 	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
+	EnableStandaloneActivity      bool
 }
 
 type tpsExecutor struct {
@@ -163,6 +168,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
+	config.EnableStandaloneActivity = info.ScenarioOptionBool(EnableStandaloneActivityFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -431,6 +437,14 @@ func (t *tpsExecutor) createActionsChunk(
 		asyncActions = append(asyncActions,
 			ClientActivity(ClientActions(CreateScheduleClientAction()), DefaultRemoteActivity),
 		)
+
+		// Standalone activity uses low-level RPCs that require server-side support
+		// for workflow-independent activities (not available in all environments).
+		if t.config.EnableStandaloneActivity {
+			asyncActions = append(asyncActions,
+				ClientActivity(ClientActions(StandaloneActivityClientAction(256, 256)), DefaultRemoteActivity),
+			)
+		}
 
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{

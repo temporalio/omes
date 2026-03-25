@@ -381,6 +381,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
+		Namespace:       r.Namespace,
 	}
 	startErr := executor.Start(ctx, options.Params.WithStartAction)
 	if startErr != nil {

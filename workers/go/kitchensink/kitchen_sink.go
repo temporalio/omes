@@ -33,6 +33,7 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 		},
 		WorkflowType:  "kitchenSink",
 		WorkflowInput: &kitchensink.WorkflowInput{},
+		Namespace:     info.WorkflowNamespace,
 	}
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
