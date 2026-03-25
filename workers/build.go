@@ -250,6 +250,7 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 		BaseDir:         baseDir,
 		Version:         version,
 		DirName:         b.DirName,
+		Configuration:   "Release",
 		ProgramContents: "await Temporalio.Omes.App.RunAsync(args);",
 		CsprojContents: `<Project Sdk="Microsoft.NET.Sdk">
 			<PropertyGroup>

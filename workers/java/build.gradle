@@ -21,7 +21,7 @@ spotless {
             include '**/*.java'
             exclude 'io/temporal/omes/KitchenSink.java'
         }
-        googleJavaFormat('1.16.0')
+        googleJavaFormat('1.22.0')
     }
 }
 
