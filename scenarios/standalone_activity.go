@@ -36,7 +36,9 @@ func init() {
 					if err != nil {
 						return err
 					}
-					return handle.Get(ctx, nil)
+					getCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+					defer cancel()
+					return handle.Get(getCtx, nil)
 				},
 			}
 		},
@@ -52,7 +54,8 @@ func activityOptions(r *loadgen.Run, failForAttempts int32) client.StartActivity
 			r.Iteration,
 		),
 		TaskQueue:           r.TaskQueue(),
-		StartToCloseTimeout: 5 * time.Second,
+		StartToCloseTimeout:    5 * time.Second,
+		ScheduleToCloseTimeout: 60 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts:    failForAttempts + 1,
 			InitialInterval:    1 * time.Millisecond,
