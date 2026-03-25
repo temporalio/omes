@@ -26,7 +26,8 @@ from activities import (
     retryable_error_activity,
     timeout_activity,
 )
-from kitchen_sink import KitchenSinkWorkflow
+from kitchen_sink import KitchenSinkWorkflow, NexusHandlerWorkflow
+from nexus_service import KitchenSinkNexusServiceHandler
 
 nameToLevel = {
     "PANIC": logging.FATAL,
@@ -86,7 +87,7 @@ async def run():
         help="Max concurrent workflow tasks",
     )
     parser.add_argument(
-        "--worker-activities-per-second",
+        "--activities-per-second",
         type=float,
         help="Per-worker activity rate limit",
     )
@@ -111,7 +112,12 @@ async def run():
         default="localhost:7233",
         help="Address of Temporal server",
     )
-    parser.add_argument("--tls", action="store_true", help="Enable TLS")
+    parser.add_argument(
+        "--tls",
+        type=lambda x: x.lower() in ("true", "1", "yes"),
+        default=False,
+        help="Enable TLS (true/false)",
+    )
     parser.add_argument(
         "--tls-cert-path", default="", help="Path to client TLS certificate"
     )
@@ -121,6 +127,8 @@ async def run():
     parser.add_argument(
         "--prom-handler-path", default="/metrics", help="Prometheus handler path"
     )
+    parser.add_argument("--auth-header", default="", help="Authorization header value")
+    parser.add_argument("--build-id", default="", help="Build ID")
     args = parser.parse_args()
 
     if args.task_queue_suffix_index_start > args.task_queue_suffix_index_end:
@@ -140,6 +148,9 @@ async def run():
         raise ValueError("Client key specified, but not client cert!")
     elif args.tls:
         tls_config = TLSConfig()
+
+    # Configure API key
+    api_key = args.auth_header.removeprefix("Bearer ") if args.auth_header else None
 
     # Configure logging
     logger = logging.getLogger()
@@ -173,6 +184,7 @@ async def run():
     client = await Client.connect(
         target_host=args.server_address,
         namespace=args.namespace,
+        api_key=api_key,
         tls=tls_config,
         runtime=new_runtime,
     )
@@ -215,15 +227,15 @@ async def run():
         worker_kwargs[
             "max_concurrent_workflow_tasks"
         ] = args.max_concurrent_workflow_tasks
-    if args.worker_activities_per_second is not None:
-        worker_kwargs["max_activities_per_second"] = args.worker_activities_per_second
+    if args.activities_per_second is not None:
+        worker_kwargs["max_activities_per_second"] = args.activities_per_second
 
     # Start all workers, throwing on first exception
     workers = [
         Worker(
             client,
             task_queue=task_queue,
-            workflows=[KitchenSinkWorkflow],
+            workflows=[KitchenSinkWorkflow, NexusHandlerWorkflow],
             activities=[
                 noop_activity,
                 delay_activity,
@@ -233,6 +245,7 @@ async def run():
                 heartbeat_activity,
                 create_client_activity(client, args.err_on_unimplemented),
             ],
+            nexus_service_handlers=[KitchenSinkNexusServiceHandler()],
             **worker_kwargs,
         )
         for task_queue in task_queues

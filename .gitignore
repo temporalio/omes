@@ -13,6 +13,8 @@ workers/java/bin
 workers/java/build
 
 /loadgen/kitchen-sink-gen/target/
+
+omes.sln
 /workers/dotnet/obj/
 /workers/dotnet/bin/
 /last_fuzz_run.proto
@@ -21,5 +23,7 @@ workers/dotnet/Temporalio.Omes.temp.csproj
 workers/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
+
+tsconfig.tsbuildinfo
 
 temporal-omes

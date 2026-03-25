@@ -60,6 +60,8 @@ func runInstallTools(ctx context.Context, tools []string) error {
 			err = installPython(ctx)
 		case "node":
 			err = installNode(ctx)
+		case "ruby":
+			err = installRuby(ctx)
 		case "rust":
 			err = installRust(ctx)
 		case "protoc":
@@ -85,7 +87,7 @@ func installDotnet(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("dotnet")
+	workerDir, err := getTargetDir("dotnet")
 	if err != nil {
 		return err
 	}
@@ -99,7 +101,7 @@ func installDotnet(ctx context.Context) error {
 }
 
 func installGo(ctx context.Context) error {
-	workerDir, err := getWorkerDir("go")
+	workerDir, err := getTargetDir("go")
 	if err != nil {
 		return err
 	}
@@ -121,7 +123,7 @@ func installJava(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("java")
+	workerDir, err := getTargetDir("java")
 	if err != nil {
 		return err
 	}
@@ -159,7 +161,7 @@ func installPython(ctx context.Context) error {
 	}
 	fmt.Println("✅ poethepoet installed successfully!")
 
-	workerDir, err := getWorkerDir("python")
+	workerDir, err := getTargetDir("python")
 	if err != nil {
 		return err
 	}
@@ -181,7 +183,7 @@ func installNode(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("typescript")
+	workerDir, err := getTargetDir("typescript")
 	if err != nil {
 		return err
 	}
@@ -194,12 +196,34 @@ func installNode(ctx context.Context) error {
 	return nil
 }
 
+func installRuby(ctx context.Context) error {
+	version, err := getVersion("ruby")
+	if err != nil {
+		return err
+	}
+	if err := installViaMise(ctx, "ruby", version); err != nil {
+		return err
+	}
+
+	targetDir, err := getTargetDir("ruby")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing Ruby worker dependencies...")
+	if err := runCommandInDir(ctx, targetDir, "bundle", "install"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Ruby worker dependencies installed successfully!")
+	return nil
+}
+
 func installRust(ctx context.Context) error {
 	version, err := getVersion("cargo")
 	if err != nil {
 		return err
 	}
-	return installViaMise(ctx, "rust", version)
+	// Use --profile default to ensure rustfmt is included
+	return installViaMise(ctx, "rust", version, "--profile", "default")
 }
 
 func installProtoc(ctx context.Context) error {
@@ -226,18 +250,12 @@ func installProtoc(ctx context.Context) error {
 	return nil
 }
 
-func installUv(ctx context.Context) error {
-	version, err := getVersion("uv")
-	if err != nil {
-		return err
-	}
-	return installViaMise(ctx, "uv", version)
-}
-
-func installViaMise(ctx context.Context, tool, version string) error {
+func installViaMise(ctx context.Context, tool, version string, extraArgs ...string) error {
 	fmt.Println("Installing", tool, version)
 
-	cmd := exec.CommandContext(ctx, "mise", "use", fmt.Sprintf("%s@%s", tool, version))
+	args := []string{"use", fmt.Sprintf("%s@%s", tool, version)}
+	args = append(args, extraArgs...)
+	cmd := exec.CommandContext(ctx, "mise", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("mise command failed: %v\nOutput: %s", err, output)
 	}

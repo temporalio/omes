@@ -63,7 +63,7 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 		return fmt.Errorf("run ID not found")
 	}
 	metrics := c.metricsOptions.MustCreateMetrics(ctx, c.logger)
-	defer metrics.Shutdown(ctx, c.logger)
+	defer metrics.Shutdown(ctx, c.logger, c.scenario.Scenario, c.scenario.RunID, c.scenario.RunFamily)
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
 	taskQueue := loadgen.TaskQueueForRun(c.scenario.RunID)

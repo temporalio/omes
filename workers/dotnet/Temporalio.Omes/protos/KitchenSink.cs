@@ -241,26 +241,30 @@ namespace Temporal.Omes.KitchenSink {
             "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGl2aXR5Q2FuY2VsbGF0aW9u",
             "VHlwZRIeChZkb19ub3RfZWFnZXJseV9leGVjdXRlGAIgASgIEkcKEXZlcnNp",
             "b25pbmdfaW50ZW50GAMgASgOMiwudGVtcG9yYWwub21lcy5raXRjaGVuX3Np",
-            "bmsuVmVyc2lvbmluZ0ludGVudCKsAgoVRXhlY3V0ZU5leHVzT3BlcmF0aW9u",
+            "bmsuVmVyc2lvbmluZ0ludGVudCLrAgoVRXhlY3V0ZU5leHVzT3BlcmF0aW9u",
             "EhAKCGVuZHBvaW50GAEgASgJEhEKCW9wZXJhdGlvbhgCIAEoCRINCgVpbnB1",
             "dBgDIAEoCRJPCgdoZWFkZXJzGAQgAygLMj4udGVtcG9yYWwub21lcy5raXRj",
             "aGVuX3NpbmsuRXhlY3V0ZU5leHVzT3BlcmF0aW9uLkhlYWRlcnNFbnRyeRJF",
             "ChBhd2FpdGFibGVfY2hvaWNlGAUgASgLMisudGVtcG9yYWwub21lcy5raXRj",
             "aGVuX3NpbmsuQXdhaXRhYmxlQ2hvaWNlEhcKD2V4cGVjdGVkX291dHB1dBgG",
-            "IAEoCRouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIg",
-            "ASgJOgI4ASqkAQoRUGFyZW50Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NF",
-            "X1BPTElDWV9VTlNQRUNJRklFRBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lf",
-            "VEVSTUlOQVRFEAESHwobUEFSRU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAIS",
-            "JgoiUEFSRU5UX0NMT1NFX1BPTElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZl",
-            "cnNpb25pbmdJbnRlbnQSDwoLVU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxF",
-            "EAESCwoHREVGQVVMVBACKqIBCh1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9u",
-            "VHlwZRIUChBDSElMRF9XRl9BQkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NB",
-            "TkNFTBABEigKJENISUxEX1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRF",
-            "RBACEigKJENISUxEX1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBAD",
-            "KlgKGEFjdGl2aXR5Q2FuY2VsbGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAAS",
-            "HwobV0FJVF9DQU5DRUxMQVRJT05fQ09NUExFVEVEEAESCwoHQUJBTkRPThAC",
-            "QkIKEGlvLnRlbXBvcmFsLm9tZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9v",
-            "bWVzL2xvYWRnZW4va2l0Y2hlbnNpbmtiBnByb3RvMw=="));
+            "IAEoCRI9Cg5iZWZvcmVfYWN0aW9ucxgHIAMoCzIlLnRlbXBvcmFsLm9tZXMu",
+            "a2l0Y2hlbl9zaW5rLkFjdGlvblNldBouCgxIZWFkZXJzRW50cnkSCwoDa2V5",
+            "GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJhChFOZXh1c0hhbmRsZXJJbnB1",
+            "dBINCgVpbnB1dBgBIAEoCRI9Cg5iZWZvcmVfYWN0aW9ucxgCIAMoCzIlLnRl",
+            "bXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlvblNldCqkAQoRUGFyZW50",
+            "Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQRUNJRklF",
+            "RBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAESHwobUEFS",
+            "RU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NMT1NFX1BP",
+            "TElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRlbnQSDwoL",
+            "VU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVMVBACKqIB",
+            "Ch1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElMRF9XRl9B",
+            "QkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENISUxEX1dG",
+            "X1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxEX1dGX1dB",
+            "SVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5Q2FuY2Vs",
+            "bGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5DRUxMQVRJ",
+            "T05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBvcmFsLm9t",
+            "ZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4va2l0Y2hl",
+            "bnNpbmtiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -299,7 +303,8 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ReturnErrorAction), global::Temporal.Omes.KitchenSink.ReturnErrorAction.Parser, new[]{ "Failure" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ContinueAsNewAction), global::Temporal.Omes.KitchenSink.ContinueAsNewAction.Parser, new[]{ "WorkflowType", "TaskQueue", "Arguments", "WorkflowRunTimeout", "WorkflowTaskTimeout", "Memo", "Headers", "SearchAttributes", "RetryPolicy", "VersioningIntent" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, })
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerInput), global::Temporal.Omes.KitchenSink.NexusHandlerInput.Parser, new[]{ "Input", "BeforeActions" }, null, null, null, null)
           }));
     }
     #endregion
@@ -12789,6 +12794,7 @@ namespace Temporal.Omes.KitchenSink {
       headers_ = other.headers_.Clone();
       awaitableChoice_ = other.awaitableChoice_ != null ? other.awaitableChoice_.Clone() : null;
       expectedOutput_ = other.expectedOutput_;
+      beforeActions_ = other.beforeActions_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -12884,6 +12890,20 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
+    /// <summary>Field number for the "before_actions" field.</summary>
+    public const int BeforeActionsFieldNumber = 7;
+    private static readonly pb::FieldCodec<global::Temporal.Omes.KitchenSink.ActionSet> _repeated_beforeActions_codec
+        = pb::FieldCodec.ForMessage(58, global::Temporal.Omes.KitchenSink.ActionSet.Parser);
+    private readonly pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> beforeActions_ = new pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet>();
+    /// <summary>
+    /// Actions to execute before returning from the handler workflow
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> BeforeActions {
+      get { return beforeActions_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -12905,6 +12925,7 @@ namespace Temporal.Omes.KitchenSink {
       if (!Headers.Equals(other.Headers)) return false;
       if (!object.Equals(AwaitableChoice, other.AwaitableChoice)) return false;
       if (ExpectedOutput != other.ExpectedOutput) return false;
+      if(!beforeActions_.Equals(other.beforeActions_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -12918,6 +12939,7 @@ namespace Temporal.Omes.KitchenSink {
       hash ^= Headers.GetHashCode();
       if (awaitableChoice_ != null) hash ^= AwaitableChoice.GetHashCode();
       if (ExpectedOutput.Length != 0) hash ^= ExpectedOutput.GetHashCode();
+      hash ^= beforeActions_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -12957,6 +12979,7 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(50);
         output.WriteString(ExpectedOutput);
       }
+      beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -12988,6 +13011,7 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(50);
         output.WriteString(ExpectedOutput);
       }
+      beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -13014,6 +13038,7 @@ namespace Temporal.Omes.KitchenSink {
       if (ExpectedOutput.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedOutput);
       }
+      size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -13045,6 +13070,7 @@ namespace Temporal.Omes.KitchenSink {
       if (other.ExpectedOutput.Length != 0) {
         ExpectedOutput = other.ExpectedOutput;
       }
+      beforeActions_.Add(other.beforeActions_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -13087,6 +13113,10 @@ namespace Temporal.Omes.KitchenSink {
             ExpectedOutput = input.ReadString();
             break;
           }
+          case 58: {
+            beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
+            break;
+          }
         }
       }
     #endif
@@ -13127,6 +13157,229 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 50: {
             ExpectedOutput = input.ReadString();
+            break;
+          }
+          case 58: {
+            beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NexusHandlerInput : pb::IMessage<NexusHandlerInput>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NexusHandlerInput> _parser = new pb::MessageParser<NexusHandlerInput>(() => new NexusHandlerInput());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NexusHandlerInput> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[29]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerInput() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerInput(NexusHandlerInput other) : this() {
+      input_ = other.input_;
+      beforeActions_ = other.beforeActions_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerInput Clone() {
+      return new NexusHandlerInput(this);
+    }
+
+    /// <summary>Field number for the "input" field.</summary>
+    public const int InputFieldNumber = 1;
+    private string input_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Input {
+      get { return input_; }
+      set {
+        input_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "before_actions" field.</summary>
+    public const int BeforeActionsFieldNumber = 2;
+    private static readonly pb::FieldCodec<global::Temporal.Omes.KitchenSink.ActionSet> _repeated_beforeActions_codec
+        = pb::FieldCodec.ForMessage(18, global::Temporal.Omes.KitchenSink.ActionSet.Parser);
+    private readonly pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> beforeActions_ = new pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> BeforeActions {
+      get { return beforeActions_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NexusHandlerInput);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NexusHandlerInput other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Input != other.Input) return false;
+      if(!beforeActions_.Equals(other.beforeActions_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Input.Length != 0) hash ^= Input.GetHashCode();
+      hash ^= beforeActions_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Input.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Input);
+      }
+      beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Input.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Input);
+      }
+      beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Input.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
+      }
+      size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NexusHandlerInput other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Input.Length != 0) {
+        Input = other.Input;
+      }
+      beforeActions_.Add(other.beforeActions_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Input = input.ReadString();
+            break;
+          }
+          case 18: {
+            beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Input = input.ReadString();
+            break;
+          }
+          case 18: {
+            beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
             break;
           }
         }

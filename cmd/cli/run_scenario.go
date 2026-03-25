@@ -80,7 +80,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
-	fs.StringSliceVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	fs.StringArrayVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
@@ -126,7 +126,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(ctx, r.logger)
+	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
 	start := time.Now()
 	var client client.Client
 	var err error

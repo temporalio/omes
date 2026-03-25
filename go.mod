@@ -12,13 +12,12 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
-	github.com/temporalio/features v0.0.0-20251113235102-ac7c92445a59
-	go.temporal.io/api v1.53.0
-	go.temporal.io/sdk v1.37.0
+	github.com/temporalio/features v0.0.0-20260324215619-e5868d9ba03f
+	go.temporal.io/api v1.62.1
+	go.temporal.io/sdk v1.40.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.28.0
 	golang.org/x/sync v0.17.0
-	golang.org/x/sys v0.37.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.6
 )
@@ -47,7 +46,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nexus-rpc/sdk-go v0.4.0 // indirect
+	github.com/nexus-rpc/sdk-go v0.5.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
@@ -58,6 +57,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
@@ -68,6 +68,6 @@ require (
 // This is dumb, but necesary because Go (for some commands) can't figure out the transitive
 // local-replace inside of the features module itself, so we have to help it.
 replace (
-	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20251113235102-ac7c92445a59
-	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20251113235102-ac7c92445a59
+	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20260324215619-e5868d9ba03f
+	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20260324215619-e5868d9ba03f
 )

@@ -6,7 +6,8 @@ permissions:
   checks: write
 
 env:
-  MISE_VERSION: v2025.8.1
+  MISE_VERSION: v2025.12.1
+  MISE_NODE_VERIFY: no
 
 on: # rebuild any PRs and main branch changes
   pull_request:
@@ -44,18 +45,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        target: [go, java, python, ruby, typescript, dotnet, kitchensink-gen]
         include:
-          - sdk: go
+          - target: go
             tools: go
-          - sdk: java
+          - target: java
             tools: java go
-          - sdk: python
+          - target: python
             tools: python go
-          - sdk: typescript
+          - target: ruby
+            tools: ruby go
+          - target: typescript
             tools: rust go node protoc
-          - sdk: dotnet
+          - target: dotnet
             tools: dotnet go
+          - target: kitchensink-gen
+            tools: rust go protoc
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -68,25 +73,29 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Ensure rustfmt
+        if: matrix.target == 'kitchensink-gen'
+        run: |
+          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: Lint and format ${{ matrix.sdk }} worker
+      - name: Lint and format ${{ matrix.target }} worker
         run: |
-          go run ./cmd/dev lint-and-format ${{ matrix.sdk }}
+          go run ./cmd/dev lint-and-format ${{ matrix.target }}
       - name: Check formatting
         run: |
-          git diff --exit-code || (echo "${{ matrix.sdk }} worker has uncommitted formatting changes" && exit 1)
-      - name: Test ${{ matrix.sdk }} worker
+          git diff --exit-code || (echo "${{ matrix.target }} worker has uncommitted formatting changes" && exit 1)
+      - name: Test ${{ matrix.target }} worker
         run: |
-          go run ./cmd/dev test ${{ matrix.sdk }}
+          go run ./cmd/dev test ${{ matrix.target }}
 
   build-worker:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        sdk: [go, java, python, ruby, typescript, dotnet]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -119,14 +128,13 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
-        
 
   test-kitchensink:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        sdk: [go, java, python, ruby, typescript, dotnet]
         include:
           - sdk: go
             tools: go
@@ -134,6 +142,8 @@ jobs:
             tools: java go
           - sdk: python
             tools: python go
+          - sdk: ruby
+            tools: ruby go
           - sdk: typescript
             tools: node go
           - sdk: dotnet
@@ -150,6 +160,10 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Ensure rustfmt
+        if: matrix.target == 'kitchensink-gen'
+        run: |
+          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
@@ -231,6 +245,7 @@ jobs:
       java-sdk-version: ${{ steps.set-output.outputs.java-sdk-version }}
       python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
       dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
+      ruby-sdk-version: ${{ steps.set-output.outputs.ruby-sdk-version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -246,6 +261,7 @@ jobs:
           echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "ruby-sdk-version=v${{ env.RUBY_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-docker-images:
     needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
@@ -260,3 +276,4 @@ jobs:
       java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
       py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
       dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
+      ruby-version: ${{ needs.prepare-for-docker-push.outputs.ruby-sdk-version }}

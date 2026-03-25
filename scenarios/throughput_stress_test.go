@@ -15,11 +15,10 @@ func TestThroughputStress(t *testing.T) {
 	t.Parallel()
 
 	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
-	taskQueueName := loadgen.TaskQueueForRun(runID)
 
 	env := workers.SetupTestEnvironment(t,
 		workers.WithExecutorTimeout(1*time.Minute),
-		workers.WithNexusEndpoint(taskQueueName))
+		workers.WithNexusEndpoint(runID))
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,

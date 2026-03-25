@@ -49,6 +49,33 @@ flowchart TD
 * **Executor**: produces concurrent executions of workflows and activities requested by the Scenario
 * **Workers**: consumes the workflows and activities started by the Executor
 
+### Process Metrics Sidecar
+
+Omes includes a process metrics sidecar - a Go-based HTTP server that monitors CPU and memory usage of the worker process. The sidecar is started by `run-worker` (or `run-scenario-with-worker`) after spawning the worker subprocess.
+
+**Endpoints:**
+- `/metrics` - Prometheus-format metrics (`process_cpu_percent`, `process_resident_memory_bytes`)
+- `/info` - JSON metadata (`sdk_version`, `build_id`, `language`)
+
+**Configuration flags:**
+- `--worker-process-metrics-address` - Address for the sidecar HTTP server (required to enable)
+- `--worker-metrics-version-tag` - SDK version to report in `/info` (defaults to `--version`)
+
+**Example:**
+```sh
+go run ./cmd run-worker --language python --run-id my-run \
+    --worker-process-metrics-address :9091 \
+    --worker-metrics-version-tag v1.24.0
+```
+
+**Metrics export:**
+
+When using the Prometheus instance (`--prom-instance-addr`), sidecar metrics can be exported to parquet files on shutdown. The export includes SDK version, build ID, and language from the `/info` endpoint.
+
+- `--prom-export-worker-metrics` - Path to export metrics parquet file
+- `--prom-export-process-job` - Prometheus job name for process metrics (default: `omes-worker-process`)
+- `--prom-export-worker-info-address` - Address to fetch `/info` from during export (e.g., `localhost:9091`)
+
 ## Usage
 
 ### Define a scenario
@@ -212,6 +239,12 @@ You can run the fuzzer with new random actions like so:
 
 ```sh
 go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
+```
+
+The fuzzer automatically creates a Nexus endpoint and generates Nexus operations. To use an existing endpoint instead:
+
+```sh
+go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
 ```
 
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated

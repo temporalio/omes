@@ -84,7 +84,7 @@ export const createActivities = (client: Client, errOnUnimplemented = false) => 
   retryable_error: retryableError,
   timeout,
   heartbeat: heartbeatActivity,
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   delay: require('@temporalio/activity').sleep,
 
   async client(clientActivity: IClientActivity): Promise<void> {

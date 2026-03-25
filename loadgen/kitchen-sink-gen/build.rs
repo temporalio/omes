@@ -7,6 +7,7 @@ use std::process::Command;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../../workers/proto");
     println!("cargo:rerun-if-changed=../../versions.env");
+    println!("cargo:rerun-if-env-changed=PROTOC");
     let ks_protos = ["../../workers/proto/kitchen_sink/kitchen_sink.proto"];
     let include_paths = [
         "../../workers/proto/api_upstream",
@@ -92,4 +93,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

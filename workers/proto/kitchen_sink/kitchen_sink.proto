@@ -498,5 +498,13 @@ message ExecuteNexusOperation {
   AwaitableChoice awaitable_choice = 5;
   // Expected output for verification
   string expected_output = 6;
+  // Actions to execute before returning from the handler workflow
+  repeated ActionSet before_actions = 7;
+}
+
+// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
+message NexusHandlerInput {
+  string input = 1;
+  repeated ActionSet before_actions = 2;
 }
 

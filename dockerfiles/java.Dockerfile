@@ -1,6 +1,6 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH eclipse-temurin:11-jammy AS build
+FROM --platform=linux/$TARGETARCH eclipse-temurin:21-jammy AS build
 
 # Install protobuf compiler and dependencies
 RUN apt-get update \
@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy CLI build dependencies
 COPY cmd ./cmd
 COPY loadgen ./loadgen
+COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
@@ -44,7 +45,7 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prep
 
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up
-FROM --platform=linux/$TARGETARCH eclipse-temurin:11
+FROM --platform=linux/$TARGETARCH eclipse-temurin:21
 ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes

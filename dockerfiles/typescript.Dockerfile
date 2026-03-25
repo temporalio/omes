@@ -24,6 +24,7 @@ WORKDIR /app
 COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
+COPY metrics ./metrics
 COPY workers/*.go ./workers/
 COPY go.mod go.sum ./
 
@@ -36,9 +37,18 @@ ARG SDK_VERSION
 ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
+# Read BUILD_CORE_RELEASE env var. This builds TS worker with core bridge in release mode.
+# This is only relevant if building from source (if using a published version, the worker is already
+# built in release mode).
+ARG BUILD_CORE_RELEASE=false
+ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
+
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
+
+# Install pnpm (sdkbuild uses pnpm to build typescript programs)
+RUN npm install -g pnpm
 
 # Build typescript proto files
 # hadolint ignore=DL3003

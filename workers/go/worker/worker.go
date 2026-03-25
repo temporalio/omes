@@ -33,6 +33,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 		a.logger.Fatal("Task queue suffix start after end")
 	}
 	a.logger = a.loggingOptions.MustCreateLogger()
+
 	metrics := a.metricsOptions.MustCreateMetrics(cmd.Context(), a.logger)
 	client := a.clientOptions.MustDial(metrics, a.logger)
 
@@ -49,7 +50,7 @@ func (a *App) Run(cmd *cobra.Command, args []string) {
 	if err := runWorkers(client, taskQueues, a.workerOptions); err != nil {
 		a.logger.Fatalf("Fatal worker error: %v", err)
 	}
-	if err := metrics.Shutdown(cmd.Context(), a.logger); err != nil {
+	if err := metrics.Shutdown(cmd.Context(), a.logger, "", "", ""); err != nil {
 		a.logger.Fatalf("Failed to shutdown metrics: %v", err)
 	}
 }
@@ -74,9 +75,10 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 		Client: client,
 	}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	err := service.Register(kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.WaitForCancelOperation)
-	if err != nil {
-		panic(fmt.Sprintf("failed to register operations: %v", err))
+	for _, op := range []nexus.RegisterableOperation{kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation} {
+		if err := service.Register(op); err != nil {
+			panic(fmt.Sprintf("failed to register operation: %v", err))
+		}
 	}
 
 	for _, taskQueue := range taskQueues {
@@ -105,8 +107,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
 			w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 			w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
-			w.RegisterWorkflow(kitchensink.EchoWorkflow)
-			w.RegisterWorkflow(kitchensink.WaitForCancelWorkflow)
+			w.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
 			w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 			w.RegisterActivity(&ebbFlowActivities)
 			w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
@@ -126,7 +127,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 func Main() {
 	var app App
 
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "worker",
 		Short: "A generic worker for running omes scenarios",
 		Run:   app.Run,
@@ -135,7 +136,7 @@ func Main() {
 	cmd.Flags().AddFlagSet(app.loggingOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.clientOptions.FlagSet())
 	cmd.Flags().AddFlagSet(app.metricsOptions.FlagSet(""))
-	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet(""))
+	cmd.Flags().AddFlagSet(app.workerOptions.FlagSet())
 	cmd.Flags().StringVarP(&app.taskQueue, "task-queue", "q", "omes", "Task queue to use")
 	cmd.Flags().IntVar(&app.taskQueueIndexSuffixStart,
 		"task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
