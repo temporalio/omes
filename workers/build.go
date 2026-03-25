@@ -274,7 +274,6 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 
 func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	// If version not provided, read the version constraint from the gemspec.
-	// Parses: s.add_dependency 'temporalio', '~> 1.3'
 	version := b.SdkOptions.Version
 	if version == "" {
 		gemspecBytes, err := os.ReadFile(filepath.Join(baseDir, "omes.gemspec"))
