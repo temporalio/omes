@@ -385,6 +385,20 @@ func CreateScheduleClientAction() *ClientAction {
 	}
 }
 
+// NexusOperationAttachCallbacksAction creates a workflow-level Action that starts numOps
+// async Nexus operations in parallel, attaches callbacks via GetNexusOperationExecution,
+// signals the handler workflows to complete, then waits for all operations to finish.
+func NexusOperationAttachCallbacksAction(endpoint string, numOps int32) *Action {
+	return &Action{
+		Variant: &Action_NexusOperationAttachCallbacks{
+			NexusOperationAttachCallbacks: &ExecuteNexusOperationAttachCallbacks{
+				Endpoint: endpoint,
+				NumOps:   numOps,
+			},
+		},
+	}
+}
+
 func ConvertToPayload(newInput any) *common.Payload {
 	payload, err := jsonPayloadConverter.ToPayload(newInput)
 	if err != nil {
