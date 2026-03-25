@@ -64,13 +64,14 @@ go run ./cmd run-scenario-with-worker \
   --language go \
   --run-id run-1 \
   --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
+  --option payload-size=1024 \
   --worker-max-concurrent-workflow-pollers 40 \
   --worker-max-concurrent-workflow-tasks 500 \
   --worker-max-concurrent-activity-pollers 40 \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
-  --namespace $CELL.temporal-dev \
+  --namespace $NS.temporal-dev \
   --tls \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
@@ -81,11 +82,12 @@ go run ./cmd run-scenario-with-worker \
   --language go \
   --run-id run-1 \
   --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
+  --option payload-size=1024 \
   --worker-max-concurrent-activity-pollers 40 \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
-  --namespace $CELL.temporal-dev \
+  --namespace $NS.temporal-dev \
   --tls \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
