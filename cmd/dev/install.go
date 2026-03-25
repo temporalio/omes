@@ -205,12 +205,12 @@ func installRuby(ctx context.Context) error {
 		return err
 	}
 
-	workerDir, err := getWorkerDir("ruby")
+	targetDir, err := getTargetDir("ruby")
 	if err != nil {
 		return err
 	}
 	fmt.Println("Installing Ruby worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "bundle", "install"); err != nil {
+	if err := runCommandInDir(ctx, targetDir, "bundle", "install"); err != nil {
 		return err
 	}
 	fmt.Println("✅ Ruby worker dependencies installed successfully!")

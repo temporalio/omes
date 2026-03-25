@@ -71,9 +71,9 @@ func lintAndFormat(ctx context.Context, target string) error {
 	case "typescript":
 		return lintAndFormatTypescriptWorker(ctx, targetDir)
 	case "dotnet":
-		return lintAndFormatDotnetWorker(ctx, workerDir)
+		return lintAndFormatDotnetWorker(ctx, targetDir)
 	case "ruby":
-		return lintAndFormatRubyWorker(ctx, workerDir)
+		return lintAndFormatRubyWorker(ctx, targetDir)
 	case "kitchensink-gen":
 		return lintAndFormatRustKitchenSinkGen(ctx)
 	default:
