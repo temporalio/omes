@@ -33,6 +33,18 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.InitInputs == nil {
 		return fmt.Errorf("InitInputs must be specified")
 	}
+
+	// Use a user-provided nexus endpoint, or auto-create one for this run
+	endpointName := info.ScenarioOptions["nexus-endpoint"]
+	if endpointName == "" {
+		var err error
+		endpointName, err = ensureNexusEndpoint(ctx, info.Client, info.Namespace, info.RunID)
+		if err != nil {
+			return fmt.Errorf("failed to create nexus endpoint: %w", err)
+		}
+	}
+	info.Logger.Infof("Using nexus endpoint %q", endpointName)
+
 	var testInputs []*kitchensink.TestInput
 	// Load or generate inputs
 	fileOrArgs := k.InitInputs(ctx, info)
