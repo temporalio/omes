@@ -63,14 +63,14 @@ go run ./cmd run-scenario-with-worker \
   --scenario workflow_with_single_activity \
   --language go \
   --run-id run-1 \
-  --duration 1h --max-concurrent 500 --max-iterations-per-second 50 \
+  --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
   --worker-max-concurrent-workflow-pollers 40 \
   --worker-max-concurrent-workflow-tasks 500 \
   --worker-max-concurrent-activity-pollers 40 \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
-  --namespace saa-cogs-4.temporal-dev \
+  --namespace $CELL.temporal-dev \
   --tls \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
@@ -85,7 +85,7 @@ go run ./cmd run-scenario-with-worker \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \
   --server-address us-west-2.aws.api.tmprl-test.cloud:7233 \
-  --namespace saa-cogs-4.temporal-dev \
+  --namespace $CELL.temporal-dev \
   --tls \
   --disable-tls-host-verification \
   --auth-header "Bearer $TEMPORAL_API_KEY"
@@ -94,3 +94,25 @@ ct ocld test dynamic-config namespace get -n saa-cogs-4.temporal-dev
 
 # 88ms RTT
 for i in $(seq 10); do curl -s -o /dev/null -w '%{time_connect}\n' https://us-west-2.aws.api.tmprl-test.cloud:7233; done
+
+# parameterized
+
+ct admintools --context $CELL -- temporal operator namespace list
+ct ocld test namespace create \
+  --namespace $CELL.temporal-dev \
+  --region us-west-2 \
+  --cloud-provider aws \
+  --retention 1 \
+  --placement-override-cell-id $CELL \
+  --auth-method api_key
+
+ct admintools --context $CELL -- temporal operator namespace list
+nslookup $CELL.temporal-dev.tmprl-test.cloud
+
+export TEMPORAL_API_KEY=xxx
+export TEMPORAL_ADDRESS=us-west-2.aws.api.tmprl-test.cloud:7233
+export TEMPORAL_NAMESPACE=$CELL.temporal-dev
+export TEMPORAL_TLS=true
+export TEMPORAL_TLS_DISABLE_HOST_VERIFICATION=true
+
+ct kubectl --context $CELL patch deployment/temporal-go-canary -n temporal -p '{"spec":{"replicas":0}}'
