@@ -49,7 +49,9 @@ if test "$auth_method" = "api_key"
         \"--server-address=$server_address\",
         \"--tls\",
         \"--disable-tls-host-verification\",
-        \"--auth-header=Bearer \$(TEMPORAL_API_KEY)\"
+        \"--auth-header=Bearer \$(TEMPORAL_API_KEY)\",
+        \"--worker-max-concurrent-activity-pollers=$max_concurrent_activity_pollers\",
+        \"--worker-max-concurrent-activities=$max_concurrent_activities\"
       ] |
       .spec.template.spec.containers[0].env = [
         {\"name\": \"TEMPORAL_API_KEY\", \"valueFrom\": {\"secretKeyRef\": {\"name\": \"omes-api-key\", \"key\": \"api-key\"}}}

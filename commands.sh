@@ -82,9 +82,8 @@ go run ./cmd run-scenario-with-worker \
   --scenario standalone_activity \
   --language go \
   --run-id run-2 \
-  --duration 1h --max-concurrent 500 --max-iterations-per-second 100 \
-  --option payload-size=1024 \
-  --option fail-for-attempts=9 \
+  --duration 1h --max-concurrent 500 --max-iterations-per-second 1000 \
+  --option payload-size=102400 \
   --worker-max-concurrent-activity-pollers 40 \
   --worker-max-concurrent-activities 500 \
   --do-not-register-search-attributes \

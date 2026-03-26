@@ -54,7 +54,7 @@ func activityOptions(r *loadgen.Run, failForAttempts int32) client.StartActivity
 			r.Iteration,
 		),
 		TaskQueue:           r.TaskQueue(),
-		StartToCloseTimeout:    5 * time.Second,
+		StartToCloseTimeout:    30 * time.Second,
 		ScheduleToCloseTimeout: 60 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts:    failForAttempts + 1,
