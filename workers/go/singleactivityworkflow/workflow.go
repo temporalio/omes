@@ -18,7 +18,7 @@ func SingleActivityWorkflow(ctx workflow.Context, input []byte, outputSize int32
 	}
 	var output []byte
 	err := workflow.ExecuteActivity(workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 5 * time.Second,
+		StartToCloseTimeout: 30 * time.Second,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts:    failForAttempts + 1,
 			InitialInterval:    1 * time.Millisecond,

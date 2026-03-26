@@ -36,7 +36,7 @@ func init() {
 					if err != nil {
 						return err
 					}
-					getCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+					getCtx, cancel := context.WithTimeout(ctx, time.Duration(r.ScenarioOptionInt("get-timeout-seconds", 120))*time.Second)
 					defer cancel()
 					return handle.Get(getCtx, nil)
 				},
@@ -46,6 +46,8 @@ func init() {
 }
 
 func activityOptions(r *loadgen.Run, failForAttempts int32) client.StartActivityOptions {
+	startToClose := time.Duration(r.ScenarioOptionInt("start-to-close-timeout-seconds", 30)) * time.Second
+	scheduleToClose := time.Duration(r.ScenarioOptionInt("schedule-to-close-timeout-seconds", 120)) * time.Second
 	return client.StartActivityOptions{
 		ID: fmt.Sprintf(
 			"a-%s-%s-%d",
@@ -53,9 +55,9 @@ func activityOptions(r *loadgen.Run, failForAttempts int32) client.StartActivity
 			r.ExecutionID,
 			r.Iteration,
 		),
-		TaskQueue:           r.TaskQueue(),
-		StartToCloseTimeout:    30 * time.Second,
-		ScheduleToCloseTimeout: 60 * time.Second,
+		TaskQueue:              r.TaskQueue(),
+		StartToCloseTimeout:    startToClose,
+		ScheduleToCloseTimeout: scheduleToClose,
 		RetryPolicy: &temporal.RetryPolicy{
 			MaximumAttempts:    failForAttempts + 1,
 			InitialInterval:    1 * time.Millisecond,
