@@ -4,23 +4,10 @@ Manage OMES workers and scenario executors on a running test cell.
 
 ## Prerequisites
 
-A test cell with OMES enabled must be scaffolded first:
+A test cell with an OMES deployment. Either:
 
-```
-omni scaffold environment create \
-    --cell-id=<cell> \
-    --namespace=<ns> \
-    --yaml=v5-aws-dev \
-    --temporal-version=<server-version> \
-    --agent-version=<server-version> \
-    --web-version=<web-version> \
-    --go-canary-version=<canary-version> \
-    --omes-enabled \
-    --omes-run-id=<run-id> \
-    --omes-image-tag=<image-tag>
-```
-
-This creates the cell, namespace, and initial OMES deployment (running `run-scenario-with-worker`). These scripts then split that into separate worker and executor components.
+1. Scaffold with `--omes-enabled` (creates cell, namespace, deployment, and mTLS certs), or
+2. Use `omni scaffold environment omes setup` to add an OMES deployment to an existing cell
 
 ## Setup
 
@@ -30,7 +17,17 @@ Generate config from a running cluster:
 fish fetch-config.fish <cell-id>
 ```
 
-Or edit `config.fish` manually.
+Or edit `config.fish` manually. Key settings:
+
+- `auth_method`: `"api_key"` or `"mtls"`
+- `api_gateway`: API gateway endpoint (for `api_key` auth)
+
+For API key auth, create the k8s secret:
+
+```
+ct kubectl --context <cell> create secret generic omes-api-key \
+    -n omes --from-literal=api-key=<your-api-key>
+```
 
 ## Usage
 

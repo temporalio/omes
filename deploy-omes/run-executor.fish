@@ -14,7 +14,7 @@ else
     exit 1
 end
 
-for var in cell ns runid scenario omes_image_tag omes_ecr_registry
+for var in cell ns runid scenario omes_image_tag omes_ecr_registry auth_method
     if test -z "$$var"
         echo "Error: \$$var is not set in config.fish"
         exit 1
@@ -27,27 +27,49 @@ if test (count $argv) -gt 0
 end
 
 set -l job_name "omes-executor"
-set -l deployment_name "omes-$ns-e2e-omes-worker"
-set -l namespace_fqdn "$ns.e2e"
-set -l server_address "$namespace_fqdn.tmprl-test.cloud:7233"
+set -l namespace_fqdn "$ns.temporal-dev"
 set -l image "$omes_ecr_registry:$omes_image_tag"
-set -l secret_name "$deployment_name"
 
-set -l yq_expr ".spec.template.spec.containers[0].image = \"$image\" |
-     .spec.template.spec.containers[0].args = [
-       \"run-scenario\",
-       \"--scenario=$scenario\",
-       \"--run-id=cicd-go-$runid\",
-       \"--namespace=$namespace_fqdn\",
-       \"--server-address=$server_address\",
-       \"--disable-tls-host-verification\",
-       \"--tls\",
-       \"--tls-cert-path=/certs/tls.crt\",
-       \"--tls-key-path=/certs/tls.key\",
-       \"--duration=$duration\",
-       \"--do-not-register-search-attributes\"
-     ] |
-     .spec.template.spec.volumes[0].secret.secretName = \"$secret_name\""
+if test "$auth_method" = "api_key"
+    set -l server_address "$api_gateway"
+    set -l yq_expr ".spec.template.spec.containers[0].image = \"$image\" |
+         .spec.template.spec.containers[0].args = [
+           \"run-scenario\",
+           \"--scenario=$scenario\",
+           \"--run-id=cicd-go-$runid\",
+           \"--namespace=$namespace_fqdn\",
+           \"--server-address=$server_address\",
+           \"--tls\",
+           \"--disable-tls-host-verification\",
+           \"--auth-header=Bearer \$(TEMPORAL_API_KEY)\",
+           \"--duration=$duration\",
+           \"--do-not-register-search-attributes\"
+         ] |
+         .spec.template.spec.containers[0].env = [
+           {\"name\": \"TEMPORAL_API_KEY\", \"valueFrom\": {\"secretKeyRef\": {\"name\": \"omes-api-key\", \"key\": \"api-key\"}}}
+         ] |
+         del(.spec.template.spec.volumes) |
+         del(.spec.template.spec.containers[0].volumeMounts)"
+else
+    set -l deployment_name "omes-$ns-temporal-dev-omes-worker"
+    set -l server_address "$namespace_fqdn.tmprl-test.cloud:7233"
+    set -l secret_name "$deployment_name"
+    set -l yq_expr ".spec.template.spec.containers[0].image = \"$image\" |
+         .spec.template.spec.containers[0].args = [
+           \"run-scenario\",
+           \"--scenario=$scenario\",
+           \"--run-id=cicd-go-$runid\",
+           \"--namespace=$namespace_fqdn\",
+           \"--server-address=$server_address\",
+           \"--disable-tls-host-verification\",
+           \"--tls\",
+           \"--tls-cert-path=/certs/tls.crt\",
+           \"--tls-key-path=/certs/tls.key\",
+           \"--duration=$duration\",
+           \"--do-not-register-search-attributes\"
+         ] |
+         .spec.template.spec.volumes[0].secret.secretName = \"$secret_name\""
+end
 
 # Write rendered yaml to a temp file to preserve formatting
 set -l tmpfile (mktemp /tmp/omes-executor.XXXXXX.yaml)

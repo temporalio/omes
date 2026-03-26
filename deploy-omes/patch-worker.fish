@@ -14,7 +14,7 @@ else
     exit 1
 end
 
-for var in cell ns runid scenario
+for var in cell ns runid scenario auth_method omes_image_tag omes_ecr_registry
     if test -z "$$var"
         echo "Error: \$$var is not set in config.fish"
         exit 1
@@ -26,28 +26,55 @@ if test (count $argv) -gt 0
     set replicas $argv[1]
 end
 
-set -l deployment_name "omes-$ns-e2e-omes-worker"
-set -l namespace_fqdn "$ns.e2e"
-set -l server_address "$namespace_fqdn.tmprl-test.cloud:7233"
+set -l deployment_name "omes-$ns-temporal-dev-omes-worker"
+set -l namespace_fqdn "$ns.temporal-dev"
+set -l image "$omes_ecr_registry:$omes_image_tag"
 
 set -l tmpfile (mktemp /tmp/omes-worker-patch.XXXXXX.json)
-yq -o=json -n "
-  .spec.replicas = $replicas |
-  .spec.template.spec.containers[0].name = \"omes\" |
-  .spec.template.spec.containers[0].command = [\"/app/temporal-omes\"] |
-  .spec.template.spec.containers[0].args = [
-    \"run-worker\",
-    \"--language=go\",
-    \"--dir-name=prepared\",
-    \"--scenario=$scenario\",
-    \"--run-id=cicd-go-$runid\",
-    \"--namespace=$namespace_fqdn\",
-    \"--server-address=$server_address\",
-    \"--disable-tls-host-verification\",
-    \"--tls\",
-    \"--tls-cert-path=/certs/tls.crt\",
-    \"--tls-key-path=/certs/tls.key\"
-  ]" > $tmpfile
+
+if test "$auth_method" = "api_key"
+    set -l server_address "$api_gateway"
+    yq -o=json -n "
+      .spec.replicas = $replicas |
+      .spec.template.spec.containers[0].name = \"omes\" |
+      .spec.template.spec.containers[0].image = \"$image\" |
+      .spec.template.spec.containers[0].command = [\"/app/temporal-omes\"] |
+      .spec.template.spec.containers[0].args = [
+        \"run-worker\",
+        \"--language=go\",
+        \"--dir-name=prepared\",
+        \"--scenario=$scenario\",
+        \"--run-id=cicd-go-$runid\",
+        \"--namespace=$namespace_fqdn\",
+        \"--server-address=$server_address\",
+        \"--tls\",
+        \"--disable-tls-host-verification\",
+        \"--auth-header=Bearer \$(TEMPORAL_API_KEY)\"
+      ] |
+      .spec.template.spec.containers[0].env = [
+        {\"name\": \"TEMPORAL_API_KEY\", \"valueFrom\": {\"secretKeyRef\": {\"name\": \"omes-api-key\", \"key\": \"api-key\"}}}
+      ]" > $tmpfile
+else
+    set -l server_address "$namespace_fqdn.tmprl-test.cloud:7233"
+    yq -o=json -n "
+      .spec.replicas = $replicas |
+      .spec.template.spec.containers[0].name = \"omes\" |
+      .spec.template.spec.containers[0].image = \"$image\" |
+      .spec.template.spec.containers[0].command = [\"/app/temporal-omes\"] |
+      .spec.template.spec.containers[0].args = [
+        \"run-worker\",
+        \"--language=go\",
+        \"--dir-name=prepared\",
+        \"--scenario=$scenario\",
+        \"--run-id=cicd-go-$runid\",
+        \"--namespace=$namespace_fqdn\",
+        \"--server-address=$server_address\",
+        \"--disable-tls-host-verification\",
+        \"--tls\",
+        \"--tls-cert-path=/certs/tls.crt\",
+        \"--tls-key-path=/certs/tls.key\"
+      ]" > $tmpfile
+end
 
 echo "Patching deployment '$deployment_name' to run $replicas worker(s):"
 echo ""
