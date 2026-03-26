@@ -3,6 +3,11 @@ const { resolve } = require('path');
 const { promisify } = require('util');
 const glob = require('glob');
 const { statSync, mkdirSync } = require('fs');
+
+// Normalize path separators for glob (Windows uses backslashes, glob requires forward slashes)
+function toGlobPath(p) {
+  return p.replace(/\\/g, '/');
+}
 const pbjs = require('protobufjs-cli/pbjs');
 const pbts = require('protobufjs-cli/pbts');
 
@@ -73,7 +78,7 @@ async function compileProtos(dtsOutputFile, ...args) {
 async function main() {
   mkdirSync(outputDir, { recursive: true });
 
-  const protoFiles = glob.sync(resolve(protoBaseDir, '**/*.proto'));
+  const protoFiles = glob.sync(toGlobPath(resolve(protoBaseDir, '**/*.proto')));
   const protosMTime = Math.max(...protoFiles.map(mtime));
   const genMTime = mtime(jsOutputFile);
 
