@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers/go/projects/api"
@@ -17,7 +18,7 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Run a project test via gRPC harness (--option language=<lang> --option test=<name>)",
+		Description: "Run a self-contained project test. Options: language=<lang> (required), project-dir=<path> (build from source) or prebuilt-project-dir=<path> (use pre-built binary), project-config-file=<path> (optional).",
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
 		},
@@ -25,33 +26,37 @@ func init() {
 }
 
 type projectScenarioOptions struct {
-	language   clioptions.Language
-	testName   string
-	projectDir string
-	configJSON []byte
+	language    clioptions.Language
+	projectDir  string
+	prebuiltDir string
+	configJSON  []byte
 }
 
 // projectScenarioExecutor wraps the full project test lifecycle:
-// build project binary, spawn processes, gRPC init, execute iterations, cleanup.
+// build (or load) project binary, spawn processes, gRPC init, execute iterations, cleanup.
 type projectScenarioExecutor struct{}
 
 func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
-	projectOpts, err := e.validate(info)
+	opts, err := e.validate(info)
 	if err != nil {
 		return err
 	}
 
-	info.Logger.Infof("Building project %s/%s", projectOpts.language, projectOpts.testName)
-
-	baseDir := filepath.Join(info.RootPath, "workers", projectOpts.language.String(), "projects/tests")
-	prog, err := Build(ctx, BuildOptions{
-		Language:   projectOpts.language,
-		ProjectDir: projectOpts.projectDir,
-		BaseDir:    baseDir,
-		Logger:     info.Logger,
-	})
+	var prog sdkbuild.Program
+	if opts.prebuiltDir != "" {
+		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
+		prog, err = LoadPrebuilt(opts.prebuiltDir, opts.language)
+	} else {
+		info.Logger.Infof("Building project %s", filepath.Base(opts.projectDir))
+		prog, err = Build(ctx, BuildOptions{
+			Language:   opts.language,
+			ProjectDir: opts.projectDir,
+			BaseDir:    filepath.Dir(opts.projectDir),
+			Logger:     info.Logger,
+		})
+	}
 	if err != nil {
-		return fmt.Errorf("failed to build project: %w", err)
+		return fmt.Errorf("failed to prepare project: %w", err)
 	}
 
 	port, err := findAvailablePort()
@@ -90,7 +95,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 			TlsServerName:           co.TLSServerName,
 			DisableHostVerification: co.DisableHostVerification,
 		},
-		ConfigJson:               projectOpts.configJSON,
+		ConfigJson:               opts.configJSON,
 		RegisterSearchAttributes: !info.Configuration.DoNotRegisterSearchAttributes,
 	})
 	if err != nil {
@@ -103,37 +108,47 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 }
 
 func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectScenarioOptions, error) {
-	opts := projectScenarioOptions{}
-	testName := info.ScenarioOptions["test"]
-	if testName == "" {
-		return opts, fmt.Errorf("--option test=<name> is required for the project scenario")
-	}
-	opts.testName = testName
+	var opts projectScenarioOptions
 
 	lang := info.ScenarioOptions["language"]
 	if lang == "" {
-		return opts, fmt.Errorf("--option language=<lang> is required for the project scenario")
+		return opts, fmt.Errorf("--option language=<lang> is required")
 	}
-	err := opts.language.Set(lang)
-	if err != nil {
-		return opts, fmt.Errorf("unrecognized language provided: %s", lang)
+	if err := opts.language.Set(lang); err != nil {
+		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
 
-	projectDir := filepath.Join(info.RootPath, "workers", lang, "projects/tests", testName)
-	if _, statErr := os.Stat(projectDir); statErr != nil {
-		return opts, fmt.Errorf("project not found at %s: %w", projectDir, statErr)
+	projectDir := info.ScenarioOptions["project-dir"]
+	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
+	if projectDir == "" && prebuiltDir == "" {
+		return opts, fmt.Errorf("either --option project-dir or --option prebuilt-project-dir is required")
 	}
-	opts.projectDir = projectDir
+	if projectDir != "" && prebuiltDir != "" {
+		return opts, fmt.Errorf("cannot specify both project-dir and prebuilt-project-dir")
+	}
 
-	// Read config file if provided
-	var configJSON []byte
-	if configPath := info.ScenarioOptions["config-file"]; configPath != "" {
-		_, err := os.ReadFile(configPath)
+	if projectDir != "" {
+		abs, err := filepath.Abs(projectDir)
+		if err != nil {
+			return opts, fmt.Errorf("failed to resolve project-dir: %w", err)
+		}
+		opts.projectDir = abs
+	} else {
+		abs, err := filepath.Abs(prebuiltDir)
+		if err != nil {
+			return opts, fmt.Errorf("failed to resolve prebuilt-project-dir: %w", err)
+		}
+		opts.prebuiltDir = abs
+	}
+
+	if configPath := info.ScenarioOptions["project-config-file"]; configPath != "" {
+		data, err := os.ReadFile(configPath)
 		if err != nil {
 			return opts, fmt.Errorf("failed to read config file %s: %w", configPath, err)
 		}
+		opts.configJSON = data
 	}
-	opts.configJSON = configJSON
+
 	return opts, nil
 }
 

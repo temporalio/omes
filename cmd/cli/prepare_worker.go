@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/cmd/clioptions"
+	project "github.com/temporalio/omes/scenarios/project"
 	"github.com/temporalio/omes/workers"
 )
 
@@ -22,9 +24,26 @@ func prepareWorkerCmd() *cobra.Command {
 			if err != nil {
 				b.Logger.Fatal(fmt.Errorf("failed to get root directory: %w", err))
 			}
-			baseDir := workers.BaseDir(repoDir, b.SdkOptions.Language)
-			if _, err := b.Build(cmd.Context(), baseDir); err != nil {
-				b.Logger.Fatal(err)
+			if b.ProjectDir != "" {
+				absProjectDir, err := filepath.Abs(b.ProjectDir)
+				if err != nil {
+					b.Logger.Fatal(fmt.Errorf("failed to resolve project dir: %w", err))
+				}
+				baseDir := filepath.Dir(absProjectDir)
+				if _, err := project.Build(cmd.Context(), project.BuildOptions{
+					Language:   b.SdkOptions.Language,
+					ProjectDir: absProjectDir,
+					BaseDir:    baseDir,
+					Version:    b.SdkOptions.Version,
+					Logger:     b.Logger,
+				}); err != nil {
+					b.Logger.Fatal(err)
+				}
+			} else {
+				baseDir := workers.BaseDir(repoDir, b.SdkOptions.Language)
+				if _, err := b.Build(cmd.Context(), baseDir); err != nil {
+					b.Logger.Fatal(err)
+				}
 			}
 		},
 	}
@@ -41,6 +60,7 @@ type workerBuilder struct {
 
 func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&b.DirName, "dir-name", "", "Directory name for prepared worker")
+	fs.StringVar(&b.ProjectDir, "project-dir", "", "Path to project directory (builds a project test instead of standard worker)")
 	b.SdkOptions.AddCLIFlags(fs)
 	fs.AddFlagSet(b.loggingOptions.FlagSet())
 }

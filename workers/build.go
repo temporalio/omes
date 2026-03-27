@@ -18,6 +18,7 @@ import (
 type Builder struct {
 	DirName    string
 	SdkOptions clioptions.SdkOptions
+	ProjectDir string
 	Logger     *zap.SugaredLogger
 	stdout     io.Writer
 	stderr     io.Writer
@@ -76,7 +77,8 @@ require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
 
 replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../`,
+replace github.com/temporalio/omes/workers/go => ../
+replace github.com/temporalio/omes/workers/go/projects/api => ../projects/api`,
 		GoMainContents: `package main
 
 import "github.com/temporalio/omes/workers/go/worker"

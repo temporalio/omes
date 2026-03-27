@@ -180,6 +180,62 @@ jobs:
           annotate_only: true
           skip_annotations: true
 
+  build-project-worker:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: go-project.Dockerfile
+            project-dir: workers/go/projects/tests/helloworld
+            name: go-helloworld
+          - dockerfile: dotnet-project.Dockerfile
+            project-dir: workers/dotnet/projects/tests/HelloWorld
+            name: dotnet-helloworld
+          - dockerfile: dotnet-project.Dockerfile
+            project-dir: workers/dotnet/projects/tests/NexusSimpleWorkflow
+            name: dotnet-nexus
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+      - name: Build ${{ matrix.name }} project image
+        run: |
+          docker build \
+            -f dockerfiles/${{ matrix.dockerfile }} \
+            --build-arg PROJECT_DIR=${{ matrix.project-dir }} \
+            -t omes-project:${{ matrix.name }} .
+      - name: Install Temporal CLI
+        uses: temporalio/setup-temporal@v0
+      - name: Start dev server
+        run: |
+          temporal server start-dev --port 7233 --headless --log-level error &
+          timeout 30 bash -c 'until nc -z 127.0.0.1 7233; do sleep 1; done'
+      - name: Start ${{ matrix.name }} worker
+        run: |
+          docker run --rm -d --network host \
+            --name omes-project-worker \
+            omes-project:${{ matrix.name }} worker \
+            --task-queue omes-project-${{ matrix.name }} \
+            --server-address 127.0.0.1:7233 \
+            --namespace default
+      - name: Run project scenario
+        run: |
+          docker run --rm --network host \
+            omes-project:${{ matrix.name }} run-scenario \
+            --scenario project \
+            --run-id project-${{ matrix.name }} \
+            --iterations 1 \
+            --server-address 127.0.0.1:7233 \
+            --namespace default
+      - name: Stop worker
+        if: always()
+        run: docker stop omes-project-worker || true
+
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest
     steps:

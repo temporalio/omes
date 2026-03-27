@@ -190,6 +190,101 @@ If version is not specified, the SDK version specified in `versions.env` will be
 Publishing images is done via CI, using the `build-push-worker-image` command.
 See the GHA workflows for more information.
 
+## Project Tests
+
+Project tests are self-contained test programs that exercise specific SDK features (e.g., Nexus operations)
+independently of the standard scenario/executor framework. Each project brings its own SDK version and
+test logic, while a shared harness handles client creation, worker lifecycle, and gRPC orchestration.
+
+### Structure
+
+```
+workers/<lang>/projects/
+  harness/     # Shared harness (gRPC server, client factory, worker management)
+  tests/
+    HelloWorld/           # Simple example project
+    NexusSimpleWorkflow/  # Nexus operation test
+```
+
+Each project binary supports two subcommands:
+- `worker` — starts a Temporal worker
+- `project-server` — starts a gRPC server that accepts `Init` and `Execute` RPCs
+
+### Running locally
+
+```sh
+# Go
+go test -buildvcs=false -v -race -timeout 5m ./scenarios/project/ -run TestGoHelloWorld -count=1
+
+# .NET (requires .NET 8 SDK)
+DOTNET_ROOT=/path/to/dotnet8 PATH="/path/to/dotnet8:$PATH" \
+  go test -buildvcs=false -v -race -timeout 5m ./scenarios/project/ -run TestDotNetHelloWorld -count=1
+```
+
+### Docker
+
+Project Dockerfiles produce images that can run both the project worker and the scenario runner.
+The entrypoint script routes commands automatically: `worker` and `project-server` run the project
+binary, while `run-scenario` and other commands run the omes CLI.
+
+```sh
+# Build
+docker build -f dockerfiles/go-project.Dockerfile \
+  --build-arg PROJECT_DIR=workers/go/projects/tests/helloworld \
+  -t omes-go-project-helloworld .
+
+# Run worker (one container)
+docker run --rm -d omes-go-project-helloworld worker \
+  --task-queue omes-my-run --server-address host.docker.internal:7233 --namespace default
+
+# Run scenario (another container, same image)
+docker run --rm omes-go-project-helloworld run-scenario \
+  --scenario project \
+  --run-id my-run --iterations 1 \
+  --server-address host.docker.internal:7233 --namespace default
+```
+
+.NET projects use `dockerfiles/dotnet-project.Dockerfile` with the same pattern.
+
+### Running a scenario from the CLI
+
+The `project` scenario can build from source or use a pre-built binary:
+
+```sh
+# Build from source (local development)
+go run ./cmd run-scenario --scenario project \
+  --option language=go \
+  --option project-dir=workers/go/projects/tests/helloworld \
+  --run-id my-run --iterations 1
+
+# Use pre-built binary (Docker / CI)
+go run ./cmd run-scenario --scenario project \
+  --option language=go \
+  --option prebuilt-project-dir=/app/prebuilt-project \
+  --run-id my-run --iterations 1
+```
+
+### Writing a new project test
+
+1. Create a directory under `workers/<lang>/projects/tests/<TestName>/`
+2. Use the harness API to register a client factory, optional init logic, a worker, and an execute handler:
+
+```go
+h := harness.New()
+h.RegisterClient(func(opts client.Options, _ harness.ClientConfig) (client.Client, error) {
+    return client.Dial(opts)
+})
+h.OnInit(func(ctx context.Context, c client.Client, config harness.InitConfig) error {
+    // Project-specific setup (e.g., create Nexus endpoints) — only runs on project-server Init
+    return nil
+})
+h.RegisterWorker(workerFunc)
+h.OnExecute(executeFunc)
+h.Run()
+```
+
+3. Add a test function in `scenarios/project/project_test.go`
+
 ## Specific Scenarios
 
 ### ThroughputStress (Go only)

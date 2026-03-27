@@ -22,9 +22,6 @@ import (
 
 type Runner struct {
 	Builder
-	// ProjectDir, when set, builds a project binary instead of a standard worker.
-	// The binary will be invoked with "worker" as the first argument.
-	ProjectDir                string
 	RetainTempDir             bool
 	GracefulShutdownDuration  time.Duration
 	EmbeddedServer            bool
