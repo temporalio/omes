@@ -17,8 +17,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestGoHelloworld(t *testing.T) {
+func TestGoHelloWorld(t *testing.T) {
 	runProjectTest(t, "go", "helloworld", nil)
+}
+
+func TestDotNetHelloWorld(t *testing.T) {
+	runProjectTest(t, "dotnet", "HelloWorld", nil)
+}
+
+func TestDotNetNexusSimpleWorkflow(t *testing.T) {
+	runProjectTest(t, "dotnet", "NexusSimpleWorkflow", nil)
 }
 
 func runProjectTest(t *testing.T, lang, testName string, config []byte) {
@@ -102,7 +110,9 @@ func runProjectTest(t *testing.T, lang, testName string, config []byte) {
 	require.NoError(t, err, "execute failed for project %s/%s", lang, testName)
 }
 
-func startTestProcess(ctx context.Context, prog interface{ NewCommand(context.Context, ...string) (*exec.Cmd, error) }, args []string) (*exec.Cmd, error) {
+func startTestProcess(ctx context.Context, prog interface {
+	NewCommand(context.Context, ...string) (*exec.Cmd, error)
+}, args []string) (*exec.Cmd, error) {
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err

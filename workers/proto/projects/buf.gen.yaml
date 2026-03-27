@@ -1,5 +1,6 @@
 version: v2
 plugins:
+  # Go
   - remote: buf.build/protocolbuffers/go
     out: ../../go/projects/api
     opt: paths=source_relative

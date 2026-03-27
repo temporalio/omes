@@ -32,6 +32,8 @@ func Build(ctx context.Context, opts BuildOptions) (sdkbuild.Program, error) {
 	switch opts.Language {
 	case clioptions.LangGo:
 		return buildGo(ctx, opts)
+	case clioptions.LangDotNet:
+		return buildDotNet(ctx, opts)
 	default:
 		return nil, fmt.Errorf("unsupported language for project builds: %s", opts.Language)
 	}
@@ -105,6 +107,90 @@ func main() {
 		return nil, fmt.Errorf("failed to build project: %w", err)
 	}
 	return prog, nil
+}
+
+func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, error) {
+	absProjectDir, err := filepath.Abs(opts.ProjectDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve project dir: %w", err)
+	}
+
+	if opts.Logger != nil {
+		opts.Logger.Infof("Building .NET project at %s", absProjectDir)
+	}
+
+	// Find the csproj file (skip program.csproj stub)
+	entries, err := os.ReadDir(absProjectDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read project dir: %w", err)
+	}
+	var csprojFile string
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".csproj") && e.Name() != "program.csproj" {
+			csprojFile = filepath.Join(absProjectDir, e.Name())
+			break
+		}
+	}
+	if csprojFile == "" {
+		return nil, fmt.Errorf("no .csproj file found in %s", absProjectDir)
+	}
+
+	// Remove any stale program.csproj stub from a previous build
+	os.Remove(filepath.Join(absProjectDir, "program.csproj"))
+
+	// Build into the project's build/ subdirectory
+	buildOutput := filepath.Join(absProjectDir, "build")
+	buildArgs := []string{"build", csprojFile, "--output", buildOutput}
+
+	// If version is a path, pass it as an MSBuild property so the csproj
+	// conditionally uses a ProjectReference instead of PackageReference
+	if opts.Version != "" && strings.ContainsAny(opts.Version, `/\`) {
+		absSdkCsproj, err := filepath.Abs(filepath.Join(opts.Version, "src/Temporalio/Temporalio.csproj"))
+		if err != nil {
+			return nil, fmt.Errorf("cannot resolve SDK path: %w", err)
+		}
+		if _, err := os.Stat(absSdkCsproj); err != nil {
+			return nil, fmt.Errorf("cannot find SDK csproj at %s: %w", absSdkCsproj, err)
+		}
+		buildArgs = append(buildArgs, "-property:TemporalioProjectReference="+absSdkCsproj)
+	}
+
+	cmd := exec.CommandContext(ctx, "dotnet", buildArgs...)
+	cmd.Dir = absProjectDir
+	if opts.Logger != nil {
+		cmd.Stdout = &logWriter{logger: opts.Logger}
+		cmd.Stderr = &logWriter{logger: opts.Logger}
+	}
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("dotnet build failed: %w", err)
+	}
+
+	// DotNetProgramFromDir expects ./build/program and program.csproj.
+	// Create a symlink from "program" to the actual binary so DotNetProgram.NewCommand works.
+	exeName := strings.TrimSuffix(filepath.Base(csprojFile), ".csproj")
+	programLink := filepath.Join(buildOutput, "program")
+	os.Remove(programLink) // remove stale link if exists
+	if err := os.Symlink(exeName, programLink); err != nil {
+		return nil, fmt.Errorf("failed to create program symlink: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(absProjectDir, "program.csproj"), []byte("<Project/>"), 0644); err != nil {
+		return nil, fmt.Errorf("failed writing program.csproj stub: %w", err)
+	}
+
+	return sdkbuild.DotNetProgramFromDir(absProjectDir)
+}
+
+// LoadPrebuilt loads an already-built project binary from the given directory.
+// This is used in Docker containers where the binary was built during image creation.
+func LoadPrebuilt(dir string, lang clioptions.Language) (sdkbuild.Program, error) {
+	switch lang {
+	case clioptions.LangGo:
+		return sdkbuild.GoProgramFromDir(dir)
+	case clioptions.LangDotNet:
+		return sdkbuild.DotNetProgramFromDir(dir)
+	default:
+		return nil, fmt.Errorf("prebuilt projects not supported for language: %s", lang)
+	}
 }
 
 type logWriter struct {
