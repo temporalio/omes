@@ -28,6 +28,7 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name projec
 FROM --platform=linux/$TARGETARCH alpine:3
 
 ENV OMES_PROJECT_LANGUAGE=go
+ENV OMES_PROJECT_BINARY=/app/prebuilt-project/program
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/go/projects/tests/project-build-*/. /app/prebuilt-project/

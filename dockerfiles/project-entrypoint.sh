@@ -1,7 +1,7 @@
 #!/bin/sh
 case "$1" in
   worker|project-server)
-    exec /app/prebuilt-project/program "$@" ;;
+    exec ${OMES_PROJECT_BINARY} "$@" ;;
   run-scenario)
     exec /app/temporal-omes "$@" \
       --option "language=${OMES_PROJECT_LANGUAGE}" \
