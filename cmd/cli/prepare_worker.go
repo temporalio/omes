@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -25,15 +24,9 @@ func prepareWorkerCmd() *cobra.Command {
 				b.Logger.Fatal(fmt.Errorf("failed to get root directory: %w", err))
 			}
 			if b.ProjectDir != "" {
-				absProjectDir, err := filepath.Abs(b.ProjectDir)
-				if err != nil {
-					b.Logger.Fatal(fmt.Errorf("failed to resolve project dir: %w", err))
-				}
-				baseDir := filepath.Dir(absProjectDir)
 				if _, err := project.Build(cmd.Context(), project.BuildOptions{
 					Language:   b.SdkOptions.Language,
-					ProjectDir: absProjectDir,
-					BaseDir:    baseDir,
+					ProjectDir: b.ProjectDir,
 					Version:    b.SdkOptions.Version,
 					Logger:     b.Logger,
 				}); err != nil {

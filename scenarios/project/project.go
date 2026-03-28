@@ -51,7 +51,6 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 		prog, err = Build(ctx, BuildOptions{
 			Language:   opts.language,
 			ProjectDir: opts.projectDir,
-			BaseDir:    filepath.Dir(opts.projectDir),
 			Logger:     info.Logger,
 		})
 	}

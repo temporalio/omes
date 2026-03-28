@@ -49,7 +49,6 @@ func runProjectTest(t *testing.T, lang, testName string, config []byte) {
 	repoRoot, err := filepath.Abs("../..")
 	require.NoError(t, err)
 	projectDir := filepath.Join(repoRoot, "workers", lang, "projects/tests", testName)
-	baseDir := filepath.Join(repoRoot, "workers", lang, "projects/tests")
 
 	logger, _ := zap.NewDevelopment()
 	sugar := logger.Sugar()
@@ -59,7 +58,6 @@ func runProjectTest(t *testing.T, lang, testName string, config []byte) {
 	prog, err := Build(ctx, BuildOptions{
 		Language:   language,
 		ProjectDir: projectDir,
-		BaseDir:    baseDir,
 		Logger:     sugar,
 	})
 	require.NoError(t, err, "failed to build project %s/%s", lang, testName)

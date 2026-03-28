@@ -80,7 +80,6 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		prog, err = project.Build(ctx, project.BuildOptions{
 			Language:   r.SdkOptions.Language,
 			ProjectDir: r.ProjectDir,
-			BaseDir:    baseDir,
 			Version:    r.SdkOptions.Version,
 			Logger:     r.Logger,
 		})

@@ -18,9 +18,8 @@ type BuildOptions struct {
 	// Language for the project.
 	Language clioptions.Language
 	// ProjectDir is the absolute or relative path to the project directory.
+	// Build output is placed in the parent directory of ProjectDir.
 	ProjectDir string
-	// BaseDir is the directory where the build output will be created.
-	BaseDir string
 	// Version is the SDK version to use (empty = auto).
 	Version string
 	// Logger for build output.
@@ -45,6 +44,7 @@ func buildGo(ctx context.Context, opts BuildOptions) (sdkbuild.Program, error) {
 		return nil, fmt.Errorf("failed to resolve project dir: %w", err)
 	}
 
+	baseDir := filepath.Dir(absProjectDir)
 	projectName := filepath.Base(absProjectDir)
 	pkgName := strings.ReplaceAll(projectName, "-", "")
 	testModule := fmt.Sprintf("github.com/temporalio/omes/workers/go/projects/tests/%s", projectName)
@@ -78,13 +78,13 @@ func main() {
 `, pkgName, testModule, pkgName)
 
 	dirName := fmt.Sprintf("project-build-%s", projectName)
-	buildDir := filepath.Join(opts.BaseDir, dirName)
+	buildDir := filepath.Join(baseDir, dirName)
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed creating build dir: %w", err)
 	}
 
 	buildOpts := sdkbuild.BuildGoProgramOptions{
-		BaseDir:        opts.BaseDir,
+		BaseDir:        baseDir,
 		DirName:        dirName,
 		Version:        opts.Version,
 		GoModContents:  goMod,
@@ -99,7 +99,7 @@ func main() {
 	if opts.Logger != nil {
 		buildOpts.Stdout = &logWriter{logger: opts.Logger}
 		buildOpts.Stderr = &logWriter{logger: opts.Logger}
-		opts.Logger.Infof("Building project at %s", opts.BaseDir)
+		opts.Logger.Infof("Building project at %s", baseDir)
 	}
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, buildOpts)
