@@ -1,3 +1,5 @@
 workers/dotnet/**/obj/
 workers/dotnet/**/bin/
 workers/dotnet/**/build/
+workers/dotnet/**/program.csproj
+workers/*/projects/tests/project-build-*/
