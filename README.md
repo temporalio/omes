@@ -210,16 +210,11 @@ Each project binary supports two subcommands:
 - `worker` — starts a Temporal worker
 - `project-server` — starts a gRPC server that accepts `Init` and `Execute` RPCs
 
-### Running locally
+The `Init` RPC initializing the load test, providing client connection parameters, load test metadata
+(i.e. RunID), and optional project-specific data.
 
-```sh
-# Go
-go test -buildvcs=false -v -race -timeout 5m ./scenarios/project/ -run TestGoHelloWorld -count=1
-
-# .NET (requires .NET 8 SDK)
-DOTNET_ROOT=/path/to/dotnet8 PATH="/path/to/dotnet8:$PATH" \
-  go test -buildvcs=false -v -race -timeout 5m ./scenarios/project/ -run TestDotNetHelloWorld -count=1
-```
+The `Execute` RPC is called for each iteration of the executor running against your project test. This is
+principally what drives load.
 
 ### Docker
 
@@ -267,7 +262,7 @@ go run ./cmd run-scenario --scenario project \
 ### Writing a new project test
 
 1. Create a directory under `workers/<lang>/projects/tests/<TestName>/`
-2. Use the harness API to register a client factory, optional init logic, a worker, and an execute handler:
+2. Use the harness API to register a client factory, optional init logic (this will run as part of the `Init` RPC), a worker, and an execute handler:
 
 ```go
 h := harness.New()
