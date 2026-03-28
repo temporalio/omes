@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/projects/api"
 	"go.temporal.io/sdk/testsuite"
@@ -108,9 +109,7 @@ func runProjectTest(t *testing.T, lang, testName string, config []byte) {
 	require.NoError(t, err, "execute failed for project %s/%s", lang, testName)
 }
 
-func startTestProcess(ctx context.Context, prog interface {
-	NewCommand(context.Context, ...string) (*exec.Cmd, error)
-}, args []string) (*exec.Cmd, error) {
+func startTestProcess(ctx context.Context, prog sdkbuild.Program, args []string) (*exec.Cmd, error) {
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err

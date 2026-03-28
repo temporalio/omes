@@ -161,9 +161,7 @@ func findAvailablePort() (int, error) {
 	return port, nil
 }
 
-func startProjectProcess(ctx context.Context, prog interface {
-	NewCommand(context.Context, ...string) (*exec.Cmd, error)
-}, logger *zap.SugaredLogger, args []string) (*exec.Cmd, error) {
+func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, args []string) (*exec.Cmd, error) {
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err
