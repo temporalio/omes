@@ -50,6 +50,7 @@ ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/java /app/workers/java
+COPY --from=build /app/repo /app/repo
 COPY --from=build /gradle /gradle
 
 # Use entrypoint instead of command to "bake" the default command options
