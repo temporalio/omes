@@ -21,7 +21,12 @@ harness.OnExecute(async (client, info) =>
 {
     var handle = await client.StartWorkflowAsync(
         (HelloWorldWorkflow wf) => wf.RunAsync("World"),
-        new WorkflowOptions(id: $"helloworld-{info.Iteration}", taskQueue: info.TaskQueue));
+        new WorkflowOptions(id: $"helloworld-{info.Iteration}", taskQueue: info.TaskQueue)
+        {
+            TypedSearchAttributes = new SearchAttributeCollection.Builder()
+                .Set(SearchAttributeKey.CreateKeyword(ProjectHarness.OmesSearchAttributeKey), info.ExecutionId)
+                .ToSearchAttributeCollection()
+        });
 
     var result = await handle.GetResultAsync();
     Console.WriteLine($"Workflow result: {result}");

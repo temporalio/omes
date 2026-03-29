@@ -1,4 +1,5 @@
 using Temporalio.Client;
+using Temporalio.Common;
 using Temporalio.Omes.Projects.Harness;
 using NexusSimpleWorkflow;
 
@@ -49,7 +50,12 @@ harness.OnExecute(async (client, info) =>
 {
     var handle = await client.StartWorkflowAsync(
         (CallerWorkflow wf) => wf.RunAsync(nexusEndpointName!, "some-name"),
-        new WorkflowOptions(id: $"nexus-caller-{info.Iteration}", taskQueue: info.TaskQueue));
+        new WorkflowOptions(id: $"nexus-caller-{info.Iteration}", taskQueue: info.TaskQueue)
+        {
+            TypedSearchAttributes = new SearchAttributeCollection.Builder()
+                .Set(SearchAttributeKey.CreateKeyword(ProjectHarness.OmesSearchAttributeKey), info.ExecutionId)
+                .ToSearchAttributeCollection()
+        });
 
     var result = await handle.GetResultAsync();
     Console.WriteLine($"Nexus workflow result: {result}");
