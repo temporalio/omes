@@ -372,7 +372,7 @@ const file_api_proto_rawDesc = "" +
 	"\x0fExecuteResponse2\xcf\x01\n" +
 	"\x0eProjectService\x12Y\n" +
 	"\x04Init\x12&.temporal.omes.projects.v1.InitRequest\x1a'.temporal.omes.projects.v1.InitResponse\"\x00\x12b\n" +
-	"\aExecute\x12).temporal.omes.projects.v1.ExecuteRequest\x1a*.temporal.omes.projects.v1.ExecuteResponse\"\x00B1Z/github.com/temporalio/omes/workers/projects/apib\x06proto3"
+	"\aExecute\x12).temporal.omes.projects.v1.ExecuteRequest\x1a*.temporal.omes.projects.v1.ExecuteResponse\"\x00B4Z2github.com/temporalio/omes/workers/go/projects/apib\x06proto3"
 
 var (
 	file_api_proto_rawDescOnce sync.Once
