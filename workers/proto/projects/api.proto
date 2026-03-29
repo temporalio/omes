@@ -1,8 +1,22 @@
+// Protocol for the project test framework.
+//
+// Each project test compiles into a single binary with two subcommands:
+//   - "worker": connects to Temporal and polls for tasks
+//   - "project-server": runs a gRPC server implementing ProjectService
+//
+// The omes CLI orchestrates the test by:
+//   1. Starting the worker (separate process or container)
+//   2. Starting the project-server
+//   3. Sending Init (creates client, optional project setup like Nexus endpoints)
+//   4. Sending Execute for each iteration (starts workflows, verifies results)
+
 syntax = "proto3";
 package temporal.omes.projects.v1;
 
 option go_package = "github.com/temporalio/omes/workers/go/projects/api";
 
+// Connection options passed from the CLI to the project-server during Init.
+// The project-server uses these to create its own Temporal client.
 message ConnectOptions {
     string namespace = 1;
     string server_address = 2;
@@ -14,38 +28,39 @@ message ConnectOptions {
     bool disable_host_verification = 8;
 }
 
+// Sent once at the start of a test run to initialize the project-server.
 message InitRequest {
     string execution_id = 1;
     string run_id = 2;
     string task_queue = 3;
     ConnectOptions connect_options = 4;
 
-    // Optional JSON project configuration as bytes, read from the
-    // --config-file project scenario option and passed to the project's 
-    // InitFunc.
-    //
-    // Note: this is currently not used. Subject to change/removal
+    // Optional JSON project configuration, passed from --option project-config-file
+    // to the project's OnInit callback. Schema is project-defined.
     bytes config_json = 5;
 
+    // When true, the harness registers standard omes search attributes
+    // (OmesExecutionID, KS_Keyword, KS_Int) on the namespace.
     bool register_search_attributes = 6;
 }
 
 message InitResponse {}
 
+// Sent once per iteration. The project-server starts workflows and
+// verifies results within the Execute handler.
 message ExecuteRequest {
     int64 iteration = 1;
 
-    // Per-iteration data from the executor. The structure is defined by the
-    // executor and the project must match what the executor provides. Enables
-    // Currently unused by the steady-rate executor.
-    //
-    // Note: this is currently not used. Subject to change/removal
+    // Reserved for future executor-specific per-iteration data.
     bytes payload = 2;
 }
 
 message ExecuteResponse {}
 
+// ProjectService is the gRPC interface between the omes CLI and a project test binary.
 service ProjectService {
+    // Init creates a Temporal client, runs project-specific setup, and prepares for execution.
     rpc Init(InitRequest) returns (InitResponse) {}
+    // Execute runs a single test iteration (e.g., start a workflow and verify the result).
     rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
 }

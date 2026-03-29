@@ -18,7 +18,11 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Run a self-contained project test. Options: language=<lang> (required), project-dir=<path> (build from source) or prebuilt-project-dir=<path> (use pre-built binary), project-config-file=<path> (optional).",
+		Description: `Run a self-contained project test. Builds (or loads) the project binary, spawns a project-server, and drives iterations via gRPC.
+  Required: --option language=<lang>
+  One of:   --option project-dir=<path>          (build from source)
+            --option prebuilt-project-dir=<path>  (use pre-built binary, e.g. in Docker)
+  Optional: --option project-config-file=<path>   (project-specific JSON config)`,
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
 		},
