@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
+	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -132,6 +133,9 @@ type ScenarioInfo struct {
 	RootPath string
 	// ExportOptions contains export-related configuration
 	ExportOptions ExportOptions
+	// ClientOptions carries the raw connection options. Scenarios that spawn
+	// external client processes use this to pass connection info to those processes.
+	ClientOptions clioptions.ClientOptions
 }
 
 // ExportOptions contains configuration for exporting scenario data.

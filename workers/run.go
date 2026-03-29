@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/scenarios/project"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )
@@ -72,10 +73,20 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}()
 	}
 
-	// If there is not a prepared dir, we must build a temporary one and perform
-	// the prep. Otherwise we reload the command from the directory.
+	// Build the program. Project builds use projectbuild; standard workers use Builder.
 	var prog sdkbuild.Program
-	if r.DirName == "" {
+	if r.ProjectDir != "" {
+		var err error
+		prog, err = project.Build(ctx, project.BuildOptions{
+			Language:   r.SdkOptions.Language,
+			ProjectDir: r.ProjectDir,
+			Version:    r.SdkOptions.Version,
+			Logger:     r.Logger,
+		})
+		if err != nil {
+			return fmt.Errorf("failed building project worker: %w", err)
+		}
+	} else if r.DirName == "" {
 		// Create temp dir
 		tempDir, err := os.MkdirTemp(baseDir, "omes-temp-")
 		if err != nil {
@@ -116,7 +127,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
-	if r.SdkOptions.Language == clioptions.LangPython {
+	if r.ProjectDir != "" {
+		args = append(args, "worker")
+	} else if r.SdkOptions.Language == clioptions.LangPython {
 		// Python needs module name first
 		args = append(args, "main")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {

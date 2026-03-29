@@ -28,6 +28,7 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
+COPY workers/go/projects/api ./workers/go/projects/api
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -41,6 +42,7 @@ COPY ${SDK_DIR} ./repo
 
 # Copy the worker files
 COPY workers/dotnet ./workers/dotnet
+COPY workers/proto ./workers/proto
 
 # Prepare the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"

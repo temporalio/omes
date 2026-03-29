@@ -190,6 +190,155 @@ If version is not specified, the SDK version specified in `versions.env` will be
 Publishing images is done via CI, using the `build-push-worker-image` command.
 See the GHA workflows for more information.
 
+## Project Tests
+
+Project tests are self-contained test programs that exercise specific SDK features (e.g., Nexus operations)
+independently of the standard scenario/executor framework. Each project brings its own SDK version and
+test logic, while a shared harness handles client creation, worker lifecycle, and gRPC orchestration.
+
+### Structure
+
+```
+workers/<lang>/projects/
+  harness/     # Shared harness (gRPC server, client factory, worker management)
+  tests/
+    HelloWorld/           # Simple example project
+    NexusSimpleWorkflow/  # Nexus operation test
+```
+
+Each project binary supports two subcommands:
+- `worker` — starts a Temporal worker
+- `project-server` — starts a gRPC server that accepts `Init` and `Execute` RPCs
+
+The `Init` RPC initializing the load test, providing client connection parameters, load test metadata
+(i.e. RunID), and optional project-specific data.
+
+The `Execute` RPC is called for each iteration of the executor running against your project test. This is
+principally what drives load.
+
+### Docker
+
+Project Dockerfiles (`<lang>-project.Dockerfile` in `dockerfiles/`) produce images that can run both the project worker and the scenario runner.
+The entrypoint script routes commands automatically: `worker` and `project-server` run the project
+binary, while `run-scenario` and other commands run the omes CLI.
+
+```sh
+# Build
+docker build -f dockerfiles/go-project.Dockerfile \
+  --build-arg PROJECT_DIR=workers/go/projects/tests/helloworld \
+  -t omes-go-project-helloworld .
+
+# Run worker (one container)
+docker run --rm -d omes-go-project-helloworld worker \
+  --task-queue omes-my-run --server-address host.docker.internal:7233 --namespace default
+
+# Run scenario (another container, same image)
+docker run --rm omes-go-project-helloworld run-scenario \
+  --scenario project \
+  --run-id my-run --iterations 1 \
+  --server-address host.docker.internal:7233 --namespace default
+```
+
+### Running locally
+
+The easiest way to run a project test locally is `run-scenario-with-worker`, which starts an embedded
+Temporal server, builds the project, starts the worker, and runs the scenario:
+
+```sh
+# Go
+go run ./cmd run-scenario-with-worker \
+  --scenario project --project-dir workers/go/projects/tests/helloworld \
+  --option language=go --option project-dir=workers/go/projects/tests/helloworld \
+  --language go --embedded-server --iterations 1
+```
+
+This can be done with any other implemented language by swapping out the `language` value and
+pointing to the respective `project-dir`.
+
+**Note**:
+There's a peculiarity in this usage. You have to specify `--project-dir ...` and also `--option project-dir=...`.
+This is because we are building both the worker and the runner. The worker expects the top-level
+`--project-dir` while the runner expects the `--option`. This allows separate usage of `run-worker` and `run-scenario`.
+
+You can also run the worker and scenario separately against an existing server:
+
+```sh
+# Terminal 1: start worker
+go run ./cmd run-worker --language go --run-id my-run \
+  --project-dir workers/go/projects/tests/helloworld
+
+# Terminal 2: run scenario
+go run ./cmd run-scenario --scenario project --run-id my-run --iterations 1 \
+  --option language=go --option project-dir=workers/go/projects/tests/helloworld
+```
+
+To build against a local SDK repo, add `--version ../sdk-go` (or `../sdk-dotnet`).
+
+### Writing a new project test
+
+The best starting point is the `HelloWorld` sample in your language (`workers/<lang>/projects/tests/HelloWorld/`).
+
+1. Create a directory under `workers/<lang>/projects/tests/<TestName>/`
+2. Register callbacks with the harness and call `Run()`:
+
+```go
+package main
+
+import (
+    harness "github.com/temporalio/omes/workers/go/projects/harness"
+    "go.temporal.io/sdk/client"
+    "go.temporal.io/sdk/worker"
+)
+
+func main() {
+    h := harness.New()
+
+    // RegisterClient creates a Temporal client. Called by both the worker and project-server.
+    // Can customize the client options as you like, in addition to the provided options.
+    h.RegisterClient(func(opts client.Options, _ harness.ClientConfig) (client.Client, error) {
+        return client.Dial(opts)
+    })
+
+    // OnInit runs project-specific setup during the Init RPC (i.e. creating Nexus endpoints)
+    // Optional.
+    h.OnInit(func(ctx context.Context, c client.Client, config harness.InitConfig) error {
+        return nil
+    })
+
+    // RegisterWorker starts the Temporal worker with your registered workflows/activities etc.
+    // Can customize worker options as you like, in addition to the config provided.
+    h.RegisterWorker(func(c client.Client, config harness.WorkerConfig) error {
+        w := worker.New(c, config.TaskQueue, worker.Options{})
+        w.RegisterWorkflow(MyWorkflow)
+        return w.Run(worker.InterruptCh())
+    })
+
+    // OnExecute runs once per iteration - create your load (per-iteration) here (i.e. start a workflow)
+    h.OnExecute(func(ctx context.Context, c client.Client, info harness.ExecuteInfo) error {
+        run, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+            TaskQueue: info.TaskQueue,
+        }, MyWorkflow, "input")
+        if err != nil {
+            return err
+        }
+        var result string
+        return run.Get(ctx, &result)
+    })
+
+    h.Run()
+}
+```
+
+3. Add a test function in `scenarios/project/project_test.go`
+
+### Running project tests
+There are some basic tests that run a project against a test server at `scenarios/project/project_test.go`.
+You can run one via:
+
+```sh
+go test ./scenarios/project/ -run TestGoHelloWorld -count=1
+```
+
 ## Specific Scenarios
 
 ### ThroughputStress (Go only)
