@@ -42,7 +42,6 @@ harness.RegisterWorker(async (client, config) =>
             .AddNexusService(new StringServiceHandler()));
     using var cts = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-    Console.WriteLine($"Worker starting on task queue: {config.TaskQueue}");
     await worker.ExecuteAsync(cts.Token);
 });
 
