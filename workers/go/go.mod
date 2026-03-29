@@ -62,3 +62,7 @@ require (
 )
 
 replace github.com/temporalio/omes => ../../
+
+// Required because the root omes module transitively depends on this unpublished
+// local module via scenarios/project -> workers/go/projects/api.
+replace github.com/temporalio/omes/workers/go/projects/api => ./projects/api
