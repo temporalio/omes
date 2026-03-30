@@ -121,6 +121,12 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			err = nil
 		}
 		return err
+	} else if desc := action.GetDoDescribe(); desc != nil {
+		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+		if desc.FailureExpected {
+			err = nil
+		}
+		return err
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err

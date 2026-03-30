@@ -372,6 +372,7 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, 256, DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			ClientActivity(ClientActions(t.createSelfDescribe()), DefaultRemoteActivity),
 		}
 
 		childCount++
@@ -498,6 +499,14 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 					},
 				},
 			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfDescribe() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoDescribe{
+			DoDescribe: &DoDescribe{},
 		},
 	}
 }
