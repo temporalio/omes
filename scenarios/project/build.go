@@ -119,10 +119,6 @@ func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, erro
 		return nil, fmt.Errorf("cannot find %s.csproj in %s: %w", projectName, absProjectDir, err)
 	}
 
-	// Use sdkbuild to generate a thin wrapper that calls into the project.
-	// The generated program.csproj references the project as a ProjectReference,
-	// so the project's own csproj handles all dependencies (Temporalio, harness, etc.).
-	// sdkbuild handles SDK version/source builds via TemporalioProjectReference.
 	baseDir := filepath.Dir(absProjectDir)
 	dirName := fmt.Sprintf("project-build-%s", projectName)
 	buildDir := filepath.Join(baseDir, dirName)
