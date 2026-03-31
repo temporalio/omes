@@ -16,13 +16,19 @@ COPY go.mod go.sum ./
 # Build the CLI
 RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
+ARG SDK_VERSION
+
+# Optional SDK dir to copy, defaults to unimportant file
+ARG SDK_DIR=.gitignore
+COPY ${SDK_DIR} ./repo
+
 # Copy the worker + project files
 COPY workers/go ./workers/go
 COPY workers/proto ./workers/proto
 
 # Build the project
 ARG PROJECT_DIR
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name project-prepared --project-dir "$PROJECT_DIR"
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name project-prepared --project-dir "$PROJECT_DIR" --version "$SDK_VERSION"
 
 # Runtime container
 FROM --platform=linux/$TARGETARCH alpine:3

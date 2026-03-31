@@ -18,7 +18,6 @@ omes.sln
 workers/dotnet/**/obj/
 workers/dotnet/**/bin/
 workers/dotnet/**/build/
-workers/dotnet/**/program.csproj
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
 

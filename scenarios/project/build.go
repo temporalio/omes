@@ -89,12 +89,6 @@ func main() {
 		Version:        opts.Version,
 		GoModContents:  goMod,
 		GoMainContents: goMain,
-		ApplyToCommand: func(_ context.Context, cmd *exec.Cmd) error {
-			if len(cmd.Args) > 1 && cmd.Args[1] == "build" {
-				cmd.Args = append(cmd.Args, "-buildvcs=false")
-			}
-			return nil
-		},
 	}
 	if opts.Logger != nil {
 		buildOpts.Stdout = &logWriter{logger: opts.Logger}
@@ -119,31 +113,15 @@ func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, erro
 		opts.Logger.Infof("Building .NET project at %s", absProjectDir)
 	}
 
-	// Find the csproj file (skip program.csproj stub)
-	entries, err := os.ReadDir(absProjectDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read project dir: %w", err)
-	}
-	var csprojFile string
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".csproj") && e.Name() != "program.csproj" {
-			csprojFile = filepath.Join(absProjectDir, e.Name())
-			break
-		}
-	}
-	if csprojFile == "" {
-		return nil, fmt.Errorf("no .csproj file found in %s", absProjectDir)
-	}
-
-	// Remove any stale program.csproj stub from a previous build
-	os.Remove(filepath.Join(absProjectDir, "program.csproj"))
-
-	// Build into the project's build/ subdirectory
+	// Build into the project's build/ subdirectory.
+	// sdkbuild requires .NET projects to be named program.csproj so the output binary is "program".
+	csprojFile := filepath.Join(absProjectDir, "program.csproj")
 	buildOutput := filepath.Join(absProjectDir, "build")
 	buildArgs := []string{"build", csprojFile, "--output", buildOutput}
 
-	// If version is a path, pass it as an MSBuild property so the csproj
-	// conditionally uses a ProjectReference instead of PackageReference
+	// If version is a path, we're trying to build the local SDK repo.
+	// Pass it as an MSBuild property so the project's csproj conditionally
+	// uses a ProjectReference instead of PackageReference
 	if opts.Version != "" && strings.ContainsAny(opts.Version, `/\`) {
 		absSdkCsproj, err := filepath.Abs(filepath.Join(opts.Version, "src/Temporalio/Temporalio.csproj"))
 		if err != nil {
@@ -163,18 +141,6 @@ func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, erro
 	}
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("dotnet build failed: %w", err)
-	}
-
-	// DotNetProgramFromDir expects ./build/program and program.csproj.
-	// Create a symlink from "program" to the actual binary so DotNetProgram.NewCommand works.
-	exeName := strings.TrimSuffix(filepath.Base(csprojFile), ".csproj")
-	programLink := filepath.Join(buildOutput, "program")
-	os.Remove(programLink) // remove stale link if exists
-	if err := os.Symlink(exeName, programLink); err != nil {
-		return nil, fmt.Errorf("failed to create program symlink: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(absProjectDir, "program.csproj"), []byte("<Project/>"), 0644); err != nil {
-		return nil, fmt.Errorf("failed writing program.csproj stub: %w", err)
 	}
 
 	return sdkbuild.DotNetProgramFromDir(absProjectDir)
