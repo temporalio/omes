@@ -184,6 +184,20 @@ public class KitchenSinkWorkflow
             var childId = string.IsNullOrEmpty(execChild.WorkflowId) ? null : execChild.WorkflowId;
             var tq = string.IsNullOrEmpty(execChild.TaskQueue) ? null : execChild.TaskQueue;
             var args = execChild.Input.Select(p => new RawValue(p)).ToArray();
+
+            // Log child workflow creation details
+            var saCount = execChild.SearchAttributes.Count;
+            var saProto = saCount > 0
+                ? SearchAttributeCollection.FromProto(new SearchAttributes { IndexedFields = { execChild.SearchAttributes } })
+                : null;
+            Workflow.Logger.LogWarning(
+                "Starting child workflow: type={ChildType}, id={ChildId}, taskQueue={TaskQueue}, " +
+                "argsCount={ArgsCount}, searchAttributeCount={SACount}, " +
+                "searchAttributes={SearchAttributes}, typedSearchAttributes={TypedSA}",
+                childType, childId, tq, args.Length, saCount,
+                string.Join(", ", execChild.SearchAttributes.Select(kv => $"{kv.Key}={kv.Value}")),
+                saProto != null ? string.Join(", ", saProto.UntypedValues.Select(kv => $"{kv.Key.Name}({kv.Key.ValueType})={kv.Value}")) : "null");
+
             var options = new ChildWorkflowOptions
             {
                 CancellationToken = tokenSrc.Token,
@@ -191,9 +205,7 @@ public class KitchenSinkWorkflow
                 ExecutionTimeout = execChild.WorkflowExecutionTimeout?.ToTimeSpan(),
                 TaskTimeout = execChild.WorkflowTaskTimeout?.ToTimeSpan(),
                 RunTimeout = execChild.WorkflowRunTimeout?.ToTimeSpan(),
-                TypedSearchAttributes = execChild.SearchAttributes.Count == 0
-                    ? SearchAttributeCollection.Empty
-                    : SearchAttributeCollection.FromProto(new SearchAttributes { IndexedFields = { execChild.SearchAttributes } }),
+                TypedSearchAttributes = saProto ?? SearchAttributeCollection.Empty,
             };
             var childTask = Workflow.StartChildWorkflowAsync(childType, args, options);
             await HandleAwaitableChoiceAsync(childTask, tokenSrc, execChild.AwaitableChoice,
