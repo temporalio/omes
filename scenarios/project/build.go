@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -113,37 +112,49 @@ func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, erro
 		opts.Logger.Infof("Building .NET project at %s", absProjectDir)
 	}
 
-	// Build into the project's build/ subdirectory.
-	// sdkbuild requires .NET projects to be named program.csproj so the output binary is "program".
-	csprojFile := filepath.Join(absProjectDir, "program.csproj")
-	buildOutput := filepath.Join(absProjectDir, "build")
-	buildArgs := []string{"build", csprojFile, "--output", buildOutput}
-
-	// If version is a path, we're trying to build the local SDK repo.
-	// Pass it as an MSBuild property so the project's csproj conditionally
-	// uses a ProjectReference instead of PackageReference
-	if opts.Version != "" && strings.ContainsAny(opts.Version, `/\`) {
-		absSdkCsproj, err := filepath.Abs(filepath.Join(opts.Version, "src/Temporalio/Temporalio.csproj"))
-		if err != nil {
-			return nil, fmt.Errorf("cannot resolve SDK path: %w", err)
-		}
-		if _, err := os.Stat(absSdkCsproj); err != nil {
-			return nil, fmt.Errorf("cannot find SDK csproj at %s: %w", absSdkCsproj, err)
-		}
-		buildArgs = append(buildArgs, "-property:TemporalioProjectReference="+absSdkCsproj)
+	// Find the project's csproj file (<ProjectName>.csproj)
+	projectName := filepath.Base(absProjectDir)
+	absCsprojFile := filepath.Join(absProjectDir, projectName+".csproj")
+	if _, err := os.Stat(absCsprojFile); err != nil {
+		return nil, fmt.Errorf("cannot find %s.csproj in %s: %w", projectName, absProjectDir, err)
 	}
 
-	cmd := exec.CommandContext(ctx, "dotnet", buildArgs...)
-	cmd.Dir = absProjectDir
+	// Use sdkbuild to generate a thin wrapper that calls into the project.
+	// The generated program.csproj references the project as a ProjectReference,
+	// so the project's own csproj handles all dependencies (Temporalio, harness, etc.).
+	// sdkbuild handles SDK version/source builds via TemporalioProjectReference.
+	baseDir := filepath.Dir(absProjectDir)
+	dirName := fmt.Sprintf("project-build-%s", projectName)
+	buildDir := filepath.Join(baseDir, dirName)
+	if err := os.MkdirAll(buildDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed creating build dir: %w", err)
+	}
+
+	buildOpts := sdkbuild.BuildDotNetProgramOptions{
+		BaseDir:         baseDir,
+		DirName:         dirName,
+		Version:         opts.Version,
+		ProgramContents: fmt.Sprintf("return await %s.RunAsync(args);", projectName),
+		CsprojContents: `<Project Sdk="Microsoft.NET.Sdk">
+			<PropertyGroup>
+				<OutputType>Exe</OutputType>
+				<TargetFramework>net8.0</TargetFramework>
+			</PropertyGroup>
+			<ItemGroup>
+				<ProjectReference Include="` + absCsprojFile + `" />
+			</ItemGroup>
+		</Project>`,
+	}
 	if opts.Logger != nil {
-		cmd.Stdout = &logWriter{logger: opts.Logger}
-		cmd.Stderr = &logWriter{logger: opts.Logger}
-	}
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("dotnet build failed: %w", err)
+		buildOpts.Stdout = &logWriter{logger: opts.Logger}
+		buildOpts.Stderr = &logWriter{logger: opts.Logger}
 	}
 
-	return sdkbuild.DotNetProgramFromDir(absProjectDir)
+	prog, err := sdkbuild.BuildDotNetProgram(ctx, buildOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build .NET project: %w", err)
+	}
+	return prog, nil
 }
 
 // LoadPrebuilt loads an already-built project binary from the given directory.

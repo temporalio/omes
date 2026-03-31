@@ -55,8 +55,7 @@ ENV OMES_PROJECT_LANGUAGE=cs
 ENV OMES_PROJECT_BINARY=/app/prebuilt-project/build/program
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
-COPY --from=build /app/workers/dotnet/projects/tests/*/build /app/prebuilt-project/build
-COPY --from=build /app/workers/dotnet/projects/tests/*/program.csproj /app/prebuilt-project/
+COPY --from=build /app/workers/dotnet/projects/tests/project-build-*/. /app/prebuilt-project/
 COPY dockerfiles/project-entrypoint.sh /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]

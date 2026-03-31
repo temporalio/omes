@@ -2,7 +2,7 @@ using NexusRpc;
 using NexusRpc.Handlers;
 using Temporalio.Nexus;
 
-namespace NexusSimpleWorkflow;
+namespace NexusSimpleWorkflowProject;
 
 [NexusService]
 public interface IStringService

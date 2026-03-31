@@ -1,7 +1,7 @@
 using Temporalio.Nexus;
 using Temporalio.Workflows;
 
-namespace NexusSimpleWorkflow;
+namespace NexusSimpleWorkflowProject;
 
 [Workflow]
 public class CallerWorkflow

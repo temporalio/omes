@@ -1,6 +1,6 @@
 using Temporalio.Workflows;
 
-namespace NexusSimpleWorkflow;
+namespace NexusSimpleWorkflowProject;
 
 [Workflow]
 public class HandlerWorkflow
