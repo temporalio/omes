@@ -128,6 +128,19 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
+      - name: Run throughput_stress against ${{ matrix.sdk }} worker
+        run: |
+          go run ./cmd run-scenario \
+            --scenario throughput_stress \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }} \
+            --connect-timeout 1m \
+            --iterations 2 \
+            --option internal-iterations=2 \
+            --option continue-as-new-after-iterations=1 \
+            --option sleep-time=1ms \
+            --option visibility-count-timeout=2m
 
   test-kitchensink:
     runs-on: ubuntu-latest
