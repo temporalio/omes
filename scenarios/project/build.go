@@ -130,6 +130,7 @@ func buildDotNet(ctx context.Context, opts BuildOptions) (sdkbuild.Program, erro
 		BaseDir:         baseDir,
 		DirName:         dirName,
 		Version:         opts.Version,
+		Configuration:   "Release",
 		ProgramContents: fmt.Sprintf("return await %s.RunAsync(args);", projectName),
 		CsprojContents: `<Project Sdk="Microsoft.NET.Sdk">
 			<PropertyGroup>
