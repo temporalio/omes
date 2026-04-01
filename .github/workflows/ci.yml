@@ -128,7 +128,7 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
-      - name: Run throughput_stress against ${{ matrix.sdk }} worker
+      - name: Smoke test throughput_stress to confirm build is usable against ${{ matrix.sdk }} worker
         timeout-minutes: 10
         run: |
           go run ./cmd run-scenario \
