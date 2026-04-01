@@ -129,6 +129,7 @@ jobs:
             --connect-timeout 1m \
             --iterations 5
       - name: Run throughput_stress against ${{ matrix.sdk }} worker
+        timeout-minutes: 10
         run: |
           go run ./cmd run-scenario \
             --scenario throughput_stress \
@@ -137,6 +138,7 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 2 \
+            --timeout 5m \
             --option internal-iterations=2 \
             --option continue-as-new-after-iterations=1 \
             --option sleep-time=1ms \
