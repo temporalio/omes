@@ -83,7 +83,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
     if action_set.concurrent
       return_value = nil
       futures = action_set.actions.map do |action|
-        Temporalio::Workflow.async do
+        Temporalio::Workflow::Future.new do
           result = handle_action(action)
           return_value = result unless result.nil?
         end
@@ -108,7 +108,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
       raise Temporalio::Error::ApplicationError, action.return_error.failure.message
     when :continue_as_new
       args = action.continue_as_new.arguments.map { |a| Temporalio::Converters::RawValue.new(a) }
-      Temporalio::Workflow.continue_as_new(*args)
+      raise Temporalio::Workflow::ContinueAsNewError.new(*args)
     when :timer
       handle_awaitable_choice(
         -> { Temporalio::Workflow.sleep(action.timer.milliseconds / 1000.0) },
@@ -270,7 +270,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
     when :abandon
       nil
     when :cancel_before_started
-      task = Temporalio::Workflow.async { start_fn.call }
+      task = Temporalio::Workflow::Future.new { start_fn.call }
       task.cancel
       begin
         task.result
@@ -278,7 +278,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
         nil
       end
     when :cancel_after_started
-      task = Temporalio::Workflow.async { start_fn.call }
+      task = Temporalio::Workflow::Future.new { start_fn.call }
       after_started_fn.call(task)
       task.cancel
       begin
@@ -287,7 +287,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
         nil
       end
     when :cancel_after_completed
-      task = Temporalio::Workflow.async { start_fn.call }
+      task = Temporalio::Workflow::Future.new { start_fn.call }
       after_completed_fn.call(task)
       task.cancel
     when :wait_finish

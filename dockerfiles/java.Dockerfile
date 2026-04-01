@@ -46,10 +46,12 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prep
 # Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
 # through Gradle and it's more annoying than it's worth to get its deps to line up
 FROM --platform=linux/$TARGETARCH eclipse-temurin:21
+RUN apt-get update && apt-get install --no-install-recommends --assume-yes git && rm -rf /var/lib/apt/lists/*
 ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/java /app/workers/java
+COPY --from=build /app/repo /app/repo
 COPY --from=build /gradle /gradle
 
 # Use entrypoint instead of command to "bake" the default command options
