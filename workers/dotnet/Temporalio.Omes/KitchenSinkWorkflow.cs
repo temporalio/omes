@@ -138,6 +138,12 @@ public class KitchenSinkWorkflow
         var allTasksDone = Task.WhenAll(tasks);
         await Workflow.WhenAnyAsync(waitReturnSet, allTasksDone);
 
+        // Propagate any exceptions from faulted tasks
+        if (allTasksDone.IsFaulted)
+        {
+            await allTasksDone;
+        }
+
         return returnMe;
     }
 

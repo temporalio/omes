@@ -22,6 +22,9 @@ on:
       dotnet-version:
         description: Dotnet SDK version to build. Skipped if not specified. Must start with v.
         type: string
+      ruby-version:
+        description: Ruby SDK version to build. Skipped if not specified. Must start with v.
+        type: string
       do-push:
         description: If set, push the built images to Docker Hub.
         type: boolean
@@ -48,6 +51,9 @@ on:
         type: string
       dotnet-version:
         description: Dotnet SDK version to build. Skipped if not specified. Must start with v.
+        type: string
+      ruby-version:
+        description: Ruby SDK version to build. Skipped if not specified. Must start with v.
         type: string
       do-push:
         description: If set, push the built images to Docker Hub.
@@ -106,6 +112,16 @@ jobs:
     with:
       lang: dotnet
       sdk-version: ${{ inputs.dotnet-version }}
+      do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
+
+  build-ruby-docker-images:
+    if: inputs.ruby-version
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      lang: ruby
+      sdk-version: ${{ inputs.ruby-version }}
       do-push: ${{ inputs.do-push }}
       as-latest: ${{ inputs.as-latest }}
 

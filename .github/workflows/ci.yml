@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [go, java, python, typescript, dotnet, kitchensink-gen]
+        target: [go, java, python, ruby, typescript, dotnet, kitchensink-gen]
         include:
           - target: go
             tools: go
@@ -53,6 +53,8 @@ jobs:
             tools: java go
           - target: python
             tools: python go
+          - target: ruby
+            tools: ruby go
           - target: typescript
             tools: rust go node protoc
           - target: dotnet
@@ -93,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        sdk: [go, java, python, ruby, typescript, dotnet]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -126,13 +128,28 @@ jobs:
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
+      - name: Smoke test throughput_stress to confirm build is usable against ${{ matrix.sdk }} worker
+        timeout-minutes: 10
+        run: |
+          go run ./cmd run-scenario \
+            --scenario throughput_stress \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }} \
+            --connect-timeout 1m \
+            --iterations 2 \
+            --timeout 5m \
+            --option internal-iterations=2 \
+            --option continue-as-new-after-iterations=1 \
+            --option sleep-time=1ms \
+            --option visibility-count-timeout=2m
 
   test-kitchensink:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        sdk: [go, java, python, typescript, dotnet]
+        sdk: [go, java, python, ruby, typescript, dotnet]
         include:
           - sdk: go
             tools: go
@@ -140,6 +157,8 @@ jobs:
             tools: java go
           - sdk: python
             tools: python go
+          - sdk: ruby
+            tools: ruby go
           - sdk: typescript
             tools: node go
           - sdk: dotnet
@@ -241,6 +260,7 @@ jobs:
       java-sdk-version: ${{ steps.set-output.outputs.java-sdk-version }}
       python-sdk-version: ${{ steps.set-output.outputs.python-sdk-version }}
       dotnet-sdk-version: ${{ steps.set-output.outputs.dotnet-sdk-version }}
+      ruby-sdk-version: ${{ steps.set-output.outputs.ruby-sdk-version }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -256,6 +276,7 @@ jobs:
           echo "java-sdk-version=v${{ env.JAVA_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "python-sdk-version=v${{ env.PYTHON_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
           echo "dotnet-sdk-version=v${{ env.DOTNET_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
+          echo "ruby-sdk-version=v${{ env.RUBY_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
   push-docker-images:
     needs: prepare-for-docker-push
     uses: ./.github/workflows/all-docker-images.yml
@@ -270,3 +291,4 @@ jobs:
       java-version: ${{ needs.prepare-for-docker-push.outputs.java-sdk-version }}
       py-version: ${{ needs.prepare-for-docker-push.outputs.python-sdk-version }}
       dotnet-version: ${{ needs.prepare-for-docker-push.outputs.dotnet-sdk-version }}
+      ruby-version: ${{ needs.prepare-for-docker-push.outputs.ruby-sdk-version }}

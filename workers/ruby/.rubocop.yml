@@ -1,0 +1,46 @@
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  Exclude:
+    - "protos/**/*"
+    - "vendor/**/*"
+    - "omes-temp-*/**/*"
+
+Layout/LineLength:
+  Max: 120
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/OneClassPerFile:
+  Enabled: false
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false
+
+Style/GuardClause:
+  Enabled: false
+
+# Raised limits for action dispatch methods in kitchen_sink.rb.
+# These methods are inherently branchy — they dispatch protobuf action
+# types via large case statements that mirror the proto schema.
+Metrics/MethodLength:
+  Max: 35
+
+Metrics/ClassLength:
+  Max: 300
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+Metrics/PerceivedComplexity:
+  Max: 15
+
+Metrics/AbcSize:
+  Max: 25

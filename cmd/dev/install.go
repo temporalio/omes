@@ -60,6 +60,8 @@ func runInstallTools(ctx context.Context, tools []string) error {
 			err = installPython(ctx)
 		case "node":
 			err = installNode(ctx)
+		case "ruby":
+			err = installRuby(ctx)
 		case "rust":
 			err = installRust(ctx)
 		case "protoc":
@@ -191,6 +193,27 @@ func installNode(ctx context.Context) error {
 	}
 	fmt.Println("✅ TypeScript worker dependencies installed successfully!")
 
+	return nil
+}
+
+func installRuby(ctx context.Context) error {
+	version, err := getVersion("ruby")
+	if err != nil {
+		return err
+	}
+	if err := installViaMise(ctx, "ruby", version); err != nil {
+		return err
+	}
+
+	targetDir, err := getTargetDir("ruby")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Installing Ruby worker dependencies...")
+	if err := runCommandInDir(ctx, targetDir, "bundle", "install"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Ruby worker dependencies installed successfully!")
 	return nil
 }
 
