@@ -82,8 +82,6 @@ message DoSignal {
 }
 
 message DoDescribe {
-  // If set, the client should expect the describe to fail
-  bool failure_expected = 10;
 }
 
 message DoQuery {

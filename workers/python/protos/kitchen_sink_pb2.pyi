@@ -121,10 +121,8 @@ class DoSignal(_message.Message):
     def __init__(self, do_signal_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ...) -> None: ...
 
 class DoDescribe(_message.Message):
-    __slots__ = ("failure_expected",)
-    FAILURE_EXPECTED_FIELD_NUMBER: _ClassVar[int]
-    failure_expected: bool
-    def __init__(self, failure_expected: bool = ...) -> None: ...
+    __slots__ = ()
+    def __init__(self) -> None: ...
 
 class DoQuery(_message.Message):
     __slots__ = ("report_state", "custom", "failure_expected")
