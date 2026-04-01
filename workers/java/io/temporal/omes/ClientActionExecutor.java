@@ -57,6 +57,18 @@ public class ClientActionExecutor {
       executeUpdateAction(action.getDoUpdate());
     } else if (action.hasDoQuery()) {
       executeQueryAction(action.getDoQuery());
+    } else if (action.hasDoDescribe()) {
+      client
+          .getWorkflowServiceStubs()
+          .blockingStub()
+          .describeWorkflowExecution(
+              io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest.newBuilder()
+                  .setNamespace(client.getOptions().getNamespace())
+                  .setExecution(
+                      io.temporal.api.common.v1.WorkflowExecution.newBuilder()
+                          .setWorkflowId(workflowId)
+                          .build())
+                  .build());
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
     } else {
