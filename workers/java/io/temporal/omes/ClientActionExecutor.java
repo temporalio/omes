@@ -66,8 +66,7 @@ public class ClientActionExecutor {
           .describeWorkflowExecution(
               DescribeWorkflowExecutionRequest.newBuilder()
                   .setNamespace(client.getOptions().getNamespace())
-                  .setExecution(
-                      WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
+                  .setExecution(WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
                   .build());
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
