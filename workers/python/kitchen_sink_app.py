@@ -11,13 +11,16 @@ from activities import (
     retryable_error_activity,
     timeout_activity,
 )
-from harness import App, WorkerContext
+from harness import App, WorkerContext, default_client_factory
 from kitchen_sink import KitchenSinkWorkflow, NexusHandlerWorkflow
 from nexus_service import KitchenSinkNexusServiceHandler
 
 
 def app() -> App:
-    return App(worker=build_worker)
+    return App(
+        worker=build_worker,
+        client_factory=default_client_factory,
+    )
 
 
 def build_worker(context: WorkerContext) -> Worker:
