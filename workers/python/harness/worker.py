@@ -38,6 +38,8 @@ class WorkerContext:
     client: Client
     logger: logging.Logger
     task_queue: str
+    # Kitchen sink specific field - tells the client action executor
+    # whether to error or not for unimplemented actions.
     err_on_unimplemented: bool
     worker_kwargs: dict[str, Any]
 
@@ -269,10 +271,10 @@ def _build_task_queues(
     logger: logging.Logger, task_queue: str, suffix_start: int, suffix_end: int
 ) -> list[str]:
     if suffix_end == 0:
-        logger.info("Python worker running for task queue %s", task_queue)
+        logger.info("Python worker will run on task queue %s", task_queue)
         return [task_queue]
     task_queues = [f"{task_queue}-{i}" for i in range(suffix_start, suffix_end + 1)]
-    logger.info("Python worker running for %s task queue(s)", len(task_queues))
+    logger.info("Python worker will run on %s task queue(s)", len(task_queues))
     return task_queues
 
 
