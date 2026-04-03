@@ -45,12 +45,14 @@ class InitResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class ExecuteRequest(_message.Message):
-    __slots__ = ("iteration", "payload")
+    __slots__ = ("iteration", "task_queue", "payload")
     ITERATION_FIELD_NUMBER: _ClassVar[int]
+    TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_FIELD_NUMBER: _ClassVar[int]
     iteration: int
+    task_queue: str
     payload: bytes
-    def __init__(self, iteration: _Optional[int] = ..., payload: _Optional[bytes] = ...) -> None: ...
+    def __init__(self, iteration: _Optional[int] = ..., task_queue: _Optional[str] = ..., payload: _Optional[bytes] = ...) -> None: ...
 
 class ExecuteResponse(_message.Message):
     __slots__ = ()

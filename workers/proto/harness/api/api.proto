@@ -38,9 +38,9 @@ message InitResponse {}
 // verifies results within the Execute handler.
 message ExecuteRequest {
     int64 iteration = 1;
-
+    string task_queue = 2;
     // Reserved for future executor-specific per-iteration data.
-    bytes payload = 2;
+    bytes payload = 3;
 }
 
 message ExecuteResponse {}

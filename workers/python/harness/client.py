@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -15,8 +16,17 @@ from temporalio.runtime import (
 from temporalio.service import TLSConfig
 
 def _build_tls_config(
-    *, tls: bool, tls_cert_path: str, tls_key_path: str
+    *,
+    tls: bool,
+    tls_cert_path: str,
+    tls_key_path: str,
+    tls_server_name: str | None = None,
+    disable_host_verification: bool = False,
 ) -> TLSConfig | None:
+    if disable_host_verification:
+        logging.getLogger(__name__).warning(
+            "disable_host_verification is not supported by the Python SDK; ignoring"
+        )
     if tls_cert_path:
         if not tls_key_path:
             raise ValueError("Client cert specified, but not client key!")
@@ -24,11 +34,15 @@ def _build_tls_config(
             client_cert = cert_file.read()
         with open(tls_key_path, "rb") as key_file:
             client_key = key_file.read()
-        return TLSConfig(client_cert=client_cert, client_private_key=client_key)
+        return TLSConfig(
+            client_cert=client_cert,
+            client_private_key=client_key,
+            domain=tls_server_name,
+        )
     if tls_key_path:
         raise ValueError("Client key specified, but not client cert!")
     if tls:
-        return TLSConfig()
+        return TLSConfig(domain=tls_server_name)
     return None
 
 
@@ -84,7 +98,9 @@ def build_client_config(
     tls: bool,
     tls_cert_path: str,
     tls_key_path: str,
-    prom_listen_address: str | None,
+    tls_server_name: str | None = None,
+    disable_host_verification: bool = False,
+    prom_listen_address: str | None = None,
 ) -> ClientConfig:
     return ClientConfig(
         target_host=server_address,
@@ -94,6 +110,8 @@ def build_client_config(
             tls=tls,
             tls_cert_path=tls_cert_path,
             tls_key_path=tls_key_path,
+            tls_server_name=tls_server_name,
+            disable_host_verification=disable_host_verification,
         ),
         runtime=_build_runtime(prom_listen_address),
     )

@@ -253,8 +253,9 @@ func (*InitResponse) Descriptor() ([]byte, []int) {
 type ExecuteRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Iteration int64                  `protobuf:"varint,1,opt,name=iteration,proto3" json:"iteration,omitempty"`
+	TaskQueue string                 `protobuf:"bytes,2,opt,name=task_queue,json=taskQueue,proto3" json:"task_queue,omitempty"`
 	// Reserved for future executor-specific per-iteration data.
-	Payload       []byte `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	Payload       []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -294,6 +295,13 @@ func (x *ExecuteRequest) GetIteration() int64 {
 		return x.Iteration
 	}
 	return 0
+}
+
+func (x *ExecuteRequest) GetTaskQueue() string {
+	if x != nil {
+		return x.TaskQueue
+	}
+	return ""
 }
 
 func (x *ExecuteRequest) GetPayload() []byte {
@@ -365,10 +373,12 @@ const file_harness_api_api_proto_rawDesc = "" +
 	"\vconfig_json\x18\x05 \x01(\fR\n" +
 	"configJson\x12<\n" +
 	"\x1aregister_search_attributes\x18\x06 \x01(\bR\x18registerSearchAttributes\"\x0e\n" +
-	"\fInitResponse\"H\n" +
+	"\fInitResponse\"g\n" +
 	"\x0eExecuteRequest\x12\x1c\n" +
-	"\titeration\x18\x01 \x01(\x03R\titeration\x12\x18\n" +
-	"\apayload\x18\x02 \x01(\fR\apayload\"\x11\n" +
+	"\titeration\x18\x01 \x01(\x03R\titeration\x12\x1d\n" +
+	"\n" +
+	"task_queue\x18\x02 \x01(\tR\ttaskQueue\x12\x18\n" +
+	"\apayload\x18\x03 \x01(\fR\apayload\"\x11\n" +
 	"\x0fExecuteResponse2\xcf\x01\n" +
 	"\x0eProjectService\x12Y\n" +
 	"\x04Init\x12&.temporal.omes.projects.v1.InitRequest\x1a'.temporal.omes.projects.v1.InitResponse\"\x00\x12b\n" +

@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass
 
 from harness.client import ClientFactory
-from harness.project import ProjectHandlers
+from harness.project import ProjectHandlers, run_project_server_cli
 from harness.worker import WorkerFactory, run_worker_cli
 
 
@@ -19,4 +19,13 @@ def run(app: App) -> None:
     argv = sys.argv[1:]
     if argv[:1] == ["worker"]:
         run_worker_cli(app.worker, app.client_factory, argv[1:])
-        return
+    elif argv[:1] == ["project-server"]:
+        if app.project is None:
+            raise SystemExit(
+                "Wanted project-server but no project handlers registered for this app"
+            )
+        run_project_server_cli(app.project, app.client_factory, argv[1:])
+    else:
+        raise SystemExit(
+            f"Unknown command: {argv[:1]}. Expected 'worker' or 'project-server'"
+        )
