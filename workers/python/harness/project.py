@@ -4,6 +4,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+from harness.api import api_pb2_grpc
 from temporalio.client import Client
 
 
@@ -15,24 +16,22 @@ class ProjectRunInfo:
 
 
 @dataclass(frozen=True)
-class ProjectInitContext:
-    client: Client
+class ProjectInitInfo:
     logger: logging.Logger
     run: ProjectRunInfo
     config_json: bytes
 
 
 @dataclass(frozen=True)
-class ProjectExecuteContext:
-    client: Client
+class ProjectExecuteInfo:
     logger: logging.Logger
     run: ProjectRunInfo
     iteration: int
     payload: bytes = b""
 
 
-ProjectExecuteHandler = Callable[[ProjectExecuteContext], Awaitable[None]]
-ProjectInitHandler = Callable[[ProjectInitContext], Awaitable[None]]
+ProjectExecuteHandler = Callable[[Client, ProjectExecuteInfo], Awaitable[None]]
+ProjectInitHandler = Callable[[Client, ProjectInitInfo], Awaitable[None]]
 
 
 @dataclass(frozen=True)

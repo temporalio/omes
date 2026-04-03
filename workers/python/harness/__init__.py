@@ -1,9 +1,9 @@
 from .client import ClientConfig, ClientFactory, default_client_factory
 from .main import App, run
 from .project import (
-    ProjectExecuteContext,
+    ProjectExecuteInfo,
     ProjectHandlers,
-    ProjectInitContext,
+    ProjectInitInfo,
     ProjectRunInfo,
 )
 from .worker import WorkerContext
@@ -12,9 +12,9 @@ __all__ = [
     "App",
     "ClientConfig",
     "ClientFactory",
-    "ProjectExecuteContext",
+    "ProjectExecuteInfo",
     "ProjectHandlers",
-    "ProjectInitContext",
+    "ProjectInitInfo",
     "ProjectRunInfo",
     "WorkerContext",
     "default_client_factory",
