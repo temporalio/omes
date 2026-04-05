@@ -432,8 +432,10 @@ func (e *visibilityStressExecutor) Run(ctx context.Context, info loadgen.Scenari
 		return e.runCleanup(ctx, info)
 	}
 
-	if err := e.registerCSAs(ctx, info); err != nil {
-		return err
+	if !info.Configuration.DoNotRegisterSearchAttributes {
+		if err := e.registerCSAs(ctx, info); err != nil {
+			return err
+		}
 	}
 
 	// Wait for at least one worker to be polling each namespace's task queue
