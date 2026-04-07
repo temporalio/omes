@@ -1,0 +1,21 @@
+version: v2
+inputs:
+  - directory: .
+    paths:
+      - harness/api/api.proto
+plugins:
+  # Go
+  - remote: buf.build/protocolbuffers/go
+    out: ../go/projects
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: ../go/projects
+    opt:
+      - paths=source_relative
+  # Python (using these versions for protobuf compatibility with temporalio >=1.23.0)
+  - remote: buf.build/protocolbuffers/python:v27.2
+    out: ../python
+  - remote: buf.build/protocolbuffers/pyi:v27.2
+    out: ../python
+  - remote: buf.build/grpc/python:v1.65.0
+    out: ../python

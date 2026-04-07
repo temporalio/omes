@@ -208,7 +208,7 @@ jobs:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
         run: |
-          go run ./cmd/dev install rust go protoc node
+          go run ./cmd/dev install rust go protoc node buf
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
