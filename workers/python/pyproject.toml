@@ -41,9 +41,12 @@ lint-types = "mypy --explicit-package-bases --namespace-packages --exclude 'harn
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-skip_glob = "protos/*"
+skip_glob = ["protos/*", "harness/api/*"]
 
 [tool.black]
 extend-exclude = '''
-protos/
+(
+  protos/
+  | harness/api/
+)
 '''
