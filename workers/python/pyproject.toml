@@ -37,6 +37,7 @@ lint = [
   {ref = "lint-types"},
 ]
 lint-types = "mypy --explicit-package-bases --namespace-packages --exclude 'harness/api/' ."
+test = "python -m unittest discover -s tests -p 'test_*.py'"
 
 [tool.isort]
 profile = "black"
