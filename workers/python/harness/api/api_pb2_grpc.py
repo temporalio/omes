@@ -17,17 +17,15 @@ class ProjectServiceStub(object):
             channel: A grpc.Channel.
         """
         self.Init = channel.unary_unary(
-            "/temporal.omes.projects.v1.ProjectService/Init",
-            request_serializer=harness_dot_api_dot_api__pb2.InitRequest.SerializeToString,
-            response_deserializer=harness_dot_api_dot_api__pb2.InitResponse.FromString,
-            _registered_method=True,
-        )
+                '/temporal.omes.projects.v1.ProjectService/Init',
+                request_serializer=harness_dot_api_dot_api__pb2.InitRequest.SerializeToString,
+                response_deserializer=harness_dot_api_dot_api__pb2.InitResponse.FromString,
+                _registered_method=True)
         self.Execute = channel.unary_unary(
-            "/temporal.omes.projects.v1.ProjectService/Execute",
-            request_serializer=harness_dot_api_dot_api__pb2.ExecuteRequest.SerializeToString,
-            response_deserializer=harness_dot_api_dot_api__pb2.ExecuteResponse.FromString,
-            _registered_method=True,
-        )
+                '/temporal.omes.projects.v1.ProjectService/Execute',
+                request_serializer=harness_dot_api_dot_api__pb2.ExecuteRequest.SerializeToString,
+                response_deserializer=harness_dot_api_dot_api__pb2.ExecuteResponse.FromString,
+                _registered_method=True)
 
 
 class ProjectServiceServicer(object):
@@ -36,63 +34,60 @@ class ProjectServiceServicer(object):
     """
 
     def Init(self, request, context):
-        """Init creates a Temporal client, runs project-specific setup, and prepares for execution."""
+        """Init creates a Temporal client, runs project-specific setup, and prepares for execution.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def Execute(self, request, context):
-        """Execute runs a single test iteration (e.g., start a workflow and verify the result)."""
+        """Execute runs a single test iteration (e.g., start a workflow and verify the result).
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details("Method not implemented!")
-        raise NotImplementedError("Method not implemented!")
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
 
 def add_ProjectServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "Init": grpc.unary_unary_rpc_method_handler(
-            servicer.Init,
-            request_deserializer=harness_dot_api_dot_api__pb2.InitRequest.FromString,
-            response_serializer=harness_dot_api_dot_api__pb2.InitResponse.SerializeToString,
-        ),
-        "Execute": grpc.unary_unary_rpc_method_handler(
-            servicer.Execute,
-            request_deserializer=harness_dot_api_dot_api__pb2.ExecuteRequest.FromString,
-            response_serializer=harness_dot_api_dot_api__pb2.ExecuteResponse.SerializeToString,
-        ),
+            'Init': grpc.unary_unary_rpc_method_handler(
+                    servicer.Init,
+                    request_deserializer=harness_dot_api_dot_api__pb2.InitRequest.FromString,
+                    response_serializer=harness_dot_api_dot_api__pb2.InitResponse.SerializeToString,
+            ),
+            'Execute': grpc.unary_unary_rpc_method_handler(
+                    servicer.Execute,
+                    request_deserializer=harness_dot_api_dot_api__pb2.ExecuteRequest.FromString,
+                    response_serializer=harness_dot_api_dot_api__pb2.ExecuteResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        "temporal.omes.projects.v1.ProjectService", rpc_method_handlers
-    )
+            'temporal.omes.projects.v1.ProjectService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers(
-        "temporal.omes.projects.v1.ProjectService", rpc_method_handlers
-    )
+    server.add_registered_method_handlers('temporal.omes.projects.v1.ProjectService', rpc_method_handlers)
 
 
-# This class is part of an EXPERIMENTAL API.
+ # This class is part of an EXPERIMENTAL API.
 class ProjectService(object):
     """ProjectService is the gRPC interface used by omes to intialize and drive load to
     a project.
     """
 
     @staticmethod
-    def Init(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def Init(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/temporal.omes.projects.v1.ProjectService/Init",
+            '/temporal.omes.projects.v1.ProjectService/Init',
             harness_dot_api_dot_api__pb2.InitRequest.SerializeToString,
             harness_dot_api_dot_api__pb2.InitResponse.FromString,
             options,
@@ -103,26 +98,23 @@ class ProjectService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)
 
     @staticmethod
-    def Execute(
-        request,
-        target,
-        options=(),
-        channel_credentials=None,
-        call_credentials=None,
-        insecure=False,
-        compression=None,
-        wait_for_ready=None,
-        timeout=None,
-        metadata=None,
-    ):
+    def Execute(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
         return grpc.experimental.unary_unary(
             request,
             target,
-            "/temporal.omes.projects.v1.ProjectService/Execute",
+            '/temporal.omes.projects.v1.ProjectService/Execute',
             harness_dot_api_dot_api__pb2.ExecuteRequest.SerializeToString,
             harness_dot_api_dot_api__pb2.ExecuteResponse.FromString,
             options,
@@ -133,5 +125,4 @@ class ProjectService(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
-        )
+            _registered_method=True)

@@ -1,24 +1,11 @@
-from typing import ClassVar as _ClassVar
-from typing import Mapping as _Mapping
-from typing import Optional as _Optional
-from typing import Union as _Union
-
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
+from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ConnectOptions(_message.Message):
-    __slots__ = (
-        "namespace",
-        "server_address",
-        "auth_header",
-        "enable_tls",
-        "tls_cert_path",
-        "tls_key_path",
-        "tls_server_name",
-        "disable_host_verification",
-    )
+    __slots__ = ("namespace", "server_address", "auth_header", "enable_tls", "tls_cert_path", "tls_key_path", "tls_server_name", "disable_host_verification")
     NAMESPACE_FIELD_NUMBER: _ClassVar[int]
     SERVER_ADDRESS_FIELD_NUMBER: _ClassVar[int]
     AUTH_HEADER_FIELD_NUMBER: _ClassVar[int]
@@ -35,26 +22,10 @@ class ConnectOptions(_message.Message):
     tls_key_path: str
     tls_server_name: str
     disable_host_verification: bool
-    def __init__(
-        self,
-        namespace: _Optional[str] = ...,
-        server_address: _Optional[str] = ...,
-        auth_header: _Optional[str] = ...,
-        enable_tls: bool = ...,
-        tls_cert_path: _Optional[str] = ...,
-        tls_key_path: _Optional[str] = ...,
-        tls_server_name: _Optional[str] = ...,
-        disable_host_verification: bool = ...,
-    ) -> None: ...
+    def __init__(self, namespace: _Optional[str] = ..., server_address: _Optional[str] = ..., auth_header: _Optional[str] = ..., enable_tls: bool = ..., tls_cert_path: _Optional[str] = ..., tls_key_path: _Optional[str] = ..., tls_server_name: _Optional[str] = ..., disable_host_verification: bool = ...) -> None: ...
 
 class InitRequest(_message.Message):
-    __slots__ = (
-        "execution_id",
-        "run_id",
-        "task_queue",
-        "connect_options",
-        "config_json",
-    )
+    __slots__ = ("execution_id", "run_id", "task_queue", "connect_options", "config_json")
     EXECUTION_ID_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     TASK_QUEUE_FIELD_NUMBER: _ClassVar[int]
@@ -65,14 +36,7 @@ class InitRequest(_message.Message):
     task_queue: str
     connect_options: ConnectOptions
     config_json: bytes
-    def __init__(
-        self,
-        execution_id: _Optional[str] = ...,
-        run_id: _Optional[str] = ...,
-        task_queue: _Optional[str] = ...,
-        connect_options: _Optional[_Union[ConnectOptions, _Mapping]] = ...,
-        config_json: _Optional[bytes] = ...,
-    ) -> None: ...
+    def __init__(self, execution_id: _Optional[str] = ..., run_id: _Optional[str] = ..., task_queue: _Optional[str] = ..., connect_options: _Optional[_Union[ConnectOptions, _Mapping]] = ..., config_json: _Optional[bytes] = ...) -> None: ...
 
 class InitResponse(_message.Message):
     __slots__ = ()
@@ -86,12 +50,7 @@ class ExecuteRequest(_message.Message):
     iteration: int
     task_queue: str
     payload: bytes
-    def __init__(
-        self,
-        iteration: _Optional[int] = ...,
-        task_queue: _Optional[str] = ...,
-        payload: _Optional[bytes] = ...,
-    ) -> None: ...
+    def __init__(self, iteration: _Optional[int] = ..., task_queue: _Optional[str] = ..., payload: _Optional[bytes] = ...) -> None: ...
 
 class ExecuteResponse(_message.Message):
     __slots__ = ()

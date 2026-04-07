@@ -9,39 +9,39 @@ from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
-
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC, 5, 27, 2, "", "harness/api/api.proto"
+    _runtime_version.Domain.PUBLIC,
+    5,
+    27,
+    2,
+    '',
+    'harness/api/api.proto'
 )
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x15harness/api/api.proto\x12\x19temporal.omes.projects.v1"\xbf\x02\n\x0e\x43onnectOptions\x12\x1c\n\tnamespace\x18\x01 \x01(\tR\tnamespace\x12%\n\x0eserver_address\x18\x02 \x01(\tR\rserverAddress\x12\x1f\n\x0b\x61uth_header\x18\x03 \x01(\tR\nauthHeader\x12\x1d\n\nenable_tls\x18\x04 \x01(\x08R\tenableTls\x12"\n\rtls_cert_path\x18\x05 \x01(\tR\x0btlsCertPath\x12 \n\x0ctls_key_path\x18\x06 \x01(\tR\ntlsKeyPath\x12&\n\x0ftls_server_name\x18\x07 \x01(\tR\rtlsServerName\x12:\n\x19\x64isable_host_verification\x18\x08 \x01(\x08R\x17\x64isableHostVerification"\xdb\x01\n\x0bInitRequest\x12!\n\x0c\x65xecution_id\x18\x01 \x01(\tR\x0b\x65xecutionId\x12\x15\n\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x1d\n\ntask_queue\x18\x03 \x01(\tR\ttaskQueue\x12R\n\x0f\x63onnect_options\x18\x04 \x01(\x0b\x32).temporal.omes.projects.v1.ConnectOptionsR\x0e\x63onnectOptions\x12\x1f\n\x0b\x63onfig_json\x18\x05 \x01(\x0cR\nconfigJson"\x0e\n\x0cInitResponse"g\n\x0e\x45xecuteRequest\x12\x1c\n\titeration\x18\x01 \x01(\x03R\titeration\x12\x1d\n\ntask_queue\x18\x02 \x01(\tR\ttaskQueue\x12\x18\n\x07payload\x18\x03 \x01(\x0cR\x07payload"\x11\n\x0f\x45xecuteResponse2\xcf\x01\n\x0eProjectService\x12Y\n\x04Init\x12&.temporal.omes.projects.v1.InitRequest\x1a\'.temporal.omes.projects.v1.InitResponse"\x00\x12\x62\n\x07\x45xecute\x12).temporal.omes.projects.v1.ExecuteRequest\x1a*.temporal.omes.projects.v1.ExecuteResponse"\x00\x42<Z:github.com/temporalio/omes/workers/go/projects/harness/apib\x06proto3'
-)
+
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15harness/api/api.proto\x12\x19temporal.omes.projects.v1\"\xbf\x02\n\x0e\x43onnectOptions\x12\x1c\n\tnamespace\x18\x01 \x01(\tR\tnamespace\x12%\n\x0eserver_address\x18\x02 \x01(\tR\rserverAddress\x12\x1f\n\x0b\x61uth_header\x18\x03 \x01(\tR\nauthHeader\x12\x1d\n\nenable_tls\x18\x04 \x01(\x08R\tenableTls\x12\"\n\rtls_cert_path\x18\x05 \x01(\tR\x0btlsCertPath\x12 \n\x0ctls_key_path\x18\x06 \x01(\tR\ntlsKeyPath\x12&\n\x0ftls_server_name\x18\x07 \x01(\tR\rtlsServerName\x12:\n\x19\x64isable_host_verification\x18\x08 \x01(\x08R\x17\x64isableHostVerification\"\xdb\x01\n\x0bInitRequest\x12!\n\x0c\x65xecution_id\x18\x01 \x01(\tR\x0b\x65xecutionId\x12\x15\n\x06run_id\x18\x02 \x01(\tR\x05runId\x12\x1d\n\ntask_queue\x18\x03 \x01(\tR\ttaskQueue\x12R\n\x0f\x63onnect_options\x18\x04 \x01(\x0b\x32).temporal.omes.projects.v1.ConnectOptionsR\x0e\x63onnectOptions\x12\x1f\n\x0b\x63onfig_json\x18\x05 \x01(\x0cR\nconfigJson\"\x0e\n\x0cInitResponse\"g\n\x0e\x45xecuteRequest\x12\x1c\n\titeration\x18\x01 \x01(\x03R\titeration\x12\x1d\n\ntask_queue\x18\x02 \x01(\tR\ttaskQueue\x12\x18\n\x07payload\x18\x03 \x01(\x0cR\x07payload\"\x11\n\x0f\x45xecuteResponse2\xcf\x01\n\x0eProjectService\x12Y\n\x04Init\x12&.temporal.omes.projects.v1.InitRequest\x1a\'.temporal.omes.projects.v1.InitResponse\"\x00\x12\x62\n\x07\x45xecute\x12).temporal.omes.projects.v1.ExecuteRequest\x1a*.temporal.omes.projects.v1.ExecuteResponse\"\x00\x42<Z:github.com/temporalio/omes/workers/go/projects/harness/apib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "harness.api.api_pb2", _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'harness.api.api_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-    _globals["DESCRIPTOR"]._loaded_options = None
-    _globals[
-        "DESCRIPTOR"
-    ]._serialized_options = (
-        b"Z:github.com/temporalio/omes/workers/go/projects/harness/api"
-    )
-    _globals["_CONNECTOPTIONS"]._serialized_start = 53
-    _globals["_CONNECTOPTIONS"]._serialized_end = 372
-    _globals["_INITREQUEST"]._serialized_start = 375
-    _globals["_INITREQUEST"]._serialized_end = 594
-    _globals["_INITRESPONSE"]._serialized_start = 596
-    _globals["_INITRESPONSE"]._serialized_end = 610
-    _globals["_EXECUTEREQUEST"]._serialized_start = 612
-    _globals["_EXECUTEREQUEST"]._serialized_end = 715
-    _globals["_EXECUTERESPONSE"]._serialized_start = 717
-    _globals["_EXECUTERESPONSE"]._serialized_end = 734
-    _globals["_PROJECTSERVICE"]._serialized_start = 737
-    _globals["_PROJECTSERVICE"]._serialized_end = 944
+  _globals['DESCRIPTOR']._loaded_options = None
+  _globals['DESCRIPTOR']._serialized_options = b'Z:github.com/temporalio/omes/workers/go/projects/harness/api'
+  _globals['_CONNECTOPTIONS']._serialized_start=53
+  _globals['_CONNECTOPTIONS']._serialized_end=372
+  _globals['_INITREQUEST']._serialized_start=375
+  _globals['_INITREQUEST']._serialized_end=594
+  _globals['_INITRESPONSE']._serialized_start=596
+  _globals['_INITRESPONSE']._serialized_end=610
+  _globals['_EXECUTEREQUEST']._serialized_start=612
+  _globals['_EXECUTEREQUEST']._serialized_end=715
+  _globals['_EXECUTERESPONSE']._serialized_start=717
+  _globals['_EXECUTERESPONSE']._serialized_end=734
+  _globals['_PROJECTSERVICE']._serialized_start=737
+  _globals['_PROJECTSERVICE']._serialized_end=944
 # @@protoc_insertion_point(module_scope)
