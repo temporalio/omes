@@ -162,6 +162,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
+		ClientOptions:  r.clientOptions,
 		Configuration: loadgen.RunConfiguration{
 			Iterations:                    r.iterations,
 			Duration:                      r.duration,

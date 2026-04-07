@@ -16,11 +16,12 @@ import (
 )
 
 type Builder struct {
-	DirName    string
-	SdkOptions clioptions.SdkOptions
-	Logger     *zap.SugaredLogger
-	stdout     io.Writer
-	stderr     io.Writer
+	DirName     string
+	ProjectName string
+	SdkOptions  clioptions.SdkOptions
+	Logger      *zap.SugaredLogger
+	stdout      io.Writer
+	stderr      io.Writer
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -30,17 +31,15 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
 
-	buildDir := filepath.Join(baseDir, b.DirName)
-	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
-	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
-		return nil, fmt.Errorf("failed creating directory: %w", err)
-	}
-
 	if b.stdout == nil {
 		b.stdout = &logWriter{logger: b.Logger}
 	}
 	if b.stderr == nil {
 		b.stderr = &logWriter{logger: b.Logger}
+	}
+
+	if b.ProjectName != "" {
+		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
 
 	switch b.SdkOptions.Language {
@@ -312,4 +311,9 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 
 func BaseDir(repoDir string, lang clioptions.Language) string {
 	return filepath.Join(repoDir, "workers", lang.String())
+}
+
+func ProjectDir(baseDir string, projectName string) string {
+	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
+	return filepath.Join(baseDir, projectPath)
 }
