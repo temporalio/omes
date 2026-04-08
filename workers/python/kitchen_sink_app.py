@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from temporalio.client import Client
 from temporalio.worker import Worker
 
 from activities import (
@@ -23,9 +24,9 @@ def app() -> App:
     )
 
 
-def build_worker(context: WorkerContext) -> Worker:
+def build_worker(client: Client, context: WorkerContext) -> Worker:
     return Worker(
-        context.client,
+        client,
         task_queue=context.task_queue,
         workflows=[KitchenSinkWorkflow, NexusHandlerWorkflow],
         activities=[
@@ -36,7 +37,7 @@ def build_worker(context: WorkerContext) -> Worker:
             timeout_activity,
             heartbeat_activity,
             create_client_activity(
-                context.client,
+                client,
                 context.err_on_unimplemented,
             ),
         ],

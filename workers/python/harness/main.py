@@ -17,8 +17,11 @@ class App:
 
 def run(app: App) -> None:
     argv = sys.argv[1:]
-    if argv[:1] == ["worker"]:
-        run_worker_cli(app.worker, app.client_factory, argv[1:])
+    # If not command provided, fallback to existing worker CLI usage.
+    # Preserves direct `python main.py` usage.
+    if not argv or argv[:1] == ["worker"]:
+        worker_argv = argv[1:] if argv[:1] == ["worker"] else argv
+        run_worker_cli(app.worker, app.client_factory, worker_argv)
     elif argv[:1] == ["project-server"]:
         if app.project is None:
             raise SystemExit(

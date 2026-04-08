@@ -13,7 +13,7 @@ from harness.project import ProjectExecuteContext, ProjectHandlers
 from harness.worker import WorkerContext
 
 
-def unused_worker_factory(_: WorkerContext) -> Worker:
+def unused_worker_factory(_: Client, __: WorkerContext) -> Worker:
     raise AssertionError("worker factory should not be called by CLI dispatch tests")
 
 
@@ -34,6 +34,17 @@ def make_app(*, project: ProjectHandlers | None = None) -> App:
 
 
 class HarnessCLITests(unittest.TestCase):
+    def test_no_command_dispatches_to_worker_runner(self) -> None:
+        app = make_app()
+
+        with (
+            patch("harness.main.run_worker_cli", autospec=True) as run_worker_cli,
+            patch.object(sys, "argv", ["main.py"]),
+        ):
+            run(app)
+
+        run_worker_cli.assert_called_once_with(app.worker, app.client_factory, [])
+
     def test_worker_command_dispatches_to_worker_runner(self) -> None:
         app = make_app()
 

@@ -79,16 +79,20 @@ class ProjectServiceServer(api_pb2_grpc.ProjectServiceServicer):
         if not conn.namespace:
             await context.abort(grpc.StatusCode.INVALID_ARGUMENT, "namespace required")
 
-        config = build_client_config(
-            server_address=conn.server_address,
-            namespace=conn.namespace,
-            auth_header=conn.auth_header,
-            tls=conn.enable_tls,
-            tls_cert_path=conn.tls_cert_path,
-            tls_key_path=conn.tls_key_path,
-            tls_server_name=conn.tls_server_name or None,
-            disable_host_verification=conn.disable_host_verification,
-        )
+        try:
+            config = build_client_config(
+                server_address=conn.server_address,
+                namespace=conn.namespace,
+                auth_header=conn.auth_header,
+                tls=conn.enable_tls,
+                tls_cert_path=conn.tls_cert_path,
+                tls_key_path=conn.tls_key_path,
+                tls_server_name=conn.tls_server_name or None,
+                disable_host_verification=conn.disable_host_verification,
+            )
+        except ValueError as e:
+            await context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+
         try:
             client = await self._client_factory(config)
         except Exception as e:

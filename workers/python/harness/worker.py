@@ -17,7 +17,6 @@ from harness.helpers import configure_logger
 
 @dataclass(frozen=True)
 class WorkerContext:
-    client: Client
     logger: logging.Logger
     task_queue: str
     # Kitchen sink specific field - tells the client action executor
@@ -26,7 +25,7 @@ class WorkerContext:
     worker_kwargs: dict[str, Any]
 
 
-WorkerFactory = Callable[[WorkerContext], Worker]
+WorkerFactory = Callable[[Client, WorkerContext], Worker]
 
 
 def run_worker_cli(
@@ -79,13 +78,13 @@ async def _run(
     worker_kwargs = _build_worker_kwargs(args)
     workers = [
         worker_factory(
+            client,
             WorkerContext(
-                client=client,
                 logger=logger,
                 task_queue=task_queue,
                 err_on_unimplemented=args.err_on_unimplemented,
                 worker_kwargs=worker_kwargs,
-            )
+            ),
         )
         for task_queue in task_queues
     ]

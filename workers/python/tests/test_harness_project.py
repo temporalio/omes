@@ -32,58 +32,103 @@ def make_client() -> Client:
     return create_autospec(Client, instance=True, spec_set=True)
 
 
-def make_connect_options() -> api_pb2.ConnectOptions:
-    return api_pb2.ConnectOptions(
-        namespace="default",
-        server_address="localhost:7233",
-        auth_header="Bearer token",
-        enable_tls=True,
-        tls_cert_path="/tmp/cert.pem",
-        tls_key_path="/tmp/key.pem",
-        tls_server_name="server.local",
-        disable_host_verification=True,
+def make_init_request(
+    *,
+    execution_id: str = "exec-id",
+    run_id: str = "run-id",
+    task_queue: str = "task-queue",
+    connect_options: api_pb2.ConnectOptions | None = None,
+    config_json: bytes = b'{"hello":"world"}',
+) -> api_pb2.InitRequest:
+    return api_pb2.InitRequest(
+        execution_id=execution_id,
+        run_id=run_id,
+        task_queue=task_queue,
+        connect_options=connect_options
+        or api_pb2.ConnectOptions(
+            namespace="default",
+            server_address="localhost:7233",
+            auth_header="Bearer token",
+            enable_tls=True,
+            tls_cert_path="/tmp/cert.pem",
+            tls_key_path="/tmp/key.pem",
+            tls_server_name="server.local",
+            disable_host_verification=True,
+        ),
+        config_json=config_json,
     )
 
 
-def make_init_request(**overrides: object) -> api_pb2.InitRequest:
-    request = api_pb2.InitRequest(
-        execution_id="exec-id",
-        run_id="run-id",
-        task_queue="task-queue",
-        connect_options=make_connect_options(),
-        config_json=b'{"hello":"world"}',
+def make_execute_request(
+    *,
+    iteration: int = 7,
+    task_queue: str = "task-queue",
+    payload: bytes = b"payload",
+) -> api_pb2.ExecuteRequest:
+    return api_pb2.ExecuteRequest(
+        iteration=iteration,
+        task_queue=task_queue,
+        payload=payload,
     )
-    for field, value in overrides.items():
-        setattr(request, field, value)
-    return request
-
-
-def make_execute_request(**overrides: object) -> api_pb2.ExecuteRequest:
-    request = api_pb2.ExecuteRequest(
-        iteration=7,
-        task_queue="task-queue",
-        payload=b"payload",
-    )
-    for field, value in overrides.items():
-        setattr(request, field, value)
-    return request
 
 
 class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
-    async def test_init_rejects_missing_task_queue(self) -> None:
+    async def assert_init_rejected(
+        self,
+        *,
+        request: api_pb2.InitRequest,
+        expected: str,
+    ) -> None:
         server = project.ProjectServiceServer(
             project.ProjectHandlers(execute=AsyncMock()),
             AsyncMock(),
         )
 
         with self.assertRaises(AbortError) as error:
-            await server.Init(
-                make_init_request(task_queue=""),
-                make_servicer_context(),
-            )
+            await server.Init(request, make_servicer_context())
 
         self.assertEqual(error.exception.status_code, grpc.StatusCode.INVALID_ARGUMENT)
-        self.assertEqual(error.exception.details, "task_queue required")
+        self.assertEqual(error.exception.details, expected)
+
+    async def test_init_rejects_missing_task_queue(self) -> None:
+        await self.assert_init_rejected(
+            request=make_init_request(task_queue=""),
+            expected="task_queue required",
+        )
+
+    async def test_init_rejects_missing_execution_id(self) -> None:
+        await self.assert_init_rejected(
+            request=make_init_request(execution_id=""),
+            expected="execution_id required",
+        )
+
+    async def test_init_rejects_missing_run_id(self) -> None:
+        await self.assert_init_rejected(
+            request=make_init_request(run_id=""),
+            expected="run_id required",
+        )
+
+    async def test_init_rejects_missing_server_address(self) -> None:
+        await self.assert_init_rejected(
+            request=make_init_request(
+                connect_options=api_pb2.ConnectOptions(
+                    namespace="default",
+                    server_address="",
+                )
+            ),
+            expected="server_address required",
+        )
+
+    async def test_init_rejects_missing_namespace(self) -> None:
+        await self.assert_init_rejected(
+            request=make_init_request(
+                connect_options=api_pb2.ConnectOptions(
+                    namespace="",
+                    server_address="localhost:7233",
+                )
+            ),
+            expected="namespace required",
+        )
 
     async def test_execute_requires_init(self) -> None:
         server = project.ProjectServiceServer(
@@ -132,9 +177,8 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(
             project, "build_client_config", autospec=True, return_value=config
         ) as build_config:
-            response = await server.Init(make_init_request(), make_servicer_context())
+            await server.Init(make_init_request(), make_servicer_context())
 
-        self.assertIsInstance(response, api_pb2.InitResponse)
         build_config.assert_called_once_with(
             server_address="localhost:7233",
             namespace="default",
@@ -148,8 +192,8 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
         client_factory.assert_awaited_once_with(config)
         init_handler.assert_awaited_once()
         await_args = init_handler.await_args
-        if await_args is None:
-            self.fail("init handler was not awaited")
+        # Necessary for pylance linting to accept await_args.args on the subsequent line
+        assert await_args is not None
         handler_client, init_info = await_args.args
         self.assertIs(handler_client, client)
         self.assertEqual(init_info.run.run_id, "run-id")
@@ -168,14 +212,12 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
             project, "build_client_config", autospec=True, return_value=object()
         ):
             await server.Init(make_init_request(), make_servicer_context())
+            await server.Execute(make_execute_request(), make_servicer_context())
 
-        response = await server.Execute(make_execute_request(), make_servicer_context())
-
-        self.assertIsInstance(response, api_pb2.ExecuteResponse)
         execute_handler.assert_awaited_once()
         await_args = execute_handler.await_args
-        if await_args is None:
-            self.fail("execute handler was not awaited")
+        # Necessary for pylance linting to accept await_args.args on the subsequent line
+        assert await_args is not None
         handler_client, execute_info = await_args.args
         self.assertIs(handler_client, client)
         self.assertEqual(execute_info.iteration, 7)
@@ -198,6 +240,31 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(error.exception.status_code, grpc.StatusCode.INTERNAL)
         self.assertEqual(error.exception.details, "failed to create client: boom")
+
+    async def test_init_rejects_invalid_tls_configuration(self) -> None:
+        server = project.ProjectServiceServer(
+            project.ProjectHandlers(execute=AsyncMock()),
+            AsyncMock(),
+        )
+
+        with self.assertRaises(AbortError) as error:
+            await server.Init(
+                make_init_request(
+                    connect_options=api_pb2.ConnectOptions(
+                        namespace="default",
+                        server_address="localhost:7233",
+                        enable_tls=True,
+                        tls_cert_path="/tmp/cert.pem",
+                        tls_key_path="",
+                    )
+                ),
+                make_servicer_context(),
+            )
+
+        self.assertEqual(error.exception.status_code, grpc.StatusCode.INVALID_ARGUMENT)
+        self.assertEqual(
+            error.exception.details, "Client cert specified, but not client key!"
+        )
 
     async def test_init_handler_failure_does_not_leave_server_initialized(self) -> None:
         client = make_client()
@@ -223,6 +290,9 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             execute_error.exception.status_code,
             grpc.StatusCode.FAILED_PRECONDITION,
+        )
+        self.assertEqual(
+            execute_error.exception.details, "Init must be called before Execute"
         )
 
     async def test_execute_handler_failure_maps_to_internal_error(self) -> None:

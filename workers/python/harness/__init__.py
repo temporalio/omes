@@ -1,25 +1,22 @@
-"""Getting started with the Python Omes harness.
+"""Python harness entrypoints and extension hooks.
 
-Start by defining an `App`. `App` is the object the harness uses to run your
-code: you give it a worker factory, a client factory, and, if you need project
-mode, optional `ProjectHandlers`.
+Define an `App` with a worker factory and client factory. Add
+`ProjectHandlers` only when you need `project-server` mode.
 
-The worker factory is your main hook. It receives a `WorkerContext` with the
-connected Temporal client, logger, task queue, and parsed worker options, and
-it returns the `temporalio.worker.Worker` the harness should run. The client
-factory controls how that Temporal client is created; most apps can use
-`default_client_factory` as-is.
+The worker factory is the main integration point: the harness creates one
+Temporal client with the configured `ClientFactory`, then passes that client
+and a `WorkerContext` to your factory for each task queue it runs. `run(app)`
+dispatches to either `worker` mode or `project-server` mode based on the first
+CLI argument.
 
-`run(app)` is the process entrypoint. It starts either `worker` mode or
-`project-server` mode based on the first CLI argument.
+Worker mode runs one or more Temporal workers:
 
-Worker mode is the normal case for running a Temporal worker:
-
+    from temporalio.client import Client
     from temporalio.worker import Worker
     from harness import App, WorkerContext, default_client_factory, run
 
-    def build_worker(context: WorkerContext) -> Worker:
-        return Worker(context.client, task_queue=context.task_queue)
+    def build_worker(client: Client, context: WorkerContext) -> Worker:
+        return Worker(client, task_queue=context.task_queue)
 
     def app() -> App:
         return App(worker=build_worker, client_factory=default_client_factory)
@@ -27,9 +24,9 @@ Worker mode is the normal case for running a Temporal worker:
     if __name__ == "__main__":
         run(app())
 
-Project mode is for standalone project execution. In this mode the harness can
-run one optional setup step for a project run, then call your execute hook once
-per iteration for that run.
+Project mode exposes init and execute hooks for standalone project runs. The
+project server can perform one optional setup step and then invoke your
+execute hook once per iteration.
 
     from harness import (
         App,
@@ -52,9 +49,9 @@ per iteration for that run.
             project=ProjectHandlers(execute=execute_project, init=init_project),
         )
 
-Use `ProjectHandlers` only when you need project mode. Most apps only need a
-worker factory plus `default_client_factory`; reach for `ClientConfig` and
-`ClientFactory` only when you need custom client setup.
+Most apps only need a worker factory plus `default_client_factory`. Reach for
+`ProjectHandlers` only when you need project mode, and customize
+`ClientFactory` only when the default client setup is not enough.
 """
 
 from .client import ClientConfig, ClientFactory, default_client_factory
