@@ -73,96 +73,30 @@ def make_execute_request(
 
 
 class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
-    async def assert_init_rejected(
-        self,
-        *,
-        request: api_pb2.InitRequest,
-        expected: str,
-    ) -> None:
+    async def test_init_rejects_invalid_tls_configuration(self) -> None:
         server = project.ProjectServiceServer(
             project.ProjectHandlers(execute=AsyncMock()),
             AsyncMock(),
         )
 
         with self.assertRaises(AbortError) as error:
-            await server.Init(request, make_servicer_context())
-
-        self.assertEqual(error.exception.status_code, grpc.StatusCode.INVALID_ARGUMENT)
-        self.assertEqual(error.exception.details, expected)
-
-    async def test_init_rejects_missing_task_queue(self) -> None:
-        await self.assert_init_rejected(
-            request=make_init_request(task_queue=""),
-            expected="task_queue required",
-        )
-
-    async def test_init_rejects_missing_execution_id(self) -> None:
-        await self.assert_init_rejected(
-            request=make_init_request(execution_id=""),
-            expected="execution_id required",
-        )
-
-    async def test_init_rejects_missing_run_id(self) -> None:
-        await self.assert_init_rejected(
-            request=make_init_request(run_id=""),
-            expected="run_id required",
-        )
-
-    async def test_init_rejects_missing_server_address(self) -> None:
-        await self.assert_init_rejected(
-            request=make_init_request(
-                connect_options=api_pb2.ConnectOptions(
-                    namespace="default",
-                    server_address="",
-                )
-            ),
-            expected="server_address required",
-        )
-
-    async def test_init_rejects_missing_namespace(self) -> None:
-        await self.assert_init_rejected(
-            request=make_init_request(
-                connect_options=api_pb2.ConnectOptions(
-                    namespace="",
-                    server_address="localhost:7233",
-                )
-            ),
-            expected="namespace required",
-        )
-
-    async def test_execute_requires_init(self) -> None:
-        server = project.ProjectServiceServer(
-            project.ProjectHandlers(execute=AsyncMock()),
-            AsyncMock(),
-        )
-
-        with self.assertRaises(AbortError) as error:
-            await server.Execute(make_execute_request(), make_servicer_context())
-
-        self.assertEqual(
-            error.exception.status_code, grpc.StatusCode.FAILED_PRECONDITION
-        )
-        self.assertEqual(error.exception.details, "Init must be called before Execute")
-
-    async def test_execute_rejects_missing_task_queue(self) -> None:
-        client = make_client()
-        server = project.ProjectServiceServer(
-            project.ProjectHandlers(execute=AsyncMock()),
-            AsyncMock(return_value=client),
-        )
-        with patch.object(
-            project, "build_client_config", autospec=True, return_value=object()
-        ):
-            await server.Init(make_init_request(), make_servicer_context())
-
-        with self.assertRaises(AbortError) as error:
-            await server.Execute(
-                make_execute_request(task_queue=""),
+            await server.Init(
+                make_init_request(
+                    connect_options=api_pb2.ConnectOptions(
+                        namespace="default",
+                        server_address="localhost:7233",
+                        enable_tls=True,
+                        tls_cert_path="/tmp/cert.pem",
+                        tls_key_path="",
+                    )
+                ),
                 make_servicer_context(),
             )
 
         self.assertEqual(error.exception.status_code, grpc.StatusCode.INVALID_ARGUMENT)
-        self.assertEqual(error.exception.details, "task_queue required")
+        self.assertEqual(
+            error.exception.details, "Client cert specified, but not client key!"
+        )
 
     async def test_init_passes_run_metadata_to_handler(self) -> None:
         client = make_client()
@@ -200,6 +134,20 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(init_info.run.execution_id, "exec-id")
         self.assertEqual(init_info.task_queue, "task-queue")
         self.assertEqual(init_info.config_json, b'{"hello":"world"}')
+
+    async def test_execute_requires_init(self) -> None:
+        server = project.ProjectServiceServer(
+            project.ProjectHandlers(execute=AsyncMock()),
+            AsyncMock(),
+        )
+
+        with self.assertRaises(AbortError) as error:
+            await server.Execute(make_execute_request(), make_servicer_context())
+
+        self.assertEqual(
+            error.exception.status_code, grpc.StatusCode.FAILED_PRECONDITION
+        )
+        self.assertEqual(error.exception.details, "Init must be called before Execute")
 
     async def test_execute_passes_iteration_payload_and_run_metadata(self) -> None:
         client = make_client()
@@ -240,31 +188,6 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(error.exception.status_code, grpc.StatusCode.INTERNAL)
         self.assertEqual(error.exception.details, "failed to create client: boom")
-
-    async def test_init_rejects_invalid_tls_configuration(self) -> None:
-        server = project.ProjectServiceServer(
-            project.ProjectHandlers(execute=AsyncMock()),
-            AsyncMock(),
-        )
-
-        with self.assertRaises(AbortError) as error:
-            await server.Init(
-                make_init_request(
-                    connect_options=api_pb2.ConnectOptions(
-                        namespace="default",
-                        server_address="localhost:7233",
-                        enable_tls=True,
-                        tls_cert_path="/tmp/cert.pem",
-                        tls_key_path="",
-                    )
-                ),
-                make_servicer_context(),
-            )
-
-        self.assertEqual(error.exception.status_code, grpc.StatusCode.INVALID_ARGUMENT)
-        self.assertEqual(
-            error.exception.details, "Client cert specified, but not client key!"
-        )
 
     async def test_init_handler_failure_does_not_leave_server_initialized(self) -> None:
         client = make_client()

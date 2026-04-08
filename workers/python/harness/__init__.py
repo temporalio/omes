@@ -24,6 +24,9 @@ Worker mode runs one or more Temporal workers:
     if __name__ == "__main__":
         run(app())
 
+Omes will call your provided App in `worker` mode or `project-server` mode directly
+when running your scenario.
+
 Project mode exposes init and execute hooks for standalone project runs. The
 project server can perform one optional setup step and then invoke your
 execute hook once per iteration.
