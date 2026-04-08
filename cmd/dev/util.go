@@ -16,7 +16,7 @@ var (
 		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen",
 	}
 	supportedTools = []string{
-		"dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",
+		"buf", "dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",
 	}
 	toolDependencies = map[string][]string{
 		"python":     {"python3", "uv", "poe"},
@@ -25,6 +25,7 @@ var (
 		"protoc":     {"protoc", "protoc-gen-go"},
 	}
 	toolVersionCommands = map[string][]string{
+		"buf":           {"buf", "--version"},
 		"go":            {"go", "version"},
 		"java":          {"java", "-version"},
 		"python3":       {"python3", "--version"},

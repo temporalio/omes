@@ -1,0 +1,52 @@
+syntax = "proto3";
+package temporal.omes.projects.v1;
+
+option go_package = "github.com/temporalio/omes/workers/go/projects/harness/api";
+
+// Connection options passed from the CLI to the project-server during Init.
+// These fields intentionally mirror the supported Omes client options used for
+// connecting workers and scenarios today.
+message ConnectOptions {
+    string namespace = 1;
+    string server_address = 2;
+    string auth_header = 3;
+    bool enable_tls = 4;
+    string tls_cert_path = 5;
+    string tls_key_path = 6;
+    string tls_server_name = 7;
+    bool disable_host_verification = 8;
+}
+
+// Sent once at the start of a test run to initialize the project-server.
+message InitRequest {
+    string execution_id = 1;
+    string run_id = 2;
+    string task_queue = 3;
+    ConnectOptions connect_options = 4;
+
+    // Optional JSON project configuration, passed from --option project-config-file
+    // to the project's OnInit callback. Schema is project-defined.
+    bytes config_json = 5;
+}
+
+message InitResponse {}
+
+// Sent once per iteration. The project-server starts workflows and
+// verifies results within the Execute handler.
+message ExecuteRequest {
+    int64 iteration = 1;
+    string task_queue = 2;
+    // Reserved for future executor-specific per-iteration data.
+    bytes payload = 3;
+}
+
+message ExecuteResponse {}
+
+// ProjectService is the gRPC interface used by omes to intialize and drive load to
+// a project.
+service ProjectService {
+    // Init creates a Temporal client, runs project-specific setup, and prepares for execution.
+    rpc Init(InitRequest) returns (InitResponse) {}
+    // Execute runs a single test iteration (e.g., start a workflow and verify the result).
+    rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
+}

@@ -7,6 +7,7 @@ requires-python = "~=3.10"
 license = "MIT"
 dependencies = [
     "temporalio>=1.23.0,<2",
+    "grpcio>=1.60.0,<2",
     "prometheus-client>=0.16.0,<0.17",
     "python-json-logger>=2.0.7,<3",
 ]
@@ -35,14 +36,17 @@ lint = [
   {cmd = "isort --check-only ."},
   {ref = "lint-types"},
 ]
-lint-types = "mypy --explicit-package-bases --namespace-packages ."
+lint-types = "mypy --explicit-package-bases --namespace-packages --exclude 'harness/api/' ."
 
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-skip_glob = "protos/*"
+skip_glob = ["protos/*", "harness/api/*"]
 
 [tool.black]
 extend-exclude = '''
-protos/
+(
+  protos/
+  | harness/api/
+)
 '''
