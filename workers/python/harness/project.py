@@ -139,6 +139,7 @@ class ProjectServiceServer(api_pb2_grpc.ProjectServiceServicer):
                 grpc.StatusCode.FAILED_PRECONDITION,
                 "Init must be called before Execute",
             )
+        # Necessary for linter
         assert client is not None
         assert run is not None
 

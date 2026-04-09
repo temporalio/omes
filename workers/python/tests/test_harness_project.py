@@ -192,7 +192,7 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
         client_factory.assert_awaited_once_with(config)
         init_handler.assert_awaited_once()
         await_args = init_handler.await_args
-        # Necessary for pylance linting to accept await_args.args on the subsequent line
+        # Necessary for linter
         assert await_args is not None
         handler_client, init_info = await_args.args
         self.assertIs(handler_client, client)
@@ -216,7 +216,7 @@ class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
 
         execute_handler.assert_awaited_once()
         await_args = execute_handler.await_args
-        # Necessary for pylance linting to accept await_args.args on the subsequent line
+        # Necessary for linter
         assert await_args is not None
         handler_client, execute_info = await_args.args
         self.assertIs(handler_client, client)
