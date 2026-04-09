@@ -29,7 +29,9 @@ class FakeWorker:
 
 
 class HarnessWorkerTests(unittest.IsolatedAsyncioTestCase):
-    async def test_run_passes_shared_client_and_context_to_each_worker_factory(self) -> None:
+    async def test_run_passes_shared_client_and_context_to_each_worker_factory(
+        self,
+    ) -> None:
         client = create_autospec(Client, instance=True, spec_set=True)
         config = object()
         created_workers = [object(), object()]
