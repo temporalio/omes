@@ -3,7 +3,7 @@ name = "omes"
 version = "0.1.0"
 description = "Temporal load generator"
 authors = [{ name = "Temporal Technologies Inc", email = "sdk@temporal.io" }]
-requires-python = "~=3.10"
+requires-python = "~=3.10.0"
 license = "MIT"
 dependencies = [
     "temporalio>=1.23.0,<2",
@@ -15,7 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "mypy>=0.961,<0.962",
+    "mypy>=1.4,<2",
     "black>=22.3.0,<23",
     "isort>=5.10.1,<6",
 ]
@@ -27,10 +27,10 @@ harness = { workspace = true }
 members = ["harness"]
 
 [tool.hatch.build.targets.sdist]
-include = ["*.py"]
+include = ["*.py", "protos/**/*.py"]
 
 [tool.hatch.build.targets.wheel]
-include = ["*.py"]
+include = ["*.py", "protos/**/*.py"]
 
 [build-system]
 requires = ["hatchling"]
@@ -43,18 +43,17 @@ lint = [
   {cmd = "isort --check-only ."},
   {ref = "lint-types"},
 ]
-lint-types = "mypy --explicit-package-bases --namespace-packages --exclude 'harness/src/harness/api/' ."
-test = "python -m unittest discover -s tests -p 'test_*.py'"
+lint-types = "mypy activities.py client_action_executor.py kitchen_sink.py kitchen_sink_app.py main.py nexus_service.py"
 
 [tool.isort]
 profile = "black"
 skip_gitignore = true
-skip_glob = ["protos/*", "harness/src/harness/api/*"]
+skip_glob = ["protos/*", "harness"]
 
 [tool.black]
 extend-exclude = '''
 (
   protos/
-  | harness/src/harness/api/
+  | harness
 )
 '''

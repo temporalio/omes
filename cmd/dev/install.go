@@ -173,6 +173,7 @@ func installPython(ctx context.Context) error {
 		workerDir,
 		"uv",
 		"sync",
+		"--python", version,
 		"--all-packages",
 		"--all-groups",
 	); err != nil {

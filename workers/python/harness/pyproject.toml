@@ -3,7 +3,7 @@ name = "harness"
 version = "0.1.0"
 description = "Reusable Python worker harness for Omes projects"
 authors = [{ name = "Temporal Technologies Inc", email = "sdk@temporal.io" }]
-requires-python = "~=3.10"
+requires-python = "~=3.10.0"
 license = "MIT"
 dependencies = [
     "temporalio>=1.23.0,<2",
@@ -14,7 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "mypy>=0.961,<0.962",
+    "mypy>=1.4,<2",
     "black>=22.3.0,<23",
     "isort>=5.10.1,<6",
 ]
@@ -38,6 +38,9 @@ lint = [
 ]
 lint-types = "mypy --explicit-package-bases --namespace-packages --exclude 'src/harness/api/' src tests"
 test = "python -m unittest discover -s tests -p 'test_*.py'"
+
+[tool.mypy]
+mypy_path = "src"
 
 [tool.isort]
 profile = "black"

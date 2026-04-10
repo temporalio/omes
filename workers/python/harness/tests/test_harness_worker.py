@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
-import logging
 import unittest
 from collections.abc import Awaitable, Callable
 from typing import cast
