@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -76,7 +77,22 @@ func runTestWorker(ctx context.Context, language string) error {
 	if err := checkTool(ctx, language); err != nil {
 		return err
 	}
+	if language == "python" {
+		if err := runPythonHarnessTests(ctx, repoDir); err != nil {
+			return err
+		}
+	}
 	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
+}
+
+func runPythonHarnessTests(ctx context.Context, repoDir string) error {
+	harnessDir := filepath.Join(repoDir, "workers", "python", "harness")
+	fmt.Println("Running Python harness tests...")
+	if err := runCommandInDir(ctx, harnessDir, "uv", "run", "poe", "test"); err != nil {
+		return fmt.Errorf("failed Python harness tests: %w", err)
+	}
+	fmt.Println("✅ Python harness tests completed successfully!")
+	return nil
 }
 
 func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string) error {
@@ -91,5 +107,3 @@ func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string
 	}
 	return runCommandInDir(ctx, repoDir, args[0], args[1:]...)
 }
-
-

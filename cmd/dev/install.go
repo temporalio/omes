@@ -168,7 +168,14 @@ func installPython(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("Installing Python worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"uv",
+		"sync",
+		"--all-packages",
+		"--all-groups",
+	); err != nil {
 		return err
 	}
 	fmt.Println("✅ Python worker dependencies installed successfully!")
