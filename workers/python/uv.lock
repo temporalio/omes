@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <4"
 
+[manifest]
+members = [
+    "harness",
+    "omes",
+]
+
 [[package]]
 name = "black"
 version = "22.12.0"
@@ -105,6 +111,39 @@ wheels = [
 ]
 
 [[package]]
+name = "harness"
+version = "0.1.0"
+source = { editable = "harness" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "prometheus-client" },
+    { name = "python-json-logger" },
+    { name = "temporalio" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "isort" },
+    { name = "mypy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "grpcio", specifier = ">=1.60.0,<2" },
+    { name = "prometheus-client", specifier = ">=0.16.0,<0.17" },
+    { name = "python-json-logger", specifier = ">=2.0.7,<3" },
+    { name = "temporalio", specifier = ">=1.23.0,<2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=22.3.0,<23" },
+    { name = "isort", specifier = ">=5.10.1,<6" },
+    { name = "mypy", specifier = ">=0.961,<0.962" },
+]
+
+[[package]]
 name = "isort"
 version = "5.13.2"
 source = { registry = "https://pypi.org/simple" }
@@ -159,6 +198,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio" },
+    { name = "harness" },
     { name = "prometheus-client" },
     { name = "python-json-logger" },
     { name = "temporalio" },
@@ -174,6 +214,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "grpcio", specifier = ">=1.60.0,<2" },
+    { name = "harness", editable = "harness" },
     { name = "prometheus-client", specifier = ">=0.16.0,<0.17" },
     { name = "python-json-logger", specifier = ">=2.0.7,<3" },
     { name = "temporalio", specifier = ">=1.23.0,<2" },
