@@ -27,6 +27,15 @@ func TestValidateRequiresLanguage(t *testing.T) {
 	require.EqualError(t, err, "--option language=<lang> is required")
 }
 
+func TestValidateLimitedPythonSupport(t *testing.T) {
+	_, err := (&projectScenarioExecutor{}).validate(loadgen.ScenarioInfo{
+		ScenarioOptions: map[string]string{
+			"language": "go",
+		},
+	})
+	require.EqualError(t, err, "project scenario is currently limited to Python, got go")
+}
+
 func TestValidateRejectsConflictingProjectSources(t *testing.T) {
 	_, err := (&projectScenarioExecutor{}).validate(loadgen.ScenarioInfo{
 		ScenarioOptions: map[string]string{

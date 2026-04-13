@@ -110,6 +110,9 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
+	if opts.sdkOpts.Language != clioptions.LangPython {
+		return opts, fmt.Errorf("project scenario is currently limited to Python, got %s", lang)
+	}
 
 	projectName := info.ScenarioOptions["project-name"]
 	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
