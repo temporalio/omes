@@ -117,8 +117,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// Build command args
 	var args []string
 	if r.SdkOptions.Language == clioptions.LangPython {
-		// Python needs module name first
-		args = append(args, "main")
+		// Python needs module name and subcommand
+		args = append(args, "main", "worker")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
 		// Node also needs module
 		args = append(args, "./tslib/omes.js")

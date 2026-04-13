@@ -133,6 +133,18 @@ func lintAndFormatPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	harnessDir := workerDir + "/harness"
+
+	fmt.Println("Formatting Python harness...")
+	if err := runCommandInDir(ctx, harnessDir, "uv", "run", "poe", "format"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting Python harness...")
+	if err := runCommandInDir(ctx, harnessDir, "uv", "run", "poe", "lint"); err != nil {
+		return err
+	}
+
 	fmt.Println("✅ Python lint-and-format completed successfully!")
 	return nil
 }

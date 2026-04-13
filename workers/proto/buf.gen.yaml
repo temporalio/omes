@@ -14,8 +14,8 @@ plugins:
       - paths=source_relative
   # Python (using these versions for protobuf compatibility with temporalio >=1.23.0)
   - remote: buf.build/protocolbuffers/python:v27.2
-    out: ../python
+    out: ../python/harness/src
   - remote: buf.build/protocolbuffers/pyi:v27.2
-    out: ../python
+    out: ../python/harness/src
   - remote: buf.build/grpc/python:v1.65.0
-    out: ../python
+    out: ../python/harness/src
