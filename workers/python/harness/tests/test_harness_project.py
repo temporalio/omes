@@ -5,10 +5,20 @@ from unittest.mock import AsyncMock, create_autospec, patch
 
 import grpc  # type: ignore[import]
 from grpc import aio as grpc_aio
+from temporalio import workflow
 from temporalio.client import Client
+from temporalio.testing import WorkflowEnvironment
+from temporalio.worker import Worker
 
-from harness import project
-from harness.api import api_pb2
+from harness import default_client_factory, project
+from harness.api import api_pb2, api_pb2_grpc
+
+
+@workflow.defn(sandboxed=False)
+class ProjectHarnessEchoWorkflow:
+    @workflow.run
+    async def run(self, payload: str) -> str:
+        return payload
 
 
 class AbortError(Exception):
@@ -73,6 +83,94 @@ def make_execute_request(
 
 
 class HarnessProjectTests(unittest.IsolatedAsyncioTestCase):
+    async def test_project_server_executes_workflow_against_real_temporal_server(
+        self,
+    ) -> None:
+        events: list[tuple[object, ...]] = []
+        task_queue = "project-harness-e2e"
+
+        async def init_handler(
+            handler_client: Client, context: project.ProjectInitContext
+        ) -> None:
+            events.append(("init", handler_client, context))
+
+        async def execute_handler(
+            handler_client: Client, context: project.ProjectExecuteContext
+        ) -> None:
+            result = await handler_client.execute_workflow(
+                "ProjectHarnessEchoWorkflow",
+                context.payload.decode("utf-8"),
+                id=f"{context.run.execution_id}-{context.iteration}",
+                task_queue=context.task_queue,
+                result_type=str,
+            )
+            events.append(("execute", handler_client, context, result))
+
+        async with await WorkflowEnvironment.start_local() as env:
+            server_address = env.client.service_client.config.target_host
+            worker = Worker(
+                env.client,
+                task_queue=task_queue,
+                workflows=[ProjectHarnessEchoWorkflow],
+            )
+            server = grpc_aio.server()
+            api_pb2_grpc.add_ProjectServiceServicer_to_server(
+                project.ProjectServiceServer(
+                    project.ProjectHandlers(
+                        execute=execute_handler,
+                        init=init_handler,
+                    ),
+                    default_client_factory,
+                ),
+                server,
+            )
+            port = server.add_insecure_port("127.0.0.1:0")
+            self.assertNotEqual(port, 0)
+
+            async with worker:
+                await server.start()
+                try:
+                    async with grpc_aio.insecure_channel(
+                        f"127.0.0.1:{port}"
+                    ) as channel:
+                        await channel.channel_ready()
+                        stub = api_pb2_grpc.ProjectServiceStub(channel)
+
+                        await stub.Init(
+                            make_init_request(
+                                task_queue=task_queue,
+                                connect_options=api_pb2.ConnectOptions(
+                                    namespace="default",
+                                    server_address=server_address,
+                                ),
+                            )
+                        )
+                        await stub.Execute(make_execute_request(task_queue=task_queue))
+                finally:
+                    await server.stop(0)
+
+        self.assertEqual(len(events), 2)
+        init_kind, init_client, init_context = events[0]
+        execute_kind, execute_client, execute_context, execute_result = events[1]
+
+        assert isinstance(init_context, project.ProjectInitContext)
+        assert isinstance(execute_context, project.ProjectExecuteContext)
+
+        self.assertEqual(init_kind, "init")
+        self.assertEqual(init_context.run.run_id, "run-id")
+        self.assertEqual(init_context.run.execution_id, "exec-id")
+        self.assertEqual(init_context.task_queue, task_queue)
+        self.assertEqual(init_context.config_json, b'{"hello":"world"}')
+
+        self.assertEqual(execute_kind, "execute")
+        self.assertIs(execute_client, init_client)
+        self.assertEqual(execute_context.run.run_id, "run-id")
+        self.assertEqual(execute_context.run.execution_id, "exec-id")
+        self.assertEqual(execute_context.task_queue, task_queue)
+        self.assertEqual(execute_context.iteration, 7)
+        self.assertEqual(execute_context.payload, b"payload")
+        self.assertEqual(execute_result, "payload")
+
     async def test_init_rejects_invalid_tls_configuration(self) -> None:
         server = project.ProjectServiceServer(
             project.ProjectHandlers(execute=AsyncMock()),
