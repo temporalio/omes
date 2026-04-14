@@ -422,6 +422,7 @@ func (t *tpsExecutor) createActionsChunk(
 		if t.config.NexusEndpoint != "" {
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
