@@ -40,7 +40,7 @@ const (
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
-	// Default is true.
+	// Default is false.
 	IncludeDescribeFlag = "include-describe"
 )
 
@@ -167,7 +167,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
-	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, true)
+	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
