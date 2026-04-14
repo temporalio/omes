@@ -40,7 +40,7 @@ const (
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
-	// Default is false.
+	// Default is true.
 	IncludeDescribeFlag = "include-describe"
 )
 
