@@ -50,6 +50,8 @@ func runInstallTools(ctx context.Context, tools []string) error {
 	for _, tool := range tools {
 		var err error
 		switch tool {
+		case "buf":
+			err = installBuf(ctx)
 		case "dotnet":
 			err = installDotnet(ctx)
 		case "go":
@@ -166,7 +168,15 @@ func installPython(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("Installing Python worker dependencies...")
-	if err := runCommandInDir(ctx, workerDir, "uv", "sync"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"uv",
+		"sync",
+		"--python", version,
+		"--all-packages",
+		"--all-groups",
+	); err != nil {
 		return err
 	}
 	fmt.Println("✅ Python worker dependencies installed successfully!")
@@ -247,6 +257,15 @@ func installProtoc(ctx context.Context) error {
 	}
 	fmt.Println("✅ protoc-gen-go", protocGenGoVersion, "installed successfully!")
 
+	return nil
+}
+
+func installBuf(ctx context.Context) error {
+	fmt.Println("Installing buf...")
+	if err := runCommand(ctx, "go", "install", "github.com/bufbuild/buf/cmd/buf@latest"); err != nil {
+		return fmt.Errorf("failed to install buf: %v", err)
+	}
+	fmt.Println("✅ buf installed successfully!")
 	return nil
 }
 
