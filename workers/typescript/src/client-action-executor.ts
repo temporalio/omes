@@ -53,6 +53,9 @@ export class ClientActionExecutor {
       await this.executeUpdateAction(action.doUpdate);
     } else if (action.doQuery) {
       await this.executeQueryAction(action.doQuery);
+    } else if (action.doDescribe) {
+      const handle = this.client.workflow.getHandle(this.workflowId);
+      await handle.describe();
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);
     } else {

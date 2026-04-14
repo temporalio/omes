@@ -1,6 +1,8 @@
 package io.temporal.omes;
 
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy;
+import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
 import io.temporal.client.UpdateOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -57,6 +59,15 @@ public class ClientActionExecutor {
       executeUpdateAction(action.getDoUpdate());
     } else if (action.hasDoQuery()) {
       executeQueryAction(action.getDoQuery());
+    } else if (action.hasDoDescribe()) {
+      client
+          .getWorkflowServiceStubs()
+          .blockingStub()
+          .describeWorkflowExecution(
+              DescribeWorkflowExecutionRequest.newBuilder()
+                  .setNamespace(client.getOptions().getNamespace())
+                  .setExecution(WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
+                  .build());
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
     } else {
