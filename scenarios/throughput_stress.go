@@ -39,6 +39,9 @@ const (
 	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
+	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
+	// Default is false.
+	IncludeDescribeFlag = "include-describe"
 )
 
 type tpsState struct {
@@ -64,6 +67,7 @@ type tpsConfig struct {
 	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
+	IncludeDescribe               bool
 }
 
 type tpsExecutor struct {
@@ -81,8 +85,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -163,6 +167,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
+	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -374,6 +379,12 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 		}
 
+		if t.config.IncludeDescribe {
+			syncActions = append(syncActions,
+				ClientActivity(ClientActions(t.createSelfDescribe()), DefaultRemoteActivity),
+			)
+		}
+
 		childCount++
 		asyncActions := []*Action{
 			t.createChildWorkflowAction(run, childCount),
@@ -499,6 +510,14 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 					},
 				},
 			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfDescribe() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoDescribe{
+			DoDescribe: &DoDescribe{},
 		},
 	}
 }
