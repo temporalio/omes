@@ -170,6 +170,7 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
+    ExecuteNexusOperationAttachCallbacks nexus_operation_attach_callbacks = 16;
   }
 }
 
@@ -506,5 +507,21 @@ message ExecuteNexusOperation {
 message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
+  // If true, the handler workflow will wait for an "unblock" signal before returning.
+  bool wait_for_signal = 3;
+  // If set, the operation handler uses this as the workflow ID (instead of the Nexus request ID)
+  // and sets WorkflowIDConflictPolicy to USE_EXISTING.
+  string workflow_id_override = 4;
+}
+
+// Starts multiple Nexus operations concurrently, all targeting the same handler workflow.
+// Waits for all operations to start (attaching callbacks), signals the handler to unblock,
+// then waits for all to complete.
+message ExecuteNexusOperationAttachCallbacks {
+  string endpoint = 1;
+  // Number of concurrent Nexus operations to start. All target the same handler workflow.
+  int32 num_operations = 2;
+  // Input string echoed back by the handler.
+  string input = 3;
 }
 

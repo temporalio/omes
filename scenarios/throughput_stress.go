@@ -422,6 +422,7 @@ func (t *tpsExecutor) createActionsChunk(
 		if t.config.NexusEndpoint != "" {
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -627,6 +628,18 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 						CancelAfterStarted: &emptypb.Empty{},
 					},
 				},
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperationAttachCallbacks{
+			NexusOperationAttachCallbacks: &ExecuteNexusOperationAttachCallbacks{
+				Endpoint:      t.config.NexusEndpoint,
+				NumOperations: 3,
+				Input:         "hello",
 			},
 		},
 	}

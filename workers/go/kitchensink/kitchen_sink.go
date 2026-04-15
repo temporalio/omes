@@ -7,9 +7,11 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -339,6 +341,8 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if attachCb := action.GetNexusOperationAttachCallbacks(); attachCb != nil {
+		return nil, handleNexusOperationAttachCallbacks(ctx, attachCb)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -503,6 +507,64 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		})
 }
 
+func handleNexusOperationAttachCallbacks(
+	ctx workflow.Context,
+	action *kitchensink.ExecuteNexusOperationAttachCallbacks,
+) error {
+	numOps := int(action.NumOperations)
+	if numOps <= 0 {
+		numOps = 3
+	}
+
+	// Generate a unique workflow ID for the handler workflow.
+	var handlerWfID string
+	if err := workflow.SideEffect(ctx, func(_ workflow.Context) interface{} {
+		return fmt.Sprintf("nexus-handler-attach-callbacks-%s", uuid.NewString())
+	}).Get(&handlerWfID); err != nil {
+		return err
+	}
+
+	client := workflow.NewNexusClient(action.Endpoint, KitchenSinkServiceName)
+	input := &kitchensink.NexusHandlerInput{
+		Input:              action.Input,
+		WaitForSignal:      true,
+		WorkflowIdOverride: handlerWfID,
+	}
+
+	// Start all Nexus operations concurrently.
+	opFutures := make([]workflow.NexusOperationFuture, 0, numOps)
+	for i := 0; i < numOps; i++ {
+		fut := client.ExecuteOperation(ctx, "echo-async", input, workflow.NexusOperationOptions{})
+		opFutures = append(opFutures, fut)
+	}
+
+	// Wait for all operations to start (callbacks are now attached to the handler workflow).
+	for _, fut := range opFutures {
+		if err := fut.GetNexusOperationExecution().Get(ctx, nil); err != nil {
+			return fmt.Errorf("unexpected error starting Nexus operation: %w", err)
+		}
+	}
+
+	// Signal the handler workflow to unblock.
+	signalFut := workflow.SignalExternalWorkflow(ctx, handlerWfID, "", "unblock", nil)
+	if err := signalFut.Get(ctx, nil); err != nil {
+		// The handler workflow may have already completed if all operations resolved quickly.
+		var notFound *temporal.UnknownExternalWorkflowExecutionError
+		if !errors.As(err, &notFound) {
+			return fmt.Errorf("failed to signal handler workflow %s: %w", handlerWfID, err)
+		}
+	}
+
+	// Wait for all operations to complete.
+	for _, fut := range opFutures {
+		if err := fut.Get(ctx, nil); err != nil {
+			return fmt.Errorf("Nexus operation failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // Noop is used as a no-op activity.
 func Noop(_ context.Context) error {
 	return nil
@@ -599,6 +661,9 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 			return "", err
 		}
 	}
+	if input.WaitForSignal {
+		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
+	}
 	return input.Input, nil
 }
 
@@ -612,8 +677,16 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 
 // EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
 // Cancel is handled automatically by the SDK via the backing workflow.
+// If WorkflowIdOverride is set, it uses that as the workflow ID with USE_EXISTING conflict policy,
+// enabling multiple operations to target the same handler workflow (attach-callbacks pattern).
 var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	return client.StartWorkflowOptions{
+	startOpts := client.StartWorkflowOptions{
 		ID: opts.RequestID,
-	}, nil
+	}
+	if input.WorkflowIdOverride != "" {
+		startOpts.ID = input.WorkflowIdOverride
+		startOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		startOpts.WorkflowExecutionTimeout = 60 * time.Minute
+	}
+	return startOpts, nil
 })

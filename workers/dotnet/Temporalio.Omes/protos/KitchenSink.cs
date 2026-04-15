@@ -4528,6 +4528,9 @@ namespace Temporal.Omes.KitchenSink {
         case VariantOneofCase.NexusOperation:
           NexusOperation = other.NexusOperation.Clone();
           break;
+        case VariantOneofCase.NexusOperationAttachCallbacks:
+          NexusOperationAttachCallbacks = other.NexusOperationAttachCallbacks.Clone();
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -4719,6 +4722,18 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
+    /// <summary>Field number for the "nexus_operation_attach_callbacks" field.</summary>
+    public const int NexusOperationAttachCallbacksFieldNumber = 16;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks NexusOperationAttachCallbacks {
+      get { return variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks ? (global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks) variant_ : null; }
+      set {
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.NexusOperationAttachCallbacks;
+      }
+    }
+
     private object variant_;
     /// <summary>Enum of possible cases for the "variant" oneof.</summary>
     public enum VariantOneofCase {
@@ -4738,6 +4753,7 @@ namespace Temporal.Omes.KitchenSink {
       ContinueAsNew = 13,
       NestedActionSet = 14,
       NexusOperation = 15,
+      NexusOperationAttachCallbacks = 16,
     }
     private VariantOneofCase variantCase_ = VariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4783,6 +4799,7 @@ namespace Temporal.Omes.KitchenSink {
       if (!object.Equals(ContinueAsNew, other.ContinueAsNew)) return false;
       if (!object.Equals(NestedActionSet, other.NestedActionSet)) return false;
       if (!object.Equals(NexusOperation, other.NexusOperation)) return false;
+      if (!object.Equals(NexusOperationAttachCallbacks, other.NexusOperationAttachCallbacks)) return false;
       if (VariantCase != other.VariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -4806,6 +4823,7 @@ namespace Temporal.Omes.KitchenSink {
       if (variantCase_ == VariantOneofCase.ContinueAsNew) hash ^= ContinueAsNew.GetHashCode();
       if (variantCase_ == VariantOneofCase.NestedActionSet) hash ^= NestedActionSet.GetHashCode();
       if (variantCase_ == VariantOneofCase.NexusOperation) hash ^= NexusOperation.GetHashCode();
+      if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) hash ^= NexusOperationAttachCallbacks.GetHashCode();
       hash ^= (int) variantCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -4885,6 +4903,10 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(122);
         output.WriteMessage(NexusOperation);
       }
+      if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) {
+        output.WriteRawTag(130, 1);
+        output.WriteMessage(NexusOperationAttachCallbacks);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4955,6 +4977,10 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(122);
         output.WriteMessage(NexusOperation);
       }
+      if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) {
+        output.WriteRawTag(130, 1);
+        output.WriteMessage(NexusOperationAttachCallbacks);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -5009,6 +5035,9 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (variantCase_ == VariantOneofCase.NexusOperation) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(NexusOperation);
+      }
+      if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(NexusOperationAttachCallbacks);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -5112,6 +5141,12 @@ namespace Temporal.Omes.KitchenSink {
             NexusOperation = new global::Temporal.Omes.KitchenSink.ExecuteNexusOperation();
           }
           NexusOperation.MergeFrom(other.NexusOperation);
+          break;
+        case VariantOneofCase.NexusOperationAttachCallbacks:
+          if (NexusOperationAttachCallbacks == null) {
+            NexusOperationAttachCallbacks = new global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks();
+          }
+          NexusOperationAttachCallbacks.MergeFrom(other.NexusOperationAttachCallbacks);
           break;
       }
 
@@ -5265,6 +5300,15 @@ namespace Temporal.Omes.KitchenSink {
             NexusOperation = subBuilder;
             break;
           }
+          case 130: {
+            global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks();
+            if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) {
+              subBuilder.MergeFrom(NexusOperationAttachCallbacks);
+            }
+            input.ReadMessage(subBuilder);
+            NexusOperationAttachCallbacks = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -5413,6 +5457,15 @@ namespace Temporal.Omes.KitchenSink {
             }
             input.ReadMessage(subBuilder);
             NexusOperation = subBuilder;
+            break;
+          }
+          case 130: {
+            global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks subBuilder = new global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks();
+            if (variantCase_ == VariantOneofCase.NexusOperationAttachCallbacks) {
+              subBuilder.MergeFrom(NexusOperationAttachCallbacks);
+            }
+            input.ReadMessage(subBuilder);
+            NexusOperationAttachCallbacks = subBuilder;
             break;
           }
         }
@@ -13210,6 +13263,8 @@ namespace Temporal.Omes.KitchenSink {
     public NexusHandlerInput(NexusHandlerInput other) : this() {
       input_ = other.input_;
       beforeActions_ = other.beforeActions_.Clone();
+      waitForSignal_ = other.waitForSignal_;
+      workflowIdOverride_ = other.workflowIdOverride_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -13242,6 +13297,30 @@ namespace Temporal.Omes.KitchenSink {
       get { return beforeActions_; }
     }
 
+    /// <summary>Field number for the "wait_for_signal" field.</summary>
+    public const int WaitForSignalFieldNumber = 3;
+    private bool waitForSignal_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool WaitForSignal {
+      get { return waitForSignal_; }
+      set {
+        waitForSignal_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "workflow_id_override" field.</summary>
+    public const int WorkflowIdOverrideFieldNumber = 4;
+    private string workflowIdOverride_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowIdOverride {
+      get { return workflowIdOverride_; }
+      set {
+        workflowIdOverride_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -13259,6 +13338,8 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (Input != other.Input) return false;
       if(!beforeActions_.Equals(other.beforeActions_)) return false;
+      if (WaitForSignal != other.WaitForSignal) return false;
+      if (WorkflowIdOverride != other.WorkflowIdOverride) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -13268,6 +13349,8 @@ namespace Temporal.Omes.KitchenSink {
       int hash = 1;
       if (Input.Length != 0) hash ^= Input.GetHashCode();
       hash ^= beforeActions_.GetHashCode();
+      if (WaitForSignal != false) hash ^= WaitForSignal.GetHashCode();
+      if (WorkflowIdOverride.Length != 0) hash ^= WorkflowIdOverride.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -13291,6 +13374,14 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteString(Input);
       }
       beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
+      if (WaitForSignal != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(WaitForSignal);
+      }
+      if (WorkflowIdOverride.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(WorkflowIdOverride);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -13306,6 +13397,14 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteString(Input);
       }
       beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
+      if (WaitForSignal != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(WaitForSignal);
+      }
+      if (WorkflowIdOverride.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(WorkflowIdOverride);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -13320,6 +13419,12 @@ namespace Temporal.Omes.KitchenSink {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
       }
       size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
+      if (WaitForSignal != false) {
+        size += 1 + 1;
+      }
+      if (WorkflowIdOverride.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowIdOverride);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -13336,6 +13441,12 @@ namespace Temporal.Omes.KitchenSink {
         Input = other.Input;
       }
       beforeActions_.Add(other.beforeActions_);
+      if (other.WaitForSignal != false) {
+        WaitForSignal = other.WaitForSignal;
+      }
+      if (other.WorkflowIdOverride.Length != 0) {
+        WorkflowIdOverride = other.WorkflowIdOverride;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -13359,6 +13470,14 @@ namespace Temporal.Omes.KitchenSink {
             beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
             break;
           }
+          case 24: {
+            WaitForSignal = input.ReadBool();
+            break;
+          }
+          case 34: {
+            WorkflowIdOverride = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -13380,6 +13499,278 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 18: {
             beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
+            break;
+          }
+          case 24: {
+            WaitForSignal = input.ReadBool();
+            break;
+          }
+          case 34: {
+            WorkflowIdOverride = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ExecuteNexusOperationAttachCallbacks : pb::IMessage<ExecuteNexusOperationAttachCallbacks>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ExecuteNexusOperationAttachCallbacks> _parser = new pb::MessageParser<ExecuteNexusOperationAttachCallbacks>(() => new ExecuteNexusOperationAttachCallbacks());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ExecuteNexusOperationAttachCallbacks> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[30]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ExecuteNexusOperationAttachCallbacks() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ExecuteNexusOperationAttachCallbacks(ExecuteNexusOperationAttachCallbacks other) : this() {
+      endpoint_ = other.endpoint_;
+      numOperations_ = other.numOperations_;
+      input_ = other.input_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ExecuteNexusOperationAttachCallbacks Clone() {
+      return new ExecuteNexusOperationAttachCallbacks(this);
+    }
+
+    /// <summary>Field number for the "endpoint" field.</summary>
+    public const int EndpointFieldNumber = 1;
+    private string endpoint_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Endpoint {
+      get { return endpoint_; }
+      set {
+        endpoint_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "num_operations" field.</summary>
+    public const int NumOperationsFieldNumber = 2;
+    private int numOperations_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int NumOperations {
+      get { return numOperations_; }
+      set {
+        numOperations_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "input" field.</summary>
+    public const int InputFieldNumber = 3;
+    private string input_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Input {
+      get { return input_; }
+      set {
+        input_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ExecuteNexusOperationAttachCallbacks);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ExecuteNexusOperationAttachCallbacks other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Endpoint != other.Endpoint) return false;
+      if (NumOperations != other.NumOperations) return false;
+      if (Input != other.Input) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Endpoint.Length != 0) hash ^= Endpoint.GetHashCode();
+      if (NumOperations != 0) hash ^= NumOperations.GetHashCode();
+      if (Input.Length != 0) hash ^= Input.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Endpoint.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Endpoint);
+      }
+      if (NumOperations != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(NumOperations);
+      }
+      if (Input.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Input);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Endpoint.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Endpoint);
+      }
+      if (NumOperations != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(NumOperations);
+      }
+      if (Input.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Input);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Endpoint.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Endpoint);
+      }
+      if (NumOperations != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(NumOperations);
+      }
+      if (Input.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ExecuteNexusOperationAttachCallbacks other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Endpoint.Length != 0) {
+        Endpoint = other.Endpoint;
+      }
+      if (other.NumOperations != 0) {
+        NumOperations = other.NumOperations;
+      }
+      if (other.Input.Length != 0) {
+        Input = other.Input;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Endpoint = input.ReadString();
+            break;
+          }
+          case 16: {
+            NumOperations = input.ReadInt32();
+            break;
+          }
+          case 26: {
+            Input = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Endpoint = input.ReadString();
+            break;
+          }
+          case 16: {
+            NumOperations = input.ReadInt32();
+            break;
+          }
+          case 26: {
+            Input = input.ReadString();
             break;
           }
         }

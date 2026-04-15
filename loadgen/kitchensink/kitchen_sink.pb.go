@@ -1265,6 +1265,7 @@ type Action struct {
 	//	*Action_ContinueAsNew
 	//	*Action_NestedActionSet
 	//	*Action_NexusOperation
+	//	*Action_NexusOperationAttachCallbacks
 	Variant isAction_Variant `protobuf_oneof:"variant"`
 }
 
@@ -1412,6 +1413,13 @@ func (x *Action) GetNexusOperation() *ExecuteNexusOperation {
 	return nil
 }
 
+func (x *Action) GetNexusOperationAttachCallbacks() *ExecuteNexusOperationAttachCallbacks {
+	if x, ok := x.GetVariant().(*Action_NexusOperationAttachCallbacks); ok {
+		return x.NexusOperationAttachCallbacks
+	}
+	return nil
+}
+
 type isAction_Variant interface {
 	isAction_Variant()
 }
@@ -1476,6 +1484,10 @@ type Action_NexusOperation struct {
 	NexusOperation *ExecuteNexusOperation `protobuf:"bytes,15,opt,name=nexus_operation,json=nexusOperation,proto3,oneof"`
 }
 
+type Action_NexusOperationAttachCallbacks struct {
+	NexusOperationAttachCallbacks *ExecuteNexusOperationAttachCallbacks `protobuf:"bytes,16,opt,name=nexus_operation_attach_callbacks,json=nexusOperationAttachCallbacks,proto3,oneof"`
+}
+
 func (*Action_Timer) isAction_Variant() {}
 
 func (*Action_ExecActivity) isAction_Variant() {}
@@ -1505,6 +1517,8 @@ func (*Action_ContinueAsNew) isAction_Variant() {}
 func (*Action_NestedActionSet) isAction_Variant() {}
 
 func (*Action_NexusOperation) isAction_Variant() {}
+
+func (*Action_NexusOperationAttachCallbacks) isAction_Variant() {}
 
 // All await commands will have this available as a field. If it is set, the command
 // should be either awaited upon, cancelled, or abandoned at the specified juncture (if possible,
@@ -3000,8 +3014,10 @@ type NexusHandlerInput struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Input         string       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
-	BeforeActions []*ActionSet `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
+	Input              string       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
+	BeforeActions      []*ActionSet `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
+	WaitForSignal      bool         `protobuf:"varint,3,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
+	WorkflowIdOverride string       `protobuf:"bytes,4,opt,name=workflow_id_override,json=workflowIdOverride,proto3" json:"workflow_id_override,omitempty"`
 }
 
 func (x *NexusHandlerInput) Reset() {
@@ -3048,6 +3064,69 @@ func (x *NexusHandlerInput) GetBeforeActions() []*ActionSet {
 		return x.BeforeActions
 	}
 	return nil
+}
+
+func (x *NexusHandlerInput) GetWaitForSignal() bool {
+	if x != nil {
+		return x.WaitForSignal
+	}
+	return false
+}
+
+func (x *NexusHandlerInput) GetWorkflowIdOverride() string {
+	if x != nil {
+		return x.WorkflowIdOverride
+	}
+	return ""
+}
+
+type ExecuteNexusOperationAttachCallbacks struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Endpoint      string `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	NumOperations int32  `protobuf:"varint,2,opt,name=num_operations,json=numOperations,proto3" json:"num_operations,omitempty"`
+	Input         string `protobuf:"bytes,3,opt,name=input,proto3" json:"input,omitempty"`
+}
+
+func (x *ExecuteNexusOperationAttachCallbacks) Reset() {
+	*x = ExecuteNexusOperationAttachCallbacks{}
+}
+
+func (x *ExecuteNexusOperationAttachCallbacks) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteNexusOperationAttachCallbacks) ProtoMessage() {}
+
+func (x *ExecuteNexusOperationAttachCallbacks) ProtoReflect() protoreflect.Message {
+	return nil
+}
+
+func (*ExecuteNexusOperationAttachCallbacks) Descriptor() ([]byte, []int) {
+	return nil, nil
+}
+
+func (x *ExecuteNexusOperationAttachCallbacks) GetEndpoint() string {
+	if x != nil {
+		return x.Endpoint
+	}
+	return ""
+}
+
+func (x *ExecuteNexusOperationAttachCallbacks) GetNumOperations() int32 {
+	if x != nil {
+		return x.NumOperations
+	}
+	return 0
+}
+
+func (x *ExecuteNexusOperationAttachCallbacks) GetInput() string {
+	if x != nil {
+		return x.Input
+	}
+	return ""
 }
 
 type DoSignal_DoSignalActions struct {

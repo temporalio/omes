@@ -25,6 +25,7 @@ from protos.kitchen_sink_pb2 import (
     DoSignal,
     ExecuteActivityAction,
     ExecuteNexusOperation,
+    ExecuteNexusOperationAttachCallbacks,
     NexusHandlerInput,
     WorkflowInput,
     WorkflowState,
@@ -194,6 +195,10 @@ class KitchenSinkWorkflow:
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
             await handle_nexus_operation(action.nexus_operation)
+        elif action.HasField("nexus_operation_attach_callbacks"):
+            await handle_nexus_operation_attach_callbacks(
+                action.nexus_operation_attach_callbacks
+            )
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -334,6 +339,42 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
     )
 
 
+async def handle_nexus_operation_attach_callbacks(
+    action: ExecuteNexusOperationAttachCallbacks,
+):
+    num_ops = action.num_operations if action.num_operations > 0 else 3
+
+    handler_wf_id = f"nexus-handler-attach-callbacks-{workflow.uuid4()}"
+
+    client = workflow.create_nexus_client(
+        endpoint=action.endpoint,
+        service=KITCHEN_SINK_SERVICE_NAME,
+    )
+    op_input = NexusHandlerInput(
+        input=action.input,
+        wait_for_signal=True,
+        workflow_id_override=handler_wf_id,
+    )
+
+    # Start all Nexus operations concurrently.
+    handles = []
+    for _ in range(num_ops):
+        handle = await client.start_operation(
+            "echo-async",
+            op_input,
+            output_type=str,
+        )
+        handles.append(handle)
+
+    # Signal the handler workflow to unblock.
+    ext_handle = workflow.get_external_workflow_handle(handler_wf_id)
+    await ext_handle.signal("unblock")
+
+    # Wait for all operations to complete.
+    for handle in handles:
+        await handle
+
+
 async def handle_awaitable_choice(
     awaitable: Union[Coroutine, asyncio.Task],
     choice: AwaitableChoice,
@@ -400,9 +441,17 @@ def convert_act_cancel_type(
 
 @workflow.defn
 class NexusHandlerWorkflow:
+    _unblocked: bool = False
+
     @workflow.run
     async def run(self, input: NexusHandlerInput) -> str:
         state = KitchenSinkWorkflow()
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
+        if input.wait_for_signal:
+            await workflow.wait_condition(lambda: self._unblocked)
         return input.input
+
+    @workflow.signal(name="unblock")
+    async def unblock(self) -> None:
+        self._unblocked = True
