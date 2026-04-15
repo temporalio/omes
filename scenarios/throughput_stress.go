@@ -621,8 +621,10 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
 				Endpoint:  t.config.NexusEndpoint,
-				Operation: "wait-for-cancel",
-				Input:     "",
+				Operation: "echo-async",
+				BeforeActions: ListActionSet(
+					NewAwaitWorkflowStateAction("never", "resolves"),
+				),
 				AwaitableChoice: &AwaitableChoice{
 					Condition: &AwaitableChoice_CancelAfterStarted{
 						CancelAfterStarted: &emptypb.Empty{},
