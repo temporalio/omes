@@ -357,14 +357,18 @@ async def handle_nexus_operation_attach_callbacks(
     )
 
     # Start all Nexus operations concurrently.
-    handles = []
-    for _ in range(num_ops):
-        handle = await client.start_operation(
-            "echo-async",
-            op_input,
-            output_type=str,
+    handles = list(
+        await asyncio.gather(
+            *[
+                client.start_operation(
+                    "echo-async",
+                    op_input,
+                    output_type=str,
+                )
+                for _ in range(num_ops)
+            ]
         )
-        handles.append(handle)
+    )
 
     # Signal the handler workflow to unblock.
     ext_handle = workflow.get_external_workflow_handle(handler_wf_id)
