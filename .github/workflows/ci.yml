@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
       - name: Run tests
@@ -30,7 +30,7 @@ jobs:
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-omes.xml
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-omes.xml"
@@ -63,11 +63,11 @@ jobs:
             tools: rust go protoc
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -98,7 +98,7 @@ jobs:
         sdk: [go, java, python, ruby, typescript, dotnet]
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Build ${{ matrix.sdk }} worker image
@@ -165,11 +165,11 @@ jobs:
             tools: dotnet go
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -185,7 +185,7 @@ jobs:
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
       - name: Publish Kitchensink Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-kitchensink-${{ matrix.sdk }}.xml"
@@ -199,11 +199,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "true"
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -221,7 +221,7 @@ jobs:
           git diff > generator.diff
           git diff --exit-code
       - name: Upload generator diff
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         if: always()
         with:
           name: generator-diff
@@ -232,14 +232,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
       - name: Build CLI image
         run: |
           go run ./cmd/dev build-cli-image
@@ -263,7 +263,7 @@ jobs:
       ruby-sdk-version: ${{ steps.set-output.outputs.ruby-sdk-version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Load versions
         run: |
           set -a && source versions.env && set +a
