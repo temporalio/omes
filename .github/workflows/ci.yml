@@ -144,6 +144,73 @@ jobs:
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m
 
+  build-project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [python]
+        include:
+          - sdk: python
+            project: helloworld
+            dockerfile: dockerfiles/python.Dockerfile
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set ${{ matrix.sdk }} project image metadata
+        run: |
+          echo "PROJECT_IMAGE_SDK_VERSION=v${PYTHON_SDK_VERSION}" >> "$GITHUB_ENV"
+          echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+          echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
+          echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.sdk }} ${{ matrix.project }} project image
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            --build-arg PROJECT_NAME=${{ matrix.project }} \
+            --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
+            -t ${PROJECT_IMAGE_TAG} .
+      - name: Create Docker network
+        run: |
+          docker network create omes-project-net
+      - name: Start ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        run: |
+          docker run \
+            --rm \
+            --name ${PROJECT_WORKER_CONTAINER} \
+            --network omes-project-net \
+            ${PROJECT_IMAGE_TAG} \
+            --run-id ${PROJECT_RUN_ID} \
+            --embedded-server-address 0.0.0.0:7233 &
+      - name: Wait for embedded server
+        run: |
+          timeout 30 bash -c 'until nc -z ${PROJECT_WORKER_CONTAINER} 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
+      - name: Run project scenario against ${{ matrix.sdk }} ${{ matrix.project }} worker image
+        run: |
+          docker run --rm \
+            --network omes-project-net \
+            ${PROJECT_IMAGE_TAG} \
+            run-scenario \
+            --scenario project \
+            --run-id ${PROJECT_RUN_ID} \
+            --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
+            --iterations 1 \
+            --connect-timeout 30s
+      - name: Stop ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        if: always()
+        run: |
+          docker stop ${PROJECT_WORKER_CONTAINER} || true
+      - name: Remove Docker network
+        if: always()
+        run: |
+          docker network rm omes-project-net || true
+
   test-kitchensink:
     runs-on: ubuntu-latest
     strategy:

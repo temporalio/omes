@@ -192,7 +192,127 @@ See the GHA workflows for more information.
 
 ## Specific Scenarios
 
-### ThroughputStress (Go only)
+### Project (Python only)
+
+The `project` scenario is different from the built-in kitchen-sink style scenarios. It is intended
+to be a more ergnomomic way of writing load tests, akin to writing a Temporal sample.
+
+Instead of driving workflows and activities that Omes owns (through a client that Omes owns), the 
+`project` scenario enables you to write a project where you configure the worker(s), client, and load 
+(workflows, activites, Nexus operations, etc.), and pass them as entrypoints to a harness. Omes calls into
+this harness repeatedly (i.e. for 'x' `--iterations` or 'y' `--duration`) through a gRPC interface to 
+generate load.
+
+As such, it's a **good fit** if you:
+- need to write a load test
+- are more familiar with Temporal-native code than Omes's framework
+
+and are not restricted by the **current limitations**:
+- Python is the only implemented project language right now
+- the load pattern is limited to a steady-rate executor (i.e. "run 'x' times at 'y' rate"), more nuanced
+  load patterns will need to create their own scenario + executor (the existing method)
+
+#### Writing your first project
+
+Writing a project should be fairly similar to writing a Temporal sample, and requires only a little
+familiarity with the project harness interface.
+
+To get started:
+- projects should be written at `workers/<lang>/projects/tests/<name>`, this is a path convention expected
+  by Omes when building your project
+- use the example `helloworld/` project as a reference to get started
+- take a look at `workers/python/harness/src/harness/__init__.py` as an entrypoint to the harness and 
+  how it works
+
+#### How projects run (optional)
+
+On the worker-side, it's fairly similar to how Omes starts and runs workers already:
+  - Omes builds a program that can start a worker via a command
+  - Omes executes the command that starts the worker process against the built program
+The only difference is that the program is now your project + harness.
+
+On the runner-side, it's a bit different than typical Omes scenarios because the runner needs to call into
+the harness to drive load. Consequently, it too needs to build your project + harness to run. So the flow looks like:
+  - Omes runner builds a program that can start a gRPC server (`project-server`) via a command
+    - `project-server` is language-agnostic interface for runner to tell your project to create load
+  - Omes runner executes the command that starts the `project-server` in another process
+  - Omes runner calls into gRPC server repeatedly over the course of the load test to spawn load
+  - Omes runner shuts down `project-server` on conclusion of load test
+
+#### Running a Project
+
+To run a project:
+1) Run your project worker:
+```sh
+go run ./cmd run-worker \
+  --language python \
+  --project-name helloworld \
+  --run-id local-project-test \
+  --server-address <your server address>
+```
+Make sure to point your `server-address` to a running Temporal server. Alternatively, use the
+`--embedded-server` to spin one up for you.
+
+2) Run the project scenario
+```sh
+go run ./cmd run-scenario \
+  --scenario project \
+  --iterations 1 \
+  --server-address <your server address> \
+  --run-id local-project-test \
+  --option language=python \
+  --option project-name=helloworld
+```
+
+For local all-in-one development, run the worker and scenario together:
+
+```sh
+go run ./cmd run-scenario-with-worker \
+  --scenario project \
+  --iterations 1 \
+  --language python \
+  --project-name helloworld \
+  --run-id local-project-test \
+  --embedded-server \
+  --option language=python \
+  --option project-name=helloworld
+```
+
+To run a project via Docker:
+
+```sh
+docker build \
+  -f dockerfiles/python.Dockerfile \
+  --build-arg PROJECT_NAME=helloworld \
+  --build-arg SDK_VERSION=v1.25.0 \
+  -t omes-python-project-helloworld .
+
+docker network create omes-project-net
+
+docker run -d --rm \
+  --name omes-python-project-worker \
+  --network omes-project-net \
+  omes-python-project-helloworld \
+  --run-id local-project-test \
+  --embedded-server-address 0.0.0.0:7233
+
+docker run --rm \
+  --network omes-project-net \
+  omes-python-project-helloworld \
+  run-scenario \
+  --scenario project \
+  --run-id local-project-test \
+  --server-address omes-python-project-worker:7233 \
+  --iterations 1 \
+  --connect-timeout 30s
+
+docker stop omes-python-project-worker
+docker network rm omes-project-net
+```
+
+This docker workflow it is not yet wired into `go run ./cmd/dev build-worker-image`.
+
+### ThroughputStress
 
 #### Sleep Activity
 

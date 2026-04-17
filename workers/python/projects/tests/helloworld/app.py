@@ -38,4 +38,4 @@ async def execute_project(client: Client, context: ProjectExecuteContext) -> Non
         task_queue=context.task_queue,
     )
     result = await handle.result()
-    context.logger.info(result)
+    print(result)

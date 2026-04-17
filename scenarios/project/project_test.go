@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"syscall"
 	"testing"
 	"time"
 
@@ -14,8 +12,10 @@ import (
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/workers"
+	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestValidateRequiresLanguage(t *testing.T) {
@@ -47,104 +47,49 @@ func TestValidateRejectsConflictingProjectSources(t *testing.T) {
 	require.EqualError(t, err, "cannot specify both project-name and prebuilt-project-dir")
 }
 
-func TestPythonHelloWorld(t *testing.T) {
-	runProjectScenario(t, "python", "helloworld", "", nil)
+func TestPythonHelloWorldSourceBuild(t *testing.T) {
+	runProjectScenario(t, "python", "helloworld", "", nil, false)
 }
 
-func runProjectScenario(t *testing.T, lang, projectName, version string, config []byte) {
+func TestPythonHelloWorldPrebuilt(t *testing.T) {
+	runProjectScenario(t, "python", "helloworld", "", nil, true)
+}
+
+func runProjectScenario(
+	t *testing.T,
+	lang, projectName, version string,
+	config []byte,
+	usePrebuilt bool,
+) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
 	defer cancel()
 
-	repoRoot, err := filepath.Abs("../..")
+	client, clientOptions := startServerAndClient(t, ctx)
+	info := buildScenarioInfo(t, client, clientOptions, lang, projectName, version, config)
+	opts, err := (&projectScenarioExecutor{}).validate(info)
 	require.NoError(t, err)
 
-	logger, err := zap.NewDevelopment()
-	require.NoError(t, err)
-	sugar := logger.Sugar()
-
-	metrics := (&clioptions.MetricsOptions{}).MustCreateMetrics(ctx, sugar)
-	runID := fmt.Sprintf("test-%s-%s-%d", lang, projectName, time.Now().UnixNano())
-	defer func() {
-		require.NoError(t, metrics.Shutdown(ctx, sugar, "project", runID, ""))
-	}()
-
-	server, err := testsuite.StartDevServer(ctx, testsuite.DevServerOptions{
-		LogLevel: "error",
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
-	})
-	require.NoError(t, err)
-	defer server.Stop()
-
-	hostPort := server.FrontendHostPort()
-	namespace := "default"
-	taskQueue := loadgen.TaskQueueForRun(runID)
-	executionID := fmt.Sprintf("exec-%d", time.Now().UnixNano())
-
-	var language clioptions.Language
-	require.NoError(t, language.Set(lang))
-
-	clientOptions := clioptions.ClientOptions{
-		Address:   hostPort,
-		Namespace: namespace,
-	}
-	client, err := clientOptions.Dial(metrics, sugar)
-	require.NoError(t, err)
-	defer client.Close()
-
-	prog, err := buildProject(ctx, repoRoot, projectScenarioOptions{
-		sdkOpts: clioptions.SdkOptions{
-			Language: language,
-			Version:  version,
-		},
-		projectName: projectName,
-	}, sugar)
-	require.NoError(t, err)
-
-	workerCtx, workerCancel := context.WithCancel(ctx)
-	defer workerCancel()
-
-	workerCmd, err := startWorkerProcess(workerCtx, prog, taskQueue, clientOptions)
-	require.NoError(t, err)
-
-	workerErrCh := make(chan error, 1)
-	go func() {
-		workerErrCh <- workerCmd.Wait()
-	}()
-
-	info := loadgen.ScenarioInfo{
-		ScenarioName:   "project",
-		RunID:          runID,
-		ExecutionID:    executionID,
-		MetricsHandler: metrics.NewHandler(),
-		Logger:         sugar,
-		Client:         client,
-		ClientOptions:  clientOptions,
-		Configuration: loadgen.RunConfiguration{
-			Iterations:                    1,
-			DoNotRegisterSearchAttributes: true,
-		},
-		ScenarioOptions: map[string]string{
-			"language":     lang,
-			"project-name": projectName,
-			"version":      version,
-		},
-		Namespace: namespace,
-		RootPath:  repoRoot,
-	}
-	if config != nil {
-		configFile, err := os.CreateTemp(t.TempDir(), "project-config-*.json")
+	runInfo := info
+	var prog sdkbuild.Program
+	if usePrebuilt {
+		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
 		require.NoError(t, err)
-		_, err = configFile.Write(config)
-		require.NoError(t, err)
-		require.NoError(t, configFile.Close())
-		info.ScenarioOptions["project-config-file"] = configFile.Name()
+		runInfo = withPrebuiltProjectDir(info, prog.Dir())
 	}
+
+	workerErrCh := startProjectWorker(
+		t,
+		ctx,
+		info,
+		opts,
+		prog,
+		usePrebuilt,
+	)
 
 	scenarioErrCh := make(chan error, 1)
 	go func() {
-		scenarioErrCh <- (&projectScenarioExecutor{}).Run(ctx, info)
+		scenarioErrCh <- (&projectScenarioExecutor{}).Run(ctx, runInfo)
 	}()
 
 	select {
@@ -154,53 +99,148 @@ func runProjectScenario(t *testing.T, lang, projectName, version string, config 
 		require.NoError(t, err, "project scenario failed for %s/%s", lang, projectName)
 	}
 
-	stopWorkerProcess(t, workerCancel, workerErrCh, workerCmd)
-}
-
-func startWorkerProcess(ctx context.Context, prog sdkbuild.Program, taskQueue string, clientOptions clioptions.ClientOptions) (*exec.Cmd, error) {
-	args := []string{
-		"main",
-		"worker",
-		"--task-queue", taskQueue,
-		"--server-address", clientOptions.Address,
-		"--namespace", clientOptions.Namespace,
-	}
-	cmd, err := prog.NewCommand(ctx, args...)
-	if err != nil {
-		return nil, err
-	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
-	}
-	cmd.WaitDelay = 3 * time.Second
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd, cmd.Start()
-}
-
-func stopWorkerProcess(t *testing.T, cancel context.CancelFunc, workerErrCh <-chan error, cmd *exec.Cmd) {
-	t.Helper()
 	cancel()
 
-	if waitForWorkerExit(workerErrCh, 3*time.Second) {
-		return
+	select {
+	case err := <-workerErrCh:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for project worker to exit")
 	}
-
-	require.NoError(t, syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL))
-
-	if waitForWorkerExit(workerErrCh, 3*time.Second) {
-		return
-	}
-
-	t.Fatal("timed out waiting for project worker to exit")
 }
 
-func waitForWorkerExit(workerErrCh <-chan error, timeout time.Duration) bool {
-	select {
-	case <-workerErrCh:
-		return true
-	case <-time.After(timeout):
-		return false
+func startServerAndClient(
+	t *testing.T,
+	ctx context.Context,
+) (sdkclient.Client, clioptions.ClientOptions) {
+	t.Helper()
+
+	server, err := testsuite.StartDevServer(ctx, testsuite.DevServerOptions{
+		ClientOptions: &sdkclient.Options{
+			Namespace: "default",
+		},
+		LogLevel: "error",
+		Stdout:   os.Stdout,
+		Stderr:   os.Stderr,
+	})
+	require.NoError(t, err)
+
+	clientOptions := clioptions.ClientOptions{
+		Address:   server.FrontendHostPort(),
+		Namespace: "default",
 	}
+	temporalClient, err := sdkclient.Dial(sdkclient.Options{
+		HostPort:  clientOptions.Address,
+		Namespace: clientOptions.Namespace,
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		temporalClient.Close()
+		server.Stop()
+	})
+	return temporalClient, clientOptions
+}
+
+func buildScenarioInfo(
+	t *testing.T,
+	client sdkclient.Client,
+	clientOptions clioptions.ClientOptions,
+	lang, projectName, version string,
+	config []byte,
+) loadgen.ScenarioInfo {
+	t.Helper()
+
+	repoRoot, err := filepath.Abs("../..")
+	require.NoError(t, err)
+
+	logger := zaptest.NewLogger(t).Sugar()
+
+	info := loadgen.ScenarioInfo{
+		ScenarioName:   "project",
+		RunID:          fmt.Sprintf("test-%s-%s-%d", lang, projectName, time.Now().UnixNano()),
+		ExecutionID:    fmt.Sprintf("exec-%d", time.Now().UnixNano()),
+		MetricsHandler: sdkclient.MetricsNopHandler,
+		Logger:         logger,
+		Client:         client,
+		ClientOptions:  clientOptions,
+		Configuration: loadgen.RunConfiguration{
+			Iterations:                    1,
+			DoNotRegisterSearchAttributes: true,
+		},
+		ScenarioOptions: map[string]string{
+			"language":     lang,
+			"project-name": projectName,
+		},
+		Namespace: clientOptions.Namespace,
+		RootPath:  repoRoot,
+	}
+	if version != "" {
+		info.ScenarioOptions["version"] = version
+	}
+	if config != nil {
+		configPath := filepath.Join(t.TempDir(), "project-config.json")
+		require.NoError(t, os.WriteFile(configPath, config, 0644))
+		info.ScenarioOptions["project-config-file"] = configPath
+	}
+	return info
+}
+
+func withPrebuiltProjectDir(info loadgen.ScenarioInfo, dir string) loadgen.ScenarioInfo {
+	runInfo := info
+	runInfo.ScenarioOptions = map[string]string{
+		"language":             info.ScenarioOptions["language"],
+		"prebuilt-project-dir": dir,
+	}
+	if version := info.ScenarioOptions["version"]; version != "" {
+		runInfo.ScenarioOptions["version"] = version
+	}
+	if configPath := info.ScenarioOptions["project-config-file"]; configPath != "" {
+		runInfo.ScenarioOptions["project-config-file"] = configPath
+	}
+	return runInfo
+}
+
+func startProjectWorker(
+	t *testing.T,
+	ctx context.Context,
+	info loadgen.ScenarioInfo,
+	opts projectScenarioOptions,
+	prog sdkbuild.Program,
+	usePrebuilt bool,
+) <-chan error {
+	t.Helper()
+	require.NotEmpty(t, opts.projectName)
+
+	builder := workers.Builder{
+		ProjectName: opts.projectName,
+		SdkOptions:  opts.sdkOpts,
+		Logger:      info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
+	}
+	if usePrebuilt {
+		require.NotNil(t, prog)
+		builder.DirName = filepath.Base(prog.Dir())
+	}
+
+	runner := &workers.Runner{
+		Builder:                  builder,
+		TaskQueueName:            loadgen.TaskQueueForRun(info.RunID),
+		GracefulShutdownDuration: 5 * time.Second,
+		ScenarioID: clioptions.ScenarioID{
+			Scenario: "project",
+			RunID:    info.RunID,
+		},
+		LoggingOptions: clioptions.LoggingOptions{
+			PreparedLogger: info.Logger.Named(fmt.Sprintf("%s-worker", opts.sdkOpts.Language)),
+		},
+	}
+	require.NoError(t, runner.ClientOptions.FlagSet().Set("server-address", info.ClientOptions.Address))
+	require.NoError(t, runner.ClientOptions.FlagSet().Set("namespace", info.ClientOptions.Namespace))
+
+	workerErrCh := make(chan error, 1)
+	go func() {
+		defer close(workerErrCh)
+		workerErrCh <- runner.Run(ctx, workers.BaseDir(info.RootPath, opts.sdkOpts.Language))
+	}()
+	return workerErrCh
 }

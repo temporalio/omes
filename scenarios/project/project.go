@@ -24,7 +24,8 @@ func init() {
   Required: --option language=<lang>
   One of:   --option project-name=<name>  (build from source; optional --option version=<version> override)
             --option prebuilt-project-dir=<path>  (use pre-built project dir)
-  Optional: --option project-config-file=<path>   (project-specific JSON config)`,
+  Optional: --option project-config-file=<path>   (project-specific JSON config)
+  See README.md ("Project (Python only)") for local usage examples and current limitations.`,
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
 		},
