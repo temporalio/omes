@@ -3,8 +3,6 @@ package project
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
@@ -14,26 +12,14 @@ import (
 
 // buildProject builds a project test program for the given language.
 func buildProject(ctx context.Context, repoRoot string, p projectScenarioOptions, logger *zap.SugaredLogger) (sdkbuild.Program, error) {
-	baseDir := workers.BaseDir(repoRoot, p.sdkOpts.Language)
-	projectDir := workers.ProjectDir(baseDir, p.projectName)
-	absProjDir, err := filepath.Abs(projectDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve project-dir: %w", err)
-	}
-
-	dirName := fmt.Sprintf("project-build-runner-%s", p.projectName)
-	outputDir := filepath.Join(absProjDir, dirName)
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed creating build dir: %w", err)
-	}
-
 	b := workers.Builder{
-		DirName:     filepath.Base(outputDir),
+		DirName:     fmt.Sprintf("project-build-runner-%s", p.projectName),
 		SdkOptions:  p.sdkOpts,
 		ProjectName: p.projectName,
 		Logger:      logger,
 	}
 
+	baseDir := workers.BaseDir(repoRoot, p.sdkOpts.Language)
 	switch p.sdkOpts.Language {
 	case clioptions.LangPython:
 		return b.Build(ctx, baseDir)

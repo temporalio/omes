@@ -24,7 +24,6 @@ workers/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
 workers/**/project-build-*/
-workers/**/project-build-*
 
 tsconfig.tsbuildinfo
 

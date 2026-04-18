@@ -26,7 +26,7 @@ type ProjectHandle struct {
 	client    api.ProjectServiceClient
 }
 
-func NewProjectHandle(ctx context.Context, port int, req *api.InitRequest) (ProjectHandle, error) {
+func newProjectHandle(ctx context.Context, port int, req *api.InitRequest) (ProjectHandle, error) {
 	address := fmt.Sprintf("%s:%d", defaultClientHost, port)
 	c := ProjectHandle{address: address, taskQueue: req.GetTaskQueue()}
 
@@ -67,7 +67,7 @@ func NewProjectHandle(ctx context.Context, port int, req *api.InitRequest) (Proj
 	return c, nil
 }
 
-func (c *ProjectHandle) Close() error {
+func (c *ProjectHandle) close() error {
 	if c.conn == nil {
 		return nil
 	}
@@ -85,8 +85,7 @@ func (c *ProjectHandle) init(ctx context.Context, req *api.InitRequest) error {
 	return nil
 }
 
-// Execute calls ProjectService.Execute for a single iteration.
-func (c *ProjectHandle) Execute(ctx context.Context, req *api.ExecuteRequest) (*api.ExecuteResponse, error) {
+func (c *ProjectHandle) execute(ctx context.Context, req *api.ExecuteRequest) (*api.ExecuteResponse, error) {
 	if req.GetTaskQueue() == "" {
 		req = &api.ExecuteRequest{
 			Iteration: req.GetIteration(),
@@ -101,11 +100,11 @@ func (c *ProjectHandle) Execute(ctx context.Context, req *api.ExecuteRequest) (*
 	return resp, nil
 }
 
-// NewSteadyRateExecutor creates an executor that calls Execute once per iteration.
-func NewSteadyRateExecutor(c *ProjectHandle) loadgen.Executor {
+// newSteadyRateExecutor creates an executor that calls Execute once per iteration.
+func newSteadyRateExecutor(c *ProjectHandle) loadgen.Executor {
 	return &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
-			_, err := c.Execute(ctx, &api.ExecuteRequest{
+			_, err := c.execute(ctx, &api.ExecuteRequest{
 				Iteration: int64(run.Iteration),
 				TaskQueue: c.taskQueue,
 			})

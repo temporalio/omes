@@ -70,12 +70,12 @@ func runProjectScenario(
 	opts, err := (&projectScenarioExecutor{}).validate(info)
 	require.NoError(t, err)
 
-	runInfo := info
 	var prog sdkbuild.Program
 	if usePrebuilt {
 		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
 		require.NoError(t, err)
-		runInfo = withPrebuiltProjectDir(info, prog.Dir())
+		info.ScenarioOptions["project-name"] = ""
+		info.ScenarioOptions["prebuilt-project-dir"] = prog.Dir()
 	}
 
 	workerErrCh := startProjectWorker(
@@ -84,12 +84,11 @@ func runProjectScenario(
 		info,
 		opts,
 		prog,
-		usePrebuilt,
 	)
 
 	scenarioErrCh := make(chan error, 1)
 	go func() {
-		scenarioErrCh <- (&projectScenarioExecutor{}).Run(ctx, runInfo)
+		scenarioErrCh <- (&projectScenarioExecutor{}).Run(ctx, info)
 	}()
 
 	select {
@@ -119,9 +118,6 @@ func startServerAndClient(
 		ClientOptions: &sdkclient.Options{
 			Namespace: "default",
 		},
-		LogLevel: "error",
-		Stdout:   os.Stdout,
-		Stderr:   os.Stderr,
 	})
 	require.NoError(t, err)
 
@@ -154,14 +150,12 @@ func buildScenarioInfo(
 	repoRoot, err := filepath.Abs("../..")
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t).Sugar()
-
 	info := loadgen.ScenarioInfo{
 		ScenarioName:   "project",
 		RunID:          fmt.Sprintf("test-%s-%s-%d", lang, projectName, time.Now().UnixNano()),
 		ExecutionID:    fmt.Sprintf("exec-%d", time.Now().UnixNano()),
 		MetricsHandler: sdkclient.MetricsNopHandler,
-		Logger:         logger,
+		Logger:         zaptest.NewLogger(t).Sugar(),
 		Client:         client,
 		ClientOptions:  clientOptions,
 		Configuration: loadgen.RunConfiguration{
@@ -186,28 +180,12 @@ func buildScenarioInfo(
 	return info
 }
 
-func withPrebuiltProjectDir(info loadgen.ScenarioInfo, dir string) loadgen.ScenarioInfo {
-	runInfo := info
-	runInfo.ScenarioOptions = map[string]string{
-		"language":             info.ScenarioOptions["language"],
-		"prebuilt-project-dir": dir,
-	}
-	if version := info.ScenarioOptions["version"]; version != "" {
-		runInfo.ScenarioOptions["version"] = version
-	}
-	if configPath := info.ScenarioOptions["project-config-file"]; configPath != "" {
-		runInfo.ScenarioOptions["project-config-file"] = configPath
-	}
-	return runInfo
-}
-
 func startProjectWorker(
 	t *testing.T,
 	ctx context.Context,
 	info loadgen.ScenarioInfo,
 	opts projectScenarioOptions,
 	prog sdkbuild.Program,
-	usePrebuilt bool,
 ) <-chan error {
 	t.Helper()
 	require.NotEmpty(t, opts.projectName)
@@ -217,7 +195,9 @@ func startProjectWorker(
 		SdkOptions:  opts.sdkOpts,
 		Logger:      info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
 	}
-	if usePrebuilt {
+
+	// If we have a prebuilt program, use it
+	if prog != nil {
 		require.NotNil(t, prog)
 		builder.DirName = filepath.Base(prog.Dir())
 	}

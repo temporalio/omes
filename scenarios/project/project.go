@@ -76,7 +76,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	defer stopProjectProcess("project-server", serverCancel, serverCmd, info.Logger)
 
 	co := info.ClientOptions
-	handle, err := NewProjectHandle(ctx, port, &api.InitRequest{
+	handle, err := newProjectHandle(ctx, port, &api.InitRequest{
 		ExecutionId: info.ExecutionID,
 		RunId:       info.RunID,
 		TaskQueue:   taskQueue,
@@ -95,9 +95,9 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	if err != nil {
 		return fmt.Errorf("failed to init project: %w", err)
 	}
-	defer handle.Close()
+	defer handle.close()
 
-	executor := NewSteadyRateExecutor(&handle)
+	executor := newSteadyRateExecutor(&handle)
 	return executor.Run(ctx, info)
 }
 
@@ -161,6 +161,7 @@ func findAvailablePort() (int, error) {
 
 func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, port int) (*exec.Cmd, error) {
 	var args []string
+	// Python needs module name
 	if lang == clioptions.LangPython {
 		args = append(args, "main")
 	}
@@ -169,8 +170,9 @@ func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap
 	if err != nil {
 		return nil, err
 	}
+
 	// Set pgid to kill spawned child processes
-	// (needed largely for Python, which spawns a child process through uv)
+	// (needed for Python, which spawns a child process through uv)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {

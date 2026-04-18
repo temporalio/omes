@@ -62,10 +62,14 @@ ARG PROJECT_NAME=""
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/python /app/workers/python
-COPY dockerfiles/python-entrypoint.sh /app/python-entrypoint.sh
-RUN chmod +x /app/python-entrypoint.sh
+COPY dockerfiles/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
+ENV OMES_WORKER_LANGUAGE=python
+ENV OMES_PREPARED_DIR=prepared
 ENV OMES_PROJECT_NAME=$PROJECT_NAME
+ENV OMES_PROJECT_PREPARED_DIR=project-build-runner-${PROJECT_NAME}
+ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/projects/tests/${PROJECT_NAME}/project-build-runner-${PROJECT_NAME}
 
-ENTRYPOINT ["/app/python-entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]

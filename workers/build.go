@@ -31,15 +31,21 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
 
+	if b.ProjectName != "" {
+		baseDir = ProjectDir(baseDir, b.ProjectName)
+	}
+
+	buildDir := filepath.Join(baseDir, b.DirName)
+	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
+	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("failed creating directory: %w", err)
+	}
+
 	if b.stdout == nil {
 		b.stdout = &logWriter{logger: b.Logger}
 	}
 	if b.stderr == nil {
 		b.stderr = &logWriter{logger: b.Logger}
-	}
-
-	if b.ProjectName != "" {
-		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
 
 	switch b.SdkOptions.Language {
