@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from contextlib import suppress
 import logging
 from collections.abc import Awaitable, Callable, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 
 import grpc  # type: ignore[import]
@@ -175,6 +175,7 @@ async def _serve(
             await server.wait_for_termination()
     finally:
         await server.stop(0)
+
 
 def run_project_server_cli(
     handlers: ProjectHandlers,
