@@ -24,6 +24,14 @@ jobs:
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      # Scope to just Python for project build tests
+      - name: Install Tools
+        run: |
+          go run ./cmd/dev install python
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
@@ -185,12 +193,13 @@ jobs:
             --rm \
             --name ${PROJECT_WORKER_CONTAINER} \
             --network omes-project-net \
+            -p 7233:7233 \
             ${PROJECT_IMAGE_TAG} \
             --run-id ${PROJECT_RUN_ID} \
             --embedded-server-address 0.0.0.0:7233 &
       - name: Wait for embedded server
         run: |
-          timeout 30 bash -c 'until nc -z ${PROJECT_WORKER_CONTAINER} 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
+          timeout 30 bash -c 'until nc -z 127.0.0.1 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
       - name: Run project scenario against ${{ matrix.sdk }} ${{ matrix.project }} worker image
         run: |
           docker run --rm \
@@ -202,6 +211,10 @@ jobs:
             --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
             --iterations 1 \
             --connect-timeout 30s
+      - name: Print project worker logs
+        if: failure()
+        run: |
+          docker logs ${PROJECT_WORKER_CONTAINER} || true
       - name: Stop ${{ matrix.sdk }} ${{ matrix.project }} project worker image
         if: always()
         run: |
