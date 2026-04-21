@@ -28,6 +28,7 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
+COPY workers/proto/harness ./workers/proto/harness
 COPY go.mod go.sum ./
 
 # Build the CLI
@@ -43,7 +44,7 @@ COPY ${SDK_DIR} ./repo
 COPY workers/dotnet ./workers/dotnet
 
 # Prepare the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION" --log-level trace
 
 # Copy the CLI and prepared feature to a distroless "run" container
 FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy
