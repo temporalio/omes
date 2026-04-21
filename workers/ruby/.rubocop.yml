@@ -3,6 +3,7 @@ AllCops:
   NewCops: enable
   Exclude:
     - "protos/**/*"
+    - "projects/harness/api/**/*"
     - "vendor/**/*"
     - "omes-temp-*/**/*"
 

@@ -3,5 +3,7 @@ source 'https://rubygems.org'
 gemspec
 
 group :development do
+  gem 'grpc-tools', '~> 1.80'
+  gem 'minitest'
   gem 'rubocop', '~> 1.0'
 end
