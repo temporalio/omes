@@ -90,6 +90,48 @@ public class WorkerTests
         Assert.Equal(1, failingWorker.DisposeCalls);
         Assert.Equal(1, waitingWorker.DisposeCalls);
     }
+
+    [Fact]
+    public async Task WorkerModeWaitsForAllWorkersToCompleteWhenNoneFail()
+    {
+        var releaseWorker = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blockingWorkerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var quickWorker = new FakeHarnessWorker(_ => Task.CompletedTask);
+        var blockingWorkerSawCancellation = false;
+        var blockingWorker = new FakeHarnessWorker(
+            async cancellationToken =>
+            {
+                blockingWorkerStarted.SetResult();
+                try
+                {
+                    await releaseWorker.Task.WaitAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    blockingWorkerSawCancellation = true;
+                    throw;
+                }
+            });
+
+        var runTask = WorkerHarness.RunWorkersAsync(
+            [quickWorker, blockingWorker],
+            static (worker, cancellationToken) => worker.RunAsync(cancellationToken),
+            static worker => worker.Dispose());
+
+        await blockingWorkerStarted.Task;
+        var completedTask = await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromMilliseconds(200)));
+
+        Assert.NotSame(runTask, completedTask);
+        Assert.False(blockingWorkerSawCancellation);
+
+        releaseWorker.SetResult();
+        await runTask;
+
+        Assert.Equal(1, quickWorker.RunCalls);
+        Assert.Equal(1, blockingWorker.RunCalls);
+        Assert.Equal(1, quickWorker.DisposeCalls);
+        Assert.Equal(1, blockingWorker.DisposeCalls);
+    }
 }
 
 file sealed class FakeHarnessWorker(Func<CancellationToken, Task> runAsync)

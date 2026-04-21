@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFramework>net8.0</TargetFramework>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -9,11 +8,6 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
-    </PropertyGroup>
-
-    <!-- When testing/linting, treat this as a library so no Main method is needed. -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Library'">
-        <OutputType>Library</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
@@ -36,6 +30,7 @@
 
     <ItemGroup>
         <Compile Remove="projects/**/*.cs" />
+        <Compile Remove="omes-temp-*/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup>

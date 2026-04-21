@@ -7,7 +7,6 @@ public sealed record App(
 {
     public static Task<int> RunAsync(App app, string[] args)
     {
-        // Preserve direct harness invocation without an explicit subcommand.
         if (args.Length == 0 || args[0] == "worker")
         {
             var workerArgs = args.Length > 0 && args[0] == "worker" ? args[1..] : args;

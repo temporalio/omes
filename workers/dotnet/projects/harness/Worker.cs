@@ -220,15 +220,14 @@ internal static class WorkerHarness
             var workerTasks = workers
                 .Select(worker => executeWorkerAsync(worker, cancellationTokenSource.Token))
                 .ToList();
+            var allWorkersTask = WaitForWorkerFailureOrCompletionAsync(workerTasks);
+            var interruptTask = WaitForInterruptAsync(cancellationTokenSource.Token);
+            var completedTask = await Task.WhenAny(allWorkersTask, interruptTask);
+            var interrupted = completedTask == interruptTask;
 
-            var completedTask = await Task.WhenAny(workerTasks);
             cancellationTokenSource.Cancel();
 
             Exception? firstFailure = null;
-            if (completedTask.IsFaulted)
-            {
-                firstFailure = completedTask.Exception?.GetBaseException();
-            }
             try
             {
                 await Task.WhenAll(workerTasks);
@@ -239,6 +238,22 @@ internal static class WorkerHarness
                     .Where(task => task.IsFaulted)
                     .Select(task => task.Exception?.GetBaseException())
                     .FirstOrDefault(exception => exception is not null);
+            }
+
+            if (!interrupted)
+            {
+                try
+                {
+                    await allWorkersTask;
+                }
+                catch (OperationCanceledException err)
+                {
+                    firstFailure ??= err;
+                }
+                catch (Exception err)
+                {
+                    firstFailure ??= err.GetBaseException();
+                }
             }
 
             if (firstFailure is not null)
@@ -255,6 +270,20 @@ internal static class WorkerHarness
             }
         }
     }
+
+    private static async Task WaitForWorkerFailureOrCompletionAsync(IReadOnlyList<Task> workerTasks)
+    {
+        var pendingTasks = workerTasks.ToList();
+        while (pendingTasks.Count > 0)
+        {
+            var completedTask = await Task.WhenAny(pendingTasks);
+            pendingTasks.Remove(completedTask);
+            await completedTask;
+        }
+    }
+
+    private static Task WaitForInterruptAsync(CancellationToken cancellationToken) =>
+        Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
 
     private static List<string> BuildTaskQueues(
         ILogger logger,
