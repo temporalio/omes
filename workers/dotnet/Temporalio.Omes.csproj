@@ -31,6 +31,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="projects/harness/ProjectHarness.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="projects/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Using Include="Microsoft.Extensions.Logging" />
     </ItemGroup>
 
