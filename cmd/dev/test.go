@@ -92,6 +92,11 @@ func runTestWorker(ctx context.Context, language string) error {
 			return err
 		}
 	}
+	if language == "ruby" {
+		if err := runRubyHarnessTests(ctx, repoDir); err != nil {
+			return err
+		}
+	}
 	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
 }
 
@@ -122,6 +127,41 @@ func runTypeScriptHarnessTests(ctx context.Context, repoDir string) error {
 		return fmt.Errorf("failed TypeScript harness tests: %w", err)
 	}
 	fmt.Println("✅ TypeScript harness tests completed successfully!")
+	return nil
+}
+
+func runRubyHarnessTests(ctx context.Context, repoDir string) error {
+	workerDir := filepath.Join(repoDir, "workers", "ruby")
+	rubyVersion, err := getVersion("ruby")
+	if err != nil {
+		return err
+	}
+	if err := checkMise(); err != nil {
+		return err
+	}
+	fmt.Println("Running Ruby harness tests...")
+	testFiles := []string{
+		"projects/harness/tests/test_worker.rb",
+		"projects/harness/tests/test_project.rb",
+	}
+	for _, testFile := range testFiles {
+		fmt.Println("Running Ruby harness test:", testFile)
+		if err := runCommandInDir(
+			ctx,
+			workerDir,
+			"mise",
+			"exec",
+			"ruby@"+rubyVersion,
+			"--",
+			"bundle",
+			"exec",
+			"ruby",
+			testFile,
+		); err != nil {
+			return fmt.Errorf("failed Ruby harness tests: %w", err)
+		}
+	}
+	fmt.Println("✅ Ruby harness tests completed successfully!")
 	return nil
 }
 
