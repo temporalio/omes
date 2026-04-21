@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFramework>net8.0</TargetFramework>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -29,8 +30,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Remove="projects/**/*.cs" />
-        <Compile Remove="omes-temp-*/**/*.cs" />
+        <Compile Include="App.cs" />
+        <Compile Include="KitchenSinkApp.cs" />
+        <Compile Include="Temporalio.Omes/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup>
