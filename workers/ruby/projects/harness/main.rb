@@ -16,13 +16,10 @@ module Harness
 
   def self.run(app, argv = ARGV)
     argv = Array(argv).dup
-    if argv.empty? || argv.first == 'worker'
-      worker_argv = argv.first == 'worker' ? argv.drop(1) : argv
-      WorkerCLI.run_cli(app.worker, app.client_factory, worker_argv)
+    if argv.first == 'worker'
+      WorkerCLI.run_cli(app.worker, app.client_factory, argv.drop(1))
     elsif argv.first == 'project-server'
-      if app.project.nil?
-        raise SystemExit, 'Wanted project-server but no project handlers registered for this app'
-      end
+      raise SystemExit, 'Wanted project-server but no project handlers registered for this app' if app.project.nil?
 
       ProjectCLI.run_cli(app.project, app.client_factory, argv.drop(1))
     else

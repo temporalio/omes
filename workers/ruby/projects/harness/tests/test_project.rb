@@ -50,7 +50,7 @@ class HarnessProjectTest < Minitest::Test
           init_calls << [handler_client, context]
         end
       ),
-      ->(given_config) do
+      lambda do |given_config|
         assert_equal 'localhost:7233', given_config.target_host
         assert_equal 'default', given_config.namespace
         assert_equal 'token', given_config.api_key
@@ -184,13 +184,7 @@ class HarnessProjectTest < Minitest::Test
       events << [:execute, handler_client, context, result]
     end
 
-    cli_path = ENV['TEMPORAL_CLI_PATH']
-    cli_path = `which temporal`.strip if cli_path.to_s.empty?
-    raise 'temporal CLI not found' if cli_path.to_s.empty?
-
-    Temporalio::Testing::WorkflowEnvironment.start_local(
-      dev_server_existing_path: cli_path
-    ) do |env|
+    Temporalio::Testing::WorkflowEnvironment.start_local do |env|
       worker = Temporalio::Worker.new(
         client: env.client,
         task_queue: task_queue,
