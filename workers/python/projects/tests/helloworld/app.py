@@ -30,7 +30,9 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
     )
 
 
-async def execute_project_iteration(client: Client, context: ProjectExecuteContext) -> None:
+async def execute_project_iteration(
+    client: Client, context: ProjectExecuteContext
+) -> None:
     handle = await client.start_workflow(
         HelloWorldWorkflow.run,
         "World",
