@@ -28,3 +28,4 @@ workers/**/project-build-*/
 tsconfig.tsbuildinfo
 
 temporal-omes
+.omx/

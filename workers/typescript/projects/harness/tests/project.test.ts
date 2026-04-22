@@ -322,32 +322,33 @@ void test('project server executes workflow against a real Temporal server', asy
     await env.teardown();
   }
 
-  assert.equal(events.length, 2);
-  assert.strictEqual(events[0]?.client, events[1]?.client);
-  assert.deepEqual(events[0], {
-    kind: 'init',
-    client: events[0]?.client,
-    context: {
-      run: {
-        runId: 'run-id',
-        executionId: 'exec-id',
+  const sharedClient = events[0]?.client;
+  assert.deepEqual(events, [
+    {
+      kind: 'init',
+      client: sharedClient,
+      context: {
+        run: {
+          runId: 'run-id',
+          executionId: 'exec-id',
+        },
+        taskQueue,
+        configJson: '{"hello":"world"}',
       },
-      taskQueue,
-      configJson: '{"hello":"world"}',
     },
-  });
-  assert.deepEqual(events[1], {
-    kind: 'execute',
-    client: events[0]?.client,
-    context: {
-      run: {
-        runId: 'run-id',
-        executionId: 'exec-id',
+    {
+      kind: 'execute',
+      client: sharedClient,
+      context: {
+        run: {
+          runId: 'run-id',
+          executionId: 'exec-id',
+        },
+        taskQueue,
+        iteration: 7,
+        payload: 'payload',
       },
-      taskQueue,
-      iteration: 7,
-      payload: 'payload',
+      result: 'payload',
     },
-    result: 'payload',
-  });
+  ]);
 });

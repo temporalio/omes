@@ -1,3 +1,4 @@
+import { promisify } from 'node:util';
 import * as grpc from '@grpc/grpc-js';
 import { Client, isGrpcServiceError } from '@temporalio/client';
 import { DefaultLogger, Logger } from '@temporalio/worker';
@@ -167,34 +168,20 @@ export async function runProjectServerCli(
 ): Promise<void> {
   const port = parsePortArg(argv);
   const server = new grpc.Server();
+  const bindAsync = promisify(server.bindAsync.bind(server));
+  const tryShutdown = promisify(server.tryShutdown.bind(server));
   const service = new ProjectServiceServer(handlers, clientFactory);
   server.addService(ProjectServiceService, {
     init: unaryHandler((request) => service.Init(request)),
     execute: unaryHandler((request) => service.Execute(request)),
   } satisfies IProjectServiceServer);
-  await new Promise((resolve, reject) => {
-    server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (error, boundPort) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(boundPort);
-    });
-  });
+  await bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure());
   logger.info(`Project server listening on port ${port}`);
 
   await new Promise<void>((resolve, reject) => {
-    const onInterrupt = () => {
-      process.off('SIGINT', onInterrupt);
-      server.tryShutdown((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    };
-    process.once('SIGINT', onInterrupt);
+    process.once('SIGINT', () => {
+      void tryShutdown().then(resolve, reject);
+    });
   });
 }
 
@@ -224,7 +211,14 @@ function unaryHandler<Request, Response>(
     try {
       callback(null, await handler(call.request));
     } catch (error) {
-      callback(isGrpcServiceError(error) ? error: grpcError(grpc.status.INTERNAL, error instanceof Error ? error.message : String(error)));
+      callback(
+        isGrpcServiceError(error)
+          ? error
+          : grpcError(
+              grpc.status.INTERNAL,
+              error instanceof Error ? error.message : String(error),
+            ),
+      );
     }
   };
 }

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./lib-test",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "projects/harness/tests/**/*.ts",
+    "projects/harness/api/**/*.js"
+  ],
+  "exclude": []
+}

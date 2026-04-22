@@ -143,13 +143,5 @@ export function createProjectServiceClient(port: number): ProjectServiceClient {
 export async function callUnary<Response>(
   invoke: (callback: (error: grpc.ServiceError | null, response: Response) => void) => void,
 ): Promise<Response> {
-  return await new Promise<Response>((resolve, reject) => {
-    invoke((error, response) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(response);
-    });
-  });
+  return await promisify(invoke)();
 }

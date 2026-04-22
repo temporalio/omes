@@ -133,6 +133,10 @@ export async function runWorkers(
   await allWorkersPromise;
 }
 
+function parseBooleanFlag(value: string | boolean): boolean {
+  return typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value.toLowerCase());
+}
+
 function buildParser(): Command {
   return new Command()
     .option('-q, --task-queue <taskQueue>', 'Task queue to use', 'omes')
@@ -186,10 +190,7 @@ function buildParser(): Command {
     .option(
       '--err-on-unimplemented <errOnImplemented>',
       'Error when receiving unimplemented actions (currently only affects concurrent client actions)',
-      (value) =>
-        typeof value === 'boolean'
-          ? value
-          : ['true', '1', 'yes'].includes(value.toLowerCase()),
+      parseBooleanFlag,
       false,
     )
     .option('--log-level <logLevel>', '(debug info warn error panic fatal)', 'info')
@@ -199,10 +200,7 @@ function buildParser(): Command {
     .option(
       '--tls <tls>',
       'Enable TLS (true/false)',
-      (value) =>
-        typeof value === 'boolean'
-          ? value
-          : ['true', '1', 'yes'].includes(value.toLowerCase()),
+      parseBooleanFlag,
       false,
     )
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS', '')
