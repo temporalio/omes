@@ -31,12 +31,14 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
+COPY workers/go/projects/harness/api ./workers/go/projects/harness/api
 COPY go.mod go.sum ./
 
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
+ARG PROJECT_NAME=""
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
@@ -45,17 +47,29 @@ COPY ${SDK_DIR} ./repo
 # Copy the worker files
 COPY workers/python ./workers/python
 
-# Build the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
+# Build the worker or project runner
+RUN if [ -n "$PROJECT_NAME" ]; then \
+      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --project-name "$PROJECT_NAME" --dir-name "project-build-runner-$PROJECT_NAME" --version "$SDK_VERSION" ; \
+    else \
+      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION" ; \
+    fi
 
 # Copy the CLI and built worker to a distroless "run" container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
 
+ARG PROJECT_NAME=""
+
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/python /app/workers/python
+COPY dockerfiles/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
+ENV OMES_WORKER_LANGUAGE=python
+ENV OMES_PREPARED_DIR=prepared
+ENV OMES_PROJECT_NAME=$PROJECT_NAME
+ENV OMES_PROJECT_PREPARED_DIR=project-build-runner-${PROJECT_NAME}
+ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/projects/tests/${PROJECT_NAME}/project-build-runner-${PROJECT_NAME}
 
-# Put the language and dir, but let other options (like required scenario and run-id) be given by user
-ENTRYPOINT ["/app/temporal-omes", "run-worker", "--language", "python", "--dir-name", "prepared"]
+ENTRYPOINT ["/app/entrypoint.sh"]

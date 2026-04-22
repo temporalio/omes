@@ -16,11 +16,12 @@ import (
 )
 
 type Builder struct {
-	DirName    string
-	SdkOptions clioptions.SdkOptions
-	Logger     *zap.SugaredLogger
-	stdout     io.Writer
-	stderr     io.Writer
+	DirName     string
+	ProjectName string
+	SdkOptions  clioptions.SdkOptions
+	Logger      *zap.SugaredLogger
+	stdout      io.Writer
+	stderr      io.Writer
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -28,6 +29,10 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name required")
 	} else if strings.ContainsAny(b.DirName, `/\`) {
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
+	}
+
+	if b.ProjectName != "" {
+		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
 
 	buildDir := filepath.Join(baseDir, b.DirName)
@@ -312,4 +317,9 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 
 func BaseDir(repoDir string, lang clioptions.Language) string {
 	return filepath.Join(repoDir, "workers", lang.String())
+}
+
+func ProjectDir(baseDir string, projectName string) string {
+	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
+	return filepath.Join(baseDir, projectPath)
 }

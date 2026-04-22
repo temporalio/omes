@@ -77,7 +77,11 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	var prog sdkbuild.Program
 	if r.DirName == "" {
 		// Create temp dir
-		tempDir, err := os.MkdirTemp(baseDir, "omes-temp-")
+		tempBaseDir := baseDir
+		if r.ProjectName != "" {
+			tempBaseDir = ProjectDir(baseDir, r.ProjectName)
+		}
+		tempDir, err := os.MkdirTemp(tempBaseDir, "omes-temp-")
 		if err != nil {
 			return fmt.Errorf("failed creating temp dir: %w", err)
 		}
@@ -92,6 +96,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 	} else {
 		var err error
+		if r.ProjectName != "" {
+			baseDir = ProjectDir(baseDir, r.ProjectName)
+		}
 		loadDir := filepath.Join(baseDir, r.DirName)
 		switch r.SdkOptions.Language {
 		case clioptions.LangGo:
@@ -119,6 +126,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.SdkOptions.Language == clioptions.LangPython {
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
+	} else if r.SdkOptions.Language == clioptions.LangDotNet {
+		// The dotnet harness uses explicit subcommands like the Python harness.
+		args = append(args, "worker")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
 		// Node also needs module
 		args = append(args, "./tslib/omes.js")

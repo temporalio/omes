@@ -24,6 +24,14 @@ jobs:
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      # Scope to just Python for project build tests
+      - name: Install Tools
+        run: |
+          go run ./cmd/dev install python
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
@@ -143,6 +151,78 @@ jobs:
             --option continue-as-new-after-iterations=1 \
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m
+
+  build-project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [python]
+        include:
+          - sdk: python
+            project: helloworld
+            dockerfile: dockerfiles/python.Dockerfile
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set ${{ matrix.sdk }} project image metadata
+        run: |
+          echo "PROJECT_IMAGE_SDK_VERSION=v${PYTHON_SDK_VERSION}" >> "$GITHUB_ENV"
+          echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+          echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
+          echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.sdk }} ${{ matrix.project }} project image
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            --build-arg PROJECT_NAME=${{ matrix.project }} \
+            --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
+            -t ${PROJECT_IMAGE_TAG} .
+      - name: Create Docker network
+        run: |
+          docker network create omes-project-net
+      - name: Start ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        run: |
+          docker run \
+            --rm \
+            --name ${PROJECT_WORKER_CONTAINER} \
+            --network omes-project-net \
+            -p 7233:7233 \
+            ${PROJECT_IMAGE_TAG} \
+            --run-id ${PROJECT_RUN_ID} \
+            --embedded-server-address 0.0.0.0:7233 &
+      - name: Wait for embedded server
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
+      - name: Run project scenario against ${{ matrix.sdk }} ${{ matrix.project }} worker image
+        run: |
+          docker run --rm \
+            --network omes-project-net \
+            ${PROJECT_IMAGE_TAG} \
+            run-scenario \
+            --scenario project \
+            --run-id ${PROJECT_RUN_ID} \
+            --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
+            --iterations 1 \
+            --connect-timeout 30s
+      - name: Print project worker logs
+        if: failure()
+        run: |
+          docker logs ${PROJECT_WORKER_CONTAINER} || true
+      - name: Stop ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        if: always()
+        run: |
+          docker stop ${PROJECT_WORKER_CONTAINER} || true
+      - name: Remove Docker network
+        if: always()
+        run: |
+          docker network rm omes-project-net || true
 
   test-kitchensink:
     runs-on: ubuntu-latest

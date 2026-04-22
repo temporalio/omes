@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 
 import grpc  # type: ignore[import]
@@ -169,7 +170,11 @@ async def _serve(
     server.add_insecure_port(f"0.0.0.0:{port}")
     await server.start()
     logging.getLogger(__name__).info("Project server listening on port %d", port)
-    await server.wait_for_termination()
+    try:
+        with suppress(asyncio.CancelledError):
+            await server.wait_for_termination()
+    finally:
+        await server.stop(0)
 
 
 def run_project_server_cli(
@@ -180,4 +185,7 @@ def run_project_server_cli(
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8080, help="gRPC listen port")
     args = parser.parse_args(argv)
-    asyncio.run(_serve(handlers, client_factory, args.port))
+    try:
+        asyncio.run(_serve(handlers, client_factory, args.port))
+    except KeyboardInterrupt:
+        pass

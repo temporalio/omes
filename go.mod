@@ -13,6 +13,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20260331150122-757294c2a9e9
+	github.com/temporalio/omes/workers/go/projects/harness/api v0.0.0-00010101000000-000000000000
 	go.temporal.io/api v1.62.7
 	go.temporal.io/sdk v1.42.0
 	go.uber.org/zap v1.27.0
@@ -70,4 +71,5 @@ require (
 replace (
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20260324215619-e5868d9ba03f
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20260324215619-e5868d9ba03f
+	github.com/temporalio/omes/workers/go/projects/harness/api => ./workers/go/projects/harness/api
 )
