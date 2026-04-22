@@ -9,8 +9,7 @@ class HarnessWorkerTest < Minitest::Test
     :on_run,
     :run_calls,
     :shutdown_calls,
-    :received_shutdown_signals,
-    keyword_init: true
+    :received_shutdown_signals
   ) do
     def run(shutdown_signals: [])
       self.run_calls += 1
@@ -79,7 +78,7 @@ class HarnessWorkerTest < Minitest::Test
       received_shutdown_signals: nil
     )
     successful_worker = FakeRunnableWorker.new(
-      on_run: -> { nil },
+      on_run: -> {},
       run_calls: 0,
       shutdown_calls: 0,
       received_shutdown_signals: nil
@@ -88,11 +87,9 @@ class HarnessWorkerTest < Minitest::Test
     error = with_stubbed_run_all(lambda do |*workers, **kwargs|
       first_error = nil
       workers.each do |worker|
-        begin
-          worker.run(shutdown_signals: kwargs[:shutdown_signals])
-        rescue StandardError => raised_error
-          first_error ||= raised_error
-        end
+        worker.run(shutdown_signals: kwargs[:shutdown_signals])
+      rescue StandardError => e
+        first_error ||= e
       end
       workers.each(&:shutdown)
       raise first_error if first_error

@@ -228,6 +228,11 @@ func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	fmt.Println("Type checking Ruby worker...")
+	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "steep", "check"); err != nil {
+		return err
+	}
+
 	fmt.Println("✅ Ruby lint-and-format completed successfully!")
 	return nil
 }

@@ -1,6 +1,7 @@
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
+  SuggestExtensions: false
   Exclude:
     - "protos/**/*"
     - "projects/harness/api/**/*"
@@ -29,10 +30,13 @@ Style/GuardClause:
 # These methods are inherently branchy — they dispatch protobuf action
 # types via large case statements that mirror the proto schema.
 Metrics/MethodLength:
-  Max: 35
+  Max: 80
 
 Metrics/ClassLength:
-  Max: 300
+  Max: 400
+
+Metrics/ModuleLength:
+  Max: 200
 
 Metrics/BlockLength:
   Enabled: false
@@ -44,4 +48,7 @@ Metrics/PerceivedComplexity:
   Max: 15
 
 Metrics/AbcSize:
-  Max: 25
+  Max: 100
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false

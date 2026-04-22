@@ -6,12 +6,11 @@ require_relative 'client'
 require_relative 'helpers'
 
 module Harness
-  WorkerContext = Struct.new(
+  WorkerContext = Data.define(
     :logger,
     :task_queue,
     :err_on_unimplemented,
-    :worker_kwargs,
-    keyword_init: true
+    :worker_kwargs
   )
 
   module WorkerCLI
@@ -25,7 +24,10 @@ module Harness
       options = default_options
       build_parser(options).parse!(Array(argv).dup)
 
-      raise ArgumentError, 'Task queue suffix start after end' if options[:task_queue_suffix_index_start] > options[:task_queue_suffix_index_end]
+      if options[:task_queue_suffix_index_start] > options[:task_queue_suffix_index_end]
+        raise ArgumentError,
+              'Task queue suffix start after end'
+      end
 
       logger = Helpers.configure_logger(options[:log_level], options[:log_encoding])
       config = ClientHelpers.build_client_config(
@@ -70,14 +72,26 @@ module Harness
         opts.banner = 'Usage: runner.rb [options]'
 
         opts.on('-q', '--task-queue QUEUE', 'Task queue to use') { |value| options[:task_queue] = value }
-        opts.on('--task-queue-suffix-index-start N', Integer) { |value| options[:task_queue_suffix_index_start] = value }
+        opts.on('--task-queue-suffix-index-start N', Integer) do |value|
+          options[:task_queue_suffix_index_start] = value
+        end
         opts.on('--task-queue-suffix-index-end N', Integer) { |value| options[:task_queue_suffix_index_end] = value }
-        opts.on('--max-concurrent-activity-pollers N', Integer) { |value| options[:max_concurrent_activity_pollers] = value }
-        opts.on('--max-concurrent-workflow-pollers N', Integer) { |value| options[:max_concurrent_workflow_pollers] = value }
-        opts.on('--activity-poller-autoscale-max N', Integer) { |value| options[:activity_poller_autoscale_max] = value }
-        opts.on('--workflow-poller-autoscale-max N', Integer) { |value| options[:workflow_poller_autoscale_max] = value }
+        opts.on('--max-concurrent-activity-pollers N', Integer) do |value|
+          options[:max_concurrent_activity_pollers] = value
+        end
+        opts.on('--max-concurrent-workflow-pollers N', Integer) do |value|
+          options[:max_concurrent_workflow_pollers] = value
+        end
+        opts.on('--activity-poller-autoscale-max N', Integer) do |value|
+          options[:activity_poller_autoscale_max] = value
+        end
+        opts.on('--workflow-poller-autoscale-max N', Integer) do |value|
+          options[:workflow_poller_autoscale_max] = value
+        end
         opts.on('--max-concurrent-activities N', Integer) { |value| options[:max_concurrent_activities] = value }
-        opts.on('--max-concurrent-workflow-tasks N', Integer) { |value| options[:max_concurrent_workflow_tasks] = value }
+        opts.on('--max-concurrent-workflow-tasks N', Integer) do |value|
+          options[:max_concurrent_workflow_tasks] = value
+        end
         opts.on('--activities-per-second N', Float) { |value| options[:activities_per_second] = value }
         opts.on('--err-on-unimplemented BOOL') { |value| options[:err_on_unimplemented] = parse_bool(value) }
         opts.on('--log-level LEVEL') { |value| options[:log_level] = value }
@@ -123,14 +137,20 @@ module Harness
         worker_kwargs[:max_concurrent_workflow_task_polls] = options[:max_concurrent_workflow_pollers]
       end
 
-      worker_kwargs[:max_concurrent_activities] = options[:max_concurrent_activities] if options[:max_concurrent_activities]
-      worker_kwargs[:max_concurrent_workflow_tasks] = options[:max_concurrent_workflow_tasks] if options[:max_concurrent_workflow_tasks]
+      if options[:max_concurrent_activities]
+        worker_kwargs[:max_concurrent_activities] =
+          options[:max_concurrent_activities]
+      end
+      if options[:max_concurrent_workflow_tasks]
+        worker_kwargs[:max_concurrent_workflow_tasks] =
+          options[:max_concurrent_workflow_tasks]
+      end
       worker_kwargs[:max_activities_per_second] = options[:activities_per_second] if options[:activities_per_second]
       worker_kwargs
     end
 
     def parse_bool(value)
-      return value if value == true || value == false
+      return value if [true, false].include?(value)
 
       %w[true 1 yes].include?(value.to_s.downcase)
     end

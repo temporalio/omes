@@ -4,27 +4,16 @@ require 'temporalio/client'
 require 'temporalio/runtime'
 
 module Harness
-  ClientConfig = Struct.new(
+  ClientConfig = Data.define(
     :target_host,
     :namespace,
     :api_key,
     :tls,
-    :runtime,
-    keyword_init: true
+    :runtime
   )
 
   module ClientHelpers
     module_function
-
-    def default_client_factory(config)
-      Temporalio::Client.connect(
-        config.target_host,
-        config.namespace,
-        api_key: config.api_key,
-        tls: config.tls,
-        runtime: config.runtime
-      )
-    end
 
     def build_client_config(
       server_address:,
@@ -107,6 +96,12 @@ module Harness
   end
 
   def self.default_client_factory(config)
-    ClientHelpers.default_client_factory(config)
+    Temporalio::Client.connect(
+      config.target_host,
+      config.namespace,
+      api_key: config.api_key,
+      tls: config.tls,
+      runtime: config.runtime
+    )
   end
 end

@@ -12,8 +12,7 @@ module Harness
       'ERROR' => Logger::ERROR,
       'WARN' => Logger::WARN,
       'INFO' => Logger::INFO,
-      'DEBUG' => Logger::DEBUG,
-      'NOTSET' => Logger::DEBUG
+      'DEBUG' => Logger::DEBUG
     }.freeze
 
     module_function

@@ -5,5 +5,7 @@ gemspec
 group :development do
   gem 'grpc-tools', '~> 1.80'
   gem 'minitest'
+  gem 'rbs', '~> 3.10'
   gem 'rubocop', '~> 1.0'
+  gem 'steep', '~> 1.10'
 end

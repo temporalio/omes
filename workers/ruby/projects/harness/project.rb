@@ -4,44 +4,46 @@ require 'logger'
 require 'optparse'
 require 'grpc'
 
-$LOAD_PATH.unshift(File.expand_path('..', __dir__)) unless $LOAD_PATH.include?(File.expand_path('..', __dir__))
+harness_projects_dir = File.expand_path('..', __dir__ || '.')
+$LOAD_PATH.unshift(harness_projects_dir) unless $LOAD_PATH.include?(harness_projects_dir)
 
 require_relative 'client'
 require_relative 'api/api_pb'
 require_relative 'api/api_services_pb'
 
 module Harness
-  ProjectRunMetadata = Struct.new(
+  ProjectRunMetadata = Data.define(
     :run_id,
-    :execution_id,
-    keyword_init: true
+    :execution_id
   )
 
-  ProjectInitContext = Struct.new(
+  ProjectInitContext = Data.define(
     :logger,
     :run,
     :task_queue,
-    :config_json,
-    keyword_init: true
+    :config_json
   )
 
-  ProjectExecuteContext = Struct.new(
+  ProjectExecuteContext = Data.define(
     :logger,
     :run,
     :task_queue,
     :iteration,
-    :payload,
-    keyword_init: true
+    :payload
   )
 
-  ProjectHandlers = Struct.new(
+  ProjectHandlers = Data.define(
     :execute,
-    :init,
-    keyword_init: true
-  )
+    :init
+  ) do
+    def initialize(execute:, init: nil)
+      super
+    end
+  end
 
   class ProjectServiceServer < Temporal::Omes::Projects::V1::ProjectService::Service
     def initialize(handlers, client_factory)
+      super()
       @handlers = handlers
       @client_factory = client_factory
       @client = nil
@@ -50,13 +52,25 @@ module Harness
     end
 
     def init(request, _call)
-      raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'task_queue required') if request.task_queue.to_s.empty?
-      raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'execution_id required') if request.execution_id.to_s.empty?
+      if request.task_queue.to_s.empty?
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT,
+                          'task_queue required')
+      end
+      if request.execution_id.to_s.empty?
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT,
+                          'execution_id required')
+      end
       raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'run_id required') if request.run_id.to_s.empty?
 
       connect_options = request.connect_options || Temporal::Omes::Projects::V1::ConnectOptions.new
-      raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'server_address required') if connect_options.server_address.to_s.empty?
-      raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'namespace required') if connect_options.namespace.to_s.empty?
+      if connect_options.server_address.to_s.empty?
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT,
+                          'server_address required')
+      end
+      if connect_options.namespace.to_s.empty?
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT,
+                          'namespace required')
+      end
 
       begin
         config = ClientHelpers.build_client_config(
@@ -69,14 +83,14 @@ module Harness
           tls_server_name: connect_options.tls_server_name.to_s.empty? ? nil : connect_options.tls_server_name,
           disable_host_verification: connect_options.disable_host_verification
         )
-      rescue ArgumentError => error
-        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, error.message)
+      rescue ArgumentError => e
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, e.message)
       end
 
       begin
         client = @client_factory.call(config)
-      rescue StandardError => error
-        raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "failed to create client: #{error}")
+      rescue StandardError => e
+        raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "failed to create client: #{e}")
       end
 
       run = ProjectRunMetadata.new(
@@ -95,21 +109,25 @@ module Harness
               config_json: request.config_json
             )
           )
-        rescue StandardError => error
-          raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "init handler failed: #{error}")
+        rescue StandardError => e
+          raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "init handler failed: #{e}")
         end
       end
 
       @client = client
       @run = run
       Temporal::Omes::Projects::V1::InitResponse.new
-    rescue GRPC::BadStatus
-      raise
     end
 
     def execute(request, _call)
-      raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT, 'task_queue required') if request.task_queue.to_s.empty?
-      raise grpc_status(GRPC::Core::StatusCodes::FAILED_PRECONDITION, 'Init must be called before Execute') if @client.nil? || @run.nil?
+      if request.task_queue.to_s.empty?
+        raise grpc_status(GRPC::Core::StatusCodes::INVALID_ARGUMENT,
+                          'task_queue required')
+      end
+      if @client.nil? || @run.nil?
+        raise grpc_status(GRPC::Core::StatusCodes::FAILED_PRECONDITION,
+                          'Init must be called before Execute')
+      end
 
       @handlers.execute.call(
         @client,
@@ -122,10 +140,10 @@ module Harness
         )
       )
       Temporal::Omes::Projects::V1::ExecuteResponse.new
-    rescue GRPC::BadStatus
-      raise
-    rescue StandardError => error
-      raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "execute handler failed: #{error}")
+    rescue StandardError => e
+      raise if e.is_a?(GRPC::BadStatus)
+
+      raise grpc_status(GRPC::Core::StatusCodes::INTERNAL, "execute handler failed: #{e}")
     end
 
     private
@@ -133,7 +151,6 @@ module Harness
     def grpc_status(code, details)
       GRPC::BadStatus.new_status_exception(code, details)
     end
-
   end
 
   module ProjectCLI
