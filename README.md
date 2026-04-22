@@ -192,7 +192,7 @@ See the GHA workflows for more information.
 
 ## Specific Scenarios
 
-### Project (Python only)
+### Project
 
 The `project` scenario is different from the built-in kitchen-sink style scenarios. It is intended
 to be a more ergnomomic way of writing load tests, akin to writing a Temporal sample.
@@ -209,8 +209,8 @@ As such, it's a **good fit** if you:
 
 and are not restricted by the **current limitations**:
 - Python is the only implemented project language right now
-- the load pattern is limited to a steady-rate executor (i.e. "run 'x' times at 'y' rate"), more nuanced
-  load patterns will need to create their own scenario + executor (the existing method)
+- the load pattern is limited to a steady-rate executor (i.e. "run 'x' times or run for 'y' duration),
+  more nuanced load patterns will need to create their own scenario + executor (the existing method)
 
 #### Writing your first project
 

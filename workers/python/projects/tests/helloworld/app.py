@@ -17,7 +17,7 @@ def app() -> App:
     return App(
         worker=build_worker,
         client_factory=default_client_factory,
-        project=ProjectHandlers(execute=execute_project),
+        project=ProjectHandlers(execute=execute_project_iteration),
     )
 
 
@@ -30,7 +30,7 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
     )
 
 
-async def execute_project(client: Client, context: ProjectExecuteContext) -> None:
+async def execute_project_iteration(client: Client, context: ProjectExecuteContext) -> None:
     handle = await client.start_workflow(
         HelloWorldWorkflow.run,
         "World",
