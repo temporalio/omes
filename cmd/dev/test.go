@@ -82,6 +82,11 @@ func runTestWorker(ctx context.Context, language string) error {
 			return err
 		}
 	}
+	if language == "dotnet" {
+		if err := runDotnetHarnessTests(ctx, repoDir); err != nil {
+			return err
+		}
+	}
 	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
 }
 
@@ -92,6 +97,16 @@ func runPythonHarnessTests(ctx context.Context, repoDir string) error {
 		return fmt.Errorf("failed Python harness tests: %w", err)
 	}
 	fmt.Println("✅ Python harness tests completed successfully!")
+	return nil
+}
+
+func runDotnetHarnessTests(ctx context.Context, repoDir string) error {
+	harnessTestsProj := filepath.Join(repoDir, "workers", "dotnet", "projects", "harness", "tests", "HarnessTests.csproj")
+	fmt.Println("Running .NET harness tests...")
+	if err := runCommandInDir(ctx, repoDir, "dotnet", "test", harnessTestsProj); err != nil {
+		return fmt.Errorf("failed .NET harness tests: %w", err)
+	}
+	fmt.Println("✅ .NET harness tests completed successfully!")
 	return nil
 }
 
