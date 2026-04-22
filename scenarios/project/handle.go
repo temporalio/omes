@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultClientHost               = "localhost"
-	defaultClientReadyTimeout       = 3 * time.Second
+	defaultClientReadyTimeout       = 5 * time.Second
 	defaultClientReadyCheckInterval = 100 * time.Millisecond
 )
 
