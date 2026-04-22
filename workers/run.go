@@ -126,6 +126,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.SdkOptions.Language == clioptions.LangPython {
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
+	} else if r.SdkOptions.Language == clioptions.LangDotNet {
+		// The dotnet harness uses explicit subcommands like the Python harness.
+		args = append(args, "worker")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
 		// Node also needs module
 		args = append(args, "./tslib/omes.js")

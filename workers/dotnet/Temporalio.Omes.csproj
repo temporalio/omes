@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFramework>net8.0</TargetFramework>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -9,11 +9,6 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
-    </PropertyGroup>
-
-    <!-- When testing/linting, treat this as a library so no Main method is needed. -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Library'">
-        <OutputType>Library</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,6 +23,16 @@
 <!--            <PrivateAssets>all</PrivateAssets>-->
         </PackageReference>
         <PackageReference Include="Google.Protobuf" Version="3.26.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="projects/harness/ProjectHarness.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="App.cs" />
+        <Compile Include="KitchenSinkApp.cs" />
+        <Compile Include="Temporalio.Omes/**/*.cs" />
     </ItemGroup>
 
     <ItemGroup>
