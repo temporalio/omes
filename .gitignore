@@ -23,6 +23,7 @@ workers/dotnet/Temporalio.Omes.temp.csproj
 workers/python/**/__pycache__/
 workers/*/omes-temp-*/
 workers/*/prepared/
+workers/**/project-build-*/
 
 tsconfig.tsbuildinfo
 
