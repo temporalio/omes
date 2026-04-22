@@ -6,8 +6,16 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowJs": true,
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./lib"
   },
-  "include": ["src/**/*.ts", "src/protos/json-module.js", "src/protos/root.js"]
+  "include": [
+    "src/**/*.ts",
+    "projects/**/*.ts",
+    "src/protos/json-module.js",
+    "src/protos/root.js"
+  ],
+  "exclude": [
+    "projects/harness/tests"
+  ]
 }

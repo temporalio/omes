@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "scripts": {
     "build": "npm run proto-gen && tsc --build",
+    "build:test": "rm -rf lib-test && tsc --project tsconfig.test.json",
     "build.watch": "tsc --build --watch",
-    "clean": "rm -rf node_modules dist build",
+    "clean": "rm -rf node_modules dist build lib-test",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
-    "lint-ci": "eslint . && prettier --check .",
+    "lint-ci": "npm run typecheck && npm run typecheck:test && eslint . && prettier --check .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "test": "npm run build && npm run build:test && node --test lib-test/projects/harness/tests/project.test.js lib-test/projects/harness/tests/worker.test.js",
+    "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --project tsconfig.test.json --noEmit"
   },
   "nodemonConfig": {
     "execMap": {
@@ -21,21 +24,26 @@
     ]
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
     "@temporalio/activity": "^1.15.0",
     "@temporalio/client": "^1.15.0",
     "@temporalio/worker": "^1.15.0",
     "@temporalio/workflow": "^1.15.0",
     "commander": "^11.1.0",
+    "google-protobuf": "^3.21.4",
     "long": "^5.2.3",
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@temporalio/testing": "^1.15.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.10.0",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^9.1.0",
+    "grpc_tools_node_protoc_ts": "^5.3.3",
+    "grpc-tools": "^1.13.1",
     "nodemon": "^2.0.12",
     "prettier": "^3.1.1",
     "protobufjs": "7.5.1",
