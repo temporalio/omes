@@ -44,7 +44,7 @@ COPY ${SDK_DIR} ./repo
 COPY workers/dotnet ./workers/dotnet
 
 # Prepare the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION" --log-level trace
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language cs --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a distroless "run" container
 FROM --platform=linux/$TARGETARCH mcr.microsoft.com/dotnet/sdk:8.0-jammy

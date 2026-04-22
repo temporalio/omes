@@ -17,8 +17,7 @@ public sealed record WorkerContext(
 
 public delegate TemporalWorker WorkerFactory(ITemporalClient client, WorkerContext context);
 
-// This small generic seam exists only to let tests substitute fake worker objects, which is the
-// closest .NET analogue to Python patching `_run_workers`.
+// This small generic seam exists only to let tests substitute fake worker objects.
 internal delegate TWorker WorkerFactoryCore<out TWorker>(ITemporalClient client, WorkerContext context);
 
 internal static class WorkerHarness

@@ -7,7 +7,7 @@ public sealed record App(
 {
     public static Task<int> RunAsync(App app, string[] args)
     {
-        if (args.Length == 0 || args[0] == "worker")
+        if (args[0] == "worker")
         {
             var workerArgs = args.Length > 0 && args[0] == "worker" ? args[1..] : args;
             return WorkerHarness.RunAsync(app, workerArgs);

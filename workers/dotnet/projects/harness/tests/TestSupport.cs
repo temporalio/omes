@@ -3,8 +3,6 @@ using System.Runtime.CompilerServices;
 using Temporalio.Client;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
 internal static class HarnessTestSupport
 {
     public static ITemporalClient CreateStrictTemporalClientProbe() =>
