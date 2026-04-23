@@ -17,10 +17,6 @@ module Harness
     module_function
 
     def run_cli(worker_factory, client_factory, argv)
-      run(worker_factory, client_factory, argv)
-    end
-
-    def run(worker_factory, client_factory, argv)
       options = default_options
       build_parser(options).parse!(Array(argv).dup)
 

@@ -3,8 +3,8 @@ AllCops:
   NewCops: enable
   SuggestExtensions: false
   Exclude:
+    - "harness/**/*"
     - "protos/**/*"
-    - "projects/harness/api/**/*"
     - "vendor/**/*"
     - "omes-temp-*/**/*"
 
@@ -30,13 +30,10 @@ Style/GuardClause:
 # These methods are inherently branchy — they dispatch protobuf action
 # types via large case statements that mirror the proto schema.
 Metrics/MethodLength:
-  Max: 80
+  Max: 35
 
 Metrics/ClassLength:
-  Max: 400
-
-Metrics/ModuleLength:
-  Max: 200
+  Max: 300
 
 Metrics/BlockLength:
   Enabled: false
@@ -48,7 +45,7 @@ Metrics/PerceivedComplexity:
   Max: 15
 
 Metrics/AbcSize:
-  Max: 100
+  Max: 25
 
 Metrics/ParameterLists:
   CountKeywordArgs: false

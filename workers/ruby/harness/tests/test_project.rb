@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
+require 'bundler/setup'
 require 'minitest/autorun'
 require 'securerandom'
 require 'temporalio/testing/workflow_environment'
 require 'temporalio/worker'
 require 'temporalio/workflow'
 require 'grpc'
-require_relative '../../harness'
+require 'harness'
 
 class HarnessProjectTest < Minitest::Test
   class ProjectHarnessEchoWorkflow < Temporalio::Workflow::Definition
