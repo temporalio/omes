@@ -116,7 +116,7 @@ func runDotnetHarnessTests(ctx context.Context, repoDir string) error {
 }
 
 func runTypeScriptHarnessTests(ctx context.Context, repoDir string) error {
-	harnessDir := filepath.Join(repoDir, "workers", "typescript")
+	harnessDir := filepath.Join(repoDir, "workers", "typescript", "harness")
 	fmt.Println("Running TypeScript harness tests...")
 	if err := runCommandInDir(ctx, harnessDir, "npm", "run", "test"); err != nil {
 		return fmt.Errorf("failed TypeScript harness tests: %w", err)

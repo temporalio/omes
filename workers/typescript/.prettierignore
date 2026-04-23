@@ -1,6 +1,4 @@
 lib
 src/protos/
-harness/dist/
-harness/dist-test/
-harness/src/generated/
+harness/
 omes-temp-*

@@ -8,45 +8,39 @@ const restrictedBuiltins = builtinModules
   .filter((m) => !ALLOWED_NODE_BUILTINS.has(m))
   .flatMap((m) => [m, `node:${m}`]);
 
-const typeCheckedRules = {
-  '@typescript-eslint/no-deprecated': 'warn',
-  '@typescript-eslint/no-explicit-any': 'off',
-  '@typescript-eslint/no-floating-promises': 'error',
-  '@typescript-eslint/no-unused-vars': [
-    'warn',
-    {
-      argsIgnorePattern: '^_',
-      caughtErrorsIgnorePattern: '^_',
-      varsIgnorePattern: '^_',
-    },
-  ],
-  'object-shorthand': ['error', 'always'],
-};
-
 export default tseslint.config(
   {
     ignores: [
       '**/node_modules/**',
       '**/lib/**',
-      '**/lib-test/**',
       '**/*.js',
       '**/*.mjs',
       '**/*.cjs',
-      'harness/src/generated/**',
       'src/protos/*',
       'protogen.js',
       'omes-temp-*',
     ],
   },
   {
-    files: ['src/**/*.ts', 'harness/src/**/*.ts', 'harness/tests/**/*.ts'],
+    files: ['src/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettierConfig],
     languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.json', './harness/tsconfig.json', './harness/tsconfig.test.json'],
-      },
+      parserOptions: { project: ['./tsconfig.json'] },
     },
-    rules: typeCheckedRules,
+    rules: {
+      '@typescript-eslint/no-deprecated': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      'object-shorthand': ['error', 'always'],
+    },
   },
   {
     files: ['src/workflows.ts', 'src/workflows-*.ts', 'src/workflows/*.ts'],

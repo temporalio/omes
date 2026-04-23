@@ -2,16 +2,14 @@
   "name": "omes",
   "version": "0.1.0",
   "scripts": {
-    "proto-gen:harness": "npm --prefix harness run proto-gen",
-    "build": "npm run proto-gen && npm run proto-gen:harness && tsc --build",
-    "build.watch": "npm run proto-gen && npm run proto-gen:harness && tsc --build --watch",
-    "clean": "rm -rf node_modules lib dist build harness/dist harness/dist-test harness/src/generated tsconfig.tsbuildinfo",
+    "build": "npm run proto-gen && tsc --build",
+    "build.watch": "tsc --build --watch",
+    "clean": "rm -rf node_modules dist build",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
-    "lint-ci": "npm run typecheck && eslint . && prettier --check .",
+    "lint-ci": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "test": "npm run build && npm --prefix harness test",
-    "typecheck": "npm run proto-gen && npm run proto-gen:harness && tsc --build --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "nodemonConfig": {
     "execMap": {
@@ -33,7 +31,6 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.15.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
