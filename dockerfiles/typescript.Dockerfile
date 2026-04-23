@@ -55,6 +55,9 @@ RUN npm install -g pnpm
 # hadolint ignore=DL3003
 RUN cd workers/typescript && npm install && npm run proto-gen
 
+# Build typescript harness (install and generate proto files)
+RUN cd harness && npm install && npm run build
+
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 

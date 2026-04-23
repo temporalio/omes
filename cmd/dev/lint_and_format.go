@@ -174,6 +174,23 @@ func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error 
 		return err
 	}
 
+	harnessDir := workerDir + "/harness"
+
+	fmt.Println("Formatting TypeScript harness...")
+	if err := runCommandInDir(ctx, harnessDir, "npm", "run", "format"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting TypeScript harness...")
+	if err := runCommandInDir(ctx, harnessDir, "npm", "run", "lint"); err != nil {
+		return err
+	}
+
+	fmt.Println("Compiling TypeScript harness...")
+	if err := runCommandInDir(ctx, harnessDir, "npm", "run", "typecheck"); err != nil {
+		return err
+	}
+
 	fmt.Println("✅ TypeScript lint-and-format completed successfully!")
 	return nil
 }

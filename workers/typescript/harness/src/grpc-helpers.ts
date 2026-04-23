@@ -16,12 +16,9 @@ export type ProjectServiceClientConstructor = new (
 // Packaged consumers (e.g. temp worker builds in cmd/dev test) do not have repo-relative
 // access to workers/proto, so the built harness package must carry a copy of api.proto next
 // to the compiled output under dist*/proto.
-const packageDefinition = protoLoader.loadSync(
-  path.resolve(__dirname, '../proto/api.proto'),
-  {
-    longs: Number,
-  },
-);
+const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, '../proto/api.proto'), {
+  longs: Number,
+});
 const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
 
 export const projectServiceDefinition: ProjectServiceDefinition =

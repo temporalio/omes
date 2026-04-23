@@ -18,6 +18,9 @@
     "copy-proto": "node ./copy-proto.js",
     "build": "npm run proto-gen && tsc --build",
     "build:test": "npm run proto-gen && tsc --project tsconfig.test.json",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "lint-ci": "npm run typecheck && npm run lint && prettier --check .",
     "prepare": "npm run build",
     "test": "npm run build:test && node --test dist-test/tests/project.test.js dist-test/tests/worker.test.js",
     "typecheck": "npm run proto-gen && tsc --noEmit",
@@ -43,8 +46,13 @@
     "@temporalio/testing": "^1.15.0",
     "@temporalio/worker": "^1.15.0",
     "@temporalio/workflow": "^1.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.10.0",
+    "@typescript-eslint/parser": "^8.10.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
+    "eslint": "^9.26.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.1.1",
     "typescript": "^5.9.3"
   }
 }

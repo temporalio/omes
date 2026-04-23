@@ -203,6 +203,12 @@ func installNode(ctx context.Context) error {
 	}
 	fmt.Println("✅ TypeScript worker dependencies installed successfully!")
 
+	harnessDir := workerDir + "/harness"
+	fmt.Println("Installing TypeScript harness dependencies...")
+	if err := runCommandInDir(ctx, harnessDir, "npm", "ci"); err != nil {
+		return err
+	}
+	fmt.Println("✅ TypeScript harnessDir dependencies installed successfully!")
 	return nil
 }
 
