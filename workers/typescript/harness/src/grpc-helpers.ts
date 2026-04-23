@@ -13,9 +13,11 @@ export type ProjectServiceClientConstructor = new (
   options?: Partial<grpc.ClientOptions>,
 ) => ProjectServiceClient;
 
-// This harness is repo-internal, so the runtime can load the source proto directly.
+// Packaged consumers (e.g. temp worker builds in cmd/dev test) do not have repo-relative
+// access to workers/proto, so the built harness package must carry a copy of api.proto next
+// to the compiled output under dist*/proto.
 const packageDefinition = protoLoader.loadSync(
-  path.resolve(__dirname, '../../../../proto/harness/api/api.proto'),
+  path.resolve(__dirname, '../proto/api.proto'),
   {
     longs: Number,
   },
