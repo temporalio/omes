@@ -4,9 +4,6 @@ require 'logger'
 require 'optparse'
 require 'grpc'
 
-harness_projects_dir = File.expand_path('..', __dir__ || '.')
-$LOAD_PATH.unshift(harness_projects_dir) unless $LOAD_PATH.include?(harness_projects_dir)
-
 require_relative 'client'
 require_relative 'api/api_pb'
 require_relative 'api/api_services_pb'

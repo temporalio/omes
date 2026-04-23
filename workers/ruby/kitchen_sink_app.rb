@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
+require 'harness'
 require 'temporalio/worker'
 require_relative 'activities'
 require_relative 'kitchen_sink'
-require_relative 'projects/harness'
 
 module KitchenSinkApp
   module_function

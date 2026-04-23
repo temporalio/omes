@@ -21,6 +21,7 @@ omes.sln
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/
+workers/**/.rubocop_cache/
 workers/*/omes-temp-*/
 workers/*/prepared/
 workers/**/project-build-*/

@@ -224,6 +224,13 @@ func installRuby(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("✅ Ruby worker dependencies installed successfully!")
+
+	harnessDir := targetDir + "/harness"
+	fmt.Println("Installing Ruby harness dependencies...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "install"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Ruby harness dependencies installed successfully!")
 	return nil
 }
 
