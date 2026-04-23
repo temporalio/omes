@@ -21,6 +21,9 @@ omes.sln
 workers/dotnet/Temporalio.Omes.temp.csproj
 
 workers/python/**/__pycache__/
+workers/typescript/harness/dist/
+workers/typescript/harness/dist-test/
+workers/typescript/harness/src/generated/
 workers/*/omes-temp-*/
 workers/*/prepared/
 workers/**/project-build-*/
@@ -28,4 +31,3 @@ workers/**/project-build-*/
 tsconfig.tsbuildinfo
 
 temporal-omes
-.omx/

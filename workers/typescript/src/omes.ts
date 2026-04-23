@@ -1,26 +1,14 @@
-import {
-  NativeConnection,
-  Runtime,
-  Worker,
-} from '@temporalio/worker';
+import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Client } from '@temporalio/client';
 import { createActivities } from './activities';
-import {
-  ClientConfig,
-  ClientFactory,
-} from '../projects/harness/client';
-import { run as runApp, App } from '../projects/harness/main';
-import {
-  WorkerContext,
-} from '../projects/harness/worker';
+import type { ClientConfig, App, WorkerContext } from '@temporalio/omes-project-harness';
+import { run as runApp } from '@temporalio/omes-project-harness';
 
 const payloadConverterPath = require.resolve('./payload-converter');
 
-export const kitchenSinkClientFactory: ClientFactory = async (
-  config: ClientConfig,
-): Promise<Client> => {
-  // Use native connection backed client because resulting client
-  // is also used for worker.
+async function kitchenSinkClientFactory(config: ClientConfig): Promise<Client> {
+  // Use native connection backed client. This client is also used
+  // for the worker(s).
   Runtime.install(config.runtimeOptions);
   const connection = await NativeConnection.connect({
     address: config.targetHost,
@@ -35,24 +23,7 @@ export const kitchenSinkClientFactory: ClientFactory = async (
       payloadConverterPath,
     },
   });
-};
-
-async function main() {
-  const app: App = {
-    worker: buildWorker,
-    clientFactory: kitchenSinkClientFactory,
-  };
-  await runApp(app);
 }
-
-main()
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
 
 async function buildWorker(client: Client, context: WorkerContext): Promise<Worker> {
   const connection = client.connection;
@@ -72,3 +43,20 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
     ...context.workerOptions,
   });
 }
+
+async function main() {
+  const app: App = {
+    worker: buildWorker,
+    clientFactory: kitchenSinkClientFactory,
+  };
+  await runApp(app);
+}
+
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

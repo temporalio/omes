@@ -12,9 +12,8 @@ export async function run(
   app: App,
   argv: readonly string[] = process.argv.slice(2),
 ): Promise<void> {
-  if (argv.length === 0 || argv[0] === 'worker') {
-    const workerArgv = argv[0] === 'worker' ? argv.slice(1) : argv;
-    await runWorkerCli(app.worker, app.clientFactory, workerArgv);
+  if (argv[0] === 'worker') {
+    await runWorkerCli(app.worker, app.clientFactory, argv.slice(1));
     return;
   }
 

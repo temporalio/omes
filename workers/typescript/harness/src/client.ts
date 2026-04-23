@@ -26,6 +26,7 @@ export type ClientFactory = (config: ClientConfig) => Promise<Client>;
 
 export async function defaultClientFactory(config: ClientConfig): Promise<Client> {
   Runtime.install(config.runtimeOptions);
+  // Use native connection backed client. This client is also used for the worker(s).
   const connection = await NativeConnection.connect({
     address: config.targetHost,
     apiKey: config.apiKey,
@@ -57,7 +58,9 @@ function buildApiKey(authHeader: string): string | undefined {
 
 function buildTlsConfig(options: BuildClientConfigOptions): TLSConfig | undefined {
   if (options.disable_host_verification) {
-    process.emitWarning('disable_host_verification is not supported by the TypeScript SDK; ignoring');
+    process.emitWarning(
+      'disable_host_verification is not supported by the TypeScript SDK; ignoring',
+    );
   }
 
   if (options.tls_cert_path) {
@@ -81,9 +84,7 @@ function buildTlsConfig(options: BuildClientConfigOptions): TLSConfig | undefine
     return undefined;
   }
 
-  return options.tls_server_name
-    ? { serverNameOverride: options.tls_server_name }
-    : {};
+  return options.tls_server_name ? { serverNameOverride: options.tls_server_name } : {};
 }
 
 function buildRuntimeOptions(promListenAddress: string | undefined): RuntimeOptions {

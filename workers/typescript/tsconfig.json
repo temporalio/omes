@@ -2,20 +2,15 @@
   "extends": "@tsconfig/node24/tsconfig.json",
   "version": "5.9.0",
   "compilerOptions": {
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
+    "incremental": true,
     "sourceMap": true,
     "allowJs": true,
-    "rootDir": ".",
+    "rootDir": "./src",
     "outDir": "./lib"
   },
-  "include": [
-    "src/**/*.ts",
-    "projects/**/*.ts",
-    "src/protos/json-module.js",
-    "src/protos/root.js"
-  ],
-  "exclude": [
-    "projects/harness/tests"
-  ]
+  "include": ["src/**/*.ts", "src/protos/json-module.js", "src/protos/root.js"],
+  "references": [{ "path": "./harness" }]
 }

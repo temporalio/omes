@@ -32,26 +32,19 @@ export default tseslint.config(
       '**/*.js',
       '**/*.mjs',
       '**/*.cjs',
+      'harness/src/generated/**',
       'src/protos/*',
-      'projects/harness/api/**',
       'protogen.js',
       'omes-temp-*',
     ],
   },
   {
-    files: ['src/**/*.ts', 'projects/**/*.ts'],
-    ignores: ['projects/harness/tests/**/*.ts'],
+    files: ['src/**/*.ts', 'harness/src/**/*.ts', 'harness/tests/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettierConfig],
     languageOptions: {
-      parserOptions: { project: ['./tsconfig.json'] },
-    },
-    rules: typeCheckedRules,
-  },
-  {
-    files: ['projects/harness/tests/**/*.ts'],
-    extends: [js.configs.recommended, ...tseslint.configs.recommended, prettierConfig],
-    languageOptions: {
-      parserOptions: { project: ['./tsconfig.test.json'] },
+      parserOptions: {
+        project: ['./tsconfig.json', './harness/tsconfig.json', './harness/tsconfig.test.json'],
+      },
     },
     rules: typeCheckedRules,
   },

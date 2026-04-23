@@ -1,13 +1,13 @@
 import { promisify } from 'node:util';
 import * as grpc from '@grpc/grpc-js';
-import { Client, isGrpcServiceError } from '@temporalio/client';
+import { Client } from '@temporalio/client';
 import { DefaultLogger, Logger } from '@temporalio/worker';
-import * as apiPb from './api/api/api_pb';
-import {
-  IProjectServiceServer,
-  ProjectServiceService,
-} from './api/api/api_grpc_pb';
 import { buildClientConfig, ClientFactory } from './client';
+import type { ExecuteRequest__Output } from './generated/temporal/omes/projects/v1/ExecuteRequest';
+import type { ExecuteResponse } from './generated/temporal/omes/projects/v1/ExecuteResponse';
+import type { InitRequest__Output } from './generated/temporal/omes/projects/v1/InitRequest';
+import type { InitResponse } from './generated/temporal/omes/projects/v1/InitResponse';
+import { grpcError, registerProjectService } from './helpers';
 
 export interface ProjectRunMetadata {
   runId: string;
@@ -34,10 +34,7 @@ export type ProjectExecuteHandler = (
   context: ProjectExecuteContext,
 ) => Promise<void>;
 
-export type ProjectInitHandler = (
-  client: Client,
-  context: ProjectInitContext,
-) => Promise<void>;
+export type ProjectInitHandler = (client: Client, context: ProjectInitContext) => Promise<void>;
 
 export interface ProjectHandlers {
   execute: ProjectExecuteHandler;
@@ -55,13 +52,13 @@ export class ProjectServiceServer {
     private readonly clientFactory: ClientFactory,
   ) {}
 
-  async Init(request: apiPb.InitRequest): Promise<apiPb.InitResponse> {
-    const taskQueue = request.getTaskQueue();
-    const executionId = request.getExecutionId();
-    const runId = request.getRunId();
-    const connectOptions = request.getConnectOptions();
+  async Init(request: InitRequest__Output): Promise<InitResponse> {
+    const taskQueue = request.taskQueue ?? '';
+    const executionId = request.executionId ?? '';
+    const runId = request.runId ?? '';
+    const connectOptions = request.connectOptions;
 
-    if (!taskQueue) {
+    if (!request.taskQueue) {
       throw grpcError(grpc.status.INVALID_ARGUMENT, 'task_queue required');
     }
     if (!executionId) {
@@ -70,24 +67,24 @@ export class ProjectServiceServer {
     if (!runId) {
       throw grpcError(grpc.status.INVALID_ARGUMENT, 'run_id required');
     }
-    if (connectOptions === undefined || !connectOptions.getServerAddress()) {
+    if (connectOptions === undefined || !connectOptions.serverAddress) {
       throw grpcError(grpc.status.INVALID_ARGUMENT, 'server_address required');
     }
-    if (!connectOptions.getNamespace()) {
+    if (!connectOptions.namespace) {
       throw grpcError(grpc.status.INVALID_ARGUMENT, 'namespace required');
     }
 
     let config;
     try {
       config = buildClientConfig({
-        server_address: connectOptions.getServerAddress(),
-        namespace: connectOptions.getNamespace(),
-        auth_header: connectOptions.getAuthHeader(),
-        tls: connectOptions.getEnableTls(),
-        tls_cert_path: connectOptions.getTlsCertPath(),
-        tls_key_path: connectOptions.getTlsKeyPath(),
-        tls_server_name: connectOptions.getTlsServerName() || undefined,
-        disable_host_verification: connectOptions.getDisableHostVerification(),
+        server_address: connectOptions.serverAddress,
+        namespace: connectOptions.namespace,
+        auth_header: connectOptions.authHeader ?? '',
+        tls: connectOptions.enableTls ?? false,
+        tls_cert_path: connectOptions.tlsCertPath ?? '',
+        tls_key_path: connectOptions.tlsKeyPath ?? '',
+        tls_server_name: connectOptions.tlsServerName || undefined,
+        disable_host_verification: connectOptions.disableHostVerification,
       });
     } catch (error) {
       throw grpcError(
@@ -117,7 +114,7 @@ export class ProjectServiceServer {
           logger,
           run,
           taskQueue,
-          configJson: request.getConfigJson_asU8(),
+          configJson: request.configJson ?? Buffer.alloc(0),
         });
       } catch (error) {
         throw grpcError(
@@ -129,11 +126,11 @@ export class ProjectServiceServer {
 
     this.client = client;
     this.run = run;
-    return new apiPb.InitResponse();
+    return {};
   }
 
-  async Execute(request: apiPb.ExecuteRequest): Promise<apiPb.ExecuteResponse> {
-    const taskQueue = request.getTaskQueue();
+  async Execute(request: ExecuteRequest__Output): Promise<ExecuteResponse> {
+    const taskQueue = request.taskQueue ?? '';
 
     if (!taskQueue) {
       throw grpcError(grpc.status.INVALID_ARGUMENT, 'task_queue required');
@@ -147,8 +144,8 @@ export class ProjectServiceServer {
         logger,
         run: this.run,
         taskQueue,
-        iteration: request.getIteration(),
-        payload: request.getPayload_asU8(),
+        iteration: request.iteration ?? 0,
+        payload: request.payload ?? Buffer.alloc(0),
       });
     } catch (error) {
       throw grpcError(
@@ -157,7 +154,7 @@ export class ProjectServiceServer {
       );
     }
 
-    return new apiPb.ExecuteResponse();
+    return {};
   }
 }
 
@@ -171,10 +168,7 @@ export async function runProjectServerCli(
   const bindAsync = promisify(server.bindAsync.bind(server));
   const tryShutdown = promisify(server.tryShutdown.bind(server));
   const service = new ProjectServiceServer(handlers, clientFactory);
-  server.addService(ProjectServiceService, {
-    init: unaryHandler((request) => service.Init(request)),
-    execute: unaryHandler((request) => service.Execute(request)),
-  } satisfies IProjectServiceServer);
+  registerProjectService(server, service);
   await bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure());
   logger.info(`Project server listening on port ${port}`);
 
@@ -193,32 +187,4 @@ function parsePortArg(argv: readonly string[]): number {
     }
   }
   return port;
-}
-
-function grpcError(code: grpc.status, details: string): grpc.ServiceError {
-  return Object.assign(new Error(details), {
-    code,
-    details,
-    metadata: new grpc.Metadata(),
-    name: 'Error',
-  });
-}
-
-function unaryHandler<Request, Response>(
-  handler: (request: Request) => Promise<Response>,
-): grpc.handleUnaryCall<Request, Response> {
-  return async (call, callback) => {
-    try {
-      callback(null, await handler(call.request));
-    } catch (error) {
-      callback(
-        isGrpcServiceError(error)
-          ? error
-          : grpcError(
-              grpc.status.INTERNAL,
-              error instanceof Error ? error.message : String(error),
-            ),
-      );
-    }
-  };
 }

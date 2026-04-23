@@ -1,17 +1,14 @@
 const { rm, readFile, writeFile } = require('fs/promises');
-const { execFileSync } = require('child_process');
 const { resolve } = require('path');
 const { promisify } = require('util');
 const glob = require('glob');
-const { statSync, mkdirSync, rmSync } = require('fs');
+const { statSync, mkdirSync } = require('fs');
 const pbjs = require('protobufjs-cli/pbjs');
 const pbts = require('protobufjs-cli/pbts');
 
 const outputDir = resolve(__dirname, './src/protos');
 const jsOutputFile = resolve(outputDir, 'json-module.js');
 const tempFile = resolve(outputDir, 'temp.js');
-const harnessOutputDir = resolve(__dirname, './projects/harness/api');
-const harnessGrpcJsOutputFile = resolve(harnessOutputDir, 'api/api_grpc_pb.js');
 const protoBaseDir = resolve(__dirname, '../proto');
 
 const ksProtoPath = resolve(protoBaseDir, 'kitchen_sink/kitchen_sink.proto');
@@ -73,42 +70,12 @@ async function compileProtos(dtsOutputFile, ...args) {
   }
 }
 
-function compileHarnessGrpcBindings() {
-  rmSync(harnessOutputDir, { recursive: true, force: true });
-  mkdirSync(harnessOutputDir, { recursive: true });
-
-  execFileSync(
-    'grpc_tools_node_protoc',
-    [
-      `--js_out=import_style=commonjs,binary:${harnessOutputDir}`,
-      `--grpc_out=grpc_js:${harnessOutputDir}`,
-      '--plugin=protoc-gen-grpc=./node_modules/.bin/grpc_tools_node_protoc_plugin',
-      '-I',
-      resolve(protoBaseDir, 'harness'),
-      resolve(protoBaseDir, 'harness/api/api.proto'),
-    ],
-    { stdio: 'inherit' },
-  );
-
-  execFileSync(
-    'grpc_tools_node_protoc',
-    [
-      '--plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts',
-      `--ts_out=grpc_js:${harnessOutputDir}`,
-      '-I',
-      resolve(protoBaseDir, 'harness'),
-      resolve(protoBaseDir, 'harness/api/api.proto'),
-    ],
-    { stdio: 'inherit' },
-  );
-}
-
 async function main() {
   mkdirSync(outputDir, { recursive: true });
 
   const protoFiles = glob.sync(resolve(protoBaseDir, '**/*.proto'));
-  const protosMTime = Math.max(mtime(__filename), ...protoFiles.map(mtime));
-  const genMTime = Math.min(mtime(jsOutputFile), mtime(harnessGrpcJsOutputFile));
+  const protosMTime = Math.max(...protoFiles.map(mtime));
+  const genMTime = mtime(jsOutputFile);
 
   if (protosMTime < genMTime) {
     console.log('Assuming protos are up to date');
@@ -122,7 +89,6 @@ async function main() {
     '--path',
     resolve(protoBaseDir, 'api_upstream'),
   );
-  compileHarnessGrpcBindings();
 
   console.log('Done');
 }

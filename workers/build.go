@@ -189,14 +189,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
-		Includes: []string{
-			"../src/**/*.ts",
-			"../projects/harness/**/*.ts",
-			"../src/protos/json-module.js",
-			"../src/protos/root.js",
-		},
+		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
 		MoreDependencies: map[string]string{
-			"winston": "^3.11.0",
+			"@temporalio/omes-project-harness": "file:../harness",
+			"winston":                          "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,

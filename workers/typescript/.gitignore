@@ -1,6 +1,4 @@
 lib
-lib-test
 node_modules
-projects/harness/api
 src/protos/json-module.js
 src/protos/root.d.ts

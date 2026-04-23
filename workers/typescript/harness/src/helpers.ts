@@ -1,5 +1,8 @@
 import { DefaultLogger, Logger, LogLevel } from '@temporalio/worker';
 import winston from 'winston';
+import { type ProjectServiceServer } from '../src/project';
+import * as grpc from '@grpc/grpc-js';
+import { projectServiceDefinition } from './grpc-helpers';
 
 const temporalLogLevels: Record<string, LogLevel> = {
   trace: 'TRACE',
@@ -18,7 +21,6 @@ const winstonLogLevels: Record<string, string> = {
   error: 'error',
   fatal: 'error',
 };
-
 
 export function configureLogger(logLevel: string, logEncoding: string): Logger {
   const normalized = logLevel.toLowerCase();
@@ -45,5 +47,33 @@ export function configureLogger(logLevel: string, logEncoding: string): Logger {
       timestamp: Number(entry.timestampNanos / 1_000_000n),
       meta: entry.meta,
     });
+  });
+}
+
+export function unaryHandler<Request, Response>(
+  handler: (request: Request) => Promise<Response>,
+): grpc.handleUnaryCall<Request, Response> {
+  return async (call, callback) => {
+    try {
+      callback(null, await handler(call.request));
+    } catch (error) {
+      callback(error as grpc.ServiceError);
+    }
+  };
+}
+
+export function registerProjectService(server: grpc.Server, service: ProjectServiceServer): void {
+  server.addService(projectServiceDefinition, {
+    Init: unaryHandler((request) => service.Init(request)),
+    Execute: unaryHandler((request) => service.Execute(request)),
+  });
+}
+
+export function grpcError(code: grpc.status, details: string): grpc.ServiceError {
+  return Object.assign(new Error(details), {
+    code,
+    details,
+    metadata: new grpc.Metadata(),
+    name: 'Error',
   });
 }

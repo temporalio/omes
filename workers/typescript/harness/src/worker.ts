@@ -1,9 +1,5 @@
 import { Client } from '@temporalio/client';
-import {
-  Logger,
-  Worker,
-  WorkerOptions,
-} from '@temporalio/worker';
+import { Logger, Worker, WorkerOptions } from '@temporalio/worker';
 import { Command } from 'commander';
 import { buildClientConfig, ClientFactory } from './client';
 import { configureLogger } from './helpers';
@@ -15,10 +11,7 @@ export interface WorkerContext {
   workerOptions: Partial<WorkerOptions>;
 }
 
-export type WorkerFactory = (
-  client: Client,
-  context: WorkerContext,
-) => Worker | Promise<Worker>;
+export type WorkerFactory = (client: Client, context: WorkerContext) => Worker | Promise<Worker>;
 
 interface WorkerCliOptions {
   taskQueue: string;
@@ -69,9 +62,7 @@ export async function runWorker(
   interruptPromise: Promise<void>,
   argv: readonly string[],
 ): Promise<void> {
-  const args = buildParser()
-    .parse(argv, { from: 'user' })
-    .opts<WorkerCliOptions>();
+  const args = buildParser().parse(argv, { from: 'user' }).opts<WorkerCliOptions>();
 
   if (args.taskQueueSuffixIndexStart > args.taskQueueSuffixIndexEnd) {
     throw new Error('Task queue suffix start after end');
@@ -103,13 +94,14 @@ export async function runWorker(
   );
   const workerOptions = buildWorkerOptions(args);
   const workers = await Promise.all(
-    taskQueues.map(async (taskQueue) =>
-      await workerFactory(client, {
-        logger,
-        taskQueue,
-        errOnUnimplemented: args.errOnUnimplemented,
-        workerOptions,
-      }),
+    taskQueues.map(
+      async (taskQueue) =>
+        await workerFactory(client, {
+          logger,
+          taskQueue,
+          errOnUnimplemented: args.errOnUnimplemented,
+          workerOptions,
+        }),
     ),
   );
 
@@ -120,14 +112,11 @@ export async function runWorkers(
   workers: readonly Worker[],
   interruptPromise: Promise<void>,
 ): Promise<void> {
-  // Start all workers, throwing on first exception
   const allWorkersPromise = Promise.all(workers.map(async (worker) => await worker.run()));
-  // Swallow success/failure so that we can shutdown workers afterward (re-surface errors later)
   const completionPromise = allWorkersPromise.then(
     () => undefined,
     () => undefined,
   );
-  // Wait until either all workers settle or an interrupt arrives.
   await Promise.race([completionPromise, interruptPromise]);
   await Promise.all(workers.map(async (worker) => await worker.shutdown()));
   await allWorkersPromise;
@@ -172,15 +161,11 @@ function buildParser(): Command {
       'Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers)',
       (value) => Number.parseInt(value, 10),
     )
-    .option(
-      '--max-concurrent-activities <maxActs>',
-      'Max concurrent activities',
-      (value) => Number.parseInt(value, 10),
+    .option('--max-concurrent-activities <maxActs>', 'Max concurrent activities', (value) =>
+      Number.parseInt(value, 10),
     )
-    .option(
-      '--max-concurrent-workflow-tasks <maxWFTs>',
-      'Max concurrent workflow tasks',
-      (value) => Number.parseInt(value, 10),
+    .option('--max-concurrent-workflow-tasks <maxWFTs>', 'Max concurrent workflow tasks', (value) =>
+      Number.parseInt(value, 10),
     )
     .option(
       '--activities-per-second <workerActivityRate>',
@@ -197,12 +182,7 @@ function buildParser(): Command {
     .option('--log-encoding <logEncoding>', '(console json)', 'console')
     .option('-n, --namespace <namespace>', 'The namespace to use', 'default')
     .option('-a, --server-address <address>', 'The host:port of the server', 'localhost:7233')
-    .option(
-      '--tls <tls>',
-      'Enable TLS (true/false)',
-      parseBooleanFlag,
-      false,
-    )
+    .option('--tls <tls>', 'Enable TLS (true/false)', parseBooleanFlag, false)
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS', '')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS', '')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')

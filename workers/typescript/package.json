@@ -2,17 +2,16 @@
   "name": "omes",
   "version": "0.1.0",
   "scripts": {
-    "build": "npm run proto-gen && tsc --build",
-    "build:test": "rm -rf lib-test && tsc --project tsconfig.test.json",
-    "build.watch": "tsc --build --watch",
-    "clean": "rm -rf node_modules dist build lib-test",
+    "proto-gen:harness": "npm --prefix harness run proto-gen",
+    "build": "npm run proto-gen && npm run proto-gen:harness && tsc --build",
+    "build.watch": "npm run proto-gen && npm run proto-gen:harness && tsc --build --watch",
+    "clean": "rm -rf node_modules lib dist build harness/dist harness/dist-test harness/src/generated tsconfig.tsbuildinfo",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
-    "lint-ci": "npm run typecheck && npm run typecheck:test && eslint . && prettier --check .",
+    "lint-ci": "npm run typecheck && eslint . && prettier --check .",
     "format": "prettier --write .",
-    "test": "npm run build && npm run build:test && node --test lib-test/projects/harness/tests/project.test.js lib-test/projects/harness/tests/worker.test.js",
-    "typecheck": "tsc --noEmit",
-    "typecheck:test": "tsc --project tsconfig.test.json --noEmit"
+    "test": "npm run build && npm --prefix harness test",
+    "typecheck": "npm run proto-gen && npm run proto-gen:harness && tsc --build --noEmit"
   },
   "nodemonConfig": {
     "execMap": {
@@ -24,13 +23,12 @@
     ]
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.14.3",
+    "@temporalio/omes-project-harness": "file:./harness",
     "@temporalio/activity": "^1.15.0",
     "@temporalio/client": "^1.15.0",
     "@temporalio/worker": "^1.15.0",
     "@temporalio/workflow": "^1.15.0",
     "commander": "^11.1.0",
-    "google-protobuf": "^3.21.4",
     "long": "^5.2.3",
     "winston": "^3.11.0"
   },
@@ -42,8 +40,6 @@
     "@typescript-eslint/parser": "^8.10.0",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^9.1.0",
-    "grpc_tools_node_protoc_ts": "^5.3.3",
-    "grpc-tools": "^1.13.1",
     "nodemon": "^2.0.12",
     "prettier": "^3.1.1",
     "protobufjs": "7.5.1",
