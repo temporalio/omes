@@ -1,1 +1,6 @@
 **/node_modules
+workers/typescript/lib
+workers/typescript/tsconfig.tsbuildinfo
+workers/typescript/src/protos
+workers/typescript/harness/dist*
+workers/typescript/harness/src/generated
