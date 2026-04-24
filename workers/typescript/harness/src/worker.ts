@@ -118,8 +118,26 @@ export async function runWorkers(
     () => undefined,
   );
   await Promise.race([completionPromise, interruptPromise]);
-  await Promise.all(workers.map(async (worker) => await worker.shutdown()));
+  await Promise.all(workers.map(shutdownWorker));
   await allWorkersPromise;
+}
+
+async function shutdownWorker(worker: Worker): Promise<void> {
+  try {
+    await worker.shutdown();
+  } catch (err) {
+    if (!isAlreadyShuttingDown(err)) {
+      throw err;
+    }
+  }
+}
+
+function isAlreadyShuttingDown(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    err.name === 'IllegalStateError' &&
+    err.message.startsWith('Not running. Current state:')
+  );
 }
 
 function parseBooleanFlag(value: string | boolean): boolean {

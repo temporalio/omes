@@ -1,6 +1,11 @@
 {
   "name": "omes",
   "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "harness",
+    "projects/tests/*"
+  ],
   "scripts": {
     "build": "npm run proto-gen && tsc --build",
     "build.watch": "tsc --build --watch",
@@ -22,10 +27,11 @@
   },
   "dependencies": {
     "@temporalio/omes-project-harness": "file:./harness",
-    "@temporalio/activity": "^1.15.0",
-    "@temporalio/client": "^1.15.0",
-    "@temporalio/worker": "^1.15.0",
-    "@temporalio/workflow": "^1.15.0",
+    "@temporalio/activity": "1.15.0",
+    "@temporalio/client": "1.15.0",
+    "@temporalio/common": "1.15.0",
+    "@temporalio/worker": "1.15.0",
+    "@temporalio/workflow": "1.15.0",
     "commander": "^11.1.0",
     "long": "^5.2.3",
     "winston": "^3.11.0"

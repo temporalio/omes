@@ -51,12 +51,12 @@ COPY workers/typescript ./workers/typescript
 # Install pnpm (sdkbuild uses pnpm to build typescript programs)
 RUN npm install -g pnpm
 
-# Build typescript proto files
+# Install dependencies once at the TypeScript workspace root and build proto files.
 # hadolint ignore=DL3003
-RUN cd workers/typescript && npm install && npm run proto-gen
+RUN cd workers/typescript \
+    && npm ci \
+    && npm run proto-gen
 
-# Build typescript harness (install and generate proto files)
-RUN cd harness && npm install && npm run build
 
 # Build the worker
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
