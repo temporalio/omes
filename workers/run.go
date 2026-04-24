@@ -142,7 +142,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	args = append(args, passthrough(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -220,20 +220,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	}
 }
 
-func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
-	fs.VisitAll(func(f *pflag.Flag) {
-		if !f.Changed {
-			return
-		}
-		flags = append(flags, fmt.Sprintf("--%s=%s",
-			strings.TrimPrefix(f.Name, prefix),
-			f.Value.String(),
-		))
-	})
-	return
-}
-
-func passthroughExcluding(fs *pflag.FlagSet, prefix string, exclude ...string) (flags []string) {
+func passthrough(fs *pflag.FlagSet, prefix string, exclude ...string) (flags []string) {
 	excludeSet := make(map[string]bool)
 	for _, e := range exclude {
 		excludeSet[e] = true
