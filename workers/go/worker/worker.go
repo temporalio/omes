@@ -115,8 +115,9 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 	} else if options.DeploymentBuildID != "" {
 		return fmt.Errorf("--deployment-build-id requires --deployment-name")
 	} else if options.BuildID != "" {
-		// BuildID and UseBuildIDForVersioning are the deprecated Build-ID-based
-		// worker versioning API. New users should use --deployment-name and
+		// DEPRECATED: BuildID and UseBuildIDForVersioning select the legacy
+		// Rules-Based Versioning APIs, which Temporal Server will soon stop
+		// supporting. New users should use --deployment-name and
 		// --deployment-build-id above, which drive Worker Deployment Versioning.
 		workerOpts.BuildID = options.BuildID
 		workerOpts.UseBuildIDForVersioning = true

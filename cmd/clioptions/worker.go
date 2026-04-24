@@ -28,7 +28,7 @@ func (m *WorkerOptions) FlagSet() *pflag.FlagSet {
 		return m.fs
 	}
 	m.fs = pflag.NewFlagSet("worker_options", pflag.ExitOnError)
-	m.fs.StringVar(&m.BuildID, "build-id", "", "Build ID for legacy Build-ID-based worker versioning. Mutually exclusive with --deployment-name")
+	m.fs.StringVar(&m.BuildID, "build-id", "", "DEPRECATED: Build ID for legacy Build-ID-based worker versioning. Temporal Server will soon stop supporting the Rules-Based Versioning APIs that back this flag - use --deployment-name and --deployment-build-id instead. Mutually exclusive with --deployment-name")
 	m.fs.StringVar(&m.DeploymentName, "deployment-name", "", "Worker Deployment name. When set, enables Worker Deployment Versioning and must be combined with --deployment-build-id")
 	m.fs.StringVar(&m.DeploymentBuildID, "deployment-build-id", "", "Build ID within the Worker Deployment. Required when --deployment-name is set")
 	m.fs.StringVar(&m.DefaultVersioningBehavior, "default-versioning-behavior", "", "Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set")
