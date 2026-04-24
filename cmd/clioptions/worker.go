@@ -7,6 +7,8 @@ import (
 // WorkerOptions for setting up worker parameters
 type WorkerOptions struct {
 	BuildID                      string
+	DeploymentName               string
+	DefaultVersioningBehavior    string
 	MaxConcurrentActivityPollers int
 	MaxConcurrentWorkflowPollers int
 	ActivityPollerAutoscaleMax   int // overrides MaxConcurrentActivityPollers
@@ -26,6 +28,8 @@ func (m *WorkerOptions) FlagSet() *pflag.FlagSet {
 	}
 	m.fs = pflag.NewFlagSet("worker_options", pflag.ExitOnError)
 	m.fs.StringVar(&m.BuildID, "build-id", "", "Build ID")
+	m.fs.StringVar(&m.DeploymentName, "deployment-name", "", "Worker Deployment name. When set, enables Worker Deployment Versioning and must be combined with --build-id")
+	m.fs.StringVar(&m.DefaultVersioningBehavior, "default-versioning-behavior", "", "Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set")
 	m.fs.IntVar(&m.MaxConcurrentActivityPollers, "worker-max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, "worker-max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
 	m.fs.IntVar(&m.MaxConcurrentActivities, "worker-max-concurrent-activities", 0, "Max concurrent activities")

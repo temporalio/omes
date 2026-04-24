@@ -68,7 +68,52 @@ func makePollerBehavior(simple, auto int) worker.PollerBehavior {
 	})
 }
 
+func parseVersioningBehavior(s string) (workflow.VersioningBehavior, error) {
+	switch s {
+	case "", "auto-upgrade":
+		return workflow.VersioningBehaviorAutoUpgrade, nil
+	case "pinned":
+		return workflow.VersioningBehaviorPinned, nil
+	default:
+		return 0, fmt.Errorf("invalid --default-versioning-behavior %q (expected pinned or auto-upgrade)", s)
+	}
+}
+
 func runWorkers(client client.Client, taskQueues []string, options clioptions.WorkerOptions) error {
+	workerOpts := worker.Options{
+		MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
+		MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
+		ActivityTaskPollerBehavior: makePollerBehavior(
+			options.MaxConcurrentActivityPollers,
+			options.ActivityPollerAutoscaleMax,
+		),
+		WorkflowTaskPollerBehavior: makePollerBehavior(
+			options.MaxConcurrentWorkflowPollers,
+			options.WorkflowPollerAutoscaleMax,
+		),
+		WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
+	}
+	if options.DeploymentName != "" {
+		if options.BuildID == "" {
+			return fmt.Errorf("--build-id is required when --deployment-name is set")
+		}
+		behavior, err := parseVersioningBehavior(options.DefaultVersioningBehavior)
+		if err != nil {
+			return err
+		}
+		workerOpts.DeploymentOptions = worker.DeploymentOptions{
+			UseVersioning: true,
+			Version: worker.WorkerDeploymentVersion{
+				DeploymentName: options.DeploymentName,
+				BuildID:        options.BuildID,
+			},
+			DefaultVersioningBehavior: behavior,
+		}
+	} else if options.BuildID != "" {
+		workerOpts.BuildID = options.BuildID
+		workerOpts.UseBuildIDForVersioning = true
+	}
+
 	errCh := make(chan error, len(taskQueues))
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{
@@ -84,21 +129,7 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 	for _, taskQueue := range taskQueues {
 		taskQueue := taskQueue
 		go func() {
-			w := worker.New(client, taskQueue, worker.Options{
-				BuildID:                                options.BuildID,
-				UseBuildIDForVersioning:                options.BuildID != "",
-				MaxConcurrentActivityExecutionSize:     options.MaxConcurrentActivities,
-				MaxConcurrentWorkflowTaskExecutionSize: options.MaxConcurrentWorkflowTasks,
-				ActivityTaskPollerBehavior: makePollerBehavior(
-					options.MaxConcurrentActivityPollers,
-					options.ActivityPollerAutoscaleMax,
-				),
-				WorkflowTaskPollerBehavior: makePollerBehavior(
-					options.MaxConcurrentWorkflowPollers,
-					options.WorkflowPollerAutoscaleMax,
-				),
-				WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
-			})
+			w := worker.New(client, taskQueue, workerOpts)
 			w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 			w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 			w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
