@@ -94,8 +94,11 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 		WorkerActivitiesPerSecond: options.WorkerActivitiesPerSecond,
 	}
 	if options.DeploymentName != "" {
-		if options.BuildID == "" {
-			return fmt.Errorf("--build-id is required when --deployment-name is set")
+		if options.BuildID != "" {
+			return fmt.Errorf("--build-id and --deployment-name are mutually exclusive; use --deployment-build-id with --deployment-name")
+		}
+		if options.DeploymentBuildID == "" {
+			return fmt.Errorf("--deployment-build-id is required when --deployment-name is set")
 		}
 		behavior, err := parseVersioningBehavior(options.DefaultVersioningBehavior)
 		if err != nil {
@@ -105,10 +108,12 @@ func runWorkers(client client.Client, taskQueues []string, options clioptions.Wo
 			UseVersioning: true,
 			Version: worker.WorkerDeploymentVersion{
 				DeploymentName: options.DeploymentName,
-				BuildID:        options.BuildID,
+				BuildID:        options.DeploymentBuildID,
 			},
 			DefaultVersioningBehavior: behavior,
 		}
+	} else if options.DeploymentBuildID != "" {
+		return fmt.Errorf("--deployment-build-id requires --deployment-name")
 	} else if options.BuildID != "" {
 		workerOpts.BuildID = options.BuildID
 		workerOpts.UseBuildIDForVersioning = true
