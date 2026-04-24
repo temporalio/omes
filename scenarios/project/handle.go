@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen"
-	api "github.com/temporalio/omes/workers/go/projects/harness/api"
+	api "github.com/temporalio/omes/workers/go/harness/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
