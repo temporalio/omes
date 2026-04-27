@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Gem::Specification.new do |s|
   s.name = 'harness'
   s.version = '0.1.0'
@@ -5,6 +7,7 @@ Gem::Specification.new do |s|
   s.authors = ['Temporal Technologies Inc']
   s.email = ['sdk@temporal.io']
   s.license = 'MIT'
+  s.required_ruby_version = '>= 3.3'
   s.files = Dir['lib/**/*.rb'] + Dir['sig/**/*.rbs']
   s.require_paths = ['lib']
   s.add_dependency 'google-protobuf', '~> 4.0'
