@@ -51,7 +51,8 @@ COPY workers/typescript ./workers/typescript
 # Install pnpm (sdkbuild uses pnpm to build typescript programs)
 RUN npm install -g pnpm
 
-# Build the worker
+# prepare-worker builds the TypeScript workspace itself: it installs npm deps,
+# runs the root build, and generates the prepared sdkbuild package.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.

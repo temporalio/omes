@@ -14,8 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "proto-gen": "node ./protogen.js && node ./copy-proto.js",
-    "copy-proto": "node ./copy-proto.js",
+    "proto-gen": "node ./protogen.js",
     "build": "npm run proto-gen && tsc --build",
     "build:watch": "npm run proto-gen && tsc --build --watch",
     "build:test": "npm run proto-gen && tsc --project tsconfig.test.json",

@@ -202,6 +202,7 @@ func installNode(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("✅ TypeScript worker dependencies installed successfully!")
+
 	return nil
 }
 

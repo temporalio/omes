@@ -13,7 +13,6 @@ export default tseslint.config(
       '**/*.cjs',
       'src/generated/**',
       'protogen.js',
-      'copy-proto.js',
     ],
   },
   {

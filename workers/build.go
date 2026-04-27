@@ -161,7 +161,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		if err := json.Unmarshal(packageJSON, &pkg); err != nil {
 			return nil, fmt.Errorf("failed parsing package.json: %w", err)
 		}
-
+		// Pick a single temporal dependency, assumption is that the version for
+		// other temporal dependency versions will match.
 		const temporalTypeScriptSDKPackage = "@temporalio/client"
 		version = pkg.Dependencies[temporalTypeScriptSDKPackage]
 		if version == "" {
