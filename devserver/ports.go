@@ -2,96 +2,49 @@ package devserver
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
-	"strconv"
 )
 
-type portSet struct {
-	Host string
+// Postgres stores cluster_membership.rpc_port as SMALLINT (max 32767), so
+// every port must stay below that. Linux ephemeral ports start at 32768
+// which would overflow — pick from a fixed safe window instead.
+const (
+	safePortMin = 10000
+	safePortMax = 30000
+)
 
-	FrontendGRPC       int
-	FrontendMembership int
-	FrontendHTTP       int
-	HistoryGRPC        int
-	HistoryMembership  int
-	MatchingGRPC       int
-	MatchingMembership int
-	WorkerGRPC         int
-	WorkerMembership   int
+// allocatePorts returns portCount consecutive free ports in the postgres-safe
+// range (<32768). Picks a random base in [safePortMin, safePortMax-portCount)
+// and probes; retries on collision.
+func allocatePorts(host string) ([portCount]int, error) {
+	for attempt := 0; attempt < 50; attempt++ {
+		base := safePortMin + rand.Intn(safePortMax-safePortMin-portCount)
+		if ports, ok := probeContiguous(host, base); ok {
+			return ports, nil
+		}
+	}
+	return [portCount]int{}, fmt.Errorf("allocatePorts: could not find free contiguous range")
 }
 
-func (p portSet) frontendAddr() string {
-	return net.JoinHostPort(p.Host, strconv.Itoa(p.FrontendGRPC))
-}
-
-// allocatePortSet returns 9 ports for the four temporal services. Behavior:
-//   - portBase != 0: returns 9 sequential ports starting at portBase. Use this
-//     when ports must stay below 32768 (postgres cluster_membership.rpc_port is
-//     SMALLINT, and Linux ephemeral ports overflow it).
-//   - portBase == 0: picks free ports by listening on :0 then closing — racy
-//     but cheap. Honors a non-zero frontend port from bindAddress if set.
-//
-// bindAddress (when non-empty) parses as host:port; host (default 127.0.0.1)
-// is used everywhere. Mixing portBase and a bindAddress port is rejected.
-func allocatePortSet(bindAddress string, portBase int) (portSet, error) {
-	host := "127.0.0.1"
-	frontendPort := 0
-	if bindAddress != "" {
-		h, p, err := net.SplitHostPort(bindAddress)
+// probeContiguous tries to bind portCount sequential ports starting at base.
+// Returns the array and true on success; closes all listeners before returning
+// so callers can rebind. Race window is small but real.
+func probeContiguous(host string, base int) ([portCount]int, bool) {
+	var ports [portCount]int
+	listeners := make([]net.Listener, 0, portCount)
+	defer func() {
+		for _, l := range listeners {
+			_ = l.Close()
+		}
+	}()
+	for i := 0; i < portCount; i++ {
+		l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, base+i))
 		if err != nil {
-			return portSet{}, fmt.Errorf("parse bind address %q: %w", bindAddress, err)
+			return [portCount]int{}, false
 		}
-		if h != "" {
-			host = h
-		}
-		if p != "" && p != "0" {
-			n, err := strconv.Atoi(p)
-			if err != nil {
-				return portSet{}, fmt.Errorf("parse port %q: %w", p, err)
-			}
-			frontendPort = n
-		}
+		listeners = append(listeners, l)
+		ports[i] = base + i
 	}
-	if portBase != 0 && frontendPort != 0 {
-		return portSet{}, fmt.Errorf("cannot combine PortBase with an explicit bind port")
-	}
-
-	ports := make([]int, 9)
-	if portBase != 0 {
-		for i := range ports {
-			ports[i] = portBase + i
-		}
-	} else {
-		listeners := make([]net.Listener, 0, 9)
-		defer func() {
-			for _, l := range listeners {
-				_ = l.Close()
-			}
-		}()
-		for i := range ports {
-			if i == 0 && frontendPort != 0 {
-				ports[i] = frontendPort
-				continue
-			}
-			l, err := net.Listen("tcp", host+":0")
-			if err != nil {
-				return portSet{}, fmt.Errorf("listen on free port: %w", err)
-			}
-			listeners = append(listeners, l)
-			ports[i] = l.Addr().(*net.TCPAddr).Port
-		}
-	}
-
-	return portSet{
-		Host:               host,
-		FrontendGRPC:       ports[0],
-		FrontendMembership: ports[1],
-		FrontendHTTP:       ports[2],
-		HistoryGRPC:        ports[3],
-		HistoryMembership:  ports[4],
-		MatchingGRPC:       ports[5],
-		MatchingMembership: ports[6],
-		WorkerGRPC:         ports[7],
-		WorkerMembership:   ports[8],
-	}, nil
+	return ports, true
 }

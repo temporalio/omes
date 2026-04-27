@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/google/uuid"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
+	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
@@ -14,6 +18,7 @@ import (
 
 type ClientActionsExecutor struct {
 	Client          client.Client
+	Namespace       string
 	WorkflowOptions client.StartWorkflowOptions
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
@@ -127,6 +132,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
+	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
+		return e.executeStandaloneNexusOperation(ctx, sano)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
@@ -195,4 +202,64 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 		err = nil
 	}
 	return run, err
+}
+
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
+	// Unique per call: each iteration schedules multiple standalone-nexus
+	// actions, and activity retries / continue-as-new can reuse the same
+	// workflow ID — colliding operation IDs make the server reject the
+	// second call with "already started".
+	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
+	_, err := e.Client.WorkflowService().StartNexusOperationExecution(ctx,
+		&workflowservicepb.StartNexusOperationExecutionRequest{
+			Namespace:   e.Namespace,
+			OperationId: operationID,
+			Endpoint:    sno.Endpoint,
+			Service:     sno.Service,
+			Operation:   sno.Operation,
+		})
+	switch {
+	case isStandaloneNexusUnimplemented(err):
+		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
+		// or in a mixed-version cluster). Treat as a no-op — the action is
+		// opt-in and the caller asked for best-effort behavior.
+		log.Printf("standalone nexus: StartNexusOperationExecution unimplemented (operation=%s/%s, opID=%s)",
+			sno.Service, sno.Operation, operationID)
+		return nil
+	case err != nil:
+		log.Printf("standalone nexus: StartNexusOperationExecution error (operation=%s/%s, opID=%s): %v",
+			sno.Service, sno.Operation, operationID, err)
+		return fmt.Errorf("StartNexusOperationExecution: %w", err)
+	default:
+		log.Printf("standalone nexus: StartNexusOperationExecution success (operation=%s/%s, opID=%s)",
+			sno.Service, sno.Operation, operationID)
+	}
+	pollResp, err := e.Client.WorkflowService().PollNexusOperationExecution(ctx,
+		&workflowservicepb.PollNexusOperationExecutionRequest{
+			Namespace:   e.Namespace,
+			OperationId: operationID,
+			WaitStage:   enumspb.NEXUS_OPERATION_WAIT_STAGE_CLOSED,
+		})
+	if isStandaloneNexusUnimplemented(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("PollNexusOperationExecution: %w", err)
+	}
+	if failure := pollResp.GetFailure(); failure != nil {
+		return fmt.Errorf("standalone nexus operation failed: %s", failure.GetMessage())
+	}
+	return nil
+}
+
+// isStandaloneNexusUnimplemented returns true when the server reports that
+// standalone Nexus operations aren't available — either because the feature
+// flag is off or the build predates the feature entirely. Lets callers
+// continue gracefully when running against a mixed-version cluster.
+func isStandaloneNexusUnimplemented(err error) bool {
+	if err == nil {
+		return false
+	}
+	var unimplemented *serviceerror.Unimplemented
+	return errors.As(err, &unimplemented)
 }

@@ -411,6 +411,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 	executor := &kitchensink.ClientActionsExecutor{
 		Client:          r.Client,
+		Namespace:       r.Namespace,
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),

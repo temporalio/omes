@@ -19,19 +19,8 @@ func envMap(env []string) map[string]string {
 }
 
 func TestBuildServerEnv_SQLite(t *testing.T) {
-	ports := portSet{
-		Host:               "127.0.0.1",
-		FrontendGRPC:       7233,
-		FrontendMembership: 6933,
-		FrontendHTTP:       7243,
-		HistoryGRPC:        7234,
-		HistoryMembership:  6934,
-		MatchingGRPC:       7235,
-		MatchingMembership: 6935,
-		WorkerGRPC:         7239,
-		WorkerMembership:   6939,
-	}
-	env := buildServerEnv("/tmp/work", PersistenceOptions{}, ClusterEndpoint{}, "/tmp/dyn.yaml", ports)
+	ports := [portCount]int{7233, 6933, 7243, 7234, 6934, 7235, 6935, 7239, 6939}
+	env := buildServerEnv("/tmp/work", PersistenceOptions{}, ClusterEndpoint{}, "/tmp/dyn.yaml", "127.0.0.1", ports)
 	m := envMap(env)
 
 	require.Equal(t, "sqlite", m["DB"])
@@ -45,12 +34,13 @@ func TestBuildServerEnv_SQLite(t *testing.T) {
 }
 
 func TestBuildServerEnv_Postgres(t *testing.T) {
+	var ports [portCount]int
 	env := buildServerEnv("/tmp/work", PersistenceOptions{
 		Driver:      "postgres12",
 		ConnectAddr: "10.0.0.5:5432",
 		User:        "temporal",
 		Password:    "secret",
-	}, ClusterEndpoint{}, "/tmp/dyn.yaml", portSet{Host: "127.0.0.1"})
+	}, ClusterEndpoint{}, "/tmp/dyn.yaml", "127.0.0.1", ports)
 	m := envMap(env)
 
 	require.Equal(t, "postgres12", m["DB"])
@@ -61,37 +51,35 @@ func TestBuildServerEnv_Postgres(t *testing.T) {
 }
 
 func TestBuildServerEnv_ClusterOverride(t *testing.T) {
+	var ports [portCount]int
+	ports[portFrontendGRPC] = 1234
+	ports[portFrontendHTTP] = 1235
 	env := buildServerEnv("/tmp/work", PersistenceOptions{}, ClusterEndpoint{
 		RPCAddress:  "10.0.0.9:9999",
 		HTTPAddress: "10.0.0.9:9998",
-	}, "/tmp/dyn.yaml", portSet{Host: "127.0.0.1", FrontendGRPC: 1234, FrontendHTTP: 1235})
+	}, "/tmp/dyn.yaml", "127.0.0.1", ports)
 	m := envMap(env)
 	require.Equal(t, "10.0.0.9:9999", m["CLUSTER_RPC_ADDRESS"])
 	require.Equal(t, "10.0.0.9:9998", m["CLUSTER_HTTP_ADDRESS"])
 }
 
-func TestAllocatePortSet_PortBase(t *testing.T) {
-	p, err := allocatePortSet("", 7230)
+func TestAllocatePorts(t *testing.T) {
+	ports, err := allocatePorts("127.0.0.1")
 	require.NoError(t, err)
-	require.Equal(t, 7230, p.FrontendGRPC)
-	require.Equal(t, 7231, p.FrontendMembership)
-	require.Equal(t, 7232, p.FrontendHTTP)
-	require.Equal(t, 7238, p.WorkerMembership)
-}
-
-func TestAllocatePortSet_PortBaseConflictsWithBindPort(t *testing.T) {
-	_, err := allocatePortSet("127.0.0.1:9999", 7230)
-	require.Error(t, err)
+	require.GreaterOrEqual(t, ports[0], safePortMin)
+	require.Less(t, ports[portCount-1], 32768)
+	for i := 1; i < portCount; i++ {
+		require.Equal(t, ports[0]+i, ports[i], "ports must be consecutive")
+	}
 }
 
 func TestWriteDynamicConfig_Overrides(t *testing.T) {
 	tmp := t.TempDir()
-	ports := portSet{Host: "127.0.0.1", FrontendHTTP: 7243}
-	path, err := writeDynamicConfig(tmp, map[string]any{
+	path, err := writeDynamicConfig(tmp, "127.0.0.1:7243", map[string]any{
 		"nexusoperation.enableStandalone": true,
 		"my.numeric.setting":              42,
 		"my.string.setting":               "hello",
-	}, ports)
+	})
 	require.NoError(t, err)
 
 	data, err := os.ReadFile(path)
@@ -103,9 +91,4 @@ func TestWriteDynamicConfig_Overrides(t *testing.T) {
 	require.Contains(t, body, "nexusoperation.enableStandalone:\n- value: true")
 	require.Contains(t, body, "my.numeric.setting:\n- value: 42")
 	require.Contains(t, body, "my.string.setting:\n- value: hello")
-}
-
-func TestSanitizeRef(t *testing.T) {
-	require.Equal(t, "abc123", sanitizeRef("abc123"))
-	require.Equal(t, "release_v1.30.0", sanitizeRef("release/v1.30.0"))
 }

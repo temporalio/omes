@@ -70,6 +70,9 @@ public class ClientActionExecutor {
                   .build());
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
+    } else if (action.hasDoStandaloneNexusOperation()) {
+      throw ApplicationFailure.newNonRetryableFailure(
+          "DoStandaloneNexusOperation is not supported", "UnsupportedOperation");
     } else {
       throw new IllegalArgumentException("Client action must have a recognized variant");
     }

@@ -109,8 +109,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		Ref:                 serverRef,
 		Namespace:           testNamespace,
 		DynamicConfigValues: cfg.dynamicConfig,
-		Stdout:              &logWriter{logger: serverLogger},
-		Stderr:              &logWriter{logger: serverLogger},
+		Output:              &logWriter{logger: serverLogger},
 		Logger:              serverLogger,
 	})
 	require.NoError(t, err, "Failed to start dev server")

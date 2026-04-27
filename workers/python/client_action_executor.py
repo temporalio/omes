@@ -58,6 +58,8 @@ class ClientActionExecutor:
             await handle.describe()
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
+        elif action.HasField("do_standalone_nexus_operation"):
+            raise NotImplementedError("DoStandaloneNexusOperation is not supported")
         else:
             raise ValueError("Client action must have a recognized variant")
 

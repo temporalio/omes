@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -18,30 +18,30 @@ const (
 )
 
 // buildServer builds ./cmd/server into binaryPath. When clone is true, the
-// source is cloned from temporalio/temporal at ref into srcDir (caching the
-// result across calls); when clone is false, srcDir is used as-is.
-//
-// Parallel callers targeting the same ref are serialized via a lockfile in
-// the cache dir, so concurrent tests don't race on the clone/build.
+// source is cloned from temporalio/temporal at ref into srcDir; a .sha marker
+// next to the binary records which sha is cached, so the next call with the
+// same ref skips clone+build. When clone is false, srcDir is used as-is and
+// always rebuilt (caller may have uncommitted changes).
 func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, ref, binaryPath string, clone bool) error {
-	unlock, err := acquireBuildLock(ctx, filepath.Dir(binaryPath))
-	if err != nil {
-		return err
-	}
-	defer unlock()
-
+	var sha, shaPath string
 	if clone {
-		if _, err := os.Stat(filepath.Join(srcDir, ".git")); err != nil {
-			if err := cloneAt(ctx, logger, srcDir, ref); err != nil {
-				return err
-			}
-		} else {
-			logger.Infof("Reusing temporal source at %s (ref %s)", srcDir, ref)
+		var err error
+		sha, err = resolveSha(ctx, ref)
+		if err != nil {
+			return err
 		}
-
-		if _, err := os.Stat(binaryPath); err == nil {
-			logger.Infof("Reusing cached server binary at %s", binaryPath)
-			return nil
+		shaPath = filepath.Join(filepath.Dir(binaryPath), ".sha")
+		if cached, _ := os.ReadFile(shaPath); strings.TrimSpace(string(cached)) == sha {
+			if _, err := os.Stat(binaryPath); err == nil {
+				logger.Infof("Reusing cached server binary at %s (sha %s)", binaryPath, sha)
+				return nil
+			}
+		}
+		// Stale or missing — clear marker before re-cloning so a failed build
+		// doesn't leave a misleading .sha behind.
+		_ = os.Remove(shaPath)
+		if err := cloneAt(ctx, logger, srcDir, ref); err != nil {
+			return err
 		}
 	}
 
@@ -63,37 +63,26 @@ func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, ref, bi
 	if err != nil {
 		return fmt.Errorf("go build server: %w\n%s", err, out)
 	}
+	if shaPath != "" {
+		if err := os.WriteFile(shaPath, []byte(sha), 0644); err != nil {
+			return fmt.Errorf("write sha marker: %w", err)
+		}
+	}
 	return nil
 }
 
-// acquireBuildLock blocks on a per-cache-dir lockfile so concurrent processes
-// (and concurrent goroutines within one process) take turns at clone+build.
-// Returns a release function that must be called once the build is done.
-func acquireBuildLock(ctx context.Context, cacheDir string) (func(), error) {
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return nil, fmt.Errorf("create cache dir: %w", err)
-	}
-	lockPath := filepath.Join(cacheDir, ".build.lock")
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+// resolveSha returns the full sha for ref via `git ls-remote` against the
+// temporal repo.
+func resolveSha(ctx context.Context, ref string) (string, error) {
+	out, err := runCmd(ctx, "", "git", "ls-remote", "--exit-code", temporalRepo, ref)
 	if err != nil {
-		return nil, fmt.Errorf("open build lock: %w", err)
+		return "", fmt.Errorf("git ls-remote %s: %w\n%s", ref, err, out)
 	}
-	// flock blocks until acquired. Watch ctx so a cancelled test doesn't
-	// deadlock — try once, sleep a bit, repeat.
-	for {
-		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err == nil {
-			return func() {
-				_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-				_ = f.Close()
-			}, nil
-		}
-		select {
-		case <-ctx.Done():
-			_ = f.Close()
-			return nil, ctx.Err()
-		case <-time.After(200 * time.Millisecond):
-		}
+	sha, _, ok := strings.Cut(strings.TrimSpace(string(out)), "\t")
+	if !ok || sha == "" {
+		return "", fmt.Errorf("unexpected ls-remote output: %q", string(out))
 	}
+	return sha, nil
 }
 
 func cloneAt(ctx context.Context, logger *zap.SugaredLogger, dest, ref string) error {
