@@ -1,0 +1,53 @@
+{
+  "name": "@temporalio/omes-project-harness",
+  "version": "0.1.0",
+  "description": "Reusable TypeScript project harness for Omes",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "proto-gen": "node ./protogen.js",
+    "build": "npm run proto-gen && tsc --build",
+    "build:watch": "npm run proto-gen && tsc --build --watch",
+    "build:test": "npm run proto-gen && tsc --project tsconfig.test.json",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "lint-ci": "npm run typecheck && npm run lint && prettier --check .",
+    "prepare": "npm run build",
+    "test": "npm run build:test && node --test dist-test/tests/project.test.js dist-test/tests/worker.test.js",
+    "typecheck": "npm run proto-gen && tsc --noEmit",
+    "typecheck:test": "npm run proto-gen && tsc --noEmit --project tsconfig.test.json"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "commander": "^11.1.0",
+    "winston": "^3.11.0"
+  },
+  "peerDependencies": {
+    "@temporalio/activity": ">=1.15.0 <2",
+    "@temporalio/client": ">=1.15.0 <2",
+    "@temporalio/common": ">=1.15.0 <2",
+    "@temporalio/worker": ">=1.15.0 <2",
+    "@temporalio/workflow": ">=1.15.0 <2"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "1.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.10.0",
+    "@typescript-eslint/parser": "^8.10.0",
+    "@tsconfig/node24": "^24.0.4",
+    "@types/node": "^24.1.0",
+    "eslint": "^9.26.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.9.3"
+  }
+}

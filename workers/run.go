@@ -130,8 +130,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		// The dotnet harness uses explicit subcommands like the Python harness.
 		args = append(args, "worker")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
-		// Node also needs module
-		args = append(args, "./tslib/omes.js")
+		// Node also needs module before the harness subcommand.
+		args = append(args, "./tslib/omes.js", "worker")
 	}
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
