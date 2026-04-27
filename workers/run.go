@@ -126,8 +126,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.SdkOptions.Language == clioptions.LangPython {
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
-	} else if r.SdkOptions.Language == clioptions.LangDotNet {
-		// The dotnet harness uses explicit subcommands like the Python harness.
+	} else if r.SdkOptions.Language == clioptions.LangDotNet || r.SdkOptions.Language == clioptions.LangRuby {
+		// dotnet and ruby harnesses uses explicit subcommands for their worker harnesses
 		args = append(args, "worker")
 	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
 		// Node also needs module
