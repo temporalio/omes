@@ -9,7 +9,6 @@
 // dist-test/src, so ../proto/api.proto must exist as dist/proto/api.proto or
 // dist-test/proto/api.proto.
 
-
 const { execFileSync } = require('node:child_process');
 const { copyFileSync, mkdirSync, rmSync } = require('node:fs');
 const { resolve } = require('node:path');
