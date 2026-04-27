@@ -14,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20260331150122-757294c2a9e9
 	github.com/temporalio/omes/workers/go/projects/harness/api v0.0.0-00010101000000-000000000000
-	go.temporal.io/api v1.62.7
+	go.temporal.io/api v1.62.11
 	go.temporal.io/sdk v1.42.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.31.0

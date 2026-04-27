@@ -88,18 +88,30 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe")
+    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_standalone_nexus_operation")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     DO_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
+    DO_STANDALONE_NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
     nested_actions: ClientActionSet
     do_describe: DoDescribe
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ...) -> None: ...
+    do_standalone_nexus_operation: DoStandaloneNexusOperation
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_standalone_nexus_operation: _Optional[_Union[DoStandaloneNexusOperation, _Mapping]] = ...) -> None: ...
+
+class DoStandaloneNexusOperation(_message.Message):
+    __slots__ = ("endpoint", "service", "operation")
+    ENDPOINT_FIELD_NUMBER: _ClassVar[int]
+    SERVICE_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_FIELD_NUMBER: _ClassVar[int]
+    endpoint: str
+    service: str
+    operation: str
+    def __init__(self, endpoint: _Optional[str] = ..., service: _Optional[str] = ..., operation: _Optional[str] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")

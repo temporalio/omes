@@ -970,6 +970,56 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
+			name: "ExecActivity/Client/StandaloneNexusOperation/Async",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneNexusOperation{
+									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+										// Endpoint filled by PrepareTestInput
+										Service:   "kitchen-sink",
+										Operation: "echo-async",
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
+			name: "ExecActivity/Client/StandaloneNexusOperation/Sync",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneNexusOperation{
+									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+										// Endpoint filled by PrepareTestInput
+										Service:   "kitchen-sink",
+										Operation: "echo-sync",
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1043,6 +1093,15 @@ func testForSDK(
 					for _, action := range actionSet.Actions {
 						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
 							nexusOp.Endpoint = nexusEndpoint
+						}
+						if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
+							for _, cas := range clientSeq.ActionSets {
+								for _, ca := range cas.Actions {
+									if sno := ca.GetDoStandaloneNexusOperation(); sno != nil && sno.Endpoint == "" {
+										sno.Endpoint = nexusEndpoint
+									}
+								}
+							}
 						}
 					}
 				}

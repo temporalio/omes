@@ -7,7 +7,7 @@ require github.com/temporalio/omes v1.0.0
 require (
 	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/spf13/cobra v1.8.0
-	go.temporal.io/api v1.62.7
+	go.temporal.io/api v1.62.11
 	go.temporal.io/sdk v1.42.0
 	go.uber.org/zap v1.27.0
 )

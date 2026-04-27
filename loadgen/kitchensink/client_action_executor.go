@@ -7,6 +7,7 @@ import (
 	"time"
 
 	enumspb "go.temporal.io/api/enums/v1"
+	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
@@ -14,6 +15,7 @@ import (
 
 type ClientActionsExecutor struct {
 	Client          client.Client
+	Namespace       string
 	WorkflowOptions client.StartWorkflowOptions
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
@@ -127,6 +129,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
+	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
+		return e.executeStandaloneNexusOperation(ctx, sano)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
@@ -195,4 +199,33 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 		err = nil
 	}
 	return run, err
+}
+
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
+	// Use a unique operation ID scoped to the workflow so parallel iterations don't collide.
+	operationID := fmt.Sprintf("standalone-nexus-%s", e.WorkflowOptions.ID)
+	_, err := e.Client.WorkflowService().StartNexusOperationExecution(ctx,
+		&workflowservicepb.StartNexusOperationExecutionRequest{
+			Namespace:   e.Namespace,
+			OperationId: operationID,
+			Endpoint:    sno.Endpoint,
+			Service:     sno.Service,
+			Operation:   sno.Operation,
+		})
+	if err != nil {
+		return fmt.Errorf("StartNexusOperationExecution: %w", err)
+	}
+	pollResp, err := e.Client.WorkflowService().PollNexusOperationExecution(ctx,
+		&workflowservicepb.PollNexusOperationExecutionRequest{
+			Namespace:   e.Namespace,
+			OperationId: operationID,
+			WaitStage:   enumspb.NEXUS_OPERATION_WAIT_STAGE_CLOSED,
+		})
+	if err != nil {
+		return fmt.Errorf("PollNexusOperationExecution: %w", err)
+	}
+	if failure := pollResp.GetFailure(); failure != nil {
+		return fmt.Errorf("standalone nexus operation failed: %s", failure.GetMessage())
+	}
+	return nil
 }
