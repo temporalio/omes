@@ -74,6 +74,11 @@ public class ClientActionsExecutor
         {
             await ExecuteClientActionSet(action.NestedActions);
         }
+        else if (action.DoStandaloneNexusOperation != null)
+        {
+            throw new ApplicationFailureException(
+                "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
+        }
         else
         {
             throw new ArgumentException("Client action must have a recognized variant");
