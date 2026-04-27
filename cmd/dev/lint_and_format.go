@@ -214,8 +214,14 @@ func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
 	}
 
 	harnessDir := workerDir + "/harness"
-	fmt.Println("Installing Ruby harness deps for type checking...")
-	if err := runCommandInDir(ctx, harnessDir, "bundle", "install"); err != nil {
+
+	fmt.Println("Formatting Ruby harness...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "exec", "rubocop", "-A"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting Ruby harness...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "exec", "rubocop"); err != nil {
 		return err
 	}
 

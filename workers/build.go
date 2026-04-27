@@ -278,37 +278,22 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 }
 
 func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	// If version not provided, read the version constraint from the gemspec.
-	version := b.SdkOptions.Version
-	if version == "" {
-		gemspecBytes, err := os.ReadFile(filepath.Join(baseDir, "omes.gemspec"))
-		if err != nil {
-			return nil, fmt.Errorf("failed reading omes.gemspec: %w", err)
-		}
-		for _, line := range strings.Split(string(gemspecBytes), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.Contains(line, "'temporalio'") || strings.Contains(line, `"temporalio"`) {
-				parts := strings.Split(line, ",")
-				if len(parts) >= 2 {
-					version = strings.TrimSpace(parts[1])
-					version = strings.Trim(version, `"'`)
-				}
-				break
-			}
-		}
-		if version == "" {
-			return nil, fmt.Errorf("version not found in omes.gemspec")
-		}
-	}
-
-	prog, err := sdkbuild.BuildRubyProgram(ctx, sdkbuild.BuildRubyProgramOptions{
+	options := sdkbuild.BuildRubyProgramOptions{
 		BaseDir:   baseDir,
 		SourceDir: baseDir,
 		DirName:   b.DirName,
-		Version:   version,
+		Version:   b.SdkOptions.Version,
 		Stdout:    b.stdout,
 		Stderr:    b.stderr,
-	})
+	}
+	if b.ProjectName == "" {
+		options.MoreDependencies = []sdkbuild.RubyDependency{{
+			Name: "harness",
+			Path: filepath.Join(baseDir, "harness"),
+		}}
+	}
+
+	prog, err := sdkbuild.BuildRubyProgram(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
