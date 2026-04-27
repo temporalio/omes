@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
@@ -15,6 +16,9 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/resolver/manual"
 )
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
@@ -94,6 +98,12 @@ func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger
 	}
 	var clientOptions client.Options
 	clientOptions.HostPort = c.Address
+	if hosts := SplitHosts(c.Address); len(hosts) > 1 {
+		// Multiple comma-separated addresses → use gRPC round-robin across
+		// them so RPCs distribute per-stream rather than pinning to a
+		// single backend via HTTP/2 multiplexing.
+		clientOptions.HostPort, clientOptions.ConnectionOptions.DialOptions = RoundRobinDial(hosts)
+	}
 	clientOptions.Namespace = c.Namespace
 	clientOptions.ConnectionOptions.TLS = tlsCfg
 	clientOptions.Logger = NewZapAdapter(logger.Desugar())
@@ -185,4 +195,35 @@ func (p *PassThroughPayloadConverter) ToString(payload *common.Payload) string {
 
 func (p *PassThroughPayloadConverter) Encoding() string {
 	return "_passthrough"
+}
+
+// SplitHosts parses a comma-separated host list, trimming whitespace and
+// dropping empty entries.
+func SplitHosts(addr string) []string {
+	parts := strings.Split(addr, ",")
+	out := parts[:0]
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// RoundRobinDial returns a HostPort and gRPC dial options that load-balance
+// across `hosts` with the round_robin policy. Uses a manual resolver so the
+// SDK sees one synthetic authority but gRPC opens a subchannel per host,
+// distributing each RPC stream across them.
+func RoundRobinDial(hosts []string) (string, []grpc.DialOption) {
+	const scheme = "omes-multi"
+	r := manual.NewBuilderWithScheme(scheme)
+	addrs := make([]resolver.Address, len(hosts))
+	for i, h := range hosts {
+		addrs[i] = resolver.Address{Addr: h}
+	}
+	r.InitialState(resolver.State{Addresses: addrs})
+	return scheme + ":///cluster", []grpc.DialOption{
+		grpc.WithResolvers(r),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig":[{"round_robin":{}}]}`),
+	}
 }

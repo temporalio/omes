@@ -46,6 +46,8 @@ class ClientActionExecutor
       handle.describe
     when :nested_actions
       execute_client_action_set(action.nested_actions)
+    when :do_standalone_nexus_operation
+      raise 'DoStandaloneNexusOperation is not supported'
     else
       raise 'Client action must have a recognized variant'
     end
