@@ -28,7 +28,7 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
-COPY workers/go/projects/harness/api ./workers/go/projects/harness/api
+COPY workers/go/harness/api ./workers/go/harness/api
 COPY workers/proto/harness ./workers/proto/harness
 COPY go.mod go.sum ./
 
