@@ -6,10 +6,10 @@ inputs:
 plugins:
   # Go
   - remote: buf.build/protocolbuffers/go
-    out: ../go/projects
+    out: ../go
     opt: paths=source_relative
   - remote: buf.build/grpc/go
-    out: ../go/projects
+    out: ../go
     opt:
       - paths=source_relative
   # Python (using these versions for protobuf compatibility with temporalio >=1.23.0)

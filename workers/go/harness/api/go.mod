@@ -1,4 +1,4 @@
-module github.com/temporalio/omes/workers/go/projects/harness/api
+module github.com/temporalio/omes/workers/go/harness/api
 
 go 1.25.0
 
