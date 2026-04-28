@@ -26,7 +26,8 @@ type ClientActivities struct {
 func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientActivity *kitchensink.ExecuteActivityAction_ClientActivity) error {
 	info := activity.GetInfo(ctx)
 	executor := &kitchensink.ClientActionsExecutor{
-		Client: ca.Client,
+		Client:    ca.Client,
+		Namespace: info.WorkflowNamespace,
 		WorkflowOptions: client.StartWorkflowOptions{
 			ID:        info.WorkflowExecution.ID,
 			TaskQueue: info.TaskQueue,

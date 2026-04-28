@@ -52,7 +52,16 @@ message ClientAction {
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
+    DoStandaloneNexusOperation do_standalone_nexus_operation = 6;
   }
+}
+
+// DoStandaloneNexusOperation starts a Nexus operation outside of any workflow context using
+// StartNexusOperationExecution and polls for its completion with PollNexusOperationExecution.
+message DoStandaloneNexusOperation {
+  string endpoint = 1;
+  string service = 2;
+  string operation = 3;
 }
 
 message DoSignal {
