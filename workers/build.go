@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
@@ -151,20 +152,23 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	// If version not provided, try to read it from package.json
 	version := b.SdkOptions.Version
 	if version == "" {
-		b, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
+		packageJSON, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
 		if err != nil {
 			return nil, fmt.Errorf("failed reading package.json: %w", err)
 		}
-		for line := range strings.SplitSeq(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "\"temporalio:\"") || strings.HasPrefix(line, "\"@temporalio/") {
-				split := strings.Split(line, "\"")
-				version = split[len(split)-2]
-				break
-			}
+
+		var pkg struct {
+			Dependencies map[string]string `json:"dependencies"`
 		}
+		if err := json.Unmarshal(packageJSON, &pkg); err != nil {
+			return nil, fmt.Errorf("failed parsing package.json: %w", err)
+		}
+		// Pick a single temporal dependency, assumption is that the version for
+		// other temporal dependency versions will match.
+		const temporalTypeScriptSDKPackage = "@temporalio/client"
+		version = pkg.Dependencies[temporalTypeScriptSDKPackage]
 		if version == "" {
-			return nil, fmt.Errorf("version not found in package.json")
+			return nil, fmt.Errorf("version not found in package.json for %s", temporalTypeScriptSDKPackage)
 		}
 	}
 
@@ -193,7 +197,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		ApplyToCommand: nil,
 		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
 		MoreDependencies: map[string]string{
-			"winston": "^3.11.0",
+			"@temporalio/omes-project-harness": "file:../harness",
+			"winston":                          "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
