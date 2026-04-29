@@ -123,16 +123,18 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
-	if r.SdkOptions.Language == clioptions.LangPython {
+	switch r.SdkOptions.Language {
+	case clioptions.LangPython:
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
-	} else if r.SdkOptions.Language == clioptions.LangDotNet {
-		// The dotnet harness uses explicit subcommands like the Python harness.
-		args = append(args, "worker")
-	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
+	case clioptions.LangTypeScript:
 		// Node also needs module before the harness subcommand.
 		args = append(args, "./tslib/omes.js", "worker")
+	case clioptions.LangDotNet, clioptions.LangGo:
+		// .NET and Go just need the harness worker subcommand
+		args = append(args, "worker")
 	}
+
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))

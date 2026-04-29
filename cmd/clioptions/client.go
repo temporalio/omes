@@ -111,15 +111,7 @@ func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger
 		})
 	}
 
-	dataConverter := converter.NewCompositeDataConverter(
-		converter.NewNilPayloadConverter(),
-		converter.NewByteSlicePayloadConverter(),
-		&PassThroughPayloadConverter{},
-		converter.NewProtoJSONPayloadConverter(),
-		converter.NewProtoPayloadConverter(),
-		converter.NewJSONPayloadConverter(),
-	)
-	clientOptions.DataConverter = dataConverter
+	clientOptions.DataConverter = OmesDataConverter()
 
 	client, err := client.Dial(clientOptions)
 	if err != nil {
@@ -127,6 +119,17 @@ func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger
 	}
 	logger.Infof("Client connected to %s, namespace: %s", c.Address, c.Namespace)
 	return client, nil
+}
+
+func OmesDataConverter() converter.DataConverter {
+	return converter.NewCompositeDataConverter(
+		converter.NewNilPayloadConverter(),
+		converter.NewByteSlicePayloadConverter(),
+		&PassThroughPayloadConverter{},
+		converter.NewProtoJSONPayloadConverter(),
+		converter.NewProtoPayloadConverter(),
+		converter.NewJSONPayloadConverter(),
+	)
 }
 
 // FlagSet adds the relevant flags to populate the options struct and returns a pflag.FlagSet.
