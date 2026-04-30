@@ -24,6 +24,7 @@ workers/python/**/__pycache__/
 workers/typescript/harness/dist/
 workers/typescript/harness/dist-test/
 workers/typescript/harness/src/generated/
+workers/**/.rubocop_cache/
 workers/*/omes-temp-*/
 workers/*/prepared/
 workers/**/project-build-*/
