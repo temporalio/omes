@@ -7,17 +7,13 @@ import io.temporal.common.converter.DataConverterException;
 import io.temporal.common.converter.EncodingKeys;
 import io.temporal.common.converter.GlobalDataConverter;
 import io.temporal.common.converter.PayloadConverter;
-import io.temporal.workflow.Workflow;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import org.slf4j.Logger;
 
-public final class PassthroughDataConverter implements PayloadConverter {
-  public static final Logger log = Workflow.getLogger(PassthroughDataConverter.class);
-
-  static final String METADATA_ENCODING_NAME = "_passthrough";
-  static final ByteString METADATA_ENCODING =
+final class PassthroughDataConverter implements PayloadConverter {
+  private static final String METADATA_ENCODING_NAME = "_passthrough";
+  private static final ByteString METADATA_ENCODING =
       ByteString.copyFrom(METADATA_ENCODING_NAME, StandardCharsets.UTF_8);
 
   @Override

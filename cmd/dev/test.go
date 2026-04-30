@@ -81,6 +81,10 @@ func runTestWorker(ctx context.Context, language string) error {
 		if err := runPythonHarnessTests(ctx, repoDir); err != nil {
 			return err
 		}
+	} else if language == "java" {
+		if err := runJavaHarnessTests(ctx, repoDir); err != nil {
+			return err
+		}
 	}
 	if language == "dotnet" {
 		if err := runDotnetHarnessTests(ctx, repoDir); err != nil {
@@ -155,6 +159,23 @@ func runRubyHarnessTests(ctx context.Context, repoDir string) error {
 		return fmt.Errorf("failed Ruby harness tests: %w", err)
 	}
 	fmt.Println("✅ Ruby harness tests completed successfully!")
+	return nil
+}
+
+func runJavaHarnessTests(ctx context.Context, repoDir string) error {
+	harnessDir := filepath.Join(repoDir, "workers", "java")
+	fmt.Println("Running Java harness tests...")
+	if err := runCommandInDir(
+		ctx,
+		harnessDir,
+		"./gradlew",
+		"test",
+		"--tests",
+		"io.temporal.omes.harness.*",
+	); err != nil {
+		return fmt.Errorf("failed Java harness tests: %w", err)
+	}
+	fmt.Println("✅ Java harness tests completed successfully!")
 	return nil
 }
 
