@@ -157,11 +157,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [python]
         include:
           - sdk: python
             project: helloworld
             dockerfile: dockerfiles/python.Dockerfile
+            sdk_version_env: PYTHON_SDK_VERSION
+            sdk_version_prefix: v
+          - sdk: typescript
+            project: helloworld
+            dockerfile: dockerfiles/typescript.Dockerfile
+            sdk_version_env: TYPESCRIPT_SDK_VERSION
+            sdk_version_prefix: ""
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -173,7 +179,8 @@ jobs:
           printenv >> $GITHUB_ENV
       - name: Set ${{ matrix.sdk }} project image metadata
         run: |
-          echo "PROJECT_IMAGE_SDK_VERSION=v${PYTHON_SDK_VERSION}" >> "$GITHUB_ENV"
+          sdk_version_env=${{ matrix.sdk_version_env }}
+          echo "PROJECT_IMAGE_SDK_VERSION=${{ matrix.sdk_version_prefix }}${!sdk_version_env}" >> "$GITHUB_ENV"
           echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
           echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
           echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
