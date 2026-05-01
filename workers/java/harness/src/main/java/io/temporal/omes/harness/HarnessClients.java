@@ -183,11 +183,11 @@ public final class HarnessClients {
             .reporter(reporter)
             .reportEvery(com.uber.m3.util.Duration.ofSeconds(1));
     HttpServer scrapeEndpoint =
-        HarnessMetricsUtils.startPrometheusScrapeEndpoint(registry, promHandlerPath, promListenAddress);
+        HarnessMetricsUtils.startPrometheusScrapeEndpoint(
+            registry, promHandlerPath, promListenAddress);
     Runtime.getRuntime()
         .addShutdownHook(
-            new Thread(
-                () -> scrapeEndpoint.stop(1), "omes-java-harness-metrics-shutdown"));
+            new Thread(() -> scrapeEndpoint.stop(1), "omes-java-harness-metrics-shutdown"));
     return scope;
   }
 

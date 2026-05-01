@@ -1,6 +1,5 @@
 package io.temporal.omes.harness;
 
-import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -23,7 +22,10 @@ public final class ProjectHarness {
       throws Exception {
     Arguments args = new Arguments();
     new CommandLine(args).parseArgs(argv);
-    Server server = ServerBuilder.forPort(args.port).addService(new ProjectServiceServer(handlers, clientFactory)).build();
+    Server server =
+        ServerBuilder.forPort(args.port)
+            .addService(new ProjectServiceServer(handlers, clientFactory))
+            .build();
     server.start();
     logger.info("Project server listening on port {}", server.getPort());
     server.awaitTermination();
@@ -168,7 +170,10 @@ public final class ProjectHarness {
           handlers.init.init(
               createdClient,
               new ProjectInitContext(
-                  logger, createdRun, request.getTaskQueue(), request.getConfigJson().toByteArray()));
+                  logger,
+                  createdRun,
+                  request.getTaskQueue(),
+                  request.getConfigJson().toByteArray()));
         } catch (Exception e) {
           abort(responseObserver, Status.INTERNAL, "init handler failed: " + messageOf(e));
           return;
@@ -215,8 +220,7 @@ public final class ProjectHarness {
     }
   }
 
-  private static void abort(
-      StreamObserver<?> responseObserver, Status status, String description) {
+  private static void abort(StreamObserver<?> responseObserver, Status status, String description) {
     responseObserver.onError(status.withDescription(description).asRuntimeException());
   }
 

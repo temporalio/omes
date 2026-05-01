@@ -29,8 +29,7 @@ public final class Harness {
     }
 
     throw new IllegalArgumentException(
-        String.format(
-            "Unknown command: [%s]. Expected 'worker' or 'project-server'", argv[0]));
+        String.format("Unknown command: [%s]. Expected 'worker' or 'project-server'", argv[0]));
   }
 
   public static final class App {
