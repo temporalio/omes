@@ -34,6 +34,7 @@ ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
 # Copy the worker files
+COPY workers/proto ./workers/proto
 COPY workers/java ./workers/java
 
 # Download Gradle using wrapper to cache it in build layer
