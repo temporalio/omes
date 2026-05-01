@@ -149,6 +149,16 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 }
 
 func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	moreDependencies := map[string]string{
+		"@temporalio/omes-project-harness": "file:../harness",
+		"winston":                          "^3.11.0",
+	}
+	if b.ProjectName != "" {
+		// Project fixtures build from workers/typescript/projects/tests/<name>,
+		// so their generated package needs to walk back to workers/typescript/harness.
+		moreDependencies["@temporalio/omes-project-harness"] = "file:../../../../harness"
+	}
+
 	// If version not provided, try to read it from package.json
 	version := b.SdkOptions.Version
 	if version == "" {
@@ -190,18 +200,15 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-		BaseDir:        baseDir,
-		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
-		DirName:        b.DirName,
-		ApplyToCommand: nil,
-		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
-		MoreDependencies: map[string]string{
-			"@temporalio/omes-project-harness": "file:../harness",
-			"winston":                          "^3.11.0",
-		},
-		Stdout: b.stdout,
-		Stderr: b.stderr,
+		BaseDir:          baseDir,
+		Version:          version,
+		TSConfigPaths:    map[string][]string{"@temporalio/omes": {"src/main.ts"}},
+		DirName:          b.DirName,
+		ApplyToCommand:   nil,
+		Includes:         []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+		MoreDependencies: moreDependencies,
+		Stdout:           b.stdout,
+		Stderr:           b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
