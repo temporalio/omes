@@ -21,7 +21,7 @@ func buildProject(ctx context.Context, repoRoot string, p projectScenarioOptions
 
 	baseDir := workers.BaseDir(repoRoot, p.sdkOpts.Language)
 	switch p.sdkOpts.Language {
-	case clioptions.LangPython:
+	case clioptions.LangPython, clioptions.LangTypeScript:
 		return b.Build(ctx, baseDir)
 	default:
 		return nil, fmt.Errorf("unsupported language for project builds: %s", b.SdkOptions.Language)
@@ -33,6 +33,8 @@ func loadPrebuilt(dir string, lang clioptions.Language) (sdkbuild.Program, error
 	switch lang {
 	case clioptions.LangPython:
 		return sdkbuild.PythonProgramFromDir(dir)
+	case clioptions.LangTypeScript:
+		return sdkbuild.TypeScriptProgramFromDir(dir)
 	default:
 		return nil, fmt.Errorf("prebuilt projects not supported for language: %s", lang)
 	}

@@ -129,7 +129,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		args = append(args, "main", "worker")
 	case clioptions.LangTypeScript:
 		// Node also needs module before the harness subcommand.
-		args = append(args, "./tslib/omes.js", "worker")
+		args = append(args, "./tslib/main.js", "worker")
 	case clioptions.LangDotNet, clioptions.LangRuby, clioptions.LangGo:
 		// .NET, Ruby, and Go just need the harness worker subcommand
 		args = append(args, "worker")

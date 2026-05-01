@@ -39,7 +39,9 @@ type projectScenarioOptions struct {
 	configJSON  []byte
 }
 
-type projectScenarioExecutor struct{}
+type projectScenarioExecutor struct {
+	clientReadyTimeout time.Duration
+}
 
 func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	opts, err := e.validate(info)
@@ -91,7 +93,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 			DisableHostVerification: co.DisableHostVerification,
 		},
 		ConfigJson: opts.configJSON,
-	})
+	}, e.clientReadyTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to init project: %w", err)
 	}
@@ -111,8 +113,8 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
-	if opts.sdkOpts.Language != clioptions.LangPython {
-		return opts, fmt.Errorf("project scenario is currently limited to Python, got %s", lang)
+	if opts.sdkOpts.Language != clioptions.LangPython && opts.sdkOpts.Language != clioptions.LangTypeScript {
+		return opts, fmt.Errorf("project scenario is currently limited to Python and TypeScript, got %s", lang)
 	}
 
 	projectName := info.ScenarioOptions["project-name"]
@@ -161,9 +163,13 @@ func findAvailablePort() (int, error) {
 
 func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, port int) (*exec.Cmd, error) {
 	var args []string
-	// Python needs module name
-	if lang == clioptions.LangPython {
+	switch lang {
+	case clioptions.LangPython:
+		// Python needs module name.
 		args = append(args, "main")
+	case clioptions.LangTypeScript:
+		// Node needs the compiled module before the harness subcommand.
+		args = append(args, "./tslib/main.js")
 	}
 	args = append(args, "project-server", "--port", strconv.Itoa(port))
 	cmd, err := prog.NewCommand(ctx, args...)

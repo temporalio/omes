@@ -208,7 +208,7 @@ As such, it's a **good fit** if you:
 - are more familiar with Temporal-native code than Omes's framework
 
 and are not restricted by the **current limitations**:
-- Python is the only implemented project language right now
+- Python and TypeScript are the implemented project languages right now
 - the load pattern is limited to a steady-rate executor (i.e. "run 'x' times or run for 'y' duration),
   more nuanced load patterns will need to create their own scenario + executor (the existing method)
 
@@ -308,6 +308,16 @@ docker run --rm \
 
 docker stop omes-python-project-worker
 docker network rm omes-project-net
+```
+
+The TypeScript project image uses the same project arguments with `dockerfiles/typescript.Dockerfile`:
+
+```sh
+docker build \
+  -f dockerfiles/typescript.Dockerfile \
+  --build-arg PROJECT_NAME=helloworld \
+  --build-arg SDK_VERSION=1.15.0 \
+  -t omes-typescript-project-helloworld .
 ```
 
 This docker workflow it is not yet wired into `go run ./cmd/dev build-worker-image`.
