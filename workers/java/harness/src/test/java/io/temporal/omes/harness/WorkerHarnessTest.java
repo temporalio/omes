@@ -1,126 +1,137 @@
 package io.temporal.omes.harness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.temporal.client.WorkflowClient;
+import io.temporal.common.SimplePlugin;
+import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
-import io.temporal.worker.WorkerOptions;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 class WorkerHarnessTest {
   @Test
-  void harnessRunDefaultsToWorkerModeWhenNoCommandIsProvided() {
-    IllegalStateException error =
-        assertThrows(
-            IllegalStateException.class,
-            () ->
-                Harness.run(
-                    new Harness.App(
-                        (client, worker, context) -> {},
-                        config -> {
-                          throw new IllegalStateException("worker mode");
-                        })));
+  void runWorkerFactoryShutsDownAllWorkersWhenStartFails() {
+    LifecyclePlugin lifecycle = new LifecyclePlugin("omes-1", 2);
 
-    assertEquals("worker mode", error.getMessage());
+    try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+      environment.start();
+      WorkflowClient client = environment.getWorkflowClient();
+      WorkerFactory workerFactory = newWorkerFactory(client, lifecycle);
+      addWorker(workerFactory, "omes-1");
+      addWorker(workerFactory, "omes-2");
+
+      IllegalStateException error =
+          assertThrows(
+              IllegalStateException.class,
+              () -> WorkerHarness.runWorkerFactory(workerFactory, client, new CountDownLatch(1)));
+
+      assertEquals("boom", error.getMessage());
+      assertEquals(Set.of("omes-1", "omes-2"), lifecycle.shutdownTaskQueues());
+    }
   }
 
   @Test
-  void runPassesSharedClientAndContextToEachWorkerFactory() throws Exception {
-    WorkflowClient client = HarnessTestSupport.fakeWorkflowClient();
-    WorkerFactory workerFactory =
-        WorkerFactory.newInstance(
-            client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(4).build());
-    WorkerOptions workerOptions = WorkerOptions.newBuilder().build();
-    Logger logger = LoggerFactory.getLogger("worker-harness-test");
-    List<ConfiguredWorker> configuredWorkers = new ArrayList<>();
+  void runWorkerFactoryShutsDownAllWorkersWhenStopped() throws Exception {
+    LifecyclePlugin lifecycle = new LifecyclePlugin(null, 2);
+    CountDownLatch stopSignal = new CountDownLatch(1);
 
-    WorkerHarness.WorkerConfigurer configurer =
-        (configuredClient, worker, context) ->
-            configuredWorkers.add(new ConfiguredWorker(configuredClient, context));
+    try (TestWorkflowEnvironment environment = TestWorkflowEnvironment.newInstance()) {
+      environment.start();
+      WorkflowClient client = environment.getWorkflowClient();
+      WorkerFactory workerFactory = newWorkerFactory(client, lifecycle);
+      addWorker(workerFactory, "omes-1");
+      addWorker(workerFactory, "omes-2");
 
-    List<Worker> workers =
-        WorkerHarness.configureWorkers(
-            client,
-            workerFactory,
-            configurer,
-            logger,
-            List.of("omes-1", "omes-2"),
-            true,
-            workerOptions);
+      CompletableFuture<Void> runTask =
+          CompletableFuture.runAsync(
+              () -> runWorkerFactory(workerFactory, client, stopSignal));
 
-    assertEquals(2, workers.size());
-    assertEquals(2, configuredWorkers.size());
-    assertSame(client, configuredWorkers.get(0).client);
-    assertSame(client, configuredWorkers.get(1).client);
-    assertEquals("omes-1", configuredWorkers.get(0).context.taskQueue);
-    assertEquals("omes-2", configuredWorkers.get(1).context.taskQueue);
+      assertTrue(lifecycle.awaitStarted(5, TimeUnit.SECONDS));
+      stopSignal.countDown();
+      runTask.join();
+
+      assertEquals(Set.of("omes-1", "omes-2"), lifecycle.startedTaskQueues());
+      assertEquals(Set.of("omes-1", "omes-2"), lifecycle.shutdownTaskQueues());
+    }
   }
 
-  @Test
-  void parseArgumentsRejectsInvalidTaskQueueRange() {
-    IllegalArgumentException error =
-        assertThrows(
-            IllegalArgumentException.class,
-            () ->
-                WorkerHarness.parseArguments(
-                    "--task-queue-suffix-index-start",
-                    "2",
-                    "--task-queue-suffix-index-end",
-                    "1"));
-
-    assertEquals("Task queue suffix start after end", error.getMessage());
+  private static WorkerFactory newWorkerFactory(
+      WorkflowClient client, LifecyclePlugin lifecycle) {
+    return WorkerFactory.newInstance(
+        client,
+        WorkerFactoryOptions.newBuilder()
+            .setMaxWorkflowThreadCount(4)
+            .setPlugins(lifecycle)
+            .build());
   }
 
-  @Test
-  void parseArgumentsAndBuildWorkerOptionsMapCliValues() {
-    WorkerHarness.Arguments args =
-        WorkerHarness.parseArguments(
-            "--task-queue",
-            "custom",
-            "--task-queue-suffix-index-start",
-            "1",
-            "--task-queue-suffix-index-end",
-            "3",
-            "--max-concurrent-activity-pollers",
-            "4",
-            "--max-concurrent-workflow-pollers",
-            "5",
-            "--max-concurrent-activities",
-            "6",
-            "--max-concurrent-workflow-tasks",
-            "7",
-            "--activities-per-second",
-            "8.5",
-            "--err-on-unimplemented",
-            "--tls=yes");
-    WorkerOptions options = WorkerHarness.buildWorkerOptions(args);
-
-    assertEquals("custom", args.taskQueue);
-    assertTrue(args.errOnUnimplemented);
-    assertTrue(args.tls);
-    assertEquals(4, options.getMaxConcurrentActivityTaskPollers());
-    assertEquals(5, options.getMaxConcurrentWorkflowTaskPollers());
-    assertEquals(6, options.getMaxConcurrentActivityExecutionSize());
-    assertEquals(7, options.getMaxConcurrentWorkflowTaskExecutionSize());
-    assertEquals(8.5, options.getMaxWorkerActivitiesPerSecond());
+  private static void addWorker(WorkerFactory workerFactory, String taskQueue) {
+    Worker worker = workerFactory.newWorker(taskQueue);
+    worker.registerWorkflowImplementationTypes(ProjectHarnessEchoWorkflowImpl.class);
   }
 
-  private static final class ConfiguredWorker {
-    private final WorkflowClient client;
-    private final WorkerHarness.WorkerContext context;
+  private static void runWorkerFactory(
+      WorkerFactory workerFactory, WorkflowClient client, CountDownLatch stopSignal) {
+    try {
+      WorkerHarness.runWorkerFactory(workerFactory, client, stopSignal);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new AssertionError(e);
+    }
+  }
 
-    private ConfiguredWorker(WorkflowClient client, WorkerHarness.WorkerContext context) {
-      this.client = client;
-      this.context = context;
+  private static final class LifecyclePlugin extends SimplePlugin {
+    private final String failOnStartTaskQueue;
+    private final CountDownLatch startedWorkers;
+    private final List<String> startedTaskQueues = new ArrayList<>();
+    private final List<String> shutdownTaskQueues = new ArrayList<>();
+
+    private LifecyclePlugin(String failOnStartTaskQueue, int expectedWorkerCount) {
+      super("io.temporal.omes.harness-test.lifecycle");
+      this.failOnStartTaskQueue = failOnStartTaskQueue;
+      this.startedWorkers = new CountDownLatch(expectedWorkerCount);
+    }
+
+    @Override
+    public synchronized void startWorker(
+        String taskQueue, Worker worker, BiConsumer<String, Worker> next) {
+      next.accept(taskQueue, worker);
+      startedTaskQueues.add(taskQueue);
+      startedWorkers.countDown();
+      if (taskQueue.equals(failOnStartTaskQueue)) {
+        throw new IllegalStateException("boom");
+      }
+    }
+
+    @Override
+    public synchronized void shutdownWorker(
+        String taskQueue, Worker worker, BiConsumer<String, Worker> next) {
+      shutdownTaskQueues.add(taskQueue);
+      next.accept(taskQueue, worker);
+    }
+
+    private boolean awaitStarted(long timeout, TimeUnit unit) throws InterruptedException {
+      return startedWorkers.await(timeout, unit);
+    }
+
+    private synchronized Set<String> startedTaskQueues() {
+      return new HashSet<>(startedTaskQueues);
+    }
+
+    private synchronized Set<String> shutdownTaskQueues() {
+      return new HashSet<>(shutdownTaskQueues);
     }
   }
 }

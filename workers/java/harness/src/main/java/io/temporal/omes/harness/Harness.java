@@ -7,10 +7,14 @@ public final class Harness {
   private Harness() {}
 
   public static void run(App app, String... argv) throws Exception {
-    if (argv.length == 0 || "worker".equals(argv[0])) {
-      String[] workerArgv =
-          argv.length == 0 ? new String[0] : Arrays.copyOfRange(argv, 1, argv.length);
-      WorkerHarness.runWorkerCli(app.worker, app.clientFactory, workerArgv);
+    if (argv.length == 0) {
+      throw new IllegalArgumentException(
+          "No command specified. Expected 'worker' or 'project-server'");
+    }
+
+    if ("worker".equals(argv[0])) {
+      WorkerHarness.runWorkerCli(
+          app.worker, app.clientFactory, Arrays.copyOfRange(argv, 1, argv.length));
       return;
     }
 
@@ -30,17 +34,16 @@ public final class Harness {
   }
 
   public static final class App {
-    public final WorkerHarness.WorkerConfigurer worker;
+    public final WorkerHarness.WorkerRegistrar worker;
     public final HarnessClients.ClientFactory clientFactory;
     public final ProjectHarness.ProjectHandlers project;
 
-    public App(
-        WorkerHarness.WorkerConfigurer worker, HarnessClients.ClientFactory clientFactory) {
+    public App(WorkerHarness.WorkerRegistrar worker, HarnessClients.ClientFactory clientFactory) {
       this(worker, clientFactory, null);
     }
 
     public App(
-        WorkerHarness.WorkerConfigurer worker,
+        WorkerHarness.WorkerRegistrar worker,
         HarnessClients.ClientFactory clientFactory,
         ProjectHarness.ProjectHandlers project) {
       this.worker = Objects.requireNonNull(worker);
