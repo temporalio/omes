@@ -21,7 +21,6 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint-ci": "npm run typecheck && npm run lint && prettier --check .",
-    "prepare": "npm run build",
     "test": "npm run build:test && node --test dist-test/tests/project.test.js dist-test/tests/worker.test.js",
     "typecheck": "npm run proto-gen && tsc --noEmit",
     "typecheck:test": "npm run proto-gen && tsc --noEmit --project tsconfig.test.json"

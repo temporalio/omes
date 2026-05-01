@@ -26,11 +26,14 @@ type ProjectHandle struct {
 	client    api.ProjectServiceClient
 }
 
-func newProjectHandle(ctx context.Context, port int, req *api.InitRequest) (ProjectHandle, error) {
+func newProjectHandle(ctx context.Context, port int, req *api.InitRequest, readyTimeout time.Duration) (ProjectHandle, error) {
 	address := fmt.Sprintf("%s:%d", defaultClientHost, port)
 	c := ProjectHandle{address: address, taskQueue: req.GetTaskQueue()}
 
-	deadline := time.Now().Add(defaultClientReadyTimeout)
+	if readyTimeout == 0 {
+		readyTimeout = defaultClientReadyTimeout
+	}
+	deadline := time.Now().Add(readyTimeout)
 	var err error
 	for time.Now().Before(deadline) {
 		conn, dialErr := net.Dial("tcp", c.address)
@@ -47,7 +50,7 @@ func newProjectHandle(ctx context.Context, port int, req *api.InitRequest) (Proj
 		}
 	}
 	if err != nil {
-		return ProjectHandle{}, fmt.Errorf("project server not ready after %v: %w", defaultClientReadyTimeout, err)
+		return ProjectHandle{}, fmt.Errorf("project server not ready after %v: %w", readyTimeout, err)
 	}
 
 	conn, err := grpc.NewClient(

@@ -8,6 +8,7 @@ const pbts = require('protobufjs-cli/pbts');
 
 const outputDir = resolve(__dirname, './src/protos');
 const jsOutputFile = resolve(outputDir, 'json-module.js');
+const dtsOutputFile = resolve(outputDir, 'root.d.ts');
 const tempFile = resolve(outputDir, 'temp.js');
 const protoBaseDir = resolve(__dirname, '../proto');
 
@@ -66,7 +67,7 @@ async function compileProtos(dtsOutputFile, ...args) {
 
     await promisify(pbts.main)(['--out', dtsOutputFile, tempFile]);
   } finally {
-    await rm(tempFile);
+    await rm(tempFile, { force: true });
   }
 }
 
@@ -75,7 +76,7 @@ async function main() {
 
   const protoFiles = glob.sync(resolve(protoBaseDir, '**/*.proto'));
   const protosMTime = Math.max(...protoFiles.map(mtime));
-  const genMTime = mtime(jsOutputFile);
+  const genMTime = Math.min(mtime(jsOutputFile), mtime(dtsOutputFile));
 
   if (protosMTime < genMTime) {
     console.log('Assuming protos are up to date');
@@ -83,7 +84,7 @@ async function main() {
   }
 
   await compileProtos(
-    resolve(outputDir, 'root.d.ts'),
+    dtsOutputFile,
     '--path',
     resolve(protoBaseDir, 'kitchen_sink'),
     '--path',
