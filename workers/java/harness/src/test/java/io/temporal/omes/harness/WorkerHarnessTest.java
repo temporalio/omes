@@ -55,8 +55,7 @@ class WorkerHarnessTest {
       addWorker(workerFactory, "omes-2");
 
       CompletableFuture<Void> runTask =
-          CompletableFuture.runAsync(
-              () -> runWorkerFactory(workerFactory, client, stopSignal));
+          CompletableFuture.runAsync(() -> runWorkerFactory(workerFactory, client, stopSignal));
 
       assertTrue(lifecycle.awaitStarted(5, TimeUnit.SECONDS));
       stopSignal.countDown();
@@ -67,8 +66,7 @@ class WorkerHarnessTest {
     }
   }
 
-  private static WorkerFactory newWorkerFactory(
-      WorkflowClient client, LifecyclePlugin lifecycle) {
+  private static WorkerFactory newWorkerFactory(WorkflowClient client, LifecyclePlugin lifecycle) {
     return WorkerFactory.newInstance(
         client,
         WorkerFactoryOptions.newBuilder()

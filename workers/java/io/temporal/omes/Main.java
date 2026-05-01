@@ -39,6 +39,7 @@ public final class Main {
   private static void configureWorker(
       WorkflowClient client, Worker worker, WorkerHarness.WorkerContext context) {
     worker.registerWorkflowImplementationTypes(KitchenSinkWorkflowImpl.class);
-    worker.registerActivitiesImplementations(new ActivitiesImpl(client, context.errOnUnimplemented));
+    worker.registerActivitiesImplementations(
+        new ActivitiesImpl(client, context.errOnUnimplemented));
   }
 }

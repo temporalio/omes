@@ -38,10 +38,9 @@ final class ProjectHarnessTestSupport {
 
   static TestServer startServer(ProjectHarness.ProjectServiceServer service) throws IOException {
     String serverName = InProcessServerBuilder.generateName();
-    Server server =
-        InProcessServerBuilder.forName(serverName).directExecutor().addService(service).build();
+    Server server = InProcessServerBuilder.forName(serverName).addService(service).build();
     server.start();
-    ManagedChannel channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
+    ManagedChannel channel = InProcessChannelBuilder.forName(serverName).build();
     return new TestServer(server, channel, ProjectServiceGrpc.newBlockingStub(channel));
   }
 

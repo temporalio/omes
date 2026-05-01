@@ -75,10 +75,7 @@ public final class WorkerHarness {
           workerRegistrar,
           logger,
           buildTaskQueues(
-              logger,
-              args.taskQueue,
-              args.taskQueueSuffixIndexStart,
-              args.taskQueueSuffixIndexEnd),
+              logger, args.taskQueue, args.taskQueueSuffixIndexStart, args.taskQueueSuffixIndexEnd),
           args.errOnUnimplemented,
           buildWorkerOptions(args));
 
@@ -330,14 +327,10 @@ public final class WorkerHarness {
   private static final class BooleanFlagConverter implements CommandLine.ITypeConverter<Boolean> {
     @Override
     public Boolean convert(String value) {
-      if ("true".equalsIgnoreCase(value)
-          || "1".equals(value)
-          || "yes".equalsIgnoreCase(value)) {
+      if ("true".equalsIgnoreCase(value) || "1".equals(value) || "yes".equalsIgnoreCase(value)) {
         return true;
       }
-      if ("false".equalsIgnoreCase(value)
-          || "0".equals(value)
-          || "no".equalsIgnoreCase(value)) {
+      if ("false".equalsIgnoreCase(value) || "0".equals(value) || "no".equalsIgnoreCase(value)) {
         return false;
       }
       throw new IllegalArgumentException("Invalid boolean value: " + value);

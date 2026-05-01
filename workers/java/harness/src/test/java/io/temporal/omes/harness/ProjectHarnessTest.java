@@ -36,8 +36,7 @@ class ProjectHarnessTest {
                                 WorkflowOptions.newBuilder()
                                     .setWorkflowId(
                                         String.format(
-                                            "%s-%d",
-                                            context.run.executionId, context.iteration))
+                                            "%s-%d", context.run.executionId, context.iteration))
                                     .setTaskQueue(context.taskQueue)
                                     .build());
                         captured.executeClient = client;
@@ -52,13 +51,11 @@ class ProjectHarnessTest {
                       }),
                   config -> environment.getWorkflowClient()))) {
         server.stub.init(
-            ProjectHarnessTestSupport.makeInitRequest()
-                .toBuilder()
+            ProjectHarnessTestSupport.makeInitRequest().toBuilder()
                 .setTaskQueue(taskQueue)
                 .build());
         server.stub.execute(
-            ProjectHarnessTestSupport.makeExecuteRequest()
-                .toBuilder()
+            ProjectHarnessTestSupport.makeExecuteRequest().toBuilder()
                 .setTaskQueue(taskQueue)
                 .build());
       }
