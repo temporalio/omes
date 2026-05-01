@@ -11,8 +11,8 @@ require (
 	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/pflag v1.0.5
-	go.temporal.io/api v1.62.7
-	go.temporal.io/sdk v1.42.0
+	go.temporal.io/api v1.62.11
+	go.temporal.io/sdk v1.43.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.79.3
 )
