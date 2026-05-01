@@ -1,0 +1,21 @@
+{
+  "name": "@temporalio/omes-project-helloworld",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@temporalio/client": "1.15.0",
+    "@temporalio/omes-project-harness": "file:../../../harness",
+    "@temporalio/worker": "1.15.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.4",
+    "@types/node": "^24.1.0",
+    "typescript": "^5.9.3"
+  }
+}

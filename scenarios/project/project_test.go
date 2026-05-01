@@ -27,13 +27,13 @@ func TestValidateRequiresLanguage(t *testing.T) {
 	require.EqualError(t, err, "--option language=<lang> is required")
 }
 
-func TestValidateLimitedPythonSupport(t *testing.T) {
+func TestValidateLimitedProjectLanguageSupport(t *testing.T) {
 	_, err := (&projectScenarioExecutor{}).validate(loadgen.ScenarioInfo{
 		ScenarioOptions: map[string]string{
 			"language": "go",
 		},
 	})
-	require.EqualError(t, err, "project scenario is currently limited to Python, got go")
+	require.EqualError(t, err, "project scenario is currently limited to Python and TypeScript, got go")
 }
 
 func TestValidateRejectsConflictingProjectSources(t *testing.T) {
@@ -53,6 +53,14 @@ func TestPythonHelloWorldSourceBuild(t *testing.T) {
 
 func TestPythonHelloWorldPrebuilt(t *testing.T) {
 	runProjectScenario(t, "python", "helloworld", "", nil, true)
+}
+
+func TestTypeScriptHelloWorldSourceBuild(t *testing.T) {
+	runProjectScenario(t, "typescript", "helloworld", "", nil, false)
+}
+
+func TestTypeScriptHelloWorldPrebuilt(t *testing.T) {
+	runProjectScenario(t, "typescript", "helloworld", "", nil, true)
 }
 
 func runProjectScenario(
@@ -88,7 +96,9 @@ func runProjectScenario(
 
 	scenarioErrCh := make(chan error, 1)
 	go func() {
-		scenarioErrCh <- (&projectScenarioExecutor{}).Run(ctx, info)
+		scenarioErrCh <- (&projectScenarioExecutor{
+			clientReadyTimeout: 30 * time.Second,
+		}).Run(ctx, info)
 	}()
 
 	select {
