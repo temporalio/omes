@@ -1,9 +1,5 @@
 package io.temporal.omes.harness;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.ConsoleAppender;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.ServiceStubs;
 import io.temporal.worker.Worker;
@@ -13,23 +9,38 @@ import io.temporal.worker.WorkerOptions;
 import io.temporal.worker.tuning.PollerBehaviorAutoscaling;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import net.logstash.logback.encoder.LogstashEncoder;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 public final class WorkerHarness {
+
+  @FunctionalInterface
+  public interface WorkerRegistrar {
+    void register(WorkflowClient client, Worker worker, WorkerContext context) throws Exception;
+  }
+
+  public static final class WorkerContext {
+    public final Logger logger;
+    public final String taskQueue;
+    public final boolean errOnUnimplemented;
+
+    public WorkerContext(Logger logger, String taskQueue, boolean errOnUnimplemented) {
+      this.logger = logger;
+      this.taskQueue = taskQueue;
+      this.errOnUnimplemented = errOnUnimplemented;
+    }
+  }
+
   private WorkerHarness() {}
 
   static void runWorkerCli(
-      WorkerConfigurer workerConfigurer, HarnessClients.ClientFactory clientFactory, String... argv)
+      WorkerRegistrar workerRegistrar, HarnessClients.ClientFactory clientFactory, String... argv)
       throws Exception {
     Arguments args = parseArguments(argv);
-    Logger logger = configureLogger(args.logLevel, args.logEncoding);
+    Logger logger = HarnessHelpers.configure(args.logLevel, args.logEncoding);
     WorkflowClient client =
         clientFactory.create(
             HarnessClients.buildClientConfig(
@@ -47,21 +58,21 @@ public final class WorkerHarness {
         WorkerFactory.newInstance(
             client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000).build());
     AtomicBoolean shutdown = new AtomicBoolean(false);
-    CountDownLatch stopped = new CountDownLatch(1);
+    CountDownLatch stopSignal = new CountDownLatch(1);
     Thread shutdownHook =
         new Thread(
             () -> {
-              shutdownWorkerFactory(workerFactory, client, shutdown);
-              stopped.countDown();
+              stopSignal.countDown();
+              shutdownWorkersAndClient(workerFactory, client, shutdown);
             },
             "omes-java-harness-worker-shutdown");
     boolean shutdownHookAdded = false;
 
     try {
-      configureWorkers(
+      registerWorkers(
           client,
           workerFactory,
-          workerConfigurer,
+          workerRegistrar,
           logger,
           buildTaskQueues(
               logger,
@@ -73,21 +84,14 @@ public final class WorkerHarness {
 
       Runtime.getRuntime().addShutdownHook(shutdownHook);
       shutdownHookAdded = true;
-      workerFactory.start();
-      stopped.await();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
+      runWorkerFactory(workerFactory, client, stopSignal, shutdown);
     } finally {
-      if (shutdownHookAdded && !shutdown.get()) {
+      if (shutdownHookAdded) {
         try {
           Runtime.getRuntime().removeShutdownHook(shutdownHook);
         } catch (IllegalStateException ignored) {
           // JVM shutdown is already in progress.
         }
-      }
-      if (!shutdown.get()) {
-        shutdownWorkerFactory(workerFactory, client, shutdown);
       }
     }
   }
@@ -101,23 +105,20 @@ public final class WorkerHarness {
     return args;
   }
 
-  static List<Worker> configureWorkers(
+  static void registerWorkers(
       WorkflowClient client,
       WorkerFactory workerFactory,
-      WorkerConfigurer workerConfigurer,
+      WorkerRegistrar workerRegistrar,
       Logger logger,
       List<String> taskQueues,
       boolean errOnUnimplemented,
       WorkerOptions workerOptions)
       throws Exception {
-    List<Worker> workers = new ArrayList<>(taskQueues.size());
     for (String taskQueue : taskQueues) {
       Worker worker = workerFactory.newWorker(taskQueue, workerOptions);
-      workerConfigurer.configure(
+      workerRegistrar.register(
           client, worker, new WorkerContext(logger, taskQueue, errOnUnimplemented));
-      workers.add(worker);
     }
-    return workers;
   }
 
   static List<String> buildTaskQueues(
@@ -163,83 +164,27 @@ public final class WorkerHarness {
     return workerOptions.build();
   }
 
-  public interface WorkerConfigurer {
-    void configure(WorkflowClient client, Worker worker, WorkerContext context) throws Exception;
+  static void runWorkerFactory(
+      WorkerFactory workerFactory, WorkflowClient client, CountDownLatch stopSignal)
+      throws InterruptedException {
+    runWorkerFactory(workerFactory, client, stopSignal, new AtomicBoolean(false));
   }
 
-  public static final class WorkerContext {
-    public final Logger logger;
-    public final String taskQueue;
-    public final boolean errOnUnimplemented;
-
-    public WorkerContext(Logger logger, String taskQueue, boolean errOnUnimplemented) {
-      this.logger = logger;
-      this.taskQueue = taskQueue;
-      this.errOnUnimplemented = errOnUnimplemented;
+  private static void runWorkerFactory(
+      WorkerFactory workerFactory,
+      WorkflowClient client,
+      CountDownLatch stopSignal,
+      AtomicBoolean shutdown)
+      throws InterruptedException {
+    try {
+      workerFactory.start();
+      stopSignal.await();
+    } finally {
+      shutdownWorkersAndClient(workerFactory, client, shutdown);
     }
   }
 
-  private static Level resolveLogLevel(String logLevel) {
-    switch (logLevel.toUpperCase(Locale.ROOT)) {
-      case "PANIC":
-      case "FATAL":
-        return Level.ERROR;
-      case "ERROR":
-        return Level.ERROR;
-      case "WARN":
-        return Level.WARN;
-      case "INFO":
-        return Level.INFO;
-      case "DEBUG":
-        return Level.DEBUG;
-      case "NOTSET":
-        return Level.ALL;
-      default:
-        throw new IllegalArgumentException(
-            "Invalid log level: "
-                + logLevel
-                + ". Expected one of: debug, info, warn, error, panic, fatal, notset");
-    }
-  }
-
-  private static Logger configureLogger(String logLevel, String logEncoding) {
-    Logger logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-    if (!(logger instanceof ch.qos.logback.classic.Logger)) {
-      return logger;
-    }
-
-    ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) logger;
-    rootLogger.setLevel(resolveLogLevel(logLevel));
-
-    if ("json".equals(logEncoding)) {
-      LoggerContext context = rootLogger.getLoggerContext();
-      rootLogger.detachAndStopAllAppenders();
-      ConsoleAppender<ILoggingEvent> appender = new ConsoleAppender<>();
-      appender.setContext(context);
-      LogstashEncoder encoder = new LogstashEncoder();
-      encoder.setContext(context);
-      encoder.start();
-      appender.setEncoder(encoder);
-      appender.start();
-      rootLogger.addAppender(appender);
-    } else if (!rootLogger.iteratorForAppenders().hasNext()) {
-      LoggerContext context = rootLogger.getLoggerContext();
-      ConsoleAppender<ILoggingEvent> appender = new ConsoleAppender<>();
-      appender.setContext(context);
-      ch.qos.logback.classic.encoder.PatternLayoutEncoder encoder =
-          new ch.qos.logback.classic.encoder.PatternLayoutEncoder();
-      encoder.setContext(context);
-      encoder.setPattern("%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n");
-      encoder.start();
-      appender.setEncoder(encoder);
-      appender.start();
-      rootLogger.addAppender(appender);
-    }
-
-    return rootLogger;
-  }
-
-  private static void shutdownWorkerFactory(
+  private static void shutdownWorkersAndClient(
       WorkerFactory workerFactory, WorkflowClient client, AtomicBoolean shutdown) {
     if (!shutdown.compareAndSet(false, true)) {
       return;
@@ -315,7 +260,7 @@ public final class WorkerHarness {
         arity = "0..1",
         fallbackValue = "true",
         defaultValue = "false",
-        converter = FlexibleBooleanConverter.class)
+        converter = BooleanFlagConverter.class)
     boolean errOnUnimplemented;
 
     @CommandLine.Option(
@@ -348,7 +293,7 @@ public final class WorkerHarness {
         arity = "0..1",
         fallbackValue = "true",
         defaultValue = "false",
-        converter = FlexibleBooleanConverter.class)
+        converter = BooleanFlagConverter.class)
     boolean tls;
 
     @CommandLine.Option(
@@ -382,8 +327,7 @@ public final class WorkerHarness {
     String buildId;
   }
 
-  private static final class FlexibleBooleanConverter
-      implements CommandLine.ITypeConverter<Boolean> {
+  private static final class BooleanFlagConverter implements CommandLine.ITypeConverter<Boolean> {
     @Override
     public Boolean convert(String value) {
       if ("true".equalsIgnoreCase(value)

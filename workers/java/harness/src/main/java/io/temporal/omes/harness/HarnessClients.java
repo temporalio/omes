@@ -13,6 +13,7 @@ import io.micrometer.prometheus.PrometheusNamingConvention;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.DataConverter;
+import io.temporal.common.converter.GlobalDataConverter;
 import io.temporal.common.reporter.MicrometerClientStatsReporter;
 import io.temporal.serviceclient.SimpleSslContextBuilder;
 import io.temporal.serviceclient.WorkflowServiceStubs;
@@ -25,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class HarnessClients {
-  private static final String DEFAULT_PROM_HANDLER_PATH = "/metrics";
   private static final Logger logger = LoggerFactory.getLogger(HarnessClients.class);
 
   private HarnessClients() {}
@@ -51,12 +51,12 @@ public final class HarnessClients {
         buildApiKey(authHeader),
         buildTlsContext(tls, tlsCertPath, tlsKeyPath),
         normalizeEmpty(promListenAddress),
-        normalizePromHandlerPath(promHandlerPath),
+        normalizeEmpty(promHandlerPath),
         normalizeEmpty(tlsServerName));
   }
 
   public static WorkflowClient defaultClientFactory(ClientConfig config) throws Exception {
-    return newWorkflowClient(config, DataConverter.getDefaultInstance());
+    return newWorkflowClient(config, GlobalDataConverter.get());
   }
 
   public static WorkflowClient newWorkflowClient(ClientConfig config, DataConverter dataConverter)
@@ -189,13 +189,6 @@ public final class HarnessClients {
             new Thread(
                 () -> scrapeEndpoint.stop(1), "omes-java-harness-metrics-shutdown"));
     return scope;
-  }
-
-  private static String normalizePromHandlerPath(String promHandlerPath) {
-    if (promHandlerPath == null || promHandlerPath.isEmpty()) {
-      return DEFAULT_PROM_HANDLER_PATH;
-    }
-    return promHandlerPath;
   }
 
   private static String normalizeEmpty(String value) {
