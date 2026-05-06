@@ -74,7 +74,8 @@ func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program
 go 1.20
 
 require github.com/temporalio/omes v1.0.0
-require github.com/temporalio/omes/workers/go v1.0.0`
+require github.com/temporalio/omes/workers/go v1.0.0
+require github.com/temporalio/omes/workers/go/harness/api v0.0.0`
 
 	goMain := `package main
 
@@ -97,32 +98,17 @@ func main() {
 	goMod += `
 
 replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../`
+replace github.com/temporalio/omes/workers/go => ../
+replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
-		BaseDir: baseDir,
-		DirName: b.DirName,
-		Version: b.SdkOptions.Version,
-		Stdout:  b.stdout,
-		Stderr:  b.stderr,
-		GoModContents: `module github.com/temporalio/omes-worker
-
-go 1.20
-
-require github.com/temporalio/omes v1.0.0
-require github.com/temporalio/omes/workers/go v1.0.0
-require github.com/temporalio/omes/workers/go/harness/api v0.0.0
-
-replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../
-replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`,
-		GoMainContents: `package main
-
-import "github.com/temporalio/omes/workers/go/worker"
-
-func main() {
-	worker.Main()
-}`,
+		BaseDir:        baseDir,
+		DirName:        b.DirName,
+		Version:        b.SdkOptions.Version,
+		Stdout:         b.stdout,
+		Stderr:         b.stderr,
+		GoModContents:  goMod,
+		GoMainContents: goMain,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
