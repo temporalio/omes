@@ -23,6 +23,7 @@ type Builder struct {
 	Logger      *zap.SugaredLogger
 	stdout      io.Writer
 	stderr      io.Writer
+	Lambda      bool
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -68,6 +69,36 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 }
 
 func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	goMod := `module github.com/temporalio/omes-worker
+
+go 1.20
+
+require github.com/temporalio/omes v1.0.0
+require github.com/temporalio/omes/workers/go v1.0.0`
+
+	goMain := `package main
+
+import "github.com/temporalio/omes/workers/go/worker"
+
+func main() {
+	worker.Main()
+}`
+
+	if b.Lambda {
+		goMain = `package main
+
+import "github.com/temporalio/omes/workers/go/lambda"
+
+func main() {
+	lambda.Main()
+}`
+	}
+
+	goMod += `
+
+replace github.com/temporalio/omes => ../../../
+replace github.com/temporalio/omes/workers/go => ../`
+
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
 		BaseDir: baseDir,
 		DirName: b.DirName,
