@@ -221,42 +221,25 @@ func (s *SchedulerExecutor) executeWithNewSchedules(ctx context.Context, run *lo
 
 	for range s.config.WorkerCount {
 		wg.Go(func() {
-			// Each worker keeps consuming from the channel until it's closed
 			for config := range scheduleConfigChan {
-				func() {
+				start := time.Now()
+				ticker := time.NewTicker(s.config.OperationInterval)
 
-					start := time.Now()
-					ticker := time.NewTicker(s.config.OperationInterval)
-
-					sc, err := s.createSchedule(ctx, client, config.ScheduleID, config.TaskQueue, logger)
-					if err != nil {
-						logger.Errorw("Failed to create schedule", "scheduleID", config.ScheduleID, "error", err)
-						ticker.Stop()
-						return
-					}
-
-					if !s.config.SkipDeletion {
-						defer func(id string, startTime time.Time) {
-							dur := time.Until(startTime.Add(s.config.WaitTimeBeforeCleanup))
-							logger.Debugw("Waiting for deletion", "scheduleID", id, "duration", dur)
-							select {
-							case <-time.After(dur):
-								logger.Debugw("deleting", "scheduleID", id, "duration", dur)
-								if err := s.deleteSchedule(ctx, client, id, logger); err != nil {
-									logger.Errorw("Failed to delete schedule", "scheduleID", id, "error", err)
-								}
-								logger.Debugw("deleted", "scheduleID", id)
-							case <-ctx.Done():
-								logger.Infow("Context canceled")
-							}
-						}(sc.ScheduleID, start)
-					}
-
-					<-ticker.C
-					s.performScheduleOperations(ctx, client, sc.ScheduleID, ticker, logger)
+				sc, err := s.createSchedule(ctx, client, config.ScheduleID, config.TaskQueue, logger)
+				if err != nil {
+					logger.Errorw("Failed to create schedule", "scheduleID", config.ScheduleID, "error", err)
 					ticker.Stop()
-				}()
-				logger.Debug("worker exited")
+					continue
+				}
+
+				if waitForTick(ctx, ticker) {
+					s.performScheduleOperations(ctx, client, sc.ScheduleID, ticker, logger)
+				}
+				ticker.Stop()
+
+				if !s.config.SkipDeletion {
+					s.waitAndDeleteSchedule(ctx, client, sc.ScheduleID, start, logger)
+				}
 			}
 		})
 	}
@@ -273,11 +256,8 @@ func (s *SchedulerExecutor) executeWithExistingSchedules(ctx context.Context, cl
 	scheduleIDChan := make(chan string, 100)
 	listErrChan := make(chan error, 1)
 
-	// Start a goroutine to list schedules and send them to the channel
 	go func() {
-		defer close(scheduleIDChan)
 		listErrChan <- s.listSchedules(ctx, client, scheduleIDChan, logger)
-		logger.Infow("about to close ch")
 	}()
 
 	// Start workers that will process schedules as they arrive
@@ -285,31 +265,18 @@ func (s *SchedulerExecutor) executeWithExistingSchedules(ctx context.Context, cl
 
 	for range s.config.WorkerCount {
 		wg.Go(func() {
-			// Each worker keeps consuming from the channel until it's closed
 			for scheduleID := range scheduleIDChan {
-				func() {
+				start := time.Now()
+				ticker := time.NewTicker(s.config.OperationInterval)
 
-					start := time.Now()
-					ticker := time.NewTicker(s.config.OperationInterval)
-
-					if !s.config.SkipDeletion {
-						defer func(id string, startTime time.Time) {
-							dur := time.Until(startTime.Add(s.config.WaitTimeBeforeCleanup))
-							select {
-							case <-time.After(dur):
-								if err := s.deleteSchedule(ctx, client, id, logger); err != nil {
-									logger.Errorw("Failed to delete schedule", "scheduleID", id, "error", err)
-								}
-							case <-ctx.Done():
-								logger.Infow("Context canceled")
-							}
-						}(scheduleID, start)
-					}
-
-					<-ticker.C
+				if waitForTick(ctx, ticker) {
 					s.performScheduleOperations(ctx, client, scheduleID, ticker, logger)
-					ticker.Stop()
-				}()
+				}
+				ticker.Stop()
+
+				if !s.config.SkipDeletion {
+					s.waitAndDeleteSchedule(ctx, client, scheduleID, start, logger)
+				}
 			}
 		})
 	}
@@ -327,20 +294,52 @@ func (s *SchedulerExecutor) executeWithExistingSchedules(ctx context.Context, cl
 	return nil
 }
 
+func (s *SchedulerExecutor) waitAndDeleteSchedule(ctx context.Context, c client.Client, scheduleID string, start time.Time, logger *zap.SugaredLogger) {
+	dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
+	logger.Debugw("Waiting for deletion", "scheduleID", scheduleID, "duration", dur)
+	select {
+	case <-time.After(dur):
+		logger.Debugw("deleting", "scheduleID", scheduleID)
+		if err := s.deleteSchedule(ctx, c, scheduleID, logger); err != nil {
+			logger.Errorw("Failed to delete schedule", "scheduleID", scheduleID, "error", err)
+		}
+		logger.Debugw("deleted", "scheduleID", scheduleID)
+	case <-ctx.Done():
+		logger.Infow("Context canceled")
+	}
+}
+
+// waitForTick waits for the next ticker tick or context cancellation.
+// Returns false if the context was canceled.
+func waitForTick(ctx context.Context, ticker *time.Ticker) bool {
+	select {
+	case <-ticker.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 func (s *SchedulerExecutor) performScheduleOperations(ctx context.Context, client client.Client, scheduleID string, ticker *time.Ticker, logger *zap.SugaredLogger) {
 	for range s.config.ScheduleReadsPerCreation {
-		<-ticker.C // Wait between read operations
+		if !waitForTick(ctx, ticker) {
+			return
+		}
 		if err := s.describeSchedule(ctx, client, scheduleID, logger); err != nil {
 			logger.Errorw("Failed to describe schedule", "scheduleID", scheduleID, "error", err)
 		}
-		<-ticker.C // Wait between read operations
+		if !waitForTick(ctx, ticker) {
+			return
+		}
 	}
 
 	for range s.config.ScheduleUpdatesPerCreation {
 		if err := s.updateSchedule(ctx, client, scheduleID, logger); err != nil {
 			logger.Errorw("Failed to update schedule", "scheduleID", scheduleID, "error", err)
 		}
-		<-ticker.C // Wait between update operations
+		if !waitForTick(ctx, ticker) {
+			return
+		}
 	}
 }
 
@@ -350,6 +349,8 @@ type ScheduleState struct {
 }
 
 func (s *SchedulerExecutor) listSchedules(ctx context.Context, c client.Client, scheduleIDChan chan<- string, logger *zap.SugaredLogger) error {
+	defer close(scheduleIDChan)
+
 	iter, err := c.ScheduleClient().List(ctx, client.ScheduleListOptions{})
 	if err != nil {
 		logger.Errorw("Error creating schedule list iterator", "error", err)
@@ -431,7 +432,7 @@ func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogg
 	return policies[n.Int64()]
 }
 
-// retryConfig defines retry behavior for schedule operations
+// Retry constants for schedule operations
 const (
 	maxRetries      = 5
 	baseBackoff     = 100 * time.Millisecond
@@ -439,7 +440,8 @@ const (
 	backoffMultiple = 2.0
 )
 
-// retryWithBackoff executes an operation with exponential backoff and jitter on context deadline errors
+// retryWithBackoff executes an operation with exponential backoff and jitter on context deadline errors.
+// The Go SDK's built-in gRPC retry interceptor does not retry DeadlineExceeded errors, so we handle them here.
 func retryWithBackoff(ctx context.Context, operation string, logger *zap.SugaredLogger, fn func() error) error {
 	var lastErr error
 	backoff := baseBackoff
