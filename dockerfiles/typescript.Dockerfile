@@ -1,6 +1,6 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH node:20-bullseye AS build
+FROM --platform=linux/$TARGETARCH node:24-bullseye AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install protobuf compiler
