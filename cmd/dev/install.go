@@ -189,7 +189,18 @@ func installNode(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	pnpmVersion, err := getVersion("pnpm")
+	if err != nil {
+		return err
+	}
 	if err := installViaMise(ctx, "node", version); err != nil {
+		return err
+	}
+	fmt.Println("Activating pnpm", pnpmVersion, "with Corepack...")
+	if err := runCommand(ctx, "corepack", "prepare", "pnpm@"+pnpmVersion, "--activate"); err != nil {
+		return err
+	}
+	if err := runCommand(ctx, "corepack", "pnpm", "--version"); err != nil {
 		return err
 	}
 
