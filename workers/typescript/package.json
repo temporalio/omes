@@ -37,6 +37,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@temporalio/testing": "^1.17.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
