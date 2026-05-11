@@ -37,10 +37,10 @@
     "@temporalio/client": ">=1.15.0 <2",
     "@temporalio/common": ">=1.15.0 <2",
     "@temporalio/worker": ">=1.15.0 <2",
-    "@temporalio/workflow": ">=1.15.0 <2"
+    "@temporalio/workflow": ">=1.15.0 <2",
+    "@temporalio/testing": ">=1.15.0 <2"
   },
   "devDependencies": {
-    "@temporalio/testing": "1.15.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.10.0",
     "@tsconfig/node24": "^24.0.4",

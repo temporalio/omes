@@ -89,7 +89,7 @@ export const createActivities = (client: Client, errOnUnimplemented = false) => 
 
   async client(clientActivity: IClientActivity): Promise<void> {
     const activityContext = activityInfo();
-    const workflowId = activityContext.workflowExecution.workflowId;
+    const workflowId = activityContext?.workflowExecution?.workflowId ?? '';
     const taskQueue = activityContext.taskQueue;
 
     const executor = new ClientActionExecutor(client, workflowId, taskQueue, errOnUnimplemented);
