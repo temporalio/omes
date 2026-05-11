@@ -29,6 +29,7 @@ import (
 	"time"
 
 	. "github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/temporalio/omes/loadgen"
@@ -84,6 +85,10 @@ func init() {
 						{Actions: slowActions, Concurrent: true},
 						{Actions: []*Action{NewEmptyReturnResultAction()}},
 					}
+					return nil
+				},
+				UpdateWorkflowOptions: func(_ context.Context, run *loadgen.Run, opts *loadgen.KitchenSinkWorkflowOptions) error {
+					opts.StartOptions.VersioningOverride = &client.AutoUpgradeVersioningOverride{}
 					return nil
 				},
 			}
