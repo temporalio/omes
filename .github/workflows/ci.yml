@@ -28,10 +28,10 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
-      # Scope to just Python for project build tests
+      # Scope to languages used by project build tests
       - name: Install Tools
         run: |
-          go run ./cmd/dev install python
+          go run ./cmd/dev install python node
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
@@ -162,12 +162,10 @@ jobs:
             project: helloworld
             dockerfile: dockerfiles/python.Dockerfile
             sdk_version_env: PYTHON_SDK_VERSION
-            sdk_version_prefix: v
           - sdk: typescript
             project: helloworld
             dockerfile: dockerfiles/typescript.Dockerfile
             sdk_version_env: TYPESCRIPT_SDK_VERSION
-            sdk_version_prefix: ""
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -180,7 +178,7 @@ jobs:
       - name: Set ${{ matrix.sdk }} project image metadata
         run: |
           sdk_version_env=${{ matrix.sdk_version_env }}
-          echo "PROJECT_IMAGE_SDK_VERSION=${{ matrix.sdk_version_prefix }}${!sdk_version_env}" >> "$GITHUB_ENV"
+          echo "PROJECT_IMAGE_SDK_VERSION=${!sdk_version_env}" >> "$GITHUB_ENV"
           echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
           echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
           echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"

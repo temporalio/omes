@@ -33,11 +33,7 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
 
-	if b.ProjectName != "" {
-		baseDir = ProjectDir(baseDir, b.ProjectName)
-	}
-
-	buildDir := filepath.Join(baseDir, b.DirName)
+	buildDir := filepath.Join(ProjectDir(baseDir, b.ProjectName), b.DirName)
 	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
 	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("failed creating directory: %w", err)
@@ -117,6 +113,8 @@ replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 }
 
 func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	baseDir = ProjectDir(baseDir, b.ProjectName)
+
 	// If version not provided, try to read it from pyproject.toml
 	version := b.SdkOptions.Version
 	if version == "" {
@@ -166,20 +164,25 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 }
 
 func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	moreDependencies := map[string]string{
-		"@temporalio/omes-project-harness": "file:../harness",
-		"winston":                          "^3.11.0",
+	// Typescript builds need to install workspace deps from the workspace (i.e. workers/typscript)
+	workspaceDir := baseDir
+	// And deps from their individual test
+	testDir := ProjectDir(baseDir, b.ProjectName)
+
+	harnessDir, absErr := filepath.Abs(filepath.Join(baseDir, "harness"))
+	if absErr != nil {
+		return nil, fmt.Errorf("failed resolving TypeScript project harness path: %w", absErr)
 	}
-	if b.ProjectName != "" {
-		// Project fixtures build from workers/typescript/projects/tests/<name>,
-		// so their generated package needs to walk back to workers/typescript/harness.
-		moreDependencies["@temporalio/omes-project-harness"] = "file:../../../../harness"
+
+	moreDependencies := map[string]string{
+		"@temporalio/omes-project-harness": fmt.Sprintf("file:%s", filepath.ToSlash(harnessDir)),
+		"winston":                          "^3.11.0",
 	}
 
 	// If version not provided, try to read it from package.json
 	version := b.SdkOptions.Version
 	if version == "" {
-		packageJSON, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
+		packageJSON, err := os.ReadFile(filepath.Join(testDir, "package.json"))
 		if err != nil {
 			return nil, fmt.Errorf("failed reading package.json: %w", err)
 		}
@@ -199,25 +202,28 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		}
 	}
 
-	// Prep the TypeScript runner to be built
-	cmd := exec.Command("npm", "install")
-	cmd.Dir = baseDir
+	// Install workspace deps
+	cmd := exec.CommandContext(ctx, "npm", "install")
+	cmd.Dir = workspaceDir
+	cmd.Stdout = b.stdout
+	cmd.Stderr = b.stderr
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("npm install in ./workers/typescript failed: %w", err)
+		return nil, fmt.Errorf("npm install in %s failed: %w", workspaceDir, err)
 	}
 
-	cmd = exec.Command("npm", "run", "build")
-	cmd.Dir = baseDir
+	// Build workspace deps
+	cmd = exec.CommandContext(ctx, "npm", "run", "build")
+	cmd.Dir = workspaceDir
 	cmd.Stdout = b.stdout
 	cmd.Stderr = b.stderr
 	err = cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("npm run build in ./workers/typescript failed: %w", err)
+		return nil, fmt.Errorf("npm run build in %s failed: %w", workspaceDir, err)
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-		BaseDir:          baseDir,
+		BaseDir:          testDir,
 		Version:          version,
 		TSConfigPaths:    map[string][]string{"@temporalio/omes": {"src/main.ts"}},
 		DirName:          b.DirName,
@@ -336,6 +342,9 @@ func BaseDir(repoDir string, lang clioptions.Language) string {
 }
 
 func ProjectDir(baseDir string, projectName string) string {
+	if projectName == "" {
+		return baseDir
+	}
 	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
 	return filepath.Join(baseDir, projectPath)
 }

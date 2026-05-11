@@ -10,5 +10,5 @@
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["dist", "omes-temp-*", "project-build-runner-*"]
+  "exclude": ["dist", "prepared", "omes-temp-*", "project-build-runner-*"]
 }
