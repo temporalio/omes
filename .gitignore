@@ -26,7 +26,7 @@ workers/typescript/harness/dist-test/
 workers/typescript/harness/src/generated/
 workers/**/.rubocop_cache/
 workers/*/omes-temp-*/
-workers/*/prepared/
+workers/**/prepared/
 workers/**/project-build-*/
 
 tsconfig.tsbuildinfo
