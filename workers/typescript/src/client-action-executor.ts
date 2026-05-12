@@ -58,7 +58,7 @@ export class ClientActionExecutor {
       await handle.describe();
     } else if (action.doStandaloneActivity) {
       throw ApplicationFailure.nonRetryable(
-        'do_standalone_activity is not implemented for TypeScript'
+        'do_standalone_activity is not implemented for TypeScript',
       );
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);

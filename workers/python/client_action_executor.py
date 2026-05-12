@@ -58,7 +58,8 @@ class ClientActionExecutor:
             await handle.describe()
         elif action.HasField("do_standalone_activity"):
             raise ApplicationError(
-                "do_standalone_activity is not implemented for Python", non_retryable=True
+                "do_standalone_activity is not implemented for Python",
+                non_retryable=True,
             )
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
