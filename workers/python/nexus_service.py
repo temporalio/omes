@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import nexusrpc
 import nexusrpc.handler
 import temporalio.common
@@ -36,16 +38,17 @@ class KitchenSinkNexusServiceHandler:
     async def echo_async(
         self, ctx: nexus.WorkflowRunOperationContext, input: NexusHandlerInput
     ) -> nexus.WorkflowHandle[str]:
-        wf_id = ctx.request_id
-        id_conflict_policy = temporalio.common.WorkflowIDConflictPolicy.FAIL
         if input.workflow_id_override:
-            wf_id = input.workflow_id_override
-            id_conflict_policy = (
-                temporalio.common.WorkflowIDConflictPolicy.USE_EXISTING
+            return await ctx.start_workflow(
+                NexusHandlerWorkflow.run,
+                input,
+                id=input.workflow_id_override,
+                id_conflict_policy=temporalio.common.WorkflowIDConflictPolicy.USE_EXISTING,
+                # Use a large timeout so we aren't left with dangling handler workflows if the scenario fails.
+                execution_timeout=timedelta(minutes=60),
             )
         return await ctx.start_workflow(
             NexusHandlerWorkflow.run,
             input,
-            id=wf_id,
-            id_conflict_policy=id_conflict_policy,
+            id=ctx.request_id,
         )

@@ -342,7 +342,7 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
 async def handle_nexus_operation_attach_callbacks(
     action: ExecuteNexusOperationAttachCallbacks,
 ):
-    num_ops = action.num_operations if action.num_operations > 0 else 3
+    num_ops = action.num_operations
 
     handler_wf_id = f"nexus-handler-attach-callbacks-{workflow.uuid4()}"
 

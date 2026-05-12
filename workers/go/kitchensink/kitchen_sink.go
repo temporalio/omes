@@ -512,9 +512,6 @@ func handleNexusOperationAttachCallbacks(
 	action *kitchensink.ExecuteNexusOperationAttachCallbacks,
 ) error {
 	numOps := int(action.NumOperations)
-	if numOps <= 0 {
-		numOps = 3
-	}
 
 	// Generate a unique workflow ID for the handler workflow.
 	var handlerWfID string
@@ -548,11 +545,11 @@ func handleNexusOperationAttachCallbacks(
 	// Signal the handler workflow to unblock.
 	signalFut := workflow.SignalExternalWorkflow(ctx, handlerWfID, "", "unblock", nil)
 	if err := signalFut.Get(ctx, nil); err != nil {
-		// The handler workflow may have already completed if all operations resolved quickly.
 		var notFound *temporal.UnknownExternalWorkflowExecutionError
 		if !errors.As(err, &notFound) {
 			return fmt.Errorf("failed to signal handler workflow %s: %w", handlerWfID, err)
 		}
+		workflow.GetLogger(ctx).Warn("failed to signal Nexus handler workflow", "workflowID", handlerWfID)
 	}
 
 	// Wait for all operations to complete.
@@ -686,6 +683,7 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Nex
 	if input.WorkflowIdOverride != "" {
 		startOpts.ID = input.WorkflowIdOverride
 		startOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		// Use a large timeout so we aren't left with dangling handler workflows if the scenario fails.
 		startOpts.WorkflowExecutionTimeout = 60 * time.Minute
 	}
 	return startOpts, nil
