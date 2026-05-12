@@ -42,6 +42,10 @@ const (
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
+	// EnableStandaloneActivityFlag enables standalone activity execution via the
+	// low-level StartActivityExecution / PollActivityExecution RPCs. Requires
+	// server-side support for workflow-independent activities. Default is false.
+	EnableStandaloneActivityFlag = "enable-standalone-activity"
 )
 
 type tpsState struct {
@@ -68,6 +72,7 @@ type tpsConfig struct {
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
 	IncludeDescribe               bool
+	EnableStandaloneActivity      bool
 }
 
 type tpsExecutor struct {
@@ -85,8 +90,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, EnableStandaloneActivityFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -168,6 +173,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
+	config.EnableStandaloneActivity = info.ScenarioOptionBool(EnableStandaloneActivityFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -434,6 +440,14 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
+		}
+
+		// Standalone activity uses low-level RPCs that require server-side support
+		// for workflow-independent activities (not available in all environments).
+		if t.config.EnableStandaloneActivity {
+			asyncActions = append(asyncActions,
+				ClientActivity(ClientActions(StandaloneActivityClientAction(256, 256)), DefaultRemoteActivity),
+			)
 		}
 
 		chunkActions = append(chunkActions, syncActions...)

@@ -44,6 +44,11 @@ class ClientActionExecutor
     when :do_describe
       handle = @client.workflow_handle(@workflow_id)
       handle.describe
+    when :do_standalone_activity
+      raise Temporalio::Error::ApplicationError.new(
+        'do_standalone_activity is not implemented for Ruby',
+        non_retryable: true
+      )
     when :nested_actions
       execute_client_action_set(action.nested_actions)
     else

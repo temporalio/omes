@@ -68,6 +68,9 @@ public class ClientActionExecutor {
                   .setNamespace(client.getOptions().getNamespace())
                   .setExecution(WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
                   .build());
+    } else if (action.hasDoStandaloneActivity()) {
+      throw ApplicationFailure.newNonRetryableFailure(
+          "do_standalone_activity is not implemented for Java", "UnsupportedOperation");
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
     } else {

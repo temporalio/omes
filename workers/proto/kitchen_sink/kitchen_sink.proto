@@ -52,6 +52,7 @@ message ClientAction {
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
+    DoStandaloneActivity do_standalone_activity = 6;
   }
 }
 
@@ -82,6 +83,14 @@ message DoSignal {
 }
 
 message DoDescribe {
+}
+
+// Invoke an activity directly via the low-level StartActivityExecution /
+// PollActivityExecution RPCs, bypassing normal workflow activity scheduling.
+// Requires server-side support for workflow-independent activities.
+message DoStandaloneActivity {
+  int32 bytes_to_receive = 1;
+  int32 bytes_to_return = 2;
 }
 
 message DoQuery {

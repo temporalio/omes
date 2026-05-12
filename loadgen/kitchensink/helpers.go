@@ -290,6 +290,20 @@ func RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout time.Dura
 	}
 }
 
+// StandaloneActivityClientAction creates a ClientAction that invokes the `payload`
+// activity directly via the low-level StartActivityExecution / PollActivityExecution
+// RPCs, bypassing normal workflow activity scheduling.
+func StandaloneActivityClientAction(bytesToReceive, bytesToReturn int32) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				BytesToReceive: bytesToReceive,
+				BytesToReturn:  bytesToReturn,
+			},
+		},
+	}
+}
+
 func NewSetWorkflowStateAction(key, value string) *Action {
 	return &Action{
 		Variant: &Action_SetWorkflowState{
