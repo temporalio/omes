@@ -372,7 +372,15 @@ async def handle_nexus_operation_attach_callbacks(
 
     # Signal the handler workflow to unblock.
     ext_handle = workflow.get_external_workflow_handle(handler_wf_id)
-    await ext_handle.signal("unblock")
+    try:
+        await ext_handle.signal("unblock")
+    except exceptions.FailureError as e:
+        # The handler workflow may have already completed if all operations resolved quickly.
+        if "not found" not in str(e):
+            raise
+        workflow.logger.warning(
+            "failed to signal Nexus handler workflow %s", handler_wf_id
+        )
 
     # Wait for all operations to complete.
     for handle in handles:
