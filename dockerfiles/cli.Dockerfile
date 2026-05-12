@@ -30,6 +30,8 @@ COPY cmd ./cmd
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
+COPY devserver ./devserver
+COPY versions ./versions
 COPY workers ./workers/
 COPY go.mod go.sum ./
 
