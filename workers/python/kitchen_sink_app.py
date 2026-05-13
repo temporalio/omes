@@ -13,7 +13,11 @@ from activities import (
     timeout_activity,
 )
 from harness import App, WorkerContext, default_client_factory
-from kitchen_sink import KitchenSinkWorkflow, NexusHandlerWorkflow
+from kitchen_sink import (
+    KitchenSinkWorkflow,
+    NexusAttachHandlerWorkflow,
+    NexusHandlerWorkflow,
+)
 from nexus_service import KitchenSinkNexusServiceHandler
 
 
@@ -28,7 +32,11 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
     return Worker(
         client,
         task_queue=context.task_queue,
-        workflows=[KitchenSinkWorkflow, NexusHandlerWorkflow],
+        workflows=[
+            KitchenSinkWorkflow,
+            NexusHandlerWorkflow,
+            NexusAttachHandlerWorkflow,
+        ],
         activities=[
             noop_activity,
             delay_activity,

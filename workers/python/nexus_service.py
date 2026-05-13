@@ -7,8 +7,16 @@ import nexusrpc.handler
 import temporalio.common
 from temporalio import nexus
 
-from kitchen_sink import KITCHEN_SINK_SERVICE_NAME, NexusHandlerWorkflow
-from protos.kitchen_sink_pb2 import NexusHandlerInput
+from kitchen_sink import (
+    KITCHEN_SINK_SERVICE_NAME,
+    NexusAttachHandlerWorkflow,
+    NexusHandlerWorkflow,
+)
+from protos.kitchen_sink_pb2 import (
+    NexusAttachHandlerInput,
+    NexusAttachHandlerOutput,
+    NexusHandlerInput,
+)
 
 
 @nexusrpc.service(name=KITCHEN_SINK_SERVICE_NAME)
@@ -19,6 +27,9 @@ class KitchenSinkNexusService:
     echo_async: nexusrpc.Operation[NexusHandlerInput, str] = nexusrpc.Operation(
         name="echo-async"
     )
+    attach_to_workflow: nexusrpc.Operation[
+        NexusAttachHandlerInput, NexusAttachHandlerOutput
+    ] = nexusrpc.Operation(name="attach-to-workflow")
 
 
 @nexusrpc.handler.service_handler(service=KitchenSinkNexusService)
@@ -38,17 +49,23 @@ class KitchenSinkNexusServiceHandler:
     async def echo_async(
         self, ctx: nexus.WorkflowRunOperationContext, input: NexusHandlerInput
     ) -> nexus.WorkflowHandle[str]:
-        if input.workflow_id_override:
-            return await ctx.start_workflow(
-                NexusHandlerWorkflow.run,
-                input,
-                id=input.workflow_id_override,
-                id_conflict_policy=temporalio.common.WorkflowIDConflictPolicy.USE_EXISTING,
-                # Use a large timeout so we aren't left with dangling handler workflows if the scenario fails.
-                execution_timeout=timedelta(minutes=60),
-            )
         return await ctx.start_workflow(
             NexusHandlerWorkflow.run,
             input,
             id=ctx.request_id,
+        )
+
+    @nexus.workflow_run_operation
+    async def attach_to_workflow(
+        self,
+        ctx: nexus.WorkflowRunOperationContext,
+        input: NexusAttachHandlerInput,
+    ) -> nexus.WorkflowHandle[NexusAttachHandlerOutput]:
+        return await ctx.start_workflow(
+            NexusAttachHandlerWorkflow.run,
+            input,
+            id=input.workflow_id,
+            id_conflict_policy=temporalio.common.WorkflowIDConflictPolicy.USE_EXISTING,
+            # Cap the handler so we don't leave dangling workflows if a stress run fails.
+            execution_timeout=timedelta(minutes=60),
         )

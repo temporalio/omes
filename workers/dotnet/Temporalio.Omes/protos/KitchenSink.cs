@@ -252,25 +252,25 @@ namespace Temporal.Omes.KitchenSink {
             "FwoPZXhwZWN0ZWRfb3V0cHV0GAYgASgJEj0KDmJlZm9yZV9hY3Rpb25zGAcg",
             "AygLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0Gi4K",
             "DEhlYWRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgB",
-            "IpgBChFOZXh1c0hhbmRsZXJJbnB1dBINCgVpbnB1dBgBIAEoCRI9Cg5iZWZv",
-            "cmVfYWN0aW9ucxgCIAMoCzIlLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5r",
-            "LkFjdGlvblNldBIXCg93YWl0X2Zvcl9zaWduYWwYAyABKAgSHAoUd29ya2Zs",
-            "b3dfaWRfb3ZlcnJpZGUYBCABKAkiXwokRXhlY3V0ZU5leHVzT3BlcmF0aW9u",
-            "QXR0YWNoQ2FsbGJhY2tzEhAKCGVuZHBvaW50GAEgASgJEhYKDm51bV9vcGVy",
-            "YXRpb25zGAIgASgFEg0KBWlucHV0GAMgASgJKqQBChFQYXJlbnRDbG9zZVBv",
-            "bGljeRIjCh9QQVJFTlRfQ0xPU0VfUE9MSUNZX1VOU1BFQ0lGSUVEEAASIQod",
-            "UEFSRU5UX0NMT1NFX1BPTElDWV9URVJNSU5BVEUQARIfChtQQVJFTlRfQ0xP",
-            "U0VfUE9MSUNZX0FCQU5ET04QAhImCiJQQVJFTlRfQ0xPU0VfUE9MSUNZX1JF",
-            "UVVFU1RfQ0FOQ0VMEAMqQAoQVmVyc2lvbmluZ0ludGVudBIPCgtVTlNQRUNJ",
-            "RklFRBAAEg4KCkNPTVBBVElCTEUQARILCgdERUZBVUxUEAIqogEKHUNoaWxk",
-            "V29ya2Zsb3dDYW5jZWxsYXRpb25UeXBlEhQKEENISUxEX1dGX0FCQU5ET04Q",
-            "ABIXChNDSElMRF9XRl9UUllfQ0FOQ0VMEAESKAokQ0hJTERfV0ZfV0FJVF9D",
-            "QU5DRUxMQVRJT05fQ09NUExFVEVEEAISKAokQ0hJTERfV0ZfV0FJVF9DQU5D",
-            "RUxMQVRJT05fUkVRVUVTVEVEEAMqWAoYQWN0aXZpdHlDYW5jZWxsYXRpb25U",
-            "eXBlEg4KClRSWV9DQU5DRUwQABIfChtXQUlUX0NBTkNFTExBVElPTl9DT01Q",
-            "TEVURUQQARILCgdBQkFORE9OEAJCQgoQaW8udGVtcG9yYWwub21lc1ouZ2l0",
-            "aHViLmNvbS90ZW1wb3JhbGlvL29tZXMvbG9hZGdlbi9raXRjaGVuc2lua2IG",
-            "cHJvdG8z"));
+            "ImEKEU5leHVzSGFuZGxlcklucHV0Eg0KBWlucHV0GAEgASgJEj0KDmJlZm9y",
+            "ZV9hY3Rpb25zGAIgAygLMiUudGVtcG9yYWwub21lcy5raXRjaGVuX3Npbmsu",
+            "QWN0aW9uU2V0Ii4KF05leHVzQXR0YWNoSGFuZGxlcklucHV0EhMKC3dvcmtm",
+            "bG93X2lkGAEgASgJIioKGE5leHVzQXR0YWNoSGFuZGxlck91dHB1dBIOCgZy",
+            "dW5faWQYASABKAkiUAokRXhlY3V0ZU5leHVzT3BlcmF0aW9uQXR0YWNoQ2Fs",
+            "bGJhY2tzEhAKCGVuZHBvaW50GAEgASgJEhYKDm51bV9vcGVyYXRpb25zGAIg",
+            "ASgFKqQBChFQYXJlbnRDbG9zZVBvbGljeRIjCh9QQVJFTlRfQ0xPU0VfUE9M",
+            "SUNZX1VOU1BFQ0lGSUVEEAASIQodUEFSRU5UX0NMT1NFX1BPTElDWV9URVJN",
+            "SU5BVEUQARIfChtQQVJFTlRfQ0xPU0VfUE9MSUNZX0FCQU5ET04QAhImCiJQ",
+            "QVJFTlRfQ0xPU0VfUE9MSUNZX1JFUVVFU1RfQ0FOQ0VMEAMqQAoQVmVyc2lv",
+            "bmluZ0ludGVudBIPCgtVTlNQRUNJRklFRBAAEg4KCkNPTVBBVElCTEUQARIL",
+            "CgdERUZBVUxUEAIqogEKHUNoaWxkV29ya2Zsb3dDYW5jZWxsYXRpb25UeXBl",
+            "EhQKEENISUxEX1dGX0FCQU5ET04QABIXChNDSElMRF9XRl9UUllfQ0FOQ0VM",
+            "EAESKAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxMQVRJT05fQ09NUExFVEVEEAIS",
+            "KAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxMQVRJT05fUkVRVUVTVEVEEAMqWAoY",
+            "QWN0aXZpdHlDYW5jZWxsYXRpb25UeXBlEg4KClRSWV9DQU5DRUwQABIfChtX",
+            "QUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQARILCgdBQkFORE9OEAJCQgoQ",
+            "aW8udGVtcG9yYWwub21lc1ouZ2l0aHViLmNvbS90ZW1wb3JhbGlvL29tZXMv",
+            "bG9hZGdlbi9raXRjaGVuc2lua2IGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -310,8 +310,10 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ContinueAsNewAction), global::Temporal.Omes.KitchenSink.ContinueAsNewAction.Parser, new[]{ "WorkflowType", "TaskQueue", "Arguments", "WorkflowRunTimeout", "WorkflowTaskTimeout", "Memo", "Headers", "SearchAttributes", "RetryPolicy", "VersioningIntent" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerInput), global::Temporal.Omes.KitchenSink.NexusHandlerInput.Parser, new[]{ "Input", "BeforeActions", "WaitForSignal", "WorkflowIdOverride" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks), global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks.Parser, new[]{ "Endpoint", "NumOperations", "Input" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerInput), global::Temporal.Omes.KitchenSink.NexusHandlerInput.Parser, new[]{ "Input", "BeforeActions" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusAttachHandlerInput), global::Temporal.Omes.KitchenSink.NexusAttachHandlerInput.Parser, new[]{ "WorkflowId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusAttachHandlerOutput), global::Temporal.Omes.KitchenSink.NexusAttachHandlerOutput.Parser, new[]{ "RunId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks), global::Temporal.Omes.KitchenSink.ExecuteNexusOperationAttachCallbacks.Parser, new[]{ "Endpoint", "NumOperations" }, null, null, null, null)
           }));
     }
     #endregion
@@ -13270,8 +13272,6 @@ namespace Temporal.Omes.KitchenSink {
     public NexusHandlerInput(NexusHandlerInput other) : this() {
       input_ = other.input_;
       beforeActions_ = other.beforeActions_.Clone();
-      waitForSignal_ = other.waitForSignal_;
-      workflowIdOverride_ = other.workflowIdOverride_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -13304,37 +13304,6 @@ namespace Temporal.Omes.KitchenSink {
       get { return beforeActions_; }
     }
 
-    /// <summary>Field number for the "wait_for_signal" field.</summary>
-    public const int WaitForSignalFieldNumber = 3;
-    private bool waitForSignal_;
-    /// <summary>
-    /// If true, the handler workflow will wait for an "unblock" signal before returning.
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool WaitForSignal {
-      get { return waitForSignal_; }
-      set {
-        waitForSignal_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "workflow_id_override" field.</summary>
-    public const int WorkflowIdOverrideFieldNumber = 4;
-    private string workflowIdOverride_ = "";
-    /// <summary>
-    /// If set, the operation handler uses this as the workflow ID (instead of the Nexus request ID)
-    /// and sets WorkflowIDConflictPolicy to USE_EXISTING.
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string WorkflowIdOverride {
-      get { return workflowIdOverride_; }
-      set {
-        workflowIdOverride_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -13352,8 +13321,6 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (Input != other.Input) return false;
       if(!beforeActions_.Equals(other.beforeActions_)) return false;
-      if (WaitForSignal != other.WaitForSignal) return false;
-      if (WorkflowIdOverride != other.WorkflowIdOverride) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -13363,8 +13330,6 @@ namespace Temporal.Omes.KitchenSink {
       int hash = 1;
       if (Input.Length != 0) hash ^= Input.GetHashCode();
       hash ^= beforeActions_.GetHashCode();
-      if (WaitForSignal != false) hash ^= WaitForSignal.GetHashCode();
-      if (WorkflowIdOverride.Length != 0) hash ^= WorkflowIdOverride.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -13388,14 +13353,6 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteString(Input);
       }
       beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
-      if (WaitForSignal != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(WaitForSignal);
-      }
-      if (WorkflowIdOverride.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(WorkflowIdOverride);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -13411,14 +13368,6 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteString(Input);
       }
       beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
-      if (WaitForSignal != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(WaitForSignal);
-      }
-      if (WorkflowIdOverride.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(WorkflowIdOverride);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -13433,12 +13382,6 @@ namespace Temporal.Omes.KitchenSink {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
       }
       size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
-      if (WaitForSignal != false) {
-        size += 1 + 1;
-      }
-      if (WorkflowIdOverride.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowIdOverride);
-      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -13455,12 +13398,6 @@ namespace Temporal.Omes.KitchenSink {
         Input = other.Input;
       }
       beforeActions_.Add(other.beforeActions_);
-      if (other.WaitForSignal != false) {
-        WaitForSignal = other.WaitForSignal;
-      }
-      if (other.WorkflowIdOverride.Length != 0) {
-        WorkflowIdOverride = other.WorkflowIdOverride;
-      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -13482,14 +13419,6 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 18: {
             beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
-            break;
-          }
-          case 24: {
-            WaitForSignal = input.ReadBool();
-            break;
-          }
-          case 34: {
-            WorkflowIdOverride = input.ReadString();
             break;
           }
         }
@@ -13515,12 +13444,199 @@ namespace Temporal.Omes.KitchenSink {
             beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
             break;
           }
-          case 24: {
-            WaitForSignal = input.ReadBool();
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Input for the attach-to-workflow Nexus operation. Carries the caller-supplied handler
+  /// workflow ID; the operation always uses WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING so multiple
+  /// concurrent operations coalesce as callbacks onto a single backing workflow execution.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NexusAttachHandlerInput : pb::IMessage<NexusAttachHandlerInput>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NexusAttachHandlerInput> _parser = new pb::MessageParser<NexusAttachHandlerInput>(() => new NexusAttachHandlerInput());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NexusAttachHandlerInput> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[30]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerInput() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerInput(NexusAttachHandlerInput other) : this() {
+      workflowId_ = other.workflowId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerInput Clone() {
+      return new NexusAttachHandlerInput(this);
+    }
+
+    /// <summary>Field number for the "workflow_id" field.</summary>
+    public const int WorkflowIdFieldNumber = 1;
+    private string workflowId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowId {
+      get { return workflowId_; }
+      set {
+        workflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NexusAttachHandlerInput);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NexusAttachHandlerInput other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (WorkflowId != other.WorkflowId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (WorkflowId.Length != 0) hash ^= WorkflowId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (WorkflowId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NexusAttachHandlerInput other) {
+      if (other == null) {
+        return;
+      }
+      if (other.WorkflowId.Length != 0) {
+        WorkflowId = other.WorkflowId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
             break;
           }
-          case 34: {
-            WorkflowIdOverride = input.ReadString();
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
             break;
           }
         }
@@ -13531,9 +13647,205 @@ namespace Temporal.Omes.KitchenSink {
   }
 
   /// <summary>
-  /// Starts multiple Nexus operations concurrently, all targeting the same handler workflow.
-  /// Waits for all operations to start (attaching callbacks), signals the handler to unblock,
-  /// then waits for all to complete.
+  /// Output from the attach-to-workflow handler workflow. The caller compares the RunID returned
+  /// by each of the N concurrent operations to verify that all callbacks attached to the same
+  /// backing execution.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NexusAttachHandlerOutput : pb::IMessage<NexusAttachHandlerOutput>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NexusAttachHandlerOutput> _parser = new pb::MessageParser<NexusAttachHandlerOutput>(() => new NexusAttachHandlerOutput());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NexusAttachHandlerOutput> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[31]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerOutput() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerOutput(NexusAttachHandlerOutput other) : this() {
+      runId_ = other.runId_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusAttachHandlerOutput Clone() {
+      return new NexusAttachHandlerOutput(this);
+    }
+
+    /// <summary>Field number for the "run_id" field.</summary>
+    public const int RunIdFieldNumber = 1;
+    private string runId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RunId {
+      get { return runId_; }
+      set {
+        runId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NexusAttachHandlerOutput);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NexusAttachHandlerOutput other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (RunId != other.RunId) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (RunId.Length != 0) hash ^= RunId.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (RunId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RunId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (RunId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RunId);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (RunId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RunId);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NexusAttachHandlerOutput other) {
+      if (other == null) {
+        return;
+      }
+      if (other.RunId.Length != 0) {
+        RunId = other.RunId;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            RunId = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            RunId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Starts multiple Nexus operations concurrently, all targeting the same handler workflow via
+  /// USE_EXISTING. Waits for all operations to start (attaching callbacks), signals the handler
+  /// to unblock, then waits for all to complete and verifies they all coalesced onto the same
+  /// backing workflow run.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class ExecuteNexusOperationAttachCallbacks : pb::IMessage<ExecuteNexusOperationAttachCallbacks>
@@ -13550,7 +13862,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[30]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[32]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -13572,7 +13884,6 @@ namespace Temporal.Omes.KitchenSink {
     public ExecuteNexusOperationAttachCallbacks(ExecuteNexusOperationAttachCallbacks other) : this() {
       endpoint_ = other.endpoint_;
       numOperations_ = other.numOperations_;
-      input_ = other.input_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -13609,21 +13920,6 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
-    /// <summary>Field number for the "input" field.</summary>
-    public const int InputFieldNumber = 3;
-    private string input_ = "";
-    /// <summary>
-    /// Input string echoed back by the handler.
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Input {
-      get { return input_; }
-      set {
-        input_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -13641,7 +13937,6 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (Endpoint != other.Endpoint) return false;
       if (NumOperations != other.NumOperations) return false;
-      if (Input != other.Input) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -13651,7 +13946,6 @@ namespace Temporal.Omes.KitchenSink {
       int hash = 1;
       if (Endpoint.Length != 0) hash ^= Endpoint.GetHashCode();
       if (NumOperations != 0) hash ^= NumOperations.GetHashCode();
-      if (Input.Length != 0) hash ^= Input.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -13678,10 +13972,6 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(16);
         output.WriteInt32(NumOperations);
       }
-      if (Input.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(Input);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -13700,10 +13990,6 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(16);
         output.WriteInt32(NumOperations);
       }
-      if (Input.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(Input);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -13719,9 +14005,6 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (NumOperations != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(NumOperations);
-      }
-      if (Input.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -13740,9 +14023,6 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (other.NumOperations != 0) {
         NumOperations = other.NumOperations;
-      }
-      if (other.Input.Length != 0) {
-        Input = other.Input;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -13767,10 +14047,6 @@ namespace Temporal.Omes.KitchenSink {
             NumOperations = input.ReadInt32();
             break;
           }
-          case 26: {
-            Input = input.ReadString();
-            break;
-          }
         }
       }
     #endif
@@ -13792,10 +14068,6 @@ namespace Temporal.Omes.KitchenSink {
           }
           case 16: {
             NumOperations = input.ReadInt32();
-            break;
-          }
-          case 26: {
-            Input = input.ReadString();
             break;
           }
         }

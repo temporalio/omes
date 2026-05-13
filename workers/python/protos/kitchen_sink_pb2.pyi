@@ -577,23 +577,29 @@ class ExecuteNexusOperation(_message.Message):
     def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
 
 class NexusHandlerInput(_message.Message):
-    __slots__ = ("input", "before_actions", "wait_for_signal", "workflow_id_override")
+    __slots__ = ("input", "before_actions")
     INPUT_FIELD_NUMBER: _ClassVar[int]
     BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
-    WAIT_FOR_SIGNAL_FIELD_NUMBER: _ClassVar[int]
-    WORKFLOW_ID_OVERRIDE_FIELD_NUMBER: _ClassVar[int]
     input: str
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    wait_for_signal: bool
-    workflow_id_override: str
-    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., wait_for_signal: bool = ..., workflow_id_override: _Optional[str] = ...) -> None: ...
+    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+
+class NexusAttachHandlerInput(_message.Message):
+    __slots__ = ("workflow_id",)
+    WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    workflow_id: str
+    def __init__(self, workflow_id: _Optional[str] = ...) -> None: ...
+
+class NexusAttachHandlerOutput(_message.Message):
+    __slots__ = ("run_id",)
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    def __init__(self, run_id: _Optional[str] = ...) -> None: ...
 
 class ExecuteNexusOperationAttachCallbacks(_message.Message):
-    __slots__ = ("endpoint", "num_operations", "input")
+    __slots__ = ("endpoint", "num_operations")
     ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     NUM_OPERATIONS_FIELD_NUMBER: _ClassVar[int]
-    INPUT_FIELD_NUMBER: _ClassVar[int]
     endpoint: str
     num_operations: int
-    input: str
-    def __init__(self, endpoint: _Optional[str] = ..., num_operations: _Optional[int] = ..., input: _Optional[str] = ...) -> None: ...
+    def __init__(self, endpoint: _Optional[str] = ..., num_operations: _Optional[int] = ...) -> None: ...

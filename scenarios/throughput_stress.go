@@ -639,7 +639,6 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 			NexusOperationAttachCallbacks: &ExecuteNexusOperationAttachCallbacks{
 				Endpoint:      t.config.NexusEndpoint,
 				NumOperations: 3,
-				Input:         "hello",
 			},
 		},
 	}

@@ -26,6 +26,8 @@ from protos.kitchen_sink_pb2 import (
     ExecuteActivityAction,
     ExecuteNexusOperation,
     ExecuteNexusOperationAttachCallbacks,
+    NexusAttachHandlerInput,
+    NexusAttachHandlerOutput,
     NexusHandlerInput,
     WorkflowInput,
     WorkflowState,
@@ -344,26 +346,22 @@ async def handle_nexus_operation_attach_callbacks(
 ):
     num_ops = action.num_operations
 
-    handler_wf_id = f"nexus-handler-attach-callbacks-{workflow.uuid4()}"
+    handler_wf_id = f"nexus-attach-handler-{workflow.uuid4()}"
 
     client = workflow.create_nexus_client(
         endpoint=action.endpoint,
         service=KITCHEN_SINK_SERVICE_NAME,
     )
-    op_input = NexusHandlerInput(
-        input=action.input,
-        wait_for_signal=True,
-        workflow_id_override=handler_wf_id,
-    )
+    op_input = NexusAttachHandlerInput(workflow_id=handler_wf_id)
 
     # Start all Nexus operations concurrently.
     handles = list(
         await asyncio.gather(
             *[
                 client.start_operation(
-                    "echo-async",
+                    "attach-to-workflow",
                     op_input,
-                    output_type=str,
+                    output_type=NexusAttachHandlerOutput,
                 )
                 for _ in range(num_ops)
             ]
@@ -376,15 +374,26 @@ async def handle_nexus_operation_attach_callbacks(
         await ext_handle.signal("unblock")
     except exceptions.FailureError as e:
         # The handler workflow may have already completed if all operations resolved quickly.
-        if "not found" not in str(e):
+        # Core emits this exact message for ExternalWorkflowExecutionNotFound (see
+        # signal_external_state_machine.rs). Anchor on the full phrase to avoid swallowing
+        # unrelated "not found" failures (namespace lookups, schedule lookups, etc.).
+        if "Unable to signal external workflow" not in str(e):
             raise
         workflow.logger.warning(
-            "failed to signal Nexus handler workflow %s", handler_wf_id
+            "failed to signal Nexus handler workflow %s: %s", handler_wf_id, e
         )
 
-    # Wait for all operations to complete.
-    for handle in handles:
-        await handle
+    # Wait for all operations to complete and verify they all coalesced onto the same run.
+    first_run_id: Optional[str] = None
+    for i, handle in enumerate(handles):
+        output: NexusAttachHandlerOutput = await handle
+        if i == 0:
+            first_run_id = output.run_id
+        elif output.run_id != first_run_id:
+            raise exceptions.ApplicationError(
+                f"callbacks did not coalesce onto a single workflow: "
+                f"op 0 ran on {first_run_id}, op {i} ran on {output.run_id}"
+            )
 
 
 async def handle_awaitable_choice(
@@ -453,16 +462,30 @@ def convert_act_cancel_type(
 
 @workflow.defn
 class NexusHandlerWorkflow:
-    _unblocked: bool = False
-
     @workflow.run
     async def run(self, input: NexusHandlerInput) -> str:
         state = KitchenSinkWorkflow()
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
-        if input.wait_for_signal:
-            await workflow.wait_condition(lambda: self._unblocked)
         return input.input
+
+
+@workflow.defn
+class NexusAttachHandlerWorkflow:
+    """Backing workflow for the attach-to-workflow Nexus operation.
+
+    Blocks on the ``unblock`` signal so that multiple Nexus callbacks have time to attach
+    (via USE_EXISTING) before the workflow completes and fans out completion to all attached
+    callbacks. Returns the workflow's RunID so the caller can verify all N operations
+    coalesced onto the same backing execution.
+    """
+
+    _unblocked: bool = False
+
+    @workflow.run
+    async def run(self, input: NexusAttachHandlerInput) -> NexusAttachHandlerOutput:
+        await workflow.wait_condition(lambda: self._unblocked)
+        return NexusAttachHandlerOutput(run_id=workflow.info().run_id)
 
     @workflow.signal(name="unblock")
     async def unblock(self) -> None:
