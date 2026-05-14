@@ -50,7 +50,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 	if options.taskQueueSuffixIndexStart > options.taskQueueSuffixIndexEnd {
 		return fmt.Errorf("task queue suffix start after end")
 	}
-	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions)
+	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions, os.Getenv(workerProfileEnvVar))
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,11 @@ func parseVersioningBehavior(value string) (workflow.VersioningBehavior, error) 
 	}
 }
 
-func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions) (sdkworker.Options, error) {
+func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, profileName string) (sdkworker.Options, error) {
+	if profileName != "" {
+		return lookupWorkerProfile(profileName)
+	}
+
 	options := sdkworker.Options{}
 	if args.DeploymentName != "" {
 		if args.BuildID != "" {

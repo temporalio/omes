@@ -28,7 +28,8 @@ class HarnessWorkerTest < Minitest::Test
           '--task-queue', 'omes',
           '--task-queue-suffix-index-start', '1',
           '--task-queue-suffix-index-end', '2'
-        ]
+        ],
+        worker_profile: nil
       )
     end
 
@@ -40,6 +41,51 @@ class HarnessWorkerTest < Minitest::Test
     assert_same worker_factory_calls[0][1].worker_kwargs, worker_factory_calls[1][1].worker_kwargs
     assert_equal 'omes-1', worker_factory_calls[0][1].task_queue
     assert_equal 'omes-2', worker_factory_calls[1][1].task_queue
+  end
+
+  def test_run_applies_resource_based_worker_profile
+    captured_context = nil
+    worker_factory = lambda do |_client, context|
+      captured_context = context
+      Object.new
+    end
+
+    with_stubbed_run_all(->(*_workers, **_kwargs) {}) do
+      Harness::WorkerCLI.run_cli(
+        worker_factory,
+        ->(_config) { Object.new },
+        [],
+        worker_profile: 'resource-based-default'
+      )
+    end
+
+    refute_nil captured_context.worker_kwargs[:tuner]
+  end
+
+  def test_build_worker_kwargs_ignores_worker_option_flags_when_profile_is_selected
+    options = Harness::WorkerCLI.default_options
+    options[:max_concurrent_activities] = 50
+
+    worker_kwargs = Harness::WorkerCLI.build_worker_kwargs(options, 'resource-based-default')
+
+    refute_nil worker_kwargs[:tuner]
+    refute_includes worker_kwargs, :max_concurrent_activities
+  end
+
+  def test_build_worker_kwargs_applies_worker_option_flags_without_profile
+    options = Harness::WorkerCLI.default_options
+    options[:max_concurrent_activities] = 50
+
+    worker_kwargs = Harness::WorkerCLI.build_worker_kwargs(options, nil)
+
+    assert_equal 50, worker_kwargs[:max_concurrent_activities]
+  end
+
+  def test_build_worker_kwargs_rejects_unknown_worker_profile
+    error = assert_raises(ArgumentError) do
+      Harness::WorkerCLI.build_worker_kwargs(Harness::WorkerCLI.default_options, 'nope')
+    end
+    assert_match(/Unknown worker profile "nope"/, error.message)
   end
 
   private

@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Temporalio.Client;
 using Temporalio.Omes.Projects.Harness;
+using Temporalio.Worker;
 using Xunit;
 
 namespace Temporalio.Omes.Projects.Tests.HarnessTests;
@@ -45,7 +46,8 @@ public class WorkerTests
             {
                 runWorkersInput = workers;
                 return Task.CompletedTask;
-            });
+            },
+            workerProfile: null);
 
         Assert.All(seenClients, client => Assert.Same(sharedClient, client));
         Assert.Equal(["omes-1", "omes-2"], createdWorkers);
@@ -55,6 +57,97 @@ public class WorkerTests
         Assert.Equal("default", capturedConfig.Namespace);
         Assert.Null(capturedConfig.ApiKey);
         Assert.Null(capturedConfig.Tls);
+    }
+
+    [Fact]
+    public async Task RunAppliesResourceBasedWorkerProfile()
+    {
+        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
+        TemporalWorkerOptions? capturedOptions = null;
+        var options = WorkerHarness.ParseWorkerOptions(
+            WorkerHarness.CreateWorkerCommand().Parse(["--log-level", "panic"]));
+
+        await WorkerHarness.RunCoreAsync(
+            workerFactory: (_, context) =>
+            {
+                capturedOptions = context.WorkerOptions;
+                return context.TaskQueue;
+            },
+            clientFactory: _ => Task.FromResult(sharedClient),
+            options: options,
+            runWorkersAsync: _ => Task.CompletedTask,
+            workerProfile: WorkerProfiles.ResourceBasedDefaultProfile);
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions!.Tuner);
+    }
+
+    [Fact]
+    public async Task RunIgnoresWorkerOptionFlagsWhenProfileIsSelected()
+    {
+        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
+        TemporalWorkerOptions? capturedOptions = null;
+        var options = WorkerHarness.ParseWorkerOptions(
+            WorkerHarness.CreateWorkerCommand().Parse(
+                ["--log-level", "panic", "--max-concurrent-activities", "50"]));
+
+        await WorkerHarness.RunCoreAsync(
+            workerFactory: (_, context) =>
+            {
+                capturedOptions = context.WorkerOptions;
+                return context.TaskQueue;
+            },
+            clientFactory: _ => Task.FromResult(sharedClient),
+            options: options,
+            runWorkersAsync: _ => Task.CompletedTask,
+            workerProfile: WorkerProfiles.ResourceBasedDefaultProfile);
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions!.Tuner);
+        Assert.NotEqual(50, capturedOptions.MaxConcurrentActivities);
+    }
+
+    [Fact]
+    public async Task RunAppliesWorkerOptionFlagsWithoutProfile()
+    {
+        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
+        TemporalWorkerOptions? capturedOptions = null;
+        var options = WorkerHarness.ParseWorkerOptions(
+            WorkerHarness.CreateWorkerCommand().Parse(
+                ["--log-level", "panic", "--max-concurrent-activities", "50"]));
+
+        await WorkerHarness.RunCoreAsync(
+            workerFactory: (_, context) =>
+            {
+                capturedOptions = context.WorkerOptions;
+                return context.TaskQueue;
+            },
+            clientFactory: _ => Task.FromResult(sharedClient),
+            options: options,
+            runWorkersAsync: _ => Task.CompletedTask,
+            workerProfile: null);
+
+        Assert.NotNull(capturedOptions);
+        Assert.Equal(50, capturedOptions!.MaxConcurrentActivities);
+    }
+
+    [Fact]
+    public async Task RunRejectsUnknownWorkerProfile()
+    {
+        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
+        var options = WorkerHarness.ParseWorkerOptions(
+            WorkerHarness.CreateWorkerCommand().Parse(["--log-level", "panic"]));
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(
+            () =>
+                WorkerHarness.RunCoreAsync(
+                    workerFactory: (_, context) => context.TaskQueue,
+                    clientFactory: _ => Task.FromResult(sharedClient),
+                    options: options,
+                    runWorkersAsync: _ => Task.CompletedTask,
+                    workerProfile: "nope"));
+
+        Assert.Contains("Unknown worker profile \"nope\"", error.Message);
     }
 
     [Fact]
