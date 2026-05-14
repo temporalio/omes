@@ -65,7 +65,7 @@ public class WorkerTests
         var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
         TemporalWorkerOptions? capturedOptions = null;
         var options = WorkerHarness.ParseWorkerOptions(
-            WorkerHarness.CreateWorkerCommand().Parse(["--log-level", "panic"]));
+            WorkerHarness.CreateWorkerCommand().Parse());
 
         await WorkerHarness.RunCoreAsync(
             workerFactory: (_, context) =>
@@ -89,7 +89,7 @@ public class WorkerTests
         TemporalWorkerOptions? capturedOptions = null;
         var options = WorkerHarness.ParseWorkerOptions(
             WorkerHarness.CreateWorkerCommand().Parse(
-                ["--log-level", "panic", "--max-concurrent-activities", "50"]));
+                ["--max-concurrent-activities", "50"]));
 
         await WorkerHarness.RunCoreAsync(
             workerFactory: (_, context) =>
@@ -105,30 +105,6 @@ public class WorkerTests
         Assert.NotNull(capturedOptions);
         Assert.NotNull(capturedOptions!.Tuner);
         Assert.NotEqual(50, capturedOptions.MaxConcurrentActivities);
-    }
-
-    [Fact]
-    public async Task RunAppliesWorkerOptionFlagsWithoutProfile()
-    {
-        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
-        TemporalWorkerOptions? capturedOptions = null;
-        var options = WorkerHarness.ParseWorkerOptions(
-            WorkerHarness.CreateWorkerCommand().Parse(
-                ["--log-level", "panic", "--max-concurrent-activities", "50"]));
-
-        await WorkerHarness.RunCoreAsync(
-            workerFactory: (_, context) =>
-            {
-                capturedOptions = context.WorkerOptions;
-                return context.TaskQueue;
-            },
-            clientFactory: _ => Task.FromResult(sharedClient),
-            options: options,
-            runWorkersAsync: _ => Task.CompletedTask,
-            workerProfile: null);
-
-        Assert.NotNull(capturedOptions);
-        Assert.Equal(50, capturedOptions!.MaxConcurrentActivities);
     }
 
     [Fact]

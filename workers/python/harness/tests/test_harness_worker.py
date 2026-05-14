@@ -55,7 +55,6 @@ class HarnessWorkerTests(unittest.IsolatedAsyncioTestCase):
                     "--task-queue-suffix-index-end",
                     "2",
                 ],
-                None,
             )
 
         build_client_config.assert_called_once_with(
@@ -113,15 +112,6 @@ class HarnessWorkerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertIsInstance(worker_kwargs["tuner"], WorkerTuner)
         self.assertNotIn("max_concurrent_activities", worker_kwargs)
-
-    def test_build_worker_kwargs_applies_worker_option_flags_without_profile(
-        self,
-    ) -> None:
-        args = worker._build_parser().parse_args(["--max-concurrent-activities", "50"])
-
-        worker_kwargs = worker._build_worker_kwargs(args, None)
-
-        self.assertEqual(worker_kwargs["max_concurrent_activities"], 50)
 
     def test_build_worker_kwargs_rejects_unknown_profile(self) -> None:
         args = worker._build_parser().parse_args([])

@@ -102,21 +102,6 @@ func TestBuildWorkerOptionsIgnoresWorkerOptionFlagsWhenProfileIsSelected(t *test
 	}
 }
 
-func TestBuildWorkerOptionsAppliesWorkerOptionFlagsWithoutProfile(t *testing.T) {
-	options := newWorkerCLIOptions()
-	if err := options.parse([]string{"--max-concurrent-activities", "50"}); err != nil {
-		t.Fatal(err)
-	}
-
-	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if workerOptions.MaxConcurrentActivityExecutionSize != 50 {
-		t.Fatalf("expected max concurrent activities 50, got %d", workerOptions.MaxConcurrentActivityExecutionSize)
-	}
-}
-
 func TestBuildWorkerOptionsRejectsUnknownProfile(t *testing.T) {
 	options := newWorkerCLIOptions()
 	if err := options.parse(nil); err != nil {

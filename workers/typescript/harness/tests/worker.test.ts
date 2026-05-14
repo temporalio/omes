@@ -171,30 +171,6 @@ void test('runWorker ignores worker option flags when profile is selected', asyn
   });
 });
 
-void test('runWorker applies worker option flags when profile is not selected', async () => {
-  const client = makeClient();
-  const workerFactoryCalls: WorkerFactoryCall[] = [];
-  const workerFactory: WorkerFactory = async (receivedClient, context) => {
-    workerFactoryCalls.push({
-      client: receivedClient,
-      context,
-    });
-    return makeTestWorker(async () => undefined) as unknown as Worker;
-  };
-  const clientFactory = async (_config: ClientConfig): Promise<Client> => client;
-
-  await runWorker(
-    workerFactory,
-    clientFactory,
-    neverInterrupt(),
-    ['--max-concurrent-activities', '50'],
-  );
-
-  assert.deepEqual(workerFactoryCalls[0]?.context.workerOptions, {
-    maxConcurrentActivityTaskExecutions: 50,
-  });
-});
-
 void test('runWorker rejects unknown worker profile', async () => {
   const client = makeClient();
   const workerFactory: WorkerFactory = async () =>

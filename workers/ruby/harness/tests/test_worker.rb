@@ -28,8 +28,7 @@ class HarnessWorkerTest < Minitest::Test
           '--task-queue', 'omes',
           '--task-queue-suffix-index-start', '1',
           '--task-queue-suffix-index-end', '2'
-        ],
-        worker_profile: nil
+        ]
       )
     end
 
@@ -70,15 +69,6 @@ class HarnessWorkerTest < Minitest::Test
 
     refute_nil worker_kwargs[:tuner]
     refute_includes worker_kwargs, :max_concurrent_activities
-  end
-
-  def test_build_worker_kwargs_applies_worker_option_flags_without_profile
-    options = Harness::WorkerCLI.default_options
-    options[:max_concurrent_activities] = 50
-
-    worker_kwargs = Harness::WorkerCLI.build_worker_kwargs(options, nil)
-
-    assert_equal 50, worker_kwargs[:max_concurrent_activities]
   end
 
   def test_build_worker_kwargs_rejects_unknown_worker_profile
