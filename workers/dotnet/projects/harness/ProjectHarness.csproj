@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <TargetFramework>net8.0</TargetFramework>
-        <TemporalioVersion Condition="'$(TemporalioVersion)' == ''">1.14.0</TemporalioVersion>
+        <TemporalioVersion Condition="'$(TemporalioVersion)' == ''">1.14.1</TemporalioVersion>
     </PropertyGroup>
 
     <ItemGroup>
