@@ -5,6 +5,7 @@ import type { ClientConfig } from '../src/client.js';
 import type { Worker } from '@temporalio/worker';
 import { runWorker, runWorkers, type WorkerContext, type WorkerFactory } from '../src/worker.js';
 import { makeClient } from './test-helpers.js';
+import { RESOURCE_BASED_DEFAULT_PROFILE } from '../src/profiles.js';
 
 interface WorkerFactoryCall {
   client: Client;
@@ -51,14 +52,20 @@ void test('runWorker passes shared client and context to each worker factory', a
     return client;
   };
 
-  await runWorker(workerFactory, clientFactory, neverInterrupt(), [
-    '--task-queue',
-    'omes',
-    '--task-queue-suffix-index-start',
-    '1',
-    '--task-queue-suffix-index-end',
-    '2',
-  ]);
+  await runWorker(
+    workerFactory,
+    clientFactory,
+    neverInterrupt(),
+    [
+      '--task-queue',
+      'omes',
+      '--task-queue-suffix-index-start',
+      '1',
+      '--task-queue-suffix-index-end',
+      '2',
+    ],
+    undefined,
+  );
 
   assert.strictEqual(workerFactoryCalls[0]?.client, client);
   assert.strictEqual(workerFactoryCalls[1]?.client, client);
@@ -102,4 +109,100 @@ void test('runWorkers shuts down all workers when one fails', async () => {
   assert.equal(successfulWorker.runCalls, 1);
   assert.equal(failingWorker.shutdownCalls, 1);
   assert.equal(successfulWorker.shutdownCalls, 1);
+});
+
+void test('runWorker applies resource based worker profile', async () => {
+  const client = makeClient();
+  const workerFactoryCalls: WorkerFactoryCall[] = [];
+  const workerFactory: WorkerFactory = async (receivedClient, context) => {
+    workerFactoryCalls.push({
+      client: receivedClient,
+      context,
+    });
+    return makeTestWorker(async () => undefined) as unknown as Worker;
+  };
+  const clientFactory = async (_config: ClientConfig): Promise<Client> => client;
+
+  await runWorker(
+    workerFactory,
+    clientFactory,
+    neverInterrupt(),
+    [],
+    RESOURCE_BASED_DEFAULT_PROFILE,
+  );
+
+  assert.deepEqual(workerFactoryCalls[0]?.context.workerOptions, {
+    tuner: {
+      tunerOptions: {
+        targetMemoryUsage: 0.8,
+        targetCpuUsage: 0.8,
+      },
+    },
+  });
+});
+
+void test('runWorker ignores worker option flags when profile is selected', async () => {
+  const client = makeClient();
+  const workerFactoryCalls: WorkerFactoryCall[] = [];
+  const workerFactory: WorkerFactory = async (receivedClient, context) => {
+    workerFactoryCalls.push({
+      client: receivedClient,
+      context,
+    });
+    return makeTestWorker(async () => undefined) as unknown as Worker;
+  };
+  const clientFactory = async (_config: ClientConfig): Promise<Client> => client;
+
+  await runWorker(
+    workerFactory,
+    clientFactory,
+    neverInterrupt(),
+    ['--max-concurrent-activities', '50'],
+    RESOURCE_BASED_DEFAULT_PROFILE,
+  );
+
+  assert.deepEqual(workerFactoryCalls[0]?.context.workerOptions, {
+    tuner: {
+      tunerOptions: {
+        targetMemoryUsage: 0.8,
+        targetCpuUsage: 0.8,
+      },
+    },
+  });
+});
+
+void test('runWorker applies worker option flags when profile is not selected', async () => {
+  const client = makeClient();
+  const workerFactoryCalls: WorkerFactoryCall[] = [];
+  const workerFactory: WorkerFactory = async (receivedClient, context) => {
+    workerFactoryCalls.push({
+      client: receivedClient,
+      context,
+    });
+    return makeTestWorker(async () => undefined) as unknown as Worker;
+  };
+  const clientFactory = async (_config: ClientConfig): Promise<Client> => client;
+
+  await runWorker(
+    workerFactory,
+    clientFactory,
+    neverInterrupt(),
+    ['--max-concurrent-activities', '50'],
+  );
+
+  assert.deepEqual(workerFactoryCalls[0]?.context.workerOptions, {
+    maxConcurrentActivityTaskExecutions: 50,
+  });
+});
+
+void test('runWorker rejects unknown worker profile', async () => {
+  const client = makeClient();
+  const workerFactory: WorkerFactory = async () =>
+    makeTestWorker(async () => undefined) as unknown as Worker;
+  const clientFactory = async (_config: ClientConfig): Promise<Client> => client;
+
+  await assert.rejects(
+    () => runWorker(workerFactory, clientFactory, neverInterrupt(), [], 'nope'),
+    /Unknown worker profile "nope"/,
+  );
 });

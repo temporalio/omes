@@ -51,6 +51,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.EmbeddedServerAddress, "embedded-server-address", "", "Address to bind local embedded server to")
 	fs.IntVar(&r.TaskQueueIndexSuffixStart, "task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
 	fs.IntVar(&r.TaskQueueIndexSuffixEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
+	fs.StringVar(&r.WorkerProfile, "worker-profile", "", "Worker configuration profile to apply in the worker harness")
 	fs.AddFlagSet(r.ClientOptions.FlagSet())
 	fs.AddFlagSet(r.MetricsOptions.FlagSet("worker-"))
 	fs.AddFlagSet(r.WorkerOptions.FlagSet())

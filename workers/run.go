@@ -28,6 +28,7 @@ type Runner struct {
 	TaskQueueName             string
 	TaskQueueIndexSuffixStart int
 	TaskQueueIndexSuffixEnd   int
+	WorkerProfile             string
 	ScenarioID                clioptions.ScenarioID
 	ClientOptions             clioptions.ClientOptions
 	MetricsOptions            clioptions.MetricsOptions
@@ -151,6 +152,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
+	cmd.Env = withWorkerProfileEnv(cmd.Environ(), r.WorkerProfile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
 
 	// Direct logging output to provided logger, if available.
@@ -220,6 +222,23 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 		return nil
 	}
+}
+
+const WorkerProfileEnvVar = "OMES_WORKER_PROFILE"
+
+func withWorkerProfileEnv(environ []string, profile string) []string {
+	const prefix = WorkerProfileEnvVar + "="
+	nextEnv := make([]string, 0, len(environ)+1)
+	for _, item := range environ {
+		if strings.HasPrefix(item, prefix) {
+			continue
+		}
+		nextEnv = append(nextEnv, item)
+	}
+	if profile != "" {
+		nextEnv = append(nextEnv, prefix+profile)
+	}
+	return nextEnv
 }
 
 func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
