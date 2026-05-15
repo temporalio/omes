@@ -290,22 +290,16 @@ func RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout time.Dura
 	}
 }
 
-// StandaloneActivity wraps an ExecuteActivityAction so it runs via the
-// namespace-scoped StartActivityExecution / PollActivityExecution RPCs
-// instead of being workflow-scheduled. Mirrors the DefaultRemoteActivity
-// factory shape so the same ExecuteActivityAction builders (PayloadActivity,
-// GenericActivity, etc.) can target either path.
-//
-// Defaults StartToCloseTimeout to 30s if unset. Workflow-only fields
-// (awaitable_choice, locality, priority, fairness_*) on the embedded
-// action are ignored by the standalone executor.
-func StandaloneActivity(activity *ExecuteActivityAction) *ClientAction {
-	if activity.StartToCloseTimeout == nil {
-		activity.StartToCloseTimeout = durationpb.New(30 * time.Second)
-	}
+// StandaloneActivityClientAction creates a ClientAction that invokes the `payload`
+// activity directly via the low-level StartActivityExecution / PollActivityExecution
+// RPCs, bypassing normal workflow activity scheduling.
+func StandaloneActivityClientAction(bytesToReceive, bytesToReturn int32) *ClientAction {
 	return &ClientAction{
 		Variant: &ClientAction_DoStandaloneActivity{
-			DoStandaloneActivity: &DoStandaloneActivity{Activity: activity},
+			DoStandaloneActivity: &DoStandaloneActivity{
+				BytesToReceive: bytesToReceive,
+				BytesToReturn:  bytesToReturn,
+			},
 		},
 	}
 }

@@ -88,14 +88,9 @@ message DoDescribe {
 // Invoke an activity directly via the low-level StartActivityExecution /
 // PollActivityExecution RPCs, bypassing normal workflow activity scheduling.
 // Requires server-side support for workflow-independent activities.
-//
-// Reuses ExecuteActivityAction's surface so the standalone path receives the
-// same activity input contract as the workflow-scheduled path. Honored
-// fields: activity_type, task_queue, all four timeouts, retry_policy.
-// Ignored fields (workflow-only): awaitable_choice, locality (always
-// remote), priority, fairness_key, fairness_weight, headers.
 message DoStandaloneActivity {
-  ExecuteActivityAction activity = 1;
+  int32 bytes_to_receive = 1;
+  int32 bytes_to_return = 2;
 }
 
 message DoQuery {
