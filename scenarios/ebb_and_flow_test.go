@@ -11,6 +11,38 @@ import (
 	"github.com/temporalio/omes/workers"
 )
 
+func TestEbbAndFlowRateMode(t *testing.T) {
+	t.Parallel()
+
+	env := workers.SetupTestEnvironment(t,
+		workers.WithExecutorTimeout(2*time.Minute))
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID: fmt.Sprintf("eaf-rate-%d", time.Now().Unix()),
+		Configuration: loadgen.RunConfiguration{
+			Duration: 10 * time.Second,
+		},
+		ScenarioOptions: map[string]string{
+			MinAddRateFlag:                    "1",
+			MaxAddRateFlag:                    "3",
+			RatePeriodFlag:                    "5s",
+			MinBacklogFlag:                    "0",
+			MaxBacklogFlag:                    "3",
+			BacklogPeriodFlag:                 "5s",
+			PeriodFlag:                        "5s",
+			BacklogLogIntervalFlag:            "5s",
+			VisibilityVerificationTimeoutFlag: "5s",
+		},
+	}
+
+	executor := newEbbAndFlowExecutor()
+	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "Rate mode executor should complete successfully")
+
+	state := executor.Snapshot().(ebbAndFlowState)
+	require.GreaterOrEqual(t, state.TotalCompletedWorkflows, int64(1))
+}
+
 func TestEbbAndFlow(t *testing.T) {
 	t.Parallel()
 
