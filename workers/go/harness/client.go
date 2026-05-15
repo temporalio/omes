@@ -61,6 +61,9 @@ func BuildSDKClientOptions(config ClientConfig) sdkclient.Options {
 		Logger:         clioptions.NewZapAdapter(logger.Desugar()),
 		MetricsHandler: clientMetrics.NewHandler(),
 	}
+	if hosts := clioptions.SplitHosts(config.TargetHost); len(hosts) > 1 {
+		options.HostPort, options.ConnectionOptions.DialOptions = clioptions.RoundRobinDial(hosts)
+	}
 	options.ConnectionOptions.TLS = config.TLS
 	if config.APIKey != "" {
 		options.Credentials = sdkclient.NewAPIKeyStaticCredentials(config.APIKey)
