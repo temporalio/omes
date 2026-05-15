@@ -77,7 +77,7 @@ public final class WorkerHarness {
           buildTaskQueues(
               logger, args.taskQueue, args.taskQueueSuffixIndexStart, args.taskQueueSuffixIndexEnd),
           args.errOnUnimplemented,
-          buildWorkerOptions(args));
+          buildWorkerOptions(args, System.getenv(WorkerProfiles.WORKER_PROFILE_ENV_VAR)));
 
       Runtime.getRuntime().addShutdownHook(shutdownHook);
       shutdownHookAdded = true;
@@ -134,6 +134,14 @@ public final class WorkerHarness {
   }
 
   static WorkerOptions buildWorkerOptions(Arguments args) {
+    return buildWorkerOptions(args, null);
+  }
+
+  static WorkerOptions buildWorkerOptions(Arguments args, String profileName) {
+    if (profileName != null && !profileName.isEmpty()) {
+      return WorkerProfiles.lookupWorkerProfile(profileName);
+    }
+
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     if (args.workflowPollerAutoscaleMax != null) {
       workerOptions.setWorkflowTaskPollersBehavior(

@@ -1,5 +1,6 @@
 using Temporalio.Worker;
 using Temporalio.Worker.Tuning;
+using WorkerProfile = Temporalio.Worker.TemporalWorkerOptions;
 
 namespace Temporalio.Omes.Projects.Harness;
 
@@ -8,8 +9,8 @@ internal static class WorkerProfiles
     public const string EnvVarName = "OMES_WORKER_PROFILE";
     public const string ResourceBasedDefaultProfile = "resource-based-default";
 
-    private static readonly IReadOnlyDictionary<string, TemporalWorkerOptions> Profiles =
-        new Dictionary<string, TemporalWorkerOptions>
+    private static readonly IReadOnlyDictionary<string, WorkerProfile> Profiles =
+        new Dictionary<string, WorkerProfile>
         {
             [ResourceBasedDefaultProfile] = new TemporalWorkerOptions
             {
@@ -19,13 +20,13 @@ internal static class WorkerProfiles
             },
         };
 
-    public static TemporalWorkerOptions Lookup(string name)
+    public static WorkerProfile LookupWorkerProfile(string name)
     {
         if (!Profiles.TryGetValue(name, out var profile))
         {
             throw new ArgumentException($"Unknown worker profile \"{name}\"");
         }
 
-        return (TemporalWorkerOptions)profile.Clone();
+        return (WorkerProfile)profile.Clone();
     }
 }

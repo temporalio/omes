@@ -320,7 +320,7 @@ internal static class WorkerHarness
     {
         if (!string.IsNullOrEmpty(settings.Profile))
         {
-            var profileOptions = WorkerProfiles.Lookup(settings.Profile);
+            var profileOptions = WorkerProfiles.LookupWorkerProfile(settings.Profile);
             profileOptions.TaskQueue = taskQueue;
             return profileOptions;
         }

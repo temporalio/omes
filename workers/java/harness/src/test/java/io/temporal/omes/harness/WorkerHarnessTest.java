@@ -1,6 +1,8 @@
 package io.temporal.omes.harness;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,6 +12,7 @@ import io.temporal.testing.TestWorkflowEnvironment;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
 import io.temporal.worker.WorkerFactoryOptions;
+import io.temporal.worker.WorkerOptions;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +24,37 @@ import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Test;
 
 class WorkerHarnessTest {
+  @Test
+  void buildWorkerOptionsAppliesProfile() {
+    WorkerOptions workerOptions =
+        WorkerHarness.buildWorkerOptions(
+            WorkerHarness.parseArguments(), WorkerProfiles.RESOURCE_BASED_DEFAULT_PROFILE);
+
+    assertNotNull(workerOptions.getWorkerTuner());
+  }
+
+  @Test
+  void buildWorkerOptionsIgnoresWorkerOptionFlagsWhenProfileIsSelected() {
+    WorkerHarness.Arguments args =
+        WorkerHarness.parseArguments("--max-concurrent-activities", "50");
+
+    WorkerOptions workerOptions =
+        WorkerHarness.buildWorkerOptions(args, WorkerProfiles.RESOURCE_BASED_DEFAULT_PROFILE);
+
+    assertNotNull(workerOptions.getWorkerTuner());
+    assertNotEquals(50, workerOptions.getMaxConcurrentActivityExecutionSize());
+  }
+
+  @Test
+  void buildWorkerOptionsRejectsUnknownProfile() {
+    IllegalArgumentException error =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> WorkerHarness.buildWorkerOptions(WorkerHarness.parseArguments(), "nope"));
+
+    assertEquals("Unknown worker profile \"nope\"", error.getMessage());
+  }
+
   @Test
   void runWorkerFactoryShutsDownAllWorkersWhenStartFails() {
     LifecyclePlugin lifecycle = new LifecyclePlugin("omes-1", 2);
