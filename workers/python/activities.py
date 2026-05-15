@@ -74,12 +74,3 @@ def create_client_activity(client: Client, err_on_unimplemented: bool):
         await executor.execute_client_sequence(client_activity_proto.client_sequence)
 
     return client_activity
-
-
-def create_wait_for_workflow_activity(client: Client):
-    @activity.defn(name="wait_for_workflow")
-    async def wait_for_workflow_activity(workflow_id: str, run_id: str) -> None:
-        handle = client.get_workflow_handle(workflow_id, run_id=run_id or None)
-        await handle.result()
-
-    return wait_for_workflow_activity

@@ -701,10 +701,8 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 						},
 					},
 				}},
-				{Variant: &Action_AwaitWorkflowCompletion{
-					AwaitWorkflowCompletion: &AwaitWorkflowCompletion{
-						WorkflowId: handlerWfID,
-					},
+				{Variant: &Action_AwaitPendingActions{
+					AwaitPendingActions: &AwaitPendingActions{},
 				}},
 			},
 		},

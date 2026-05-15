@@ -37,13 +37,9 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 
-func (ca *ClientActivities) WaitForWorkflow(ctx context.Context, workflowID, runID string) error {
-	handle := ca.Client.GetWorkflow(ctx, workflowID, runID)
-	return handle.Get(ctx, nil)
-}
-
 type KSWorkflowState struct {
-	workflowState *kitchensink.WorkflowState
+	workflowState  *kitchensink.WorkflowState
+	pendingActions []workflow.Future
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
@@ -274,7 +270,7 @@ func (ws *KSWorkflowState) handleAction(
 	} else if can := action.GetContinueAsNew(); can != nil {
 		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
-		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+		return nil, withAwaitableChoice(ctx, ws, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)
 			workflow.Go(ctx, func(ctx workflow.Context) {
 				_ = workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond)
@@ -283,7 +279,7 @@ func (ws *KSWorkflowState) handleAction(
 			return fut
 		}, timer.AwaitableChoice)
 	} else if act := action.GetExecActivity(); act != nil {
-		return nil, launchActivity(ctx, action.GetExecActivity())
+		return nil, launchActivity(ctx, ws, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
 		// Use name if present, otherwise use this one
 		childType := "kitchenSink"
@@ -301,7 +297,7 @@ func (ws *KSWorkflowState) handleAction(
 			WorkflowID:       child.WorkflowId,
 			SearchAttributes: searchAttributes,
 		})
-		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
+		err := withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
 			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
 		}, child.AwaitableChoice,
 			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
@@ -344,17 +340,17 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
-	} else if awc := action.GetAwaitWorkflowCompletion(); awc != nil {
-		return nil, handleAwaitWorkflowCompletion(ctx, awc)
+	} else if action.GetAwaitPendingActions() != nil {
+		return nil, handleAwaitPendingActions(ctx, ws)
 	} else if sig := action.GetSendSignal(); sig != nil {
-		return nil, handleSendSignal(ctx, sig)
+		return nil, handleSendSignal(ctx, ws, sig)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
 	return nil, nil
 }
 
-func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
+func launchActivity(ctx workflow.Context, ws *KSWorkflowState, act *kitchensink.ExecuteActivityAction) error {
 	actType := "noop"
 	args := make([]interface{}, 0)
 	if delay := act.GetDelay(); delay != nil {
@@ -388,7 +384,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
 
-		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+		return withAwaitableChoice(actCtx, ws, func(ctx workflow.Context) workflow.Future {
 			return workflow.ExecuteLocalActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	} else {
@@ -421,7 +417,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
-		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+		return withAwaitableChoice(actCtx, ws, func(ctx workflow.Context) workflow.Future {
 			return workflow.ExecuteActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	}
@@ -429,10 +425,11 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 
 func withAwaitableChoice[F workflow.Future](
 	ctx workflow.Context,
+	ws *KSWorkflowState,
 	starter func(workflow.Context) F,
 	awaitChoice *kitchensink.AwaitableChoice,
 ) error {
-	return withAwaitableChoiceCustom(ctx, starter, awaitChoice,
+	return withAwaitableChoiceCustom(ctx, ws, starter, awaitChoice,
 		func(ctx workflow.Context, fut F) error {
 			_ = workflow.Sleep(ctx, 1)
 			return nil
@@ -444,6 +441,7 @@ func withAwaitableChoice[F workflow.Future](
 
 func withAwaitableChoiceCustom[F workflow.Future](
 	ctx workflow.Context,
+	ws *KSWorkflowState,
 	starter func(workflow.Context) F,
 	awaitChoice *kitchensink.AwaitableChoice,
 	afterStartedWaiter func(workflow.Context, F) error,
@@ -473,7 +471,9 @@ func withAwaitableChoiceCustom[F workflow.Future](
 		err = res
 	} else if awaitChoice.GetWaitStarted() != nil {
 		err = afterStartedWaiter(ctx, fut)
-		// Leave fut running; do NOT call cancel().
+		if err == nil && ws != nil {
+			ws.pendingActions = append(ws.pendingActions, fut)
+		}
 	} else {
 		err = fut.Get(ctx, nil)
 	}
@@ -488,7 +488,7 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
-	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
+	return withAwaitableChoiceCustom(ctx, state, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
 		input := &kitchensink.NexusHandlerInput{
@@ -518,8 +518,8 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		})
 }
 
-func handleSendSignal(ctx workflow.Context, action *kitchensink.SendSignalAction) error {
-	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.Future {
+func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
+	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
 		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
@@ -530,18 +530,15 @@ func handleSendSignal(ctx workflow.Context, action *kitchensink.SendSignalAction
 		})
 }
 
-func handleAwaitWorkflowCompletion(ctx workflow.Context, action *kitchensink.AwaitWorkflowCompletion) error {
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 24 * time.Hour,
-		HeartbeatTimeout:    30 * time.Second,
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 3,
-		},
+func handleAwaitPendingActions(ctx workflow.Context, ws *KSWorkflowState) error {
+	pending := ws.pendingActions
+	ws.pendingActions = nil
+	for i, fut := range pending {
+		if err := fut.Get(ctx, nil); err != nil {
+			return fmt.Errorf("pending action %d failed: %w", i, err)
+		}
 	}
-	return workflow.ExecuteActivity(
-		workflow.WithActivityOptions(ctx, ao),
-		"wait_for_workflow", action.WorkflowId, action.RunId,
-	).Get(ctx, nil)
+	return nil
 }
 
 // Noop is used as a no-op activity.

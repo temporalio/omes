@@ -174,7 +174,7 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
-    AwaitWorkflowCompletion await_workflow_completion = 17;
+    AwaitPendingActions await_pending_actions = 17;
   }
 }
 
@@ -527,9 +527,8 @@ message NexusHandlerInput {
   bool wait_for_signal = 5;
 }
 
-// Wait for an external workflow to complete by ID. No parent-child relationship.
-message AwaitWorkflowCompletion {
-  string workflow_id = 1;
-  string run_id = 2;     // empty = latest run
+// Await completion of all actions that were started in the same workflow with
+// AwaitableChoice.wait_started and not yet awaited.
+message AwaitPendingActions {
 }
 
