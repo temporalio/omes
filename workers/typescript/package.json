@@ -7,7 +7,7 @@
     "projects/tests/*"
   ],
   "scripts": {
-    "build": "npm run proto-gen && tsc --build",
+    "build": "npm run proto-gen && npm run build --workspace @temporalio/omes-project-harness && tsc --build",
     "build.watch": "tsc --build --watch",
     "clean": "rm -rf node_modules dist build",
     "proto-gen": "node ./protogen.js",

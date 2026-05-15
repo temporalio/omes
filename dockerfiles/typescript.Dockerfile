@@ -33,6 +33,7 @@ COPY go.mod go.sum versions.env ./
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
+ARG PROJECT_NAME=""
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
@@ -55,17 +56,29 @@ RUN . ./versions.env \
  && corepack pnpm --version
 
 # prepare-worker builds the TypeScript workspace itself: it installs npm deps,
-# runs the root build, and generates the prepared sdkbuild package.
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
+# runs the relevant build, and generates the prepared sdkbuild package.
+RUN project_args="" ; \
+    if [ -n "$PROJECT_NAME" ]; then \
+      project_args="--project-name $PROJECT_NAME" ; \
+    fi ; \
+    CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION" $project_args
 
 # Copy the CLI and prepared feature to a "run" container.
-# hadolint ignore=DL3006
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian11
+FROM --platform=linux/$TARGETARCH node:20-bullseye-slim
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive \
+    apt-get install --no-install-recommends --assume-yes ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG PROJECT_NAME=""
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/typescript /app/workers/typescript
+COPY dockerfiles/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-# Node is installed here 👇 in distroless
-ENV PATH="/nodejs/bin:$PATH"
-# Use entrypoint instead of command to "bake" the default command options
-ENTRYPOINT ["/app/temporal-omes", "run-worker", "--language", "typescript", "--dir-name", "prepared"]
+ENV OMES_WORKER_LANGUAGE=typescript
+ENV OMES_PREPARED_DIR=prepared
+ENV OMES_PROJECT_NAME=$PROJECT_NAME
+
+ENTRYPOINT ["/app/entrypoint.sh"]

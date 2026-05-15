@@ -169,6 +169,11 @@ func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error 
 		return err
 	}
 
+	fmt.Println("Building TypeScript harness...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "build"); err != nil {
+		return err
+	}
+
 	fmt.Println("Compiling TypeScript worker...")
 	if err := runCommandInDir(ctx, workerDir, "npm", "run", "typecheck"); err != nil {
 		return err
