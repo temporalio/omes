@@ -730,6 +730,7 @@ impl ExecuteNexusOperation {
             before_actions: vec![],
             handler_workflow_id: String::new(),
             handler_workflow_id_conflict_policy: 0,
+            wait_for_signal: false,
         })
     }
 }
@@ -775,6 +776,7 @@ impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
             before_actions,
             handler_workflow_id: String::new(),
             handler_workflow_id_conflict_policy: 0,
+            wait_for_signal: false,
         })
     }
 }

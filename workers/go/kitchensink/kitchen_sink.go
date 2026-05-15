@@ -37,6 +37,14 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 
+// WaitForWorkflow blocks until the workflow identified by workflowID finishes.
+// runID may be empty to refer to the latest run. Establishes no parent-child
+// relationship with the target.
+func (ca *ClientActivities) WaitForWorkflow(ctx context.Context, workflowID, runID string) error {
+	handle := ca.Client.GetWorkflow(ctx, workflowID, runID)
+	return handle.Get(ctx, nil)
+}
+
 type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
 }
@@ -339,6 +347,8 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if awc := action.GetAwaitWorkflowCompletion(); awc != nil {
+		return nil, handleAwaitWorkflowCompletion(ctx, awc)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -462,6 +472,9 @@ func withAwaitableChoiceCustom[F workflow.Future](
 		res := afterCompletedWaiter(ctx, fut)
 		cancel()
 		err = res
+	} else if awaitChoice.GetWaitStarted() != nil {
+		err = afterStartedWaiter(ctx, fut)
+		// Leave fut running; do NOT call cancel().
 	} else {
 		err = fut.Get(ctx, nil)
 	}
@@ -484,6 +497,7 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 			BeforeActions:                   nexusOp.BeforeActions,
 			HandlerWorkflowId:               nexusOp.HandlerWorkflowId,
 			HandlerWorkflowIdConflictPolicy: nexusOp.HandlerWorkflowIdConflictPolicy,
+			WaitForSignal:                   nexusOp.WaitForSignal,
 		}
 		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
@@ -503,6 +517,24 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 			}
 			return fut.Get(ctx, nil)
 		})
+}
+
+// handleAwaitWorkflowCompletion blocks until the named workflow finishes, by
+// dispatching to the wait_for_workflow activity (which internally calls
+// Client.GetWorkflow(...).Get on the orchestrator's behalf). Establishes no
+// parent-child relationship with the target.
+func handleAwaitWorkflowCompletion(ctx workflow.Context, action *kitchensink.AwaitWorkflowCompletion) error {
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 24 * time.Hour,
+		HeartbeatTimeout:    30 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 3,
+		},
+	}
+	return workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, ao),
+		"wait_for_workflow", action.WorkflowId, action.RunId,
+	).Get(ctx, nil)
 }
 
 // Noop is used as a no-op activity.
@@ -600,6 +632,11 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 		if _, err := state.handleActionSet(ctx, actionSet); err != nil {
 			return "", err
 		}
+	}
+	if input.WaitForSignal {
+		// Block until the caller sends "unblock". Used by the attach-callbacks
+		// pattern to hold the handler open while concurrent ops attach as callbacks.
+		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
 	}
 	return input.Input, nil
 }

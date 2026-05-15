@@ -21,6 +21,7 @@ from protos.kitchen_sink_pb2 import (
     ActionSet,
     ActivityCancellationType,
     AwaitableChoice,
+    AwaitWorkflowCompletion,
     DoActionsUpdate,
     DoSignal,
     ExecuteActivityAction,
@@ -194,6 +195,8 @@ class KitchenSinkWorkflow:
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
             await handle_nexus_operation(action.nexus_operation)
+        elif action.HasField("await_workflow_completion"):
+            await handle_await_workflow_completion(action.await_workflow_completion)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -300,6 +303,7 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
         before_actions=nexus_op.before_actions,
         handler_workflow_id=nexus_op.handler_workflow_id,
         handler_workflow_id_conflict_policy=nexus_op.handler_workflow_id_conflict_policy,
+        wait_for_signal=nexus_op.wait_for_signal,
     )
     output_type = str
 
@@ -336,6 +340,18 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
     )
 
 
+async def handle_await_workflow_completion(action: AwaitWorkflowCompletion) -> None:
+    """Block until the named workflow finishes by dispatching to the
+    wait_for_workflow activity (which internally calls client.get_workflow_handle().result()).
+    No parent-child relationship with the target."""
+    await workflow.execute_activity(
+        "wait_for_workflow",
+        args=[action.workflow_id, action.run_id],
+        start_to_close_timeout=timedelta(hours=24),
+        heartbeat_timeout=timedelta(seconds=30),
+    )
+
+
 async def handle_awaitable_choice(
     awaitable: Union[Coroutine, asyncio.Task],
     choice: AwaitableChoice,
@@ -366,6 +382,10 @@ async def handle_awaitable_choice(
             await after_completed_fn(task)
             task.cancel()
             did_cancel = True
+        elif choice.HasField("wait_started"):
+            await after_started_fn(task)
+            # Leave task running.
+            return
         else:
             await after_completed_fn(task)
     except (asyncio.CancelledError, exceptions.NexusOperationError):
@@ -402,9 +422,18 @@ def convert_act_cancel_type(
 
 @workflow.defn
 class NexusHandlerWorkflow:
+    _unblocked: bool = False
+
     @workflow.run
     async def run(self, input: NexusHandlerInput) -> str:
         state = KitchenSinkWorkflow()
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
+        if input.wait_for_signal:
+            # Hold the handler open while concurrent Nexus ops attach as callbacks.
+            await workflow.wait_condition(lambda: self._unblocked)
         return input.input
+
+    @workflow.signal(name="unblock")
+    async def unblock(self) -> None:
+        self._unblocked = True

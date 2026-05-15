@@ -1317,6 +1317,7 @@ type Action struct {
 	//	*Action_ContinueAsNew
 	//	*Action_NestedActionSet
 	//	*Action_NexusOperation
+	//	*Action_AwaitWorkflowCompletion
 	Variant isAction_Variant `protobuf_oneof:"variant"`
 }
 
@@ -1464,6 +1465,13 @@ func (x *Action) GetNexusOperation() *ExecuteNexusOperation {
 	return nil
 }
 
+func (x *Action) GetAwaitWorkflowCompletion() *AwaitWorkflowCompletion {
+	if x, ok := x.GetVariant().(*Action_AwaitWorkflowCompletion); ok {
+		return x.AwaitWorkflowCompletion
+	}
+	return nil
+}
+
 type isAction_Variant interface {
 	isAction_Variant()
 }
@@ -1528,6 +1536,10 @@ type Action_NexusOperation struct {
 	NexusOperation *ExecuteNexusOperation `protobuf:"bytes,15,opt,name=nexus_operation,json=nexusOperation,proto3,oneof"`
 }
 
+type Action_AwaitWorkflowCompletion struct {
+	AwaitWorkflowCompletion *AwaitWorkflowCompletion `protobuf:"bytes,17,opt,name=await_workflow_completion,json=awaitWorkflowCompletion,proto3,oneof"`
+}
+
 func (*Action_Timer) isAction_Variant() {}
 
 func (*Action_ExecActivity) isAction_Variant() {}
@@ -1558,6 +1570,8 @@ func (*Action_NestedActionSet) isAction_Variant() {}
 
 func (*Action_NexusOperation) isAction_Variant() {}
 
+func (*Action_AwaitWorkflowCompletion) isAction_Variant() {}
+
 // All await commands will have this available as a field. If it is set, the command
 // should be either awaited upon, cancelled, or abandoned at the specified juncture (if possible,
 // not all command types will be cancellable at all stages. Is is up to the generator to produce
@@ -1574,6 +1588,7 @@ type AwaitableChoice struct {
 	//	*AwaitableChoice_CancelBeforeStarted
 	//	*AwaitableChoice_CancelAfterStarted
 	//	*AwaitableChoice_CancelAfterCompleted
+	//	*AwaitableChoice_WaitStarted
 	Condition isAwaitableChoice_Condition `protobuf_oneof:"condition"`
 }
 
@@ -1651,6 +1666,13 @@ func (x *AwaitableChoice) GetCancelAfterCompleted() *emptypb.Empty {
 	return nil
 }
 
+func (x *AwaitableChoice) GetWaitStarted() *emptypb.Empty {
+	if x, ok := x.GetCondition().(*AwaitableChoice_WaitStarted); ok {
+		return x.WaitStarted
+	}
+	return nil
+}
+
 type isAwaitableChoice_Condition interface {
 	isAwaitableChoice_Condition()
 }
@@ -1683,6 +1705,14 @@ type AwaitableChoice_CancelAfterCompleted struct {
 	CancelAfterCompleted *emptypb.Empty `protobuf:"bytes,5,opt,name=cancel_after_completed,json=cancelAfterCompleted,proto3,oneof"`
 }
 
+type AwaitableChoice_WaitStarted struct {
+	// Await the command's STARTED event, then return without awaiting completion
+	// or cancelling. The underlying operation continues running; subsequent
+	// coordination (e.g. signaling another workflow that drives its completion)
+	// is the caller's responsibility.
+	WaitStarted *emptypb.Empty `protobuf:"bytes,6,opt,name=wait_started,json=waitStarted,proto3,oneof"`
+}
+
 func (*AwaitableChoice_WaitFinish) isAwaitableChoice_Condition() {}
 
 func (*AwaitableChoice_Abandon) isAwaitableChoice_Condition() {}
@@ -1692,6 +1722,8 @@ func (*AwaitableChoice_CancelBeforeStarted) isAwaitableChoice_Condition() {}
 func (*AwaitableChoice_CancelAfterStarted) isAwaitableChoice_Condition() {}
 
 func (*AwaitableChoice_CancelAfterCompleted) isAwaitableChoice_Condition() {}
+
+func (*AwaitableChoice_WaitStarted) isAwaitableChoice_Condition() {}
 
 type TimerAction struct {
 	state         protoimpl.MessageState
@@ -2972,6 +3004,10 @@ type ExecuteNexusOperation struct {
 	// handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
 	// callback to an existing run.
 	HandlerWorkflowIdConflictPolicy v11.WorkflowIdConflictPolicy `protobuf:"varint,9,opt,name=handler_workflow_id_conflict_policy,json=handlerWorkflowIdConflictPolicy,proto3,enum=temporal.api.enums.v1.WorkflowIdConflictPolicy" json:"handler_workflow_id_conflict_policy,omitempty"`
+	// If true, the backing handler workflow blocks on the "unblock" signal after running
+	// before_actions, before returning. Used by the attach-callbacks pattern to hold the
+	// handler open until all concurrent ops have attached as callbacks.
+	WaitForSignal bool `protobuf:"varint,10,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
 }
 
 func (x *ExecuteNexusOperation) Reset() {
@@ -3069,6 +3105,13 @@ func (x *ExecuteNexusOperation) GetHandlerWorkflowIdConflictPolicy() v11.Workflo
 	return v11.WorkflowIdConflictPolicy(0)
 }
 
+func (x *ExecuteNexusOperation) GetWaitForSignal() bool {
+	if x != nil {
+		return x.WaitForSignal
+	}
+	return false
+}
+
 // Input for the Nexus handler workflow that backs echo-sync and echo-async operations
 type NexusHandlerInput struct {
 	state         protoimpl.MessageState
@@ -3082,6 +3125,9 @@ type NexusHandlerInput struct {
 	HandlerWorkflowId string `protobuf:"bytes,3,opt,name=handler_workflow_id,json=handlerWorkflowId,proto3" json:"handler_workflow_id,omitempty"`
 	// Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
 	HandlerWorkflowIdConflictPolicy v11.WorkflowIdConflictPolicy `protobuf:"varint,4,opt,name=handler_workflow_id_conflict_policy,json=handlerWorkflowIdConflictPolicy,proto3,enum=temporal.api.enums.v1.WorkflowIdConflictPolicy" json:"handler_workflow_id_conflict_policy,omitempty"`
+	// When true, the handler workflow waits on the "unblock" signal after before_actions,
+	// before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+	WaitForSignal bool `protobuf:"varint,5,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
 }
 
 func (x *NexusHandlerInput) Reset() {
@@ -3144,6 +3190,71 @@ func (x *NexusHandlerInput) GetHandlerWorkflowIdConflictPolicy() v11.WorkflowIdC
 	return v11.WorkflowIdConflictPolicy(0)
 }
 
+func (x *NexusHandlerInput) GetWaitForSignal() bool {
+	if x != nil {
+		return x.WaitForSignal
+	}
+	return false
+}
+
+// Wait for an external workflow to complete by ID. Establishes no parent-child relationship
+// with the target — implementations call the Temporal client's GetWorkflow().Get() inside
+// an activity.
+type AwaitWorkflowCompletion struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	WorkflowId string `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	RunId      string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"` // empty = latest run
+}
+
+func (x *AwaitWorkflowCompletion) Reset() {
+	*x = AwaitWorkflowCompletion{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_kitchen_sink_proto_msgTypes[31]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AwaitWorkflowCompletion) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AwaitWorkflowCompletion) ProtoMessage() {}
+
+func (x *AwaitWorkflowCompletion) ProtoReflect() protoreflect.Message {
+	mi := &file_kitchen_sink_proto_msgTypes[31]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AwaitWorkflowCompletion.ProtoReflect.Descriptor instead.
+func (*AwaitWorkflowCompletion) Descriptor() ([]byte, []int) {
+	return file_kitchen_sink_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *AwaitWorkflowCompletion) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *AwaitWorkflowCompletion) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
 type DoSignal_DoSignalActions struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3161,7 +3272,7 @@ type DoSignal_DoSignalActions struct {
 func (x *DoSignal_DoSignalActions) Reset() {
 	*x = DoSignal_DoSignalActions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[31]
+		mi := &file_kitchen_sink_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3174,7 +3285,7 @@ func (x *DoSignal_DoSignalActions) String() string {
 func (*DoSignal_DoSignalActions) ProtoMessage() {}
 
 func (x *DoSignal_DoSignalActions) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[31]
+	mi := &file_kitchen_sink_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3251,7 +3362,7 @@ type ExecuteActivityAction_GenericActivity struct {
 func (x *ExecuteActivityAction_GenericActivity) Reset() {
 	*x = ExecuteActivityAction_GenericActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[33]
+		mi := &file_kitchen_sink_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3264,7 +3375,7 @@ func (x *ExecuteActivityAction_GenericActivity) String() string {
 func (*ExecuteActivityAction_GenericActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_GenericActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[33]
+	mi := &file_kitchen_sink_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3308,7 +3419,7 @@ type ExecuteActivityAction_ResourcesActivity struct {
 func (x *ExecuteActivityAction_ResourcesActivity) Reset() {
 	*x = ExecuteActivityAction_ResourcesActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[34]
+		mi := &file_kitchen_sink_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3321,7 +3432,7 @@ func (x *ExecuteActivityAction_ResourcesActivity) String() string {
 func (*ExecuteActivityAction_ResourcesActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_ResourcesActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[34]
+	mi := &file_kitchen_sink_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3377,7 +3488,7 @@ type ExecuteActivityAction_PayloadActivity struct {
 func (x *ExecuteActivityAction_PayloadActivity) Reset() {
 	*x = ExecuteActivityAction_PayloadActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[35]
+		mi := &file_kitchen_sink_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3390,7 +3501,7 @@ func (x *ExecuteActivityAction_PayloadActivity) String() string {
 func (*ExecuteActivityAction_PayloadActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_PayloadActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[35]
+	mi := &file_kitchen_sink_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3431,7 +3542,7 @@ type ExecuteActivityAction_ClientActivity struct {
 func (x *ExecuteActivityAction_ClientActivity) Reset() {
 	*x = ExecuteActivityAction_ClientActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[36]
+		mi := &file_kitchen_sink_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3444,7 +3555,7 @@ func (x *ExecuteActivityAction_ClientActivity) String() string {
 func (*ExecuteActivityAction_ClientActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_ClientActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[36]
+	mi := &file_kitchen_sink_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3481,7 +3592,7 @@ type ExecuteActivityAction_RetryableErrorActivity struct {
 func (x *ExecuteActivityAction_RetryableErrorActivity) Reset() {
 	*x = ExecuteActivityAction_RetryableErrorActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[37]
+		mi := &file_kitchen_sink_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3494,7 +3605,7 @@ func (x *ExecuteActivityAction_RetryableErrorActivity) String() string {
 func (*ExecuteActivityAction_RetryableErrorActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_RetryableErrorActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[37]
+	mi := &file_kitchen_sink_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3535,7 +3646,7 @@ type ExecuteActivityAction_TimeoutActivity struct {
 func (x *ExecuteActivityAction_TimeoutActivity) Reset() {
 	*x = ExecuteActivityAction_TimeoutActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[38]
+		mi := &file_kitchen_sink_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3548,7 +3659,7 @@ func (x *ExecuteActivityAction_TimeoutActivity) String() string {
 func (*ExecuteActivityAction_TimeoutActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_TimeoutActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[38]
+	mi := &file_kitchen_sink_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3603,7 +3714,7 @@ type ExecuteActivityAction_HeartbeatTimeoutActivity struct {
 func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) Reset() {
 	*x = ExecuteActivityAction_HeartbeatTimeoutActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_kitchen_sink_proto_msgTypes[39]
+		mi := &file_kitchen_sink_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3616,7 +3727,7 @@ func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) String() string {
 func (*ExecuteActivityAction_HeartbeatTimeoutActivity) ProtoMessage() {}
 
 func (x *ExecuteActivityAction_HeartbeatTimeoutActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_kitchen_sink_proto_msgTypes[39]
+	mi := &file_kitchen_sink_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3849,7 +3960,7 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x6e, 0x6b, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x07, 0x61, 0x63, 0x74, 0x69, 0x6f,
 	0x6e, 0x73, 0x12, 0x1e, 0x0a, 0x0a, 0x63, 0x6f, 0x6e, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x63, 0x6f, 0x6e, 0x63, 0x75, 0x72, 0x72, 0x65,
-	0x6e, 0x74, 0x22, 0xe3, 0x0a, 0x0a, 0x06, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x3f, 0x0a,
+	0x6e, 0x74, 0x22, 0xd6, 0x0b, 0x0a, 0x06, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x3f, 0x0a,
 	0x05, 0x74, 0x69, 0x6d, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x27, 0x2e, 0x74,
 	0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74,
 	0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x72, 0x41,
@@ -3934,31 +4045,42 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e,
 	0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x4e, 0x65, 0x78,
 	0x75, 0x73, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x0e, 0x6e,
-	0x65, 0x78, 0x75, 0x73, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x09, 0x0a,
-	0x07, 0x76, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x74, 0x22, 0xf7, 0x02, 0x0a, 0x0f, 0x41, 0x77, 0x61,
-	0x69, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x12, 0x39, 0x0a, 0x0b,
-	0x77, 0x61, 0x69, 0x74, 0x5f, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x48, 0x00, 0x52, 0x0a, 0x77, 0x61, 0x69,
-	0x74, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x12, 0x32, 0x0a, 0x07, 0x61, 0x62, 0x61, 0x6e, 0x64,
-	0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
-	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
-	0x48, 0x00, 0x52, 0x07, 0x61, 0x62, 0x61, 0x6e, 0x64, 0x6f, 0x6e, 0x12, 0x4c, 0x0a, 0x15, 0x63,
-	0x61, 0x6e, 0x63, 0x65, 0x6c, 0x5f, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x5f, 0x73, 0x74, 0x61,
-	0x72, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
+	0x65, 0x78, 0x75, 0x73, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x71, 0x0a,
+	0x19, 0x61, 0x77, 0x61, 0x69, 0x74, 0x5f, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x5f,
+	0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x11, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x33, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73,
+	0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x41, 0x77,
+	0x61, 0x69, 0x74, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x43, 0x6f, 0x6d, 0x70, 0x6c,
+	0x65, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x17, 0x61, 0x77, 0x61, 0x69, 0x74, 0x57, 0x6f,
+	0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e,
+	0x42, 0x09, 0x0a, 0x07, 0x76, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x74, 0x22, 0xb4, 0x03, 0x0a, 0x0f,
+	0x41, 0x77, 0x61, 0x69, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x43, 0x68, 0x6f, 0x69, 0x63, 0x65, 0x12,
+	0x39, 0x0a, 0x0b, 0x77, 0x61, 0x69, 0x74, 0x5f, 0x66, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x48, 0x00, 0x52, 0x0a,
+	0x77, 0x61, 0x69, 0x74, 0x46, 0x69, 0x6e, 0x69, 0x73, 0x68, 0x12, 0x32, 0x0a, 0x07, 0x61, 0x62,
+	0x61, 0x6e, 0x64, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f,
+	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d,
+	0x70, 0x74, 0x79, 0x48, 0x00, 0x52, 0x07, 0x61, 0x62, 0x61, 0x6e, 0x64, 0x6f, 0x6e, 0x12, 0x4c,
+	0x0a, 0x15, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x5f, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x5f,
+	0x73, 0x74, 0x61, 0x72, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x45, 0x6d, 0x70, 0x74, 0x79, 0x48, 0x00, 0x52, 0x13, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x42,
+	0x65, 0x66, 0x6f, 0x72, 0x65, 0x53, 0x74, 0x61, 0x72, 0x74, 0x65, 0x64, 0x12, 0x4a, 0x0a, 0x14,
+	0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x5f, 0x61, 0x66, 0x74, 0x65, 0x72, 0x5f, 0x73, 0x74, 0x61,
+	0x72, 0x74, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
 	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70,
-	0x74, 0x79, 0x48, 0x00, 0x52, 0x13, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x42, 0x65, 0x66, 0x6f,
-	0x72, 0x65, 0x53, 0x74, 0x61, 0x72, 0x74, 0x65, 0x64, 0x12, 0x4a, 0x0a, 0x14, 0x63, 0x61, 0x6e,
-	0x63, 0x65, 0x6c, 0x5f, 0x61, 0x66, 0x74, 0x65, 0x72, 0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x65,
-	0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
-	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x48,
-	0x00, 0x52, 0x12, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x41, 0x66, 0x74, 0x65, 0x72, 0x53, 0x74,
-	0x61, 0x72, 0x74, 0x65, 0x64, 0x12, 0x4e, 0x0a, 0x16, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x5f,
-	0x61, 0x66, 0x74, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x18,
-	0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x48, 0x00, 0x52,
-	0x14, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x41, 0x66, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6d, 0x70,
-	0x6c, 0x65, 0x74, 0x65, 0x64, 0x42, 0x0b, 0x0a, 0x09, 0x63, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69,
+	0x74, 0x79, 0x48, 0x00, 0x52, 0x12, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x41, 0x66, 0x74, 0x65,
+	0x72, 0x53, 0x74, 0x61, 0x72, 0x74, 0x65, 0x64, 0x12, 0x4e, 0x0a, 0x16, 0x63, 0x61, 0x6e, 0x63,
+	0x65, 0x6c, 0x5f, 0x61, 0x66, 0x74, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74,
+	0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
+	0x48, 0x00, 0x52, 0x14, 0x63, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x41, 0x66, 0x74, 0x65, 0x72, 0x43,
+	0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x12, 0x3b, 0x0a, 0x0c, 0x77, 0x61, 0x69, 0x74,
+	0x5f, 0x73, 0x74, 0x61, 0x72, 0x74, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x48, 0x00, 0x52, 0x0b, 0x77, 0x61, 0x69, 0x74, 0x53, 0x74,
+	0x61, 0x72, 0x74, 0x65, 0x64, 0x42, 0x0b, 0x0a, 0x09, 0x63, 0x6f, 0x6e, 0x64, 0x69, 0x74, 0x69,
 	0x6f, 0x6e, 0x22, 0x89, 0x01, 0x0a, 0x0b, 0x54, 0x69, 0x6d, 0x65, 0x72, 0x41, 0x63, 0x74, 0x69,
 	0x6f, 0x6e, 0x12, 0x22, 0x0a, 0x0c, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x65, 0x63, 0x6f, 0x6e,
 	0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0c, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73,
@@ -4406,7 +4528,7 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x56, 0x65,
 	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x52, 0x10,
 	0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49, 0x6e, 0x74, 0x65, 0x6e, 0x74,
-	0x22, 0xfb, 0x04, 0x0a, 0x15, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x4e, 0x65, 0x78, 0x75,
+	0x22, 0xa3, 0x05, 0x0a, 0x15, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x65, 0x4e, 0x65, 0x78, 0x75,
 	0x73, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x6e,
 	0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x6e,
 	0x64, 0x70, 0x6f, 0x69, 0x6e, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74,
@@ -4442,64 +4564,74 @@ var file_kitchen_sink_proto_rawDesc = []byte{
 	0x77, 0x49, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63,
 	0x79, 0x52, 0x1f, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c,
 	0x6f, 0x77, 0x49, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74, 0x50, 0x6f, 0x6c, 0x69,
-	0x63, 0x79, 0x1a, 0x3a, 0x0a, 0x0c, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74,
-	0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xa6,
-	0x02, 0x0a, 0x11, 0x4e, 0x65, 0x78, 0x75, 0x73, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x49,
-	0x6e, 0x70, 0x75, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x70, 0x75, 0x74, 0x12, 0x4c, 0x0a, 0x0e, 0x62, 0x65,
-	0x66, 0x6f, 0x72, 0x65, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x02, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x25, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d,
-	0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e,
-	0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65, 0x74, 0x52, 0x0d, 0x62, 0x65, 0x66, 0x6f, 0x72,
-	0x65, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x2e, 0x0a, 0x13, 0x68, 0x61, 0x6e, 0x64,
-	0x6c, 0x65, 0x72, 0x5f, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x5f, 0x69, 0x64, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x57, 0x6f,
-	0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x64, 0x12, 0x7d, 0x0a, 0x23, 0x68, 0x61, 0x6e, 0x64,
-	0x6c, 0x65, 0x72, 0x5f, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x5f, 0x69, 0x64, 0x5f,
-	0x63, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74, 0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2f, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c,
-	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x65, 0x6e, 0x75, 0x6d, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x57, 0x6f,
-	0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74,
-	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x1f, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x57,
-	0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x64, 0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63,
-	0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x2a, 0xa4, 0x01, 0x0a, 0x11, 0x50, 0x61, 0x72, 0x65,
-	0x6e, 0x74, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x23, 0x0a,
-	0x1f, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f,
-	0x4c, 0x49, 0x43, 0x59, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44,
-	0x10, 0x00, 0x12, 0x21, 0x0a, 0x1d, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f,
-	0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x54, 0x45, 0x52, 0x4d, 0x49, 0x4e,
-	0x41, 0x54, 0x45, 0x10, 0x01, 0x12, 0x1f, 0x0a, 0x1b, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f,
-	0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x41, 0x42, 0x41,
-	0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54,
-	0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x52, 0x45,
-	0x51, 0x55, 0x45, 0x53, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10, 0x03, 0x2a, 0x40,
-	0x0a, 0x10, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49, 0x6e, 0x74, 0x65,
-	0x6e, 0x74, 0x12, 0x0f, 0x0a, 0x0b, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45,
-	0x44, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x4d, 0x50, 0x41, 0x54, 0x49, 0x42, 0x4c,
-	0x45, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x46, 0x41, 0x55, 0x4c, 0x54, 0x10, 0x02,
-	0x2a, 0xa2, 0x01, 0x0a, 0x1d, 0x43, 0x68, 0x69, 0x6c, 0x64, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c,
-	0x6f, 0x77, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79,
-	0x70, 0x65, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x41,
-	0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x00, 0x12, 0x17, 0x0a, 0x13, 0x43, 0x48, 0x49, 0x4c,
-	0x44, 0x5f, 0x57, 0x46, 0x5f, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10,
-	0x01, 0x12, 0x28, 0x0a, 0x24, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x57, 0x41,
-	0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f,
-	0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x28, 0x0a, 0x24, 0x43,
-	0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e,
-	0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53,
-	0x54, 0x45, 0x44, 0x10, 0x03, 0x2a, 0x58, 0x0a, 0x18, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74,
-	0x79, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70,
-	0x65, 0x12, 0x0e, 0x0a, 0x0a, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10,
-	0x00, 0x12, 0x1f, 0x0a, 0x1b, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c,
-	0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45, 0x44,
-	0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02, 0x42,
-	0x42, 0x0a, 0x10, 0x69, 0x6f, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f,
-	0x6d, 0x65, 0x73, 0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x69, 0x6f, 0x2f, 0x6f, 0x6d, 0x65, 0x73, 0x2f,
-	0x6c, 0x6f, 0x61, 0x64, 0x67, 0x65, 0x6e, 0x2f, 0x6b, 0x69, 0x74, 0x63, 0x68, 0x65, 0x6e, 0x73,
-	0x69, 0x6e, 0x6b, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x63, 0x79, 0x12, 0x26, 0x0a, 0x0f, 0x77, 0x61, 0x69, 0x74, 0x5f, 0x66, 0x6f, 0x72, 0x5f, 0x73,
+	0x69, 0x67, 0x6e, 0x61, 0x6c, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x77, 0x61, 0x69,
+	0x74, 0x46, 0x6f, 0x72, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x6c, 0x1a, 0x3a, 0x0a, 0x0c, 0x48, 0x65,
+	0x61, 0x64, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
+	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xce, 0x02, 0x0a, 0x11, 0x4e, 0x65, 0x78, 0x75, 0x73,
+	0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x49, 0x6e, 0x70, 0x75, 0x74, 0x12, 0x14, 0x0a, 0x05,
+	0x69, 0x6e, 0x70, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6e, 0x70,
+	0x75, 0x74, 0x12, 0x4c, 0x0a, 0x0e, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x5f, 0x61, 0x63, 0x74,
+	0x69, 0x6f, 0x6e, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x74, 0x65, 0x6d,
+	0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x2e, 0x6b, 0x69, 0x74, 0x63, 0x68,
+	0x65, 0x6e, 0x5f, 0x73, 0x69, 0x6e, 0x6b, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65,
+	0x74, 0x52, 0x0d, 0x62, 0x65, 0x66, 0x6f, 0x72, 0x65, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+	0x12, 0x2e, 0x0a, 0x13, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x5f, 0x77, 0x6f, 0x72, 0x6b,
+	0x66, 0x6c, 0x6f, 0x77, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x11, 0x68,
+	0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x64,
+	0x12, 0x7d, 0x0a, 0x23, 0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x5f, 0x77, 0x6f, 0x72, 0x6b,
+	0x66, 0x6c, 0x6f, 0x77, 0x5f, 0x69, 0x64, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74,
+	0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2f, 0x2e,
+	0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x65, 0x6e, 0x75,
+	0x6d, 0x73, 0x2e, 0x76, 0x31, 0x2e, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49, 0x64,
+	0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x1f,
+	0x68, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x49,
+	0x64, 0x43, 0x6f, 0x6e, 0x66, 0x6c, 0x69, 0x63, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12,
+	0x26, 0x0a, 0x0f, 0x77, 0x61, 0x69, 0x74, 0x5f, 0x66, 0x6f, 0x72, 0x5f, 0x73, 0x69, 0x67, 0x6e,
+	0x61, 0x6c, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0d, 0x77, 0x61, 0x69, 0x74, 0x46, 0x6f,
+	0x72, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x6c, 0x22, 0x51, 0x0a, 0x17, 0x41, 0x77, 0x61, 0x69, 0x74,
+	0x57, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x1f, 0x0a, 0x0b, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x5f, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f,
+	0x77, 0x49, 0x64, 0x12, 0x15, 0x0a, 0x06, 0x72, 0x75, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x72, 0x75, 0x6e, 0x49, 0x64, 0x2a, 0xa4, 0x01, 0x0a, 0x11, 0x50,
+	0x61, 0x72, 0x65, 0x6e, 0x74, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x12, 0x23, 0x0a, 0x1f, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45,
+	0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46,
+	0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x21, 0x0a, 0x1d, 0x50, 0x41, 0x52, 0x45, 0x4e, 0x54, 0x5f,
+	0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f, 0x54, 0x45, 0x52,
+	0x4d, 0x49, 0x4e, 0x41, 0x54, 0x45, 0x10, 0x01, 0x12, 0x1f, 0x0a, 0x1b, 0x50, 0x41, 0x52, 0x45,
+	0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59, 0x5f,
+	0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x02, 0x12, 0x26, 0x0a, 0x22, 0x50, 0x41, 0x52,
+	0x45, 0x4e, 0x54, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x5f, 0x50, 0x4f, 0x4c, 0x49, 0x43, 0x59,
+	0x5f, 0x52, 0x45, 0x51, 0x55, 0x45, 0x53, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10,
+	0x03, 0x2a, 0x40, 0x0a, 0x10, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67, 0x49,
+	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x0f, 0x0a, 0x0b, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49,
+	0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x4d, 0x50, 0x41, 0x54,
+	0x49, 0x42, 0x4c, 0x45, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x46, 0x41, 0x55, 0x4c,
+	0x54, 0x10, 0x02, 0x2a, 0xa2, 0x01, 0x0a, 0x1d, 0x43, 0x68, 0x69, 0x6c, 0x64, 0x57, 0x6f, 0x72,
+	0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x14, 0x0a, 0x10, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57,
+	0x46, 0x5f, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e, 0x10, 0x00, 0x12, 0x17, 0x0a, 0x13, 0x43,
+	0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43,
+	0x45, 0x4c, 0x10, 0x01, 0x12, 0x28, 0x0a, 0x24, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46,
+	0x5f, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49,
+	0x4f, 0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x02, 0x12, 0x28,
+	0x0a, 0x24, 0x43, 0x48, 0x49, 0x4c, 0x44, 0x5f, 0x57, 0x46, 0x5f, 0x57, 0x41, 0x49, 0x54, 0x5f,
+	0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x52, 0x45, 0x51,
+	0x55, 0x45, 0x53, 0x54, 0x45, 0x44, 0x10, 0x03, 0x2a, 0x58, 0x0a, 0x18, 0x41, 0x63, 0x74, 0x69,
+	0x76, 0x69, 0x74, 0x79, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x0e, 0x0a, 0x0a, 0x54, 0x52, 0x59, 0x5f, 0x43, 0x41, 0x4e, 0x43,
+	0x45, 0x4c, 0x10, 0x00, 0x12, 0x1f, 0x0a, 0x1b, 0x57, 0x41, 0x49, 0x54, 0x5f, 0x43, 0x41, 0x4e,
+	0x43, 0x45, 0x4c, 0x4c, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43, 0x4f, 0x4d, 0x50, 0x4c, 0x45,
+	0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x41, 0x42, 0x41, 0x4e, 0x44, 0x4f, 0x4e,
+	0x10, 0x02, 0x42, 0x42, 0x0a, 0x10, 0x69, 0x6f, 0x2e, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61,
+	0x6c, 0x2e, 0x6f, 0x6d, 0x65, 0x73, 0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x74, 0x65, 0x6d, 0x70, 0x6f, 0x72, 0x61, 0x6c, 0x69, 0x6f, 0x2f, 0x6f, 0x6d,
+	0x65, 0x73, 0x2f, 0x6c, 0x6f, 0x61, 0x64, 0x67, 0x65, 0x6e, 0x2f, 0x6b, 0x69, 0x74, 0x63, 0x68,
+	0x65, 0x6e, 0x73, 0x69, 0x6e, 0x6b, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -4515,7 +4647,7 @@ func file_kitchen_sink_proto_rawDescGZIP() []byte {
 }
 
 var file_kitchen_sink_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_kitchen_sink_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_kitchen_sink_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_kitchen_sink_proto_goTypes = []interface{}{
 	(ParentClosePolicy)(0),                                 // 0: temporal.omes.kitchen_sink.ParentClosePolicy
 	(VersioningIntent)(0),                                  // 1: temporal.omes.kitchen_sink.VersioningIntent
@@ -4552,35 +4684,36 @@ var file_kitchen_sink_proto_goTypes = []interface{}{
 	(*RemoteActivityOptions)(nil),                          // 32: temporal.omes.kitchen_sink.RemoteActivityOptions
 	(*ExecuteNexusOperation)(nil),                          // 33: temporal.omes.kitchen_sink.ExecuteNexusOperation
 	(*NexusHandlerInput)(nil),                              // 34: temporal.omes.kitchen_sink.NexusHandlerInput
-	(*DoSignal_DoSignalActions)(nil),                       // 35: temporal.omes.kitchen_sink.DoSignal.DoSignalActions
-	nil,                                                    // 36: temporal.omes.kitchen_sink.WorkflowState.KvsEntry
-	(*ExecuteActivityAction_GenericActivity)(nil),          // 37: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
-	(*ExecuteActivityAction_ResourcesActivity)(nil),        // 38: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
-	(*ExecuteActivityAction_PayloadActivity)(nil),          // 39: temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
-	(*ExecuteActivityAction_ClientActivity)(nil),           // 40: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
-	(*ExecuteActivityAction_RetryableErrorActivity)(nil),   // 41: temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
-	(*ExecuteActivityAction_TimeoutActivity)(nil),          // 42: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
-	(*ExecuteActivityAction_HeartbeatTimeoutActivity)(nil), // 43: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
-	nil,                               // 44: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
-	nil,                               // 45: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
-	nil,                               // 46: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
-	nil,                               // 47: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
-	nil,                               // 48: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
-	nil,                               // 49: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
-	nil,                               // 50: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
-	nil,                               // 51: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
-	nil,                               // 52: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
-	nil,                               // 53: temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
-	(*durationpb.Duration)(nil),       // 54: google.protobuf.Duration
-	(*v1.Payloads)(nil),               // 55: temporal.api.common.v1.Payloads
-	(*emptypb.Empty)(nil),             // 56: google.protobuf.Empty
-	(*v1.Payload)(nil),                // 57: temporal.api.common.v1.Payload
-	(*v1.RetryPolicy)(nil),            // 58: temporal.api.common.v1.RetryPolicy
-	(*v1.Priority)(nil),               // 59: temporal.api.common.v1.Priority
-	(v11.WorkflowIdReusePolicy)(0),    // 60: temporal.api.enums.v1.WorkflowIdReusePolicy
-	(*v1.Memo)(nil),                   // 61: temporal.api.common.v1.Memo
-	(*v12.Failure)(nil),               // 62: temporal.api.failure.v1.Failure
-	(v11.WorkflowIdConflictPolicy)(0), // 63: temporal.api.enums.v1.WorkflowIdConflictPolicy
+	(*AwaitWorkflowCompletion)(nil),                        // 35: temporal.omes.kitchen_sink.AwaitWorkflowCompletion
+	(*DoSignal_DoSignalActions)(nil),                       // 36: temporal.omes.kitchen_sink.DoSignal.DoSignalActions
+	nil,                                                    // 37: temporal.omes.kitchen_sink.WorkflowState.KvsEntry
+	(*ExecuteActivityAction_GenericActivity)(nil),          // 38: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
+	(*ExecuteActivityAction_ResourcesActivity)(nil),        // 39: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
+	(*ExecuteActivityAction_PayloadActivity)(nil),          // 40: temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
+	(*ExecuteActivityAction_ClientActivity)(nil),           // 41: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
+	(*ExecuteActivityAction_RetryableErrorActivity)(nil),   // 42: temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
+	(*ExecuteActivityAction_TimeoutActivity)(nil),          // 43: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
+	(*ExecuteActivityAction_HeartbeatTimeoutActivity)(nil), // 44: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
+	nil,                               // 45: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
+	nil,                               // 46: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
+	nil,                               // 47: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
+	nil,                               // 48: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
+	nil,                               // 49: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
+	nil,                               // 50: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
+	nil,                               // 51: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
+	nil,                               // 52: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
+	nil,                               // 53: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
+	nil,                               // 54: temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
+	(*durationpb.Duration)(nil),       // 55: google.protobuf.Duration
+	(*v1.Payloads)(nil),               // 56: temporal.api.common.v1.Payloads
+	(*emptypb.Empty)(nil),             // 57: google.protobuf.Empty
+	(*v1.Payload)(nil),                // 58: temporal.api.common.v1.Payload
+	(*v1.RetryPolicy)(nil),            // 59: temporal.api.common.v1.RetryPolicy
+	(*v1.Priority)(nil),               // 60: temporal.api.common.v1.Priority
+	(v11.WorkflowIdReusePolicy)(0),    // 61: temporal.api.enums.v1.WorkflowIdReusePolicy
+	(*v1.Memo)(nil),                   // 62: temporal.api.common.v1.Memo
+	(*v12.Failure)(nil),               // 63: temporal.api.failure.v1.Failure
+	(v11.WorkflowIdConflictPolicy)(0), // 64: temporal.api.enums.v1.WorkflowIdConflictPolicy
 }
 var file_kitchen_sink_proto_depIdxs = []int32{
 	16,  // 0: temporal.omes.kitchen_sink.TestInput.workflow_input:type_name -> temporal.omes.kitchen_sink.WorkflowInput
@@ -4588,7 +4721,7 @@ var file_kitchen_sink_proto_depIdxs = []int32{
 	7,   // 2: temporal.omes.kitchen_sink.TestInput.with_start_action:type_name -> temporal.omes.kitchen_sink.WithStartClientAction
 	6,   // 3: temporal.omes.kitchen_sink.ClientSequence.action_sets:type_name -> temporal.omes.kitchen_sink.ClientActionSet
 	8,   // 4: temporal.omes.kitchen_sink.ClientActionSet.actions:type_name -> temporal.omes.kitchen_sink.ClientAction
-	54,  // 5: temporal.omes.kitchen_sink.ClientActionSet.wait_at_end:type_name -> google.protobuf.Duration
+	55,  // 5: temporal.omes.kitchen_sink.ClientActionSet.wait_at_end:type_name -> google.protobuf.Duration
 	9,   // 6: temporal.omes.kitchen_sink.WithStartClientAction.do_signal:type_name -> temporal.omes.kitchen_sink.DoSignal
 	12,  // 7: temporal.omes.kitchen_sink.WithStartClientAction.do_update:type_name -> temporal.omes.kitchen_sink.DoUpdate
 	9,   // 8: temporal.omes.kitchen_sink.ClientAction.do_signal:type_name -> temporal.omes.kitchen_sink.DoSignal
@@ -4596,16 +4729,16 @@ var file_kitchen_sink_proto_depIdxs = []int32{
 	12,  // 10: temporal.omes.kitchen_sink.ClientAction.do_update:type_name -> temporal.omes.kitchen_sink.DoUpdate
 	6,   // 11: temporal.omes.kitchen_sink.ClientAction.nested_actions:type_name -> temporal.omes.kitchen_sink.ClientActionSet
 	10,  // 12: temporal.omes.kitchen_sink.ClientAction.do_describe:type_name -> temporal.omes.kitchen_sink.DoDescribe
-	35,  // 13: temporal.omes.kitchen_sink.DoSignal.do_signal_actions:type_name -> temporal.omes.kitchen_sink.DoSignal.DoSignalActions
+	36,  // 13: temporal.omes.kitchen_sink.DoSignal.do_signal_actions:type_name -> temporal.omes.kitchen_sink.DoSignal.DoSignalActions
 	14,  // 14: temporal.omes.kitchen_sink.DoSignal.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
-	55,  // 15: temporal.omes.kitchen_sink.DoQuery.report_state:type_name -> temporal.api.common.v1.Payloads
+	56,  // 15: temporal.omes.kitchen_sink.DoQuery.report_state:type_name -> temporal.api.common.v1.Payloads
 	14,  // 16: temporal.omes.kitchen_sink.DoQuery.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
 	13,  // 17: temporal.omes.kitchen_sink.DoUpdate.do_actions:type_name -> temporal.omes.kitchen_sink.DoActionsUpdate
 	14,  // 18: temporal.omes.kitchen_sink.DoUpdate.custom:type_name -> temporal.omes.kitchen_sink.HandlerInvocation
 	17,  // 19: temporal.omes.kitchen_sink.DoActionsUpdate.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	56,  // 20: temporal.omes.kitchen_sink.DoActionsUpdate.reject_me:type_name -> google.protobuf.Empty
-	57,  // 21: temporal.omes.kitchen_sink.HandlerInvocation.args:type_name -> temporal.api.common.v1.Payload
-	36,  // 22: temporal.omes.kitchen_sink.WorkflowState.kvs:type_name -> temporal.omes.kitchen_sink.WorkflowState.KvsEntry
+	57,  // 20: temporal.omes.kitchen_sink.DoActionsUpdate.reject_me:type_name -> google.protobuf.Empty
+	58,  // 21: temporal.omes.kitchen_sink.HandlerInvocation.args:type_name -> temporal.api.common.v1.Payload
+	37,  // 22: temporal.omes.kitchen_sink.WorkflowState.kvs:type_name -> temporal.omes.kitchen_sink.WorkflowState.KvsEntry
 	17,  // 23: temporal.omes.kitchen_sink.WorkflowInput.initial_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
 	18,  // 24: temporal.omes.kitchen_sink.ActionSet.actions:type_name -> temporal.omes.kitchen_sink.Action
 	20,  // 25: temporal.omes.kitchen_sink.Action.timer:type_name -> temporal.omes.kitchen_sink.TimerAction
@@ -4623,91 +4756,93 @@ var file_kitchen_sink_proto_depIdxs = []int32{
 	31,  // 37: temporal.omes.kitchen_sink.Action.continue_as_new:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction
 	17,  // 38: temporal.omes.kitchen_sink.Action.nested_action_set:type_name -> temporal.omes.kitchen_sink.ActionSet
 	33,  // 39: temporal.omes.kitchen_sink.Action.nexus_operation:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation
-	56,  // 40: temporal.omes.kitchen_sink.AwaitableChoice.wait_finish:type_name -> google.protobuf.Empty
-	56,  // 41: temporal.omes.kitchen_sink.AwaitableChoice.abandon:type_name -> google.protobuf.Empty
-	56,  // 42: temporal.omes.kitchen_sink.AwaitableChoice.cancel_before_started:type_name -> google.protobuf.Empty
-	56,  // 43: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_started:type_name -> google.protobuf.Empty
-	56,  // 44: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_completed:type_name -> google.protobuf.Empty
-	19,  // 45: temporal.omes.kitchen_sink.TimerAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	37,  // 46: temporal.omes.kitchen_sink.ExecuteActivityAction.generic:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
-	54,  // 47: temporal.omes.kitchen_sink.ExecuteActivityAction.delay:type_name -> google.protobuf.Duration
-	56,  // 48: temporal.omes.kitchen_sink.ExecuteActivityAction.noop:type_name -> google.protobuf.Empty
-	38,  // 49: temporal.omes.kitchen_sink.ExecuteActivityAction.resources:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
-	39,  // 50: temporal.omes.kitchen_sink.ExecuteActivityAction.payload:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
-	40,  // 51: temporal.omes.kitchen_sink.ExecuteActivityAction.client:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
-	41,  // 52: temporal.omes.kitchen_sink.ExecuteActivityAction.retryable_error:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
-	42,  // 53: temporal.omes.kitchen_sink.ExecuteActivityAction.timeout:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
-	43,  // 54: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
-	44,  // 55: temporal.omes.kitchen_sink.ExecuteActivityAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
-	54,  // 56: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_close_timeout:type_name -> google.protobuf.Duration
-	54,  // 57: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_start_timeout:type_name -> google.protobuf.Duration
-	54,  // 58: temporal.omes.kitchen_sink.ExecuteActivityAction.start_to_close_timeout:type_name -> google.protobuf.Duration
-	54,  // 59: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat_timeout:type_name -> google.protobuf.Duration
-	58,  // 60: temporal.omes.kitchen_sink.ExecuteActivityAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
-	56,  // 61: temporal.omes.kitchen_sink.ExecuteActivityAction.is_local:type_name -> google.protobuf.Empty
-	32,  // 62: temporal.omes.kitchen_sink.ExecuteActivityAction.remote:type_name -> temporal.omes.kitchen_sink.RemoteActivityOptions
-	19,  // 63: temporal.omes.kitchen_sink.ExecuteActivityAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	59,  // 64: temporal.omes.kitchen_sink.ExecuteActivityAction.priority:type_name -> temporal.api.common.v1.Priority
-	57,  // 65: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.input:type_name -> temporal.api.common.v1.Payload
-	54,  // 66: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_execution_timeout:type_name -> google.protobuf.Duration
-	54,  // 67: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_run_timeout:type_name -> google.protobuf.Duration
-	54,  // 68: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_task_timeout:type_name -> google.protobuf.Duration
-	0,   // 69: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.parent_close_policy:type_name -> temporal.omes.kitchen_sink.ParentClosePolicy
-	60,  // 70: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_id_reuse_policy:type_name -> temporal.api.enums.v1.WorkflowIdReusePolicy
-	58,  // 71: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
-	45,  // 72: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
-	46,  // 73: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.memo:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
-	47,  // 74: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
-	2,   // 75: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.cancellation_type:type_name -> temporal.omes.kitchen_sink.ChildWorkflowCancellationType
-	1,   // 76: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
-	19,  // 77: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	57,  // 78: temporal.omes.kitchen_sink.SendSignalAction.args:type_name -> temporal.api.common.v1.Payload
-	48,  // 79: temporal.omes.kitchen_sink.SendSignalAction.headers:type_name -> temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
-	19,  // 80: temporal.omes.kitchen_sink.SendSignalAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	18,  // 81: temporal.omes.kitchen_sink.SetPatchMarkerAction.inner_action:type_name -> temporal.omes.kitchen_sink.Action
-	49,  // 82: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.search_attributes:type_name -> temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
-	61,  // 83: temporal.omes.kitchen_sink.UpsertMemoAction.upserted_memo:type_name -> temporal.api.common.v1.Memo
-	57,  // 84: temporal.omes.kitchen_sink.ReturnResultAction.return_this:type_name -> temporal.api.common.v1.Payload
-	62,  // 85: temporal.omes.kitchen_sink.ReturnErrorAction.failure:type_name -> temporal.api.failure.v1.Failure
-	57,  // 86: temporal.omes.kitchen_sink.ContinueAsNewAction.arguments:type_name -> temporal.api.common.v1.Payload
-	54,  // 87: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_run_timeout:type_name -> google.protobuf.Duration
-	54,  // 88: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_task_timeout:type_name -> google.protobuf.Duration
-	50,  // 89: temporal.omes.kitchen_sink.ContinueAsNewAction.memo:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
-	51,  // 90: temporal.omes.kitchen_sink.ContinueAsNewAction.headers:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
-	52,  // 91: temporal.omes.kitchen_sink.ContinueAsNewAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
-	58,  // 92: temporal.omes.kitchen_sink.ContinueAsNewAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
-	1,   // 93: temporal.omes.kitchen_sink.ContinueAsNewAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
-	3,   // 94: temporal.omes.kitchen_sink.RemoteActivityOptions.cancellation_type:type_name -> temporal.omes.kitchen_sink.ActivityCancellationType
-	1,   // 95: temporal.omes.kitchen_sink.RemoteActivityOptions.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
-	53,  // 96: temporal.omes.kitchen_sink.ExecuteNexusOperation.headers:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
-	19,  // 97: temporal.omes.kitchen_sink.ExecuteNexusOperation.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
-	17,  // 98: temporal.omes.kitchen_sink.ExecuteNexusOperation.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	63,  // 99: temporal.omes.kitchen_sink.ExecuteNexusOperation.handler_workflow_id_conflict_policy:type_name -> temporal.api.enums.v1.WorkflowIdConflictPolicy
-	17,  // 100: temporal.omes.kitchen_sink.NexusHandlerInput.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	63,  // 101: temporal.omes.kitchen_sink.NexusHandlerInput.handler_workflow_id_conflict_policy:type_name -> temporal.api.enums.v1.WorkflowIdConflictPolicy
-	17,  // 102: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
-	17,  // 103: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions_in_main:type_name -> temporal.omes.kitchen_sink.ActionSet
-	57,  // 104: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity.arguments:type_name -> temporal.api.common.v1.Payload
-	54,  // 105: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity.run_for:type_name -> google.protobuf.Duration
-	5,   // 106: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.client_sequence:type_name -> temporal.omes.kitchen_sink.ClientSequence
-	54,  // 107: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.success_duration:type_name -> google.protobuf.Duration
-	54,  // 108: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
-	54,  // 109: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.success_duration:type_name -> google.protobuf.Duration
-	54,  // 110: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
-	57,  // 111: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 112: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 113: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 114: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 115: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 116: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 117: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 118: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
-	57,  // 119: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
-	120, // [120:120] is the sub-list for method output_type
-	120, // [120:120] is the sub-list for method input_type
-	120, // [120:120] is the sub-list for extension type_name
-	120, // [120:120] is the sub-list for extension extendee
-	0,   // [0:120] is the sub-list for field type_name
+	35,  // 40: temporal.omes.kitchen_sink.Action.await_workflow_completion:type_name -> temporal.omes.kitchen_sink.AwaitWorkflowCompletion
+	57,  // 41: temporal.omes.kitchen_sink.AwaitableChoice.wait_finish:type_name -> google.protobuf.Empty
+	57,  // 42: temporal.omes.kitchen_sink.AwaitableChoice.abandon:type_name -> google.protobuf.Empty
+	57,  // 43: temporal.omes.kitchen_sink.AwaitableChoice.cancel_before_started:type_name -> google.protobuf.Empty
+	57,  // 44: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_started:type_name -> google.protobuf.Empty
+	57,  // 45: temporal.omes.kitchen_sink.AwaitableChoice.cancel_after_completed:type_name -> google.protobuf.Empty
+	57,  // 46: temporal.omes.kitchen_sink.AwaitableChoice.wait_started:type_name -> google.protobuf.Empty
+	19,  // 47: temporal.omes.kitchen_sink.TimerAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
+	38,  // 48: temporal.omes.kitchen_sink.ExecuteActivityAction.generic:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity
+	55,  // 49: temporal.omes.kitchen_sink.ExecuteActivityAction.delay:type_name -> google.protobuf.Duration
+	57,  // 50: temporal.omes.kitchen_sink.ExecuteActivityAction.noop:type_name -> google.protobuf.Empty
+	39,  // 51: temporal.omes.kitchen_sink.ExecuteActivityAction.resources:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity
+	40,  // 52: temporal.omes.kitchen_sink.ExecuteActivityAction.payload:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.PayloadActivity
+	41,  // 53: temporal.omes.kitchen_sink.ExecuteActivityAction.client:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity
+	42,  // 54: temporal.omes.kitchen_sink.ExecuteActivityAction.retryable_error:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.RetryableErrorActivity
+	43,  // 55: temporal.omes.kitchen_sink.ExecuteActivityAction.timeout:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity
+	44,  // 56: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity
+	45,  // 57: temporal.omes.kitchen_sink.ExecuteActivityAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry
+	55,  // 58: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_close_timeout:type_name -> google.protobuf.Duration
+	55,  // 59: temporal.omes.kitchen_sink.ExecuteActivityAction.schedule_to_start_timeout:type_name -> google.protobuf.Duration
+	55,  // 60: temporal.omes.kitchen_sink.ExecuteActivityAction.start_to_close_timeout:type_name -> google.protobuf.Duration
+	55,  // 61: temporal.omes.kitchen_sink.ExecuteActivityAction.heartbeat_timeout:type_name -> google.protobuf.Duration
+	59,  // 62: temporal.omes.kitchen_sink.ExecuteActivityAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	57,  // 63: temporal.omes.kitchen_sink.ExecuteActivityAction.is_local:type_name -> google.protobuf.Empty
+	32,  // 64: temporal.omes.kitchen_sink.ExecuteActivityAction.remote:type_name -> temporal.omes.kitchen_sink.RemoteActivityOptions
+	19,  // 65: temporal.omes.kitchen_sink.ExecuteActivityAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
+	60,  // 66: temporal.omes.kitchen_sink.ExecuteActivityAction.priority:type_name -> temporal.api.common.v1.Priority
+	58,  // 67: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.input:type_name -> temporal.api.common.v1.Payload
+	55,  // 68: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_execution_timeout:type_name -> google.protobuf.Duration
+	55,  // 69: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_run_timeout:type_name -> google.protobuf.Duration
+	55,  // 70: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_task_timeout:type_name -> google.protobuf.Duration
+	0,   // 71: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.parent_close_policy:type_name -> temporal.omes.kitchen_sink.ParentClosePolicy
+	61,  // 72: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.workflow_id_reuse_policy:type_name -> temporal.api.enums.v1.WorkflowIdReusePolicy
+	59,  // 73: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	46,  // 74: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.headers:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry
+	47,  // 75: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.memo:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry
+	48,  // 76: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry
+	2,   // 77: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.cancellation_type:type_name -> temporal.omes.kitchen_sink.ChildWorkflowCancellationType
+	1,   // 78: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
+	19,  // 79: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
+	58,  // 80: temporal.omes.kitchen_sink.SendSignalAction.args:type_name -> temporal.api.common.v1.Payload
+	49,  // 81: temporal.omes.kitchen_sink.SendSignalAction.headers:type_name -> temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry
+	19,  // 82: temporal.omes.kitchen_sink.SendSignalAction.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
+	18,  // 83: temporal.omes.kitchen_sink.SetPatchMarkerAction.inner_action:type_name -> temporal.omes.kitchen_sink.Action
+	50,  // 84: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.search_attributes:type_name -> temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry
+	62,  // 85: temporal.omes.kitchen_sink.UpsertMemoAction.upserted_memo:type_name -> temporal.api.common.v1.Memo
+	58,  // 86: temporal.omes.kitchen_sink.ReturnResultAction.return_this:type_name -> temporal.api.common.v1.Payload
+	63,  // 87: temporal.omes.kitchen_sink.ReturnErrorAction.failure:type_name -> temporal.api.failure.v1.Failure
+	58,  // 88: temporal.omes.kitchen_sink.ContinueAsNewAction.arguments:type_name -> temporal.api.common.v1.Payload
+	55,  // 89: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_run_timeout:type_name -> google.protobuf.Duration
+	55,  // 90: temporal.omes.kitchen_sink.ContinueAsNewAction.workflow_task_timeout:type_name -> google.protobuf.Duration
+	51,  // 91: temporal.omes.kitchen_sink.ContinueAsNewAction.memo:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry
+	52,  // 92: temporal.omes.kitchen_sink.ContinueAsNewAction.headers:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry
+	53,  // 93: temporal.omes.kitchen_sink.ContinueAsNewAction.search_attributes:type_name -> temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry
+	59,  // 94: temporal.omes.kitchen_sink.ContinueAsNewAction.retry_policy:type_name -> temporal.api.common.v1.RetryPolicy
+	1,   // 95: temporal.omes.kitchen_sink.ContinueAsNewAction.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
+	3,   // 96: temporal.omes.kitchen_sink.RemoteActivityOptions.cancellation_type:type_name -> temporal.omes.kitchen_sink.ActivityCancellationType
+	1,   // 97: temporal.omes.kitchen_sink.RemoteActivityOptions.versioning_intent:type_name -> temporal.omes.kitchen_sink.VersioningIntent
+	54,  // 98: temporal.omes.kitchen_sink.ExecuteNexusOperation.headers:type_name -> temporal.omes.kitchen_sink.ExecuteNexusOperation.HeadersEntry
+	19,  // 99: temporal.omes.kitchen_sink.ExecuteNexusOperation.awaitable_choice:type_name -> temporal.omes.kitchen_sink.AwaitableChoice
+	17,  // 100: temporal.omes.kitchen_sink.ExecuteNexusOperation.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	64,  // 101: temporal.omes.kitchen_sink.ExecuteNexusOperation.handler_workflow_id_conflict_policy:type_name -> temporal.api.enums.v1.WorkflowIdConflictPolicy
+	17,  // 102: temporal.omes.kitchen_sink.NexusHandlerInput.before_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	64,  // 103: temporal.omes.kitchen_sink.NexusHandlerInput.handler_workflow_id_conflict_policy:type_name -> temporal.api.enums.v1.WorkflowIdConflictPolicy
+	17,  // 104: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions:type_name -> temporal.omes.kitchen_sink.ActionSet
+	17,  // 105: temporal.omes.kitchen_sink.DoSignal.DoSignalActions.do_actions_in_main:type_name -> temporal.omes.kitchen_sink.ActionSet
+	58,  // 106: temporal.omes.kitchen_sink.ExecuteActivityAction.GenericActivity.arguments:type_name -> temporal.api.common.v1.Payload
+	55,  // 107: temporal.omes.kitchen_sink.ExecuteActivityAction.ResourcesActivity.run_for:type_name -> google.protobuf.Duration
+	5,   // 108: temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.client_sequence:type_name -> temporal.omes.kitchen_sink.ClientSequence
+	55,  // 109: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.success_duration:type_name -> google.protobuf.Duration
+	55,  // 110: temporal.omes.kitchen_sink.ExecuteActivityAction.TimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
+	55,  // 111: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.success_duration:type_name -> google.protobuf.Duration
+	55,  // 112: temporal.omes.kitchen_sink.ExecuteActivityAction.HeartbeatTimeoutActivity.failure_duration:type_name -> google.protobuf.Duration
+	58,  // 113: temporal.omes.kitchen_sink.ExecuteActivityAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 114: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 115: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 116: temporal.omes.kitchen_sink.ExecuteChildWorkflowAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 117: temporal.omes.kitchen_sink.SendSignalAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 118: temporal.omes.kitchen_sink.UpsertSearchAttributesAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 119: temporal.omes.kitchen_sink.ContinueAsNewAction.MemoEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 120: temporal.omes.kitchen_sink.ContinueAsNewAction.HeadersEntry.value:type_name -> temporal.api.common.v1.Payload
+	58,  // 121: temporal.omes.kitchen_sink.ContinueAsNewAction.SearchAttributesEntry.value:type_name -> temporal.api.common.v1.Payload
+	122, // [122:122] is the sub-list for method output_type
+	122, // [122:122] is the sub-list for method input_type
+	122, // [122:122] is the sub-list for extension type_name
+	122, // [122:122] is the sub-list for extension extendee
+	0,   // [0:122] is the sub-list for field type_name
 }
 
 func init() { file_kitchen_sink_proto_init() }
@@ -5089,6 +5224,18 @@ func file_kitchen_sink_proto_init() {
 			}
 		}
 		file_kitchen_sink_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*AwaitWorkflowCompletion); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_kitchen_sink_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DoSignal_DoSignalActions); i {
 			case 0:
 				return &v.state
@@ -5100,7 +5247,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_GenericActivity); i {
 			case 0:
 				return &v.state
@@ -5112,7 +5259,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_ResourcesActivity); i {
 			case 0:
 				return &v.state
@@ -5124,7 +5271,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_PayloadActivity); i {
 			case 0:
 				return &v.state
@@ -5136,7 +5283,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_ClientActivity); i {
 			case 0:
 				return &v.state
@@ -5148,7 +5295,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_RetryableErrorActivity); i {
 			case 0:
 				return &v.state
@@ -5160,7 +5307,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_TimeoutActivity); i {
 			case 0:
 				return &v.state
@@ -5172,7 +5319,7 @@ func file_kitchen_sink_proto_init() {
 				return nil
 			}
 		}
-		file_kitchen_sink_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
+		file_kitchen_sink_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecuteActivityAction_HeartbeatTimeoutActivity); i {
 			case 0:
 				return &v.state
@@ -5228,6 +5375,7 @@ func file_kitchen_sink_proto_init() {
 		(*Action_ContinueAsNew)(nil),
 		(*Action_NestedActionSet)(nil),
 		(*Action_NexusOperation)(nil),
+		(*Action_AwaitWorkflowCompletion)(nil),
 	}
 	file_kitchen_sink_proto_msgTypes[15].OneofWrappers = []interface{}{
 		(*AwaitableChoice_WaitFinish)(nil),
@@ -5235,6 +5383,7 @@ func file_kitchen_sink_proto_init() {
 		(*AwaitableChoice_CancelBeforeStarted)(nil),
 		(*AwaitableChoice_CancelAfterStarted)(nil),
 		(*AwaitableChoice_CancelAfterCompleted)(nil),
+		(*AwaitableChoice_WaitStarted)(nil),
 	}
 	file_kitchen_sink_proto_msgTypes[17].OneofWrappers = []interface{}{
 		(*ExecuteActivityAction_Generic)(nil),
@@ -5249,7 +5398,7 @@ func file_kitchen_sink_proto_init() {
 		(*ExecuteActivityAction_IsLocal)(nil),
 		(*ExecuteActivityAction_Remote)(nil),
 	}
-	file_kitchen_sink_proto_msgTypes[31].OneofWrappers = []interface{}{
+	file_kitchen_sink_proto_msgTypes[32].OneofWrappers = []interface{}{
 		(*DoSignal_DoSignalActions_DoActions)(nil),
 		(*DoSignal_DoSignalActions_DoActionsInMain)(nil),
 	}
@@ -5259,7 +5408,7 @@ func file_kitchen_sink_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_kitchen_sink_proto_rawDesc,
 			NumEnums:      4,
-			NumMessages:   50,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

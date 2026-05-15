@@ -5,6 +5,7 @@ from temporalio.worker import Worker
 
 from activities import (
     create_client_activity,
+    create_wait_for_workflow_activity,
     delay_activity,
     heartbeat_activity,
     noop_activity,
@@ -43,6 +44,7 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
                 client,
                 context.err_on_unimplemented,
             ),
+            create_wait_for_workflow_activity(client),
         ],
         nexus_service_handlers=[KitchenSinkNexusServiceHandler()],
         **context.worker_kwargs,

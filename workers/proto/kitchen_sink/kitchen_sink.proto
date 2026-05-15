@@ -174,6 +174,7 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
+    AwaitWorkflowCompletion await_workflow_completion = 17;
   }
 }
 
@@ -199,6 +200,11 @@ message AwaitableChoice {
     google.protobuf.Empty cancel_after_started = 4;
     // Cancel the command after it's already completed.
     google.protobuf.Empty cancel_after_completed = 5;
+    // Await the command's STARTED event, then return without awaiting completion
+    // or cancelling. The underlying operation continues running; subsequent
+    // coordination (e.g. signaling another workflow that drives its completion)
+    // is the caller's responsibility.
+    google.protobuf.Empty wait_started = 6;
   }
 }
 
@@ -513,6 +519,10 @@ message ExecuteNexusOperation {
   // handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
   // callback to an existing run.
   temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;
+  // If true, the backing handler workflow blocks on the "unblock" signal after running
+  // before_actions, before returning. Used by the attach-callbacks pattern to hold the
+  // handler open until all concurrent ops have attached as callbacks.
+  bool wait_for_signal = 10;
 }
 
 // Input for the Nexus handler workflow that backs echo-sync and echo-async operations
@@ -524,5 +534,16 @@ message NexusHandlerInput {
   string handler_workflow_id = 3;
   // Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
   temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
+  // When true, the handler workflow waits on the "unblock" signal after before_actions,
+  // before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+  bool wait_for_signal = 5;
+}
+
+// Wait for an external workflow to complete by ID. Establishes no parent-child relationship
+// with the target — implementations call the Temporal client's GetWorkflow().Get() inside
+// an activity.
+message AwaitWorkflowCompletion {
+  string workflow_id = 1;
+  string run_id = 2;     // empty = latest run
 }
 

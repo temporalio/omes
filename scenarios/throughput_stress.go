@@ -657,18 +657,22 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 	}
 }
 
-// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing: it fires
-// `numOps` concurrent Nexus operations against the same handler workflow ID. The first
-// operation starts the handler workflow; the rest attach as completion callbacks. The handler
-// sleeps `handlerBlockDuration` (via before_actions) so all callbacks have time to attach
-// before it completes and fans out completion to each.
+// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing.
+// Three concurrent operations target the same handler workflow ID; the first creates the
+// handler, the rest attach as completion callbacks. Signal-based coordination ensures all
+// callbacks are attached before the handler is unblocked:
+//
+//  1. wait_started on each ExecuteNexusOperation returns only after that op's callback is
+//     attached on the server.
+//  2. SendSignal "unblock" reaches a handler that's still alive with all N callbacks attached.
+//  3. AwaitWorkflowCompletion blocks on the handler's actual completion (via a wait_for_workflow
+//     activity that calls client.GetWorkflow().Get()) — no parent-child relationship.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 	const numOps = 3
-	const handlerBlockDuration = 5 * time.Second
 	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
-	actions := make([]*Action, 0, numOps)
-	for i := 0; i < numOps; i++ {
-		actions = append(actions, &Action{
+
+	waitStartedOp := func() *Action {
+		return &Action{
 			Variant: &Action_NexusOperation{
 				NexusOperation: &ExecuteNexusOperation{
 					Endpoint:                        t.config.NexusEndpoint,
@@ -676,19 +680,46 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 					Input:                           "hello",
 					HandlerWorkflowId:               handlerWfID,
 					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-					BeforeActions:                   ListActionSet(NewTimerAction(handlerBlockDuration)),
+					WaitForSignal:                   true,
+					AwaitableChoice: &AwaitableChoice{
+						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
+					},
 				},
 			},
-		})
+		}
 	}
-	return &Action{
-		Variant: &Action_NestedActionSet{
-			NestedActionSet: &ActionSet{
-				Concurrent: true,
-				Actions:    actions,
+	fanout := make([]*Action, 0, numOps)
+	for i := 0; i < numOps; i++ {
+		fanout = append(fanout, waitStartedOp())
+	}
+
+	return &Action{Variant: &Action_NestedActionSet{
+		NestedActionSet: &ActionSet{
+			Concurrent: false,
+			Actions: []*Action{
+				// Phase 1: fire N ops; each returns when its callback is attached.
+				{Variant: &Action_NestedActionSet{
+					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
+				}},
+				// Phase 2: unblock the handler — all N callbacks are now attached.
+				{Variant: &Action_SendSignal{
+					SendSignal: &SendSignalAction{
+						WorkflowId: handlerWfID,
+						SignalName: "unblock",
+						AwaitableChoice: &AwaitableChoice{
+							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+						},
+					},
+				}},
+				// Phase 3: wait for the handler workflow to complete by ID.
+				{Variant: &Action_AwaitWorkflowCompletion{
+					AwaitWorkflowCompletion: &AwaitWorkflowCompletion{
+						WorkflowId: handlerWfID,
+					},
+				}},
 			},
 		},
-	}
+	}}
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
