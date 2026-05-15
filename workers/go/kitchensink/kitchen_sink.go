@@ -7,11 +7,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -341,8 +339,6 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
-	} else if attachCb := action.GetNexusOperationAttachCallbacks(); attachCb != nil {
-		return nil, handleNexusOperationAttachCallbacks(ctx, attachCb)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -484,8 +480,10 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
 		input := &kitchensink.NexusHandlerInput{
-			Input:         nexusOp.Input,
-			BeforeActions: nexusOp.BeforeActions,
+			Input:                           nexusOp.Input,
+			BeforeActions:                   nexusOp.BeforeActions,
+			HandlerWorkflowId:               nexusOp.HandlerWorkflowId,
+			HandlerWorkflowIdConflictPolicy: nexusOp.HandlerWorkflowIdConflictPolicy,
 		}
 		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
@@ -505,69 +503,6 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 			}
 			return fut.Get(ctx, nil)
 		})
-}
-
-func handleNexusOperationAttachCallbacks(
-	ctx workflow.Context,
-	action *kitchensink.ExecuteNexusOperationAttachCallbacks,
-) error {
-	numOps := int(action.NumOperations)
-
-	// Generate a unique workflow ID for the handler workflow.
-	var handlerWfID string
-	if err := workflow.SideEffect(ctx, func(_ workflow.Context) interface{} {
-		return fmt.Sprintf("nexus-attach-handler-%s", uuid.NewString())
-	}).Get(&handlerWfID); err != nil {
-		return err
-	}
-
-	nexusClient := workflow.NewNexusClient(action.Endpoint, KitchenSinkServiceName)
-	input := &kitchensink.NexusAttachHandlerInput{
-		WorkflowId: handlerWfID,
-	}
-
-	// Start all Nexus operations concurrently.
-	opFutures := make([]workflow.NexusOperationFuture, 0, numOps)
-	for i := 0; i < numOps; i++ {
-		fut := nexusClient.ExecuteOperation(ctx, "attach-to-workflow", input, workflow.NexusOperationOptions{})
-		opFutures = append(opFutures, fut)
-	}
-
-	// Wait for all operations to start (callbacks are now attached to the handler workflow).
-	for _, fut := range opFutures {
-		if err := fut.GetNexusOperationExecution().Get(ctx, nil); err != nil {
-			return fmt.Errorf("unexpected error starting Nexus operation: %w", err)
-		}
-	}
-
-	// Signal the handler workflow to unblock.
-	signalFut := workflow.SignalExternalWorkflow(ctx, handlerWfID, "", "unblock", nil)
-	if err := signalFut.Get(ctx, nil); err != nil {
-		var notFound *temporal.UnknownExternalWorkflowExecutionError
-		if !errors.As(err, &notFound) {
-			return fmt.Errorf("failed to signal handler workflow %s: %w", handlerWfID, err)
-		}
-		workflow.GetLogger(ctx).Warn("failed to signal Nexus handler workflow", "workflowID", handlerWfID)
-	}
-
-	// Wait for all operations to complete and verify they all coalesced onto the same backing run.
-	var firstRunID string
-	for i, fut := range opFutures {
-		var output kitchensink.NexusAttachHandlerOutput
-		if err := fut.Get(ctx, &output); err != nil {
-			return fmt.Errorf("Nexus operation %d failed: %w", i, err)
-		}
-		if i == 0 {
-			firstRunID = output.RunId
-		} else if output.RunId != firstRunID {
-			return fmt.Errorf(
-				"callbacks did not coalesce onto a single workflow: op 0 ran on %s, op %d ran on %s",
-				firstRunID, i, output.RunId,
-			)
-		}
-	}
-
-	return nil
 }
 
 // Noop is used as a no-op activity.
@@ -679,31 +614,20 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 
 // EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
 // Cancel is handled automatically by the SDK via the backing workflow.
+//
+// If input.HandlerWorkflowId is set, that ID is used instead of the per-request ID, along with
+// the caller-supplied conflict policy. This lets callers exercise USE_EXISTING coalescing by
+// firing multiple concurrent operations against the same workflow ID.
 var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	if input.HandlerWorkflowId != "" {
+		return client.StartWorkflowOptions{
+			ID:                       input.HandlerWorkflowId,
+			WorkflowIDConflictPolicy: input.HandlerWorkflowIdConflictPolicy,
+			// Cap the handler so we don't leave dangling workflows if a stress run fails.
+			WorkflowExecutionTimeout: 60 * time.Minute,
+		}, nil
+	}
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
-	}, nil
-})
-
-// NexusAttachHandlerWorkflow is the backing workflow for the attach-to-workflow Nexus operation.
-// It blocks on the "unblock" signal so that multiple Nexus callbacks have time to attach (via
-// USE_EXISTING) before the workflow completes and fans out completion to all attached callbacks.
-// The returned RunID lets the caller verify all N operations coalesced onto the same execution.
-func NexusAttachHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusAttachHandlerInput) (*kitchensink.NexusAttachHandlerOutput, error) {
-	workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
-	return &kitchensink.NexusAttachHandlerOutput{
-		RunId: workflow.GetInfo(ctx).WorkflowExecution.RunID,
-	}, nil
-}
-
-// AttachToWorkflowOperation backs the attach-callbacks pattern. The handler workflow ID comes from
-// the caller; the operation always uses USE_EXISTING so concurrent operations targeting the same
-// workflow_id attach as callbacks rather than spawning distinct executions.
-var AttachToWorkflowOperation = temporalnexus.NewWorkflowRunOperation("attach-to-workflow", NexusAttachHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusAttachHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	return client.StartWorkflowOptions{
-		ID:                       input.WorkflowId,
-		WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		// Cap the handler so we don't leave dangling workflows if a stress run fails.
-		WorkflowExecutionTimeout: 60 * time.Minute,
 	}, nil
 })

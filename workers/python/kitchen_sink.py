@@ -25,9 +25,6 @@ from protos.kitchen_sink_pb2 import (
     DoSignal,
     ExecuteActivityAction,
     ExecuteNexusOperation,
-    ExecuteNexusOperationAttachCallbacks,
-    NexusAttachHandlerInput,
-    NexusAttachHandlerOutput,
     NexusHandlerInput,
     WorkflowInput,
     WorkflowState,
@@ -197,10 +194,6 @@ class KitchenSinkWorkflow:
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
             await handle_nexus_operation(action.nexus_operation)
-        elif action.HasField("nexus_operation_attach_callbacks"):
-            await handle_nexus_operation_attach_callbacks(
-                action.nexus_operation_attach_callbacks
-            )
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -305,6 +298,8 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
     op_input = NexusHandlerInput(
         input=nexus_op.input,
         before_actions=nexus_op.before_actions,
+        handler_workflow_id=nexus_op.handler_workflow_id,
+        handler_workflow_id_conflict_policy=nexus_op.handler_workflow_id_conflict_policy,
     )
     output_type = str
 
@@ -339,61 +334,6 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
         after_started_fn=after_nexus_started,
         after_completed_fn=wait_task_complete,
     )
-
-
-async def handle_nexus_operation_attach_callbacks(
-    action: ExecuteNexusOperationAttachCallbacks,
-):
-    num_ops = action.num_operations
-
-    handler_wf_id = f"nexus-attach-handler-{workflow.uuid4()}"
-
-    client = workflow.create_nexus_client(
-        endpoint=action.endpoint,
-        service=KITCHEN_SINK_SERVICE_NAME,
-    )
-    op_input = NexusAttachHandlerInput(workflow_id=handler_wf_id)
-
-    # Start all Nexus operations concurrently.
-    handles = list(
-        await asyncio.gather(
-            *[
-                client.start_operation(
-                    "attach-to-workflow",
-                    op_input,
-                    output_type=NexusAttachHandlerOutput,
-                )
-                for _ in range(num_ops)
-            ]
-        )
-    )
-
-    # Signal the handler workflow to unblock.
-    ext_handle = workflow.get_external_workflow_handle(handler_wf_id)
-    try:
-        await ext_handle.signal("unblock")
-    except exceptions.FailureError as e:
-        # The handler workflow may have already completed if all operations resolved quickly.
-        # Core emits this exact message for ExternalWorkflowExecutionNotFound (see
-        # signal_external_state_machine.rs). Anchor on the full phrase to avoid swallowing
-        # unrelated "not found" failures (namespace lookups, schedule lookups, etc.).
-        if "Unable to signal external workflow" not in str(e):
-            raise
-        workflow.logger.warning(
-            "failed to signal Nexus handler workflow %s: %s", handler_wf_id, e
-        )
-
-    # Wait for all operations to complete and verify they all coalesced onto the same run.
-    first_run_id: Optional[str] = None
-    for i, handle in enumerate(handles):
-        output: NexusAttachHandlerOutput = await handle
-        if i == 0:
-            first_run_id = output.run_id
-        elif output.run_id != first_run_id:
-            raise exceptions.ApplicationError(
-                f"callbacks did not coalesce onto a single workflow: "
-                f"op 0 ran on {first_run_id}, op {i} ran on {output.run_id}"
-            )
 
 
 async def handle_awaitable_choice(
@@ -468,25 +408,3 @@ class NexusHandlerWorkflow:
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
         return input.input
-
-
-@workflow.defn
-class NexusAttachHandlerWorkflow:
-    """Backing workflow for the attach-to-workflow Nexus operation.
-
-    Blocks on the ``unblock`` signal so that multiple Nexus callbacks have time to attach
-    (via USE_EXISTING) before the workflow completes and fans out completion to all attached
-    callbacks. Returns the workflow's RunID so the caller can verify all N operations
-    coalesced onto the same backing execution.
-    """
-
-    _unblocked: bool = False
-
-    @workflow.run
-    async def run(self, input: NexusAttachHandlerInput) -> NexusAttachHandlerOutput:
-        await workflow.wait_condition(lambda: self._unblocked)
-        return NexusAttachHandlerOutput(run_id=workflow.info().run_id)
-
-    @workflow.signal(name="unblock")
-    async def unblock(self) -> None:
-        self._unblocked = True

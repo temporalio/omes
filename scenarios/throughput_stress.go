@@ -11,9 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -655,12 +657,35 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 	}
 }
 
+// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing: it fires
+// `numOps` concurrent Nexus operations against the same handler workflow ID. The first
+// operation starts the handler workflow; the rest attach as completion callbacks. The handler
+// sleeps `handlerBlockDuration` (via before_actions) so all callbacks have time to attach
+// before it completes and fans out completion to each.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
+	const numOps = 3
+	const handlerBlockDuration = 5 * time.Second
+	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
+	actions := make([]*Action, 0, numOps)
+	for i := 0; i < numOps; i++ {
+		actions = append(actions, &Action{
+			Variant: &Action_NexusOperation{
+				NexusOperation: &ExecuteNexusOperation{
+					Endpoint:                        t.config.NexusEndpoint,
+					Operation:                       "echo-async",
+					Input:                           "hello",
+					HandlerWorkflowId:               handlerWfID,
+					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+					BeforeActions:                   ListActionSet(NewTimerAction(handlerBlockDuration)),
+				},
+			},
+		})
+	}
 	return &Action{
-		Variant: &Action_NexusOperationAttachCallbacks{
-			NexusOperationAttachCallbacks: &ExecuteNexusOperationAttachCallbacks{
-				Endpoint:      t.config.NexusEndpoint,
-				NumOperations: 3,
+		Variant: &Action_NestedActionSet{
+			NestedActionSet: &ActionSet{
+				Concurrent: true,
+				Actions:    actions,
 			},
 		},
 	}

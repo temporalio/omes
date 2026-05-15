@@ -174,7 +174,6 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
-    ExecuteNexusOperationAttachCallbacks nexus_operation_attach_callbacks = 16;
   }
 }
 
@@ -505,35 +504,25 @@ message ExecuteNexusOperation {
   string expected_output = 6;
   // Actions to execute before returning from the handler workflow
   repeated ActionSet before_actions = 7;
+  // If set, the handler workflow that backs the Nexus operation is started with this workflow
+  // ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
+  // this lets multiple concurrent operations target the same backing workflow execution (e.g.
+  // to exercise USE_EXISTING callback coalescing).
+  string handler_workflow_id = 8;
+  // Conflict policy to use when starting the handler workflow. Only applied when
+  // handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
+  // callback to an existing run.
+  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;
 }
 
 // Input for the Nexus handler workflow that backs echo-sync and echo-async operations
 message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
-}
-
-// Input for the attach-to-workflow Nexus operation. Carries the caller-supplied handler
-// workflow ID; the operation always uses WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING so multiple
-// concurrent operations coalesce as callbacks onto a single backing workflow execution.
-message NexusAttachHandlerInput {
-  string workflow_id = 1;
-}
-
-// Output from the attach-to-workflow handler workflow. The caller compares the RunID returned
-// by each of the N concurrent operations to verify that all callbacks attached to the same
-// backing execution.
-message NexusAttachHandlerOutput {
-  string run_id = 1;
-}
-
-// Starts multiple Nexus operations concurrently, all targeting the same handler workflow via
-// USE_EXISTING. Waits for all operations to start (attaching callbacks), signals the handler
-// to unblock, then waits for all to complete and verifies they all coalesced onto the same
-// backing workflow run.
-message ExecuteNexusOperationAttachCallbacks {
-  string endpoint = 1;
-  // Number of concurrent Nexus operations to start. All target the same handler workflow.
-  int32 num_operations = 2;
+  // Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
+  // handler to override the default request-ID-based workflow ID.
+  string handler_workflow_id = 3;
+  // Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
+  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
 }
 

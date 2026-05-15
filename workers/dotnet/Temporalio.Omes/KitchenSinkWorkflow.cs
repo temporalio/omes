@@ -276,10 +276,6 @@ public class KitchenSinkWorkflow
         {
             throw new ApplicationFailureException("ExecuteNexusOperation is not supported", nonRetryable: true);
         }
-        else if (action.NexusOperationAttachCallbacks is { })
-        {
-            throw new ApplicationFailureException("ExecuteNexusOperationAttachCallbacks is not supported", nonRetryable: true);
-        }
         else
         {
             throw new ApplicationFailureException("Unrecognized action");

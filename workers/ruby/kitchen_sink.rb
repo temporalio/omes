@@ -183,11 +183,6 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
         'ExecuteNexusOperation is not supported',
         non_retryable: true
       )
-    when :nexus_operation_attach_callbacks
-      raise Temporalio::Error::ApplicationError.new(
-        'ExecuteNexusOperationAttachCallbacks is not supported',
-        non_retryable: true
-      )
     else
       raise Temporalio::Error::ApplicationError, "unrecognized action: #{action}"
     end

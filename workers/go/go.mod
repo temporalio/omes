@@ -10,7 +10,6 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.16
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.6
-	github.com/google/uuid v1.6.0
 	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/pflag v1.0.5
@@ -47,6 +46,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

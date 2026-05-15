@@ -22,7 +22,6 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	for _, op := range []nexus.RegisterableOperation{
 		kitchensink.EchoSyncOperation,
 		kitchensink.EchoAsyncOperation,
-		kitchensink.AttachToWorkflowOperation,
 	} {
 		if err := service.Register(op); err != nil {
 			panic(err)
@@ -38,7 +37,6 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 	w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
 	w.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
-	w.RegisterWorkflow(kitchensink.NexusAttachHandlerWorkflow)
 	w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 	w.RegisterActivity(&ebbFlowActivities)
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
