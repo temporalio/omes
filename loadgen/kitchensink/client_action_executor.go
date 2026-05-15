@@ -14,7 +14,6 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type ClientActionsExecutor struct {
@@ -142,27 +141,44 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	}
 }
 
-// executeStandaloneActivity invokes the `payload` activity directly via the
-// StartActivityExecution / PollActivityExecution RPCs, bypassing workflow
-// activity scheduling. Requires server-side support for workflow-independent
-// activities.
+// executeStandaloneActivity invokes the embedded ExecuteActivityAction
+// directly via StartActivityExecution / PollActivityExecution RPCs, bypassing
+// workflow activity scheduling. Honors activity_type, task_queue, all four
+// timeouts, and retry_policy on the embedded action. Workflow-only fields
+// (awaitable_choice, locality, priority, fairness_*) are ignored.
 func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
-	activityID := fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
-	dc := converter.GetDefaultDataConverter()
-	input, err := dc.ToPayloads(make([]byte, sa.BytesToReceive), sa.BytesToReturn)
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
+	}
+
+	actType, args, err := standaloneActivityNameAndArgs(act)
+	if err != nil {
+		return err
+	}
+
+	input, err := converter.GetDefaultDataConverter().ToPayloads(args...)
 	if err != nil {
 		return fmt.Errorf("failed to encode standalone activity input: %w", err)
 	}
+
+	taskQueue := act.TaskQueue
+	if taskQueue == "" {
+		taskQueue = e.WorkflowOptions.TaskQueue
+	}
+
+	activityID := fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
 	_, err = e.Client.WorkflowService().StartActivityExecution(ctx, &workflowservicepb.StartActivityExecutionRequest{
-		Namespace:    e.Namespace,
-		ActivityId:   activityID,
-		ActivityType: &commonpb.ActivityType{Name: "payload"},
-		TaskQueue: &taskqueuepb.TaskQueue{
-			Name: e.WorkflowOptions.TaskQueue,
-			Kind: enumspb.TASK_QUEUE_KIND_NORMAL,
-		},
-		Input:               input,
-		StartToCloseTimeout: durationpb.New(30 * time.Second),
+		Namespace:              e.Namespace,
+		ActivityId:             activityID,
+		ActivityType:           &commonpb.ActivityType{Name: actType},
+		TaskQueue:              &taskqueuepb.TaskQueue{Name: taskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+		Input:                  input,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout,
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout,
+		StartToCloseTimeout:    act.StartToCloseTimeout,
+		HeartbeatTimeout:       act.HeartbeatTimeout,
+		RetryPolicy:            act.RetryPolicy,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to start standalone activity: %w", err)
@@ -183,6 +199,40 @@ func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, s
 		return fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
 	}
 	return nil
+}
+
+// standaloneActivityNameAndArgs maps an ExecuteActivityAction's activity_type
+// oneof to the registered activity name and the arg list that the activity
+// expects. MUST stay in sync with launchActivity in
+// workers/go/kitchensink/kitchen_sink.go so the standalone path and the
+// workflow-scheduled path produce the same on-wire input.
+func standaloneActivityNameAndArgs(act *ExecuteActivityAction) (string, []any, error) {
+	switch v := act.ActivityType.(type) {
+	case nil, *ExecuteActivityAction_Noop:
+		return "noop", nil, nil
+	case *ExecuteActivityAction_Delay:
+		return "delay", []any{v.Delay.AsDuration()}, nil
+	case *ExecuteActivityAction_Payload:
+		inputData := make([]byte, v.Payload.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		return "payload", []any{inputData, v.Payload.BytesToReturn}, nil
+	case *ExecuteActivityAction_RetryableError:
+		return "retryable_error", []any{v.RetryableError}, nil
+	case *ExecuteActivityAction_Timeout:
+		return "timeout", []any{v.Timeout}, nil
+	case *ExecuteActivityAction_Heartbeat:
+		return "heartbeat", []any{v.Heartbeat}, nil
+	case *ExecuteActivityAction_Generic:
+		return v.Generic.Type, nil, fmt.Errorf("generic activity not supported for standalone activity")
+	case *ExecuteActivityAction_Client:
+		return "", nil, fmt.Errorf("client activity not supported for standalone activity")
+	case *ExecuteActivityAction_Resources:
+		return "", nil, fmt.Errorf("resources activity not supported for standalone activity")
+	default:
+		return "", nil, fmt.Errorf("unsupported activity_type for standalone activity: %T", v)
+	}
 }
 
 func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {

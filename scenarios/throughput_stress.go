@@ -446,7 +446,14 @@ func (t *tpsExecutor) createActionsChunk(
 		// for workflow-independent activities (not available in all environments).
 		if t.config.EnableStandaloneActivity {
 			asyncActions = append(asyncActions,
-				ClientActivity(ClientActions(StandaloneActivityClientAction(256, 256)), DefaultRemoteActivity),
+				ClientActivity(ClientActions(StandaloneActivity(&ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+				})), DefaultRemoteActivity),
 			)
 		}
 

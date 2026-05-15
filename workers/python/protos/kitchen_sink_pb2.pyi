@@ -127,12 +127,10 @@ class DoDescribe(_message.Message):
     def __init__(self) -> None: ...
 
 class DoStandaloneActivity(_message.Message):
-    __slots__ = ("bytes_to_receive", "bytes_to_return")
-    BYTES_TO_RECEIVE_FIELD_NUMBER: _ClassVar[int]
-    BYTES_TO_RETURN_FIELD_NUMBER: _ClassVar[int]
-    bytes_to_receive: int
-    bytes_to_return: int
-    def __init__(self, bytes_to_receive: _Optional[int] = ..., bytes_to_return: _Optional[int] = ...) -> None: ...
+    __slots__ = ("activity",)
+    ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    activity: ExecuteActivityAction
+    def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ...) -> None: ...
 
 class DoQuery(_message.Message):
     __slots__ = ("report_state", "custom", "failure_expected")
