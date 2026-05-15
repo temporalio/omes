@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -151,7 +150,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
+	setSysProcAttr(cmd) // set process group ID for shutdown
 
 	// Direct logging output to provided logger, if available.
 	if r.LoggingOptions.PreparedLogger != nil {
@@ -257,10 +256,12 @@ func sendInterrupt(process *os.Process) error {
 	if runtime.GOOS == "windows" {
 		return process.Kill()
 	}
-	return process.Signal(syscall.SIGINT)
+	return osSendInterrupt(process)
 }
 
 func sendKill(process *os.Process) error {
-	// shutting down the process group (ie including all child processes)
-	return syscall.Kill(-process.Pid, syscall.SIGKILL)
+	if runtime.GOOS == "windows" {
+		return process.Kill()
+	}
+	return osSendKill(process)
 }
