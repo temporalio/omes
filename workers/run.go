@@ -154,7 +154,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
-	cmd.Env = withEnv(cmd.Environ(), WorkerProfileEnvVar, r.WorkerProfile)
+	cmd.Env = clioptions.WithEnv(cmd.Environ(), WorkerProfileEnvVar, r.WorkerProfile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
 
 	// Direct logging output to provided logger, if available.
@@ -224,21 +224,6 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 		return nil
 	}
-}
-
-func withEnv(environ []string, name string, value string) []string {
-	prefix := name + "="
-	nextEnv := make([]string, 0, len(environ)+1)
-	for _, item := range environ {
-		if strings.HasPrefix(item, prefix) {
-			continue
-		}
-		nextEnv = append(nextEnv, item)
-	}
-	if value != "" {
-		nextEnv = append(nextEnv, prefix+value)
-	}
-	return nextEnv
 }
 
 func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {

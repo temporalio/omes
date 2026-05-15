@@ -29,3 +29,20 @@ func BindEnvVars(fs *pflag.FlagSet) {
 		}
 	})
 }
+
+// WithEnv removes any existing environment variable matching name and appends
+// name=value when value is not empty.
+func WithEnv(environ []string, name string, value string) []string {
+	prefix := name + "="
+	nextEnv := make([]string, 0, len(environ)+1)
+	for _, item := range environ {
+		if strings.HasPrefix(item, prefix) {
+			continue
+		}
+		nextEnv = append(nextEnv, item)
+	}
+	if value != "" {
+		nextEnv = append(nextEnv, prefix+value)
+	}
+	return nextEnv
+}

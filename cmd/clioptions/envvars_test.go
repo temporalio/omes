@@ -1,4 +1,4 @@
-package workers
+package clioptions
 
 import (
 	"slices"
@@ -14,7 +14,7 @@ func TestWithEnvClearsInheritedEnvVar(t *testing.T) {
 		"HOME=/tmp",
 	}
 
-	got := withEnv(environ, name, "")
+	got := WithEnv(environ, name, "")
 
 	want := []string{
 		"PATH=/bin",
@@ -33,7 +33,7 @@ func TestWithEnvSetsExplicitEnvVar(t *testing.T) {
 		"HOME=/tmp",
 	}
 
-	got := withEnv(environ, name, "explicit")
+	got := WithEnv(environ, name, "explicit")
 
 	want := []string{
 		"PATH=/bin",
@@ -54,7 +54,7 @@ func TestWithEnvExplicitEnvVarOverridesInheritedEnvVar(t *testing.T) {
 		"HOME=/tmp",
 	}
 
-	got := withEnv(environ, name, "explicit")
+	got := WithEnv(environ, name, "explicit")
 
 	want := []string{
 		"PATH=/bin",
