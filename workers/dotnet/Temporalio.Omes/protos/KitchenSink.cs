@@ -5848,10 +5848,7 @@ namespace Temporal.Omes.KitchenSink {
     /// <summary>Field number for the "wait_started" field.</summary>
     public const int WaitStartedFieldNumber = 6;
     /// <summary>
-    /// Await the command's STARTED event, then return without awaiting completion
-    /// or cancelling. The underlying operation continues running; subsequent
-    /// coordination (e.g. signaling another workflow that drives its completion)
-    /// is the caller's responsibility.
+    /// Wait for the command to reach STARTED, then return without awaiting completion.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13244,10 +13241,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int HandlerWorkflowIdFieldNumber = 8;
     private string handlerWorkflowId_ = "";
     /// <summary>
-    /// If set, the handler workflow that backs the Nexus operation is started with this workflow
-    /// ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-    /// this lets multiple concurrent operations target the same backing workflow execution (e.g.
-    /// to exercise USE_EXISTING callback coalescing).
+    /// Override the handler workflow ID (defaults to per-request random).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13262,9 +13256,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int HandlerWorkflowIdConflictPolicyFieldNumber = 9;
     private global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy handlerWorkflowIdConflictPolicy_ = global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified;
     /// <summary>
-    /// Conflict policy to use when starting the handler workflow. Only applied when
-    /// handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-    /// callback to an existing run.
+    /// Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13279,9 +13271,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int WaitForSignalFieldNumber = 10;
     private bool waitForSignal_;
     /// <summary>
-    /// If true, the backing handler workflow blocks on the "unblock" signal after running
-    /// before_actions, before returning. Used by the attach-callbacks pattern to hold the
-    /// handler open until all concurrent ops have attached as callbacks.
+    /// If true, the handler workflow waits on the "unblock" signal before returning.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13709,8 +13699,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int HandlerWorkflowIdFieldNumber = 3;
     private string handlerWorkflowId_ = "";
     /// <summary>
-    /// Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-    /// handler to override the default request-ID-based workflow ID.
+    /// Forwarded from ExecuteNexusOperation.handler_workflow_id.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13740,8 +13729,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int WaitForSignalFieldNumber = 5;
     private bool waitForSignal_;
     /// <summary>
-    /// When true, the handler workflow waits on the "unblock" signal after before_actions,
-    /// before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+    /// If true, the handler workflow waits on the "unblock" signal before returning.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13972,9 +13960,7 @@ namespace Temporal.Omes.KitchenSink {
   }
 
   /// <summary>
-  /// Wait for an external workflow to complete by ID. Establishes no parent-child relationship
-  /// with the target — implementations call the Temporal client's GetWorkflow().Get() inside
-  /// an activity.
+  /// Wait for an external workflow to complete by ID. No parent-child relationship.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class AwaitWorkflowCompletion : pb::IMessage<AwaitWorkflowCompletion>

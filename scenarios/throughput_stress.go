@@ -657,16 +657,8 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 	}
 }
 
-// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing.
-// Three concurrent operations target the same handler workflow ID; the first creates the
-// handler, the rest attach as completion callbacks. Signal-based coordination ensures all
-// callbacks are attached before the handler is unblocked:
-//
-//  1. wait_started on each ExecuteNexusOperation returns only after that op's callback is
-//     attached on the server.
-//  2. SendSignal "unblock" reaches a handler that's still alive with all N callbacks attached.
-//  3. AwaitWorkflowCompletion blocks on the handler's actual completion (via a wait_for_workflow
-//     activity that calls client.GetWorkflow().Get()) — no parent-child relationship.
+// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
+// fire N ops with wait_started, signal the handler to unblock, then await its completion.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 	const numOps = 3
 	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
@@ -697,11 +689,9 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 		NestedActionSet: &ActionSet{
 			Concurrent: false,
 			Actions: []*Action{
-				// Phase 1: fire N ops; each returns when its callback is attached.
 				{Variant: &Action_NestedActionSet{
 					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
 				}},
-				// Phase 2: unblock the handler — all N callbacks are now attached.
 				{Variant: &Action_SendSignal{
 					SendSignal: &SendSignalAction{
 						WorkflowId: handlerWfID,
@@ -711,7 +701,6 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 						},
 					},
 				}},
-				// Phase 3: wait for the handler workflow to complete by ID.
 				{Variant: &Action_AwaitWorkflowCompletion{
 					AwaitWorkflowCompletion: &AwaitWorkflowCompletion{
 						WorkflowId: handlerWfID,

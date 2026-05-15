@@ -344,9 +344,6 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
 
 
 async def handle_await_workflow_completion(action: AwaitWorkflowCompletion) -> None:
-    """Block until the named workflow finishes by dispatching to the
-    wait_for_workflow activity (which internally calls client.get_workflow_handle().result()).
-    No parent-child relationship with the target."""
     await workflow.execute_activity(
         "wait_for_workflow",
         args=[action.workflow_id, action.run_id],
@@ -356,7 +353,6 @@ async def handle_await_workflow_completion(action: AwaitWorkflowCompletion) -> N
 
 
 async def handle_send_signal(action: SendSignalAction) -> None:
-    """Send a signal to an external workflow."""
     ext_handle = workflow.get_external_workflow_handle(
         action.workflow_id, run_id=action.run_id or None
     )
@@ -441,7 +437,6 @@ class NexusHandlerWorkflow:
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
         if input.wait_for_signal:
-            # Hold the handler open while concurrent Nexus ops attach as callbacks.
             await workflow.wait_condition(lambda: self._unblocked)
         return input.input
 

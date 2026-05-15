@@ -20565,10 +20565,7 @@ java.lang.String defaultValue) {
 
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -20577,10 +20574,7 @@ java.lang.String defaultValue) {
     boolean hasWaitStarted();
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -20589,10 +20583,7 @@ java.lang.String defaultValue) {
     com.google.protobuf.Empty getWaitStarted();
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -20920,10 +20911,7 @@ java.lang.String defaultValue) {
     public static final int WAIT_STARTED_FIELD_NUMBER = 6;
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -20935,10 +20923,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -20953,10 +20938,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * Await the command's STARTED event, then return without awaiting completion
-     * or cancelling. The underlying operation continues running; subsequent
-     * coordination (e.g. signaling another workflow that drives its completion)
-     * is the caller's responsibility.
+     * Wait for the command to reach STARTED, then return without awaiting completion.
      * </pre>
      *
      * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22434,10 +22416,7 @@ java.lang.String defaultValue) {
           com.google.protobuf.Empty, com.google.protobuf.Empty.Builder, com.google.protobuf.EmptyOrBuilder> waitStartedBuilder_;
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22449,10 +22428,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22474,10 +22450,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22497,10 +22470,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22518,10 +22488,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22548,10 +22515,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22574,10 +22538,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22587,10 +22548,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -22608,10 +22566,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Await the command's STARTED event, then return without awaiting completion
-       * or cancelling. The underlying operation continues running; subsequent
-       * coordination (e.g. signaling another workflow that drives its completion)
-       * is the caller's responsibility.
+       * Wait for the command to reach STARTED, then return without awaiting completion.
        * </pre>
        *
        * <code>.google.protobuf.Empty wait_started = 6;</code>
@@ -51030,10 +50985,7 @@ java.lang.String defaultValue);
 
     /**
      * <pre>
-     * If set, the handler workflow that backs the Nexus operation is started with this workflow
-     * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-     * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-     * to exercise USE_EXISTING callback coalescing).
+     * Override the handler workflow ID (defaults to per-request random).
      * </pre>
      *
      * <code>string handler_workflow_id = 8;</code>
@@ -51042,10 +50994,7 @@ java.lang.String defaultValue);
     java.lang.String getHandlerWorkflowId();
     /**
      * <pre>
-     * If set, the handler workflow that backs the Nexus operation is started with this workflow
-     * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-     * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-     * to exercise USE_EXISTING callback coalescing).
+     * Override the handler workflow ID (defaults to per-request random).
      * </pre>
      *
      * <code>string handler_workflow_id = 8;</code>
@@ -51056,9 +51005,7 @@ java.lang.String defaultValue);
 
     /**
      * <pre>
-     * Conflict policy to use when starting the handler workflow. Only applied when
-     * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-     * callback to an existing run.
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
      * </pre>
      *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -51067,9 +51014,7 @@ java.lang.String defaultValue);
     int getHandlerWorkflowIdConflictPolicyValue();
     /**
      * <pre>
-     * Conflict policy to use when starting the handler workflow. Only applied when
-     * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-     * callback to an existing run.
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
      * </pre>
      *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -51079,9 +51024,7 @@ java.lang.String defaultValue);
 
     /**
      * <pre>
-     * If true, the backing handler workflow blocks on the "unblock" signal after running
-     * before_actions, before returning. Used by the attach-callbacks pattern to hold the
-     * handler open until all concurrent ops have attached as callbacks.
+     * If true, the handler workflow waits on the "unblock" signal before returning.
      * </pre>
      *
      * <code>bool wait_for_signal = 10;</code>
@@ -51527,10 +51470,7 @@ java.lang.String defaultValue) {
     private volatile java.lang.Object handlerWorkflowId_ = "";
     /**
      * <pre>
-     * If set, the handler workflow that backs the Nexus operation is started with this workflow
-     * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-     * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-     * to exercise USE_EXISTING callback coalescing).
+     * Override the handler workflow ID (defaults to per-request random).
      * </pre>
      *
      * <code>string handler_workflow_id = 8;</code>
@@ -51551,10 +51491,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * If set, the handler workflow that backs the Nexus operation is started with this workflow
-     * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-     * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-     * to exercise USE_EXISTING callback coalescing).
+     * Override the handler workflow ID (defaults to per-request random).
      * </pre>
      *
      * <code>string handler_workflow_id = 8;</code>
@@ -51579,9 +51516,7 @@ java.lang.String defaultValue) {
     private int handlerWorkflowIdConflictPolicy_ = 0;
     /**
      * <pre>
-     * Conflict policy to use when starting the handler workflow. Only applied when
-     * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-     * callback to an existing run.
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
      * </pre>
      *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -51592,9 +51527,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * Conflict policy to use when starting the handler workflow. Only applied when
-     * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-     * callback to an existing run.
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
      * </pre>
      *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -51609,9 +51542,7 @@ java.lang.String defaultValue) {
     private boolean waitForSignal_ = false;
     /**
      * <pre>
-     * If true, the backing handler workflow blocks on the "unblock" signal after running
-     * before_actions, before returning. Used by the attach-callbacks pattern to hold the
-     * handler open until all concurrent ops have attached as callbacks.
+     * If true, the handler workflow waits on the "unblock" signal before returning.
      * </pre>
      *
      * <code>bool wait_for_signal = 10;</code>
@@ -53248,10 +53179,7 @@ java.lang.String defaultValue) {
       private java.lang.Object handlerWorkflowId_ = "";
       /**
        * <pre>
-       * If set, the handler workflow that backs the Nexus operation is started with this workflow
-       * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-       * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-       * to exercise USE_EXISTING callback coalescing).
+       * Override the handler workflow ID (defaults to per-request random).
        * </pre>
        *
        * <code>string handler_workflow_id = 8;</code>
@@ -53271,10 +53199,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If set, the handler workflow that backs the Nexus operation is started with this workflow
-       * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-       * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-       * to exercise USE_EXISTING callback coalescing).
+       * Override the handler workflow ID (defaults to per-request random).
        * </pre>
        *
        * <code>string handler_workflow_id = 8;</code>
@@ -53295,10 +53220,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If set, the handler workflow that backs the Nexus operation is started with this workflow
-       * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-       * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-       * to exercise USE_EXISTING callback coalescing).
+       * Override the handler workflow ID (defaults to per-request random).
        * </pre>
        *
        * <code>string handler_workflow_id = 8;</code>
@@ -53315,10 +53237,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If set, the handler workflow that backs the Nexus operation is started with this workflow
-       * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-       * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-       * to exercise USE_EXISTING callback coalescing).
+       * Override the handler workflow ID (defaults to per-request random).
        * </pre>
        *
        * <code>string handler_workflow_id = 8;</code>
@@ -53332,10 +53251,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If set, the handler workflow that backs the Nexus operation is started with this workflow
-       * ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-       * this lets multiple concurrent operations target the same backing workflow execution (e.g.
-       * to exercise USE_EXISTING callback coalescing).
+       * Override the handler workflow ID (defaults to per-request random).
        * </pre>
        *
        * <code>string handler_workflow_id = 8;</code>
@@ -53355,9 +53271,7 @@ java.lang.String defaultValue) {
       private int handlerWorkflowIdConflictPolicy_ = 0;
       /**
        * <pre>
-       * Conflict policy to use when starting the handler workflow. Only applied when
-       * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-       * callback to an existing run.
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
        * </pre>
        *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -53368,9 +53282,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Conflict policy to use when starting the handler workflow. Only applied when
-       * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-       * callback to an existing run.
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
        * </pre>
        *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -53385,9 +53297,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Conflict policy to use when starting the handler workflow. Only applied when
-       * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-       * callback to an existing run.
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
        * </pre>
        *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -53400,9 +53310,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Conflict policy to use when starting the handler workflow. Only applied when
-       * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-       * callback to an existing run.
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
        * </pre>
        *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -53420,9 +53328,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Conflict policy to use when starting the handler workflow. Only applied when
-       * handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-       * callback to an existing run.
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
        * </pre>
        *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
@@ -53438,9 +53344,7 @@ java.lang.String defaultValue) {
       private boolean waitForSignal_ ;
       /**
        * <pre>
-       * If true, the backing handler workflow blocks on the "unblock" signal after running
-       * before_actions, before returning. Used by the attach-callbacks pattern to hold the
-       * handler open until all concurrent ops have attached as callbacks.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 10;</code>
@@ -53452,9 +53356,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If true, the backing handler workflow blocks on the "unblock" signal after running
-       * before_actions, before returning. Used by the attach-callbacks pattern to hold the
-       * handler open until all concurrent ops have attached as callbacks.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 10;</code>
@@ -53470,9 +53372,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * If true, the backing handler workflow blocks on the "unblock" signal after running
-       * before_actions, before returning. Used by the attach-callbacks pattern to hold the
-       * handler open until all concurrent ops have attached as callbacks.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 10;</code>
@@ -53590,8 +53490,7 @@ java.lang.String defaultValue) {
 
     /**
      * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-     * handler to override the default request-ID-based workflow ID.
+     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
      * </pre>
      *
      * <code>string handler_workflow_id = 3;</code>
@@ -53600,8 +53499,7 @@ java.lang.String defaultValue) {
     java.lang.String getHandlerWorkflowId();
     /**
      * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-     * handler to override the default request-ID-based workflow ID.
+     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
      * </pre>
      *
      * <code>string handler_workflow_id = 3;</code>
@@ -53631,8 +53529,7 @@ java.lang.String defaultValue) {
 
     /**
      * <pre>
-     * When true, the handler workflow waits on the "unblock" signal after before_actions,
-     * before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+     * If true, the handler workflow waits on the "unblock" signal before returning.
      * </pre>
      *
      * <code>bool wait_for_signal = 5;</code>
@@ -53768,8 +53665,7 @@ java.lang.String defaultValue) {
     private volatile java.lang.Object handlerWorkflowId_ = "";
     /**
      * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-     * handler to override the default request-ID-based workflow ID.
+     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
      * </pre>
      *
      * <code>string handler_workflow_id = 3;</code>
@@ -53790,8 +53686,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-     * handler to override the default request-ID-based workflow ID.
+     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
      * </pre>
      *
      * <code>string handler_workflow_id = 3;</code>
@@ -53842,8 +53737,7 @@ java.lang.String defaultValue) {
     private boolean waitForSignal_ = false;
     /**
      * <pre>
-     * When true, the handler workflow waits on the "unblock" signal after before_actions,
-     * before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+     * If true, the handler workflow waits on the "unblock" signal before returning.
      * </pre>
      *
      * <code>bool wait_for_signal = 5;</code>
@@ -54641,8 +54535,7 @@ java.lang.String defaultValue) {
       private java.lang.Object handlerWorkflowId_ = "";
       /**
        * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-       * handler to override the default request-ID-based workflow ID.
+       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
        * </pre>
        *
        * <code>string handler_workflow_id = 3;</code>
@@ -54662,8 +54555,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-       * handler to override the default request-ID-based workflow ID.
+       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
        * </pre>
        *
        * <code>string handler_workflow_id = 3;</code>
@@ -54684,8 +54576,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-       * handler to override the default request-ID-based workflow ID.
+       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
        * </pre>
        *
        * <code>string handler_workflow_id = 3;</code>
@@ -54702,8 +54593,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-       * handler to override the default request-ID-based workflow ID.
+       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
        * </pre>
        *
        * <code>string handler_workflow_id = 3;</code>
@@ -54717,8 +54607,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-       * handler to override the default request-ID-based workflow ID.
+       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
        * </pre>
        *
        * <code>string handler_workflow_id = 3;</code>
@@ -54811,8 +54700,7 @@ java.lang.String defaultValue) {
       private boolean waitForSignal_ ;
       /**
        * <pre>
-       * When true, the handler workflow waits on the "unblock" signal after before_actions,
-       * before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 5;</code>
@@ -54824,8 +54712,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * When true, the handler workflow waits on the "unblock" signal after before_actions,
-       * before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 5;</code>
@@ -54841,8 +54728,7 @@ java.lang.String defaultValue) {
       }
       /**
        * <pre>
-       * When true, the handler workflow waits on the "unblock" signal after before_actions,
-       * before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+       * If true, the handler workflow waits on the "unblock" signal before returning.
        * </pre>
        *
        * <code>bool wait_for_signal = 5;</code>
@@ -54956,9 +54842,7 @@ java.lang.String defaultValue) {
   }
   /**
    * <pre>
-   * Wait for an external workflow to complete by ID. Establishes no parent-child relationship
-   * with the target — implementations call the Temporal client's GetWorkflow().Get() inside
-   * an activity.
+   * Wait for an external workflow to complete by ID. No parent-child relationship.
    * </pre>
    *
    * Protobuf type {@code temporal.omes.kitchen_sink.AwaitWorkflowCompletion}
@@ -55251,9 +55135,7 @@ java.lang.String defaultValue) {
     }
     /**
      * <pre>
-     * Wait for an external workflow to complete by ID. Establishes no parent-child relationship
-     * with the target — implementations call the Temporal client's GetWorkflow().Get() inside
-     * an activity.
+     * Wait for an external workflow to complete by ID. No parent-child relationship.
      * </pre>
      *
      * Protobuf type {@code temporal.omes.kitchen_sink.AwaitWorkflowCompletion}

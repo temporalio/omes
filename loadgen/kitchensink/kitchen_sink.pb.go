@@ -1706,10 +1706,7 @@ type AwaitableChoice_CancelAfterCompleted struct {
 }
 
 type AwaitableChoice_WaitStarted struct {
-	// Await the command's STARTED event, then return without awaiting completion
-	// or cancelling. The underlying operation continues running; subsequent
-	// coordination (e.g. signaling another workflow that drives its completion)
-	// is the caller's responsibility.
+	// Wait for the command to reach STARTED, then return without awaiting completion.
 	WaitStarted *emptypb.Empty `protobuf:"bytes,6,opt,name=wait_started,json=waitStarted,proto3,oneof"`
 }
 
@@ -2995,18 +2992,11 @@ type ExecuteNexusOperation struct {
 	ExpectedOutput string `protobuf:"bytes,6,opt,name=expected_output,json=expectedOutput,proto3" json:"expected_output,omitempty"`
 	// Actions to execute before returning from the handler workflow
 	BeforeActions []*ActionSet `protobuf:"bytes,7,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
-	// If set, the handler workflow that backs the Nexus operation is started with this workflow
-	// ID instead of a per-request random ID. Combined with handler_workflow_id_conflict_policy,
-	// this lets multiple concurrent operations target the same backing workflow execution (e.g.
-	// to exercise USE_EXISTING callback coalescing).
+	// Override the handler workflow ID (defaults to per-request random).
 	HandlerWorkflowId string `protobuf:"bytes,8,opt,name=handler_workflow_id,json=handlerWorkflowId,proto3" json:"handler_workflow_id,omitempty"`
-	// Conflict policy to use when starting the handler workflow. Only applied when
-	// handler_workflow_id is set. Use WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING to attach as a
-	// callback to an existing run.
+	// Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
 	HandlerWorkflowIdConflictPolicy v11.WorkflowIdConflictPolicy `protobuf:"varint,9,opt,name=handler_workflow_id_conflict_policy,json=handlerWorkflowIdConflictPolicy,proto3,enum=temporal.api.enums.v1.WorkflowIdConflictPolicy" json:"handler_workflow_id_conflict_policy,omitempty"`
-	// If true, the backing handler workflow blocks on the "unblock" signal after running
-	// before_actions, before returning. Used by the attach-callbacks pattern to hold the
-	// handler open until all concurrent ops have attached as callbacks.
+	// If true, the handler workflow waits on the "unblock" signal before returning.
 	WaitForSignal bool `protobuf:"varint,10,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
 }
 
@@ -3120,13 +3110,11 @@ type NexusHandlerInput struct {
 
 	Input         string       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
 	BeforeActions []*ActionSet `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
-	// Forwarded from ExecuteNexusOperation.handler_workflow_id; used by the operation start
-	// handler to override the default request-ID-based workflow ID.
+	// Forwarded from ExecuteNexusOperation.handler_workflow_id.
 	HandlerWorkflowId string `protobuf:"bytes,3,opt,name=handler_workflow_id,json=handlerWorkflowId,proto3" json:"handler_workflow_id,omitempty"`
 	// Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
 	HandlerWorkflowIdConflictPolicy v11.WorkflowIdConflictPolicy `protobuf:"varint,4,opt,name=handler_workflow_id_conflict_policy,json=handlerWorkflowIdConflictPolicy,proto3,enum=temporal.api.enums.v1.WorkflowIdConflictPolicy" json:"handler_workflow_id_conflict_policy,omitempty"`
-	// When true, the handler workflow waits on the "unblock" signal after before_actions,
-	// before returning. Forwarded from ExecuteNexusOperation.wait_for_signal.
+	// If true, the handler workflow waits on the "unblock" signal before returning.
 	WaitForSignal bool `protobuf:"varint,5,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
 }
 
@@ -3197,9 +3185,7 @@ func (x *NexusHandlerInput) GetWaitForSignal() bool {
 	return false
 }
 
-// Wait for an external workflow to complete by ID. Establishes no parent-child relationship
-// with the target — implementations call the Temporal client's GetWorkflow().Get() inside
-// an activity.
+// Wait for an external workflow to complete by ID. No parent-child relationship.
 type AwaitWorkflowCompletion struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

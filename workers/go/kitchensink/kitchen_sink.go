@@ -37,9 +37,6 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 
-// WaitForWorkflow blocks until the workflow identified by workflowID finishes.
-// runID may be empty to refer to the latest run. Establishes no parent-child
-// relationship with the target.
 func (ca *ClientActivities) WaitForWorkflow(ctx context.Context, workflowID, runID string) error {
 	handle := ca.Client.GetWorkflow(ctx, workflowID, runID)
 	return handle.Get(ctx, nil)
@@ -521,7 +518,6 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		})
 }
 
-// handleSendSignal sends a signal to an external workflow.
 func handleSendSignal(ctx workflow.Context, action *kitchensink.SendSignalAction) error {
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.Future {
 		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
@@ -534,10 +530,6 @@ func handleSendSignal(ctx workflow.Context, action *kitchensink.SendSignalAction
 		})
 }
 
-// handleAwaitWorkflowCompletion blocks until the named workflow finishes, by
-// dispatching to the wait_for_workflow activity (which internally calls
-// Client.GetWorkflow(...).Get on the orchestrator's behalf). Establishes no
-// parent-child relationship with the target.
 func handleAwaitWorkflowCompletion(ctx workflow.Context, action *kitchensink.AwaitWorkflowCompletion) error {
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 24 * time.Hour,
@@ -649,8 +641,6 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 		}
 	}
 	if input.WaitForSignal {
-		// Block until the caller sends "unblock". Used by the attach-callbacks
-		// pattern to hold the handler open while concurrent ops attach as callbacks.
 		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
 	}
 	return input.Input, nil
@@ -664,18 +654,12 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 	return input.Input, nil
 })
 
-// EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
-// Cancel is handled automatically by the SDK via the backing workflow.
-//
-// If input.HandlerWorkflowId is set, that ID is used instead of the per-request ID, along with
-// the caller-supplied conflict policy. This lets callers exercise USE_EXISTING coalescing by
-// firing multiple concurrent operations against the same workflow ID.
+// EchoAsyncOperation starts a NexusHandlerWorkflow that runs before_actions and returns the input.
 var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
 	if input.HandlerWorkflowId != "" {
 		return client.StartWorkflowOptions{
 			ID:                       input.HandlerWorkflowId,
 			WorkflowIDConflictPolicy: input.HandlerWorkflowIdConflictPolicy,
-			// Cap the handler so we don't leave dangling workflows if a stress run fails.
 			WorkflowExecutionTimeout: 60 * time.Minute,
 		}, nil
 	}
