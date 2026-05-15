@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import cast
 
 import nexusrpc
 import nexusrpc.handler
@@ -42,13 +43,16 @@ class KitchenSinkNexusServiceHandler:
         # concurrent operations can exercise USE_EXISTING callback coalescing. Otherwise
         # fall back to a per-request unique ID.
         if input.handler_workflow_id:
+            # Proto enums are ints at runtime; cast to satisfy mypy when constructing the
+            # SDK's typed WorkflowIDConflictPolicy enum.
+            policy = temporalio.common.WorkflowIDConflictPolicy(
+                cast(int, input.handler_workflow_id_conflict_policy)
+            )
             return await ctx.start_workflow(
                 NexusHandlerWorkflow.run,
                 input,
                 id=input.handler_workflow_id,
-                id_conflict_policy=temporalio.common.WorkflowIDConflictPolicy(
-                    input.handler_workflow_id_conflict_policy
-                ),
+                id_conflict_policy=policy,
                 # Cap the handler so we don't leave dangling workflows if a stress run fails.
                 execution_timeout=timedelta(minutes=60),
             )
