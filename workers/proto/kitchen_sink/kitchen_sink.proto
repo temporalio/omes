@@ -519,9 +519,7 @@ message ExecuteNexusOperation {
 message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
-  // Forwarded from ExecuteNexusOperation.handler_workflow_id.
   string handler_workflow_id = 3;
-  // Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
   temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
   // If true, the handler workflow waits on the "unblock" signal before returning.
   bool wait_for_signal = 5;

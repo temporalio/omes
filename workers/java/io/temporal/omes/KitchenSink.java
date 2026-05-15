@@ -53489,19 +53489,11 @@ java.lang.String defaultValue) {
         int index);
 
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-     * </pre>
-     *
      * <code>string handler_workflow_id = 3;</code>
      * @return The handlerWorkflowId.
      */
     java.lang.String getHandlerWorkflowId();
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-     * </pre>
-     *
      * <code>string handler_workflow_id = 3;</code>
      * @return The bytes for handlerWorkflowId.
      */
@@ -53509,19 +53501,11 @@ java.lang.String defaultValue) {
         getHandlerWorkflowIdBytes();
 
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-     * </pre>
-     *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
      * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
      */
     int getHandlerWorkflowIdConflictPolicyValue();
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-     * </pre>
-     *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
      * @return The handlerWorkflowIdConflictPolicy.
      */
@@ -53664,10 +53648,6 @@ java.lang.String defaultValue) {
     @SuppressWarnings("serial")
     private volatile java.lang.Object handlerWorkflowId_ = "";
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-     * </pre>
-     *
      * <code>string handler_workflow_id = 3;</code>
      * @return The handlerWorkflowId.
      */
@@ -53685,10 +53665,6 @@ java.lang.String defaultValue) {
       }
     }
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-     * </pre>
-     *
      * <code>string handler_workflow_id = 3;</code>
      * @return The bytes for handlerWorkflowId.
      */
@@ -53710,10 +53686,6 @@ java.lang.String defaultValue) {
     public static final int HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER = 4;
     private int handlerWorkflowIdConflictPolicy_ = 0;
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-     * </pre>
-     *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
      * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
      */
@@ -53721,10 +53693,6 @@ java.lang.String defaultValue) {
       return handlerWorkflowIdConflictPolicy_;
     }
     /**
-     * <pre>
-     * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-     * </pre>
-     *
      * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
      * @return The handlerWorkflowIdConflictPolicy.
      */
@@ -54534,10 +54502,6 @@ java.lang.String defaultValue) {
 
       private java.lang.Object handlerWorkflowId_ = "";
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-       * </pre>
-       *
        * <code>string handler_workflow_id = 3;</code>
        * @return The handlerWorkflowId.
        */
@@ -54554,10 +54518,6 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-       * </pre>
-       *
        * <code>string handler_workflow_id = 3;</code>
        * @return The bytes for handlerWorkflowId.
        */
@@ -54575,10 +54535,6 @@ java.lang.String defaultValue) {
         }
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-       * </pre>
-       *
        * <code>string handler_workflow_id = 3;</code>
        * @param value The handlerWorkflowId to set.
        * @return This builder for chaining.
@@ -54592,10 +54548,6 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-       * </pre>
-       *
        * <code>string handler_workflow_id = 3;</code>
        * @return This builder for chaining.
        */
@@ -54606,10 +54558,6 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id.
-       * </pre>
-       *
        * <code>string handler_workflow_id = 3;</code>
        * @param value The bytes for handlerWorkflowId to set.
        * @return This builder for chaining.
@@ -54626,10 +54574,6 @@ java.lang.String defaultValue) {
 
       private int handlerWorkflowIdConflictPolicy_ = 0;
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-       * </pre>
-       *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
        * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
        */
@@ -54637,10 +54581,6 @@ java.lang.String defaultValue) {
         return handlerWorkflowIdConflictPolicy_;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-       * </pre>
-       *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
        * @param value The enum numeric value on the wire for handlerWorkflowIdConflictPolicy to set.
        * @return This builder for chaining.
@@ -54652,10 +54592,6 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-       * </pre>
-       *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
        * @return The handlerWorkflowIdConflictPolicy.
        */
@@ -54665,10 +54601,6 @@ java.lang.String defaultValue) {
         return result == null ? io.temporal.api.enums.v1.WorkflowIdConflictPolicy.UNRECOGNIZED : result;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-       * </pre>
-       *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
        * @param value The handlerWorkflowIdConflictPolicy to set.
        * @return This builder for chaining.
@@ -54683,10 +54615,6 @@ java.lang.String defaultValue) {
         return this;
       }
       /**
-       * <pre>
-       * Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-       * </pre>
-       *
        * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
        * @return This builder for chaining.
        */

@@ -13696,9 +13696,6 @@ namespace Temporal.Omes.KitchenSink {
     /// <summary>Field number for the "handler_workflow_id" field.</summary>
     public const int HandlerWorkflowIdFieldNumber = 3;
     private string handlerWorkflowId_ = "";
-    /// <summary>
-    /// Forwarded from ExecuteNexusOperation.handler_workflow_id.
-    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string HandlerWorkflowId {
@@ -13711,9 +13708,6 @@ namespace Temporal.Omes.KitchenSink {
     /// <summary>Field number for the "handler_workflow_id_conflict_policy" field.</summary>
     public const int HandlerWorkflowIdConflictPolicyFieldNumber = 4;
     private global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy handlerWorkflowIdConflictPolicy_ = global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified;
-    /// <summary>
-    /// Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
-    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy HandlerWorkflowIdConflictPolicy {

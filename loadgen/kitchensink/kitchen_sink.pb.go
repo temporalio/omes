@@ -3108,11 +3108,9 @@ type NexusHandlerInput struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Input         string       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
-	BeforeActions []*ActionSet `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
-	// Forwarded from ExecuteNexusOperation.handler_workflow_id.
-	HandlerWorkflowId string `protobuf:"bytes,3,opt,name=handler_workflow_id,json=handlerWorkflowId,proto3" json:"handler_workflow_id,omitempty"`
-	// Forwarded from ExecuteNexusOperation.handler_workflow_id_conflict_policy.
+	Input                           string                       `protobuf:"bytes,1,opt,name=input,proto3" json:"input,omitempty"`
+	BeforeActions                   []*ActionSet                 `protobuf:"bytes,2,rep,name=before_actions,json=beforeActions,proto3" json:"before_actions,omitempty"`
+	HandlerWorkflowId               string                       `protobuf:"bytes,3,opt,name=handler_workflow_id,json=handlerWorkflowId,proto3" json:"handler_workflow_id,omitempty"`
 	HandlerWorkflowIdConflictPolicy v11.WorkflowIdConflictPolicy `protobuf:"varint,4,opt,name=handler_workflow_id_conflict_policy,json=handlerWorkflowIdConflictPolicy,proto3,enum=temporal.api.enums.v1.WorkflowIdConflictPolicy" json:"handler_workflow_id_conflict_policy,omitempty"`
 	// If true, the handler workflow waits on the "unblock" signal before returning.
 	WaitForSignal bool `protobuf:"varint,5,opt,name=wait_for_signal,json=waitForSignal,proto3" json:"wait_for_signal,omitempty"`
