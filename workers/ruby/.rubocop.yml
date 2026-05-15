@@ -1,7 +1,9 @@
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
+  SuggestExtensions: false
   Exclude:
+    - "harness/**/*"
     - "protos/**/*"
     - "vendor/**/*"
     - "omes-temp-*/**/*"
@@ -44,3 +46,6 @@ Metrics/PerceivedComplexity:
 
 Metrics/AbcSize:
   Max: 25
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false

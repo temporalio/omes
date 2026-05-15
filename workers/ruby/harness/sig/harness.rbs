@@ -1,0 +1,335 @@
+module GRPC
+  class BadStatus < StandardError
+    def self.new_status_exception: (untyped code, String details) -> BadStatus
+  end
+
+  class RpcServer
+    def initialize: (**untyped) -> void
+    def handle: (untyped service) -> void
+    def add_http2_port: (String port, untyped creds) -> Integer
+    def run_till_terminated_or_interrupted: (Array[String] signals) -> void
+  end
+
+  module Core
+    module StatusCodes
+      INVALID_ARGUMENT: untyped
+      FAILED_PRECONDITION: untyped
+      INTERNAL: untyped
+    end
+  end
+end
+
+module Temporalio
+  class Runtime
+    class TelemetryOptions
+      def initialize: (**untyped) -> void
+    end
+
+    class LoggingOptions
+      def initialize: (**untyped) -> void
+    end
+
+    class LoggingFilterOptions
+      def initialize: (**untyped) -> void
+    end
+
+    class PrometheusMetricsOptions
+      attr_reader bind_address: String
+      attr_reader durations_as_seconds: bool
+
+      def initialize: (
+        bind_address: String,
+        ?durations_as_seconds: bool
+      ) -> void
+    end
+
+    def initialize: (**untyped) -> void
+  end
+
+  class Client
+    class Connection
+      class TLSOptions
+        attr_reader client_cert: String?
+        attr_reader client_private_key: String?
+        attr_reader server_root_ca_cert: String?
+        attr_reader domain: String?
+
+        def initialize: (
+          ?client_cert: String?,
+          ?client_private_key: String?,
+          ?server_root_ca_cert: String?,
+          ?domain: String?
+        ) -> void
+      end
+    end
+
+    def self.connect: (*untyped, **untyped) -> Client
+  end
+
+  class Worker
+    class PollerBehavior
+      class Autoscaling
+        attr_reader maximum: Integer
+
+        def initialize: (maximum: Integer) -> void
+      end
+    end
+
+    def self.run_all: (*Worker workers, **untyped) -> untyped
+  end
+end
+
+module Temporal
+  module Omes
+    module Projects
+      module V1
+        class ConnectOptions
+          attr_reader namespace: String
+          attr_reader server_address: String
+          attr_reader auth_header: String
+          attr_reader enable_tls: bool
+          attr_reader tls_cert_path: String
+          attr_reader tls_key_path: String
+          attr_reader tls_server_name: String
+          attr_reader disable_host_verification: bool
+
+          def initialize: (
+            ?namespace: String,
+            ?server_address: String,
+            ?auth_header: String,
+            ?enable_tls: bool,
+            ?tls_cert_path: String,
+            ?tls_key_path: String,
+            ?tls_server_name: String,
+            ?disable_host_verification: bool
+          ) -> void
+        end
+
+        class InitRequest
+          attr_reader execution_id: String
+          attr_reader run_id: String
+          attr_reader task_queue: String
+          attr_reader connect_options: ConnectOptions?
+          attr_reader config_json: String
+
+          def initialize: (
+            ?execution_id: String,
+            ?run_id: String,
+            ?task_queue: String,
+            ?connect_options: ConnectOptions?,
+            ?config_json: String
+          ) -> void
+        end
+
+        class InitResponse
+          def initialize: () -> void
+        end
+
+        class ExecuteRequest
+          attr_reader iteration: Integer
+          attr_reader task_queue: String
+          attr_reader payload: String
+
+          def initialize: (
+            ?iteration: Integer,
+            ?task_queue: String,
+            ?payload: String
+          ) -> void
+        end
+
+        class ExecuteResponse
+          def initialize: () -> void
+        end
+
+        module ProjectService
+          class Service
+            def initialize: () -> void
+          end
+        end
+      end
+    end
+  end
+end
+
+module Harness
+  type client_factory = ^(ClientConfig config) -> Temporalio::Client
+  type worker_factory = ^(Temporalio::Client client, WorkerContext context) -> Temporalio::Worker
+  type project_execute_handler = ^(Temporalio::Client client, ProjectExecuteContext context) -> void
+  type project_init_handler = ^(Temporalio::Client client, ProjectInitContext context) -> void
+
+  class ClientConfig
+    attr_reader target_host: String
+    attr_reader namespace: String
+    attr_reader api_key: String?
+    attr_reader tls: Temporalio::Client::Connection::TLSOptions?
+    attr_reader runtime: Temporalio::Runtime
+
+    def initialize: (
+      target_host: String,
+      namespace: String,
+      api_key: String?,
+      tls: Temporalio::Client::Connection::TLSOptions?,
+      runtime: Temporalio::Runtime
+    ) -> void
+  end
+
+  class App
+    attr_reader worker: worker_factory
+    attr_reader client_factory: client_factory
+    attr_reader project: ProjectHandlers?
+
+    def initialize: (
+      worker: worker_factory,
+      client_factory: client_factory,
+      ?project: ProjectHandlers?
+    ) -> void
+  end
+
+  class WorkerContext
+    attr_reader logger: Logger
+    attr_reader task_queue: String
+    attr_reader err_on_unimplemented: bool
+    attr_reader worker_kwargs: Hash[Symbol, untyped]
+
+    def initialize: (
+      logger: Logger,
+      task_queue: String,
+      err_on_unimplemented: bool,
+      worker_kwargs: Hash[Symbol, untyped]
+    ) -> void
+  end
+
+  class ProjectRunMetadata
+    attr_reader run_id: String
+    attr_reader execution_id: String
+
+    def initialize: (
+      run_id: String,
+      execution_id: String
+    ) -> void
+  end
+
+  class ProjectInitContext
+    attr_reader logger: Logger
+    attr_reader run: ProjectRunMetadata
+    attr_reader task_queue: String
+    attr_reader config_json: String
+
+    def initialize: (
+      logger: Logger,
+      run: ProjectRunMetadata,
+      task_queue: String,
+      config_json: String
+    ) -> void
+  end
+
+  class ProjectExecuteContext
+    attr_reader logger: Logger
+    attr_reader run: ProjectRunMetadata
+    attr_reader task_queue: String
+    attr_reader iteration: Integer
+    attr_reader payload: String
+
+    def initialize: (
+      logger: Logger,
+      run: ProjectRunMetadata,
+      task_queue: String,
+      iteration: Integer,
+      payload: String
+    ) -> void
+  end
+
+  class ProjectHandlers
+    attr_reader execute: project_execute_handler
+    attr_reader init: project_init_handler?
+
+    def initialize: (
+      execute: project_execute_handler,
+      ?init: project_init_handler?
+    ) -> void
+  end
+
+  module ClientHelpers
+    def build_client_config: (
+      server_address: String,
+      namespace: String,
+      auth_header: String,
+      tls: bool,
+      tls_cert_path: String,
+      tls_key_path: String,
+      ?tls_server_name: String?,
+      ?disable_host_verification: bool,
+      ?prom_listen_address: String?
+    ) -> ClientConfig
+    def self.build_client_config: (
+      server_address: String,
+      namespace: String,
+      auth_header: String,
+      tls: bool,
+      tls_cert_path: String,
+      tls_key_path: String,
+      ?tls_server_name: String?,
+      ?disable_host_verification: bool,
+      ?prom_listen_address: String?
+    ) -> ClientConfig
+    def build_api_key: (String auth_header) -> String?
+    def self.build_api_key: (String auth_header) -> String?
+    def build_tls_config: (
+      tls: bool,
+      tls_cert_path: String,
+      tls_key_path: String,
+      ?tls_server_name: String?,
+      ?disable_host_verification: bool
+    ) -> Temporalio::Client::Connection::TLSOptions?
+    def self.build_tls_config: (
+      tls: bool,
+      tls_cert_path: String,
+      tls_key_path: String,
+      ?tls_server_name: String?,
+      ?disable_host_verification: bool
+    ) -> Temporalio::Client::Connection::TLSOptions?
+    def build_runtime: (String? prom_listen_address) -> Temporalio::Runtime
+    def self.build_runtime: (String? prom_listen_address) -> Temporalio::Runtime
+  end
+
+  module Helpers
+    def configure_logger: (String log_level, String log_encoding) -> Logger
+    def self.configure_logger: (String log_level, String log_encoding) -> Logger
+  end
+
+  module WorkerCLI
+    def run_cli: (worker_factory, client_factory, Array[String]) -> void
+    def self.run_cli: (worker_factory, client_factory, Array[String]) -> void
+    def run: (worker_factory, client_factory, Array[String]) -> void
+    def self.run: (worker_factory, client_factory, Array[String]) -> void
+    def run_workers: (Array[untyped] workers) -> void
+    def self.run_workers: (Array[untyped] workers) -> void
+    def build_parser: (Hash[Symbol, untyped] options) -> OptionParser
+    def self.build_parser: (Hash[Symbol, untyped] options) -> OptionParser
+    def build_task_queues: (Logger logger, String task_queue, Integer suffix_start, Integer suffix_end) -> Array[String]
+    def self.build_task_queues: (Logger logger, String task_queue, Integer suffix_start, Integer suffix_end) -> Array[String]
+    def build_worker_kwargs: (Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+    def self.build_worker_kwargs: (Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+    def parse_bool: (untyped value) -> bool
+    def self.parse_bool: (untyped value) -> bool
+    def default_options: -> Hash[Symbol, untyped]
+    def self.default_options: -> Hash[Symbol, untyped]
+  end
+
+  class ProjectServiceServer
+    def initialize: (ProjectHandlers handlers, client_factory client_factory) -> void
+    def init: (Temporal::Omes::Projects::V1::InitRequest request, untyped call) -> Temporal::Omes::Projects::V1::InitResponse
+    def execute: (Temporal::Omes::Projects::V1::ExecuteRequest request, untyped call) -> Temporal::Omes::Projects::V1::ExecuteResponse
+    def grpc_status: (untyped code, String details) -> GRPC::BadStatus
+  end
+
+  module ProjectCLI
+    def run_cli: (ProjectHandlers, client_factory, Array[String]) -> void
+    def self.run_cli: (ProjectHandlers, client_factory, Array[String]) -> void
+    def serve: (ProjectHandlers, client_factory, Integer) -> void
+    def self.serve: (ProjectHandlers, client_factory, Integer) -> void
+  end
+
+  def self.default_client_factory: (ClientConfig config) -> Temporalio::Client
+  def self.run: (App app, ?Array[String] argv) -> void
+end

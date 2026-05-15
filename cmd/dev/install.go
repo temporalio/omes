@@ -189,7 +189,18 @@ func installNode(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	pnpmVersion, err := getVersion("pnpm")
+	if err != nil {
+		return err
+	}
 	if err := installViaMise(ctx, "node", version); err != nil {
+		return err
+	}
+	fmt.Println("Activating pnpm", pnpmVersion, "with Corepack...")
+	if err := runCommand(ctx, "corepack", "prepare", "pnpm@"+pnpmVersion, "--activate"); err != nil {
+		return err
+	}
+	if err := runCommand(ctx, "corepack", "pnpm", "--version"); err != nil {
 		return err
 	}
 
@@ -224,6 +235,13 @@ func installRuby(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("✅ Ruby worker dependencies installed successfully!")
+
+	harnessDir := targetDir + "/harness"
+	fmt.Println("Installing Ruby harness dependencies...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "install"); err != nil {
+		return err
+	}
+	fmt.Println("✅ Ruby harness dependencies installed successfully!")
 	return nil
 }
 

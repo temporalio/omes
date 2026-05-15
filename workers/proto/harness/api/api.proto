@@ -1,7 +1,7 @@
 syntax = "proto3";
 package temporal.omes.projects.v1;
 
-option go_package = "github.com/temporalio/omes/workers/go/projects/harness/api";
+option go_package = "github.com/temporalio/omes/workers/go/harness/api";
 
 // Connection options passed from the CLI to the project-server during Init.
 // These fields intentionally mirror the supported Omes client options used for

@@ -174,6 +174,21 @@ func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error 
 		return err
 	}
 
+	fmt.Println("Formatting TypeScript harness...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "format"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting TypeScript harness...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "lint"); err != nil {
+		return err
+	}
+
+	fmt.Println("Compiling TypeScript harness...")
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "typecheck"); err != nil {
+		return err
+	}
+
 	fmt.Println("✅ TypeScript lint-and-format completed successfully!")
 	return nil
 }
@@ -210,6 +225,23 @@ func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
 
 	fmt.Println("Linting Ruby worker...")
 	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "rubocop"); err != nil {
+		return err
+	}
+
+	harnessDir := workerDir + "/harness"
+
+	fmt.Println("Formatting Ruby harness...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "exec", "rubocop", "-A"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting Ruby harness...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "exec", "rubocop"); err != nil {
+		return err
+	}
+
+	fmt.Println("Type checking Ruby harness...")
+	if err := runCommandInDir(ctx, harnessDir, "bundle", "exec", "steep", "check"); err != nil {
 		return err
 	}
 

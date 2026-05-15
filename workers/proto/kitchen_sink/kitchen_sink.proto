@@ -51,6 +51,7 @@ message ClientAction {
     DoQuery do_query = 2;
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
+    DoDescribe do_describe = 5;
   }
 }
 
@@ -78,6 +79,9 @@ message DoSignal {
   }
   // If set, the Signal is a Signal-with-Start.
   bool with_start = 3;
+}
+
+message DoDescribe {
 }
 
 message DoQuery {

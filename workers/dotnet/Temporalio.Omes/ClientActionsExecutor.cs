@@ -65,6 +65,11 @@ public class ClientActionsExecutor
         {
             await ExecuteQueryAction(action.DoQuery);
         }
+        else if (action.DoDescribe != null)
+        {
+            var handle = _client.GetWorkflowHandle(WorkflowId!);
+            await handle.DescribeAsync();
+        }
         else if (action.NestedActions != null)
         {
             await ExecuteClientActionSet(action.NestedActions);

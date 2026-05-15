@@ -202,7 +202,9 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.nexusOperation) {
       throw ApplicationFailure.nonRetryable('ExecuteNexusOperation is not supported');
     } else if (action.nexusOperationAttachCallbacks) {
-      throw ApplicationFailure.nonRetryable('ExecuteNexusOperationAttachCallbacks is not supported');
+      throw ApplicationFailure.nonRetryable(
+        'ExecuteNexusOperationAttachCallbacks is not supported',
+      );
     } else {
       throw new ApplicationFailure('unrecognized action ' + JSON.stringify(action));
     }

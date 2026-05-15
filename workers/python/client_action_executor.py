@@ -53,6 +53,9 @@ class ClientActionExecutor:
             await self._execute_update_action(action.do_update)
         elif action.HasField("do_query"):
             await self._execute_query_action(action.do_query)
+        elif action.HasField("do_describe"):
+            handle = self.client.get_workflow_handle(self.workflow_id)
+            await handle.describe()
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
         else:

@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html"
 	"io"
@@ -16,11 +17,13 @@ import (
 )
 
 type Builder struct {
-	DirName    string
-	SdkOptions clioptions.SdkOptions
-	Logger     *zap.SugaredLogger
-	stdout     io.Writer
-	stderr     io.Writer
+	DirName     string
+	ProjectName string
+	SdkOptions  clioptions.SdkOptions
+	Logger      *zap.SugaredLogger
+	stdout      io.Writer
+	stderr      io.Writer
+	Lambda      bool
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -28,6 +31,10 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name required")
 	} else if strings.ContainsAny(b.DirName, `/\`) {
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
+	}
+
+	if b.ProjectName != "" {
+		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
 
 	buildDir := filepath.Join(baseDir, b.DirName)
@@ -62,28 +69,46 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 }
 
 func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
-		BaseDir: baseDir,
-		DirName: b.DirName,
-		Version: b.SdkOptions.Version,
-		Stdout:  b.stdout,
-		Stderr:  b.stderr,
-		GoModContents: `module github.com/temporalio/omes-worker
+	goMod := `module github.com/temporalio/omes-worker
 
 go 1.20
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
+require github.com/temporalio/omes/workers/go/harness/api v0.0.0`
 
-replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../`,
-		GoMainContents: `package main
+	goMain := `package main
 
 import "github.com/temporalio/omes/workers/go/worker"
 
 func main() {
 	worker.Main()
-}`,
+}`
+
+	if b.Lambda {
+		goMain = `package main
+
+import "github.com/temporalio/omes/workers/go/lambda"
+
+func main() {
+	lambda.Main()
+}`
+	}
+
+	goMod += `
+
+replace github.com/temporalio/omes => ../../../
+replace github.com/temporalio/omes/workers/go => ../
+replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
+
+	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
+		BaseDir:        baseDir,
+		DirName:        b.DirName,
+		Version:        b.SdkOptions.Version,
+		Stdout:         b.stdout,
+		Stderr:         b.stderr,
+		GoModContents:  goMod,
+		GoMainContents: goMain,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
@@ -144,20 +169,23 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	// If version not provided, try to read it from package.json
 	version := b.SdkOptions.Version
 	if version == "" {
-		b, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
+		packageJSON, err := os.ReadFile(filepath.Join(baseDir, "package.json"))
 		if err != nil {
 			return nil, fmt.Errorf("failed reading package.json: %w", err)
 		}
-		for line := range strings.SplitSeq(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "\"temporalio:\"") || strings.HasPrefix(line, "\"@temporalio/") {
-				split := strings.Split(line, "\"")
-				version = split[len(split)-2]
-				break
-			}
+
+		var pkg struct {
+			Dependencies map[string]string `json:"dependencies"`
 		}
+		if err := json.Unmarshal(packageJSON, &pkg); err != nil {
+			return nil, fmt.Errorf("failed parsing package.json: %w", err)
+		}
+		// Pick a single temporal dependency, assumption is that the version for
+		// other temporal dependency versions will match.
+		const temporalTypeScriptSDKPackage = "@temporalio/client"
+		version = pkg.Dependencies[temporalTypeScriptSDKPackage]
 		if version == "" {
-			return nil, fmt.Errorf("version not found in package.json")
+			return nil, fmt.Errorf("version not found in package.json for %s", temporalTypeScriptSDKPackage)
 		}
 	}
 
@@ -186,7 +214,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		ApplyToCommand: nil,
 		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
 		MoreDependencies: map[string]string{
-			"winston": "^3.11.0",
+			"@temporalio/omes-project-harness": "file:../harness",
+			"winston":                          "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
@@ -273,37 +302,22 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 }
 
 func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	// If version not provided, read the version constraint from the gemspec.
-	version := b.SdkOptions.Version
-	if version == "" {
-		gemspecBytes, err := os.ReadFile(filepath.Join(baseDir, "omes.gemspec"))
-		if err != nil {
-			return nil, fmt.Errorf("failed reading omes.gemspec: %w", err)
-		}
-		for _, line := range strings.Split(string(gemspecBytes), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.Contains(line, "'temporalio'") || strings.Contains(line, `"temporalio"`) {
-				parts := strings.Split(line, ",")
-				if len(parts) >= 2 {
-					version = strings.TrimSpace(parts[1])
-					version = strings.Trim(version, `"'`)
-				}
-				break
-			}
-		}
-		if version == "" {
-			return nil, fmt.Errorf("version not found in omes.gemspec")
-		}
-	}
-
-	prog, err := sdkbuild.BuildRubyProgram(ctx, sdkbuild.BuildRubyProgramOptions{
+	options := sdkbuild.BuildRubyProgramOptions{
 		BaseDir:   baseDir,
 		SourceDir: baseDir,
 		DirName:   b.DirName,
-		Version:   version,
+		Version:   b.SdkOptions.Version,
 		Stdout:    b.stdout,
 		Stderr:    b.stderr,
-	})
+	}
+	if b.ProjectName == "" {
+		options.MoreDependencies = []sdkbuild.RubyDependency{{
+			Name: "harness",
+			Path: filepath.Join(baseDir, "harness"),
+		}}
+	}
+
+	prog, err := sdkbuild.BuildRubyProgram(ctx, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
@@ -312,4 +326,9 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 
 func BaseDir(repoDir string, lang clioptions.Language) string {
 	return filepath.Join(repoDir, "workers", lang.String())
+}
+
+func ProjectDir(baseDir string, projectName string) string {
+	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
+	return filepath.Join(baseDir, projectPath)
 }

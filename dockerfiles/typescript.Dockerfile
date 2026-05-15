@@ -1,6 +1,6 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH node:20-bullseye AS build
+FROM --platform=linux/$TARGETARCH node:24-bullseye AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install protobuf compiler
@@ -26,7 +26,8 @@ COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
 COPY workers/*.go ./workers/
-COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+COPY go.mod go.sum versions.env ./
 
 # Build the CLI
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
@@ -47,14 +48,14 @@ ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
 
-# Install pnpm (sdkbuild uses pnpm to build typescript programs)
-RUN npm install -g pnpm
+# Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm`.
+RUN . ./versions.env \
+ && test -n "${PNPM_VERSION}" \
+ && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
+ && corepack pnpm --version
 
-# Build typescript proto files
-# hadolint ignore=DL3003
-RUN cd workers/typescript && npm install && npm run proto-gen
-
-# Build the worker
+# prepare-worker builds the TypeScript workspace itself: it installs npm deps,
+# runs the root build, and generates the prepared sdkbuild package.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.

@@ -20,17 +20,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      # Scope to just Python for project build tests
+      - name: Install Tools
+        run: |
+          go run ./cmd/dev install python
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-omes.xml
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-omes.xml"
@@ -63,11 +71,11 @@ jobs:
             tools: rust go protoc
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -98,7 +106,7 @@ jobs:
         sdk: [go, java, python, ruby, typescript, dotnet]
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Build ${{ matrix.sdk }} worker image
@@ -144,6 +152,78 @@ jobs:
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m
 
+  build-project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [python]
+        include:
+          - sdk: python
+            project: helloworld
+            dockerfile: dockerfiles/python.Dockerfile
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set ${{ matrix.sdk }} project image metadata
+        run: |
+          echo "PROJECT_IMAGE_SDK_VERSION=v${PYTHON_SDK_VERSION}" >> "$GITHUB_ENV"
+          echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+          echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
+          echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.sdk }} ${{ matrix.project }} project image
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            --build-arg PROJECT_NAME=${{ matrix.project }} \
+            --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
+            -t ${PROJECT_IMAGE_TAG} .
+      - name: Create Docker network
+        run: |
+          docker network create omes-project-net
+      - name: Start ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        run: |
+          docker run \
+            --rm \
+            --name ${PROJECT_WORKER_CONTAINER} \
+            --network omes-project-net \
+            -p 7233:7233 \
+            ${PROJECT_IMAGE_TAG} \
+            --run-id ${PROJECT_RUN_ID} \
+            --embedded-server-address 0.0.0.0:7233 &
+      - name: Wait for embedded server
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
+      - name: Run project scenario against ${{ matrix.sdk }} ${{ matrix.project }} worker image
+        run: |
+          docker run --rm \
+            --network omes-project-net \
+            ${PROJECT_IMAGE_TAG} \
+            run-scenario \
+            --scenario project \
+            --run-id ${PROJECT_RUN_ID} \
+            --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
+            --iterations 1 \
+            --connect-timeout 30s
+      - name: Print project worker logs
+        if: failure()
+        run: |
+          docker logs ${PROJECT_WORKER_CONTAINER} || true
+      - name: Stop ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        if: always()
+        run: |
+          docker stop ${PROJECT_WORKER_CONTAINER} || true
+      - name: Remove Docker network
+        if: always()
+        run: |
+          docker network rm omes-project-net || true
+
   test-kitchensink:
     runs-on: ubuntu-latest
     strategy:
@@ -165,11 +245,11 @@ jobs:
             tools: dotnet go
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -185,7 +265,7 @@ jobs:
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
       - name: Publish Kitchensink Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-kitchensink-${{ matrix.sdk }}.xml"
@@ -199,11 +279,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "true"
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -221,7 +301,7 @@ jobs:
           git diff > generator.diff
           git diff --exit-code
       - name: Upload generator diff
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         if: always()
         with:
           name: generator-diff
@@ -232,14 +312,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
       - name: Build CLI image
         run: |
           go run ./cmd/dev build-cli-image
@@ -263,7 +343,7 @@ jobs:
       ruby-sdk-version: ${{ steps.set-output.outputs.ruby-sdk-version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Load versions
         run: |
           set -a && source versions.env && set +a

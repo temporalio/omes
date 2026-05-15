@@ -41,6 +41,9 @@ class ClientActionExecutor
       execute_update_action(action.do_update)
     when :do_query
       execute_query_action(action.do_query)
+    when :do_describe
+      handle = @client.workflow_handle(@workflow_id)
+      handle.describe
     when :nested_actions
       execute_client_action_set(action.nested_actions)
     else

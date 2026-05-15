@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+D = Steep::Diagnostic
+
+target :harness do
+  signature 'sig'
+  check 'lib/harness.rb'
+  check 'lib/harness'
+  ignore 'lib/harness/api', 'tests'
+  library 'logger', 'optparse'
+  configure_code_diagnostics do |hash|
+    hash[D::Ruby::UnknownConstant] = :information
+    hash[D::Ruby::UnannotatedEmptyCollection] = :information
+    hash[D::Ruby::UndeclaredMethodDefinition] = :information
+  end
+end

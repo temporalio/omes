@@ -77,7 +77,11 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	var prog sdkbuild.Program
 	if r.DirName == "" {
 		// Create temp dir
-		tempDir, err := os.MkdirTemp(baseDir, "omes-temp-")
+		tempBaseDir := baseDir
+		if r.ProjectName != "" {
+			tempBaseDir = ProjectDir(baseDir, r.ProjectName)
+		}
+		tempDir, err := os.MkdirTemp(tempBaseDir, "omes-temp-")
 		if err != nil {
 			return fmt.Errorf("failed creating temp dir: %w", err)
 		}
@@ -92,6 +96,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 	} else {
 		var err error
+		if r.ProjectName != "" {
+			baseDir = ProjectDir(baseDir, r.ProjectName)
+		}
 		loadDir := filepath.Join(baseDir, r.DirName)
 		switch r.SdkOptions.Language {
 		case clioptions.LangGo:
@@ -116,13 +123,18 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
-	if r.SdkOptions.Language == clioptions.LangPython {
+	switch r.SdkOptions.Language {
+	case clioptions.LangPython:
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
-	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
-		// Node also needs module
-		args = append(args, "./tslib/omes.js")
+	case clioptions.LangTypeScript:
+		// Node also needs module before the harness subcommand.
+		args = append(args, "./tslib/omes.js", "worker")
+	case clioptions.LangDotNet, clioptions.LangRuby, clioptions.LangGo:
+		// .NET, Ruby, and Go just need the harness worker subcommand
+		args = append(args, "worker")
 	}
+
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
 		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
