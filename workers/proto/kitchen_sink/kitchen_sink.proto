@@ -85,12 +85,11 @@ message DoSignal {
 message DoDescribe {
 }
 
-// Invoke an activity directly via the low-level StartActivityExecution /
-// PollActivityExecution RPCs, bypassing normal workflow activity scheduling.
-// Requires server-side support for workflow-independent activities.
+// Invoke an activity via StartActivityExecution / PollActivityExecution RPCs,
+// bypassing workflow activity scheduling. Requires server-side support for
+// workflow-independent activities.
 message DoStandaloneActivity {
-  int32 bytes_to_receive = 1;
-  int32 bytes_to_return = 2;
+  ExecuteActivityAction activity = 1;
 }
 
 message DoQuery {

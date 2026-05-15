@@ -290,16 +290,40 @@ func RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout time.Dura
 	}
 }
 
-// StandaloneActivityClientAction creates a ClientAction that invokes the `payload`
-// activity directly via the low-level StartActivityExecution / PollActivityExecution
-// RPCs, bypassing normal workflow activity scheduling.
-func StandaloneActivityClientAction(bytesToReceive, bytesToReturn int32) *ClientAction {
+// ActivityNameAndArgs maps an ExecuteActivityAction's activity_type to the
+// registered activity name and its args. Shared by the workflow-scheduled
+// and standalone paths. Unrecognized types fall back to "noop".
+func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
+	if delay := act.GetDelay(); delay != nil {
+		return "delay", []any{delay.AsDuration()}
+	} else if payload := act.GetPayload(); payload != nil {
+		inputData := make([]byte, payload.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		return "payload", []any{inputData, payload.BytesToReturn}
+	} else if client := act.GetClient(); client != nil {
+		return "client", []any{client}
+	} else if retryable := act.GetRetryableError(); retryable != nil {
+		return "retryable_error", []any{retryable}
+	} else if timeout := act.GetTimeout(); timeout != nil {
+		return "timeout", []any{timeout}
+	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
+		return "heartbeat", []any{heartbeat}
+	}
+	return "noop", nil
+}
+
+// StandaloneActivity wraps an ExecuteActivityAction so it runs via the
+// standalone-activity RPCs instead of being workflow-scheduled. Defaults
+// StartToCloseTimeout to 30s if unset.
+func StandaloneActivity(activity *ExecuteActivityAction) *ClientAction {
+	if activity.StartToCloseTimeout == nil {
+		activity.StartToCloseTimeout = durationpb.New(30 * time.Second)
+	}
 	return &ClientAction{
 		Variant: &ClientAction_DoStandaloneActivity{
-			DoStandaloneActivity: &DoStandaloneActivity{
-				BytesToReceive: bytesToReceive,
-				BytesToReturn:  bytesToReturn,
-			},
+			DoStandaloneActivity: &DoStandaloneActivity{Activity: activity},
 		},
 	}
 }

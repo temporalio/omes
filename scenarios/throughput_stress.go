@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -442,11 +443,23 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
 		}
 
-		// Standalone activity uses low-level RPCs that require server-side support
-		// for workflow-independent activities (not available in all environments).
+		// Standalone activity requires server-side support for workflow-independent
+		// activities. Matches bench-go's standalone-activity prebuilt: a sized
+		// payload activity scheduled via raw RPCs with an RPC-level retry policy.
 		if t.config.EnableStandaloneActivity {
 			asyncActions = append(asyncActions,
-				ClientActivity(ClientActions(StandaloneActivityClientAction(256, 256)), DefaultRemoteActivity),
+				ClientActivity(ClientActions(StandaloneActivity(&ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+					RetryPolicy: &common.RetryPolicy{
+						InitialInterval:    durationpb.New(100 * time.Millisecond),
+						BackoffCoefficient: 1,
+					},
+				})), DefaultRemoteActivity),
 			)
 		}
 

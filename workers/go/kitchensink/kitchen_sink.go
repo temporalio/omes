@@ -347,31 +347,7 @@ func (ws *KSWorkflowState) handleAction(
 }
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
-	actType := "noop"
-	args := make([]interface{}, 0)
-	if delay := act.GetDelay(); delay != nil {
-		actType = "delay"
-		args = append(args, delay.AsDuration())
-	} else if payload := act.GetPayload(); payload != nil {
-		actType = "payload"
-		inputData := make([]byte, payload.BytesToReceive)
-		for i := range inputData {
-			inputData[i] = byte(i % 256)
-		}
-		args = append(args, inputData, payload.BytesToReturn)
-	} else if client := act.GetClient(); client != nil {
-		actType = "client"
-		args = append(args, client)
-	} else if retryable := act.GetRetryableError(); retryable != nil {
-		actType = "retryable_error"
-		args = append(args, retryable)
-	} else if timeout := act.GetTimeout(); timeout != nil {
-		actType = "timeout"
-		args = append(args, timeout)
-	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
-		actType = "heartbeat"
-		args = append(args, heartbeat)
-	}
+	actType, args := kitchensink.ActivityNameAndArgs(act)
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),

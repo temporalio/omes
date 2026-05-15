@@ -14,7 +14,6 @@ import (
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type ClientActionsExecutor struct {
@@ -142,27 +141,37 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	}
 }
 
-// executeStandaloneActivity invokes the `payload` activity directly via the
-// StartActivityExecution / PollActivityExecution RPCs, bypassing workflow
-// activity scheduling. Requires server-side support for workflow-independent
-// activities.
+// executeStandaloneActivity invokes the embedded activity via the raw
+// StartActivityExecution / PollActivityExecution RPCs.
 func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
-	activityID := fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
-	dc := converter.GetDefaultDataConverter()
-	input, err := dc.ToPayloads(make([]byte, sa.BytesToReceive), sa.BytesToReturn)
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
+	}
+
+	actType, args := ActivityNameAndArgs(act)
+	input, err := converter.GetDefaultDataConverter().ToPayloads(args...)
 	if err != nil {
 		return fmt.Errorf("failed to encode standalone activity input: %w", err)
 	}
+
+	taskQueue := act.TaskQueue
+	if taskQueue == "" {
+		taskQueue = e.WorkflowOptions.TaskQueue
+	}
+
+	activityID := fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano())
 	_, err = e.Client.WorkflowService().StartActivityExecution(ctx, &workflowservicepb.StartActivityExecutionRequest{
-		Namespace:    e.Namespace,
-		ActivityId:   activityID,
-		ActivityType: &commonpb.ActivityType{Name: "payload"},
-		TaskQueue: &taskqueuepb.TaskQueue{
-			Name: e.WorkflowOptions.TaskQueue,
-			Kind: enumspb.TASK_QUEUE_KIND_NORMAL,
-		},
-		Input:               input,
-		StartToCloseTimeout: durationpb.New(30 * time.Second),
+		Namespace:              e.Namespace,
+		ActivityId:             activityID,
+		ActivityType:           &commonpb.ActivityType{Name: actType},
+		TaskQueue:              &taskqueuepb.TaskQueue{Name: taskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+		Input:                  input,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout,
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout,
+		StartToCloseTimeout:    act.StartToCloseTimeout,
+		HeartbeatTimeout:       act.HeartbeatTimeout,
+		RetryPolicy:            act.RetryPolicy,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to start standalone activity: %w", err)
@@ -181,6 +190,14 @@ func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, s
 	}
 	if failure := outcome.GetFailure(); failure != nil {
 		return fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
+	}
+
+	// Only `payload` returns a value; decode to catch encoding drift.
+	if result := outcome.GetResult(); result != nil && actType == "payload" {
+		var data []byte
+		if err := converter.GetDefaultDataConverter().FromPayloads(result, &data); err != nil {
+			return fmt.Errorf("failed to decode standalone activity result: %w", err)
+		}
 	}
 	return nil
 }
