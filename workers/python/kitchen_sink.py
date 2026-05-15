@@ -27,6 +27,7 @@ from protos.kitchen_sink_pb2 import (
     ExecuteActivityAction,
     ExecuteNexusOperation,
     NexusHandlerInput,
+    SendSignalAction,
     WorkflowInput,
     WorkflowState,
 )
@@ -197,6 +198,8 @@ class KitchenSinkWorkflow:
             await handle_nexus_operation(action.nexus_operation)
         elif action.HasField("await_workflow_completion"):
             await handle_await_workflow_completion(action.await_workflow_completion)
+        elif action.HasField("send_signal"):
+            await handle_send_signal(action.send_signal)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -350,6 +353,14 @@ async def handle_await_workflow_completion(action: AwaitWorkflowCompletion) -> N
         start_to_close_timeout=timedelta(hours=24),
         heartbeat_timeout=timedelta(seconds=30),
     )
+
+
+async def handle_send_signal(action: SendSignalAction) -> None:
+    """Send a signal to an external workflow."""
+    ext_handle = workflow.get_external_workflow_handle(
+        action.workflow_id, run_id=action.run_id or None
+    )
+    await ext_handle.signal(action.signal_name)
 
 
 async def handle_awaitable_choice(

@@ -349,6 +349,8 @@ func (ws *KSWorkflowState) handleAction(
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
 	} else if awc := action.GetAwaitWorkflowCompletion(); awc != nil {
 		return nil, handleAwaitWorkflowCompletion(ctx, awc)
+	} else if sig := action.GetSendSignal(); sig != nil {
+		return nil, handleSendSignal(ctx, sig)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
@@ -515,6 +517,19 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 				}
 				return nil
 			}
+			return fut.Get(ctx, nil)
+		})
+}
+
+// handleSendSignal sends a signal to an external workflow.
+func handleSendSignal(ctx workflow.Context, action *kitchensink.SendSignalAction) error {
+	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.Future {
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
+	}, action.AwaitableChoice,
+		func(ctx workflow.Context, fut workflow.Future) error {
+			return fut.Get(ctx, nil)
+		},
+		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)
 		})
 }
