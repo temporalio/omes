@@ -43,9 +43,9 @@ const (
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
-	// EnableStandaloneActivityFlag enables standalone activity execution via the
-	// low-level StartActivityExecution / PollActivityExecution RPCs. Requires
-	// server-side support for workflow-independent activities. Default is false.
+	// EnableStandaloneActivityFlag enables standalone activity execution.
+	// Requires server-side support for workflow-independent activities.
+	// Default is false.
 	EnableStandaloneActivityFlag = "enable-standalone-activity"
 )
 
@@ -443,23 +443,9 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
 		}
 
-		// Standalone activity requires server-side support for workflow-independent
-		// activities. Matches bench-go's standalone-activity prebuilt: a sized
-		// payload activity scheduled via raw RPCs with an RPC-level retry policy.
 		if t.config.EnableStandaloneActivity {
 			asyncActions = append(asyncActions,
-				ClientActivity(ClientActions(StandaloneActivity(&ExecuteActivityAction{
-					ActivityType: &ExecuteActivityAction_Payload{
-						Payload: &ExecuteActivityAction_PayloadActivity{
-							BytesToReceive: 256,
-							BytesToReturn:  256,
-						},
-					},
-					RetryPolicy: &common.RetryPolicy{
-						InitialInterval:    durationpb.New(100 * time.Millisecond),
-						BackoffCoefficient: 1,
-					},
-				})), DefaultRemoteActivity),
+				ClientActivity(ClientActions(t.createStandaloneActivity()), DefaultRemoteActivity),
 			)
 		}
 
@@ -634,6 +620,21 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 			},
 		},
 	}
+}
+
+func (t *tpsExecutor) createStandaloneActivity() *ClientAction {
+	return StandaloneActivity(&ExecuteActivityAction{
+		ActivityType: &ExecuteActivityAction_Payload{
+			Payload: &ExecuteActivityAction_PayloadActivity{
+				BytesToReceive: 256,
+				BytesToReturn:  256,
+			},
+		},
+		RetryPolicy: &common.RetryPolicy{
+			InitialInterval:    durationpb.New(100 * time.Millisecond),
+			BackoffCoefficient: 1,
+		},
+	})
 }
 
 func (t *tpsExecutor) createNexusEchoSyncAction() *Action {

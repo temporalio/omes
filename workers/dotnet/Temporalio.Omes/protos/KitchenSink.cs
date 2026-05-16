@@ -2814,9 +2814,8 @@ namespace Temporal.Omes.KitchenSink {
   }
 
   /// <summary>
-  /// Invoke an activity via StartActivityExecution / PollActivityExecution RPCs,
-  /// bypassing workflow activity scheduling. Requires server-side support for
-  /// workflow-independent activities.
+  /// Invoke an activity as a standalone activity. Requires server-side support
+  /// for workflow-independent activities.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class DoStandaloneActivity : pb::IMessage<DoStandaloneActivity>

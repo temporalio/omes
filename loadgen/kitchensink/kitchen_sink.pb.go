@@ -792,9 +792,8 @@ func (*DoDescribe) Descriptor() ([]byte, []int) {
 	return file_kitchen_sink_proto_rawDescGZIP(), []int{6}
 }
 
-// Invoke an activity via StartActivityExecution / PollActivityExecution RPCs,
-// bypassing workflow activity scheduling. Requires server-side support for
-// workflow-independent activities.
+// Invoke an activity as a standalone activity. Requires server-side support
+// for workflow-independent activities.
 type DoStandaloneActivity struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

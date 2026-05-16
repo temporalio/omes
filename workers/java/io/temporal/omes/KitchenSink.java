@@ -9293,9 +9293,8 @@ public final class KitchenSink {
   }
   /**
    * <pre>
-   * Invoke an activity via StartActivityExecution / PollActivityExecution RPCs,
-   * bypassing workflow activity scheduling. Requires server-side support for
-   * workflow-independent activities.
+   * Invoke an activity as a standalone activity. Requires server-side support
+   * for workflow-independent activities.
    * </pre>
    *
    * Protobuf type {@code temporal.omes.kitchen_sink.DoStandaloneActivity}
@@ -9523,9 +9522,8 @@ public final class KitchenSink {
     }
     /**
      * <pre>
-     * Invoke an activity via StartActivityExecution / PollActivityExecution RPCs,
-     * bypassing workflow activity scheduling. Requires server-side support for
-     * workflow-independent activities.
+     * Invoke an activity as a standalone activity. Requires server-side support
+     * for workflow-independent activities.
      * </pre>
      *
      * Protobuf type {@code temporal.omes.kitchen_sink.DoStandaloneActivity}

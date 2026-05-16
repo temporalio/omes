@@ -33,7 +33,6 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 		},
 		WorkflowType:  "kitchenSink",
 		WorkflowInput: &kitchensink.WorkflowInput{},
-		Namespace:     info.WorkflowNamespace,
 	}
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
@@ -352,7 +351,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
 
@@ -385,7 +384,7 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
@@ -539,27 +538,6 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 	<-time.After(config.SuccessDuration.AsDuration())
 	activity.RecordHeartbeat(ctx)
 	return nil
-}
-
-func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
-	if retryPolicy == nil {
-		return nil
-	}
-
-	p := temporal.RetryPolicy{
-		BackoffCoefficient:     retryPolicy.BackoffCoefficient,
-		MaximumAttempts:        retryPolicy.MaximumAttempts,
-		NonRetryableErrorTypes: retryPolicy.NonRetryableErrorTypes,
-	}
-
-	if v := retryPolicy.MaximumInterval; v != nil {
-		p.MaximumInterval = v.AsDuration()
-	}
-	if v := retryPolicy.InitialInterval; v != nil {
-		p.InitialInterval = v.AsDuration()
-	}
-
-	return &p
 }
 
 type ReturnOrErr struct {
