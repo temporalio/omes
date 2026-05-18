@@ -6,3 +6,4 @@
  */
 
 rootProject.name = 'omes'
+include 'harness'
