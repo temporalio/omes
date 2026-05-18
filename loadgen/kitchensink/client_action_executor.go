@@ -124,12 +124,42 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetDoDescribe() != nil {
 		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
 		return err
+	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
+		return e.executeStandaloneActivity(ctx, sa)
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
+}
+
+func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
+	}
+
+	actType, args := ActivityNameAndArgs(act)
+
+	taskQueue := act.TaskQueue
+	if taskQueue == "" {
+		taskQueue = e.WorkflowOptions.TaskQueue
+	}
+
+	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
+		ID:                     fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano()),
+		TaskQueue:              taskQueue,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
+		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
+		HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
+		RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
+	}, actType, args...)
+	if err != nil {
+		return fmt.Errorf("failed to start standalone activity: %w", err)
+	}
+	return handle.Get(ctx, nil)
 }
 
 func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {

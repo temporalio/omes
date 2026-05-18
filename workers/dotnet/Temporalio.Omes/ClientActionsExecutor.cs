@@ -70,6 +70,13 @@ public class ClientActionsExecutor
             var handle = _client.GetWorkflowHandle(WorkflowId!);
             await handle.DescribeAsync();
         }
+        else if (action.DoStandaloneActivity != null)
+        {
+            throw new ApplicationFailureException(
+                "do_standalone_activity is not implemented for .NET",
+                "UnsupportedOperation",
+                nonRetryable: true);
+        }
         else if (action.NestedActions != null)
         {
             await ExecuteClientActionSet(action.NestedActions);

@@ -52,6 +52,7 @@ message ClientAction {
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
+    DoStandaloneActivity do_standalone_activity = 6;
   }
 }
 
@@ -82,6 +83,12 @@ message DoSignal {
 }
 
 message DoDescribe {
+}
+
+// Invoke an activity as a standalone activity. Requires server-side support
+// for workflow-independent activities.
+message DoStandaloneActivity {
+  ExecuteActivityAction activity = 1;
 }
 
 message DoQuery {
