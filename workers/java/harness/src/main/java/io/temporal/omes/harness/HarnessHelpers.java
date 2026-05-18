@@ -16,7 +16,10 @@ final class HarnessHelpers {
   static Logger configure(String logLevel, String logEncoding) {
     Logger logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     if (!(logger instanceof ch.qos.logback.classic.Logger)) {
-      return logger;
+      throw new IllegalStateException(
+          "The Java harness needs Logback for logging, but found "
+              + logger.getClass().getName()
+              + " instead.");
     }
 
     ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) logger;
