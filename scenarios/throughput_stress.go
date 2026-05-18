@@ -11,9 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -434,6 +436,7 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
+			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -652,6 +655,58 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 			},
 		},
 	}
+}
+
+// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
+// fire N ops with wait_started, signal the handler to unblock, then await its completion.
+func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
+	const numOps = 3
+	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
+
+	waitStartedOp := func() *Action {
+		return &Action{
+			Variant: &Action_NexusOperation{
+				NexusOperation: &ExecuteNexusOperation{
+					Endpoint:                        t.config.NexusEndpoint,
+					Operation:                       "echo-async",
+					Input:                           "hello",
+					HandlerWorkflowId:               handlerWfID,
+					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+					WaitForSignal:                   true,
+					AwaitableChoice: &AwaitableChoice{
+						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
+					},
+				},
+			},
+		}
+	}
+	fanout := make([]*Action, 0, numOps)
+	for i := 0; i < numOps; i++ {
+		fanout = append(fanout, waitStartedOp())
+	}
+
+	return &Action{Variant: &Action_NestedActionSet{
+		NestedActionSet: &ActionSet{
+			Concurrent: false,
+			Actions: []*Action{
+				{Variant: &Action_NestedActionSet{
+					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
+				}},
+				{Variant: &Action_SendSignal{
+					SendSignal: &SendSignalAction{
+						WorkflowId: handlerWfID,
+						SignalName: "unblock",
+						AwaitableChoice: &AwaitableChoice{
+							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+						},
+					},
+				}},
+				{Variant: &Action_AwaitPendingActions{
+					AwaitPendingActions: &AwaitPendingActions{},
+				}},
+			},
+		},
+	}}
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {

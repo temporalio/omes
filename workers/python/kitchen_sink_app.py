@@ -28,7 +28,10 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
     return Worker(
         client,
         task_queue=context.task_queue,
-        workflows=[KitchenSinkWorkflow, NexusHandlerWorkflow],
+        workflows=[
+            KitchenSinkWorkflow,
+            NexusHandlerWorkflow,
+        ],
         activities=[
             noop_activity,
             delay_activity,

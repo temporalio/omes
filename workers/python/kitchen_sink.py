@@ -26,6 +26,7 @@ from protos.kitchen_sink_pb2 import (
     ExecuteActivityAction,
     ExecuteNexusOperation,
     NexusHandlerInput,
+    SendSignalAction,
     WorkflowInput,
     WorkflowState,
 )
@@ -37,6 +38,9 @@ KITCHEN_SINK_SERVICE_NAME = "kitchen-sink"
 class KitchenSinkWorkflow:
     action_set_queue: asyncio.Queue[ActionSet] = asyncio.Queue()
     workflow_state = WorkflowState()
+
+    def __init__(self) -> None:
+        self.pending_actions: list[asyncio.Task] = []
 
     @workflow.signal
     async def do_actions_signal(self, signal_actions: DoSignal.DoSignalActions) -> None:
@@ -137,11 +141,13 @@ class KitchenSinkWorkflow:
             await handle_awaitable_choice(
                 asyncio.sleep(action.timer.milliseconds / 1000),
                 action.timer.awaitable_choice,
+                pending=self.pending_actions,
             )
         elif action.HasField("exec_activity"):
             await handle_awaitable_choice(
                 launch_activity(action.exec_activity),
                 action.exec_activity.awaitable_choice,
+                pending=self.pending_actions,
             )
         elif action.HasField("exec_child_workflow"):
             child_action = action.exec_child_workflow
@@ -159,6 +165,7 @@ class KitchenSinkWorkflow:
                 child_action.awaitable_choice,
                 after_started_fn=wait_task_complete,
                 after_completed_fn=wait_child_wf_complete,
+                pending=self.pending_actions,
             )
         elif action.HasField("set_patch_marker"):
             if action.set_patch_marker.deprecated:
@@ -193,7 +200,13 @@ class KitchenSinkWorkflow:
         elif action.HasField("nested_action_set"):
             return await self.handle_action_set(action.nested_action_set)
         elif action.HasField("nexus_operation"):
-            await handle_nexus_operation(action.nexus_operation)
+            await handle_nexus_operation(
+                action.nexus_operation, pending=self.pending_actions
+            )
+        elif action.HasField("await_pending_actions"):
+            await handle_await_pending_actions(self.pending_actions)
+        elif action.HasField("send_signal"):
+            await handle_send_signal(action.send_signal, pending=self.pending_actions)
         else:
             raise exceptions.ApplicationError("unrecognized action: " + str(action))
 
@@ -287,7 +300,10 @@ async def wait_child_wf_complete(task: asyncio.Task[ChildWorkflowHandle]):
     await res
 
 
-async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
+async def handle_nexus_operation(
+    nexus_op: ExecuteNexusOperation,
+    pending: Optional[list[asyncio.Task]] = None,
+):
     client = workflow.create_nexus_client(
         endpoint=nexus_op.endpoint,
         service=KITCHEN_SINK_SERVICE_NAME,
@@ -298,6 +314,9 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
     op_input = NexusHandlerInput(
         input=nexus_op.input,
         before_actions=nexus_op.before_actions,
+        handler_workflow_id=nexus_op.handler_workflow_id,
+        handler_workflow_id_conflict_policy=nexus_op.handler_workflow_id_conflict_policy,
+        wait_for_signal=nexus_op.wait_for_signal,
     )
     output_type = str
 
@@ -331,7 +350,30 @@ async def handle_nexus_operation(nexus_op: ExecuteNexusOperation):
         choice,
         after_started_fn=after_nexus_started,
         after_completed_fn=wait_task_complete,
+        pending=pending,
     )
+
+
+async def handle_await_pending_actions(pending: list[asyncio.Task]) -> None:
+    to_await = list(pending)
+    pending.clear()
+    for i, task in enumerate(to_await):
+        try:
+            await task
+        except Exception as e:
+            raise exceptions.ApplicationError(f"pending action {i} failed: {e}") from e
+
+
+async def handle_send_signal(
+    action: SendSignalAction, pending: Optional[list[asyncio.Task]] = None
+) -> None:
+    async def deliver() -> None:
+        ext_handle = workflow.get_external_workflow_handle(
+            action.workflow_id, run_id=action.run_id or None
+        )
+        await ext_handle.signal(action.signal_name)
+
+    await handle_awaitable_choice(deliver(), action.awaitable_choice, pending=pending)
 
 
 async def handle_awaitable_choice(
@@ -339,6 +381,7 @@ async def handle_awaitable_choice(
     choice: AwaitableChoice,
     after_started_fn: Callable[[asyncio.Task], Awaitable] = brief_wait,
     after_completed_fn: Callable[[asyncio.Task], Awaitable] = wait_task_complete,
+    pending: Optional[list[asyncio.Task]] = None,
 ):
     if isinstance(awaitable, asyncio.Task):
         task = awaitable
@@ -364,6 +407,11 @@ async def handle_awaitable_choice(
             await after_completed_fn(task)
             task.cancel()
             did_cancel = True
+        elif choice.HasField("wait_started"):
+            await after_started_fn(task)
+            if pending is not None:
+                pending.append(task)
+            return
         else:
             await after_completed_fn(task)
     except (asyncio.CancelledError, exceptions.NexusOperationError):
@@ -400,9 +448,17 @@ def convert_act_cancel_type(
 
 @workflow.defn
 class NexusHandlerWorkflow:
+    _unblocked: bool = False
+
     @workflow.run
     async def run(self, input: NexusHandlerInput) -> str:
         state = KitchenSinkWorkflow()
         for action_set in input.before_actions:
             await state.handle_action_set(action_set)
+        if input.wait_for_signal:
+            await workflow.wait_condition(lambda: self._unblocked)
         return input.input
+
+    @workflow.signal(name="unblock")
+    async def unblock(self) -> None:
+        self._unblocked = True

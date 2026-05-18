@@ -16595,6 +16595,21 @@ java.lang.String defaultValue) {
      */
     io.temporal.omes.KitchenSink.ExecuteNexusOperationOrBuilder getNexusOperationOrBuilder();
 
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     * @return Whether the awaitPendingActions field is set.
+     */
+    boolean hasAwaitPendingActions();
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     * @return The awaitPendingActions.
+     */
+    io.temporal.omes.KitchenSink.AwaitPendingActions getAwaitPendingActions();
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     */
+    io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder getAwaitPendingActionsOrBuilder();
+
     io.temporal.omes.KitchenSink.Action.VariantCase getVariantCase();
   }
   /**
@@ -16653,6 +16668,7 @@ java.lang.String defaultValue) {
       CONTINUE_AS_NEW(13),
       NESTED_ACTION_SET(14),
       NEXUS_OPERATION(15),
+      AWAIT_PENDING_ACTIONS(17),
       VARIANT_NOT_SET(0);
       private final int value;
       private VariantCase(int value) {
@@ -16685,6 +16701,7 @@ java.lang.String defaultValue) {
           case 13: return CONTINUE_AS_NEW;
           case 14: return NESTED_ACTION_SET;
           case 15: return NEXUS_OPERATION;
+          case 17: return AWAIT_PENDING_ACTIONS;
           case 0: return VARIANT_NOT_SET;
           default: return null;
         }
@@ -17165,6 +17182,37 @@ java.lang.String defaultValue) {
       return io.temporal.omes.KitchenSink.ExecuteNexusOperation.getDefaultInstance();
     }
 
+    public static final int AWAIT_PENDING_ACTIONS_FIELD_NUMBER = 17;
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     * @return Whether the awaitPendingActions field is set.
+     */
+    @java.lang.Override
+    public boolean hasAwaitPendingActions() {
+      return variantCase_ == 17;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     * @return The awaitPendingActions.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.AwaitPendingActions getAwaitPendingActions() {
+      if (variantCase_ == 17) {
+         return (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_;
+      }
+      return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder getAwaitPendingActionsOrBuilder() {
+      if (variantCase_ == 17) {
+         return (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_;
+      }
+      return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -17223,6 +17271,9 @@ java.lang.String defaultValue) {
       }
       if (variantCase_ == 15) {
         output.writeMessage(15, (io.temporal.omes.KitchenSink.ExecuteNexusOperation) variant_);
+      }
+      if (variantCase_ == 17) {
+        output.writeMessage(17, (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -17292,6 +17343,10 @@ java.lang.String defaultValue) {
       if (variantCase_ == 15) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(15, (io.temporal.omes.KitchenSink.ExecuteNexusOperation) variant_);
+      }
+      if (variantCase_ == 17) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(17, (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -17370,6 +17425,10 @@ java.lang.String defaultValue) {
           if (!getNexusOperation()
               .equals(other.getNexusOperation())) return false;
           break;
+        case 17:
+          if (!getAwaitPendingActions()
+              .equals(other.getAwaitPendingActions())) return false;
+          break;
         case 0:
         default:
       }
@@ -17444,6 +17503,10 @@ java.lang.String defaultValue) {
         case 15:
           hash = (37 * hash) + NEXUS_OPERATION_FIELD_NUMBER;
           hash = (53 * hash) + getNexusOperation().hashCode();
+          break;
+        case 17:
+          hash = (37 * hash) + AWAIT_PENDING_ACTIONS_FIELD_NUMBER;
+          hash = (53 * hash) + getAwaitPendingActions().hashCode();
           break;
         case 0:
         default:
@@ -17624,6 +17687,9 @@ java.lang.String defaultValue) {
         if (nexusOperationBuilder_ != null) {
           nexusOperationBuilder_.clear();
         }
+        if (awaitPendingActionsBuilder_ != null) {
+          awaitPendingActionsBuilder_.clear();
+        }
         variantCase_ = 0;
         variant_ = null;
         return this;
@@ -17724,6 +17790,10 @@ java.lang.String defaultValue) {
         if (variantCase_ == 15 &&
             nexusOperationBuilder_ != null) {
           result.variant_ = nexusOperationBuilder_.build();
+        }
+        if (variantCase_ == 17 &&
+            awaitPendingActionsBuilder_ != null) {
+          result.variant_ = awaitPendingActionsBuilder_.build();
         }
       }
 
@@ -17830,6 +17900,10 @@ java.lang.String defaultValue) {
           }
           case NEXUS_OPERATION: {
             mergeNexusOperation(other.getNexusOperation());
+            break;
+          }
+          case AWAIT_PENDING_ACTIONS: {
+            mergeAwaitPendingActions(other.getAwaitPendingActions());
             break;
           }
           case VARIANT_NOT_SET: {
@@ -17967,6 +18041,13 @@ java.lang.String defaultValue) {
                 variantCase_ = 15;
                 break;
               } // case 122
+              case 138: {
+                input.readMessage(
+                    getAwaitPendingActionsFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                variantCase_ = 17;
+                break;
+              } // case 138
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -20128,6 +20209,148 @@ java.lang.String defaultValue) {
         onChanged();
         return nexusOperationBuilder_;
       }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.AwaitPendingActions, io.temporal.omes.KitchenSink.AwaitPendingActions.Builder, io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder> awaitPendingActionsBuilder_;
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       * @return Whether the awaitPendingActions field is set.
+       */
+      @java.lang.Override
+      public boolean hasAwaitPendingActions() {
+        return variantCase_ == 17;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       * @return The awaitPendingActions.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.AwaitPendingActions getAwaitPendingActions() {
+        if (awaitPendingActionsBuilder_ == null) {
+          if (variantCase_ == 17) {
+            return (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_;
+          }
+          return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+        } else {
+          if (variantCase_ == 17) {
+            return awaitPendingActionsBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      public Builder setAwaitPendingActions(io.temporal.omes.KitchenSink.AwaitPendingActions value) {
+        if (awaitPendingActionsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          variant_ = value;
+          onChanged();
+        } else {
+          awaitPendingActionsBuilder_.setMessage(value);
+        }
+        variantCase_ = 17;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      public Builder setAwaitPendingActions(
+          io.temporal.omes.KitchenSink.AwaitPendingActions.Builder builderForValue) {
+        if (awaitPendingActionsBuilder_ == null) {
+          variant_ = builderForValue.build();
+          onChanged();
+        } else {
+          awaitPendingActionsBuilder_.setMessage(builderForValue.build());
+        }
+        variantCase_ = 17;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      public Builder mergeAwaitPendingActions(io.temporal.omes.KitchenSink.AwaitPendingActions value) {
+        if (awaitPendingActionsBuilder_ == null) {
+          if (variantCase_ == 17 &&
+              variant_ != io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance()) {
+            variant_ = io.temporal.omes.KitchenSink.AwaitPendingActions.newBuilder((io.temporal.omes.KitchenSink.AwaitPendingActions) variant_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            variant_ = value;
+          }
+          onChanged();
+        } else {
+          if (variantCase_ == 17) {
+            awaitPendingActionsBuilder_.mergeFrom(value);
+          } else {
+            awaitPendingActionsBuilder_.setMessage(value);
+          }
+        }
+        variantCase_ = 17;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      public Builder clearAwaitPendingActions() {
+        if (awaitPendingActionsBuilder_ == null) {
+          if (variantCase_ == 17) {
+            variantCase_ = 0;
+            variant_ = null;
+            onChanged();
+          }
+        } else {
+          if (variantCase_ == 17) {
+            variantCase_ = 0;
+            variant_ = null;
+          }
+          awaitPendingActionsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      public io.temporal.omes.KitchenSink.AwaitPendingActions.Builder getAwaitPendingActionsBuilder() {
+        return getAwaitPendingActionsFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder getAwaitPendingActionsOrBuilder() {
+        if ((variantCase_ == 17) && (awaitPendingActionsBuilder_ != null)) {
+          return awaitPendingActionsBuilder_.getMessageOrBuilder();
+        } else {
+          if (variantCase_ == 17) {
+            return (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_;
+          }
+          return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.AwaitPendingActions await_pending_actions = 17;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.AwaitPendingActions, io.temporal.omes.KitchenSink.AwaitPendingActions.Builder, io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder> 
+          getAwaitPendingActionsFieldBuilder() {
+        if (awaitPendingActionsBuilder_ == null) {
+          if (!(variantCase_ == 17)) {
+            variant_ = io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+          }
+          awaitPendingActionsBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.AwaitPendingActions, io.temporal.omes.KitchenSink.AwaitPendingActions.Builder, io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder>(
+                  (io.temporal.omes.KitchenSink.AwaitPendingActions) variant_,
+                  getParentForChildren(),
+                  isClean());
+          variant_ = null;
+        }
+        variantCase_ = 17;
+        onChanged();
+        return awaitPendingActionsBuilder_;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -20340,6 +20563,33 @@ java.lang.String defaultValue) {
      */
     com.google.protobuf.EmptyOrBuilder getCancelAfterCompletedOrBuilder();
 
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     * @return Whether the waitStarted field is set.
+     */
+    boolean hasWaitStarted();
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     * @return The waitStarted.
+     */
+    com.google.protobuf.Empty getWaitStarted();
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     */
+    com.google.protobuf.EmptyOrBuilder getWaitStartedOrBuilder();
+
     io.temporal.omes.KitchenSink.AwaitableChoice.ConditionCase getConditionCase();
   }
   /**
@@ -20395,6 +20645,7 @@ java.lang.String defaultValue) {
       CANCEL_BEFORE_STARTED(3),
       CANCEL_AFTER_STARTED(4),
       CANCEL_AFTER_COMPLETED(5),
+      WAIT_STARTED(6),
       CONDITION_NOT_SET(0);
       private final int value;
       private ConditionCase(int value) {
@@ -20417,6 +20668,7 @@ java.lang.String defaultValue) {
           case 3: return CANCEL_BEFORE_STARTED;
           case 4: return CANCEL_AFTER_STARTED;
           case 5: return CANCEL_AFTER_COMPLETED;
+          case 6: return WAIT_STARTED;
           case 0: return CONDITION_NOT_SET;
           default: return null;
         }
@@ -20656,6 +20908,49 @@ java.lang.String defaultValue) {
       return com.google.protobuf.Empty.getDefaultInstance();
     }
 
+    public static final int WAIT_STARTED_FIELD_NUMBER = 6;
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     * @return Whether the waitStarted field is set.
+     */
+    @java.lang.Override
+    public boolean hasWaitStarted() {
+      return conditionCase_ == 6;
+    }
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     * @return The waitStarted.
+     */
+    @java.lang.Override
+    public com.google.protobuf.Empty getWaitStarted() {
+      if (conditionCase_ == 6) {
+         return (com.google.protobuf.Empty) condition_;
+      }
+      return com.google.protobuf.Empty.getDefaultInstance();
+    }
+    /**
+     * <pre>
+     * Wait for the command to reach STARTED, then return without awaiting completion.
+     * </pre>
+     *
+     * <code>.google.protobuf.Empty wait_started = 6;</code>
+     */
+    @java.lang.Override
+    public com.google.protobuf.EmptyOrBuilder getWaitStartedOrBuilder() {
+      if (conditionCase_ == 6) {
+         return (com.google.protobuf.Empty) condition_;
+      }
+      return com.google.protobuf.Empty.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -20685,6 +20980,9 @@ java.lang.String defaultValue) {
       if (conditionCase_ == 5) {
         output.writeMessage(5, (com.google.protobuf.Empty) condition_);
       }
+      if (conditionCase_ == 6) {
+        output.writeMessage(6, (com.google.protobuf.Empty) condition_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -20713,6 +21011,10 @@ java.lang.String defaultValue) {
       if (conditionCase_ == 5) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, (com.google.protobuf.Empty) condition_);
+      }
+      if (conditionCase_ == 6) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, (com.google.protobuf.Empty) condition_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -20751,6 +21053,10 @@ java.lang.String defaultValue) {
           if (!getCancelAfterCompleted()
               .equals(other.getCancelAfterCompleted())) return false;
           break;
+        case 6:
+          if (!getWaitStarted()
+              .equals(other.getWaitStarted())) return false;
+          break;
         case 0:
         default:
       }
@@ -20785,6 +21091,10 @@ java.lang.String defaultValue) {
         case 5:
           hash = (37 * hash) + CANCEL_AFTER_COMPLETED_FIELD_NUMBER;
           hash = (53 * hash) + getCancelAfterCompleted().hashCode();
+          break;
+        case 6:
+          hash = (37 * hash) + WAIT_STARTED_FIELD_NUMBER;
+          hash = (53 * hash) + getWaitStarted().hashCode();
           break;
         case 0:
         default:
@@ -20942,6 +21252,9 @@ java.lang.String defaultValue) {
         if (cancelAfterCompletedBuilder_ != null) {
           cancelAfterCompletedBuilder_.clear();
         }
+        if (waitStartedBuilder_ != null) {
+          waitStartedBuilder_.clear();
+        }
         conditionCase_ = 0;
         condition_ = null;
         return this;
@@ -21002,6 +21315,10 @@ java.lang.String defaultValue) {
         if (conditionCase_ == 5 &&
             cancelAfterCompletedBuilder_ != null) {
           result.condition_ = cancelAfterCompletedBuilder_.build();
+        }
+        if (conditionCase_ == 6 &&
+            waitStartedBuilder_ != null) {
+          result.condition_ = waitStartedBuilder_.build();
         }
       }
 
@@ -21070,6 +21387,10 @@ java.lang.String defaultValue) {
             mergeCancelAfterCompleted(other.getCancelAfterCompleted());
             break;
           }
+          case WAIT_STARTED: {
+            mergeWaitStarted(other.getWaitStarted());
+            break;
+          }
           case CONDITION_NOT_SET: {
             break;
           }
@@ -21135,6 +21456,13 @@ java.lang.String defaultValue) {
                 conditionCase_ = 5;
                 break;
               } // case 42
+              case 50: {
+                input.readMessage(
+                    getWaitStartedFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                conditionCase_ = 6;
+                break;
+              } // case 50
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -22082,6 +22410,184 @@ java.lang.String defaultValue) {
         conditionCase_ = 5;
         onChanged();
         return cancelAfterCompletedBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.google.protobuf.Empty, com.google.protobuf.Empty.Builder, com.google.protobuf.EmptyOrBuilder> waitStartedBuilder_;
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       * @return Whether the waitStarted field is set.
+       */
+      @java.lang.Override
+      public boolean hasWaitStarted() {
+        return conditionCase_ == 6;
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       * @return The waitStarted.
+       */
+      @java.lang.Override
+      public com.google.protobuf.Empty getWaitStarted() {
+        if (waitStartedBuilder_ == null) {
+          if (conditionCase_ == 6) {
+            return (com.google.protobuf.Empty) condition_;
+          }
+          return com.google.protobuf.Empty.getDefaultInstance();
+        } else {
+          if (conditionCase_ == 6) {
+            return waitStartedBuilder_.getMessage();
+          }
+          return com.google.protobuf.Empty.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      public Builder setWaitStarted(com.google.protobuf.Empty value) {
+        if (waitStartedBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          condition_ = value;
+          onChanged();
+        } else {
+          waitStartedBuilder_.setMessage(value);
+        }
+        conditionCase_ = 6;
+        return this;
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      public Builder setWaitStarted(
+          com.google.protobuf.Empty.Builder builderForValue) {
+        if (waitStartedBuilder_ == null) {
+          condition_ = builderForValue.build();
+          onChanged();
+        } else {
+          waitStartedBuilder_.setMessage(builderForValue.build());
+        }
+        conditionCase_ = 6;
+        return this;
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      public Builder mergeWaitStarted(com.google.protobuf.Empty value) {
+        if (waitStartedBuilder_ == null) {
+          if (conditionCase_ == 6 &&
+              condition_ != com.google.protobuf.Empty.getDefaultInstance()) {
+            condition_ = com.google.protobuf.Empty.newBuilder((com.google.protobuf.Empty) condition_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            condition_ = value;
+          }
+          onChanged();
+        } else {
+          if (conditionCase_ == 6) {
+            waitStartedBuilder_.mergeFrom(value);
+          } else {
+            waitStartedBuilder_.setMessage(value);
+          }
+        }
+        conditionCase_ = 6;
+        return this;
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      public Builder clearWaitStarted() {
+        if (waitStartedBuilder_ == null) {
+          if (conditionCase_ == 6) {
+            conditionCase_ = 0;
+            condition_ = null;
+            onChanged();
+          }
+        } else {
+          if (conditionCase_ == 6) {
+            conditionCase_ = 0;
+            condition_ = null;
+          }
+          waitStartedBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      public com.google.protobuf.Empty.Builder getWaitStartedBuilder() {
+        return getWaitStartedFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      @java.lang.Override
+      public com.google.protobuf.EmptyOrBuilder getWaitStartedOrBuilder() {
+        if ((conditionCase_ == 6) && (waitStartedBuilder_ != null)) {
+          return waitStartedBuilder_.getMessageOrBuilder();
+        } else {
+          if (conditionCase_ == 6) {
+            return (com.google.protobuf.Empty) condition_;
+          }
+          return com.google.protobuf.Empty.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * Wait for the command to reach STARTED, then return without awaiting completion.
+       * </pre>
+       *
+       * <code>.google.protobuf.Empty wait_started = 6;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.google.protobuf.Empty, com.google.protobuf.Empty.Builder, com.google.protobuf.EmptyOrBuilder> 
+          getWaitStartedFieldBuilder() {
+        if (waitStartedBuilder_ == null) {
+          if (!(conditionCase_ == 6)) {
+            condition_ = com.google.protobuf.Empty.getDefaultInstance();
+          }
+          waitStartedBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              com.google.protobuf.Empty, com.google.protobuf.Empty.Builder, com.google.protobuf.EmptyOrBuilder>(
+                  (com.google.protobuf.Empty) condition_,
+                  getParentForChildren(),
+                  isClean());
+          condition_ = null;
+        }
+        conditionCase_ = 6;
+        onChanged();
+        return waitStartedBuilder_;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -50476,6 +50982,55 @@ java.lang.String defaultValue);
      */
     io.temporal.omes.KitchenSink.ActionSetOrBuilder getBeforeActionsOrBuilder(
         int index);
+
+    /**
+     * <pre>
+     * Override the handler workflow ID (defaults to per-request random).
+     * </pre>
+     *
+     * <code>string handler_workflow_id = 8;</code>
+     * @return The handlerWorkflowId.
+     */
+    java.lang.String getHandlerWorkflowId();
+    /**
+     * <pre>
+     * Override the handler workflow ID (defaults to per-request random).
+     * </pre>
+     *
+     * <code>string handler_workflow_id = 8;</code>
+     * @return The bytes for handlerWorkflowId.
+     */
+    com.google.protobuf.ByteString
+        getHandlerWorkflowIdBytes();
+
+    /**
+     * <pre>
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+     * </pre>
+     *
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+     * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+     */
+    int getHandlerWorkflowIdConflictPolicyValue();
+    /**
+     * <pre>
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+     * </pre>
+     *
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+     * @return The handlerWorkflowIdConflictPolicy.
+     */
+    io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy();
+
+    /**
+     * <pre>
+     * If true, the handler workflow waits on the "unblock" signal before returning.
+     * </pre>
+     *
+     * <code>bool wait_for_signal = 10;</code>
+     * @return The waitForSignal.
+     */
+    boolean getWaitForSignal();
   }
   /**
    * <pre>
@@ -50499,6 +51054,8 @@ java.lang.String defaultValue);
       input_ = "";
       expectedOutput_ = "";
       beforeActions_ = java.util.Collections.emptyList();
+      handlerWorkflowId_ = "";
+      handlerWorkflowIdConflictPolicy_ = 0;
     }
 
     @java.lang.Override
@@ -50908,6 +51465,94 @@ java.lang.String defaultValue) {
       return beforeActions_.get(index);
     }
 
+    public static final int HANDLER_WORKFLOW_ID_FIELD_NUMBER = 8;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object handlerWorkflowId_ = "";
+    /**
+     * <pre>
+     * Override the handler workflow ID (defaults to per-request random).
+     * </pre>
+     *
+     * <code>string handler_workflow_id = 8;</code>
+     * @return The handlerWorkflowId.
+     */
+    @java.lang.Override
+    public java.lang.String getHandlerWorkflowId() {
+      java.lang.Object ref = handlerWorkflowId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        handlerWorkflowId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * Override the handler workflow ID (defaults to per-request random).
+     * </pre>
+     *
+     * <code>string handler_workflow_id = 8;</code>
+     * @return The bytes for handlerWorkflowId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getHandlerWorkflowIdBytes() {
+      java.lang.Object ref = handlerWorkflowId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        handlerWorkflowId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER = 9;
+    private int handlerWorkflowIdConflictPolicy_ = 0;
+    /**
+     * <pre>
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+     * </pre>
+     *
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+     * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+     */
+    @java.lang.Override public int getHandlerWorkflowIdConflictPolicyValue() {
+      return handlerWorkflowIdConflictPolicy_;
+    }
+    /**
+     * <pre>
+     * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+     * </pre>
+     *
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+     * @return The handlerWorkflowIdConflictPolicy.
+     */
+    @java.lang.Override public io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy() {
+      io.temporal.api.enums.v1.WorkflowIdConflictPolicy result = io.temporal.api.enums.v1.WorkflowIdConflictPolicy.forNumber(handlerWorkflowIdConflictPolicy_);
+      return result == null ? io.temporal.api.enums.v1.WorkflowIdConflictPolicy.UNRECOGNIZED : result;
+    }
+
+    public static final int WAIT_FOR_SIGNAL_FIELD_NUMBER = 10;
+    private boolean waitForSignal_ = false;
+    /**
+     * <pre>
+     * If true, the handler workflow waits on the "unblock" signal before returning.
+     * </pre>
+     *
+     * <code>bool wait_for_signal = 10;</code>
+     * @return The waitForSignal.
+     */
+    @java.lang.Override
+    public boolean getWaitForSignal() {
+      return waitForSignal_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -50945,6 +51590,15 @@ java.lang.String defaultValue) {
       }
       for (int i = 0; i < beforeActions_.size(); i++) {
         output.writeMessage(7, beforeActions_.get(i));
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(handlerWorkflowId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 8, handlerWorkflowId_);
+      }
+      if (handlerWorkflowIdConflictPolicy_ != io.temporal.api.enums.v1.WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED.getNumber()) {
+        output.writeEnum(9, handlerWorkflowIdConflictPolicy_);
+      }
+      if (waitForSignal_ != false) {
+        output.writeBool(10, waitForSignal_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -50985,6 +51639,17 @@ java.lang.String defaultValue) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, beforeActions_.get(i));
       }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(handlerWorkflowId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(8, handlerWorkflowId_);
+      }
+      if (handlerWorkflowIdConflictPolicy_ != io.temporal.api.enums.v1.WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED.getNumber()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(9, handlerWorkflowIdConflictPolicy_);
+      }
+      if (waitForSignal_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(10, waitForSignal_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
@@ -51017,6 +51682,11 @@ java.lang.String defaultValue) {
           .equals(other.getExpectedOutput())) return false;
       if (!getBeforeActionsList()
           .equals(other.getBeforeActionsList())) return false;
+      if (!getHandlerWorkflowId()
+          .equals(other.getHandlerWorkflowId())) return false;
+      if (handlerWorkflowIdConflictPolicy_ != other.handlerWorkflowIdConflictPolicy_) return false;
+      if (getWaitForSignal()
+          != other.getWaitForSignal()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -51048,6 +51718,13 @@ java.lang.String defaultValue) {
         hash = (37 * hash) + BEFORE_ACTIONS_FIELD_NUMBER;
         hash = (53 * hash) + getBeforeActionsList().hashCode();
       }
+      hash = (37 * hash) + HANDLER_WORKFLOW_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getHandlerWorkflowId().hashCode();
+      hash = (37 * hash) + HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER;
+      hash = (53 * hash) + handlerWorkflowIdConflictPolicy_;
+      hash = (37 * hash) + WAIT_FOR_SIGNAL_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getWaitForSignal());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -51229,6 +51906,9 @@ java.lang.String defaultValue) {
           beforeActionsBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000040);
+        handlerWorkflowId_ = "";
+        handlerWorkflowIdConflictPolicy_ = 0;
+        waitForSignal_ = false;
         return this;
       }
 
@@ -51297,6 +51977,15 @@ java.lang.String defaultValue) {
         }
         if (((from_bitField0_ & 0x00000020) != 0)) {
           result.expectedOutput_ = expectedOutput_;
+        }
+        if (((from_bitField0_ & 0x00000080) != 0)) {
+          result.handlerWorkflowId_ = handlerWorkflowId_;
+        }
+        if (((from_bitField0_ & 0x00000100) != 0)) {
+          result.handlerWorkflowIdConflictPolicy_ = handlerWorkflowIdConflictPolicy_;
+        }
+        if (((from_bitField0_ & 0x00000200) != 0)) {
+          result.waitForSignal_ = waitForSignal_;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -51397,6 +52086,17 @@ java.lang.String defaultValue) {
             }
           }
         }
+        if (!other.getHandlerWorkflowId().isEmpty()) {
+          handlerWorkflowId_ = other.handlerWorkflowId_;
+          bitField0_ |= 0x00000080;
+          onChanged();
+        }
+        if (other.handlerWorkflowIdConflictPolicy_ != 0) {
+          setHandlerWorkflowIdConflictPolicyValue(other.getHandlerWorkflowIdConflictPolicyValue());
+        }
+        if (other.getWaitForSignal() != false) {
+          setWaitForSignal(other.getWaitForSignal());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -51472,6 +52172,21 @@ java.lang.String defaultValue) {
                 }
                 break;
               } // case 58
+              case 66: {
+                handlerWorkflowId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000080;
+                break;
+              } // case 66
+              case 72: {
+                handlerWorkflowIdConflictPolicy_ = input.readEnum();
+                bitField0_ |= 0x00000100;
+                break;
+              } // case 72
+              case 80: {
+                waitForSignal_ = input.readBool();
+                bitField0_ |= 0x00000200;
+                break;
+              } // case 80
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -52460,6 +53175,215 @@ java.lang.String defaultValue) {
         }
         return beforeActionsBuilder_;
       }
+
+      private java.lang.Object handlerWorkflowId_ = "";
+      /**
+       * <pre>
+       * Override the handler workflow ID (defaults to per-request random).
+       * </pre>
+       *
+       * <code>string handler_workflow_id = 8;</code>
+       * @return The handlerWorkflowId.
+       */
+      public java.lang.String getHandlerWorkflowId() {
+        java.lang.Object ref = handlerWorkflowId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          handlerWorkflowId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * Override the handler workflow ID (defaults to per-request random).
+       * </pre>
+       *
+       * <code>string handler_workflow_id = 8;</code>
+       * @return The bytes for handlerWorkflowId.
+       */
+      public com.google.protobuf.ByteString
+          getHandlerWorkflowIdBytes() {
+        java.lang.Object ref = handlerWorkflowId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          handlerWorkflowId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * Override the handler workflow ID (defaults to per-request random).
+       * </pre>
+       *
+       * <code>string handler_workflow_id = 8;</code>
+       * @param value The handlerWorkflowId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowId(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        handlerWorkflowId_ = value;
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Override the handler workflow ID (defaults to per-request random).
+       * </pre>
+       *
+       * <code>string handler_workflow_id = 8;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearHandlerWorkflowId() {
+        handlerWorkflowId_ = getDefaultInstance().getHandlerWorkflowId();
+        bitField0_ = (bitField0_ & ~0x00000080);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Override the handler workflow ID (defaults to per-request random).
+       * </pre>
+       *
+       * <code>string handler_workflow_id = 8;</code>
+       * @param value The bytes for handlerWorkflowId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        handlerWorkflowId_ = value;
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return this;
+      }
+
+      private int handlerWorkflowIdConflictPolicy_ = 0;
+      /**
+       * <pre>
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+       * </pre>
+       *
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+       * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+       */
+      @java.lang.Override public int getHandlerWorkflowIdConflictPolicyValue() {
+        return handlerWorkflowIdConflictPolicy_;
+      }
+      /**
+       * <pre>
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+       * </pre>
+       *
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+       * @param value The enum numeric value on the wire for handlerWorkflowIdConflictPolicy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdConflictPolicyValue(int value) {
+        handlerWorkflowIdConflictPolicy_ = value;
+        bitField0_ |= 0x00000100;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+       * </pre>
+       *
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+       * @return The handlerWorkflowIdConflictPolicy.
+       */
+      @java.lang.Override
+      public io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy() {
+        io.temporal.api.enums.v1.WorkflowIdConflictPolicy result = io.temporal.api.enums.v1.WorkflowIdConflictPolicy.forNumber(handlerWorkflowIdConflictPolicy_);
+        return result == null ? io.temporal.api.enums.v1.WorkflowIdConflictPolicy.UNRECOGNIZED : result;
+      }
+      /**
+       * <pre>
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+       * </pre>
+       *
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+       * @param value The handlerWorkflowIdConflictPolicy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdConflictPolicy(io.temporal.api.enums.v1.WorkflowIdConflictPolicy value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000100;
+        handlerWorkflowIdConflictPolicy_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+       * </pre>
+       *
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearHandlerWorkflowIdConflictPolicy() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        handlerWorkflowIdConflictPolicy_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private boolean waitForSignal_ ;
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 10;</code>
+       * @return The waitForSignal.
+       */
+      @java.lang.Override
+      public boolean getWaitForSignal() {
+        return waitForSignal_;
+      }
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 10;</code>
+       * @param value The waitForSignal to set.
+       * @return This builder for chaining.
+       */
+      public Builder setWaitForSignal(boolean value) {
+
+        waitForSignal_ = value;
+        bitField0_ |= 0x00000200;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 10;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearWaitForSignal() {
+        bitField0_ = (bitField0_ & ~0x00000200);
+        waitForSignal_ = false;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -52563,6 +53487,39 @@ java.lang.String defaultValue) {
      */
     io.temporal.omes.KitchenSink.ActionSetOrBuilder getBeforeActionsOrBuilder(
         int index);
+
+    /**
+     * <code>string handler_workflow_id = 3;</code>
+     * @return The handlerWorkflowId.
+     */
+    java.lang.String getHandlerWorkflowId();
+    /**
+     * <code>string handler_workflow_id = 3;</code>
+     * @return The bytes for handlerWorkflowId.
+     */
+    com.google.protobuf.ByteString
+        getHandlerWorkflowIdBytes();
+
+    /**
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+     * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+     */
+    int getHandlerWorkflowIdConflictPolicyValue();
+    /**
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+     * @return The handlerWorkflowIdConflictPolicy.
+     */
+    io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy();
+
+    /**
+     * <pre>
+     * If true, the handler workflow waits on the "unblock" signal before returning.
+     * </pre>
+     *
+     * <code>bool wait_for_signal = 5;</code>
+     * @return The waitForSignal.
+     */
+    boolean getWaitForSignal();
   }
   /**
    * <pre>
@@ -52583,6 +53540,8 @@ java.lang.String defaultValue) {
     private NexusHandlerInput() {
       input_ = "";
       beforeActions_ = java.util.Collections.emptyList();
+      handlerWorkflowId_ = "";
+      handlerWorkflowIdConflictPolicy_ = 0;
     }
 
     @java.lang.Override
@@ -52685,6 +53644,78 @@ java.lang.String defaultValue) {
       return beforeActions_.get(index);
     }
 
+    public static final int HANDLER_WORKFLOW_ID_FIELD_NUMBER = 3;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object handlerWorkflowId_ = "";
+    /**
+     * <code>string handler_workflow_id = 3;</code>
+     * @return The handlerWorkflowId.
+     */
+    @java.lang.Override
+    public java.lang.String getHandlerWorkflowId() {
+      java.lang.Object ref = handlerWorkflowId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        handlerWorkflowId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string handler_workflow_id = 3;</code>
+     * @return The bytes for handlerWorkflowId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getHandlerWorkflowIdBytes() {
+      java.lang.Object ref = handlerWorkflowId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        handlerWorkflowId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER = 4;
+    private int handlerWorkflowIdConflictPolicy_ = 0;
+    /**
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+     * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+     */
+    @java.lang.Override public int getHandlerWorkflowIdConflictPolicyValue() {
+      return handlerWorkflowIdConflictPolicy_;
+    }
+    /**
+     * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+     * @return The handlerWorkflowIdConflictPolicy.
+     */
+    @java.lang.Override public io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy() {
+      io.temporal.api.enums.v1.WorkflowIdConflictPolicy result = io.temporal.api.enums.v1.WorkflowIdConflictPolicy.forNumber(handlerWorkflowIdConflictPolicy_);
+      return result == null ? io.temporal.api.enums.v1.WorkflowIdConflictPolicy.UNRECOGNIZED : result;
+    }
+
+    public static final int WAIT_FOR_SIGNAL_FIELD_NUMBER = 5;
+    private boolean waitForSignal_ = false;
+    /**
+     * <pre>
+     * If true, the handler workflow waits on the "unblock" signal before returning.
+     * </pre>
+     *
+     * <code>bool wait_for_signal = 5;</code>
+     * @return The waitForSignal.
+     */
+    @java.lang.Override
+    public boolean getWaitForSignal() {
+      return waitForSignal_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -52705,6 +53736,15 @@ java.lang.String defaultValue) {
       for (int i = 0; i < beforeActions_.size(); i++) {
         output.writeMessage(2, beforeActions_.get(i));
       }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(handlerWorkflowId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, handlerWorkflowId_);
+      }
+      if (handlerWorkflowIdConflictPolicy_ != io.temporal.api.enums.v1.WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED.getNumber()) {
+        output.writeEnum(4, handlerWorkflowIdConflictPolicy_);
+      }
+      if (waitForSignal_ != false) {
+        output.writeBool(5, waitForSignal_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -52720,6 +53760,17 @@ java.lang.String defaultValue) {
       for (int i = 0; i < beforeActions_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(2, beforeActions_.get(i));
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(handlerWorkflowId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, handlerWorkflowId_);
+      }
+      if (handlerWorkflowIdConflictPolicy_ != io.temporal.api.enums.v1.WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_UNSPECIFIED.getNumber()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(4, handlerWorkflowIdConflictPolicy_);
+      }
+      if (waitForSignal_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(5, waitForSignal_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -52740,6 +53791,11 @@ java.lang.String defaultValue) {
           .equals(other.getInput())) return false;
       if (!getBeforeActionsList()
           .equals(other.getBeforeActionsList())) return false;
+      if (!getHandlerWorkflowId()
+          .equals(other.getHandlerWorkflowId())) return false;
+      if (handlerWorkflowIdConflictPolicy_ != other.handlerWorkflowIdConflictPolicy_) return false;
+      if (getWaitForSignal()
+          != other.getWaitForSignal()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -52757,6 +53813,13 @@ java.lang.String defaultValue) {
         hash = (37 * hash) + BEFORE_ACTIONS_FIELD_NUMBER;
         hash = (53 * hash) + getBeforeActionsList().hashCode();
       }
+      hash = (37 * hash) + HANDLER_WORKFLOW_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getHandlerWorkflowId().hashCode();
+      hash = (37 * hash) + HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER;
+      hash = (53 * hash) + handlerWorkflowIdConflictPolicy_;
+      hash = (37 * hash) + WAIT_FOR_SIGNAL_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getWaitForSignal());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -52900,6 +53963,9 @@ java.lang.String defaultValue) {
           beforeActionsBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
+        handlerWorkflowId_ = "";
+        handlerWorkflowIdConflictPolicy_ = 0;
+        waitForSignal_ = false;
         return this;
       }
 
@@ -52948,6 +54014,15 @@ java.lang.String defaultValue) {
         int from_bitField0_ = bitField0_;
         if (((from_bitField0_ & 0x00000001) != 0)) {
           result.input_ = input_;
+        }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.handlerWorkflowId_ = handlerWorkflowId_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.handlerWorkflowIdConflictPolicy_ = handlerWorkflowIdConflictPolicy_;
+        }
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          result.waitForSignal_ = waitForSignal_;
         }
       }
 
@@ -53026,6 +54101,17 @@ java.lang.String defaultValue) {
             }
           }
         }
+        if (!other.getHandlerWorkflowId().isEmpty()) {
+          handlerWorkflowId_ = other.handlerWorkflowId_;
+          bitField0_ |= 0x00000004;
+          onChanged();
+        }
+        if (other.handlerWorkflowIdConflictPolicy_ != 0) {
+          setHandlerWorkflowIdConflictPolicyValue(other.getHandlerWorkflowIdConflictPolicyValue());
+        }
+        if (other.getWaitForSignal() != false) {
+          setWaitForSignal(other.getWaitForSignal());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -53070,6 +54156,21 @@ java.lang.String defaultValue) {
                 }
                 break;
               } // case 18
+              case 26: {
+                handlerWorkflowId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 26
+              case 32: {
+                handlerWorkflowIdConflictPolicy_ = input.readEnum();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 32
+              case 40: {
+                waitForSignal_ = input.readBool();
+                bitField0_ |= 0x00000010;
+                break;
+              } // case 40
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -53398,6 +54499,175 @@ java.lang.String defaultValue) {
         }
         return beforeActionsBuilder_;
       }
+
+      private java.lang.Object handlerWorkflowId_ = "";
+      /**
+       * <code>string handler_workflow_id = 3;</code>
+       * @return The handlerWorkflowId.
+       */
+      public java.lang.String getHandlerWorkflowId() {
+        java.lang.Object ref = handlerWorkflowId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          handlerWorkflowId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string handler_workflow_id = 3;</code>
+       * @return The bytes for handlerWorkflowId.
+       */
+      public com.google.protobuf.ByteString
+          getHandlerWorkflowIdBytes() {
+        java.lang.Object ref = handlerWorkflowId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          handlerWorkflowId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string handler_workflow_id = 3;</code>
+       * @param value The handlerWorkflowId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowId(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        handlerWorkflowId_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string handler_workflow_id = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearHandlerWorkflowId() {
+        handlerWorkflowId_ = getDefaultInstance().getHandlerWorkflowId();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string handler_workflow_id = 3;</code>
+       * @param value The bytes for handlerWorkflowId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        handlerWorkflowId_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+
+      private int handlerWorkflowIdConflictPolicy_ = 0;
+      /**
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+       * @return The enum numeric value on the wire for handlerWorkflowIdConflictPolicy.
+       */
+      @java.lang.Override public int getHandlerWorkflowIdConflictPolicyValue() {
+        return handlerWorkflowIdConflictPolicy_;
+      }
+      /**
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+       * @param value The enum numeric value on the wire for handlerWorkflowIdConflictPolicy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdConflictPolicyValue(int value) {
+        handlerWorkflowIdConflictPolicy_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+       * @return The handlerWorkflowIdConflictPolicy.
+       */
+      @java.lang.Override
+      public io.temporal.api.enums.v1.WorkflowIdConflictPolicy getHandlerWorkflowIdConflictPolicy() {
+        io.temporal.api.enums.v1.WorkflowIdConflictPolicy result = io.temporal.api.enums.v1.WorkflowIdConflictPolicy.forNumber(handlerWorkflowIdConflictPolicy_);
+        return result == null ? io.temporal.api.enums.v1.WorkflowIdConflictPolicy.UNRECOGNIZED : result;
+      }
+      /**
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+       * @param value The handlerWorkflowIdConflictPolicy to set.
+       * @return This builder for chaining.
+       */
+      public Builder setHandlerWorkflowIdConflictPolicy(io.temporal.api.enums.v1.WorkflowIdConflictPolicy value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000008;
+        handlerWorkflowIdConflictPolicy_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearHandlerWorkflowIdConflictPolicy() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        handlerWorkflowIdConflictPolicy_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private boolean waitForSignal_ ;
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 5;</code>
+       * @return The waitForSignal.
+       */
+      @java.lang.Override
+      public boolean getWaitForSignal() {
+        return waitForSignal_;
+      }
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 5;</code>
+       * @param value The waitForSignal to set.
+       * @return This builder for chaining.
+       */
+      public Builder setWaitForSignal(boolean value) {
+
+        waitForSignal_ = value;
+        bitField0_ |= 0x00000010;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * If true, the handler workflow waits on the "unblock" signal before returning.
+       * </pre>
+       *
+       * <code>bool wait_for_signal = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearWaitForSignal() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        waitForSignal_ = false;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -53457,6 +54727,413 @@ java.lang.String defaultValue) {
 
     @java.lang.Override
     public io.temporal.omes.KitchenSink.NexusHandlerInput getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface AwaitPendingActionsOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:temporal.omes.kitchen_sink.AwaitPendingActions)
+      com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * <pre>
+   * Await completion of all actions that were started in the same workflow with
+   * AwaitableChoice.wait_started and not yet awaited.
+   * </pre>
+   *
+   * Protobuf type {@code temporal.omes.kitchen_sink.AwaitPendingActions}
+   */
+  public static final class AwaitPendingActions extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:temporal.omes.kitchen_sink.AwaitPendingActions)
+      AwaitPendingActionsOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use AwaitPendingActions.newBuilder() to construct.
+    private AwaitPendingActions(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private AwaitPendingActions() {
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new AwaitPendingActions();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.temporal.omes.KitchenSink.AwaitPendingActions.class, io.temporal.omes.KitchenSink.AwaitPendingActions.Builder.class);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof io.temporal.omes.KitchenSink.AwaitPendingActions)) {
+        return super.equals(obj);
+      }
+      io.temporal.omes.KitchenSink.AwaitPendingActions other = (io.temporal.omes.KitchenSink.AwaitPendingActions) obj;
+
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(io.temporal.omes.KitchenSink.AwaitPendingActions prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * Await completion of all actions that were started in the same workflow with
+     * AwaitableChoice.wait_started and not yet awaited.
+     * </pre>
+     *
+     * Protobuf type {@code temporal.omes.kitchen_sink.AwaitPendingActions}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:temporal.omes.kitchen_sink.AwaitPendingActions)
+        io.temporal.omes.KitchenSink.AwaitPendingActionsOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.temporal.omes.KitchenSink.AwaitPendingActions.class, io.temporal.omes.KitchenSink.AwaitPendingActions.Builder.class);
+      }
+
+      // Construct using io.temporal.omes.KitchenSink.AwaitPendingActions.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor;
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.AwaitPendingActions getDefaultInstanceForType() {
+        return io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.AwaitPendingActions build() {
+        io.temporal.omes.KitchenSink.AwaitPendingActions result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.AwaitPendingActions buildPartial() {
+        io.temporal.omes.KitchenSink.AwaitPendingActions result = new io.temporal.omes.KitchenSink.AwaitPendingActions(this);
+        onBuilt();
+        return result;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof io.temporal.omes.KitchenSink.AwaitPendingActions) {
+          return mergeFrom((io.temporal.omes.KitchenSink.AwaitPendingActions)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(io.temporal.omes.KitchenSink.AwaitPendingActions other) {
+        if (other == io.temporal.omes.KitchenSink.AwaitPendingActions.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.AwaitPendingActions)
+    }
+
+    // @@protoc_insertion_point(class_scope:temporal.omes.kitchen_sink.AwaitPendingActions)
+    private static final io.temporal.omes.KitchenSink.AwaitPendingActions DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new io.temporal.omes.KitchenSink.AwaitPendingActions();
+    }
+
+    public static io.temporal.omes.KitchenSink.AwaitPendingActions getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<AwaitPendingActions>
+        PARSER = new com.google.protobuf.AbstractParser<AwaitPendingActions>() {
+      @java.lang.Override
+      public AwaitPendingActions parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<AwaitPendingActions> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<AwaitPendingActions> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.AwaitPendingActions getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -53712,6 +55389,11 @@ java.lang.String defaultValue) {
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -53785,7 +55467,7 @@ java.lang.String defaultValue) {
       "\022\033\n\023expected_signal_ids\030\003 \003(\005\022\033\n\023receive" +
       "d_signal_ids\030\004 \003(\005\"T\n\tActionSet\0223\n\007actio" +
       "ns\030\001 \003(\0132\".temporal.omes.kitchen_sink.Ac" +
-      "tion\022\022\n\nconcurrent\030\002 \001(\010\"\372\010\n\006Action\0228\n\005t" +
+      "tion\022\022\n\nconcurrent\030\002 \001(\010\"\314\t\n\006Action\0228\n\005t" +
       "imer\030\001 \001(\0132\'.temporal.omes.kitchen_sink." +
       "TimerActionH\000\022J\n\rexec_activity\030\002 \001(\01321.t" +
       "emporal.omes.kitchen_sink.ExecuteActivit" +
@@ -53814,186 +55496,197 @@ java.lang.String defaultValue) {
       "\001(\0132%.temporal.omes.kitchen_sink.ActionS" +
       "etH\000\022L\n\017nexus_operation\030\017 \001(\01321.temporal" +
       ".omes.kitchen_sink.ExecuteNexusOperation" +
-      "H\000B\t\n\007variant\"\243\002\n\017AwaitableChoice\022-\n\013wai" +
-      "t_finish\030\001 \001(\0132\026.google.protobuf.EmptyH\000" +
-      "\022)\n\007abandon\030\002 \001(\0132\026.google.protobuf.Empt" +
-      "yH\000\0227\n\025cancel_before_started\030\003 \001(\0132\026.goo" +
-      "gle.protobuf.EmptyH\000\0226\n\024cancel_after_sta" +
-      "rted\030\004 \001(\0132\026.google.protobuf.EmptyH\000\0228\n\026" +
-      "cancel_after_completed\030\005 \001(\0132\026.google.pr" +
-      "otobuf.EmptyH\000B\013\n\tcondition\"j\n\013TimerActi" +
-      "on\022\024\n\014milliseconds\030\001 \001(\004\022E\n\020awaitable_ch" +
-      "oice\030\002 \001(\0132+.temporal.omes.kitchen_sink." +
-      "AwaitableChoice\"\352\021\n\025ExecuteActivityActio" +
-      "n\022T\n\007generic\030\001 \001(\0132A.temporal.omes.kitch" +
-      "en_sink.ExecuteActivityAction.GenericAct" +
-      "ivityH\000\022*\n\005delay\030\002 \001(\0132\031.google.protobuf" +
-      ".DurationH\000\022&\n\004noop\030\003 \001(\0132\026.google.proto" +
-      "buf.EmptyH\000\022X\n\tresources\030\016 \001(\0132C.tempora" +
-      "l.omes.kitchen_sink.ExecuteActivityActio" +
-      "n.ResourcesActivityH\000\022T\n\007payload\030\022 \001(\0132A" +
-      ".temporal.omes.kitchen_sink.ExecuteActiv" +
-      "ityAction.PayloadActivityH\000\022R\n\006client\030\023 " +
-      "\001(\0132@.temporal.omes.kitchen_sink.Execute" +
-      "ActivityAction.ClientActivityH\000\022c\n\017retry" +
-      "able_error\030\024 \001(\0132H.temporal.omes.kitchen" +
-      "_sink.ExecuteActivityAction.RetryableErr" +
-      "orActivityH\000\022T\n\007timeout\030\025 \001(\0132A.temporal" +
-      ".omes.kitchen_sink.ExecuteActivityAction" +
-      ".TimeoutActivityH\000\022_\n\theartbeat\030\026 \001(\0132J." +
-      "temporal.omes.kitchen_sink.ExecuteActivi" +
-      "tyAction.HeartbeatTimeoutActivityH\000\022\022\n\nt" +
-      "ask_queue\030\004 \001(\t\022O\n\007headers\030\005 \003(\0132>.tempo" +
-      "ral.omes.kitchen_sink.ExecuteActivityAct" +
-      "ion.HeadersEntry\022<\n\031schedule_to_close_ti" +
-      "meout\030\006 \001(\0132\031.google.protobuf.Duration\022<" +
-      "\n\031schedule_to_start_timeout\030\007 \001(\0132\031.goog" +
-      "le.protobuf.Duration\0229\n\026start_to_close_t" +
-      "imeout\030\010 \001(\0132\031.google.protobuf.Duration\022" +
-      "4\n\021heartbeat_timeout\030\t \001(\0132\031.google.prot" +
-      "obuf.Duration\0229\n\014retry_policy\030\n \001(\0132#.te" +
-      "mporal.api.common.v1.RetryPolicy\022*\n\010is_l" +
-      "ocal\030\013 \001(\0132\026.google.protobuf.EmptyH\001\022C\n\006" +
-      "remote\030\014 \001(\01321.temporal.omes.kitchen_sin" +
-      "k.RemoteActivityOptionsH\001\022E\n\020awaitable_c" +
-      "hoice\030\r \001(\0132+.temporal.omes.kitchen_sink" +
-      ".AwaitableChoice\0222\n\010priority\030\017 \001(\0132 .tem" +
-      "poral.api.common.v1.Priority\022\024\n\014fairness" +
-      "_key\030\020 \001(\t\022\027\n\017fairness_weight\030\021 \001(\002\032S\n\017G" +
-      "enericActivity\022\014\n\004type\030\001 \001(\t\0222\n\targument" +
-      "s\030\002 \003(\0132\037.temporal.api.common.v1.Payload" +
-      "\032\232\001\n\021ResourcesActivity\022*\n\007run_for\030\001 \001(\0132" +
-      "\031.google.protobuf.Duration\022\031\n\021bytes_to_a" +
-      "llocate\030\002 \001(\004\022$\n\034cpu_yield_every_n_itera" +
-      "tions\030\003 \001(\r\022\030\n\020cpu_yield_for_ms\030\004 \001(\r\032D\n" +
-      "\017PayloadActivity\022\030\n\020bytes_to_receive\030\001 \001" +
-      "(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032U\n\016ClientAct" +
-      "ivity\022C\n\017client_sequence\030\001 \001(\0132*.tempora" +
-      "l.omes.kitchen_sink.ClientSequence\032/\n\026Re" +
-      "tryableErrorActivity\022\025\n\rfail_attempts\030\001 " +
-      "\001(\005\032\222\001\n\017TimeoutActivity\022\025\n\rfail_attempts" +
-      "\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\0132\031.googl" +
-      "e.protobuf.Duration\0223\n\020failure_duration\030" +
-      "\003 \001(\0132\031.google.protobuf.Duration\032\233\001\n\030Hea" +
-      "rtbeatTimeoutActivity\022\025\n\rfail_attempts\030\001" +
-      " \001(\005\0223\n\020success_duration\030\002 \001(\0132\031.google." +
-      "protobuf.Duration\0223\n\020failure_duration\030\003 " +
-      "\001(\0132\031.google.protobuf.Duration\032O\n\014Header" +
-      "sEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tem" +
-      "poral.api.common.v1.Payload:\0028\001B\017\n\ractiv" +
-      "ity_typeB\n\n\010locality\"\255\n\n\032ExecuteChildWor" +
-      "kflowAction\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workfl" +
-      "ow_id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\nta" +
-      "sk_queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037.temporal" +
-      ".api.common.v1.Payload\022=\n\032workflow_execu" +
-      "tion_timeout\030\007 \001(\0132\031.google.protobuf.Dur" +
-      "ation\0227\n\024workflow_run_timeout\030\010 \001(\0132\031.go" +
-      "ogle.protobuf.Duration\0228\n\025workflow_task_" +
-      "timeout\030\t \001(\0132\031.google.protobuf.Duration" +
-      "\022J\n\023parent_close_policy\030\n \001(\0162-.temporal" +
-      ".omes.kitchen_sink.ParentClosePolicy\022N\n\030" +
-      "workflow_id_reuse_policy\030\014 \001(\0162,.tempora" +
-      "l.api.enums.v1.WorkflowIdReusePolicy\0229\n\014" +
-      "retry_policy\030\r \001(\0132#.temporal.api.common" +
-      ".v1.RetryPolicy\022\025\n\rcron_schedule\030\016 \001(\t\022T" +
-      "\n\007headers\030\017 \003(\0132C.temporal.omes.kitchen_" +
-      "sink.ExecuteChildWorkflowAction.HeadersE" +
-      "ntry\022N\n\004memo\030\020 \003(\0132@.temporal.omes.kitch" +
-      "en_sink.ExecuteChildWorkflowAction.MemoE" +
-      "ntry\022g\n\021search_attributes\030\021 \003(\0132L.tempor" +
-      "al.omes.kitchen_sink.ExecuteChildWorkflo" +
-      "wAction.SearchAttributesEntry\022T\n\021cancell" +
-      "ation_type\030\022 \001(\01629.temporal.omes.kitchen" +
-      "_sink.ChildWorkflowCancellationType\022G\n\021v" +
-      "ersioning_intent\030\023 \001(\0162,.temporal.omes.k" +
-      "itchen_sink.VersioningIntent\022E\n\020awaitabl" +
-      "e_choice\030\024 \001(\0132+.temporal.omes.kitchen_s" +
-      "ink.AwaitableChoice\032O\n\014HeadersEntry\022\013\n\003k" +
-      "ey\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.c" +
-      "ommon.v1.Payload:\0028\001\032L\n\tMemoEntry\022\013\n\003key" +
-      "\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.com" +
-      "mon.v1.Payload:\0028\001\032X\n\025SearchAttributesEn" +
+      "H\000\022P\n\025await_pending_actions\030\021 \001(\0132/.temp" +
+      "oral.omes.kitchen_sink.AwaitPendingActio" +
+      "nsH\000B\t\n\007variant\"\323\002\n\017AwaitableChoice\022-\n\013w" +
+      "ait_finish\030\001 \001(\0132\026.google.protobuf.Empty" +
+      "H\000\022)\n\007abandon\030\002 \001(\0132\026.google.protobuf.Em" +
+      "ptyH\000\0227\n\025cancel_before_started\030\003 \001(\0132\026.g" +
+      "oogle.protobuf.EmptyH\000\0226\n\024cancel_after_s" +
+      "tarted\030\004 \001(\0132\026.google.protobuf.EmptyH\000\0228" +
+      "\n\026cancel_after_completed\030\005 \001(\0132\026.google." +
+      "protobuf.EmptyH\000\022.\n\014wait_started\030\006 \001(\0132\026" +
+      ".google.protobuf.EmptyH\000B\013\n\tcondition\"j\n" +
+      "\013TimerAction\022\024\n\014milliseconds\030\001 \001(\004\022E\n\020aw" +
+      "aitable_choice\030\002 \001(\0132+.temporal.omes.kit" +
+      "chen_sink.AwaitableChoice\"\352\021\n\025ExecuteAct" +
+      "ivityAction\022T\n\007generic\030\001 \001(\0132A.temporal." +
+      "omes.kitchen_sink.ExecuteActivityAction." +
+      "GenericActivityH\000\022*\n\005delay\030\002 \001(\0132\031.googl" +
+      "e.protobuf.DurationH\000\022&\n\004noop\030\003 \001(\0132\026.go" +
+      "ogle.protobuf.EmptyH\000\022X\n\tresources\030\016 \001(\013" +
+      "2C.temporal.omes.kitchen_sink.ExecuteAct" +
+      "ivityAction.ResourcesActivityH\000\022T\n\007paylo" +
+      "ad\030\022 \001(\0132A.temporal.omes.kitchen_sink.Ex" +
+      "ecuteActivityAction.PayloadActivityH\000\022R\n" +
+      "\006client\030\023 \001(\0132@.temporal.omes.kitchen_si" +
+      "nk.ExecuteActivityAction.ClientActivityH" +
+      "\000\022c\n\017retryable_error\030\024 \001(\0132H.temporal.om" +
+      "es.kitchen_sink.ExecuteActivityAction.Re" +
+      "tryableErrorActivityH\000\022T\n\007timeout\030\025 \001(\0132" +
+      "A.temporal.omes.kitchen_sink.ExecuteActi" +
+      "vityAction.TimeoutActivityH\000\022_\n\theartbea" +
+      "t\030\026 \001(\0132J.temporal.omes.kitchen_sink.Exe" +
+      "cuteActivityAction.HeartbeatTimeoutActiv" +
+      "ityH\000\022\022\n\ntask_queue\030\004 \001(\t\022O\n\007headers\030\005 \003" +
+      "(\0132>.temporal.omes.kitchen_sink.ExecuteA" +
+      "ctivityAction.HeadersEntry\022<\n\031schedule_t" +
+      "o_close_timeout\030\006 \001(\0132\031.google.protobuf." +
+      "Duration\022<\n\031schedule_to_start_timeout\030\007 " +
+      "\001(\0132\031.google.protobuf.Duration\0229\n\026start_" +
+      "to_close_timeout\030\010 \001(\0132\031.google.protobuf" +
+      ".Duration\0224\n\021heartbeat_timeout\030\t \001(\0132\031.g" +
+      "oogle.protobuf.Duration\0229\n\014retry_policy\030" +
+      "\n \001(\0132#.temporal.api.common.v1.RetryPoli" +
+      "cy\022*\n\010is_local\030\013 \001(\0132\026.google.protobuf.E" +
+      "mptyH\001\022C\n\006remote\030\014 \001(\01321.temporal.omes.k" +
+      "itchen_sink.RemoteActivityOptionsH\001\022E\n\020a" +
+      "waitable_choice\030\r \001(\0132+.temporal.omes.ki" +
+      "tchen_sink.AwaitableChoice\0222\n\010priority\030\017" +
+      " \001(\0132 .temporal.api.common.v1.Priority\022\024" +
+      "\n\014fairness_key\030\020 \001(\t\022\027\n\017fairness_weight\030" +
+      "\021 \001(\002\032S\n\017GenericActivity\022\014\n\004type\030\001 \001(\t\0222" +
+      "\n\targuments\030\002 \003(\0132\037.temporal.api.common." +
+      "v1.Payload\032\232\001\n\021ResourcesActivity\022*\n\007run_" +
+      "for\030\001 \001(\0132\031.google.protobuf.Duration\022\031\n\021" +
+      "bytes_to_allocate\030\002 \001(\004\022$\n\034cpu_yield_eve" +
+      "ry_n_iterations\030\003 \001(\r\022\030\n\020cpu_yield_for_m" +
+      "s\030\004 \001(\r\032D\n\017PayloadActivity\022\030\n\020bytes_to_r" +
+      "eceive\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032U\n" +
+      "\016ClientActivity\022C\n\017client_sequence\030\001 \001(\013" +
+      "2*.temporal.omes.kitchen_sink.ClientSequ" +
+      "ence\032/\n\026RetryableErrorActivity\022\025\n\rfail_a" +
+      "ttempts\030\001 \001(\005\032\222\001\n\017TimeoutActivity\022\025\n\rfai" +
+      "l_attempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001" +
+      "(\0132\031.google.protobuf.Duration\0223\n\020failure" +
+      "_duration\030\003 \001(\0132\031.google.protobuf.Durati" +
+      "on\032\233\001\n\030HeartbeatTimeoutActivity\022\025\n\rfail_" +
+      "attempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\013" +
+      "2\031.google.protobuf.Duration\0223\n\020failure_d" +
+      "uration\030\003 \001(\0132\031.google.protobuf.Duration" +
+      "\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002" +
+      " \001(\0132\037.temporal.api.common.v1.Payload:\0028" +
+      "\001B\017\n\ractivity_typeB\n\n\010locality\"\255\n\n\032Execu" +
+      "teChildWorkflowAction\022\021\n\tnamespace\030\002 \001(\t" +
+      "\022\023\n\013workflow_id\030\003 \001(\t\022\025\n\rworkflow_type\030\004" +
+      " \001(\t\022\022\n\ntask_queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132" +
+      "\037.temporal.api.common.v1.Payload\022=\n\032work" +
+      "flow_execution_timeout\030\007 \001(\0132\031.google.pr" +
+      "otobuf.Duration\0227\n\024workflow_run_timeout\030" +
+      "\010 \001(\0132\031.google.protobuf.Duration\0228\n\025work" +
+      "flow_task_timeout\030\t \001(\0132\031.google.protobu" +
+      "f.Duration\022J\n\023parent_close_policy\030\n \001(\0162" +
+      "-.temporal.omes.kitchen_sink.ParentClose" +
+      "Policy\022N\n\030workflow_id_reuse_policy\030\014 \001(\016" +
+      "2,.temporal.api.enums.v1.WorkflowIdReuse" +
+      "Policy\0229\n\014retry_policy\030\r \001(\0132#.temporal." +
+      "api.common.v1.RetryPolicy\022\025\n\rcron_schedu" +
+      "le\030\016 \001(\t\022T\n\007headers\030\017 \003(\0132C.temporal.ome" +
+      "s.kitchen_sink.ExecuteChildWorkflowActio" +
+      "n.HeadersEntry\022N\n\004memo\030\020 \003(\0132@.temporal." +
+      "omes.kitchen_sink.ExecuteChildWorkflowAc" +
+      "tion.MemoEntry\022g\n\021search_attributes\030\021 \003(" +
+      "\0132L.temporal.omes.kitchen_sink.ExecuteCh" +
+      "ildWorkflowAction.SearchAttributesEntry\022" +
+      "T\n\021cancellation_type\030\022 \001(\01629.temporal.om" +
+      "es.kitchen_sink.ChildWorkflowCancellatio" +
+      "nType\022G\n\021versioning_intent\030\023 \001(\0162,.tempo" +
+      "ral.omes.kitchen_sink.VersioningIntent\022E" +
+      "\n\020awaitable_choice\030\024 \001(\0132+.temporal.omes" +
+      ".kitchen_sink.AwaitableChoice\032O\n\014Headers" +
+      "Entry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temp" +
+      "oral.api.common.v1.Payload:\0028\001\032L\n\tMemoEn" +
       "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
-      "al.api.common.v1.Payload:\0028\001\"0\n\022AwaitWor" +
-      "kflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337" +
-      "\002\n\020SendSignalAction\022\023\n\013workflow_id\030\001 \001(\t" +
-      "\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n" +
-      "\004args\030\004 \003(\0132\037.temporal.api.common.v1.Pay" +
-      "load\022J\n\007headers\030\005 \003(\01329.temporal.omes.ki" +
-      "tchen_sink.SendSignalAction.HeadersEntry" +
-      "\022E\n\020awaitable_choice\030\006 \001(\0132+.temporal.om" +
-      "es.kitchen_sink.AwaitableChoice\032O\n\014Heade" +
-      "rsEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.te" +
-      "mporal.api.common.v1.Payload:\0028\001\";\n\024Canc" +
-      "elWorkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n" +
-      "\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerAction\022\020\n" +
-      "\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014i" +
-      "nner_action\030\003 \001(\0132\".temporal.omes.kitche" +
-      "n_sink.Action\"\343\001\n\034UpsertSearchAttributes" +
-      "Action\022i\n\021search_attributes\030\001 \003(\0132N.temp" +
-      "oral.omes.kitchen_sink.UpsertSearchAttri" +
-      "butesAction.SearchAttributesEntry\032X\n\025Sea" +
-      "rchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value" +
-      "\030\002 \001(\0132\037.temporal.api.common.v1.Payload:" +
-      "\0028\001\"G\n\020UpsertMemoAction\0223\n\rupserted_memo" +
-      "\030\001 \001(\0132\034.temporal.api.common.v1.Memo\"J\n\022" +
-      "ReturnResultAction\0224\n\013return_this\030\001 \001(\0132" +
-      "\037.temporal.api.common.v1.Payload\"F\n\021Retu" +
-      "rnErrorAction\0221\n\007failure\030\001 \001(\0132 .tempora" +
-      "l.api.failure.v1.Failure\"\336\006\n\023ContinueAsN" +
-      "ewAction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\ntask_" +
-      "queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.tempora" +
-      "l.api.common.v1.Payload\0227\n\024workflow_run_" +
-      "timeout\030\004 \001(\0132\031.google.protobuf.Duration" +
-      "\0228\n\025workflow_task_timeout\030\005 \001(\0132\031.google" +
-      ".protobuf.Duration\022G\n\004memo\030\006 \003(\01329.tempo" +
-      "ral.omes.kitchen_sink.ContinueAsNewActio" +
-      "n.MemoEntry\022M\n\007headers\030\007 \003(\0132<.temporal." +
-      "omes.kitchen_sink.ContinueAsNewAction.He" +
-      "adersEntry\022`\n\021search_attributes\030\010 \003(\0132E." +
-      "temporal.omes.kitchen_sink.ContinueAsNew" +
-      "Action.SearchAttributesEntry\0229\n\014retry_po" +
-      "licy\030\t \001(\0132#.temporal.api.common.v1.Retr" +
-      "yPolicy\022G\n\021versioning_intent\030\n \001(\0162,.tem" +
-      "poral.omes.kitchen_sink.VersioningIntent" +
-      "\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(" +
-      "\0132\037.temporal.api.common.v1.Payload:\0028\001\032O" +
-      "\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001" +
-      "(\0132\037.temporal.api.common.v1.Payload:\0028\001\032" +
-      "X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n" +
+      "al.api.common.v1.Payload:\0028\001\032X\n\025SearchAt" +
+      "tributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(" +
+      "\0132\037.temporal.api.common.v1.Payload:\0028\001\"0" +
+      "\n\022AwaitWorkflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005val" +
+      "ue\030\002 \001(\t\"\337\002\n\020SendSignalAction\022\023\n\013workflo" +
+      "w_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_nam" +
+      "e\030\003 \001(\t\022-\n\004args\030\004 \003(\0132\037.temporal.api.com" +
+      "mon.v1.Payload\022J\n\007headers\030\005 \003(\01329.tempor" +
+      "al.omes.kitchen_sink.SendSignalAction.He" +
+      "adersEntry\022E\n\020awaitable_choice\030\006 \001(\0132+.t" +
+      "emporal.omes.kitchen_sink.AwaitableChoic" +
+      "e\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030" +
+      "\002 \001(\0132\037.temporal.api.common.v1.Payload:\002" +
+      "8\001\";\n\024CancelWorkflowAction\022\023\n\013workflow_i" +
+      "d\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarke" +
+      "rAction\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030" +
+      "\002 \001(\010\0228\n\014inner_action\030\003 \001(\0132\".temporal.o" +
+      "mes.kitchen_sink.Action\"\343\001\n\034UpsertSearch" +
+      "AttributesAction\022i\n\021search_attributes\030\001 " +
+      "\003(\0132N.temporal.omes.kitchen_sink.UpsertS" +
+      "earchAttributesAction.SearchAttributesEn" +
+      "try\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(" +
+      "\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v" +
+      "1.Payload:\0028\001\"G\n\020UpsertMemoAction\0223\n\rups" +
+      "erted_memo\030\001 \001(\0132\034.temporal.api.common.v" +
+      "1.Memo\"J\n\022ReturnResultAction\0224\n\013return_t" +
+      "his\030\001 \001(\0132\037.temporal.api.common.v1.Paylo" +
+      "ad\"F\n\021ReturnErrorAction\0221\n\007failure\030\001 \001(\013" +
+      "2 .temporal.api.failure.v1.Failure\"\336\006\n\023C" +
+      "ontinueAsNewAction\022\025\n\rworkflow_type\030\001 \001(" +
+      "\t\022\022\n\ntask_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\013" +
+      "2\037.temporal.api.common.v1.Payload\0227\n\024wor" +
+      "kflow_run_timeout\030\004 \001(\0132\031.google.protobu" +
+      "f.Duration\0228\n\025workflow_task_timeout\030\005 \001(" +
+      "\0132\031.google.protobuf.Duration\022G\n\004memo\030\006 \003" +
+      "(\01329.temporal.omes.kitchen_sink.Continue" +
+      "AsNewAction.MemoEntry\022M\n\007headers\030\007 \003(\0132<" +
+      ".temporal.omes.kitchen_sink.ContinueAsNe" +
+      "wAction.HeadersEntry\022`\n\021search_attribute" +
+      "s\030\010 \003(\0132E.temporal.omes.kitchen_sink.Con" +
+      "tinueAsNewAction.SearchAttributesEntry\0229" +
+      "\n\014retry_policy\030\t \001(\0132#.temporal.api.comm" +
+      "on.v1.RetryPolicy\022G\n\021versioning_intent\030\n" +
+      " \001(\0162,.temporal.omes.kitchen_sink.Versio" +
+      "ningIntent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005" +
+      "value\030\002 \001(\0132\037.temporal.api.common.v1.Pay" +
+      "load:\0028\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n" +
       "\005value\030\002 \001(\0132\037.temporal.api.common.v1.Pa" +
-      "yload:\0028\001\"\321\001\n\025RemoteActivityOptions\022O\n\021c" +
-      "ancellation_type\030\001 \001(\01624.temporal.omes.k" +
-      "itchen_sink.ActivityCancellationType\022\036\n\026" +
-      "do_not_eagerly_execute\030\002 \001(\010\022G\n\021versioni" +
-      "ng_intent\030\003 \001(\0162,.temporal.omes.kitchen_" +
-      "sink.VersioningIntent\"\353\002\n\025ExecuteNexusOp" +
-      "eration\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperation\030\002" +
-      " \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132>.t" +
-      "emporal.omes.kitchen_sink.ExecuteNexusOp" +
-      "eration.HeadersEntry\022E\n\020awaitable_choice" +
-      "\030\005 \001(\0132+.temporal.omes.kitchen_sink.Awai" +
-      "tableChoice\022\027\n\017expected_output\030\006 \001(\t\022=\n\016" +
-      "before_actions\030\007 \003(\0132%.temporal.omes.kit" +
-      "chen_sink.ActionSet\032.\n\014HeadersEntry\022\013\n\003k" +
-      "ey\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"a\n\021NexusHand" +
-      "lerInput\022\r\n\005input\030\001 \001(\t\022=\n\016before_action" +
-      "s\030\002 \003(\0132%.temporal.omes.kitchen_sink.Act" +
-      "ionSet*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_C" +
-      "LOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLOS" +
-      "E_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_POL" +
-      "ICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_REQ" +
-      "UEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UNS" +
-      "PECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*" +
-      "\242\001\n\035ChildWorkflowCancellationType\022\024\n\020CHI" +
-      "LD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001" +
-      "\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETED" +
-      "\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQUEST" +
-      "ED\020\003*X\n\030ActivityCancellationType\022\016\n\nTRY_" +
-      "CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED\020" +
-      "\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.gith" +
-      "ub.com/temporalio/omes/loadgen/kitchensi" +
-      "nkb\006proto3"
+      "yload:\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003ke" +
+      "y\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.co" +
+      "mmon.v1.Payload:\0028\001\"\321\001\n\025RemoteActivityOp" +
+      "tions\022O\n\021cancellation_type\030\001 \001(\01624.tempo" +
+      "ral.omes.kitchen_sink.ActivityCancellati" +
+      "onType\022\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G" +
+      "\n\021versioning_intent\030\003 \001(\0162,.temporal.ome" +
+      "s.kitchen_sink.VersioningIntent\"\377\003\n\025Exec" +
+      "uteNexusOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\to" +
+      "peration\030\002 \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers" +
+      "\030\004 \003(\0132>.temporal.omes.kitchen_sink.Exec" +
+      "uteNexusOperation.HeadersEntry\022E\n\020awaita" +
+      "ble_choice\030\005 \001(\0132+.temporal.omes.kitchen" +
+      "_sink.AwaitableChoice\022\027\n\017expected_output" +
+      "\030\006 \001(\t\022=\n\016before_actions\030\007 \003(\0132%.tempora" +
+      "l.omes.kitchen_sink.ActionSet\022\033\n\023handler" +
+      "_workflow_id\030\010 \001(\t\022\\\n#handler_workflow_i" +
+      "d_conflict_policy\030\t \001(\0162/.temporal.api.e" +
+      "nums.v1.WorkflowIdConflictPolicy\022\027\n\017wait" +
+      "_for_signal\030\n \001(\010\032.\n\014HeadersEntry\022\013\n\003key" +
+      "\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"\365\001\n\021NexusHandl" +
+      "erInput\022\r\n\005input\030\001 \001(\t\022=\n\016before_actions" +
+      "\030\002 \003(\0132%.temporal.omes.kitchen_sink.Acti" +
+      "onSet\022\033\n\023handler_workflow_id\030\003 \001(\t\022\\\n#ha" +
+      "ndler_workflow_id_conflict_policy\030\004 \001(\0162" +
+      "/.temporal.api.enums.v1.WorkflowIdConfli" +
+      "ctPolicy\022\027\n\017wait_for_signal\030\005 \001(\010\"\025\n\023Awa" +
+      "itPendingActions*\244\001\n\021ParentClosePolicy\022#" +
+      "\n\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035P" +
+      "ARENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT" +
+      "_CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_" +
+      "POLICY_REQUEST_CANCEL\020\003*@\n\020VersioningInt" +
+      "ent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007" +
+      "DEFAULT\020\002*\242\001\n\035ChildWorkflowCancellationT" +
+      "ype\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TR" +
+      "Y_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION" +
+      "_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATI" +
+      "ON_REQUESTED\020\003*X\n\030ActivityCancellationTy" +
+      "pe\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_" +
+      "COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal." +
+      "omesZ.github.com/temporalio/omes/loadgen" +
+      "/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -54105,13 +55798,13 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_Action_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_Action_descriptor,
-        new java.lang.String[] { "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation", "Variant", });
+        new java.lang.String[] { "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation", "AwaitPendingActions", "Variant", });
     internal_static_temporal_omes_kitchen_sink_AwaitableChoice_descriptor =
       getDescriptor().getMessageTypes().get(15);
     internal_static_temporal_omes_kitchen_sink_AwaitableChoice_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_AwaitableChoice_descriptor,
-        new java.lang.String[] { "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted", "Condition", });
+        new java.lang.String[] { "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted", "WaitStarted", "Condition", });
     internal_static_temporal_omes_kitchen_sink_TimerAction_descriptor =
       getDescriptor().getMessageTypes().get(16);
     internal_static_temporal_omes_kitchen_sink_TimerAction_fieldAccessorTable = new
@@ -54291,7 +55984,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor,
-        new java.lang.String[] { "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions", });
+        new java.lang.String[] { "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal", });
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor.getNestedTypes().get(0);
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_fieldAccessorTable = new
@@ -54303,7 +55996,13 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor,
-        new java.lang.String[] { "Input", "BeforeActions", });
+        new java.lang.String[] { "Input", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal", });
+    internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor =
+      getDescriptor().getMessageTypes().get(31);
+    internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor,
+        new java.lang.String[] { });
     com.google.protobuf.DurationProto.getDescriptor();
     com.google.protobuf.EmptyProto.getDescriptor();
     io.temporal.api.common.v1.MessageProto.getDescriptor();
