@@ -9,19 +9,19 @@ module Harness
 
     @registry = {}
 
-    module_function
+    class << self
+      def register(name, profile)
+        @registry[name] = profile
+      end
 
-    def register(name, profile)
-      @registry[name] = profile
+      def lookup(name)
+        @registry.fetch(name).dup
+      rescue KeyError
+        raise ArgumentError, "Unknown worker profile #{name.inspect}"
+      end
     end
 
-    def lookup(name)
-      @registry.fetch(name).dup
-    rescue KeyError
-      raise ArgumentError, "Unknown worker profile #{name.inspect}"
-    end
-
-    register(
+    self.register(
       RESOURCE_BASED_DEFAULT_PROFILE,
       {
         tuner: Temporalio::Worker::Tuner.create_resource_based(

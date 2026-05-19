@@ -67,6 +67,13 @@ module Temporalio
   end
 
   class Worker
+    class Tuner
+      def self.create_resource_based: (
+        target_memory_usage: Float,
+        target_cpu_usage: Float
+      ) -> untyped
+    end
+
     class PollerBehavior
       class Autoscaling
         attr_reader maximum: Integer
@@ -295,6 +302,14 @@ module Harness
   module Helpers
     def configure_logger: (String log_level, String log_encoding) -> Logger
     def self.configure_logger: (String log_level, String log_encoding) -> Logger
+  end
+
+  module Profiles
+    WORKER_PROFILE_ENV_VAR: String
+    RESOURCE_BASED_DEFAULT_PROFILE: String
+
+    def self.register: (String name, Hash[Symbol, untyped] profile) -> Hash[Symbol, untyped]
+    def self.lookup: (String name) -> Hash[Symbol, untyped]
   end
 
   module WorkerCLI
