@@ -23,7 +23,6 @@ type Builder struct {
 	Logger      *zap.SugaredLogger
 	stdout      io.Writer
 	stderr      io.Writer
-	Lambda      bool
 }
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
@@ -84,16 +83,6 @@ import "github.com/temporalio/omes/workers/go/worker"
 func main() {
 	worker.Main()
 }`
-
-	if b.Lambda {
-		goMain = `package main
-
-import "github.com/temporalio/omes/workers/go/lambda"
-
-func main() {
-	lambda.Main()
-}`
-	}
 
 	goMod += `
 
