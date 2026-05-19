@@ -145,6 +145,18 @@ Notes:
 - `--task-queue-suffix-index-start` and `--task-queue-suffix-index-end` represent an inclusive range for running the
   worker on multiple task queues. The process will create a worker for every task queue from `<task-queue>-<start>`
   through `<task-queue>-end`. This only applies to multi-task-queue scenarios.
+- `--worker-profile` selects a code-defined worker configuration profile in the language harness. Omes forwards the
+  selected profile to the worker process via `OMES_WORKER_PROFILE`; the profile is not a worker CLI flag.
+
+Worker profiles provide a named worker configuration selected with `--worker-profile`. When a profile is selected, it
+takes precedence over worker configuration flags such as poller counts, autoscale poller settings, activity rate limits,
+slot counts, and worker versioning options. Non-worker-configuration flags, such as task queue selection, client
+connection settings, logging, metrics, and `--worker-err-on-unimplemented`, continue to apply normally.
+
+```sh
+go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go \
+    --run-id local-profile-test --worker-profile resource-based-default
+```
 
 ### Run a test scenario
 

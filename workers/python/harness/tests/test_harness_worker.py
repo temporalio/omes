@@ -7,7 +7,7 @@ from typing import cast
 from unittest.mock import AsyncMock, Mock, create_autospec, patch
 
 from temporalio.client import Client
-from temporalio.worker import PollerBehaviorAutoscaling, Worker
+from temporalio.worker import Worker, WorkerTuner
 
 from harness import worker
 
@@ -75,6 +75,49 @@ class HarnessWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(second_client, client)
         self.assertEqual(first_context.task_queue, "omes-1")
         self.assertEqual(second_context.task_queue, "omes-2")
+
+    async def test_run_applies_resource_based_worker_profile(self) -> None:
+        client = create_autospec(Client, instance=True, spec_set=True)
+        captured_contexts: list[worker.WorkerContext] = []
+
+        def capture_context(_client: Client, context: worker.WorkerContext) -> object:
+            captured_contexts.append(context)
+            return object()
+
+        worker_factory = Mock(side_effect=capture_context)
+        run_workers = AsyncMock()
+
+        with (
+            patch.object(
+                worker, "build_client_config", autospec=True, return_value=object()
+            ),
+            patch.object(worker, "_run_workers", new=run_workers),
+        ):
+            await worker._run(
+                worker_factory,
+                AsyncMock(return_value=client),
+                asyncio.Event(),
+                [],
+                "resource-based-default",
+            )
+
+        self.assertIsInstance(captured_contexts[0].worker_kwargs["tuner"], WorkerTuner)
+
+    def test_build_worker_kwargs_ignores_worker_option_flags_when_profile_is_selected(
+        self,
+    ) -> None:
+        args = worker._build_parser().parse_args(["--max-concurrent-activities", "50"])
+
+        worker_kwargs = worker._build_worker_kwargs(args, "resource-based-default")
+
+        self.assertIsInstance(worker_kwargs["tuner"], WorkerTuner)
+        self.assertNotIn("max_concurrent_activities", worker_kwargs)
+
+    def test_build_worker_kwargs_rejects_unknown_profile(self) -> None:
+        args = worker._build_parser().parse_args([])
+
+        with self.assertRaisesRegex(ValueError, "Unknown worker profile 'nope'"):
+            worker._build_worker_kwargs(args, "nope")
 
     async def test_run_workers_shuts_down_all_workers_when_one_fails(self) -> None:
         async def fail_immediately() -> None:

@@ -67,6 +67,13 @@ module Temporalio
   end
 
   class Worker
+    class Tuner
+      def self.create_resource_based: (
+        target_memory_usage: Float,
+        target_cpu_usage: Float
+      ) -> untyped
+    end
+
     class PollerBehavior
       class Autoscaling
         attr_reader maximum: Integer
@@ -297,9 +304,17 @@ module Harness
     def self.configure_logger: (String log_level, String log_encoding) -> Logger
   end
 
+  module Profiles
+    WORKER_PROFILE_ENV_VAR: String
+    RESOURCE_BASED_DEFAULT_PROFILE: String
+
+    def self.register: (String name, Hash[Symbol, untyped] profile) -> Hash[Symbol, untyped]
+    def self.lookup: (String name) -> Hash[Symbol, untyped]
+  end
+
   module WorkerCLI
-    def run_cli: (worker_factory, client_factory, Array[String]) -> void
-    def self.run_cli: (worker_factory, client_factory, Array[String]) -> void
+    def run_cli: (worker_factory, client_factory, Array[String], ?worker_profile: String?) -> void
+    def self.run_cli: (worker_factory, client_factory, Array[String], ?worker_profile: String?) -> void
     def run: (worker_factory, client_factory, Array[String]) -> void
     def self.run: (worker_factory, client_factory, Array[String]) -> void
     def run_workers: (Array[untyped] workers) -> void
@@ -308,8 +323,8 @@ module Harness
     def self.build_parser: (Hash[Symbol, untyped] options) -> OptionParser
     def build_task_queues: (Logger logger, String task_queue, Integer suffix_start, Integer suffix_end) -> Array[String]
     def self.build_task_queues: (Logger logger, String task_queue, Integer suffix_start, Integer suffix_end) -> Array[String]
-    def build_worker_kwargs: (Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
-    def self.build_worker_kwargs: (Hash[Symbol, untyped] options) -> Hash[Symbol, untyped]
+    def build_worker_kwargs: (Hash[Symbol, untyped] options, ?String? profile_name) -> Hash[Symbol, untyped]
+    def self.build_worker_kwargs: (Hash[Symbol, untyped] options, ?String? profile_name) -> Hash[Symbol, untyped]
     def parse_bool: (untyped value) -> bool
     def self.parse_bool: (untyped value) -> bool
     def default_options: -> Hash[Symbol, untyped]

@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,6 +66,51 @@ func TestRunWorkerCLIPassesSharedClientAndWorkerContext(t *testing.T) {
 		if !context.ErrOnUnimplemented {
 			t.Fatal("expected err-on-unimplemented in worker context")
 		}
+	}
+}
+
+func TestBuildWorkerOptionsAppliesResourceBasedProfile(t *testing.T) {
+	options := newWorkerCLIOptions()
+	if err := options.parse(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions, resourceBasedDefaultWorkerProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workerOptions.Tuner == nil {
+		t.Fatal("expected worker profile to set tuner")
+	}
+}
+
+func TestBuildWorkerOptionsIgnoresWorkerOptionFlagsWhenProfileIsSelected(t *testing.T) {
+	options := newWorkerCLIOptions()
+	if err := options.parse([]string{"--max-concurrent-activities", "50"}); err != nil {
+		t.Fatal(err)
+	}
+
+	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions, resourceBasedDefaultWorkerProfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workerOptions.Tuner == nil {
+		t.Fatal("expected worker profile to set tuner")
+	}
+	if workerOptions.MaxConcurrentActivityExecutionSize != 0 {
+		t.Fatalf("expected profile to ignore max concurrent activities flag, got %d", workerOptions.MaxConcurrentActivityExecutionSize)
+	}
+}
+
+func TestBuildWorkerOptionsRejectsUnknownProfile(t *testing.T) {
+	options := newWorkerCLIOptions()
+	if err := options.parse(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := buildWorkerOptions(options.flags, options.workerOptions, "nope")
+	if err == nil || !strings.Contains(err.Error(), `unknown worker profile "nope"`) {
+		t.Fatalf("expected unknown profile error, got %v", err)
 	}
 }
 
