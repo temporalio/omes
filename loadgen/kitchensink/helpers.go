@@ -332,18 +332,6 @@ func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
 	return "noop", nil
 }
 
-// StandaloneActivity defaults StartToCloseTimeout to 30s if unset.
-func StandaloneActivity(activity *ExecuteActivityAction) *ClientAction {
-	if activity.StartToCloseTimeout == nil {
-		activity.StartToCloseTimeout = durationpb.New(30 * time.Second)
-	}
-	return &ClientAction{
-		Variant: &ClientAction_DoStandaloneActivity{
-			DoStandaloneActivity: &DoStandaloneActivity{Activity: activity},
-		},
-	}
-}
-
 func NewSetWorkflowStateAction(key, value string) *Action {
 	return &Action{
 		Variant: &Action_SetWorkflowState{

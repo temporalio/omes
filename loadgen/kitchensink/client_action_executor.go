@@ -142,14 +142,9 @@ func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, s
 
 	actType, args := ActivityNameAndArgs(act)
 
-	taskQueue := act.TaskQueue
-	if taskQueue == "" {
-		taskQueue = e.WorkflowOptions.TaskQueue
-	}
-
 	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
 		ID:                     fmt.Sprintf("standalone-%s-%d", e.WorkflowOptions.ID, time.Now().UnixNano()),
-		TaskQueue:              taskQueue,
+		TaskQueue:              act.TaskQueue,
 		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 		ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
 		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),

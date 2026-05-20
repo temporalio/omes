@@ -445,7 +445,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 		if t.config.EnableStandaloneActivity {
 			asyncActions = append(asyncActions,
-				ClientActivity(ClientActions(t.createStandaloneActivity()), DefaultRemoteActivity),
+				ClientActivity(ClientActions(t.createStandaloneActivity(loadgen.TaskQueueForRun(run.RunID))), DefaultRemoteActivity),
 			)
 		}
 
@@ -622,19 +622,27 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 	}
 }
 
-func (t *tpsExecutor) createStandaloneActivity() *ClientAction {
-	return StandaloneActivity(&ExecuteActivityAction{
-		ActivityType: &ExecuteActivityAction_Payload{
-			Payload: &ExecuteActivityAction_PayloadActivity{
-				BytesToReceive: 256,
-				BytesToReturn:  256,
+func (t *tpsExecutor) createStandaloneActivity(taskQueue string) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+					TaskQueue:           taskQueue,
+					StartToCloseTimeout: durationpb.New(30 * time.Second),
+					RetryPolicy: &common.RetryPolicy{
+						InitialInterval:    durationpb.New(100 * time.Millisecond),
+						BackoffCoefficient: 1,
+					},
+				},
 			},
 		},
-		RetryPolicy: &common.RetryPolicy{
-			InitialInterval:    durationpb.New(100 * time.Millisecond),
-			BackoffCoefficient: 1,
-		},
-	})
+	}
 }
 
 func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
