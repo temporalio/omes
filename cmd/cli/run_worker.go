@@ -18,8 +18,15 @@ func runWorkerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-worker",
 		Short: "Run a worker",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := applyEnvFallbacks(cmd.Flags(), "OMES_"); err != nil {
+				return err
+			}
+			if err := requireFlagsOrEnv(cmd.Flags(), "OMES_", "language", "run-id"); err != nil {
+				return err
+			}
 			r.preRun()
+			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
@@ -30,8 +37,6 @@ func runWorkerCmd() *cobra.Command {
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("language")
-	cmd.MarkFlagRequired("run-id")
 	return cmd
 }
 
