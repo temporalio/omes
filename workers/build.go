@@ -74,7 +74,11 @@ go 1.20
 
 require github.com/temporalio/omes v1.0.0
 require github.com/temporalio/omes/workers/go v1.0.0
-require github.com/temporalio/omes/workers/go/harness/api v0.0.0`
+require github.com/temporalio/omes/workers/go/harness/api v0.0.0
+
+replace github.com/temporalio/omes => ../../../
+replace github.com/temporalio/omes/workers/go => ../
+replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	goMain := `package main
 
@@ -83,12 +87,6 @@ import "github.com/temporalio/omes/workers/go/worker"
 func main() {
 	worker.Main()
 }`
-
-	goMod += `
-
-replace github.com/temporalio/omes => ../../../
-replace github.com/temporalio/omes/workers/go => ../
-replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
 		BaseDir:        baseDir,
