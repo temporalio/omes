@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/temporalio/omes/loadgen/ebbandflow"
-	"github.com/temporalio/omes/workers/go/workflowutils"
+	"github.com/temporalio/omes/workers/go/workerlib/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
