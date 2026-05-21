@@ -11,10 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/devserver"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/versions"
 	"github.com/temporalio/omes/workers"
 	sdkclient "go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/testsuite"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -62,7 +63,7 @@ func runProjectScenario(
 	usePrebuilt bool,
 ) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Minute)
 	defer cancel()
 
 	client, clientOptions := startServerAndClient(t, ctx)
@@ -114,10 +115,13 @@ func startServerAndClient(
 ) (sdkclient.Client, clioptions.ClientOptions) {
 	t.Helper()
 
-	server, err := testsuite.StartDevServer(ctx, testsuite.DevServerOptions{
-		ClientOptions: &sdkclient.Options{
-			Namespace: "default",
-		},
+	serverRef, err := versions.Get("SERVER_VERSION")
+	require.NoError(t, err)
+	require.NotEmpty(t, serverRef, "SERVER_VERSION must be set in versions.env")
+	server, err := devserver.Start(ctx, devserver.Options{
+		Ref:       serverRef,
+		Namespace: "default",
+		Logger:    zaptest.NewLogger(t).Named("devserver").Sugar(),
 	})
 	require.NoError(t, err)
 

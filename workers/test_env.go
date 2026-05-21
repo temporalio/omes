@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/devserver"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/versions"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/testsuite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
@@ -32,7 +34,8 @@ const (
 // Functional options configuration
 type testEnvConfig struct {
 	executorTimeout time.Duration
-	runID string
+	runID           string
+	dynamicConfig   map[string]any
 }
 
 type TestEnvOption func(*testEnvConfig)
@@ -51,17 +54,24 @@ func WithNexusEndpoint(runID string) TestEnvOption {
 	}
 }
 
+// WithDynamicConfig passes dynamic-config overrides to the dev server, on top
+// of the test-friendly defaults that devserver applies. Use this for opt-in
+// feature gates that a specific test needs.
+func WithDynamicConfig(values map[string]any) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.dynamicConfig = values
+	}
+}
+
 type TestResult struct {
 	ObservedLogs *observer.ObservedLogs
 }
 
 type TestEnvironment struct {
 	testEnvConfig
-	createdAt         time.Time
-	devServer         *testsuite.DevServer
+	devServer         *devserver.Server
 	temporalClient    client.Client
-	baseDir           string
-	buildDir          string
+	buildID           string
 	repoDir           string
 	nexusEndpointName string
 	workerPool        *workerPool
@@ -87,15 +97,18 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		opt(&cfg)
 	}
 
+	serverRef, err := versions.Get("SERVER_VERSION")
+	require.NoError(t, err)
+	require.NotEmpty(t, serverRef, "SERVER_VERSION must be set in versions.env")
+
 	testLogger := zaptest.NewLogger(t)
 	serverLogger := testLogger.Named("devserver").Sugar()
-	server, err := testsuite.StartDevServer(t.Context(), testsuite.DevServerOptions{
-		ClientOptions: &client.Options{
-			Namespace: testNamespace,
-		},
-		LogLevel: "error",
-		Stdout:   &logWriter{logger: serverLogger},
-		Stderr:   &logWriter{logger: serverLogger},
+	server, err := devserver.Start(t.Context(), devserver.Options{
+		Ref:                 serverRef,
+		Namespace:           testNamespace,
+		DynamicConfigValues: cfg.dynamicConfig,
+		Output:              &logWriter{logger: serverLogger},
+		Logger:              serverLogger,
 	})
 	require.NoError(t, err, "Failed to start dev server")
 
@@ -106,14 +119,12 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	require.NoError(t, err, "Failed to create Temporal client")
 
 	testDir, _ := os.Getwd()
-	repoDir := filepath.Dir(testDir)
-
 	env := &TestEnvironment{
 		testEnvConfig:  cfg,
 		devServer:      server,
 		temporalClient: temporalClient,
-		repoDir:        repoDir,
-		createdAt:      time.Now(),
+		repoDir:        filepath.Dir(testDir),
+		buildID:        uuid.NewString(),
 	}
 	env.workerPool = NewWorkerPool(env)
 
@@ -214,5 +225,5 @@ func (env *TestEnvironment) RunExecutorTest(
 }
 
 func (env *TestEnvironment) buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", env.createdAt.UnixMilli())
+	return fmt.Sprintf("omes-temp-%s", env.buildID)
 }
