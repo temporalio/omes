@@ -19,6 +19,7 @@ import (
 type Builder struct {
 	DirName     string
 	ProjectName string
+	AppName     string
 	SdkOptions  clioptions.SdkOptions
 	Logger      *zap.SugaredLogger
 	stdout      io.Writer
@@ -35,7 +36,6 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	if b.ProjectName != "" {
 		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
-
 	buildDir := filepath.Join(baseDir, b.DirName)
 	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
 	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
@@ -68,6 +68,12 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 }
 
 func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	appName := b.AppName
+	if appName == "" {
+		appName = "worker"
+	}
+	appImportPath := "github.com/temporalio/omes/workers/go/apps/" + appName
+
 	goMod := `module github.com/temporalio/omes-worker
 
 go 1.20
@@ -80,13 +86,13 @@ replace github.com/temporalio/omes => ../../../
 replace github.com/temporalio/omes/workers/go => ../
 replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
-	goMain := `package main
+	goMain := fmt.Sprintf(`package main
 
-import "github.com/temporalio/omes/workers/go/apps/worker"
+import app %q
 
 func main() {
-	worker.Main()
-}`
+	app.Main()
+}`, appImportPath)
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
 		BaseDir:        baseDir,

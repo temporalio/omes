@@ -7,14 +7,20 @@ import (
 
 type App struct {
 	Worker        WorkerFactory
+	LambdaWorker  LambdaWorkerFactory
 	ClientFactory ClientFactory
 	Project       *ProjectHandlers
 }
 
 var dispatchWorkerCLI = runWorkerCLI
 var dispatchProjectCLI = runProjectServerCLI
+var dispatchLambdaWorker = runLambdaWorker
 
 func Run(app App) error {
+	if os.Getenv("AWS_LAMBDA_RUNTIME_API") != "" && app.LambdaWorker != nil {
+		return dispatchLambdaWorker(app.LambdaWorker)
+	}
+
 	argv := os.Args[1:]
 	if len(argv) == 0 {
 		return fmt.Errorf("No command specified. Expected 'worker' or 'project-server'")

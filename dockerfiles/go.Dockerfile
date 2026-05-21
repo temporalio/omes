@@ -19,6 +19,7 @@ COPY go.mod go.sum ./
 RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
+ARG GO_APP
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
@@ -28,7 +29,7 @@ COPY ${SDK_DIR} ./repo
 COPY workers/go ./workers/go
 
 # Build the worker
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --app "$GO_APP" --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
 FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
