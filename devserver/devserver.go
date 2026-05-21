@@ -85,6 +85,9 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	if opts.Ref == "" && opts.SourceDir == "" {
 		return nil, errors.New("devserver: Ref or SourceDir is required")
 	}
+	if opts.Ref != "" && opts.SourceDir != "" {
+		return nil, errors.New("devserver: Ref and SourceDir are mutually exclusive")
+	}
 	opts.Logger = cmp.Or(opts.Logger, zap.NewNop().Sugar())
 	opts.Namespace = cmp.Or(opts.Namespace, "default")
 
