@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/flock"
 	"go.uber.org/zap"
 )
 
@@ -19,9 +20,8 @@ const (
 )
 
 // buildMutexes serializes concurrent in-process callers of buildServer per
-// srcDir, so parallel `t.Parallel()` tests sharing a directory don't race on
-// the same clone/build, while tests on distinct dirs run in parallel.
-// Cross-process contention isn't covered.
+// srcDir. buildServer also takes a filesystem lock so package test processes
+// sharing the same cache don't race on clone/build.
 var buildMutexes sync.Map // map[srcDir]*sync.Mutex
 
 // buildServer ensures temporal's ./cmd/server is built inside srcDir and
@@ -31,6 +31,11 @@ var buildMutexes sync.Map // map[srcDir]*sync.Mutex
 // skips clone+build. When clone is false, srcDir is used as-is and always
 // rebuilt (caller may have uncommitted changes).
 func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, gitRef string, clone bool) (string, error) {
+	srcDir, err := filepath.Abs(srcDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve source dir: %w", err)
+	}
+
 	muAny, _ := buildMutexes.LoadOrStore(srcDir, &sync.Mutex{})
 	mu := muAny.(*sync.Mutex)
 	mu.Lock()
@@ -39,6 +44,12 @@ func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, gitRef 
 	if err := os.MkdirAll(filepath.Dir(srcDir), 0755); err != nil {
 		return "", fmt.Errorf("create output dir: %w", err)
 	}
+	unlock, err := lockBuildCache(buildCacheLockPath(srcDir))
+	if err != nil {
+		return "", err
+	}
+	defer unlock()
+
 	binaryPath := filepath.Join(srcDir, "temporal-server")
 	shaFile := filepath.Join(srcDir, ".sha")
 
@@ -80,6 +91,48 @@ func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, gitRef 
 		}
 	}
 	return binaryPath, nil
+}
+
+func defaultOutputDir(outputDir string) (string, error) {
+	if outputDir != "" {
+		return outputDir, nil
+	}
+	root, err := findRepoRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, ".devserver"), nil
+}
+
+func findRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("go.mod not found above %s", dir)
+		}
+		dir = parent
+	}
+}
+
+func lockBuildCache(path string) (func(), error) {
+	lock := flock.New(path)
+	if err := lock.Lock(); err != nil {
+		return nil, fmt.Errorf("lock build cache: %w", err)
+	}
+	return func() {
+		_ = lock.Unlock()
+	}, nil
+}
+
+func buildCacheLockPath(srcDir string) string {
+	return filepath.Join(filepath.Dir(srcDir), filepath.Base(srcDir)+".lock")
 }
 
 // resolveSha returns the full sha for gitRef. Accepts a 40-hex sha as-is;

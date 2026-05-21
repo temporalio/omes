@@ -3,6 +3,7 @@ package devserver
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,6 +23,28 @@ func TestAllocatePorts(t *testing.T) {
 		require.False(t, ok, "duplicate port %d", port)
 		seen[port] = struct{}{}
 	}
+}
+
+func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
+	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test\n"), 0644))
+	nested := filepath.Join(root, "scenarios", "project")
+	require.NoError(t, os.MkdirAll(nested, 0755))
+
+	prevDir, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(nested))
+	t.Cleanup(func() { require.NoError(t, os.Chdir(prevDir)) })
+
+	outputDir, err := defaultOutputDir("")
+	require.NoError(t, err)
+	root, err = filepath.EvalSymlinks(root)
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(root, ".devserver"), outputDir)
+}
+
+func TestBuildCacheLockPath(t *testing.T) {
+	require.Equal(t, filepath.Join("tmp", ".devserver.lock"), buildCacheLockPath(filepath.Join("tmp", ".devserver")))
 }
 
 func TestWriteDynamicConfig(t *testing.T) {

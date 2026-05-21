@@ -3,6 +3,7 @@ module github.com/temporalio/omes
 go 1.25.0
 
 require (
+	github.com/gofrs/flock v0.13.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0

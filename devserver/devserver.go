@@ -29,7 +29,7 @@ type Options struct {
 	// the caller has a local source tree to build from.
 	SourceDir string
 	// OutputDir holds the source clone and built binary across runs. Defaults
-	// to ".devserver" in the current directory. A single binary is cached per
+	// to ".devserver" at the repository root. A single binary is cached per
 	// OutputDir; the .sha marker file records which ref it was built from, so
 	// switching Ref triggers a re-clone + rebuild.
 	OutputDir string
@@ -129,7 +129,10 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	}
 
 	// Resolve persistent paths (cache + source) and build the binary.
-	outputDir := cmp.Or(opts.OutputDir, ".devserver")
+	outputDir, err := defaultOutputDir(opts.OutputDir)
+	if err != nil {
+		return nil, fmt.Errorf("devserver: resolve output dir: %w", err)
+	}
 	srcDir := cmp.Or(opts.SourceDir, outputDir)
 	binaryPath, err := buildServer(ctx, opts.Logger, srcDir, opts.Ref, opts.SourceDir == "")
 	if err != nil {
