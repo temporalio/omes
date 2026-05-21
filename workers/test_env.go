@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/devserver"
@@ -68,11 +69,9 @@ type TestResult struct {
 
 type TestEnvironment struct {
 	testEnvConfig
-	createdAt         time.Time
 	devServer         *devserver.Server
 	temporalClient    client.Client
-	baseDir           string
-	buildDir          string
+	buildID           string
 	repoDir           string
 	nexusEndpointName string
 	workerPool        *workerPool
@@ -125,7 +124,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		devServer:      server,
 		temporalClient: temporalClient,
 		repoDir:        filepath.Dir(testDir),
-		createdAt:      time.Now(),
+		buildID:        uuid.NewString(),
 	}
 	env.workerPool = NewWorkerPool(env)
 
@@ -226,5 +225,5 @@ func (env *TestEnvironment) RunExecutorTest(
 }
 
 func (env *TestEnvironment) buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", env.createdAt.UnixMilli())
+	return fmt.Sprintf("omes-temp-%s", env.buildID)
 }
