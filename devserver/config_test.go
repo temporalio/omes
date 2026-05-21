@@ -14,10 +14,13 @@ import (
 func TestAllocatePorts(t *testing.T) {
 	ports, err := allocatePorts("127.0.0.1")
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, ports[0], safePortMin)
-	require.Less(t, ports[portCount-1], 32768)
-	for i := 1; i < portCount; i++ {
-		require.Equal(t, ports[0]+i, ports[i], "ports must be consecutive")
+	seen := make(map[int]struct{}, portCount)
+	for _, port := range ports {
+		require.GreaterOrEqual(t, port, safePortMin)
+		require.Less(t, port, 32768)
+		_, ok := seen[port]
+		require.False(t, ok, "duplicate port %d", port)
+		seen[port] = struct{}{}
 	}
 }
 

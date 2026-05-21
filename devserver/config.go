@@ -40,36 +40,48 @@ const (
 
 const maxPortAllocationAttempts = 50
 
-// allocatePorts returns portCount consecutive free ports in the postgres-safe
-// range (<32768). Picks a random base in [safePortMin, safePortMax-portCount)
-// and binds each port to prove it's free; releases the listeners before
-// returning so the caller can rebind.
+// allocatePorts returns portCount free ports in the postgres-safe
+// range (<32768). It binds each port to prove it's free, then releases the
+// listeners before returning so the caller can rebind.
 func allocatePorts(host string) ([portCount]int, error) {
-	var lastErr error
-attempt:
-	for range maxPortAllocationAttempts {
-		base := safePortMin + rand.Intn(safePortMax-safePortMin-portCount)
-		var ports [portCount]int
-		listeners := make([]net.Listener, 0, portCount)
-		for i := range portCount {
-			l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, base+i))
-			if err != nil {
-				lastErr = err
-				for _, l := range listeners {
-					_ = l.Close()
-				}
-				continue attempt
-			}
-			listeners = append(listeners, l)
-			ports[i] = base + i
-		}
+	var ports [portCount]int
+	used := make(map[int]struct{}, portCount)
+	listeners := make([]net.Listener, 0, portCount)
+	defer func() {
 		for _, l := range listeners {
 			_ = l.Close()
 		}
-		return ports, nil
+	}()
+
+	for i := range portCount {
+		port, l, err := tryAllocatePort(host, used)
+		if err != nil {
+			return [portCount]int{},
+				fmt.Errorf("allocatePorts: no free port in [%d, %d) after %d attempts: %w", safePortMin, safePortMax, maxPortAllocationAttempts, err)
+		}
+		listeners = append(listeners, l)
+		ports[i] = port
+		used[port] = struct{}{}
 	}
-	return [portCount]int{},
-		fmt.Errorf("allocatePorts: no free contiguous range in [%d, %d) after %d attempts: %w", safePortMin, safePortMax, maxPortAllocationAttempts, lastErr)
+	return ports, nil
+}
+
+func tryAllocatePort(host string, used map[int]struct{}) (int, net.Listener, error) {
+	var lastErr error
+	for range maxPortAllocationAttempts {
+		port := safePortMin + rand.Intn(safePortMax-safePortMin)
+		if _, ok := used[port]; ok {
+			continue
+		}
+
+		l, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return port, l, nil
+	}
+	return 0, nil, cmp.Or(lastErr, fmt.Errorf("no unused free port found"))
 }
 
 // buildServerEnv returns the env vars that drive temporal-server's embedded
@@ -106,16 +118,13 @@ func buildServerEnv(p PersistenceOptions, c ClusterEndpoint, dynConfigPath, host
 		add("CLUSTER_HTTP_ADDRESS", c.HTTPAddress)
 	}
 
-	// Persistence config.
+	// Persistence config. Let the server validate unsupported drivers.
 	driver := cmp.Or(p.Driver, "sqlite")
 	add("DB", driver)
-	switch driver {
-	case "sqlite":
+	if driver == "sqlite" {
 		// Use in-memory SQLite.
 		add("SQLITE_MODE", "memory")
 		add("SQLITE_CACHE", "shared")
-	default:
-		return nil, fmt.Errorf("unsupported persistence driver %q (want sqlite)", driver)
 	}
 	return env, nil
 }
