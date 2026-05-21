@@ -82,7 +82,7 @@ replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	goMain := `package main
 
-import "github.com/temporalio/omes/workers/go/worker"
+import "github.com/temporalio/omes/workers/go/apps/worker"
 
 func main() {
 	worker.Main()

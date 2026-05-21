@@ -85,7 +85,7 @@ multiple defined that can be used.
 
 A scenario must select an `Executor`. The most common is the `KitchenSinkExecutor` which is a wrapper on the
 `GenericExecutor` specific for executing the Kitchen Sink workflow. The Kitchen Sink workflow accepts
-[actions](./workers/go/kitchensink/kitchen_sink.go) and is implemented in every worker language.
+[actions](./workers/go/workerlib/kitchensink/kitchen_sink.go) and is implemented in every worker language.
 
 For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios/workflow_with_single_noop_activity.go):
 
