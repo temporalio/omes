@@ -3,10 +3,10 @@ import * as grpc from '@grpc/grpc-js';
 import { Client } from '@temporalio/client';
 import { DefaultLogger, Logger } from '@temporalio/worker';
 import { buildClientConfig, ClientFactory } from './client';
-import type { ExecuteRequest__Output } from './generated/temporal/omes/projects/v1/ExecuteRequest';
-import type { ExecuteResponse } from './generated/temporal/omes/projects/v1/ExecuteResponse';
-import type { InitRequest__Output } from './generated/temporal/omes/projects/v1/InitRequest';
-import type { InitResponse } from './generated/temporal/omes/projects/v1/InitResponse';
+import type { ExecuteRequest__Output } from './api/temporal/omes/projects/v1/ExecuteRequest';
+import type { ExecuteResponse } from './api/temporal/omes/projects/v1/ExecuteResponse';
+import type { InitRequest__Output } from './api/temporal/omes/projects/v1/InitRequest';
+import type { InitResponse } from './api/temporal/omes/projects/v1/InitResponse';
 import { grpcError, registerProjectService } from './helpers';
 
 export interface ProjectRunMetadata {

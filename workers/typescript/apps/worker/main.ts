@@ -1,10 +1,10 @@
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Client } from '@temporalio/client';
-import { createActivities } from './activities';
-import type { ClientConfig, App, WorkerContext } from '@temporalio/omes-project-harness';
-import { run as runApp } from '@temporalio/omes-project-harness';
+import { createActivities } from '../../workerlib/kitchensink/activities';
+import type { ClientConfig, App, WorkerContext } from '../../harness';
+import { run as runApp } from '../../harness';
 
-const payloadConverterPath = require.resolve('./payload-converter');
+const payloadConverterPath = require.resolve('../../workerlib/kitchensink/payload-converter');
 
 async function kitchenSinkClientFactory(config: ClientConfig): Promise<Client> {
   // Use native connection backed client. This client is also used
@@ -34,7 +34,7 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
   return await Worker.create({
     connection,
     namespace: client.options.namespace,
-    workflowsPath: require.resolve('./workflows'),
+    workflowsPath: require.resolve('../../workerlib/kitchensink/workflows'),
     activities: createActivities(client, context.errOnUnimplemented),
     taskQueue: context.taskQueue,
     dataConverter: {

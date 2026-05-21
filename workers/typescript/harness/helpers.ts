@@ -1,6 +1,6 @@
 import { DefaultLogger, Logger, LogLevel } from '@temporalio/worker';
 import winston from 'winston';
-import { type ProjectServiceServer } from '../src/project';
+import { type ProjectServiceServer } from './project';
 import * as grpc from '@grpc/grpc-js';
 import { projectServiceDefinition } from './grpc-helpers';
 

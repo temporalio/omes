@@ -195,13 +195,20 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
+		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "worker", "main.ts"))}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
-		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+		Includes: []string{
+			"../apps/**/*.ts",
+			"../harness/*.ts",
+			"../harness/api/**/*.ts",
+			"../workerlib/**/*.ts",
+			"../workerlib/kitchensink/protos/json-module.js",
+			"../workerlib/kitchensink/protos/root.js",
+		},
 		MoreDependencies: map[string]string{
-			"@temporalio/omes-project-harness": "file:../harness",
-			"winston":                          "^3.11.0",
+			"@grpc/proto-loader": "^0.8.0",
+			"winston":            "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
@@ -209,7 +216,25 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
+	if err := copyTypeScriptHarnessProto(baseDir, prog.Dir()); err != nil {
+		return nil, err
+	}
 	return prog, nil
+}
+
+func copyTypeScriptHarnessProto(baseDir, preparedDir string) error {
+	protoBytes, err := os.ReadFile(filepath.Join(baseDir, "..", "proto", "harness", "api", "api.proto"))
+	if err != nil {
+		return fmt.Errorf("failed reading TypeScript harness api.proto: %w", err)
+	}
+	targetDir := filepath.Join(preparedDir, "tslib", "harness", "api")
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed creating TypeScript harness proto dir: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "api.proto"), protoBytes, 0644); err != nil {
+		return fmt.Errorf("failed writing TypeScript harness api.proto: %w", err)
+	}
+	return nil
 }
 
 func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Program, error) {

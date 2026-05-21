@@ -6,7 +6,7 @@ const { statSync, mkdirSync } = require('fs');
 const pbjs = require('protobufjs-cli/pbjs');
 const pbts = require('protobufjs-cli/pbts');
 
-const outputDir = resolve(__dirname, './src/protos');
+const outputDir = resolve(__dirname, './workerlib/kitchensink/protos');
 const jsOutputFile = resolve(outputDir, 'json-module.js');
 const tempFile = resolve(outputDir, 'temp.js');
 const protoBaseDir = resolve(__dirname, '../proto');
@@ -65,6 +65,14 @@ async function compileProtos(dtsOutputFile, ...args) {
     await writeFile(tempFile, tempFileContent, 'utf-8');
 
     await promisify(pbts.main)(['--out', dtsOutputFile, tempFile]);
+    let dtsFileContent = await readFile(dtsOutputFile, 'utf8');
+    dtsFileContent += `
+export const temporal: typeof temporal;
+export const google: typeof google;
+declare const root: { temporal: typeof temporal; google: typeof google };
+export default root;
+`;
+    await writeFile(dtsOutputFile, dtsFileContent, 'utf-8');
   } finally {
     await rm(tempFile);
   }
@@ -73,9 +81,10 @@ async function compileProtos(dtsOutputFile, ...args) {
 async function main() {
   mkdirSync(outputDir, { recursive: true });
 
+  const dtsOutputFile = resolve(outputDir, 'root.d.ts');
   const protoFiles = glob.sync(resolve(protoBaseDir, '**/*.proto'));
-  const protosMTime = Math.max(...protoFiles.map(mtime));
-  const genMTime = mtime(jsOutputFile);
+  const protosMTime = Math.max(mtime(__filename), ...protoFiles.map(mtime));
+  const genMTime = Math.min(mtime(jsOutputFile), mtime(dtsOutputFile));
 
   if (protosMTime < genMTime) {
     console.log('Assuming protos are up to date');
@@ -83,7 +92,7 @@ async function main() {
   }
 
   await compileProtos(
-    resolve(outputDir, 'root.d.ts'),
+    dtsOutputFile,
     '--path',
     resolve(protoBaseDir, 'kitchen_sink'),
     '--path',

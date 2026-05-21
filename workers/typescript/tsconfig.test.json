@@ -1,13 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "incremental": false,
     "outDir": "./dist-test",
     "sourceMap": false
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["harness/**/*.ts"],
   "exclude": []
 }

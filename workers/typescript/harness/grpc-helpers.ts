@@ -1,11 +1,11 @@
 import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import type { ProtoGrpcType } from './generated/api';
+import type { ProtoGrpcType } from './api/api';
 import type {
   ProjectServiceClient,
   ProjectServiceDefinition,
-} from './generated/temporal/omes/projects/v1/ProjectService';
+} from './api/temporal/omes/projects/v1/ProjectService';
 
 export type ProjectServiceClientConstructor = new (
   address: string,
@@ -14,9 +14,9 @@ export type ProjectServiceClientConstructor = new (
 ) => ProjectServiceClient;
 
 // Packaged consumers (e.g. temp worker builds in cmd/dev test) do not have repo-relative
-// access to workers/proto, so the built harness package must carry a copy of api.proto next
-// to the compiled output under dist*/proto.
-const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, '../proto/api.proto'), {
+// access to workers/proto, so built outputs must carry api.proto next to the
+// compiled harness package.
+const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, './api/api.proto'), {
   longs: Number,
 });
 const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
