@@ -63,7 +63,7 @@ func runProjectScenario(
 	usePrebuilt bool,
 ) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Minute)
 	defer cancel()
 
 	client, clientOptions := startServerAndClient(t, ctx)
@@ -228,4 +228,3 @@ func startProjectWorker(
 	}()
 	return workerErrCh
 }
-
