@@ -25,7 +25,6 @@ from protos.kitchen_sink_pb2 import (
     DoSignal,
     ExecuteActivityAction,
     ExecuteNexusOperation,
-    NexusHandlerInput,
     SendSignalAction,
     WorkflowInput,
     WorkflowState,
@@ -311,14 +310,22 @@ async def handle_nexus_operation(
     headers = dict(nexus_op.headers) if nexus_op.headers else None
     choice = nexus_op.awaitable_choice
 
-    op_input = NexusHandlerInput(
-        input=nexus_op.input,
-        before_actions=nexus_op.before_actions,
-        handler_workflow_id=nexus_op.handler_workflow_id,
-        handler_workflow_id_conflict_policy=nexus_op.handler_workflow_id_conflict_policy,
-        wait_for_signal=nexus_op.wait_for_signal,
-    )
-    output_type = str
+    # The operation name is implied by which variant the caller set; route here.
+    variant = nexus_op.WhichOneof("variant")
+    if variant == "sync":
+        operation_name = "echo-sync"
+        op_input = nexus_op.sync.input
+        output_type = str
+        expected_output = nexus_op.sync.expected_output
+    elif variant == "start_workflow":
+        operation_name = "echo-async"
+        op_input = nexus_op.start_workflow
+        output_type = Payload
+        expected_output = None
+    else:
+        raise exceptions.ApplicationError(
+            "ExecuteNexusOperation has no variant set", non_retryable=True
+        )
 
     # Track whether the operation has started so we can wait for it
     op_started = False
@@ -328,16 +335,17 @@ async def handle_nexus_operation(
     async def start_and_complete():
         nonlocal op_started
         handle = await client.start_operation(
-            nexus_op.operation,
+            operation_name,
             op_input,
             output_type=output_type,
             headers=headers,
         )
         op_started = True
         result = await handle
-        if nexus_op.expected_output and result != nexus_op.expected_output:
+        # expected_output is verified for echo-sync only (string→string).
+        if expected_output and result != expected_output:
             raise exceptions.ApplicationError(
-                f"expected output {nexus_op.expected_output!r}, got {result!r}"
+                f"expected output {expected_output!r}, got {result!r}"
             )
 
     async def after_nexus_started(task: asyncio.Task):
@@ -371,7 +379,15 @@ async def handle_send_signal(
         ext_handle = workflow.get_external_workflow_handle(
             action.workflow_id, run_id=action.run_id or None
         )
-        await ext_handle.signal(action.signal_name)
+        # SendSignalAction.args is currently only used to drive a remote kitchen-sink workflow's
+        # do_actions_signal handler: args[0] must encode a DoSignal.DoSignalActions proto.
+        if action.args:
+            do_sig = workflow.payload_converter().from_payload(
+                action.args[0], DoSignal.DoSignalActions
+            )
+            await ext_handle.signal(action.signal_name, do_sig)
+        else:
+            await ext_handle.signal(action.signal_name)
 
     await handle_awaitable_choice(deliver(), action.awaitable_choice, pending=pending)
 
@@ -446,19 +462,3 @@ def convert_act_cancel_type(
         raise NotImplementedError("Unknown cancellation type " + str(ctype))
 
 
-@workflow.defn
-class NexusHandlerWorkflow:
-    _unblocked: bool = False
-
-    @workflow.run
-    async def run(self, input: NexusHandlerInput) -> str:
-        state = KitchenSinkWorkflow()
-        for action_set in input.before_actions:
-            await state.handle_action_set(action_set)
-        if input.wait_for_signal:
-            await workflow.wait_condition(lambda: self._unblocked)
-        return input.input
-
-    @workflow.signal(name="unblock")
-    async def unblock(self) -> None:
-        self._unblocked = True

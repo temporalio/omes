@@ -246,36 +246,34 @@ namespace Temporal.Omes.KitchenSink {
             "bl9zaW5rLkFjdGl2aXR5Q2FuY2VsbGF0aW9uVHlwZRIeChZkb19ub3RfZWFn",
             "ZXJseV9leGVjdXRlGAIgASgIEkcKEXZlcnNpb25pbmdfaW50ZW50GAMgASgO",
             "MiwudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuVmVyc2lvbmluZ0ludGVu",
-            "dCL/AwoVRXhlY3V0ZU5leHVzT3BlcmF0aW9uEhAKCGVuZHBvaW50GAEgASgJ",
-            "EhEKCW9wZXJhdGlvbhgCIAEoCRINCgVpbnB1dBgDIAEoCRJPCgdoZWFkZXJz",
-            "GAQgAygLMj4udGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRXhlY3V0ZU5l",
-            "eHVzT3BlcmF0aW9uLkhlYWRlcnNFbnRyeRJFChBhd2FpdGFibGVfY2hvaWNl",
-            "GAUgASgLMisudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuQXdhaXRhYmxl",
-            "Q2hvaWNlEhcKD2V4cGVjdGVkX291dHB1dBgGIAEoCRI9Cg5iZWZvcmVfYWN0",
-            "aW9ucxgHIAMoCzIlLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLkFjdGlv",
-            "blNldBIbChNoYW5kbGVyX3dvcmtmbG93X2lkGAggASgJElwKI2hhbmRsZXJf",
-            "d29ya2Zsb3dfaWRfY29uZmxpY3RfcG9saWN5GAkgASgOMi8udGVtcG9yYWwu",
-            "YXBpLmVudW1zLnYxLldvcmtmbG93SWRDb25mbGljdFBvbGljeRIXCg93YWl0",
-            "X2Zvcl9zaWduYWwYCiABKAgaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEo",
-            "CRINCgV2YWx1ZRgCIAEoCToCOAEi9QEKEU5leHVzSGFuZGxlcklucHV0Eg0K",
-            "BWlucHV0GAEgASgJEj0KDmJlZm9yZV9hY3Rpb25zGAIgAygLMiUudGVtcG9y",
-            "YWwub21lcy5raXRjaGVuX3NpbmsuQWN0aW9uU2V0EhsKE2hhbmRsZXJfd29y",
-            "a2Zsb3dfaWQYAyABKAkSXAojaGFuZGxlcl93b3JrZmxvd19pZF9jb25mbGlj",
-            "dF9wb2xpY3kYBCABKA4yLy50ZW1wb3JhbC5hcGkuZW51bXMudjEuV29ya2Zs",
-            "b3dJZENvbmZsaWN0UG9saWN5EhcKD3dhaXRfZm9yX3NpZ25hbBgFIAEoCCIV",
-            "ChNBd2FpdFBlbmRpbmdBY3Rpb25zKqQBChFQYXJlbnRDbG9zZVBvbGljeRIj",
-            "Ch9QQVJFTlRfQ0xPU0VfUE9MSUNZX1VOU1BFQ0lGSUVEEAASIQodUEFSRU5U",
-            "X0NMT1NFX1BPTElDWV9URVJNSU5BVEUQARIfChtQQVJFTlRfQ0xPU0VfUE9M",
-            "SUNZX0FCQU5ET04QAhImCiJQQVJFTlRfQ0xPU0VfUE9MSUNZX1JFUVVFU1Rf",
-            "Q0FOQ0VMEAMqQAoQVmVyc2lvbmluZ0ludGVudBIPCgtVTlNQRUNJRklFRBAA",
-            "Eg4KCkNPTVBBVElCTEUQARILCgdERUZBVUxUEAIqogEKHUNoaWxkV29ya2Zs",
-            "b3dDYW5jZWxsYXRpb25UeXBlEhQKEENISUxEX1dGX0FCQU5ET04QABIXChND",
-            "SElMRF9XRl9UUllfQ0FOQ0VMEAESKAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxM",
-            "QVRJT05fQ09NUExFVEVEEAISKAokQ0hJTERfV0ZfV0FJVF9DQU5DRUxMQVRJ",
-            "T05fUkVRVUVTVEVEEAMqWAoYQWN0aXZpdHlDYW5jZWxsYXRpb25UeXBlEg4K",
-            "ClRSWV9DQU5DRUwQABIfChtXQUlUX0NBTkNFTExBVElPTl9DT01QTEVURUQQ",
-            "ARILCgdBQkFORE9OEAJCQgoQaW8udGVtcG9yYWwub21lc1ouZ2l0aHViLmNv",
-            "bS90ZW1wb3JhbGlvL29tZXMvbG9hZGdlbi9raXRjaGVuc2lua2IGcHJvdG8z"));
+            "dCKAAwoVRXhlY3V0ZU5leHVzT3BlcmF0aW9uEhAKCGVuZHBvaW50GAEgASgJ",
+            "Ek8KB2hlYWRlcnMYBCADKAsyPi50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5FeGVjdXRlTmV4dXNPcGVyYXRpb24uSGVhZGVyc0VudHJ5EkUKEGF3YWl0",
+            "YWJsZV9jaG9pY2UYBSABKAsyKy50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2lu",
+            "ay5Bd2FpdGFibGVDaG9pY2USOQoEc3luYxgDIAEoCzIpLnRlbXBvcmFsLm9t",
+            "ZXMua2l0Y2hlbl9zaW5rLk5leHVzU3luY0NhbGxIABJHCg5zdGFydF93b3Jr",
+            "ZmxvdxgHIAEoCzItLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLk5leHVz",
+            "SGFuZGxlclN0YXJ0SAAaLgoMSGVhZGVyc0VudHJ5EgsKA2tleRgBIAEoCRIN",
+            "CgV2YWx1ZRgCIAEoCToCOAFCCQoHdmFyaWFudCI3Cg1OZXh1c1N5bmNDYWxs",
+            "Eg0KBWlucHV0GAEgASgJEhcKD2V4cGVjdGVkX291dHB1dBgCIAEoCSLBAQoR",
+            "TmV4dXNIYW5kbGVyU3RhcnQSEwoLd29ya2Zsb3dfaWQYASABKAkSVAobd29y",
+            "a2Zsb3dfaWRfY29uZmxpY3RfcG9saWN5GAIgASgOMi8udGVtcG9yYWwuYXBp",
+            "LmVudW1zLnYxLldvcmtmbG93SWRDb25mbGljdFBvbGljeRJBCg53b3JrZmxv",
+            "d19pbnB1dBgDIAEoCzIpLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9zaW5rLldv",
+            "cmtmbG93SW5wdXQiFQoTQXdhaXRQZW5kaW5nQWN0aW9ucyqkAQoRUGFyZW50",
+            "Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQRUNJRklF",
+            "RBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAESHwobUEFS",
+            "RU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NMT1NFX1BP",
+            "TElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRlbnQSDwoL",
+            "VU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVMVBACKqIB",
+            "Ch1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElMRF9XRl9B",
+            "QkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENISUxEX1dG",
+            "X1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxEX1dGX1dB",
+            "SVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5Q2FuY2Vs",
+            "bGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5DRUxMQVRJ",
+            "T05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBvcmFsLm9t",
+            "ZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4va2l0Y2hl",
+            "bnNpbmtiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -315,8 +313,9 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ReturnErrorAction), global::Temporal.Omes.KitchenSink.ReturnErrorAction.Parser, new[]{ "Failure" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ContinueAsNewAction), global::Temporal.Omes.KitchenSink.ContinueAsNewAction.Parser, new[]{ "WorkflowType", "TaskQueue", "Arguments", "WorkflowRunTimeout", "WorkflowTaskTimeout", "Memo", "Headers", "SearchAttributes", "RetryPolicy", "VersioningIntent" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, null, null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerInput), global::Temporal.Omes.KitchenSink.NexusHandlerInput.Parser, new[]{ "Input", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Headers", "AwaitableChoice", "Sync", "StartWorkflow" }, new[]{ "Variant" }, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusSyncCall), global::Temporal.Omes.KitchenSink.NexusSyncCall.Parser, new[]{ "Input", "ExpectedOutput" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusHandlerStart), global::Temporal.Omes.KitchenSink.NexusHandlerStart.Parser, new[]{ "WorkflowId", "WorkflowIdConflictPolicy", "WorkflowInput" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitPendingActions), global::Temporal.Omes.KitchenSink.AwaitPendingActions.Parser, null, null, null, null, null)
           }));
     }
@@ -13079,7 +13078,8 @@ namespace Temporal.Omes.KitchenSink {
   }
 
   /// <summary>
-  /// Execute a Nexus operation
+  /// Execute a Nexus operation. Which underlying operation is invoked (echo-sync vs echo-async)
+  /// is determined by which variant field is set — there's no caller-set operation name.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class ExecuteNexusOperation : pb::IMessage<ExecuteNexusOperation>
@@ -13117,15 +13117,17 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public ExecuteNexusOperation(ExecuteNexusOperation other) : this() {
       endpoint_ = other.endpoint_;
-      operation_ = other.operation_;
-      input_ = other.input_;
       headers_ = other.headers_.Clone();
       awaitableChoice_ = other.awaitableChoice_ != null ? other.awaitableChoice_.Clone() : null;
-      expectedOutput_ = other.expectedOutput_;
-      beforeActions_ = other.beforeActions_.Clone();
-      handlerWorkflowId_ = other.handlerWorkflowId_;
-      handlerWorkflowIdConflictPolicy_ = other.handlerWorkflowIdConflictPolicy_;
-      waitForSignal_ = other.waitForSignal_;
+      switch (other.VariantCase) {
+        case VariantOneofCase.Sync:
+          Sync = other.Sync.Clone();
+          break;
+        case VariantOneofCase.StartWorkflow:
+          StartWorkflow = other.StartWorkflow.Clone();
+          break;
+      }
+
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -13144,36 +13146,6 @@ namespace Temporal.Omes.KitchenSink {
       get { return endpoint_; }
       set {
         endpoint_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "operation" field.</summary>
-    public const int OperationFieldNumber = 2;
-    private string operation_ = "";
-    /// <summary>
-    /// Operation name to call
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Operation {
-      get { return operation_; }
-      set {
-        operation_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "input" field.</summary>
-    public const int InputFieldNumber = 3;
-    private string input_ = "";
-    /// <summary>
-    /// Input payload for the operation
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Input {
-      get { return input_; }
-      set {
-        input_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
@@ -13206,78 +13178,56 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
-    /// <summary>Field number for the "expected_output" field.</summary>
-    public const int ExpectedOutputFieldNumber = 6;
-    private string expectedOutput_ = "";
+    /// <summary>Field number for the "sync" field.</summary>
+    public const int SyncFieldNumber = 3;
     /// <summary>
-    /// Expected output for verification
+    /// Invoke echo-sync: handler echoes a string synchronously without starting a workflow.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ExpectedOutput {
-      get { return expectedOutput_; }
+    public global::Temporal.Omes.KitchenSink.NexusSyncCall Sync {
+      get { return variantCase_ == VariantOneofCase.Sync ? (global::Temporal.Omes.KitchenSink.NexusSyncCall) variant_ : null; }
       set {
-        expectedOutput_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.Sync;
       }
     }
 
-    /// <summary>Field number for the "before_actions" field.</summary>
-    public const int BeforeActionsFieldNumber = 7;
-    private static readonly pb::FieldCodec<global::Temporal.Omes.KitchenSink.ActionSet> _repeated_beforeActions_codec
-        = pb::FieldCodec.ForMessage(58, global::Temporal.Omes.KitchenSink.ActionSet.Parser);
-    private readonly pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> beforeActions_ = new pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet>();
+    /// <summary>Field number for the "start_workflow" field.</summary>
+    public const int StartWorkflowFieldNumber = 7;
     /// <summary>
-    /// Actions to execute before returning from the handler workflow
+    /// Invoke echo-async: handler starts a kitchenSink workflow. (Field is named
+    /// start_workflow rather than "async" because Python reserves that keyword.)
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> BeforeActions {
-      get { return beforeActions_; }
-    }
-
-    /// <summary>Field number for the "handler_workflow_id" field.</summary>
-    public const int HandlerWorkflowIdFieldNumber = 8;
-    private string handlerWorkflowId_ = "";
-    /// <summary>
-    /// Override the handler workflow ID (defaults to per-request random).
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string HandlerWorkflowId {
-      get { return handlerWorkflowId_; }
+    public global::Temporal.Omes.KitchenSink.NexusHandlerStart StartWorkflow {
+      get { return variantCase_ == VariantOneofCase.StartWorkflow ? (global::Temporal.Omes.KitchenSink.NexusHandlerStart) variant_ : null; }
       set {
-        handlerWorkflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        variant_ = value;
+        variantCase_ = value == null ? VariantOneofCase.None : VariantOneofCase.StartWorkflow;
       }
     }
 
-    /// <summary>Field number for the "handler_workflow_id_conflict_policy" field.</summary>
-    public const int HandlerWorkflowIdConflictPolicyFieldNumber = 9;
-    private global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy handlerWorkflowIdConflictPolicy_ = global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified;
-    /// <summary>
-    /// Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
-    /// </summary>
+    private object variant_;
+    /// <summary>Enum of possible cases for the "variant" oneof.</summary>
+    public enum VariantOneofCase {
+      None = 0,
+      Sync = 3,
+      StartWorkflow = 7,
+    }
+    private VariantOneofCase variantCase_ = VariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy HandlerWorkflowIdConflictPolicy {
-      get { return handlerWorkflowIdConflictPolicy_; }
-      set {
-        handlerWorkflowIdConflictPolicy_ = value;
-      }
+    public VariantOneofCase VariantCase {
+      get { return variantCase_; }
     }
 
-    /// <summary>Field number for the "wait_for_signal" field.</summary>
-    public const int WaitForSignalFieldNumber = 10;
-    private bool waitForSignal_;
-    /// <summary>
-    /// If true, the handler workflow waits on the "unblock" signal before returning.
-    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool WaitForSignal {
-      get { return waitForSignal_; }
-      set {
-        waitForSignal_ = value;
-      }
+    public void ClearVariant() {
+      variantCase_ = VariantOneofCase.None;
+      variant_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -13296,15 +13246,11 @@ namespace Temporal.Omes.KitchenSink {
         return true;
       }
       if (Endpoint != other.Endpoint) return false;
-      if (Operation != other.Operation) return false;
-      if (Input != other.Input) return false;
       if (!Headers.Equals(other.Headers)) return false;
       if (!object.Equals(AwaitableChoice, other.AwaitableChoice)) return false;
-      if (ExpectedOutput != other.ExpectedOutput) return false;
-      if(!beforeActions_.Equals(other.beforeActions_)) return false;
-      if (HandlerWorkflowId != other.HandlerWorkflowId) return false;
-      if (HandlerWorkflowIdConflictPolicy != other.HandlerWorkflowIdConflictPolicy) return false;
-      if (WaitForSignal != other.WaitForSignal) return false;
+      if (!object.Equals(Sync, other.Sync)) return false;
+      if (!object.Equals(StartWorkflow, other.StartWorkflow)) return false;
+      if (VariantCase != other.VariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -13313,15 +13259,11 @@ namespace Temporal.Omes.KitchenSink {
     public override int GetHashCode() {
       int hash = 1;
       if (Endpoint.Length != 0) hash ^= Endpoint.GetHashCode();
-      if (Operation.Length != 0) hash ^= Operation.GetHashCode();
-      if (Input.Length != 0) hash ^= Input.GetHashCode();
       hash ^= Headers.GetHashCode();
       if (awaitableChoice_ != null) hash ^= AwaitableChoice.GetHashCode();
-      if (ExpectedOutput.Length != 0) hash ^= ExpectedOutput.GetHashCode();
-      hash ^= beforeActions_.GetHashCode();
-      if (HandlerWorkflowId.Length != 0) hash ^= HandlerWorkflowId.GetHashCode();
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) hash ^= HandlerWorkflowIdConflictPolicy.GetHashCode();
-      if (WaitForSignal != false) hash ^= WaitForSignal.GetHashCode();
+      if (variantCase_ == VariantOneofCase.Sync) hash ^= Sync.GetHashCode();
+      if (variantCase_ == VariantOneofCase.StartWorkflow) hash ^= StartWorkflow.GetHashCode();
+      hash ^= (int) variantCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -13344,35 +13286,18 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(10);
         output.WriteString(Endpoint);
       }
-      if (Operation.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Operation);
-      }
-      if (Input.Length != 0) {
+      if (variantCase_ == VariantOneofCase.Sync) {
         output.WriteRawTag(26);
-        output.WriteString(Input);
+        output.WriteMessage(Sync);
       }
       headers_.WriteTo(output, _map_headers_codec);
       if (awaitableChoice_ != null) {
         output.WriteRawTag(42);
         output.WriteMessage(AwaitableChoice);
       }
-      if (ExpectedOutput.Length != 0) {
-        output.WriteRawTag(50);
-        output.WriteString(ExpectedOutput);
-      }
-      beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        output.WriteRawTag(66);
-        output.WriteString(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        output.WriteRawTag(72);
-        output.WriteEnum((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        output.WriteRawTag(80);
-        output.WriteBool(WaitForSignal);
+      if (variantCase_ == VariantOneofCase.StartWorkflow) {
+        output.WriteRawTag(58);
+        output.WriteMessage(StartWorkflow);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -13388,35 +13313,18 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(10);
         output.WriteString(Endpoint);
       }
-      if (Operation.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Operation);
-      }
-      if (Input.Length != 0) {
+      if (variantCase_ == VariantOneofCase.Sync) {
         output.WriteRawTag(26);
-        output.WriteString(Input);
+        output.WriteMessage(Sync);
       }
       headers_.WriteTo(ref output, _map_headers_codec);
       if (awaitableChoice_ != null) {
         output.WriteRawTag(42);
         output.WriteMessage(AwaitableChoice);
       }
-      if (ExpectedOutput.Length != 0) {
-        output.WriteRawTag(50);
-        output.WriteString(ExpectedOutput);
-      }
-      beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        output.WriteRawTag(66);
-        output.WriteString(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        output.WriteRawTag(72);
-        output.WriteEnum((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        output.WriteRawTag(80);
-        output.WriteBool(WaitForSignal);
+      if (variantCase_ == VariantOneofCase.StartWorkflow) {
+        output.WriteRawTag(58);
+        output.WriteMessage(StartWorkflow);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -13431,28 +13339,15 @@ namespace Temporal.Omes.KitchenSink {
       if (Endpoint.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Endpoint);
       }
-      if (Operation.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Operation);
-      }
-      if (Input.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
-      }
       size += headers_.CalculateSize(_map_headers_codec);
       if (awaitableChoice_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(AwaitableChoice);
       }
-      if (ExpectedOutput.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedOutput);
+      if (variantCase_ == VariantOneofCase.Sync) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Sync);
       }
-      size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        size += 1 + 1;
+      if (variantCase_ == VariantOneofCase.StartWorkflow) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(StartWorkflow);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -13469,12 +13364,6 @@ namespace Temporal.Omes.KitchenSink {
       if (other.Endpoint.Length != 0) {
         Endpoint = other.Endpoint;
       }
-      if (other.Operation.Length != 0) {
-        Operation = other.Operation;
-      }
-      if (other.Input.Length != 0) {
-        Input = other.Input;
-      }
       headers_.MergeFrom(other.headers_);
       if (other.awaitableChoice_ != null) {
         if (awaitableChoice_ == null) {
@@ -13482,19 +13371,21 @@ namespace Temporal.Omes.KitchenSink {
         }
         AwaitableChoice.MergeFrom(other.AwaitableChoice);
       }
-      if (other.ExpectedOutput.Length != 0) {
-        ExpectedOutput = other.ExpectedOutput;
+      switch (other.VariantCase) {
+        case VariantOneofCase.Sync:
+          if (Sync == null) {
+            Sync = new global::Temporal.Omes.KitchenSink.NexusSyncCall();
+          }
+          Sync.MergeFrom(other.Sync);
+          break;
+        case VariantOneofCase.StartWorkflow:
+          if (StartWorkflow == null) {
+            StartWorkflow = new global::Temporal.Omes.KitchenSink.NexusHandlerStart();
+          }
+          StartWorkflow.MergeFrom(other.StartWorkflow);
+          break;
       }
-      beforeActions_.Add(other.beforeActions_);
-      if (other.HandlerWorkflowId.Length != 0) {
-        HandlerWorkflowId = other.HandlerWorkflowId;
-      }
-      if (other.HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        HandlerWorkflowIdConflictPolicy = other.HandlerWorkflowIdConflictPolicy;
-      }
-      if (other.WaitForSignal != false) {
-        WaitForSignal = other.WaitForSignal;
-      }
+
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -13514,12 +13405,13 @@ namespace Temporal.Omes.KitchenSink {
             Endpoint = input.ReadString();
             break;
           }
-          case 18: {
-            Operation = input.ReadString();
-            break;
-          }
           case 26: {
-            Input = input.ReadString();
+            global::Temporal.Omes.KitchenSink.NexusSyncCall subBuilder = new global::Temporal.Omes.KitchenSink.NexusSyncCall();
+            if (variantCase_ == VariantOneofCase.Sync) {
+              subBuilder.MergeFrom(Sync);
+            }
+            input.ReadMessage(subBuilder);
+            Sync = subBuilder;
             break;
           }
           case 34: {
@@ -13533,24 +13425,13 @@ namespace Temporal.Omes.KitchenSink {
             input.ReadMessage(AwaitableChoice);
             break;
           }
-          case 50: {
-            ExpectedOutput = input.ReadString();
-            break;
-          }
           case 58: {
-            beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
-            break;
-          }
-          case 66: {
-            HandlerWorkflowId = input.ReadString();
-            break;
-          }
-          case 72: {
-            HandlerWorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
-            break;
-          }
-          case 80: {
-            WaitForSignal = input.ReadBool();
+            global::Temporal.Omes.KitchenSink.NexusHandlerStart subBuilder = new global::Temporal.Omes.KitchenSink.NexusHandlerStart();
+            if (variantCase_ == VariantOneofCase.StartWorkflow) {
+              subBuilder.MergeFrom(StartWorkflow);
+            }
+            input.ReadMessage(subBuilder);
+            StartWorkflow = subBuilder;
             break;
           }
         }
@@ -13572,12 +13453,13 @@ namespace Temporal.Omes.KitchenSink {
             Endpoint = input.ReadString();
             break;
           }
-          case 18: {
-            Operation = input.ReadString();
-            break;
-          }
           case 26: {
-            Input = input.ReadString();
+            global::Temporal.Omes.KitchenSink.NexusSyncCall subBuilder = new global::Temporal.Omes.KitchenSink.NexusSyncCall();
+            if (variantCase_ == VariantOneofCase.Sync) {
+              subBuilder.MergeFrom(Sync);
+            }
+            input.ReadMessage(subBuilder);
+            Sync = subBuilder;
             break;
           }
           case 34: {
@@ -13591,24 +13473,13 @@ namespace Temporal.Omes.KitchenSink {
             input.ReadMessage(AwaitableChoice);
             break;
           }
-          case 50: {
-            ExpectedOutput = input.ReadString();
-            break;
-          }
           case 58: {
-            beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
-            break;
-          }
-          case 66: {
-            HandlerWorkflowId = input.ReadString();
-            break;
-          }
-          case 72: {
-            HandlerWorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
-            break;
-          }
-          case 80: {
-            WaitForSignal = input.ReadBool();
+            global::Temporal.Omes.KitchenSink.NexusHandlerStart subBuilder = new global::Temporal.Omes.KitchenSink.NexusHandlerStart();
+            if (variantCase_ == VariantOneofCase.StartWorkflow) {
+              subBuilder.MergeFrom(StartWorkflow);
+            }
+            input.ReadMessage(subBuilder);
+            StartWorkflow = subBuilder;
             break;
           }
         }
@@ -13619,19 +13490,19 @@ namespace Temporal.Omes.KitchenSink {
   }
 
   /// <summary>
-  /// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
+  /// Configuration for an echo-sync invocation.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class NexusHandlerInput : pb::IMessage<NexusHandlerInput>
+  public sealed partial class NexusSyncCall : pb::IMessage<NexusSyncCall>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<NexusHandlerInput> _parser = new pb::MessageParser<NexusHandlerInput>(() => new NexusHandlerInput());
+    private static readonly pb::MessageParser<NexusSyncCall> _parser = new pb::MessageParser<NexusSyncCall>(() => new NexusSyncCall());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<NexusHandlerInput> Parser { get { return _parser; } }
+    public static pb::MessageParser<NexusSyncCall> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13647,7 +13518,7 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NexusHandlerInput() {
+    public NexusSyncCall() {
       OnConstruction();
     }
 
@@ -13655,24 +13526,24 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NexusHandlerInput(NexusHandlerInput other) : this() {
+    public NexusSyncCall(NexusSyncCall other) : this() {
       input_ = other.input_;
-      beforeActions_ = other.beforeActions_.Clone();
-      handlerWorkflowId_ = other.handlerWorkflowId_;
-      handlerWorkflowIdConflictPolicy_ = other.handlerWorkflowIdConflictPolicy_;
-      waitForSignal_ = other.waitForSignal_;
+      expectedOutput_ = other.expectedOutput_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NexusHandlerInput Clone() {
-      return new NexusHandlerInput(this);
+    public NexusSyncCall Clone() {
+      return new NexusSyncCall(this);
     }
 
     /// <summary>Field number for the "input" field.</summary>
     public const int InputFieldNumber = 1;
     private string input_ = "";
+    /// <summary>
+    /// String input the handler echoes back as its output.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string Input {
@@ -13682,65 +13553,30 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
-    /// <summary>Field number for the "before_actions" field.</summary>
-    public const int BeforeActionsFieldNumber = 2;
-    private static readonly pb::FieldCodec<global::Temporal.Omes.KitchenSink.ActionSet> _repeated_beforeActions_codec
-        = pb::FieldCodec.ForMessage(18, global::Temporal.Omes.KitchenSink.ActionSet.Parser);
-    private readonly pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> beforeActions_ = new pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet>();
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::Temporal.Omes.KitchenSink.ActionSet> BeforeActions {
-      get { return beforeActions_; }
-    }
-
-    /// <summary>Field number for the "handler_workflow_id" field.</summary>
-    public const int HandlerWorkflowIdFieldNumber = 3;
-    private string handlerWorkflowId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string HandlerWorkflowId {
-      get { return handlerWorkflowId_; }
-      set {
-        handlerWorkflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "handler_workflow_id_conflict_policy" field.</summary>
-    public const int HandlerWorkflowIdConflictPolicyFieldNumber = 4;
-    private global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy handlerWorkflowIdConflictPolicy_ = global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy HandlerWorkflowIdConflictPolicy {
-      get { return handlerWorkflowIdConflictPolicy_; }
-      set {
-        handlerWorkflowIdConflictPolicy_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "wait_for_signal" field.</summary>
-    public const int WaitForSignalFieldNumber = 5;
-    private bool waitForSignal_;
+    /// <summary>Field number for the "expected_output" field.</summary>
+    public const int ExpectedOutputFieldNumber = 2;
+    private string expectedOutput_ = "";
     /// <summary>
-    /// If true, the handler workflow waits on the "unblock" signal before returning.
+    /// If set, the operation's string output is compared against this value after completion.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool WaitForSignal {
-      get { return waitForSignal_; }
+    public string ExpectedOutput {
+      get { return expectedOutput_; }
       set {
-        waitForSignal_ = value;
+        expectedOutput_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as NexusHandlerInput);
+      return Equals(other as NexusSyncCall);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(NexusHandlerInput other) {
+    public bool Equals(NexusSyncCall other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -13748,10 +13584,7 @@ namespace Temporal.Omes.KitchenSink {
         return true;
       }
       if (Input != other.Input) return false;
-      if(!beforeActions_.Equals(other.beforeActions_)) return false;
-      if (HandlerWorkflowId != other.HandlerWorkflowId) return false;
-      if (HandlerWorkflowIdConflictPolicy != other.HandlerWorkflowIdConflictPolicy) return false;
-      if (WaitForSignal != other.WaitForSignal) return false;
+      if (ExpectedOutput != other.ExpectedOutput) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -13760,10 +13593,7 @@ namespace Temporal.Omes.KitchenSink {
     public override int GetHashCode() {
       int hash = 1;
       if (Input.Length != 0) hash ^= Input.GetHashCode();
-      hash ^= beforeActions_.GetHashCode();
-      if (HandlerWorkflowId.Length != 0) hash ^= HandlerWorkflowId.GetHashCode();
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) hash ^= HandlerWorkflowIdConflictPolicy.GetHashCode();
-      if (WaitForSignal != false) hash ^= WaitForSignal.GetHashCode();
+      if (ExpectedOutput.Length != 0) hash ^= ExpectedOutput.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -13786,18 +13616,9 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(10);
         output.WriteString(Input);
       }
-      beforeActions_.WriteTo(output, _repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        output.WriteRawTag(32);
-        output.WriteEnum((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        output.WriteRawTag(40);
-        output.WriteBool(WaitForSignal);
+      if (ExpectedOutput.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ExpectedOutput);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -13813,18 +13634,9 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(10);
         output.WriteString(Input);
       }
-      beforeActions_.WriteTo(ref output, _repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        output.WriteRawTag(32);
-        output.WriteEnum((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        output.WriteRawTag(40);
-        output.WriteBool(WaitForSignal);
+      if (ExpectedOutput.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ExpectedOutput);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -13839,15 +13651,8 @@ namespace Temporal.Omes.KitchenSink {
       if (Input.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Input);
       }
-      size += beforeActions_.CalculateSize(_repeated_beforeActions_codec);
-      if (HandlerWorkflowId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(HandlerWorkflowId);
-      }
-      if (HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) HandlerWorkflowIdConflictPolicy);
-      }
-      if (WaitForSignal != false) {
-        size += 1 + 1;
+      if (ExpectedOutput.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedOutput);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -13857,22 +13662,15 @@ namespace Temporal.Omes.KitchenSink {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(NexusHandlerInput other) {
+    public void MergeFrom(NexusSyncCall other) {
       if (other == null) {
         return;
       }
       if (other.Input.Length != 0) {
         Input = other.Input;
       }
-      beforeActions_.Add(other.beforeActions_);
-      if (other.HandlerWorkflowId.Length != 0) {
-        HandlerWorkflowId = other.HandlerWorkflowId;
-      }
-      if (other.HandlerWorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
-        HandlerWorkflowIdConflictPolicy = other.HandlerWorkflowIdConflictPolicy;
-      }
-      if (other.WaitForSignal != false) {
-        WaitForSignal = other.WaitForSignal;
+      if (other.ExpectedOutput.Length != 0) {
+        ExpectedOutput = other.ExpectedOutput;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -13894,19 +13692,7 @@ namespace Temporal.Omes.KitchenSink {
             break;
           }
           case 18: {
-            beforeActions_.AddEntriesFrom(input, _repeated_beforeActions_codec);
-            break;
-          }
-          case 26: {
-            HandlerWorkflowId = input.ReadString();
-            break;
-          }
-          case 32: {
-            HandlerWorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
-            break;
-          }
-          case 40: {
-            WaitForSignal = input.ReadBool();
+            ExpectedOutput = input.ReadString();
             break;
           }
         }
@@ -13929,19 +13715,295 @@ namespace Temporal.Omes.KitchenSink {
             break;
           }
           case 18: {
-            beforeActions_.AddEntriesFrom(ref input, _repeated_beforeActions_codec);
+            ExpectedOutput = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// How to start the kitchenSink workflow that backs echo-async. The handler workflow's behavior
+  /// is described by workflow_input.initial_actions; the operation result is whatever payload the
+  /// last action returns. Callers must ensure initial_actions terminate (typically by ending with
+  /// ReturnResult) or the handler will wait for signals indefinitely.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NexusHandlerStart : pb::IMessage<NexusHandlerStart>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NexusHandlerStart> _parser = new pb::MessageParser<NexusHandlerStart>(() => new NexusHandlerStart());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NexusHandlerStart> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[31]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerStart() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerStart(NexusHandlerStart other) : this() {
+      workflowId_ = other.workflowId_;
+      workflowIdConflictPolicy_ = other.workflowIdConflictPolicy_;
+      workflowInput_ = other.workflowInput_ != null ? other.workflowInput_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NexusHandlerStart Clone() {
+      return new NexusHandlerStart(this);
+    }
+
+    /// <summary>Field number for the "workflow_id" field.</summary>
+    public const int WorkflowIdFieldNumber = 1;
+    private string workflowId_ = "";
+    /// <summary>
+    /// Handler workflow ID. Defaults to per-request random when empty.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WorkflowId {
+      get { return workflowId_; }
+      set {
+        workflowId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "workflow_id_conflict_policy" field.</summary>
+    public const int WorkflowIdConflictPolicyFieldNumber = 2;
+    private global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy workflowIdConflictPolicy_ = global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified;
+    /// <summary>
+    /// Conflict policy when starting the handler with workflow_id. Only applied when workflow_id is set.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy WorkflowIdConflictPolicy {
+      get { return workflowIdConflictPolicy_; }
+      set {
+        workflowIdConflictPolicy_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "workflow_input" field.</summary>
+    public const int WorkflowInputFieldNumber = 3;
+    private global::Temporal.Omes.KitchenSink.WorkflowInput workflowInput_;
+    /// <summary>
+    /// Typed input passed to the kitchenSink handler workflow.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.WorkflowInput WorkflowInput {
+      get { return workflowInput_; }
+      set {
+        workflowInput_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NexusHandlerStart);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NexusHandlerStart other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (WorkflowId != other.WorkflowId) return false;
+      if (WorkflowIdConflictPolicy != other.WorkflowIdConflictPolicy) return false;
+      if (!object.Equals(WorkflowInput, other.WorkflowInput)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (WorkflowId.Length != 0) hash ^= WorkflowId.GetHashCode();
+      if (WorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) hash ^= WorkflowIdConflictPolicy.GetHashCode();
+      if (workflowInput_ != null) hash ^= WorkflowInput.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (WorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) WorkflowIdConflictPolicy);
+      }
+      if (workflowInput_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(WorkflowInput);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (WorkflowId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(WorkflowId);
+      }
+      if (WorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) WorkflowIdConflictPolicy);
+      }
+      if (workflowInput_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(WorkflowInput);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (WorkflowId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WorkflowId);
+      }
+      if (WorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) WorkflowIdConflictPolicy);
+      }
+      if (workflowInput_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WorkflowInput);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NexusHandlerStart other) {
+      if (other == null) {
+        return;
+      }
+      if (other.WorkflowId.Length != 0) {
+        WorkflowId = other.WorkflowId;
+      }
+      if (other.WorkflowIdConflictPolicy != global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy.Unspecified) {
+        WorkflowIdConflictPolicy = other.WorkflowIdConflictPolicy;
+      }
+      if (other.workflowInput_ != null) {
+        if (workflowInput_ == null) {
+          WorkflowInput = new global::Temporal.Omes.KitchenSink.WorkflowInput();
+        }
+        WorkflowInput.MergeFrom(other.WorkflowInput);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
+            break;
+          }
+          case 16: {
+            WorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
             break;
           }
           case 26: {
-            HandlerWorkflowId = input.ReadString();
+            if (workflowInput_ == null) {
+              WorkflowInput = new global::Temporal.Omes.KitchenSink.WorkflowInput();
+            }
+            input.ReadMessage(WorkflowInput);
             break;
           }
-          case 32: {
-            HandlerWorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            WorkflowId = input.ReadString();
             break;
           }
-          case 40: {
-            WaitForSignal = input.ReadBool();
+          case 16: {
+            WorkflowIdConflictPolicy = (global::Temporalio.Api.Enums.V1.WorkflowIdConflictPolicy) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            if (workflowInput_ == null) {
+              WorkflowInput = new global::Temporal.Omes.KitchenSink.WorkflowInput();
+            }
+            input.ReadMessage(WorkflowInput);
             break;
           }
         }
@@ -13970,7 +14032,7 @@ namespace Temporal.Omes.KitchenSink {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[31]; }
+      get { return global::Temporal.Omes.KitchenSink.KitchenSinkReflection.Descriptor.MessageTypes[32]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

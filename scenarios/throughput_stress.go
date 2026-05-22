@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -616,10 +617,10 @@ func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
 	return &Action{
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-sync",
-				Input:          "hello",
-				ExpectedOutput: "hello",
+				Endpoint: t.config.NexusEndpoint,
+				Variant: &ExecuteNexusOperation_Sync{
+					Sync: &NexusSyncCall{Input: "hello", ExpectedOutput: "hello"},
+				},
 			},
 		},
 	}
@@ -629,10 +630,14 @@ func (t *tpsExecutor) createNexusEchoAsyncAction() *Action {
 	return &Action{
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-async",
-				Input:          "hello",
-				ExpectedOutput: "hello",
+				Endpoint: t.config.NexusEndpoint,
+				Variant: &ExecuteNexusOperation_StartWorkflow{
+					StartWorkflow: &NexusHandlerStart{
+						WorkflowInput: &WorkflowInput{
+							InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+						},
+					},
+				},
 			},
 		},
 	}
@@ -642,11 +647,16 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 	return &Action{
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:  t.config.NexusEndpoint,
-				Operation: "echo-async",
-				BeforeActions: ListActionSet(
-					NewAwaitWorkflowStateAction("never", "resolves"),
-				),
+				Endpoint: t.config.NexusEndpoint,
+				Variant: &ExecuteNexusOperation_StartWorkflow{
+					StartWorkflow: &NexusHandlerStart{
+						WorkflowInput: &WorkflowInput{
+							InitialActions: ListActionSet(
+								NewAwaitWorkflowStateAction("never", "resolves"),
+							),
+						},
+					},
+				},
 				AwaitableChoice: &AwaitableChoice{
 					Condition: &AwaitableChoice_CancelAfterStarted{
 						CancelAfterStarted: &emptypb.Empty{},
@@ -658,21 +668,43 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 }
 
 // createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
-// fire N ops with wait_started, signal the handler to unblock, then await its completion.
+// fire N ops with wait_started, signal the handler's do_actions_signal to set the
+// "unblocked" state key, then await its completion.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 	const numOps = 3
 	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
+
+	// Encode the payload the outer workflow will send to the handler's do_actions_signal,
+	// driving SetWorkflowState{unblocked=1} so the handler's initial_actions can stop waiting
+	// and return.
+	unblockPayload, err := converter.GetDefaultDataConverter().ToPayload(&DoSignal_DoSignalActions{
+		Variant: &DoSignal_DoSignalActions_DoActions{
+			DoActions: SingleActionSet(
+				NewSetWorkflowStateAction("unblocked", "1"),
+				NewEmptyReturnResultAction(),
+			),
+		},
+	})
+	if err != nil {
+		panic(fmt.Sprintf("encoding unblock payload: %v", err))
+	}
 
 	waitStartedOp := func() *Action {
 		return &Action{
 			Variant: &Action_NexusOperation{
 				NexusOperation: &ExecuteNexusOperation{
-					Endpoint:                        t.config.NexusEndpoint,
-					Operation:                       "echo-async",
-					Input:                           "hello",
-					HandlerWorkflowId:               handlerWfID,
-					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-					WaitForSignal:                   true,
+					Endpoint: t.config.NexusEndpoint,
+					Variant: &ExecuteNexusOperation_StartWorkflow{
+						StartWorkflow: &NexusHandlerStart{
+							WorkflowId:               handlerWfID,
+							WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+							WorkflowInput: &WorkflowInput{
+								InitialActions: ListActionSet(
+									NewAwaitWorkflowStateAction("unblocked", "1"),
+								),
+							},
+						},
+					},
 					AwaitableChoice: &AwaitableChoice{
 						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
 					},
@@ -695,7 +727,8 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 				{Variant: &Action_SendSignal{
 					SendSignal: &SendSignalAction{
 						WorkflowId: handlerWfID,
-						SignalName: "unblock",
+						SignalName: "do_actions_signal",
+						Args:       []*common.Payload{unblockPayload},
 						AwaitableChoice: &AwaitableChoice{
 							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
 						},

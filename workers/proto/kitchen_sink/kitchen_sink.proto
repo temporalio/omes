@@ -492,41 +492,45 @@ enum ActivityCancellationType {
   ABANDON = 2;
 }
 
-// Execute a Nexus operation
+// Execute a Nexus operation. Which underlying operation is invoked (echo-sync vs echo-async)
+// is determined by which variant field is set — there's no caller-set operation name.
 message ExecuteNexusOperation {
   string endpoint = 1;
-  // Operation name to call
-  string operation = 2;
-  // Input payload for the operation
-  string input = 3;
   // Headers to send with the operation
   map<string, string> headers = 4;
   // How to await on the operation
   AwaitableChoice awaitable_choice = 5;
-  // Expected output for verification
-  string expected_output = 6;
-  // Actions to execute before returning from the handler workflow
-  repeated ActionSet before_actions = 7;
-  // Override the handler workflow ID (defaults to per-request random).
-  string handler_workflow_id = 8;
-  // Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
-  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;
-  // If true, the handler workflow waits on the "unblock" signal before returning.
-  bool wait_for_signal = 10;
+  oneof variant {
+    // Invoke echo-sync: handler echoes a string synchronously without starting a workflow.
+    NexusSyncCall sync = 3;
+    // Invoke echo-async: handler starts a kitchenSink workflow. (Field is named
+    // start_workflow rather than "async" because Python reserves that keyword.)
+    NexusHandlerStart start_workflow = 7;
+  }
 }
 
-// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
-message NexusHandlerInput {
+// Configuration for an echo-sync invocation.
+message NexusSyncCall {
+  // String input the handler echoes back as its output.
   string input = 1;
-  repeated ActionSet before_actions = 2;
-  string handler_workflow_id = 3;
-  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
-  // If true, the handler workflow waits on the "unblock" signal before returning.
-  bool wait_for_signal = 5;
+  // If set, the operation's string output is compared against this value after completion.
+  string expected_output = 2;
+}
+
+// How to start the kitchenSink workflow that backs echo-async. The handler workflow's behavior
+// is described by workflow_input.initial_actions; the operation result is whatever payload the
+// last action returns. Callers must ensure initial_actions terminate (typically by ending with
+// ReturnResult) or the handler will wait for signals indefinitely.
+message NexusHandlerStart {
+  // Handler workflow ID. Defaults to per-request random when empty.
+  string workflow_id = 1;
+  // Conflict policy when starting the handler with workflow_id. Only applied when workflow_id is set.
+  temporal.api.enums.v1.WorkflowIdConflictPolicy workflow_id_conflict_policy = 2;
+  // Typed input passed to the kitchenSink handler workflow.
+  WorkflowInput workflow_input = 3;
 }
 
 // Await completion of all actions that were started in the same workflow with
 // AwaitableChoice.wait_started and not yet awaited.
 message AwaitPendingActions {
 }
-

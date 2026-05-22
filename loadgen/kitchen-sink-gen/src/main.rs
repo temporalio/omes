@@ -11,8 +11,9 @@ use crate::protos::temporal::{
         execute_activity_action::{ClientActivity, PayloadActivity},
         with_start_client_action, Action, ActionSet, AwaitWorkflowState, AwaitableChoice,
         ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
+        execute_nexus_operation,
         ExecuteActivityAction, ExecuteChildWorkflowAction, ExecuteNexusOperation,
-        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
+        HandlerInvocation, NexusSyncCall, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
         TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction,
         WithStartClientAction, WorkflowInput, WorkflowState,
     },
@@ -618,12 +619,7 @@ impl<'a> Arbitrary<'a> for Action {
         } else if chances.nested_action_set(action_kind) {
             action::Variant::NestedActionSet(u.arbitrary()?)
         } else if chances.nexus_operation(action_kind) {
-            if ARB_CONTEXT.with_borrow(|c| c.action_set_nest_level >= 1) {
-                // Nested nexus operations are not supported, use echo-sync instead
-                action::Variant::NexusOperation(ExecuteNexusOperation::echo_sync(u)?)
-            } else {
-                action::Variant::NexusOperation(u.arbitrary()?)
-            }
+            action::Variant::NexusOperation(u.arbitrary()?)
         } else {
             unreachable!()
         };
@@ -712,71 +708,23 @@ impl<'a> Arbitrary<'a> for ExecuteChildWorkflowAction {
     }
 }
 
-static NEXUS_OPERATIONS: [&str; 2] = ["echo-sync", "echo-async"];
-
-impl ExecuteNexusOperation {
-    fn echo_sync(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
+impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        // The fuzzer only generates echo-sync; echo-async needs deterministic coordination
+        // (caller-driven completion of the kitchenSink handler) that doesn't compose under
+        // random action generation.
         let val = format!("nexus-test-{}", u.int_in_range(1..=1000)?);
         Ok(Self {
             endpoint: ARB_CONTEXT.with_borrow(|c| c.nexus_endpoint.clone()),
-            operation: "echo-sync".to_string(),
-            input: val.clone(),
-            expected_output: val,
             headers: Default::default(),
             // echo-sync completes immediately, so only WaitFinish is valid.
             awaitable_choice: Some(AwaitableChoice {
                 condition: Some(awaitable_choice::Condition::WaitFinish(())),
             }),
-            before_actions: vec![],
-            handler_workflow_id: String::new(),
-            handler_workflow_id_conflict_policy: 0,
-            wait_for_signal: false,
-        })
-    }
-}
-
-impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
-        let &operation = u.choose(&NEXUS_OPERATIONS)?;
-
-        if operation == "echo-sync" {
-            return Self::echo_sync(u);
-        }
-
-        let endpoint = ARB_CONTEXT.with_borrow(|c| c.nexus_endpoint.clone());
-        let val = format!("nexus-test-{}", u.int_in_range(1..=1000)?);
-        let (input, expected_output) = (val.clone(), val);
-
-        // Randomly generate before_actions for echo-async operations
-        let before_actions = if u.ratio(1, 3)? {
-            ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level += 1);
-            let num_actions =
-                u.int_in_range(1..=ARB_CONTEXT.with_borrow(|c| c.config.max_actions_per_set))?;
-            let mut actions: Vec<Action> = Vec::with_capacity(num_actions);
-            for _ in 0..num_actions {
-                actions.push(u.arbitrary()?);
-            }
-            ARB_CONTEXT.with_borrow_mut(|c| c.action_set_nest_level -= 1);
-            vec![ActionSet {
-                actions,
-                concurrent: false,
-            }]
-        } else {
-            vec![]
-        };
-
-        // echo-async supports all awaitable choices including cancellation.
-        Ok(Self {
-            endpoint,
-            operation: operation.to_string(),
-            input,
-            headers: Default::default(),
-            awaitable_choice: Some(u.arbitrary()?),
-            expected_output,
-            before_actions,
-            handler_workflow_id: String::new(),
-            handler_workflow_id_conflict_policy: 0,
-            wait_for_signal: false,
+            variant: Some(execute_nexus_operation::Variant::Sync(NexusSyncCall {
+                input: val.clone(),
+                expected_output: val,
+            })),
         })
     }
 }

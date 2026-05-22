@@ -560,7 +560,7 @@ class RemoteActivityOptions(_message.Message):
     def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
-    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output", "before_actions", "handler_workflow_id", "handler_workflow_id_conflict_policy", "wait_for_signal")
+    __slots__ = ("endpoint", "headers", "awaitable_choice", "sync", "start_workflow")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -569,40 +569,34 @@ class ExecuteNexusOperation(_message.Message):
         value: str
         def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ENDPOINT_FIELD_NUMBER: _ClassVar[int]
-    OPERATION_FIELD_NUMBER: _ClassVar[int]
-    INPUT_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
-    EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
-    BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
-    HANDLER_WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
-    HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER: _ClassVar[int]
-    WAIT_FOR_SIGNAL_FIELD_NUMBER: _ClassVar[int]
+    SYNC_FIELD_NUMBER: _ClassVar[int]
+    START_WORKFLOW_FIELD_NUMBER: _ClassVar[int]
     endpoint: str
-    operation: str
-    input: str
     headers: _containers.ScalarMap[str, str]
     awaitable_choice: AwaitableChoice
-    expected_output: str
-    before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    handler_workflow_id: str
-    handler_workflow_id_conflict_policy: _workflow_pb2.WorkflowIdConflictPolicy
-    wait_for_signal: bool
-    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., handler_workflow_id: _Optional[str] = ..., handler_workflow_id_conflict_policy: _Optional[_Union[_workflow_pb2.WorkflowIdConflictPolicy, str]] = ..., wait_for_signal: bool = ...) -> None: ...
+    sync: NexusSyncCall
+    start_workflow: NexusHandlerStart
+    def __init__(self, endpoint: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., sync: _Optional[_Union[NexusSyncCall, _Mapping]] = ..., start_workflow: _Optional[_Union[NexusHandlerStart, _Mapping]] = ...) -> None: ...
 
-class NexusHandlerInput(_message.Message):
-    __slots__ = ("input", "before_actions", "handler_workflow_id", "handler_workflow_id_conflict_policy", "wait_for_signal")
+class NexusSyncCall(_message.Message):
+    __slots__ = ("input", "expected_output")
     INPUT_FIELD_NUMBER: _ClassVar[int]
-    BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
-    HANDLER_WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
-    HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER: _ClassVar[int]
-    WAIT_FOR_SIGNAL_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
     input: str
-    before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    handler_workflow_id: str
-    handler_workflow_id_conflict_policy: _workflow_pb2.WorkflowIdConflictPolicy
-    wait_for_signal: bool
-    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., handler_workflow_id: _Optional[str] = ..., handler_workflow_id_conflict_policy: _Optional[_Union[_workflow_pb2.WorkflowIdConflictPolicy, str]] = ..., wait_for_signal: bool = ...) -> None: ...
+    expected_output: str
+    def __init__(self, input: _Optional[str] = ..., expected_output: _Optional[str] = ...) -> None: ...
+
+class NexusHandlerStart(_message.Message):
+    __slots__ = ("workflow_id", "workflow_id_conflict_policy", "workflow_input")
+    WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER: _ClassVar[int]
+    WORKFLOW_INPUT_FIELD_NUMBER: _ClassVar[int]
+    workflow_id: str
+    workflow_id_conflict_policy: _workflow_pb2.WorkflowIdConflictPolicy
+    workflow_input: WorkflowInput
+    def __init__(self, workflow_id: _Optional[str] = ..., workflow_id_conflict_policy: _Optional[_Union[_workflow_pb2.WorkflowIdConflictPolicy, str]] = ..., workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ...) -> None: ...
 
 class AwaitPendingActions(_message.Message):
     __slots__ = ()
