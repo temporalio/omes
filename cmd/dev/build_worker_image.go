@@ -48,12 +48,10 @@ func buildPushWorkerImageCmd() *cobra.Command {
 type workerImageBuilder struct {
 	baseImageBuilder
 	sdkOptions clioptions.SdkOptions
-	appName    string
 }
 
 func (b *workerImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	b.sdkOptions.AddCLIFlags(fs)
-	fs.StringVar(&b.appName, "app", "", "Go app entrypoint to build; empty builds the default Go app")
 	b.addBaseCLIFlags(fs)
 }
 
@@ -79,8 +77,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 
 	// Setup args, tags, and labels based on version
 	isPathVersion := strings.ContainsAny(sdkVersion, `/\`)
-	imageTarget := workerImageTargetFor(lang, b.appName)
-	buildArgs := append([]string{}, imageTarget.buildArgs...)
+	var buildArgs []string
 	if isPathVersion {
 		if len(b.tags) == 0 {
 			return fmt.Errorf("at least one tag required for path version")
@@ -111,26 +108,23 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 
 		// Add tag for lang-fullsemver without leading "v". We are intentionally
 		// including semver build metadata.
-		langTagComponent := imageTarget.tagLanguage + "-" + strings.TrimPrefix(sdkVersion, "v")
+		langTagComponent := lang + "-" + strings.TrimPrefix(sdkVersion, "v")
 		b.tags = append(b.tags, omesVersion+"-"+langTagComponent)
-		b.tags = append(b.tags, imageTarget.tagLanguage+"-"+omesVersion)
+		b.tags = append(b.tags, lang+"-"+omesVersion)
 		if b.tagAsLatest {
 			b.tags = append(b.tags, langTagComponent)
-			b.tags = append(b.tags, imageTarget.tagLanguage+"-latest")
+			b.tags = append(b.tags, lang+"-latest")
 		}
 	}
 	imageTagsForPublish := b.generateImageTags()
 
 	// Set OCI labels
-	err = b.addDefaultLabels(ctx, omesVersion, "Load testing for "+imageTarget.tagLanguage)
+	err = b.addDefaultLabels(ctx, omesVersion, "Load testing for "+lang)
 	if err != nil {
 		return err
 	}
 	b.addLabelIfNotPresent("io.temporal.sdk.name", lang)
 	b.addLabelIfNotPresent("io.temporal.sdk.version", sdkVersion)
-	if imageTarget.workerAppLabel != "" {
-		b.addLabelIfNotPresent("io.temporal.omes.worker_app", imageTarget.workerAppLabel)
-	}
 
 	// Build docker command args
 	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs)
@@ -147,28 +141,4 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	}
 
 	return b.handleImageSave(ctx, imageTagsForPublish)
-}
-
-type workerImageTarget struct {
-	buildArgs      []string
-	tagLanguage    string
-	workerAppLabel string
-}
-
-func workerImageTargetFor(lang, appName string) workerImageTarget {
-	target := workerImageTarget{tagLanguage: lang}
-
-	switch lang {
-	case string(clioptions.LangGo):
-		switch appName {
-		case "", "worker":
-			return target
-		default:
-			target.buildArgs = append(target.buildArgs, "GO_APP="+appName)
-			target.tagLanguage = lang + "-" + appName
-			target.workerAppLabel = appName
-		}
-	}
-
-	return target
 }

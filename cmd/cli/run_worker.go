@@ -47,6 +47,7 @@ type workerRunner struct {
 
 func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.builder.addCLIFlags(fs)
+	fs.StringVar(&r.AppName, "app", "", "Go worker app entrypoint to run")
 	r.ScenarioID.AddCLIFlags(fs)
 	fs.BoolVar(&r.RetainTempDir, "retain-temp-dir", false,
 		"If set, retain the temp directory created if one wasn't given")

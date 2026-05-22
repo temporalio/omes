@@ -19,7 +19,6 @@ import (
 type Builder struct {
 	DirName     string
 	ProjectName string
-	AppName     string
 	SdkOptions  clioptions.SdkOptions
 	Logger      *zap.SugaredLogger
 	stdout      io.Writer
@@ -68,12 +67,6 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 }
 
 func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
-	appName := b.AppName
-	if appName == "" {
-		appName = "worker"
-	}
-	appImportPath := "github.com/temporalio/omes/workers/go/apps/" + appName
-
 	goMod := `module github.com/temporalio/omes-worker
 
 go 1.20
@@ -86,13 +79,13 @@ replace github.com/temporalio/omes => ../../../
 replace github.com/temporalio/omes/workers/go => ../
 replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
-	goMain := fmt.Sprintf(`package main
+	goMain := `package main
 
-import app %q
+import "github.com/temporalio/omes/workers/go/apps"
 
 func main() {
-	app.Main()
-}`, appImportPath)
+	apps.Main()
+}`
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
 		BaseDir:        baseDir,

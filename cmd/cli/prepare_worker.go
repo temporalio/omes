@@ -42,7 +42,6 @@ type workerBuilder struct {
 func (b *workerBuilder) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&b.DirName, "dir-name", "", "Directory name for prepared worker")
 	fs.StringVar(&b.ProjectName, "project-name", "", "Name of project (builds a project instead of standard worker)")
-	fs.StringVar(&b.AppName, "app", "", "App entrypoint to build (Go only; default worker)")
 	b.SdkOptions.AddCLIFlags(fs)
 	fs.AddFlagSet(b.loggingOptions.FlagSet())
 }
