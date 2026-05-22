@@ -379,13 +379,8 @@ async def handle_send_signal(
         ext_handle = workflow.get_external_workflow_handle(
             action.workflow_id, run_id=action.run_id or None
         )
-        # SendSignalAction.args is currently only used to drive a remote kitchen-sink workflow's
-        # do_actions_signal handler: args[0] must encode a DoSignal.DoSignalActions proto.
-        if action.args:
-            do_sig = workflow.payload_converter().from_payload(
-                action.args[0], DoSignal.DoSignalActions
-            )
-            await ext_handle.signal(action.signal_name, do_sig)
+        if action.HasField("do_actions"):
+            await ext_handle.signal("do_actions_signal", action.do_actions)
         else:
             await ext_handle.signal(action.signal_name)
 

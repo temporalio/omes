@@ -869,7 +869,7 @@ func TestKitchenSink(t *testing.T) {
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
 									Variant: &ExecuteNexusOperation_Sync{
-										Sync: &NexusSyncCall{Input: "hello"},
+										Sync: &SyncCall{Input: "hello"},
 									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
@@ -895,7 +895,7 @@ func TestKitchenSink(t *testing.T) {
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
 									Variant: &ExecuteNexusOperation_StartWorkflow{
-										StartWorkflow: &NexusHandlerStart{
+										StartWorkflow: &StartWorkflow{
 											WorkflowInput: &WorkflowInput{
 												InitialActions: ListActionSet(
 													NewTimerAction(1),
@@ -929,7 +929,7 @@ func TestKitchenSink(t *testing.T) {
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
 									Variant: &ExecuteNexusOperation_StartWorkflow{
-										StartWorkflow: &NexusHandlerStart{
+										StartWorkflow: &StartWorkflow{
 											WorkflowInput: &WorkflowInput{
 												InitialActions: ListActionSet(
 													NewAwaitWorkflowStateAction("never", "resolves"),
@@ -963,7 +963,7 @@ func TestKitchenSink(t *testing.T) {
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
 									Variant: &ExecuteNexusOperation_Sync{
-										Sync: &NexusSyncCall{Input: "abandoned"},
+										Sync: &SyncCall{Input: "abandoned"},
 									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_Abandon{

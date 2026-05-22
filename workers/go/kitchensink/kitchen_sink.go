@@ -1,6 +1,7 @@
 package kitchensink
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
@@ -489,19 +489,16 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
-	// The operation name is implied by which variant the caller set; we route here.
+	// Each variant carries an operation name (defaulting to the variant's canonical op when empty).
 	var operationName string
 	var operationInput any
 	switch v := nexusOp.GetVariant().(type) {
 	case *kitchensink.ExecuteNexusOperation_Sync:
-		operationName = "echo-sync"
+		operationName = cmp.Or(v.Sync.GetOperation(), "echo-sync")
 		operationInput = v.Sync.GetInput()
 	case *kitchensink.ExecuteNexusOperation_StartWorkflow:
-		operationName = "echo-async"
-		operationInput = v.StartWorkflow
-		if operationInput == nil {
-			operationInput = &kitchensink.NexusHandlerStart{}
-		}
+		operationName = cmp.Or(v.StartWorkflow.GetOperation(), "echo-async")
+		operationInput = cmp.Or(v.StartWorkflow, &kitchensink.StartWorkflow{})
 	default:
 		return fmt.Errorf("ExecuteNexusOperation has no variant set")
 	}
@@ -532,19 +529,13 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 
 func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
 	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
-		// SendSignalAction.args is currently only used to drive a remote kitchen-sink workflow's
-		// do_actions_signal handler: args[0] must encode a DoSignal.DoSignalActions proto.
+		signalName := action.SignalName
 		var arg any
-		if len(action.Args) > 0 {
-			var doSig kitchensink.DoSignal_DoSignalActions
-			if err := converter.GetDefaultDataConverter().FromPayload(action.Args[0], &doSig); err != nil {
-				fut, set := workflow.NewFuture(ctx)
-				set.Set(nil, fmt.Errorf("decoding SendSignalAction.args[0] as DoSignal.DoSignalActions: %w", err))
-				return fut
-			}
-			arg = &doSig
+		if doActions := action.GetDoActions(); doActions != nil {
+			signalName = "do_actions_signal"
+			arg = doActions
 		}
-		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, arg)
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, signalName, arg)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)
@@ -659,19 +650,13 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 
 // EchoAsyncOperation starts a KitchenSinkWorkflow as the Nexus handler. The handler is driven
 // entirely by the WorkflowInput the caller provides (and any signals it later sends).
-var EchoAsyncOperation = temporalnexus.MustNewWorkflowRunOperationWithOptions(temporalnexus.WorkflowRunOperationOptions[*kitchensink.NexusHandlerStart, *common.Payload]{
+var EchoAsyncOperation = temporalnexus.MustNewWorkflowRunOperationWithOptions(temporalnexus.WorkflowRunOperationOptions[*kitchensink.StartWorkflow, *common.Payload]{
 	Name: "echo-async",
-	Handler: func(ctx context.Context, input *kitchensink.NexusHandlerStart, opts nexus.StartOperationOptions) (temporalnexus.WorkflowHandle[*common.Payload], error) {
-		startOpts := client.StartWorkflowOptions{ID: opts.RequestID}
-		if input.WorkflowId != "" {
-			startOpts.ID = input.WorkflowId
-			startOpts.WorkflowIDConflictPolicy = input.WorkflowIdConflictPolicy
-			startOpts.WorkflowExecutionTimeout = 60 * time.Minute
-		}
-		wfInput := input.WorkflowInput
-		if wfInput == nil {
-			wfInput = &kitchensink.WorkflowInput{}
-		}
-		return temporalnexus.ExecuteWorkflow(ctx, opts, startOpts, KitchenSinkWorkflow, wfInput)
+	Handler: func(ctx context.Context, input *kitchensink.StartWorkflow, opts nexus.StartOperationOptions) (temporalnexus.WorkflowHandle[*common.Payload], error) {
+		return temporalnexus.ExecuteWorkflow(ctx, opts, client.StartWorkflowOptions{
+			ID:                       cmp.Or(input.WorkflowId, opts.RequestID),
+			WorkflowIDConflictPolicy: input.WorkflowIdConflictPolicy,
+			WorkflowExecutionTimeout: 60 * time.Minute,
+		}, KitchenSinkWorkflow, cmp.Or(input.WorkflowInput, &kitchensink.WorkflowInput{}))
 	},
 })

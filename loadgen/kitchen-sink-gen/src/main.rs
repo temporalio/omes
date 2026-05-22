@@ -13,7 +13,7 @@ use crate::protos::temporal::{
         ClientAction, ClientActionSet, ClientSequence, DoQuery, DoSignal, DoUpdate,
         execute_nexus_operation,
         ExecuteActivityAction, ExecuteChildWorkflowAction, ExecuteNexusOperation,
-        HandlerInvocation, NexusSyncCall, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction,
+        HandlerInvocation, RemoteActivityOptions, ReturnResultAction, SetPatchMarkerAction, SyncCall,
         TestInput, TimerAction, UpsertMemoAction, UpsertSearchAttributesAction,
         WithStartClientAction, WorkflowInput, WorkflowState,
     },
@@ -721,7 +721,8 @@ impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
             awaitable_choice: Some(AwaitableChoice {
                 condition: Some(awaitable_choice::Condition::WaitFinish(())),
             }),
-            variant: Some(execute_nexus_operation::Variant::Sync(NexusSyncCall {
+            variant: Some(execute_nexus_operation::Variant::Sync(SyncCall {
+                operation: String::new(),
                 input: val.clone(),
                 expected_output: val,
             })),
