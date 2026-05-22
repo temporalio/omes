@@ -59,7 +59,7 @@ func Main() {
 }
 
 func configureLambdaWorker(opts *lambdaworker.Options) error {
-	opts.TaskQueue = getEnvDefault("TEMPORAL_TASK_QUEUE", defaultLambdaTaskQueueName)
+	opts.TaskQueue = getEnvDefault("TEMPORAL_TASK_QUEUE", defaultTaskQueueName)
 
 	enableTLS := os.Getenv("ENABLE_TLS")
 	tlsKeyID := os.Getenv("TLS_KEY")
