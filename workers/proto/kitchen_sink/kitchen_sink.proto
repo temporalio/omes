@@ -350,13 +350,16 @@ message SendSignalAction {
   // What workflow is being targeted
   string workflow_id = 1;
   string run_id = 2;
-  // Name of the signal handler
+  // Name of the signal handler. Ignored when do_actions is set (delivered to
+  // do_actions_signal automatically).
   string signal_name = 3;
-  // Arguments for the handler
-  repeated temporal.api.common.v1.Payload args = 4;
   // Headers to attach to the signal
   map<string, temporal.api.common.v1.Payload> headers = 5;
   AwaitableChoice awaitable_choice = 6;
+  // When set, the signal is delivered to the receiver's do_actions_signal handler with this
+  // typed payload as the single argument. Use this to drive a remote kitchen-sink workflow's
+  // state from another workflow without encoding/decoding ceremony.
+  DoSignal.DoSignalActions do_actions = 7;
 }
 
 // Cancel an external workflow (may be a child)
@@ -492,41 +495,49 @@ enum ActivityCancellationType {
   ABANDON = 2;
 }
 
-// Execute a Nexus operation
+// Execute a Nexus operation. Which underlying operation is invoked is determined by which
+// variant is set; the variant's `operation` field names the specific operation (defaulting
+// to the variant's canonical name when empty).
 message ExecuteNexusOperation {
   string endpoint = 1;
-  // Operation name to call
-  string operation = 2;
-  // Input payload for the operation
-  string input = 3;
   // Headers to send with the operation
   map<string, string> headers = 4;
   // How to await on the operation
   AwaitableChoice awaitable_choice = 5;
-  // Expected output for verification
-  string expected_output = 6;
-  // Actions to execute before returning from the handler workflow
-  repeated ActionSet before_actions = 7;
-  // Override the handler workflow ID (defaults to per-request random).
-  string handler_workflow_id = 8;
-  // Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
-  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;
-  // If true, the handler workflow waits on the "unblock" signal before returning.
-  bool wait_for_signal = 10;
+  oneof variant {
+    // Invoke a sync Nexus operation that echoes a string without starting a workflow.
+    SyncCall sync = 3;
+    // Invoke an async Nexus operation that starts a kitchenSink workflow as the handler.
+    StartWorkflow start_workflow = 7;
+  }
 }
 
-// Input for the Nexus handler workflow that backs echo-sync and echo-async operations
-message NexusHandlerInput {
-  string input = 1;
-  repeated ActionSet before_actions = 2;
-  string handler_workflow_id = 3;
-  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
-  // If true, the handler workflow waits on the "unblock" signal before returning.
-  bool wait_for_signal = 5;
+// Configuration for a sync Nexus invocation.
+message SyncCall {
+  // Operation name on the Nexus service. Defaults to "echo-sync" when empty.
+  string operation = 1;
+  // String input the handler echoes back as its output.
+  string input = 2;
+  // If set, the operation's string output is compared against this value after completion.
+  string expected_output = 3;
+}
+
+// Configuration for starting a kitchenSink workflow as a Nexus handler. The handler workflow's
+// behavior is described by workflow_input.initial_actions; the operation result is whatever
+// payload the last action returns. Callers must ensure initial_actions terminate (typically by
+// ending with ReturnResult) or the handler will wait for signals indefinitely.
+message StartWorkflow {
+  // Operation name on the Nexus service. Defaults to "echo-async" when empty.
+  string operation = 1;
+  // Handler workflow ID. Defaults to per-request random when empty.
+  string workflow_id = 2;
+  // Conflict policy when starting the handler with workflow_id. Only applied when workflow_id is set.
+  temporal.api.enums.v1.WorkflowIdConflictPolicy workflow_id_conflict_policy = 3;
+  // Typed input passed to the kitchenSink handler workflow.
+  WorkflowInput workflow_input = 4;
 }
 
 // Await completion of all actions that were started in the same workflow with
 // AwaitableChoice.wait_started and not yet awaited.
 message AwaitPendingActions {
 }
-

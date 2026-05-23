@@ -1,6 +1,7 @@
 package kitchensink
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -488,29 +489,37 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
+	// Each variant carries an operation name (defaulting to the variant's canonical op when empty).
+	var operationName string
+	var operationInput any
+	switch v := nexusOp.GetVariant().(type) {
+	case *kitchensink.ExecuteNexusOperation_Sync:
+		operationName = cmp.Or(v.Sync.GetOperation(), "echo-sync")
+		operationInput = v.Sync.GetInput()
+	case *kitchensink.ExecuteNexusOperation_StartWorkflow:
+		operationName = cmp.Or(v.StartWorkflow.GetOperation(), "echo-async")
+		operationInput = cmp.Or(v.StartWorkflow, &kitchensink.StartWorkflow{})
+	default:
+		return fmt.Errorf("ExecuteNexusOperation has no variant set")
+	}
+
 	return withAwaitableChoiceCustom(ctx, state, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
-		nexusOptions := workflow.NexusOperationOptions{}
-		input := &kitchensink.NexusHandlerInput{
-			Input:                           nexusOp.Input,
-			BeforeActions:                   nexusOp.BeforeActions,
-			HandlerWorkflowId:               nexusOp.HandlerWorkflowId,
-			HandlerWorkflowIdConflictPolicy: nexusOp.HandlerWorkflowIdConflictPolicy,
-			WaitForSignal:                   nexusOp.WaitForSignal,
-		}
-		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
+		return client.ExecuteOperation(ctx, operationName, operationInput, workflow.NexusOperationOptions{})
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
 		},
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
-			if expOutput := nexusOp.GetExpectedOutput(); expOutput != "" {
+			// expected_output is verified for echo-sync only (string→string). echo-async returns
+			// a Payload from the kitchenSink handler.
+			if sync := nexusOp.GetSync(); sync != nil && sync.ExpectedOutput != "" {
 				var result string
 				if err := fut.Get(ctx, &result); err != nil {
 					return err
 				}
-				if expOutput != result {
-					return fmt.Errorf("expected output %q, got %q", expOutput, result)
+				if sync.ExpectedOutput != result {
+					return fmt.Errorf("expected output %q, got %q", sync.ExpectedOutput, result)
 				}
 				return nil
 			}
@@ -520,7 +529,13 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 
 func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
 	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
-		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
+		signalName := action.SignalName
+		var arg any
+		if doActions := action.GetDoActions(); doActions != nil {
+			signalName = "do_actions_signal"
+			arg = doActions
+		}
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, signalName, arg)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)
@@ -628,39 +643,20 @@ type ReturnOrErr struct {
 	err   error
 }
 
-func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerInput) (string, error) {
-	state := KSWorkflowState{
-		workflowState: &kitchensink.WorkflowState{},
-	}
-	for _, actionSet := range input.BeforeActions {
-		if _, err := state.handleActionSet(ctx, actionSet); err != nil {
-			return "", err
-		}
-	}
-	if input.WaitForSignal {
-		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
-	}
-	return input.Input, nil
-}
-
-// EchoSyncOperation returns the input synchronously without starting a workflow.
-var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
-	if len(input.BeforeActions) > 0 {
-		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
-	}
-	return input.Input, nil
+// EchoSyncOperation echoes the string input synchronously.
+var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input string, opts nexus.StartOperationOptions) (string, error) {
+	return input, nil
 })
 
-// EchoAsyncOperation starts a NexusHandlerWorkflow that runs before_actions and returns the input.
-var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	if input.HandlerWorkflowId != "" {
-		return client.StartWorkflowOptions{
-			ID:                       input.HandlerWorkflowId,
-			WorkflowIDConflictPolicy: input.HandlerWorkflowIdConflictPolicy,
+// EchoAsyncOperation starts a KitchenSinkWorkflow as the Nexus handler. The handler is driven
+// entirely by the WorkflowInput the caller provides (and any signals it later sends).
+var EchoAsyncOperation = temporalnexus.MustNewWorkflowRunOperationWithOptions(temporalnexus.WorkflowRunOperationOptions[*kitchensink.StartWorkflow, *common.Payload]{
+	Name: "echo-async",
+	Handler: func(ctx context.Context, input *kitchensink.StartWorkflow, opts nexus.StartOperationOptions) (temporalnexus.WorkflowHandle[*common.Payload], error) {
+		return temporalnexus.ExecuteWorkflow(ctx, opts, client.StartWorkflowOptions{
+			ID:                       cmp.Or(input.WorkflowId, opts.RequestID),
+			WorkflowIDConflictPolicy: input.WorkflowIdConflictPolicy,
 			WorkflowExecutionTimeout: 60 * time.Minute,
-		}, nil
-	}
-	return client.StartWorkflowOptions{
-		ID: opts.RequestID,
-	}, nil
+		}, KitchenSinkWorkflow, cmp.Or(input.WorkflowInput, &kitchensink.WorkflowInput{}))
+	},
 })

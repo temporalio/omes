@@ -868,8 +868,9 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-sync",
-									Input:     "hello",
+									Variant: &ExecuteNexusOperation_Sync{
+										Sync: &SyncCall{Input: "hello"},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
 											WaitFinish: &emptypb.Empty{},
@@ -893,11 +894,16 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-async",
-									Input:     "world",
-									BeforeActions: ListActionSet(
-										NewTimerAction(1),
-									),
+									Variant: &ExecuteNexusOperation_StartWorkflow{
+										StartWorkflow: &StartWorkflow{
+											WorkflowInput: &WorkflowInput{
+												InitialActions: ListActionSet(
+													NewTimerAction(1),
+													NewEmptyReturnResultAction(),
+												),
+											},
+										},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
 											WaitFinish: &emptypb.Empty{},
@@ -922,10 +928,15 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-async",
-									BeforeActions: ListActionSet(
-										NewAwaitWorkflowStateAction("never", "resolves"),
-									),
+									Variant: &ExecuteNexusOperation_StartWorkflow{
+										StartWorkflow: &StartWorkflow{
+											WorkflowInput: &WorkflowInput{
+												InitialActions: ListActionSet(
+													NewAwaitWorkflowStateAction("never", "resolves"),
+												),
+											},
+										},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_CancelAfterStarted{
 											CancelAfterStarted: &emptypb.Empty{},
@@ -951,8 +962,9 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-sync",
-									Input:     "abandoned",
+									Variant: &ExecuteNexusOperation_Sync{
+										Sync: &SyncCall{Input: "abandoned"},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_Abandon{
 											Abandon: &emptypb.Empty{},
