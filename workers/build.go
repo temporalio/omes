@@ -175,7 +175,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		}
 	}
 
-	// Prep generated TypeScript assets before sdkbuild compiles the prepared program.
+	// Generated TypeScript proto files are source-local and intentionally not
+	// checked in. sdkbuild installs and builds a separate prepared package, so
+	// its pnpm install does not run workers/typescript scripts; generate those
+	// source assets before sdkbuild compiles them through ../ includes.
 	cmd := exec.Command("npm", "install")
 	cmd.Dir = baseDir
 	err := cmd.Run()
@@ -195,7 +198,7 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "main.ts"))}},
+		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "registry.ts"))}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
 		Includes: []string{
@@ -216,25 +219,7 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
-	if err := copyTypeScriptHarnessProto(baseDir, prog.Dir()); err != nil {
-		return nil, err
-	}
 	return prog, nil
-}
-
-func copyTypeScriptHarnessProto(baseDir, preparedDir string) error {
-	protoBytes, err := os.ReadFile(filepath.Join(baseDir, "..", "proto", "harness", "api", "api.proto"))
-	if err != nil {
-		return fmt.Errorf("failed reading TypeScript harness api.proto: %w", err)
-	}
-	targetDir := filepath.Join(preparedDir, "tslib", "harness", "api")
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return fmt.Errorf("failed creating TypeScript harness proto dir: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(targetDir, "api.proto"), protoBytes, 0644); err != nil {
-		return fmt.Errorf("failed writing TypeScript harness api.proto: %w", err)
-	}
-	return nil
 }
 
 func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Program, error) {

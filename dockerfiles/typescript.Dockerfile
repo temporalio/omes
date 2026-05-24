@@ -56,8 +56,8 @@ RUN . ./versions.env \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
  && corepack pnpm --version
 
-# prepare-worker generates TypeScript proto assets and then lets sdkbuild compile
-# the prepared registry entrypoint package.
+# prepare-worker generates TypeScript proto assets before sdkbuild compiles the
+# prepared registry entrypoint package.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.
@@ -66,6 +66,7 @@ FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian11
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/typescript/prepared /app/workers/typescript/prepared
+COPY --from=build /app/workers/typescript/harness/api/api.proto /app/workers/typescript/harness/api/api.proto
 
 # Node is installed here 👇 in distroless
 ENV PATH="/nodejs/bin:$PATH"
