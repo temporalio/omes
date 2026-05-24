@@ -28,12 +28,8 @@ function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 }
 
 if (require.main === module) {
-  void main()
-    .then(() => {
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error(err);
-      process.exit(1);
-    });
+  void main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
