@@ -3,16 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "npm run proto-gen && npm run harness:proto-gen && tsc --build",
+    "build": "npm run proto-gen && tsc --build",
     "build.watch": "tsc --build --watch",
     "clean": "rm -rf node_modules lib dist dist-test build harness/api workerlib/kitchensink/protos/json-module.js workerlib/kitchensink/protos/root.d.ts",
-    "harness:proto-gen": "node ./harness/protogen.js",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
     "lint-ci": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "test:harness": "npm run harness:build-test && node --test dist-test/harness/tests/project.test.js dist-test/harness/tests/worker.test.js",
-    "harness:build-test": "npm run harness:proto-gen && tsc --project tsconfig.test.json",
+    "test:harness": "npm run harness:build-test && node --test dist-test/harness/tests/app-registry.test.js dist-test/harness/tests/project.test.js dist-test/harness/tests/worker.test.js",
+    "harness:build-test": "npm run proto-gen && tsc --project tsconfig.test.json",
     "typecheck": "tsc --noEmit"
   },
   "nodemonConfig": {

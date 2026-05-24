@@ -56,8 +56,8 @@ RUN . ./versions.env \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
  && corepack pnpm --version
 
-# prepare-worker builds the TypeScript workspace itself: it installs npm deps,
-# runs the root build, and generates the prepared sdkbuild package.
+# prepare-worker generates TypeScript proto assets and then lets sdkbuild compile
+# the prepared registry entrypoint package.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and prepared feature to a "run" container.
@@ -65,7 +65,7 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepar
 FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian11
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
-COPY --from=build /app/workers/typescript /app/workers/typescript
+COPY --from=build /app/workers/typescript/prepared /app/workers/typescript/prepared
 
 # Node is installed here 👇 in distroless
 ENV PATH="/nodejs/bin:$PATH"

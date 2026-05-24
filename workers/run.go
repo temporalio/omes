@@ -124,20 +124,27 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
+	if r.AppName != "" && r.SdkOptions.Language != clioptions.LangTypeScript {
+		return fmt.Errorf("--app is only supported for TypeScript workers")
+	}
 	switch r.SdkOptions.Language {
 	case clioptions.LangPython:
 		// Python needs module name and subcommand
 		args = append(args, "main", "worker")
 	case clioptions.LangTypeScript:
 		// Node also needs module before the harness subcommand.
-		args = append(args, "./tslib/apps/worker/main.js", "worker")
+		args = append(args, "./tslib/apps/main.js")
+		if r.AppName != "" {
+			args = append(args, "--app", r.AppName)
+		}
+		args = append(args, "worker")
 	case clioptions.LangGo:
 		if r.AppName != "" {
 			args = append(args, "--app", r.AppName)
 		}
 		args = append(args, "worker")
 	case clioptions.LangDotNet, clioptions.LangRuby, clioptions.LangJava:
-		// .NET, Ruby and Java just need the harness worker subcommand
+		// .NET, Ruby, and Java just need the harness worker subcommand
 		args = append(args, "worker")
 	}
 

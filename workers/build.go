@@ -175,7 +175,7 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		}
 	}
 
-	// Prep the TypeScript runner to be built
+	// Prep generated TypeScript assets before sdkbuild compiles the prepared program.
 	cmd := exec.Command("npm", "install")
 	cmd.Dir = baseDir
 	err := cmd.Run()
@@ -183,19 +183,19 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		return nil, fmt.Errorf("npm install in ./workers/typescript failed: %w", err)
 	}
 
-	cmd = exec.Command("npm", "run", "build")
+	cmd = exec.Command("npm", "run", "proto-gen")
 	cmd.Dir = baseDir
 	cmd.Stdout = b.stdout
 	cmd.Stderr = b.stderr
 	err = cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("npm run build in ./workers/typescript failed: %w", err)
+		return nil, fmt.Errorf("npm run proto-gen in ./workers/typescript failed: %w", err)
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "worker", "main.ts"))}},
+		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "main.ts"))}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
 		Includes: []string{

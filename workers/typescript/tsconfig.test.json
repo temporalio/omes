@@ -6,6 +6,6 @@
     "outDir": "./dist-test",
     "sourceMap": false
   },
-  "include": ["harness/**/*.ts"],
+  "include": ["apps/**/*.ts", "harness/**/*.ts"],
   "exclude": []
 }
