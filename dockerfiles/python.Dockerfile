@@ -40,7 +40,6 @@ COPY go.mod go.sum ./
 RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
 
 ARG SDK_VERSION
-ARG PROJECT_NAME=""
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
@@ -49,17 +48,11 @@ COPY ${SDK_DIR} ./repo
 # Copy the worker files
 COPY workers/python ./workers/python
 
-# Build the worker or project runner
-RUN if [ -n "$PROJECT_NAME" ]; then \
-      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --project-name "$PROJECT_NAME" --dir-name "project-build-runner-$PROJECT_NAME" --version "$SDK_VERSION" ; \
-    else \
-      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION" ; \
-    fi
+# Build one prepared package that can run any Python app via --app.
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and built worker to a distroless "run" container
+# Copy the CLI and built worker to a run container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
-
-ARG PROJECT_NAME=""
 
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
@@ -70,8 +63,5 @@ RUN chmod +x /app/entrypoint.sh
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
 ENV OMES_WORKER_LANGUAGE=python
 ENV OMES_PREPARED_DIR=prepared
-ENV OMES_PROJECT_NAME=$PROJECT_NAME
-ENV OMES_PROJECT_PREPARED_DIR=project-build-runner-${PROJECT_NAME}
-ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/projects/tests/${PROJECT_NAME}/project-build-runner-${PROJECT_NAME}
 
 ENTRYPOINT ["/app/entrypoint.sh"]
