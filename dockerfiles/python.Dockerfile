@@ -51,7 +51,7 @@ COPY workers/python ./workers/python
 
 # Build the worker or project runner
 RUN if [ -n "$PROJECT_NAME" ]; then \
-      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --project-name "$PROJECT_NAME" --dir-name "project-build-runner-$PROJECT_NAME" --version "$SDK_VERSION" ; \
+      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name "project-build-runner-$PROJECT_NAME" --version "$SDK_VERSION" ; \
     else \
       CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION" ; \
     fi
@@ -72,6 +72,6 @@ ENV OMES_WORKER_LANGUAGE=python
 ENV OMES_PREPARED_DIR=prepared
 ENV OMES_PROJECT_NAME=$PROJECT_NAME
 ENV OMES_PROJECT_PREPARED_DIR=project-build-runner-${PROJECT_NAME}
-ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/projects/tests/${PROJECT_NAME}/project-build-runner-${PROJECT_NAME}
+ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/project-build-runner-${PROJECT_NAME}
 
 ENTRYPOINT ["/app/entrypoint.sh"]

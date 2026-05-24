@@ -218,9 +218,9 @@ Writing a project should be fairly similar to writing a Temporal sample, and req
 familiarity with the project harness interface.
 
 To get started:
-- projects should be written at `workers/<lang>/projects/tests/<name>`, this is a path convention expected
-  by Omes when building your project
-- use the example `helloworld/` project as a reference to get started
+- projects should be written as apps under `workers/<lang>/apps/<name>`
+- register the app in `workers/<lang>/apps/registry.py`
+- use the example `workers/python/apps/helloworld/` app as a reference to get started
 - take a look at `workers/python/harness/src/harness/__init__.py` as an entrypoint to the harness and 
   how it works
 
@@ -246,7 +246,7 @@ To run a project:
 ```sh
 go run ./cmd run-worker \
   --language python \
-  --project-name helloworld \
+  --app helloworld \
   --run-id local-project-test \
   --server-address <your server address>
 ```
@@ -272,7 +272,7 @@ go run ./cmd run-scenario-with-worker \
   --scenario project \
   --iterations 1 \
   --language python \
-  --project-name helloworld \
+  --app helloworld \
   --run-id local-project-test \
   --embedded-server \
   --option language=python \

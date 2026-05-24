@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from temporalio.client import Client
 from temporalio.worker import Worker
-from workflow import HelloWorldWorkflow
 
 from harness import (
     App,
@@ -12,13 +11,7 @@ from harness import (
     default_client_factory,
 )
 
-
-def app() -> App:
-    return App(
-        worker=build_worker,
-        client_factory=default_client_factory,
-        project=ProjectHandlers(execute=execute_project_iteration),
-    )
+from .workflow import HelloWorldWorkflow
 
 
 def build_worker(client: Client, context: WorkerContext) -> Worker:
@@ -41,3 +34,10 @@ async def execute_project_iteration(
     )
     result = await handle.result()
     print(result)
+
+
+app = App(
+    worker=build_worker,
+    client_factory=default_client_factory,
+    project=ProjectHandlers(execute=execute_project_iteration),
+)
