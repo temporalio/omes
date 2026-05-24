@@ -19,11 +19,6 @@ const harnessSourceProtoDir = resolve(protoBaseDir, 'harness/api');
 const harnessSourceProtoPath = resolve(harnessSourceProtoDir, 'api.proto');
 const harnessOutputDir = resolve(packageRoot, 'harness/api');
 const harnessGenerator = require.resolve('@grpc/proto-loader/build/bin/proto-loader-gen-types.js');
-const harnessRuntimeProtoDirs = [
-  harnessOutputDir,
-  resolve(packageRoot, 'lib/harness/api'),
-  resolve(packageRoot, 'dist-test/harness/api'),
-];
 
 async function generateKitchenSinkProtos() {
   mkdirSync(kitchenSinkOutputDir, { recursive: true });
@@ -106,10 +101,7 @@ function generateHarnessApiProtos() {
     { stdio: 'inherit' },
   );
 
-  for (const targetProtoDir of harnessRuntimeProtoDirs) {
-    mkdirSync(targetProtoDir, { recursive: true });
-    copyFileSync(harnessSourceProtoPath, resolve(targetProtoDir, 'api.proto'));
-  }
+  copyFileSync(harnessSourceProtoPath, resolve(harnessOutputDir, 'api.proto'));
 }
 
 async function main() {

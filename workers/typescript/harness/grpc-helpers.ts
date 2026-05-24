@@ -17,6 +17,7 @@ export type ProjectServiceClientConstructor = new (
 function harnessApiProtoPath(): string {
   const candidates = [
     path.resolve(__dirname, './api/api.proto'),
+    path.resolve(__dirname, '../../harness/api/api.proto'),
     path.resolve(__dirname, '../../../harness/api/api.proto'),
   ];
   const protoPath = candidates.find((candidate) => fs.existsSync(candidate));

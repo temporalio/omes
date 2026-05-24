@@ -41,7 +41,7 @@ interface WorkerCliOptions {
 export async function runWorkerCli(
   workerFactory: WorkerFactory,
   clientFactory: ClientFactory,
-  argv: readonly string[],
+  argv: string[],
 ): Promise<void> {
   let resolveInterrupt!: () => void;
   const interruptPromise = new Promise<void>((resolve) => {
@@ -60,7 +60,8 @@ export async function runWorker(
   workerFactory: WorkerFactory,
   clientFactory: ClientFactory,
   interruptPromise: Promise<void>,
-  argv: readonly string[],
+  // sdkbuild's prepared package currently uses Commander 8 types, whose parse API expects string[].
+  argv: string[],
 ): Promise<void> {
   const args = buildParser().parse(argv, { from: 'user' }).opts<WorkerCliOptions>();
 

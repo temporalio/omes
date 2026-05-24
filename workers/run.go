@@ -124,9 +124,6 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Build command args
 	var args []string
-	if r.AppName != "" && r.SdkOptions.Language != clioptions.LangTypeScript {
-		return fmt.Errorf("--app is only supported for TypeScript workers")
-	}
 	switch r.SdkOptions.Language {
 	case clioptions.LangPython:
 		// Python needs module name and subcommand
