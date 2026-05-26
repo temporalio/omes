@@ -21,6 +21,7 @@ import (
 
 type Runner struct {
 	Builder
+	AppName                   string
 	RetainTempDir             bool
 	GracefulShutdownDuration  time.Duration
 	EmbeddedServer            bool
@@ -130,8 +131,13 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	case clioptions.LangTypeScript:
 		// Node also needs module before the harness subcommand.
 		args = append(args, "./tslib/omes.js", "worker")
-	case clioptions.LangDotNet, clioptions.LangRuby, clioptions.LangJava, clioptions.LangGo:
-		// .NET, Ruby, Java and Go just need the harness worker subcommand
+	case clioptions.LangGo:
+		if r.AppName != "" {
+			args = append(args, "--app", r.AppName)
+		}
+		args = append(args, "worker")
+	case clioptions.LangDotNet, clioptions.LangRuby, clioptions.LangJava:
+		// .NET, Ruby and Java just need the harness worker subcommand
 		args = append(args, "worker")
 	}
 

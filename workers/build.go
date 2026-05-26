@@ -35,7 +35,6 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	if b.ProjectName != "" {
 		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
-
 	buildDir := filepath.Join(baseDir, b.DirName)
 	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
 	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
@@ -82,10 +81,10 @@ replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	goMain := `package main
 
-import "github.com/temporalio/omes/workers/go/apps/worker"
+import "github.com/temporalio/omes/workers/go/apps"
 
 func main() {
-	worker.Main()
+	apps.Main()
 }`
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
