@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_call:
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PAT:
+        required: true
     inputs:
       push-command:
         description: Push command to run (e.g., 'build-push-worker-image' or 'build-push-cli-image')
