@@ -218,8 +218,9 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 			Service:     sno.Service,
 			Operation:   sno.Operation,
 		})
+	var unimplemented *serviceerror.Unimplemented
 	switch {
-	case isUnimplemented(err):
+	case errors.As(err, &unimplemented):
 		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
 		// or in a mixed-version cluster). Treat as a no-op — the action is
 		// opt-in and the caller asked for best-effort behavior.
@@ -240,7 +241,8 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 			OperationId: operationID,
 			WaitStage:   enumspb.NEXUS_OPERATION_WAIT_STAGE_CLOSED,
 		})
-	if isUnimplemented(err) {
+	unimplemented = nil
+	if errors.As(err, &unimplemented) {
 		return nil
 	}
 	if err != nil {
@@ -250,12 +252,4 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		return fmt.Errorf("standalone nexus operation failed: %s", failure.GetMessage())
 	}
 	return nil
-}
-
-func isUnimplemented(err error) bool {
-	if err == nil {
-		return false
-	}
-	var unimplemented *serviceerror.Unimplemented
-	return errors.As(err, &unimplemented)
 }
