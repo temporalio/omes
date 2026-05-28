@@ -8,13 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	enumspb "go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
 )
-
-const standaloneOperationScheduleToCloseTimeout = 90 * time.Second
 
 type ClientActionsExecutor struct {
 	Client          client.Client
@@ -216,24 +213,13 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 
 	handle, err := nexusClient.ExecuteOperation(ctx, sno.Operation, &NexusHandlerInput{}, client.StartNexusOperationOptions{
 		ID:                     operationID,
-		ScheduleToCloseTimeout: standaloneOperationScheduleToCloseTimeout,
+		ScheduleToCloseTimeout: 90 * time.Second,
 	})
-	var startUnimplemented *serviceerror.Unimplemented
-	if errors.As(err, &startUnimplemented) {
-		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
-		// or in a mixed-version cluster). Treat as a no-op.
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return fmt.Errorf("ExecuteOperation: %w", err)
 	}
 
 	err = handle.Get(ctx, nil)
-	var getUnimplemented *serviceerror.Unimplemented
-	if errors.As(err, &getUnimplemented) {
-		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
-		// or in a mixed-version cluster). Treat as a no-op.
-		return nil
-	}
 	if err != nil {
 		return fmt.Errorf("Get standalone nexus operation: %w", err)
 	}
