@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -123,7 +124,7 @@ func (b *baseImageBuilder) buildDockerArgs(
 	// Handle multi-platform build requirements
 	if len(b.platforms) > 1 {
 		if !allowPush {
-			err = fmt.Errorf("multi-platform builds require pushing to registry")
+			err = errors.New("multi-platform builds require pushing to registry")
 			return
 		}
 		dockerArgs = append(dockerArgs, "--push")
@@ -167,7 +168,7 @@ func (b *baseImageBuilder) executeDockerBuild(
 
 	err = writeGitHubEnv("BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
 	if err != nil {
-		return fmt.Errorf("writing image tags to github env failed: %s", err)
+		return fmt.Errorf("writing image tags to github env failed: %w", err)
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
@@ -188,7 +189,7 @@ func (b *baseImageBuilder) handleImageSave(
 	if b.saveImage != "" {
 		err := writeGitHubEnv("SAVED_IMAGE_TAG", imageTagsForPublish[0])
 		if err != nil {
-			return fmt.Errorf("writing image tags to github env failed: %s", err)
+			return fmt.Errorf("writing image tags to github env failed: %w", err)
 		}
 		if len(b.platforms) > 1 {
 			b.logger.Warn(

@@ -2,6 +2,7 @@ package harness
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -111,7 +112,7 @@ func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.C
 	}
 	if opts.TLSCertPath != "" {
 		if opts.TLSKeyPath == "" {
-			return nil, fmt.Errorf("Client cert specified, but not client key!")
+			return nil, errors.New("Client cert specified, but not client key!")
 		}
 		cert, err := tls.LoadX509KeyPair(opts.TLSCertPath, opts.TLSKeyPath)
 		if err != nil {
@@ -121,7 +122,7 @@ func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.C
 		return tlsConfig, nil
 	}
 	if opts.TLSKeyPath != "" {
-		return nil, fmt.Errorf("Client key specified, but not client cert!")
+		return nil, errors.New("Client key specified, but not client cert!")
 	}
 	if opts.EnableTLS {
 		return tlsConfig, nil

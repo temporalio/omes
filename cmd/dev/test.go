@@ -43,7 +43,7 @@ Examples:
 
 			for _, target := range targets {
 				if err := runTestWorker(cmd.Context(), target); err != nil {
-					return fmt.Errorf("failed to test %s: %v", target, err)
+					return fmt.Errorf("failed to test %s: %w", target, err)
 				}
 			}
 			return nil
@@ -77,11 +77,12 @@ func runTestWorker(ctx context.Context, language string) error {
 	if err := checkTool(ctx, language); err != nil {
 		return err
 	}
-	if language == "python" {
+	switch language {
+	case "python":
 		if err := runPythonHarnessTests(ctx, repoDir); err != nil {
 			return err
 		}
-	} else if language == "java" {
+	case "java":
 		if err := runJavaHarnessTests(ctx, repoDir); err != nil {
 			return err
 		}

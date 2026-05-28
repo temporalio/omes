@@ -72,8 +72,9 @@ func TestMetricsServer(t *testing.T) {
 		}
 
 		eventually(t, 2*time.Second, func() error {
-			_, err := http.Get("http://localhost:19091/metrics")
+			resp, err := http.Get("http://localhost:19091/metrics")
 			if err == nil {
+				resp.Body.Close()
 				return errors.New("SDK server should be stopped after shutdown")
 			}
 			return nil
@@ -175,8 +176,9 @@ func TestProcessMetricsSidecar(t *testing.T) {
 		}
 
 		eventually(t, 2*time.Second, func() error {
-			_, err := http.Get("http://localhost:19094/metrics")
+			resp, err := http.Get("http://localhost:19094/metrics")
 			if err == nil {
+				resp.Body.Close()
 				return errors.New("Sidecar should be stopped after shutdown")
 			}
 			return nil

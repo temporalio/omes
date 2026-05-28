@@ -3,7 +3,7 @@ package cli
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"path/filepath"
 	"runtime"
 )
@@ -11,7 +11,7 @@ import (
 func getRepoDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", fmt.Errorf("failed to get source file location")
+		return "", errors.New("failed to get source file location")
 	}
 	cliDir := filepath.Dir(filename) // cli
 	cmdDir := filepath.Dir(cliDir)   // cmd

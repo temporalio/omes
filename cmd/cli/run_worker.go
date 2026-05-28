@@ -80,7 +80,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 
 func (r *workerRunner) preRun() {
 	r.builder.preRun()
-	r.Runner.Builder = r.builder.Builder
+	r.Builder = r.builder.Builder
 	r.TaskQueueName = loadgen.TaskQueueForRun(r.ScenarioID.RunID)
 }
 

@@ -171,14 +171,14 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	e.ScenarioInfo = info
-	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
+	e.id = "ebb_and_flow_" + e.ExecutionID
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
 
 	// Get parsed configuration
 	config := e.config
 	if config == nil {
-		return fmt.Errorf("configuration not parsed - Parse must be called before run")
+		return errors.New("configuration not parsed - Parse must be called before run")
 	}
 
 	var consecutiveErrCount int
@@ -326,7 +326,7 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Start workflow.
 	run := e.NewRun(int(iteration))
-	e.RegisterDefaultSearchAttributes(ctx)
+	_ = e.RegisterDefaultSearchAttributes(ctx)
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false

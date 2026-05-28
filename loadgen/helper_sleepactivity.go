@@ -2,9 +2,11 @@ package loadgen
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"time"
 
 	commonpb "go.temporal.io/api/common/v1"
@@ -53,10 +55,10 @@ func ParseAndValidateSleepActivityConfig(
 		return nil, fmt.Errorf("failed to parse SleepActivityConfig JSON: %w", err)
 	}
 	if requireCount && config.Count == nil {
-		return nil, fmt.Errorf("SleepActivityConfig: Count field is required")
+		return nil, errors.New("SleepActivityConfig: Count field is required")
 	}
-	if config.Groups == nil || len(config.Groups) == 0 {
-		return nil, fmt.Errorf(
+	if len(config.Groups) == 0 {
+		return nil, errors.New(
 			"SleepActivityConfig: Groups field is required and must not be empty",
 		)
 	}
@@ -131,7 +133,7 @@ func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.Execute
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
 			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(rng); ok {
-				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
+				action.FairnessKey = strconv.FormatInt(fairnessKey, 10)
 				action.FairnessWeight = 1.0 // always set default
 			}
 		}

@@ -993,7 +993,7 @@ func TestKitchenSink(t *testing.T) {
 
 			// Ensure the workflow completes by appending a return action at the end.
 			input := tc.testInput
-			if input.WorkflowInput == nil {
+			if input.GetWorkflowInput() == nil {
 				input.WorkflowInput = &WorkflowInput{}
 			}
 			input.WorkflowInput.InitialActions = append(
@@ -1045,11 +1045,11 @@ func testForSDK(
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
-			if input.WorkflowInput != nil {
-				for _, actionSet := range input.WorkflowInput.InitialActions {
-					for _, action := range actionSet.Actions {
+			if input.GetWorkflowInput() != nil {
+				for _, actionSet := range input.GetWorkflowInput().GetInitialActions() {
+					for _, action := range actionSet.GetActions() {
 						if nexusOp := action.GetNexusOperation(); nexusOp != nil &&
-							nexusOp.Endpoint == "" {
+							nexusOp.GetEndpoint() == "" {
 							nexusOp.Endpoint = nexusEndpoint
 						}
 					}
@@ -1140,7 +1140,7 @@ func testSupportedFeature(
 		// Verify workflow failed in history
 		hasWorkflowFailed := false
 		for _, event := range historyEvents {
-			if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
+			if event.GetEventType() == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
 				hasWorkflowFailed = true
 				break
 			}
@@ -1190,22 +1190,22 @@ func getWorkflowHistory(
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflow executions: %w", err)
 	}
-	if len(executions.Executions) == 0 {
+	if len(executions.GetExecutions()) == 0 {
 		return nil, fmt.Errorf("no workflow executions found for task queue %s", taskQueueName)
 	}
-	if len(executions.Executions) > 1 {
+	if len(executions.GetExecutions()) > 1 {
 		t.Logf(
 			"Warning: found %d kitchenSink workflow executions for task queue %s, using the first one",
-			len(executions.Executions),
+			len(executions.GetExecutions()),
 			taskQueueName,
 		)
 	}
 
-	execution := executions.Executions[0]
+	execution := executions.GetExecutions()[0]
 	historyIter := temporalClient.GetWorkflowHistory(
 		t.Context(),
-		execution.Execution.WorkflowId,
-		execution.Execution.RunId,
+		execution.GetExecution().GetWorkflowId(),
+		execution.GetExecution().GetRunId(),
 		false,
 		enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
 	)

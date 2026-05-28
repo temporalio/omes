@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -28,9 +29,9 @@ type Builder struct {
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	if b.DirName == "" {
-		return nil, fmt.Errorf("output directory name required")
+		return nil, errors.New("output directory name required")
 	} else if strings.ContainsAny(b.DirName, `/\`) {
-		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
+		return nil, errors.New("output directory name is not a full path, it is a single name")
 	}
 
 	if b.ProjectName != "" {
@@ -127,7 +128,7 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 			version = outStr[len("temporalio v"):]
 		}
 		if version == "" {
-			return nil, fmt.Errorf("version not found in uv tree output")
+			return nil, errors.New("version not found in uv tree output")
 		}
 	}
 
@@ -241,7 +242,7 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 		csproj := string(csprojBytes)
 		beginIndex := strings.Index(csproj, prefix)
 		if beginIndex == -1 {
-			return nil, fmt.Errorf("cannot find Temporal dependency in csproj")
+			return nil, errors.New("cannot find Temporal dependency in csproj")
 		}
 		beginIndex += len(prefix)
 		length := strings.Index(csproj[beginIndex:], `"`)
@@ -332,6 +333,6 @@ func BaseDir(repoDir string, lang clioptions.Language) string {
 }
 
 func ProjectDir(baseDir string, projectName string) string {
-	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
+	projectPath := "projects/tests/" + projectName
 	return filepath.Join(baseDir, projectPath)
 }

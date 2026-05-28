@@ -29,18 +29,32 @@ linters:
     - bodyclose # unclosed HTTP response bodies
     - copyloopvar # loop variable aliasing bugs
     - errorlint # correct error wrapping / comparison (%w, errors.Is/As)
-    - forcetypeassert # unchecked type assertions that can panic
     - intrange # use Go 1.22+ integer range loops
     - misspell # common misspellings in comments/strings
     - nilerr # returning nil after a non-nil error check
-    - noctx # HTTP requests that should carry a context
     - perfsprint # faster alternatives to fmt.Sprintf
-    - prealloc # slices that can be preallocated
     - protogetter # use generated proto getters instead of direct field access
     - testifylint # common testify misuse
     - unconvert # redundant type conversions
     - usestdlibvars # use stdlib constants (http.MethodGet, etc.)
+    # Ratchet candidates (enable once the codebase is cleaned up):
+    #   - forcetypeassert  # unchecked type assertions that can panic
+    #   - noctx            # operations that should carry a context.Context
+    #   - prealloc         # slices that could be preallocated
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -ST1* # stylecheck (naming/comment/import style) — defer the style churn; keep SA/S/QF
+        - -SA1019 # deprecations (e.g. golang/protobuf) tracked as a separate migration
+    testifylint:
+      disable:
+        - float-compare # deterministic float values are compared exactly in distribution tests
   exclusions:
+    presets:
+      - common-false-positives
+      - legacy # golangci-lint's long-standing default excludes (errcheck on Close, etc.)
+      - std-error-handling # don't flag unchecked fmt.Print*/Fprint* to stdout/stderr
     paths:
       - loadgen/kitchensink
       - workers/go/harness/api

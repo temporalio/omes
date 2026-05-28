@@ -468,7 +468,7 @@ func TestDistributionField(t *testing.T) {
 			assert.Equal(t, expected.distType, df.distType)
 
 			// Test all samples return the same value regardless of seed.
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				rng := rand.New(rand.NewSource(testSeed + int64(i)))
 				v, ok := df.Sample(rng)
 				assert.True(t, ok)
@@ -485,7 +485,7 @@ func TestDistributionField(t *testing.T) {
 			var df DistributionField[int64]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unknown distribution type: unknown")
 		})
 
@@ -494,19 +494,19 @@ func TestDistributionField(t *testing.T) {
 			var df DistributionField[int64]
 
 			err := json.Unmarshal([]byte(jsonData), &df)
-			assert.Error(t, err)
+			require.Error(t, err)
 			assert.Contains(t, err.Error(), "missing distribution type")
 		})
 
 		t.Run("Nil distribution", func(t *testing.T) {
 			var df DistributionField[int64]
 			marshaled, err := json.Marshal(df)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "null", string(marshaled))
 
 			var parsedDF DistributionField[int64]
 			err = json.Unmarshal(marshaled, &parsedDF)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Nil(t, parsedDF.distribution)
 		})
 	})
@@ -514,13 +514,14 @@ func TestDistributionField(t *testing.T) {
 
 func checkJsonRoundtrip[T distValueType](t *testing.T, err error, df DistributionField[T]) {
 	t.Helper()
+	require.NoError(t, err)
 
 	marshaled, err := json.Marshal(df)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var unmarshalled DistributionField[T]
 	err = json.Unmarshal(marshaled, &unmarshalled)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.EqualExportedValues(t, df, unmarshalled)
 }

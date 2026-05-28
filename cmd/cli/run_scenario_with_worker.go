@@ -28,8 +28,8 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("scenario")
-	cmd.MarkFlagRequired("language")
+	_ = cmd.MarkFlagRequired("scenario")
+	_ = cmd.MarkFlagRequired("language")
 	return cmd
 }
 
@@ -86,7 +86,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	if scenarioErr != nil {
 		if workerErr != nil {
 			return fmt.Errorf(
-				"worker failed with: %v, scenario failed with: %w",
+				"worker failed with: %w, scenario failed with: %w",
 				workerErr,
 				scenarioErr,
 			)

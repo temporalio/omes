@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -262,11 +263,11 @@ func (r *RunConfiguration) ApplyDefaults() {
 
 func (r RunConfiguration) Validate() error {
 	if r.Duration < 0 {
-		return fmt.Errorf("Duration cannot be negative")
+		return errors.New("Duration cannot be negative")
 	}
 	if r.Iterations > 0 {
 		if r.Duration > 0 {
-			return fmt.Errorf("iterations and duration are mutually exclusive")
+			return errors.New("iterations and duration are mutually exclusive")
 		}
 		if r.StartFromIteration > r.Iterations {
 			return fmt.Errorf("StartFromIteration %d is greater than Iterations %d",
@@ -318,7 +319,7 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 	// Throw an error if the attributes could not be registered, but ignore already exists errs
 	alreadyExistsStrings := []string{
 		"already exists",
-		"attributes mapping unavailble",
+		"attributes mapping unavailable",
 	}
 	if err != nil {
 		isAlreadyExistsErr := false
@@ -441,19 +442,19 @@ func (r *Run) ExecuteKitchenSinkWorkflow(
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
 	}
-	startErr := executor.Start(ctx, options.Params.WithStartAction)
+	startErr := executor.Start(ctx, options.Params.GetWithStartAction())
 	if startErr != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
 	}
 
 	var clientActionsErrPtr atomic.Pointer[error]
-	clientSeq := options.Params.ClientSequence
-	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
+	clientSeq := options.Params.GetClientSequence()
+	if clientSeq != nil && len(clientSeq.GetActionSets()) > 0 {
 		go func() {
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
+				r.Logger.Error("Client actions failed: ", err)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag

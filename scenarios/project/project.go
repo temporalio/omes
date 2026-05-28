@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -109,7 +110,7 @@ func (e *projectScenarioExecutor) validate(
 
 	lang := info.ScenarioOptions["language"]
 	if lang == "" {
-		return opts, fmt.Errorf("--option language=<lang> is required")
+		return opts, errors.New("--option language=<lang> is required")
 	}
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
@@ -121,12 +122,12 @@ func (e *projectScenarioExecutor) validate(
 	projectName := info.ScenarioOptions["project-name"]
 	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
 	if projectName == "" && prebuiltDir == "" {
-		return opts, fmt.Errorf(
+		return opts, errors.New(
 			"either --option project-name or --option prebuilt-project-dir is required",
 		)
 	}
 	if projectName != "" && prebuiltDir != "" {
-		return opts, fmt.Errorf("cannot specify both project-name and prebuilt-project-dir")
+		return opts, errors.New("cannot specify both project-name and prebuilt-project-dir")
 	}
 
 	if prebuiltDir != "" {

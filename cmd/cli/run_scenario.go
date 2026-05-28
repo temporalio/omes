@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -33,8 +34,8 @@ func runScenarioCmd() *cobra.Command {
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("scenario")
-	cmd.MarkFlagRequired("run-id")
+	_ = cmd.MarkFlagRequired("scenario")
+	_ = cmd.MarkFlagRequired("run-id")
 	return cmd
 }
 
@@ -114,7 +115,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	)
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
-			"If the search attributes are not registed by the scenario they must be registered through some other method")
+			"If the search attributes are not registered by the scenario they must be registered through some other method")
 	fs.BoolVar(
 		&r.ignoreAlreadyStarted,
 		"ignore-already-started",
@@ -142,11 +143,11 @@ func (r *scenarioRunner) preRun() {
 func (r *scenarioRunner) run(ctx context.Context) error {
 	scenario := loadgen.GetScenario(r.scenario.Scenario)
 	if scenario == nil {
-		return fmt.Errorf("scenario not found")
+		return errors.New("scenario not found")
 	} else if r.scenario.RunID == "" {
-		return fmt.Errorf("run ID not found")
+		return errors.New("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
-		return fmt.Errorf("cannot provide both iterations and duration")
+		return errors.New("cannot provide both iterations and duration")
 	}
 
 	// Parse options
@@ -154,7 +155,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	for _, v := range r.scenarioOptions {
 		pieces := strings.SplitN(v, "=", 2)
 		if len(pieces) != 2 {
-			return fmt.Errorf("option does not have '='")
+			return errors.New("option does not have '='")
 		}
 		key, value := pieces[0], pieces[1]
 
@@ -171,13 +172,15 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(
-		ctx,
-		r.logger,
-		r.scenario.Scenario,
-		r.scenario.RunID,
-		r.scenario.RunFamily,
-	)
+	defer func() {
+		_ = metrics.Shutdown(
+			ctx,
+			r.logger,
+			r.scenario.Scenario,
+			r.scenario.RunID,
+			r.scenario.RunFamily,
+		)
+	}()
 	start := time.Now()
 	var client client.Client
 	var err error

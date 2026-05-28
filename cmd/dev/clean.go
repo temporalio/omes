@@ -99,7 +99,7 @@ func runClean(ctx context.Context, targets []string, cleanAll bool) error {
 			if cleanAll {
 				fmt.Printf("Warning: failed to clean %s: %v\n", target, err)
 			} else {
-				return fmt.Errorf("failed to clean %s: %v", target, err)
+				return fmt.Errorf("failed to clean %s: %w", target, err)
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func runClean(ctx context.Context, targets []string, cleanAll bool) error {
 func removeTempDirs(workersDir string) error {
 	return filepath.Walk(workersDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Continue walking even if there's an error
+			return nil //nolint:nilerr // continue walking even if a path errors
 		}
 
 		if info.IsDir() && strings.HasPrefix(info.Name(), "omes-temp-") {

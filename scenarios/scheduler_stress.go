@@ -300,7 +300,7 @@ func (s *SchedulerExecutor) createSchedule(
 		ScheduleID:  scheduleID,
 		DeleteAfter: s.config.SchedulerDurationPerIteration,
 	}
-	workflowID := fmt.Sprintf("w-%s", scheduleID)
+	workflowID := "w-" + scheduleID
 	action := &client.ScheduleWorkflowAction{
 		ID:        workflowID,
 		Workflow:  s.config.ScheduledWorkflowType,
@@ -308,7 +308,7 @@ func (s *SchedulerExecutor) createSchedule(
 		TaskQueue: taskQueue,
 	}
 
-	dur := (time.Duration(int64(int64(s.config.ScheduleReadsPerCreation)+int64(s.config.ScheduleUpdatesPerCreation))) *
+	dur := (time.Duration(int64(s.config.ScheduleReadsPerCreation)+int64(s.config.ScheduleUpdatesPerCreation)) *
 		s.config.OperationInterval) +
 		(2 * time.Second)
 

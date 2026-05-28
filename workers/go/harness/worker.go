@@ -2,6 +2,7 @@ package harness
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -39,17 +40,17 @@ type workerCLIOptions struct {
 
 func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv []string) error {
 	if workerFactory == nil {
-		return fmt.Errorf("worker factory is required")
+		return errors.New("worker factory is required")
 	}
 	if clientFactory == nil {
-		return fmt.Errorf("client factory is required")
+		return errors.New("client factory is required")
 	}
 	options := newWorkerCLIOptions()
 	if err := options.parse(argv); err != nil {
 		return err
 	}
 	if options.taskQueueSuffixIndexStart > options.taskQueueSuffixIndexEnd {
-		return fmt.Errorf("task queue suffix start after end")
+		return errors.New("task queue suffix start after end")
 	}
 	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions)
 	if err != nil {
@@ -62,7 +63,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 	if err != nil {
 		return err
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	config, err := buildClientConfig(clientConfigOptions{
 		Logger:                  logger,
@@ -81,7 +82,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		return err
 	}
 	if config.Metrics != nil {
-		defer config.Metrics.Shutdown(context.Background(), logger, "", "", "")
+		defer func() { _ = config.Metrics.Shutdown(context.Background(), logger, "", "", "") }()
 	}
 	client, err := clientFactory(config)
 	if err != nil {
@@ -151,12 +152,12 @@ func buildWorkerOptions(
 	options := sdkworker.Options{}
 	if args.DeploymentName != "" {
 		if args.BuildID != "" {
-			return sdkworker.Options{}, fmt.Errorf(
+			return sdkworker.Options{}, errors.New(
 				"--build-id and --deployment-name are mutually exclusive; use --deployment-build-id with --deployment-name",
 			)
 		}
 		if args.DeploymentBuildID == "" {
-			return sdkworker.Options{}, fmt.Errorf(
+			return sdkworker.Options{}, errors.New(
 				"--deployment-build-id is required when --deployment-name is set",
 			)
 		}
@@ -173,7 +174,7 @@ func buildWorkerOptions(
 			DefaultVersioningBehavior: behavior,
 		}
 	} else if args.DeploymentBuildID != "" {
-		return sdkworker.Options{}, fmt.Errorf("--deployment-build-id requires --deployment-name")
+		return sdkworker.Options{}, errors.New("--deployment-build-id requires --deployment-name")
 	} else if args.BuildID != "" {
 		options.BuildID = args.BuildID
 		options.UseBuildIDForVersioning = true

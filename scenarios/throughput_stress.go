@@ -224,7 +224,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
-		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
+		info.Configuration.StartFromIteration = currentState.CompletedIterations + 1
 	}
 
 	// Listen to iteration completion events to update the state.
@@ -312,23 +312,15 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var sb strings.Builder
 	sb.WriteString("[Scenario completion summary] ")
-	sb.WriteString(fmt.Sprintf("Run ID: %s, ", info.RunID))
-	sb.WriteString(fmt.Sprintf("Total iterations completed: %d, ", completedIterations))
-	sb.WriteString(
-		fmt.Sprintf(
-			"Total child workflows: %d (%d per iteration), ",
-			completedChildWorkflows,
-			t.config.InternalIterations,
-		),
-	)
-	sb.WriteString(
-		fmt.Sprintf(
-			"Total continue-as-new workflows: %d (%d per iteration), ",
-			continueAsNewWorkflows,
-			continueAsNewPerIter,
-		),
-	)
-	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
+	fmt.Fprintf(&sb, "Run ID: %s, ", info.RunID)
+	fmt.Fprintf(&sb, "Total iterations completed: %d, ", completedIterations)
+	fmt.Fprintf(&sb, "Total child workflows: %d (%d per iteration), ",
+		completedChildWorkflows,
+		t.config.InternalIterations)
+	fmt.Fprintf(&sb, "Total continue-as-new workflows: %d (%d per iteration), ",
+		continueAsNewWorkflows,
+		continueAsNewPerIter)
+	fmt.Fprintf(&sb, "Total workflows completed: %d", completedWorkflows)
 	info.Logger.Info(sb.String())
 
 	// Post-scenario: verify that at least one iteration was completed.
@@ -426,7 +418,7 @@ func (t *tpsExecutor) createActionsChunk(
 	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
 
 	// Create actions for the current chunk
-	for i := 0; i < itersPerChunk; i++ {
+	for range itersPerChunk {
 		syncActions := []*Action{
 			PayloadActivity(256, 256, DefaultLocalActivity),
 			PayloadActivity(0, 256, DefaultLocalActivity),

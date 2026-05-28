@@ -2,6 +2,7 @@ package workers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -27,28 +28,6 @@ func (e event) String(lineNum int) string {
 }
 
 type eventList []event
-
-func (el eventList) findAllByType(eventType string) []struct {
-	Event *event
-	Index int
-} {
-	var result []struct {
-		Event *event
-		Index int
-	}
-	for i, evt := range el {
-		if evt.Type == eventType {
-			result = append(result, struct {
-				Event *event
-				Index int
-			}{
-				Event: &evt,
-				Index: i,
-			})
-		}
-	}
-	return result
-}
 
 func (el eventList) Strings() []string {
 	result := make([]string, len(el))
@@ -95,7 +74,7 @@ func (m FullHistoryMatcher) Match(
 	var expectedDump strings.Builder
 	maxLines := max(len(actualEvents), len(expectedEvents))
 
-	for i := 0; i < maxLines; i++ {
+	for i := range maxLines {
 		lineNumber := i + 1
 
 		var expectedEvent event
@@ -105,7 +84,7 @@ func (m FullHistoryMatcher) Match(
 		}
 
 		if i >= len(actualEvents) {
-			actualDump.WriteString(fmt.Sprintf("%3d: <missing event>\n", lineNumber))
+			fmt.Fprintf(&actualDump, "%3d: <missing event>\n", lineNumber)
 			diffs = append(diffs, fmt.Sprintf("line %d: missing event", lineNumber))
 			continue
 		}
@@ -197,7 +176,7 @@ func (m PartialHistoryMatcher) Match(
 	}
 
 	logHistoryMismatch(t, string(m), actualEvents)
-	return fmt.Errorf("partialHistory matcher failed: expected sequence not found in history")
+	return errors.New("partialHistory matcher failed: expected sequence not found in history")
 }
 
 func parseSpec(t *testing.T, input string) eventList {
@@ -281,7 +260,7 @@ func looselyEqual(x, y any) bool {
 			return x == float64(reflect.ValueOf(y).Int())
 		}
 	case string:
-		return fmt.Sprint(x) == fmt.Sprint(y)
+		return x == fmt.Sprint(y)
 	case map[string]any:
 		if yMap, ok := y.(map[string]any); ok {
 			return mapIsSuperset(x, yMap)

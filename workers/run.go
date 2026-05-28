@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -40,10 +41,10 @@ type Runner struct {
 
 func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.TaskQueueIndexSuffixStart > r.TaskQueueIndexSuffixEnd {
-		return fmt.Errorf("cannot have task queue suffix start past end")
+		return errors.New("cannot have task queue suffix start past end")
 	}
 	if r.TaskQueueName == "" {
-		return fmt.Errorf("task queue name is required")
+		return errors.New("task queue name is required")
 	}
 
 	// Run an embedded server if requested
@@ -51,9 +52,9 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		// Intentionally don't use context, will stop on defer
 		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" ||
 			r.ClientOptions.ClientKeyPath != "" {
-			return fmt.Errorf("cannot use TLS with embedded server")
+			return errors.New("cannot use TLS with embedded server")
 		} else if r.ClientOptions.Address != client.DefaultHostPort {
-			return fmt.Errorf("cannot supply non-default client address when using embedded server")
+			return errors.New("cannot supply non-default client address when using embedded server")
 		}
 		server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 			ClientOptions: &client.Options{
@@ -65,7 +66,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("failed starting embedded server: %w", err)
 		}
-		r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
+		_ = r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
 		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.Address)
 		defer func() {
 			r.Logger.Info("Stopping embedded local server")
@@ -204,7 +205,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			r.WorkerOptions.BuildID,
 			r.SdkOptions.Language.String(),
 		)
-		defer sidecar.Shutdown(context.Background())
+		defer func() { _ = sidecar.Shutdown(context.Background()) }()
 	}
 
 	if r.OnWorkerStarted != nil {
@@ -217,7 +218,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	select {
 	case err := <-errCh:
 		if err == nil {
-			err = fmt.Errorf("worker completed unexpectedly without error")
+			err = errors.New("worker completed unexpectedly without error")
 		}
 		return fmt.Errorf("worker failed: %w", err)
 	case <-ctx.Done():
@@ -235,7 +236,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 				return fmt.Errorf("failed to send kill to worker: %w", err)
 			}
 			if err = <-errCh; err == nil {
-				err = fmt.Errorf("worker did not shutdown within graceful timeout")
+				err = errors.New("worker did not shutdown within graceful timeout")
 			}
 			if err != nil {
 				r.Logger.Warnf("Worker exited after kill: %v", err)

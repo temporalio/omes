@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -57,14 +58,6 @@ func getVersion(tool string) (string, error) {
 	return v, nil
 }
 
-// checkCommand verifies that a command is available in PATH
-func checkCommand(cmd string) error {
-	if _, err := exec.LookPath(cmd); err != nil {
-		return fmt.Errorf("%s is not installed. Please install %s first", cmd, cmd)
-	}
-	return nil
-}
-
 // runCommand executes a command and pipes output to stdout/stderr
 func runCommand(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
@@ -93,7 +86,7 @@ func runCommandOutput(ctx context.Context, name string, args ...string) (string,
 func getRepoDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", fmt.Errorf("failed to get source file location")
+		return "", errors.New("failed to get source file location")
 	}
 	sourceDir := filepath.Dir(filename) // cmd/dev
 	cmdDir := filepath.Dir(sourceDir)   // cmd
@@ -121,7 +114,7 @@ func getTargetDir(target string) (string, error) {
 // checkMise verifies that mise is installed
 func checkMise() error {
 	if _, err := exec.LookPath("mise"); err != nil {
-		return fmt.Errorf(
+		return errors.New(
 			"mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html",
 		)
 	}
@@ -151,7 +144,7 @@ func checkTool(ctx context.Context, tool string) error {
 
 		output, err := runCommandOutput(ctx, versionCmd[0], versionCmd[1:]...)
 		if err != nil {
-			return fmt.Errorf("failed to get version for %s at %s: %v", tool, toolPath, err)
+			return fmt.Errorf("failed to get version for %s at %s: %w", tool, toolPath, err)
 		}
 
 		actualVersion := strings.TrimSpace(output)

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -74,7 +74,7 @@ func (b *cliImageBuilder) build(ctx context.Context, allowPush bool) error {
 	args, err := b.buildDockerArgs("dockerfiles/cli.Dockerfile", allowPush, []string{})
 	if err != nil {
 		if !allowPush {
-			return fmt.Errorf(
+			return errors.New(
 				"multi-platform builds require pushing to registry. Use build-push-cli-image command instead",
 			)
 		}

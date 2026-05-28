@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,7 +27,7 @@ func buildWorkerImageCmd() *cobra.Command {
 		},
 	}
 	b.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("language")
+	_ = cmd.MarkFlagRequired("language")
 	return cmd
 }
 
@@ -42,7 +43,7 @@ func buildPushWorkerImageCmd() *cobra.Command {
 		},
 	}
 	b.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("language")
+	_ = cmd.MarkFlagRequired("language")
 	return cmd
 }
 
@@ -85,13 +86,13 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	var buildArgs []string
 	if isPathVersion {
 		if len(b.tags) == 0 {
-			return fmt.Errorf("at least one tag required for path version")
+			return errors.New("at least one tag required for path version")
 		} else if s, err := os.Stat(sdkVersion); err != nil {
 			return fmt.Errorf("invalid path version: %w", err)
 		} else if !s.IsDir() {
-			return fmt.Errorf("invalid path version: must be dir")
+			return errors.New("invalid path version: must be dir")
 		} else if !filepath.IsLocal(sdkVersion) {
-			return fmt.Errorf("invalid path version: must be beneath this dir")
+			return errors.New("invalid path version: must be beneath this dir")
 		}
 
 		// Dockerfile copies entire version path to ./repo
@@ -108,7 +109,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 			versionToCheck = "v" + versionToCheck
 		}
 		if semver.Canonical(versionToCheck) == "" {
-			return fmt.Errorf("expected valid semver")
+			return errors.New("expected valid semver")
 		}
 
 		// Add tag for lang-fullsemver without leading "v". We are intentionally
@@ -135,7 +136,7 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs)
 	if err != nil {
 		if !allowPush {
-			return fmt.Errorf(
+			return errors.New(
 				"multi-platform builds require pushing to registry. Use build-push-worker-image command instead",
 			)
 		}

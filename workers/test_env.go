@@ -148,7 +148,7 @@ func (env *TestEnvironment) cleanup() {
 		env.temporalClient.Close()
 	}
 	if env.devServer != nil {
-		env.devServer.Stop()
+		_ = env.devServer.Stop()
 	}
 	env.workerPool.cleanup()
 }
@@ -224,7 +224,7 @@ func (env *TestEnvironment) RunExecutorTest(
 			t.Logf("Worker shutdown with error: %v", workerErr)
 		}
 	case <-time.After(2 * workerShutdownTimeout):
-		workerErr = fmt.Errorf("timed out waiting for worker shutdown")
+		workerErr = errors.New("timed out waiting for worker shutdown")
 	}
 
 	return TestResult{ObservedLogs: observedLogs},
@@ -232,5 +232,5 @@ func (env *TestEnvironment) RunExecutorTest(
 }
 
 func (env *TestEnvironment) buildDirName() string {
-	return fmt.Sprintf("omes-temp-%s", env.buildID)
+	return "omes-temp-" + env.buildID
 }

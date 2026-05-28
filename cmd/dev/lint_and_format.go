@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"slices"
 	"strings"
 
@@ -44,7 +45,7 @@ func runLintAndFormat(ctx context.Context, targets []string) error {
 
 	for _, target := range targets {
 		if err := lintAndFormat(ctx, target); err != nil {
-			return fmt.Errorf("failed to lint-and-format %s: %v", target, err)
+			return fmt.Errorf("failed to lint-and-format %s: %w", target, err)
 		}
 	}
 
@@ -85,19 +86,73 @@ func lintAndFormatGoWorker(ctx context.Context, workerDir string) error {
 	if err := checkTool(ctx, "go"); err != nil {
 		return err
 	}
-
-	fmt.Println("Formatting Go worker...")
-	if err := runCommandInDir(ctx, workerDir, "go", "fmt", "./..."); err != nil {
+	if err := checkMise(); err != nil {
 		return err
 	}
 
-	fmt.Println("Compilig Go worker...")
-	if err := runCommandInDir(ctx, workerDir, "go", "build", "./..."); err != nil {
+	repoDir, err := getRepoDir()
+	if err != nil {
 		return err
+	}
+
+	// Lint and format both Go modules: the root omes module (cmd, loadgen,
+	// scenarios, …) and the Go worker. golangci-lint is pinned in
+	// .config/mise/config.toml; `golangci-lint fmt` formats (gofmt/gci/golines)
+	// and `golangci-lint run` lints (and compiles, so a separate build is
+	// redundant). We pass explicit package directories rather than ./... so the
+	// walk skips vendored node_modules Go sources (e.g. under the TypeScript
+	// worker) that live outside the module and break ./... loading.
+	for _, mod := range []struct{ name, dir string }{
+		{"omes", repoDir},
+		{"Go worker", workerDir},
+	} {
+		paths, err := goPackageDirs(ctx, mod.dir)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Formatting %s...\n", mod.name)
+		if err := runCommandInDir(ctx, mod.dir, "mise", goLintArgs("fmt", paths)...); err != nil {
+			return err
+		}
+
+		fmt.Printf("Linting %s...\n", mod.name)
+		if err := runCommandInDir(ctx, mod.dir, "mise", goLintArgs("run", paths)...); err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("✅ Go lint-and-format completed successfully!")
 	return nil
+}
+
+// goLintArgs builds the args for `mise exec -- golangci-lint <sub> <paths...>`.
+func goLintArgs(sub string, paths []string) []string {
+	return append([]string{"exec", "--", "golangci-lint", sub}, paths...)
+}
+
+// goPackageDirs returns the directories of the Go packages in the module rooted
+// at moduleDir (via `go list`), excluding vendored node_modules trees. `go list
+// -e` tolerates the load errors those stray sources would otherwise cause.
+func goPackageDirs(ctx context.Context, moduleDir string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "go", "list", "-e", "-f", "{{.Dir}}", "./...")
+	cmd.Dir = moduleDir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("go list in %s: %w\n%s", moduleDir, err, out)
+	}
+
+	var dirs []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line = strings.TrimSpace(line); line == "" || strings.Contains(line, "/node_modules/") {
+			continue
+		}
+		dirs = append(dirs, line)
+	}
+	if len(dirs) == 0 {
+		return nil, fmt.Errorf("no Go packages found in %s", moduleDir)
+	}
+	return dirs, nil
 }
 
 func lintAndFormatJavaWorker(ctx context.Context, workerDir string) error {

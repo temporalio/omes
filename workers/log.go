@@ -16,8 +16,8 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 	w.buffer.Write(p)
 
 	for {
-		line, err := w.buffer.ReadBytes('\n')
-		if err != nil {
+		line, readErr := w.buffer.ReadBytes('\n')
+		if readErr != nil {
 			// No complete line found, put back the partial line
 			w.buffer.Write(line)
 			break
@@ -26,5 +26,6 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 		w.logger.Debugf("%s", lineStr)
 	}
 
-	return len(p), nil
+	// EOF from ReadBytes just means no complete line yet; Write consumed all of p.
+	return len(p), nil //nolint:nilerr
 }

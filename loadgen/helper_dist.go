@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -70,7 +71,7 @@ func (df *DistributionField[T]) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to determine distribution type: %w", err)
 	}
 	if typeInfo.Type == "" {
-		return fmt.Errorf("missing distribution type")
+		return errors.New("missing distribution type")
 	}
 	df.distType = typeInfo.Type
 
@@ -105,7 +106,7 @@ func (df *DistributionField[T]) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to unmarshal %s distribution: %w", typeInfo.Type, err)
 	}
 
-	if err := df.distribution.Validate(); err != nil {
+	if err := df.Validate(); err != nil {
 		return fmt.Errorf("invalid %s distribution: %w", typeInfo.Type, err)
 	}
 
@@ -183,7 +184,7 @@ func (d *discreteDistribution[T]) GetType() string {
 
 func (d *discreteDistribution[T]) Validate() error {
 	if len(d.weights) == 0 {
-		return fmt.Errorf("weights map cannot be empty")
+		return errors.New("weights map cannot be empty")
 	}
 	for value, weight := range d.weights {
 		if weight <= 0 {

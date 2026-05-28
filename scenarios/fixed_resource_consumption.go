@@ -22,7 +22,7 @@ func parallelResourcesActions(
 	cpuYieldForMs int,
 	runForSeconds int64) *kitchensink.ActionSet {
 	actions := make([]*kitchensink.Action, numConccurrent)
-	for i := 0; i < numConccurrent; i++ {
+	for i := range numConccurrent {
 		actions[i] = kitchensink.ResourceConsumingActivity(
 			uint64(bytesToAlloc),
 			uint32(cpuYieldEveryNIters),
@@ -40,7 +40,7 @@ func parallelRandomDelays(
 	minRuntime time.Duration,
 	maxRuntime time.Duration) *kitchensink.ActionSet {
 	actions := make([]*kitchensink.Action, numConccurrent)
-	for i := 0; i < numConccurrent; i++ {
+	for i := range numConccurrent {
 		randMs := rand.Float64()*float64(
 			maxRuntime.Milliseconds()-minRuntime.Milliseconds(),
 		) + float64(

@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ func Get(key string) (string, error) {
 func load() {
 	_, here, _, ok := runtime.Caller(0)
 	if !ok {
-		loadEr = fmt.Errorf("versions: cannot locate package source")
+		loadEr = errors.New("versions: cannot locate package source")
 		return
 	}
 	repoDir := filepath.Dir(filepath.Dir(here)) // versions/ -> repo root

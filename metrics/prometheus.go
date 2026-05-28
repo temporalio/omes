@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -109,7 +110,7 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 		}
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for Prometheus, latest err: %v", err)
+			return fmt.Errorf("timed out waiting for Prometheus, latest err: %w", err)
 		case <-time.After(500 * time.Millisecond):
 		}
 	}
@@ -153,7 +154,7 @@ func (i *PrometheusInstance) Shutdown(
 		logger.Info("Prometheus shut down gracefully")
 	case <-time.After(10 * time.Second):
 		logger.Warn("Prometheus didn't shut down gracefully, killing")
-		i.prometheusCmd.Process.Kill()
+		_ = i.prometheusCmd.Process.Kill()
 	}
 }
 
@@ -393,7 +394,7 @@ func (i *PrometheusInstance) queryPrometheusRange(
 
 	matrix, ok := result.(model.Matrix)
 	if !ok {
-		return nil, fmt.Errorf("unexpected result type")
+		return nil, errors.New("unexpected result type")
 	}
 
 	var dataPoints []MetricDataPoint

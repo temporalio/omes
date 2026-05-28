@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -33,8 +34,8 @@ func cleanupScenarioCmd() *cobra.Command {
 		},
 	}
 	c.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("scenario")
-	cmd.MarkFlagRequired("run-id")
+	_ = cmd.MarkFlagRequired("scenario")
+	_ = cmd.MarkFlagRequired("run-id")
 	return cmd
 }
 
@@ -64,18 +65,20 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 	c.logger = c.loggingOptions.MustCreateLogger()
 	scenario := loadgen.GetScenario(c.scenario.Scenario)
 	if scenario == nil {
-		return fmt.Errorf("scenario not found")
+		return errors.New("scenario not found")
 	} else if c.scenario.RunID == "" {
-		return fmt.Errorf("run ID not found")
+		return errors.New("run ID not found")
 	}
 	metrics := c.metricsOptions.MustCreateMetrics(ctx, c.logger)
-	defer metrics.Shutdown(
-		ctx,
-		c.logger,
-		c.scenario.Scenario,
-		c.scenario.RunID,
-		c.scenario.RunFamily,
-	)
+	defer func() {
+		_ = metrics.Shutdown(
+			ctx,
+			c.logger,
+			c.scenario.Scenario,
+			c.scenario.RunID,
+			c.scenario.RunFamily,
+		)
+	}()
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
 	taskQueue := loadgen.TaskQueueForRun(c.scenario.RunID)
@@ -118,7 +121,7 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed checking batch: %w", err)
 		}
-		switch resp.State {
+		switch resp.GetState() {
 		case enums.BATCH_OPERATION_STATE_FAILED:
 			return fmt.Errorf("cleanup batch failed: %w", err)
 		case enums.BATCH_OPERATION_STATE_COMPLETED:
@@ -126,7 +129,11 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 		case enums.BATCH_OPERATION_STATE_RUNNING:
 			continue
 		default:
-			return fmt.Errorf("unexpected batch state %v, reason: %v", resp.State, resp.Reason)
+			return fmt.Errorf(
+				"unexpected batch state %v, reason: %v",
+				resp.GetState(),
+				resp.GetReason(),
+			)
 		}
 	}
 }

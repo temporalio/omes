@@ -3,6 +3,7 @@ package devserver
 import (
 	"bytes"
 	"cmp"
+	"errors"
 	"fmt"
 	"maps"
 	"math/rand"
@@ -87,7 +88,7 @@ func tryAllocatePort(host string, used map[int]struct{}) (int, net.Listener, err
 		}
 		return port, l, nil
 	}
-	return 0, nil, cmp.Or(lastErr, fmt.Errorf("no unused free port found"))
+	return 0, nil, cmp.Or(lastErr, errors.New("no unused free port found"))
 }
 
 // buildServerEnv returns the env vars that drive temporal-server's embedded

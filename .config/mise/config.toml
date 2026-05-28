@@ -11,7 +11,7 @@
 #
 # First-time setup (local): `mise trust && mise install`
 [tools]
-golangci-lint = "2.7.2" # Go lint + format (gofmt/gci/golines)
+golangci-lint = "2.12.2" # Go lint + format; built with go1.26 (a dep requires go1.26)
 shellcheck = "0.11.0"   # shell lint
 shfmt = "3.12.0"        # shell format
 yamlfmt = "0.21.0"      # YAML format

@@ -19,7 +19,7 @@ func buildProject(
 	logger *zap.SugaredLogger,
 ) (sdkbuild.Program, error) {
 	b := workers.Builder{
-		DirName:     fmt.Sprintf("project-build-runner-%s", p.projectName),
+		DirName:     "project-build-runner-" + p.projectName,
 		SdkOptions:  p.sdkOpts,
 		ProjectName: p.projectName,
 		Logger:      logger,

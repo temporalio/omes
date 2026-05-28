@@ -8,6 +8,8 @@ permissions:
 env:
   MISE_VERSION: v2025.12.1
   MISE_NODE_VERIFY: no
+  # Trust the committed mise config (.config/mise/config.toml) in CI.
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
 
 on: # rebuild any PRs and main branch changes
   pull_request:
@@ -44,6 +46,9 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          # Tools are installed explicitly per job (cmd/dev install / mise install);
+          # don't auto-install every tool from .config/mise/config.toml here.
+          install: false
       # Scope to just Python for project build tests
       - name: Install Tools
         run: |
@@ -102,9 +107,15 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          # Tools are installed explicitly per job (cmd/dev install / mise install);
+          # don't auto-install every tool from .config/mise/config.toml here.
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      - name: Install golangci-lint
+        if: matrix.target == 'go'
+        run: mise install golangci-lint
       - name: Ensure rustfmt
         if: matrix.target == 'kitchensink-gen'
         run: |
@@ -276,6 +287,9 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          # Tools are installed explicitly per job (cmd/dev install / mise install);
+          # don't auto-install every tool from .config/mise/config.toml here.
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
@@ -310,6 +324,9 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          # Tools are installed explicitly per job (cmd/dev install / mise install);
+          # don't auto-install every tool from .config/mise/config.toml here.
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install rust go protoc node buf

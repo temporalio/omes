@@ -2,6 +2,7 @@ package harness
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -165,10 +166,10 @@ func runProjectServerCLI(
 	argv []string,
 ) error {
 	if handlers.Execute == nil {
-		return fmt.Errorf("project handlers must provide an Execute handler")
+		return errors.New("project handlers must provide an Execute handler")
 	}
 	if clientFactory == nil {
-		return fmt.Errorf("client factory is required")
+		return errors.New("client factory is required")
 	}
 	flagSet := pflag.NewFlagSet("project-server", pflag.ContinueOnError)
 	port := flagSet.Int("port", 8080, "gRPC listen port")
@@ -179,7 +180,7 @@ func runProjectServerCLI(
 	if err != nil {
 		return err
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", *port))
 	if err != nil {

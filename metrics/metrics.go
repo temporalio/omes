@@ -237,9 +237,7 @@ func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
 	// since the child (e.g. python under uv) may not exist yet at startup.
 	if !c.childrenDiscovered {
 		if children, _ := c.rootProcess.Children(); len(children) > 0 {
-			for _, child := range children {
-				c.procs = append(c.procs, child)
-			}
+			c.procs = append(c.procs, children...)
 			c.childrenDiscovered = true
 		}
 	}

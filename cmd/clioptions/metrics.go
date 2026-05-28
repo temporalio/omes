@@ -45,7 +45,7 @@ func StartProcessMetricsSidecar(
 	handler.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	handler.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InfoResponse{
+		_ = json.NewEncoder(w).Encode(InfoResponse{
 			SDKVersion: sdkVersion,
 			BuildID:    buildID,
 			Language:   language,

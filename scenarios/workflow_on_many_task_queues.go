@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/temporalio/omes/loadgen"
@@ -25,7 +26,7 @@ func init() {
 				PrepareTestInput: func(ctx context.Context, opts loadgen.ScenarioInfo, params *kitchensink.TestInput) error {
 					// Require task queue count
 					if opts.ScenarioOptionInt("task-queue-count", 0) == 0 {
-						return fmt.Errorf("task-queue-count option required")
+						return errors.New("task-queue-count option required")
 					}
 					return nil
 				},
@@ -34,7 +35,7 @@ func init() {
 					options.StartOptions.TaskQueue +=
 						fmt.Sprintf(
 							"-%v",
-							run.Iteration%run.ScenarioInfo.ScenarioOptionInt("task-queue-count", 0),
+							run.Iteration%run.ScenarioOptionInt("task-queue-count", 0),
 						)
 					return nil
 				},

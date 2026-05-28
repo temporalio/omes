@@ -41,8 +41,8 @@ func EbbAndFlowTrackWorkflow(
 			}
 
 			// Set priority, if specified
-			if activity.Priority != nil {
-				opts.Priority.PriorityKey = int(activity.Priority.PriorityKey)
+			if activity.GetPriority() != nil {
+				opts.Priority.PriorityKey = int(activity.GetPriority().GetPriorityKey())
 			}
 
 			// Set fairness, if specified

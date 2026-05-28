@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -40,11 +41,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	// backed up and/or slow down this won't match.
 
 	if s.Configuration.Duration == 0 {
-		return fmt.Errorf("duration required for this scenario")
+		return errors.New("duration required for this scenario")
 	}
 	stateTransitionsPerSecond := s.ScenarioOptionInt("state-transitions-per-second", 0)
 	if stateTransitionsPerSecond == 0 {
-		return fmt.Errorf("state-transitions-per-second scenario option required")
+		return errors.New("state-transitions-per-second scenario option required")
 	}
 	durationPerStateTransition := time.Second / time.Duration(stateTransitionsPerSecond)
 	s.Logger.Infof(
@@ -78,7 +79,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed describing workflow: %w", err)
 	}
-	stateTransitionsPerWorkflow := resp.WorkflowExecutionInfo.StateTransitionCount
+	stateTransitionsPerWorkflow := resp.GetWorkflowExecutionInfo().GetStateTransitionCount()
 	workflowStartInterval := durationPerStateTransition * time.Duration(stateTransitionsPerWorkflow)
 	s.Logger.Infof(
 		"Simple workflow takes %v state transitions, which means we need to start a workflow every %v. "+
