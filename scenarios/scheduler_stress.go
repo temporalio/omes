@@ -94,7 +94,7 @@ const (
 )
 
 const (
-	// Parameter name constants
+	// Parameter name constants.
 	ScheduleCreationPerIterationFlag  = "schedule-creation-per-iteration"
 	ScheduleReadsPerCreationFlag      = "schedule-reads-per-creation"
 	ScheduleUpdatesPerCreationFlag    = "schedule-updates-per-creation"
@@ -119,14 +119,14 @@ const (
 	DefaultEnableChasmScheduler         = true
 )
 
-// Default duration constants
+// Default duration constants.
 var (
 	DefaultSchedulerDurationPerIteration = 30 * time.Second
 	DefaultWaitTimeBeforeCleanup         = 25 * time.Second
 	DefaultOperationInterval             = 50 * time.Millisecond
 )
 
-// Configure implements the loadgen.Configurable interface
+// Configure implements the loadgen.Configurable interface.
 func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
 		ScheduleCreationPerIteration: info.ScenarioOptionInt(
@@ -312,7 +312,7 @@ func (s *SchedulerExecutor) createSchedule(
 		s.config.OperationInterval) +
 		(2 * time.Second)
 
-	//Add some time to give the executor enough time to delete the schedule
+	// Add some time to give the executor enough time to delete the schedule
 	endTime := time.Now().Add(sc.DeleteAfter).Add(dur)
 
 	options := client.ScheduleOptions{
@@ -415,7 +415,7 @@ func (s *SchedulerExecutor) deleteSchedule(
 	return err
 }
 
-// parseOverlapPolicy converts string overlap policy to enum
+// parseOverlapPolicy converts string overlap policy to enum.
 func parseOverlapPolicy(policyStr string) []enums.ScheduleOverlapPolicy {
 	policyStr = strings.ToLower(policyStr)
 	l := []enums.ScheduleOverlapPolicy{}

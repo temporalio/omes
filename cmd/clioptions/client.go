@@ -177,7 +177,7 @@ func (c *ClientOptions) FlagSet() *pflag.FlagSet {
 
 type PassThroughPayloadConverter struct{}
 
-func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payload, error) {
+func (p *PassThroughPayloadConverter) ToPayload(value any) (*common.Payload, error) {
 	if valuePayload, ok := value.(*common.Payload); ok {
 		asBytes, err := proto.Marshal(valuePayload)
 		if err != nil {
@@ -196,7 +196,7 @@ func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payl
 
 func (p *PassThroughPayloadConverter) FromPayload(
 	payload *common.Payload,
-	valuePtr interface{},
+	valuePtr any,
 ) error {
 	innerPayload := &common.Payload{}
 	err := proto.Unmarshal(payload.GetData(), innerPayload)

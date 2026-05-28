@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// LoggingOptions for setting up the logger component
+// LoggingOptions for setting up the logger component.
 type LoggingOptions struct {
 	// Log level
 	LogLevel string

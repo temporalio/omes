@@ -32,7 +32,7 @@ const (
 	workerShutdownTimeout = 5 * time.Second
 )
 
-// Functional options configuration
+// Functional options configuration.
 type testEnvConfig struct {
 	executorTimeout time.Duration
 	runID           string
@@ -70,6 +70,7 @@ type TestResult struct {
 
 type TestEnvironment struct {
 	testEnvConfig
+
 	devServer         *devserver.Server
 	temporalClient    client.Client
 	buildID           string
@@ -91,6 +92,7 @@ func (env *TestEnvironment) NexusEndpointName() string {
 }
 
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+	t.Helper()
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
 	}
@@ -176,13 +178,14 @@ func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, runID strin
 	return endpointName, nil
 }
 
-// RunExecutorTest runs an executor with a specific SDK and server address
+// RunExecutorTest runs an executor with a specific SDK and server address.
 func (env *TestEnvironment) RunExecutorTest(
 	t *testing.T,
 	executor loadgen.Executor,
 	scenarioInfo loadgen.ScenarioInfo,
 	sdk clioptions.Language,
 ) (TestResult, error) {
+	t.Helper()
 	testLogger := zaptest.NewLogger(t).Core()
 	observeLogger, observedLogs := observer.New(zap.DebugLevel)
 	logger := zap.New(zapcore.NewTee(testLogger, observeLogger)).Sugar()

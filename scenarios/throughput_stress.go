@@ -128,7 +128,7 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 }
 
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario
-// options
+// options.
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
 		InternalIterTimeout: info.ScenarioOptionDuration(
@@ -586,8 +586,10 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 							"encoding": []byte("json/plain"),
 							"type":     []byte("Keyword"),
 						},
-						Data: []byte(
-							fmt.Sprintf("%q", t.config.ExecutionID),
+						Data: fmt.Appendf(
+							nil,
+							"%q",
+							t.config.ExecutionID,
 						), // quoted to be valid JSON string
 					},
 				},

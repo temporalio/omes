@@ -12,7 +12,6 @@ func RunConcurrently(ctx workflow.Context, funcs ...func(workflow.Context) error
 	completed := 0
 	var innerErr error
 	for _, f := range funcs {
-
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			if err := f(ctx); err != nil {
 				innerErr = err

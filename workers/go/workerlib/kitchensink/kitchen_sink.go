@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -67,7 +68,7 @@ func KitchenSinkWorkflow(
 
 	// Setup query handler.
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
-		func(input interface{}) (*kitchensink.WorkflowState, error) {
+		func(input any) (*kitchensink.WorkflowState, error) {
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
@@ -78,7 +79,7 @@ func KitchenSinkWorkflow(
 	updateErr := workflow.SetUpdateHandlerWithOptions(
 		ctx,
 		"do_actions_update",
-		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
+		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval any, err error) {
 			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
 			if payload != nil {
 				return payload, err
@@ -211,16 +212,15 @@ func (ws *KSWorkflowState) handleActionSet(
 	if !set.GetConcurrent() {
 		for _, action := range set.GetActions() {
 			if returnValue, err = ws.handleAction(ctx, action); returnValue != nil || err != nil {
-				return
+				return returnValue, err
 			}
 		}
-		return
+		return returnValue, err
 	}
 	// With a concurrent set, we'll use a coroutine for each, only updating the
 	// return values if we should return, then awaiting on that or completion
 	var actionsCompleted int
 	for _, action := range set.GetActions() {
-
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			if maybeReturnValue, maybeErr := ws.handleAction(
 				ctx,
@@ -238,7 +238,7 @@ func (ws *KSWorkflowState) handleActionSet(
 	if awaitErr != nil {
 		return nil, fmt.Errorf("failed waiting on actions: %w", err)
 	}
-	return
+	return returnValue, err
 }
 
 // validateAllSignalsReceived checks if all expected signals have been received
@@ -256,12 +256,7 @@ func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) 
 		return true
 	}
 	// If the signal ID is not in the expected list, it means we already processed it
-	for _, id := range params.GetExpectedSignalIds() {
-		if id == signalID {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(params.GetExpectedSignalIds(), signalID)
 }
 
 // handleSignalDeduplication removes a received signal ID from the expected list.
@@ -307,9 +302,9 @@ func (ws *KSWorkflowState) handleAction(
 		if child.GetWorkflowType() != "" {
 			childType = child.GetWorkflowType()
 		}
-		var searchAttributes map[string]interface{}
+		var searchAttributes map[string]any
 		if child.SearchAttributes != nil {
-			searchAttributes = make(map[string]interface{})
+			searchAttributes = make(map[string]any)
 			for k, v := range child.GetSearchAttributes() {
 				searchAttributes[k] = v
 			}
@@ -347,14 +342,14 @@ func (ws *KSWorkflowState) handleAction(
 		})
 		return nil, err
 	} else if upsertMemo := action.GetUpsertMemo(); upsertMemo != nil {
-		convertedMap := make(map[string]interface{}, len(upsertMemo.GetUpsertedMemo().GetFields()))
+		convertedMap := make(map[string]any, len(upsertMemo.GetUpsertedMemo().GetFields()))
 		for k, v := range upsertMemo.GetUpsertedMemo().GetFields() {
 			convertedMap[k] = v
 		}
 		err := workflow.UpsertMemo(ctx, convertedMap)
 		return nil, err
 	} else if upsertSA := action.GetUpsertSearchAttributes(); upsertSA != nil {
-		convertedMap := make(map[string]interface{}, len(upsertSA.GetSearchAttributes()))
+		convertedMap := make(map[string]any, len(upsertSA.GetSearchAttributes()))
 		for k, v := range upsertSA.GetSearchAttributes() {
 			convertedMap[k] = v
 		}
@@ -372,7 +367,7 @@ func (ws *KSWorkflowState) handleAction(
 
 func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
 	actType := "noop"
-	args := make([]interface{}, 0)
+	args := make([]any, 0)
 	if delay := act.GetDelay(); delay != nil {
 		actType = "delay"
 		args = append(args, delay.AsDuration())
@@ -550,7 +545,7 @@ func Delay(_ context.Context, delayFor time.Duration) error {
 	return nil
 }
 
-// RetryableError throws retryable errors for N attempts, then succeeds
+// RetryableError throws retryable errors for N attempts, then succeeds.
 func RetryableError(
 	ctx context.Context,
 	config *kitchensink.ExecuteActivityAction_RetryableErrorActivity,
@@ -562,7 +557,7 @@ func RetryableError(
 	return nil
 }
 
-// Timeout runs too long for N attempts (causing timeout), then completes quickly
+// Timeout runs too long for N attempts (causing timeout), then completes quickly.
 func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_TimeoutActivity) error {
 	info := activity.GetInfo(ctx)
 
@@ -581,7 +576,7 @@ func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_Time
 	}
 }
 
-// Heartbeat skips heartbeats for N attempts (causing heartbeat timeout), then sends them
+// Heartbeat skips heartbeats for N attempts (causing heartbeat timeout), then sends them.
 func Heartbeat(
 	ctx context.Context,
 	config *kitchensink.ExecuteActivityAction_HeartbeatTimeoutActivity,

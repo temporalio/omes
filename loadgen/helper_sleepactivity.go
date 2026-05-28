@@ -16,7 +16,7 @@ import (
 )
 
 // SleepActivityConfig defines the configuration for sleep activities with flexible distribution
-// support
+// support.
 type SleepActivityConfig struct {
 	// Distribution of how many sleep activities to run per iteration. Required.
 	Count *DistributionField[int64] `json:"count"`

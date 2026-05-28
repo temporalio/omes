@@ -16,7 +16,7 @@ import (
 var activityStub = Activities{}
 
 // EbbAndFlowTrackWorkflow executes activities and returns their schedule-to-start times with
-// fairness data
+// fairness data.
 func EbbAndFlowTrackWorkflow(
 	ctx workflow.Context,
 	params *ebbandflow.WorkflowParams,

@@ -36,6 +36,7 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 type workerWithScenarioRunner struct {
 	workerRunner
 	scenarioRunConfig
+
 	metricsOptions clioptions.MetricsOptions
 }
 

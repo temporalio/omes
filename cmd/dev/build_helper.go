@@ -125,7 +125,7 @@ func (b *baseImageBuilder) buildDockerArgs(
 	if len(b.platforms) > 1 {
 		if !allowPush {
 			err = errors.New("multi-platform builds require pushing to registry")
-			return
+			return dockerArgs, err
 		}
 		dockerArgs = append(dockerArgs, "--push")
 	} else {
@@ -148,7 +148,7 @@ func (b *baseImageBuilder) buildDockerArgs(
 		dockerArgs = append(dockerArgs, "--build-arg", arg)
 	}
 
-	return
+	return dockerArgs, err
 }
 
 func (b *baseImageBuilder) executeDockerBuild(

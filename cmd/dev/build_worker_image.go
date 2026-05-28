@@ -49,6 +49,7 @@ func buildPushWorkerImageCmd() *cobra.Command {
 
 type workerImageBuilder struct {
 	baseImageBuilder
+
 	sdkOptions clioptions.SdkOptions
 }
 

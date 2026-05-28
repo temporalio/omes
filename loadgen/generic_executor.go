@@ -109,7 +109,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// Run all until we've gotten an error or reached iteration limit or timeout
 	for i := g.info.Configuration.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
 		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
-
 		// If there is a rate limit, enforce it
 		if rateLimiter != nil {
 			<-rateLimiter

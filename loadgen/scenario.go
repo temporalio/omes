@@ -66,7 +66,7 @@ type Configurable interface {
 	Configure(ScenarioInfo) error
 }
 
-// ExecutorFunc is an [Executor] implementation for a function
+// ExecutorFunc is an [Executor] implementation for a function.
 type ExecutorFunc func(context.Context, ScenarioInfo) error
 
 // Run implements [Executor.Run].
@@ -96,7 +96,7 @@ func MustRegisterScenario(scenario Scenario) {
 	registeredScenarios[scenarioName] = &scenario
 }
 
-// GetScenarios gets a copy of registered scenarios
+// GetScenarios gets a copy of registered scenarios.
 func GetScenarios() map[string]*Scenario {
 	ret := make(map[string]*Scenario, len(registeredScenarios))
 	maps.Copy(ret, registeredScenarios)
@@ -261,7 +261,7 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-func (r RunConfiguration) Validate() error {
+func (r *RunConfiguration) Validate() error {
 	if r.Duration < 0 {
 		return errors.New("Duration cannot be negative")
 	}
@@ -427,7 +427,7 @@ type KitchenSinkWorkflowOptions struct {
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
 // completion ignoring its result. Concurrently it will perform any client actions specified in
-// kitchensink.TestInput.ClientSequence
+// kitchensink.TestInput.ClientSequence.
 func (r *Run) ExecuteKitchenSinkWorkflow(
 	ctx context.Context,
 	options *KitchenSinkWorkflowOptions,

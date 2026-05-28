@@ -183,6 +183,7 @@ func (m *MetricsOptions) mustInitPrometheusServer(
 
 type PrometheusInstanceFlags struct {
 	metrics.PrometheusInstanceOptions
+
 	fs *pflag.FlagSet
 }
 

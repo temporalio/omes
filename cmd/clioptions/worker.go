@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// WorkerOptions for setting up worker parameters
+// WorkerOptions for setting up worker parameters.
 type WorkerOptions struct {
 	BuildID                      string
 	DeploymentName               string

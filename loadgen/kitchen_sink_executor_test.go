@@ -506,17 +506,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t"),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -543,9 +533,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher:        PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled"),
 			expectedWorkflowError: "missing signal",
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
@@ -573,11 +561,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t"),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -628,19 +612,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedWorkflowError: "error after signals sent",
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionStarted
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
-				ActivityTaskScheduled
-				...
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				...
-				ActivityTaskCompleted
-				...
-				WorkflowExecutionFailed`), // No TimerStarted - error skips signal waiting
+			historyMatcher:        PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionStarted\n\t\t\t\tWorkflowTaskScheduled\n\t\t\t\tWorkflowTaskStarted\n\t\t\t\tWorkflowTaskCompleted\n\t\t\t\tActivityTaskScheduled\n\t\t\t\t...\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t...\n\t\t\t\tActivityTaskCompleted\n\t\t\t\t...\n\t\t\t\tWorkflowExecutionFailed"), // No TimerStarted - error skips signal waiting
 		},
 		{
 			name: "ClientSequence/Signal/Custom",
@@ -1020,6 +992,7 @@ func testForSDK(
 	env *TestEnvironment,
 	workflowTimeout time.Duration,
 ) {
+	t.Helper()
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
 		javaMutex.Lock()
@@ -1078,6 +1051,7 @@ func testUnsupportedFeature(
 	sdk clioptions.Language,
 	expectedErr string,
 ) {
+	t.Helper()
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
@@ -1109,6 +1083,7 @@ func testSupportedFeature(
 	tc testCase,
 	sdk clioptions.Language,
 ) {
+	t.Helper()
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
@@ -1179,6 +1154,7 @@ func getWorkflowHistory(
 	taskQueueName string,
 	temporalClient client.Client,
 ) ([]*history.HistoryEvent, error) {
+	t.Helper()
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,

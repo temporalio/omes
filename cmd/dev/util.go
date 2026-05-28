@@ -62,7 +62,7 @@ func getVersion(tool string) (string, error) {
 	return v, nil
 }
 
-// runCommand executes a command and pipes output to stdout/stderr
+// runCommand executes a command and pipes output to stdout/stderr.
 func runCommand(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = os.Stdout
@@ -70,7 +70,7 @@ func runCommand(ctx context.Context, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// runCommandInDir executes a command in a specific directory
+// runCommandInDir executes a command in a specific directory.
 func runCommandInDir(ctx context.Context, dir, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
@@ -79,14 +79,14 @@ func runCommandInDir(ctx context.Context, dir, name string, args ...string) erro
 	return cmd.Run()
 }
 
-// runCommandOutput executes a command and returns combined stdout and stderr as a string
+// runCommandOutput executes a command and returns combined stdout and stderr as a string.
 func runCommandOutput(ctx context.Context, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
-// getRepoDir returns the project's root directory
+// getRepoDir returns the project's root directory.
 func getRepoDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
@@ -103,7 +103,7 @@ func getKitchenSinkGenDir(repoDir string) string {
 	return filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
 }
 
-// getTargetDir returns the directory for the given target
+// getTargetDir returns the directory for the given target.
 func getTargetDir(target string) (string, error) {
 	repoDir, err := getRepoDir()
 	if err != nil {
@@ -115,7 +115,7 @@ func getTargetDir(target string) (string, error) {
 	return filepath.Join(repoDir, "workers", target), nil
 }
 
-// checkMise verifies that mise is installed
+// checkMise verifies that mise is installed.
 func checkMise() error {
 	if _, err := exec.LookPath("mise"); err != nil {
 		return errors.New(

@@ -62,6 +62,7 @@ type ebbAndFlowState struct {
 
 type ebbAndFlowExecutor struct {
 	loadgen.ScenarioInfo
+
 	config              *ebbAndFlowConfig
 	rng                 *rand.Rand
 	id                  string

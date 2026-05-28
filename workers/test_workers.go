@@ -44,6 +44,7 @@ func (w *workerPool) ensureWorkerBuilt(
 	logger *zap.SugaredLogger,
 	sdk clioptions.Language,
 ) error {
+	t.Helper()
 	w.mutex.Lock()
 	once, exists := w.buildOnce[sdk]
 	if !exists {

@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// logWriter implements io.Writer and streams output line by line to a logger
+// logWriter implements io.Writer and streams output line by line to a logger.
 type logWriter struct {
 	logger *zap.SugaredLogger
 	buffer bytes.Buffer

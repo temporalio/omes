@@ -15,6 +15,7 @@ import (
 
 type iterationTracker struct {
 	sync.Mutex
+
 	seen []int
 }
 
@@ -29,6 +30,7 @@ func (i *iterationTracker) track(iteration int) {
 }
 
 func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
+	t.Helper()
 	i.Lock()
 	defer i.Unlock()
 	for iter := 1; iter <= iterations; iter++ {

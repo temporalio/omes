@@ -11,17 +11,17 @@ import (
 )
 
 var (
-	once   sync.Once
-	loaded map[string]string
-	loadEr error
+	once    sync.Once
+	loaded  map[string]string
+	errLoad error
 )
 
 // Get returns the value for `key` (case-insensitive). Returns "" if the key
 // is absent and an error only when versions.env cannot be located or parsed.
 func Get(key string) (string, error) {
 	once.Do(load)
-	if loadEr != nil {
-		return "", loadEr
+	if errLoad != nil {
+		return "", errLoad
 	}
 	return loaded[strings.ToLower(key)], nil
 }
@@ -29,14 +29,14 @@ func Get(key string) (string, error) {
 func load() {
 	_, here, _, ok := runtime.Caller(0)
 	if !ok {
-		loadEr = errors.New("versions: cannot locate package source")
+		errLoad = errors.New("versions: cannot locate package source")
 		return
 	}
 	repoDir := filepath.Dir(filepath.Dir(here)) // versions/ -> repo root
 	path := filepath.Join(repoDir, "versions.env")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		loadEr = fmt.Errorf("versions: read %s: %w", path, err)
+		errLoad = fmt.Errorf("versions: read %s: %w", path, err)
 		return
 	}
 	loaded = parse(string(data))

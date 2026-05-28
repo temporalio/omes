@@ -45,6 +45,7 @@ type distribution[T distValueType] interface {
 //     Example: {"type": "normal", "mean": "500", "stdDev": "100", "min": "0", "max": "1000"}
 type DistributionField[T distValueType] struct {
 	distribution[T]
+
 	distType string
 }
 
@@ -138,7 +139,7 @@ func (d *fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
 }
 
 func (d *fixedDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":  d.GetType(),
 		"value": renderToJSON(d.value),
 	})
@@ -164,7 +165,7 @@ type discreteDistribution[T distValueType] struct {
 	cache   *discreteCache[T]
 }
 
-// discreteCache holds pre-computed values for discreteDistribution sampling
+// discreteCache holds pre-computed values for discreteDistribution sampling.
 type discreteCache[T distValueType] struct {
 	keys        []T
 	weights     []int
@@ -257,7 +258,7 @@ func (d *discreteDistribution[T]) MarshalJSON() ([]byte, error) {
 		weights[renderToJSON(value)] = weight
 	}
 
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":    d.GetType(),
 		"weights": weights,
 	})
@@ -342,7 +343,7 @@ func (d *uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *uniformDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type": d.GetType(),
 		"min":  renderToJSON(d.min),
 		"max":  renderToJSON(d.max),
@@ -355,18 +356,18 @@ func (d *uniformDistribution[T]) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	min, err := parseFromJSON[T](rawMap, "min")
+	minVal, err := parseFromJSON[T](rawMap, "min")
 	if err != nil {
 		return err
 	}
 
-	max, err := parseFromJSON[T](rawMap, "max")
+	maxVal, err := parseFromJSON[T](rawMap, "max")
 	if err != nil {
 		return err
 	}
 
-	d.min = min
-	d.max = max
+	d.min = minVal
+	d.max = maxVal
 
 	return nil
 }
@@ -400,7 +401,7 @@ func (d *zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *zipfDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type": d.GetType(),
 		"s":    d.s,
 		"v":    d.v,
@@ -480,13 +481,7 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
 
-		result := mean + int64(float64(stdDev)*rng.NormFloat64())
-		if result < minVal {
-			result = minVal
-		}
-		if result > maxVal {
-			result = maxVal
-		}
+		result := min(max(mean+int64(float64(stdDev)*rng.NormFloat64()), minVal), maxVal)
 		return T(result), true
 	case float32:
 		mean, stdDev := any(d.mean).(float32), any(d.stdDev).(float32)
@@ -504,13 +499,10 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		mean, stdDev := any(d.mean).(time.Duration), any(d.stdDev).(time.Duration)
 		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
 
-		result := time.Duration(int64(mean) + int64(float64(stdDev)*rng.NormFloat64()))
-		if result < minVal {
-			result = minVal
-		}
-		if result > maxVal {
-			result = maxVal
-		}
+		result := min(
+			max(time.Duration(int64(mean)+int64(float64(stdDev)*rng.NormFloat64())), minVal),
+			maxVal,
+		)
 		return T(result), true
 	default:
 		return d.mean, false
@@ -518,7 +510,7 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *normalDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":   d.GetType(),
 		"mean":   renderToJSON(d.mean),
 		"stdDev": renderToJSON(d.stdDev),

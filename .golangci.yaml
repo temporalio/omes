@@ -1,9 +1,10 @@
 # golangci-lint configuration for omes.
 #
-# This is a pragmatic baseline for an existing codebase: formatting plus a
-# curated, high-signal set of correctness linters (rather than `default: all`,
-# whose stylistic linters would generate thousands of low-value diffs). The set
-# can be ratcheted up over time.
+# Mirrors temporalio/git-toolkit: `default: all` with a documented opt-out
+# disable list, so new linters are adopted automatically. The first group of
+# disables matches git-toolkit; the rest defer linters that don't fit this
+# existing CLI / load-generation codebase (ratchet candidates) — everything
+# else, including the high-signal correctness linters, stays on.
 version: "2"
 formatters:
   enable:
@@ -23,28 +24,63 @@ formatters:
       - loadgen/kitchensink
       - workers/go/harness/api
 linters:
-  default: standard # errcheck, govet, ineffassign, staticcheck, unused
-  enable:
-    - bodyclose # unclosed HTTP response bodies
-    - copyloopvar # loop variable aliasing bugs
-    - errorlint # correct error wrapping / comparison (%w, errors.Is/As)
-    - intrange # use Go 1.22+ integer range loops
-    - misspell # common misspellings in comments/strings
-    - nilerr # returning nil after a non-nil error check
-    - perfsprint # faster alternatives to fmt.Sprintf
-    - protogetter # use generated proto getters instead of direct field access
-    - testifylint # common testify misuse
-    - unconvert # redundant type conversions
-    - usestdlibvars # use stdlib constants (http.MethodGet, etc.)
-    # Ratchet candidates (enable once the codebase is cleaned up):
-    #   - forcetypeassert  # unchecked type assertions that can panic
-    #   - noctx            # operations that should carry a context.Context
-    #   - prealloc         # slices that could be preallocated
+  default: all
+  disable:
+    # --- Shared with git-toolkit ---
+    - cyclop # Redundant with gocognit
+    - depguard # No custom rules configured; blocks all non-stdlib imports by default
+    - dupl # Flags intentional structural similarity in scenarios and test patterns
+    - err113 # Redundant with errorlint; sentinel errors for everything is too strict
+    - exhaustive # Switches use default cases; enumerating every proto value is noisy
+    - exhaustruct # Contradicts Go's zero-value convention
+    - interfacebloat # Proto-driven interfaces naturally have many methods
+    - ireturn # All flagged returns are external library interfaces or factory patterns
+    - noinlineerr # Inline error handling is idiomatic Go
+    - tagliatelle # JSON tag casing is dictated by external API contracts
+    - testpackage # Many tests use internal packages to test unexported helpers
+    - varnamelen # Short names (op, pr, wt, fs, tr) are conventional Go
+    - wrapcheck # Error wrapping is not consistently required across the codebase
+    - wsl # Deprecated; replaced by wsl_v5
+    # --- omes: deferred style/convention linters (high churn on existing code) ---
+    - wsl_v5 # Opinionated blank-line rules; large churn on existing code
+    - nlreturn # Requires a blank line before return; stylistic churn
+    - mnd # Load-gen scenarios use many intentional numeric literals
+    - goconst # Repeated scenario/option strings read clearer inline
+    - gochecknoglobals # Cobra commands and scenario registries use package globals
+    - gochecknoinits # Scenarios self-register via init()
+    - revive # Overlaps the stylecheck naming rules already deferred via staticcheck
+    - godoclint # godoc phrasing rules overlap the deferred stylecheck conventions
+    - lll # golines handles wrapping; remaining long lines are unbreakable strings/tags
+    - godox # TODO/FIXME comments are tracked, not blocked
+    - forbidigo # The CLI legitimately prints to stdout
+    - paralleltest # t.Parallel() is not required across the suite
+    - tparallel # ... likewise for subtests
+    - nonamedreturns # Named returns are used intentionally (e.g. with deferred mutation)
+    - funcorder # Method declaration ordering is not enforced
+    - inamedparam # Interface methods need not name every parameter
+    - unparam # Noisy on test helpers and callbacks with deliberately fixed args
+    - gomoddirectives # Worker modules use local `replace` directives by design
+    # --- omes: deferred correctness linters (real but high-effort/by-design) ---
+    - gosec # Load gen intentionally uses math/rand and spawns subprocesses
+    - noctx # Threading context through every call site is deferred
+    - forcetypeassert # Unchecked assertions deferred (mostly safe-by-construction)
+    - contextcheck # Context propagation cleanup deferred alongside noctx
+    - nilnil # (nil, nil) returns are intentional "absent, no error" in places
+    - prealloc # Micro-optimization; not worth the churn here
+    # --- omes: deferred complexity linters (inherently large scenario/run funcs) ---
+    - funlen
+    - gocognit
+    - gocyclo
+    - nestif
+    - maintidx
   settings:
+    gocritic:
+      disabled-checks:
+        - ifElseChain # if/else chains read fine here; converting to switch is churn
     staticcheck:
       checks:
         - all
-        - -ST1* # stylecheck (naming/comment/import style) — defer the style churn; keep SA/S/QF
+        - -ST1* # stylecheck (naming/comment/import style) — defer the churn; keep SA/S/QF
         - -SA1019 # deprecations (e.g. golang/protobuf) tracked as a separate migration
     testifylint:
       disable:
@@ -60,6 +96,4 @@ linters:
     rules:
       - path: (_test\.go)
         linters:
-          - errcheck
-          - forcetypeassert
-          - noctx
+          - errcheck # tests routinely ignore errors on best-effort calls

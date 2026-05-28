@@ -26,19 +26,17 @@ func TestAllocatePorts(t *testing.T) {
 }
 
 func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
-	root := t.TempDir()
+	// Resolve symlinks up front (macOS /tmp -> /private/tmp) so the path matches
+	// what os.Getwd reports after t.Chdir sets $PWD.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test\n"), 0644))
 	nested := filepath.Join(root, "scenarios", "project")
 	require.NoError(t, os.MkdirAll(nested, 0755))
 
-	prevDir, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(nested))
-	t.Cleanup(func() { require.NoError(t, os.Chdir(prevDir)) })
+	t.Chdir(nested)
 
 	outputDir, err := defaultOutputDir("")
-	require.NoError(t, err)
-	root, err = filepath.EvalSymlinks(root)
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(root, ".devserver"), outputDir)
 }

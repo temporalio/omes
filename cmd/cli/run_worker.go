@@ -43,6 +43,7 @@ func runWorkerCmd() *cobra.Command {
 
 type workerRunner struct {
 	workers.Runner
+
 	builder workerBuilder
 }
 

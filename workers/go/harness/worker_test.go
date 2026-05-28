@@ -13,10 +13,10 @@ import (
 type fakeWorker struct {
 	sdkworker.Worker
 
-	run func(<-chan interface{}) error
+	run func(<-chan any) error
 }
 
-func (f fakeWorker) Run(stopCh <-chan interface{}) error {
+func (f fakeWorker) Run(stopCh <-chan any) error {
 	if f.run == nil {
 		return nil
 	}
@@ -76,10 +76,10 @@ func TestRunWorkersStopsRemainingWorkersOnFailure(t *testing.T) {
 	stopped := make(chan struct{}, 1)
 
 	err := runWorkers([]sdkworker.Worker{
-		fakeWorker{run: func(<-chan interface{}) error {
+		fakeWorker{run: func(<-chan any) error {
 			return context.Canceled
 		}},
-		fakeWorker{run: func(stopCh <-chan interface{}) error {
+		fakeWorker{run: func(stopCh <-chan any) error {
 			select {
 			case <-stopCh:
 				stopped <- struct{}{}

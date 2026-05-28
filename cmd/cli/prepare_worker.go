@@ -37,6 +37,7 @@ func prepareWorkerCmd() *cobra.Command {
 
 type workerBuilder struct {
 	workers.Builder
+
 	loggingOptions clioptions.LoggingOptions
 }
 

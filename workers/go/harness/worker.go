@@ -224,7 +224,7 @@ func runWorkers(workers []sdkworker.Worker, stopCh <-chan struct{}) error {
 		return nil
 	}
 
-	workerStopCh := make(chan interface{})
+	workerStopCh := make(chan any)
 	var stopOnce sync.Once
 	stopWorkers := func() {
 		stopOnce.Do(func() {

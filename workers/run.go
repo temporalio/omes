@@ -23,6 +23,7 @@ import (
 
 type Runner struct {
 	Builder
+
 	AppName                   string
 	RetainTempDir             bool
 	GracefulShutdownDuration  time.Duration

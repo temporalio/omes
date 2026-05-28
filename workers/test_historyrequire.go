@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"testing"
@@ -18,11 +19,20 @@ type event struct {
 	Attributes map[string]any
 }
 
+// marshalAttrs renders event attributes for log output, falling back to a %v
+// representation if they cannot be marshaled to JSON.
+func marshalAttrs(attrs any) string {
+	b, err := json.Marshal(attrs)
+	if err != nil {
+		return fmt.Sprintf("%v", attrs)
+	}
+	return string(b)
+}
+
 func (e event) String(lineNum int) string {
 	out := e.Type
 	if len(e.Attributes) > 0 {
-		b, _ := json.Marshal(e.Attributes)
-		out += " " + string(b)
+		out += " " + marshalAttrs(e.Attributes)
 	}
 	return fmt.Sprintf("%3d: %s\n", lineNum, out)
 }
@@ -37,7 +47,7 @@ func (el eventList) Strings() []string {
 	return result
 }
 
-// HistoryMatcher defines the interface for history matching strategies
+// HistoryMatcher defines the interface for history matching strategies.
 type HistoryMatcher interface {
 	Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error
 }
@@ -180,6 +190,7 @@ func (m PartialHistoryMatcher) Match(
 }
 
 func parseSpec(t *testing.T, input string) eventList {
+	t.Helper()
 	var events eventList
 	for lineNum, raw := range strings.Split(strings.TrimSpace(input), "\n") {
 		raw = strings.TrimSpace(raw)
@@ -229,9 +240,7 @@ func extractFields(event *historypb.HistoryEvent) map[string]any {
 	for k, v := range raw {
 		if strings.HasSuffix(k, "Attributes") {
 			if inner, ok := v.(map[string]any); ok {
-				for ik, iv := range inner {
-					result[ik] = iv
-				}
+				maps.Copy(result, inner)
 			}
 		} else if k != "eventId" && k != "eventType" {
 			result[k] = v
@@ -281,8 +290,7 @@ func logHistoryMismatch(t *testing.T, expectedSpec string, actualEvents eventLis
 		for _, expectedEvent := range expectedEvents {
 			out := expectedEvent.Type
 			if len(expectedEvent.Attributes) > 0 {
-				b, _ := json.Marshal(expectedEvent.Attributes)
-				out += " " + string(b)
+				out += " " + marshalAttrs(expectedEvent.Attributes)
 			}
 			t.Logf("  %s\n", out)
 		}
@@ -302,8 +310,7 @@ func logHistoryEvents(t *testing.T, actualEvents eventList) {
 	for _, actualEvent := range actualEvents {
 		out := actualEvent.Type
 		if len(actualEvent.Attributes) > 0 {
-			b, _ := json.Marshal(actualEvent.Attributes)
-			out += " " + string(b)
+			out += " " + marshalAttrs(actualEvent.Attributes)
 		}
 		t.Logf("  %s\n", out)
 	}
