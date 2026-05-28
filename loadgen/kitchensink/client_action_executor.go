@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -226,11 +225,6 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("ExecuteOperation: %w", err)
-	}
-
-	if strings.HasSuffix(sno.Operation, "-async") {
-		// Async standalone operations have started once ExecuteOperation returns.
-		return nil
 	}
 
 	err = handle.Get(ctx, nil)

@@ -141,6 +141,12 @@ func dynamicConfigDefaults(frontendHTTPAddr string) map[string]any {
 		// Older server versions fail Nexus tasks when the callback URL template is unset.
 		"component.nexusoperations.callback.endpoint.template": fmt.Sprintf("http://%s/namespaces/{{.NamespaceName}}/nexus/callback", frontendHTTPAddr),
 		"component.nexusoperations.useSystemCallbackURL":       true,
+		"callback.allowedAddresses": []map[string]any{{
+			"Pattern":       frontendHTTPAddr,
+			"AllowInsecure": true,
+		}},
+		"nexusoperation.callback.endpoint.template": fmt.Sprintf("http://%s/namespaces/{{.NamespaceName}}/nexus/callback", frontendHTTPAddr),
+		"nexusoperation.useSystemCallbackURL":       false,
 		// Eliminate cache races.
 		"system.forceSearchAttributesCacheRefreshOnRead": true,
 		"system.forceNexusEndpointRefreshOnRead":         true,
