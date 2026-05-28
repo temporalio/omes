@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/workers"
+	"github.com/temporalio/omes/internal/workerctl"
 )
 
 func prepareWorkerCmd() *cobra.Command {
@@ -22,7 +22,7 @@ func prepareWorkerCmd() *cobra.Command {
 			if err != nil {
 				b.Logger.Fatal(fmt.Errorf("failed to get root directory: %w", err))
 			}
-			baseDir := workers.BaseDir(repoDir, b.SdkOptions.Language)
+			baseDir := workerctl.BaseDir(repoDir, b.SdkOptions.Language)
 			if _, err := b.Build(cmd.Context(), baseDir); err != nil {
 				b.Logger.Fatal(err)
 			}
@@ -35,7 +35,7 @@ func prepareWorkerCmd() *cobra.Command {
 }
 
 type workerBuilder struct {
-	workers.Builder
+	workerctl.Builder
 	loggingOptions clioptions.LoggingOptions
 }
 

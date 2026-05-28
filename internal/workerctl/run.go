@@ -1,4 +1,4 @@
-package workers
+package workerctl
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -269,4 +270,18 @@ func sendInterrupt(process *os.Process) error {
 func sendKill(process *os.Process) error {
 	// shutting down the process group (ie including all child processes)
 	return syscall.Kill(-process.Pid, syscall.SIGKILL)
+}
+
+// withEnv returns a copy of environ with name set to value, replacing any
+// existing entry for name. An empty value clears the variable entirely so the
+// child process does not inherit it from the ambient environment.
+func withEnv(environ []string, name string, value string) []string {
+	prefix := name + "="
+	nextEnv := slices.DeleteFunc(slices.Clone(environ), func(item string) bool {
+		return strings.HasPrefix(item, prefix)
+	})
+	if value != "" {
+		nextEnv = append(nextEnv, prefix+value)
+	}
+	return nextEnv
 }
