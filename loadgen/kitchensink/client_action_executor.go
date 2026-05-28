@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -205,10 +204,6 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 }
 
 func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
-	// Unique per call: each iteration schedules multiple standalone-nexus
-	// actions, and activity retries / continue-as-new can reuse the same
-	// workflow ID — colliding operation IDs make the server reject the
-	// second call with "already started".
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
 	_, err := e.Client.WorkflowService().StartNexusOperationExecution(ctx,
 		&workflowservicepb.StartNexusOperationExecutionRequest{
@@ -218,26 +213,26 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 			Service:     sno.Service,
 			Operation:   sno.Operation,
 		})
-	var unimplemented *serviceerror.Unimplemented
-	switch {
-	case errors.As(err, &unimplemented):
+	var startUnimplemented *serviceerror.Unimplemented
+	if errors.As(err, &startUnimplemented) {
 		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
-		// or in a mixed-version cluster). Treat as a no-op — the action is
-		// opt-in and the caller asked for best-effort behavior.
-		log.Printf("standalone nexus: StartNexusOperationExecution unimplemented (operation=%s/%s, opID=%s)",
-			sno.Service, sno.Operation, operationID)
+		// or in a mixed-version cluster). Treat as a no-op.
 		return nil
-	case err != nil:
+	} else if err != nil {
 		return fmt.Errorf("StartNexusOperationExecution: %w", err)
 	}
+
+	// Poll for operation completion.
 	pollResp, err := e.Client.WorkflowService().PollNexusOperationExecution(ctx,
 		&workflowservicepb.PollNexusOperationExecutionRequest{
 			Namespace:   e.Namespace,
 			OperationId: operationID,
 			WaitStage:   enumspb.NEXUS_OPERATION_WAIT_STAGE_CLOSED,
 		})
-	unimplemented = nil
-	if errors.As(err, &unimplemented) {
+	var pollUnimplemented *serviceerror.Unimplemented
+	if errors.As(err, &pollUnimplemented) {
+		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
+		// or in a mixed-version cluster). Treat as a no-op.
 		return nil
 	}
 	if err != nil {
