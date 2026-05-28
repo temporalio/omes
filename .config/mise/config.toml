@@ -1,0 +1,20 @@
+# Developer tooling for omes — linters and formatters.
+#
+# This file pins the auxiliary dev tools used by `go run ./cmd/dev lint-and-format`
+# and by CI. It is the single source of truth for tooling versions.
+#
+# NOTE: Language runtimes (go, python, node, ruby, …) and SDK versions are still
+# managed separately via versions.env and the `cmd/dev install` flow. That flow
+# shells out to `mise use`, which writes to a top-level `mise.toml` — a file that
+# is .gitignored and generated at runtime. Committed tooling therefore lives here
+# in `.config/mise/config.toml` so the two never collide.
+#
+# First-time setup (local): `mise trust && mise install`
+[tools]
+golangci-lint = "2.7.2" # Go lint + format (gofmt/gci/golines)
+shellcheck = "0.11.0"   # shell lint
+shfmt = "3.12.0"        # shell format
+yamlfmt = "0.21.0"      # YAML format
+yamllint = "1.38.0"     # YAML lint
+taplo = "0.9.3"         # TOML lint + format
+actionlint = "1.7.10"   # GitHub Actions workflow lint
