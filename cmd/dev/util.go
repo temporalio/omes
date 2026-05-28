@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/temporalio/omes/versions"
+	"github.com/temporalio/omes/internal/versions"
 )
 
 var (

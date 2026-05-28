@@ -12,9 +12,9 @@ import (
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/devserver"
+	"github.com/temporalio/omes/internal/versions"
 	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/versions"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap/zaptest"
 )
