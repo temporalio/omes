@@ -9,11 +9,12 @@ import (
 	"github.com/google/uuid"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
-	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
 )
+
+const standaloneOperationScheduleToCloseTimeout = 90 * time.Second
 
 type ClientActionsExecutor struct {
 	Client          client.Client
@@ -205,41 +206,36 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 
 func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
-	_, err := e.Client.WorkflowService().StartNexusOperationExecution(ctx,
-		&workflowservicepb.StartNexusOperationExecutionRequest{
-			Namespace:   e.Namespace,
-			OperationId: operationID,
-			Endpoint:    sno.Endpoint,
-			Service:     sno.Service,
-			Operation:   sno.Operation,
-		})
+	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
+		Endpoint: sno.Endpoint,
+		Service:  sno.Service,
+	})
+	if err != nil {
+		return fmt.Errorf("NewNexusClient: %w", err)
+	}
+
+	handle, err := nexusClient.ExecuteOperation(ctx, sno.Operation, &NexusHandlerInput{}, client.StartNexusOperationOptions{
+		ID:                     operationID,
+		ScheduleToCloseTimeout: standaloneOperationScheduleToCloseTimeout,
+	})
 	var startUnimplemented *serviceerror.Unimplemented
 	if errors.As(err, &startUnimplemented) {
 		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
 		// or in a mixed-version cluster). Treat as a no-op.
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("StartNexusOperationExecution: %w", err)
+		return fmt.Errorf("ExecuteOperation: %w", err)
 	}
 
-	// Poll for operation completion.
-	pollResp, err := e.Client.WorkflowService().PollNexusOperationExecution(ctx,
-		&workflowservicepb.PollNexusOperationExecutionRequest{
-			Namespace:   e.Namespace,
-			OperationId: operationID,
-			WaitStage:   enumspb.NEXUS_OPERATION_WAIT_STAGE_CLOSED,
-		})
-	var pollUnimplemented *serviceerror.Unimplemented
-	if errors.As(err, &pollUnimplemented) {
+	err = handle.Get(ctx, nil)
+	var getUnimplemented *serviceerror.Unimplemented
+	if errors.As(err, &getUnimplemented) {
 		// The server we hit doesn't have standalone Nexus (e.g. mid-rollout
 		// or in a mixed-version cluster). Treat as a no-op.
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("PollNexusOperationExecution: %w", err)
-	}
-	if failure := pollResp.GetFailure(); failure != nil {
-		return fmt.Errorf("standalone nexus operation failed: %s", failure.GetMessage())
+		return fmt.Errorf("Get standalone nexus operation: %w", err)
 	}
 	return nil
 }
