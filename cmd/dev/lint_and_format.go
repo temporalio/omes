@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -22,14 +24,14 @@ Examples:
   dev lint-and-format                    # All targets (default)
   dev lint-and-format all                # All targets
   dev lint-and-format go                 # Single target
-  dev lint-and-format go java python     # Multiple targets`, strings.Join(supportedTargets, ", ")),
+  dev lint-and-format go java python     # Multiple targets`, strings.Join(supportedLintTargets, ", ")),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var targets []string
 			if len(args) == 0 || (len(args) == 1 && args[0] == "all") {
-				targets = supportedTargets
+				targets = supportedLintTargets
 			} else {
 				for _, target := range args {
-					if !slices.Contains(supportedTargets, target) {
+					if !slices.Contains(supportedLintTargets, target) {
 						return fmt.Errorf("unsupported target: %s", target)
 					}
 				}
@@ -77,6 +79,8 @@ func lintAndFormat(ctx context.Context, target string) error {
 		return lintAndFormatRubyWorker(ctx, targetDir)
 	case "kitchensink-gen":
 		return lintAndFormatRustKitchenSinkGen(ctx)
+	case "repo":
+		return lintAndFormatRepo(ctx)
 	default:
 		return fmt.Errorf("unsupported target: %s", target)
 	}
@@ -326,6 +330,111 @@ func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
 
 	fmt.Println("✅ Ruby lint-and-format completed successfully!")
 	return nil
+}
+
+// lintAndFormatRepo formats and lints repo-wide, non-language files: shell
+// scripts, TOML, YAML, and GitHub Actions workflows. Tools are pinned in
+// .config/mise/config.toml and run via `mise exec`.
+func lintAndFormatRepo(ctx context.Context) error {
+	if err := checkMise(); err != nil {
+		return err
+	}
+
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return err
+	}
+
+	shellFiles, err := filepath.Glob(filepath.Join(repoDir, "dockerfiles", "*.sh"))
+	if err != nil {
+		return err
+	}
+	workflowFiles, err := filepath.Glob(filepath.Join(repoDir, ".github", "workflows", "*.yml"))
+	if err != nil {
+		return err
+	}
+	tomlFiles := []string{
+		filepath.Join(repoDir, ".config", "mise", "config.toml"),
+		filepath.Join(repoDir, "loadgen", "kitchen-sink-gen", "Cargo.toml"),
+	}
+	yamlFiles := append([]string{
+		filepath.Join(repoDir, "prom-config.yml"),
+		filepath.Join(repoDir, "scenarios", "fuzz_cases.yaml"),
+		filepath.Join(repoDir, ".golangci.yaml"),
+		filepath.Join(repoDir, ".yamllint.yaml"),
+	}, workflowFiles...)
+
+	if len(shellFiles) > 0 {
+		fmt.Println("Formatting shell scripts...")
+		if err := runMiseExec(
+			ctx,
+			repoDir,
+			nil,
+			append([]string{"shfmt", "-i", "2", "-w"}, shellFiles...)...); err != nil {
+			return err
+		}
+		fmt.Println("Linting shell scripts...")
+		if err := runMiseExec(
+			ctx,
+			repoDir,
+			nil,
+			append([]string{"shellcheck", "-x"}, shellFiles...)...); err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("Formatting TOML...")
+	if err := runMiseExec(
+		ctx,
+		repoDir,
+		nil,
+		append([]string{"taplo", "fmt"}, tomlFiles...)...); err != nil {
+		return err
+	}
+
+	fmt.Println("Formatting YAML...")
+	if err := runMiseExec(
+		ctx,
+		repoDir,
+		nil,
+		append([]string{"yamlfmt"}, yamlFiles...)...); err != nil {
+		return err
+	}
+	fmt.Println("Linting YAML...")
+	if err := runMiseExec(
+		ctx,
+		repoDir,
+		nil,
+		append([]string{"yamllint", "-c", ".yamllint.yaml"}, yamlFiles...)...); err != nil {
+		return err
+	}
+
+	// SC2086/SC2129 are noisy on ${{ }}-interpolated run scripts; exclude them
+	// while keeping actionlint's real workflow checks.
+	fmt.Println("Linting GitHub Actions workflows...")
+	if err := runMiseExec(
+		ctx,
+		repoDir,
+		[]string{"SHELLCHECK_OPTS=--exclude=SC2086,SC2129"},
+		"actionlint",
+	); err != nil {
+		return err
+	}
+
+	fmt.Println("✅ Repo lint-and-format completed successfully!")
+	return nil
+}
+
+// runMiseExec runs `mise exec -- <args>` in dir, optionally adding env vars.
+func runMiseExec(ctx context.Context, dir string, extraEnv []string, args ...string) error {
+	cmd := exec.CommandContext(ctx, "mise", append([]string{"exec", "--"}, args...)...)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
+	return cmd.Run()
 }
 
 func lintAndFormatDotnetWorker(ctx context.Context, workerDir string) error {

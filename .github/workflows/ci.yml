@@ -7,7 +7,7 @@ permissions:
 
 env:
   MISE_VERSION: v2025.12.1
-  MISE_NODE_VERIFY: no
+  MISE_NODE_VERIFY: "no"
   # Trust the committed mise config (.config/mise/config.toml) in CI.
   MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
 
@@ -132,6 +132,31 @@ jobs:
       - name: Test ${{ matrix.target }} worker
         run: |
           go run ./cmd/dev test ${{ matrix.target }}
+
+  check-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: "go.mod"
+          cache: false
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install: false
+      - name: Install repo lint tools
+        run: |
+          mise install uv # provides the installer for yamllint (pipx backend)
+          mise install shellcheck shfmt yamlfmt yamllint taplo actionlint
+      - name: Lint and format repo files
+        run: |
+          go run ./cmd/dev lint-and-format repo
+      - name: Check formatting
+        run: |
+          git diff --exit-code || (echo "repo files have uncommitted formatting changes" && exit 1)
 
   build-worker:
     runs-on: ubuntu-latest
@@ -293,10 +318,6 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Ensure rustfmt
-        if: matrix.target == 'kitchensink-gen'
-        run: |
-          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \

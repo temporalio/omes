@@ -103,5 +103,5 @@ jobs:
       - name: 🐳 Docker Hub image tag
         env:
           LANG: ${{ inputs.lang || 'CLI' }}
-        run: |
+        run: |-
           echo "::notice title=🐳 Docker Hub image published for $LANG::Check temporaliotest/omes tags"

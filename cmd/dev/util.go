@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/temporalio/omes/versions"
@@ -17,7 +18,10 @@ var (
 	supportedTargets = []string{
 		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen",
 	}
-	supportedTools = []string{
+	// supportedLintTargets extends the language targets with "repo", which lints
+	// and formats repo-wide non-language files (shell, YAML, TOML, GH Actions).
+	supportedLintTargets = append(slices.Clone(supportedTargets), "repo")
+	supportedTools       = []string{
 		"buf", "dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",
 	}
 	toolDependencies = map[string][]string{

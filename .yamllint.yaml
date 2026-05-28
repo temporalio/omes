@@ -1,0 +1,12 @@
+# Relaxed yamllint config: GitHub Actions and config YAML routinely exceed
+# 80 columns and omit document-start markers, so we lint for real problems
+# (trailing space, EOF newline, syntax) rather than cosmetic style.
+extends: default
+rules:
+  line-length: disable
+  document-start: disable
+  comments-indentation: disable
+  truthy:
+    check-keys: false # allow GitHub Actions `on:` keys
+  comments:
+    min-spaces-from-content: 1
