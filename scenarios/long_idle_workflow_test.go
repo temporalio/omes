@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 )
 
 func TestLongIdleWorkflow_ParseConfig(t *testing.T) {
@@ -103,8 +103,8 @@ func TestLongIdleWorkflow_BuildActions(t *testing.T) {
 func TestLongIdleWorkflow(t *testing.T) {
 	t.Parallel()
 
-	env := workers.SetupTestEnvironment(t,
-		workers.WithExecutorTimeout(1*time.Minute))
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute))
 
 	baseRunID := fmt.Sprintf("liw-%d", time.Now().Unix())
 

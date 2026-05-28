@@ -157,8 +157,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	// Direct logging output to provided logger, if available.
 	if r.LoggingOptions.PreparedLogger != nil {
-		cmd.Stdout = &logWriter{logger: r.LoggingOptions.PreparedLogger}
-		cmd.Stderr = &logWriter{logger: r.LoggingOptions.PreparedLogger}
+		cmd.Stdout = NewLogWriter(r.LoggingOptions.PreparedLogger)
+		cmd.Stderr = NewLogWriter(r.LoggingOptions.PreparedLogger)
 	}
 
 	// Start the command. Do not use the context so we can send interrupt.
