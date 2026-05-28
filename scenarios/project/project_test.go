@@ -12,9 +12,9 @@ import (
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/devserver"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/versions"
-	"github.com/temporalio/omes/workers"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap/zaptest"
 )
@@ -194,7 +194,7 @@ func startProjectWorker(
 	t.Helper()
 	require.NotEmpty(t, opts.projectName)
 
-	builder := workers.Builder{
+	builder := workerctl.Builder{
 		ProjectName: opts.projectName,
 		SdkOptions:  opts.sdkOpts,
 		Logger:      info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
@@ -206,7 +206,7 @@ func startProjectWorker(
 		builder.DirName = filepath.Base(prog.Dir())
 	}
 
-	runner := &workers.Runner{
+	runner := &workerctl.Runner{
 		Builder:                  builder,
 		TaskQueueName:            loadgen.TaskQueueForRun(info.RunID),
 		GracefulShutdownDuration: 5 * time.Second,
@@ -224,7 +224,7 @@ func startProjectWorker(
 	workerErrCh := make(chan error, 1)
 	go func() {
 		defer close(workerErrCh)
-		workerErrCh <- runner.Run(ctx, workers.BaseDir(info.RootPath, opts.sdkOpts.Language))
+		workerErrCh <- runner.Run(ctx, workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language))
 	}()
 	return workerErrCh
 }
