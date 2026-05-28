@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
+	. "github.com/temporalio/omes/internal/workertest"
 	. "github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
-	. "github.com/temporalio/omes/workers"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
