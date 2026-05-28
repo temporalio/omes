@@ -70,6 +70,8 @@ func TestKitchenSink(t *testing.T) {
 	env := SetupTestEnvironment(t, WithDynamicConfig(map[string]any{
 		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
 		"nexusoperation.enableStandalone": true,
+		// Standalone Nexus system callbacks require CHASM callbacks.
+		"history.enableCHASMCallbacks": true,
 	}))
 
 	// Default workflow execution timeout for tests
