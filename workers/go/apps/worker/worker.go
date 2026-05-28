@@ -9,6 +9,8 @@ import (
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
 	"github.com/temporalio/omes/workers/go/workerlib/schedulerstress"
+	workertinyqueues "github.com/temporalio/omes/workers/go/workerlib/tinyqueues"
+	tinyqueuestypes "github.com/temporalio/omes/loadgen/tinyqueues"
 	"go.temporal.io/sdk/activity"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
@@ -50,6 +52,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterActivity(&ebbFlowActivities)
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 	w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+	w.RegisterWorkflowWithOptions(workertinyqueues.TinyQueueWorkflow, workflow.RegisterOptions{Name: tinyqueuestypes.WorkflowName})
 	w.RegisterNexusService(service)
 	return w
 }
