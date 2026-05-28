@@ -27,6 +27,7 @@ WORKDIR /app
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
+COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics

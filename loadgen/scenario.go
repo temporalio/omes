@@ -22,7 +22,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 

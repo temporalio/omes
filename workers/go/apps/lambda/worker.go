@@ -9,7 +9,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/nexus-rpc/sdk-go/nexus"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/workers/go/harness"
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"

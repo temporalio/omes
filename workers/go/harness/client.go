@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/metrics"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap"

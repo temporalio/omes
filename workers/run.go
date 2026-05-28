@@ -14,7 +14,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )

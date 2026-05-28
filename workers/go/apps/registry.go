@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/workers/go/apps/lambda"
 	"github.com/temporalio/omes/workers/go/apps/worker"
 	"github.com/temporalio/omes/workers/go/harness"

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"go.uber.org/zap"
 )
