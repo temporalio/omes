@@ -228,12 +228,7 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 			sno.Service, sno.Operation, operationID)
 		return nil
 	case err != nil:
-		log.Printf("standalone nexus: StartNexusOperationExecution error (operation=%s/%s, opID=%s): %v",
-			sno.Service, sno.Operation, operationID, err)
 		return fmt.Errorf("StartNexusOperationExecution: %w", err)
-	default:
-		log.Printf("standalone nexus: StartNexusOperationExecution success (operation=%s/%s, opID=%s)",
-			sno.Service, sno.Operation, operationID)
 	}
 	pollResp, err := e.Client.WorkflowService().PollNexusOperationExecution(ctx,
 		&workflowservicepb.PollNexusOperationExecutionRequest{
