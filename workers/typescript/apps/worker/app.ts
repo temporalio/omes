@@ -32,16 +32,23 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
     throw new Error('Harness worker requires a NativeConnection-backed client');
   }
 
+  const ignoreModules = context.workerOptions.bundlerOptions?.ignoreModules ?? [];
   return await Worker.create({
     connection,
     namespace: client.options.namespace,
     workflowsPath: require.resolve('../../workerlib/kitchensink/workflows'),
     activities: createActivities(client, context.errOnUnimplemented),
     taskQueue: context.taskQueue,
+    ...context.workerOptions,
     dataConverter: {
+      ...context.workerOptions.dataConverter,
       payloadConverterPath: payloadConverterPath(),
     },
-    ...context.workerOptions,
+    bundlerOptions: {
+      ...context.workerOptions.bundlerOptions,
+      // Protobufjs probes fs optionally through the custom payload converter bundle.
+      ignoreModules: [...new Set([...ignoreModules, 'fs'])],
+    },
   });
 }
 
