@@ -153,7 +153,7 @@ jobs:
           timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
       - name: Start ${{ matrix.sdk }} worker image
         run: |
-          go run ./cmd run-scenario \
+          go run ./cmd/omes run-scenario \
             --scenario workflow_with_single_noop_activity \
             --log-level debug \
             --server-address 127.0.0.1:10233 \
@@ -163,7 +163,7 @@ jobs:
       - name: Smoke test throughput_stress to confirm build is usable against ${{ matrix.sdk }} worker
         timeout-minutes: 10
         run: |
-          go run ./cmd run-scenario \
+          go run ./cmd/omes run-scenario \
             --scenario throughput_stress \
             --log-level debug \
             --server-address 127.0.0.1:10233 \

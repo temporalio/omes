@@ -179,7 +179,7 @@ func runJavaHarnessTests(ctx context.Context, repoDir string) error {
 
 func testWorkerLocally(ctx context.Context, repoDir, language, sdkVersion string) error {
 	args := []string{
-		"go", "run", "./cmd", "run-scenario-with-worker",
+		"go", "run", "./cmd/omes", "run-scenario-with-worker",
 		"--scenario", testScenario,
 		"--log-level", "debug",
 		"--language", language,

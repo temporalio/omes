@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	_ "github.com/temporalio/omes/scenarios/project" // Register project scenario
 )
 
-func Main() {
+func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "omes",
 		Short: "A load generator for Temporal",
