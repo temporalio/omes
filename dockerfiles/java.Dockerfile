@@ -12,22 +12,25 @@ RUN apt-get update \
 ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
+ENV PATH="$PATH:/usr/local/go/bin"
 
 WORKDIR /app
 
-# Copy CLI build dependencies
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
+COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+RUN go mod download
+
+# Copy CLI source and build the CLI.
 COPY cmd ./cmd
 COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
-COPY devserver ./devserver
 COPY internal ./internal
-COPY workers/go/harness/api ./workers/go/harness/api
-COPY go.mod go.sum ./
-
-# Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd/omes
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
