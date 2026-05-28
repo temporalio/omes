@@ -23,7 +23,7 @@ COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY devserver ./devserver
 COPY versions ./versions
-COPY workers/*.go ./workers/
+COPY internal ./internal
 COPY workers/go/harness/api ./workers/go/harness/api
 COPY go.mod go.sum ./
 

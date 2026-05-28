@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/workers"
+	"github.com/temporalio/omes/internal/workerctl"
 )
 
 func runScenarioWithWorkerCmd() *cobra.Command {
@@ -61,7 +61,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 			workerErrCh <- fmt.Errorf("failed to get root directory: %w", err)
 			return
 		}
-		workerErrCh <- r.Run(ctx, workers.BaseDir(repoDir, r.SdkOptions.Language))
+		workerErrCh <- r.Run(ctx, workerctl.BaseDir(repoDir, r.SdkOptions.Language))
 	}()
 	select {
 	case err := <-workerErrCh:

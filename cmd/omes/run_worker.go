@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 )
 
 func runWorkerCmd() *cobra.Command {
@@ -41,7 +41,7 @@ func runWorkerCmd() *cobra.Command {
 }
 
 type workerRunner struct {
-	workers.Runner
+	workerctl.Runner
 	builder workerBuilder
 }
 
@@ -73,7 +73,7 @@ func (r *workerRunner) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
-	return r.Run(ctx, workers.BaseDir(repoDir, r.SdkOptions.Language))
+	return r.Run(ctx, workerctl.BaseDir(repoDir, r.SdkOptions.Language))
 }
 
 func withCancelOnInterrupt(ctx context.Context) (context.Context, context.CancelFunc) {
