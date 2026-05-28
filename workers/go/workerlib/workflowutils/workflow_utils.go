@@ -21,7 +21,10 @@ func RunConcurrently(ctx workflow.Context, funcs ...func(workflow.Context) error
 		})
 	}
 
-	awaitErr := workflow.Await(ctx, func() bool { return completed == len(funcs) || innerErr != nil })
+	awaitErr := workflow.Await(
+		ctx,
+		func() bool { return completed == len(funcs) || innerErr != nil },
+	)
 	if awaitErr != nil {
 		return fmt.Errorf("failed waiting on concurrent funcs: %w", awaitErr)
 	}

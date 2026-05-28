@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
@@ -23,7 +24,10 @@ type ClientActivities struct {
 	Client client.Client
 }
 
-func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientActivity *kitchensink.ExecuteActivityAction_ClientActivity) error {
+func (ca *ClientActivities) ExecuteClientActivity(
+	ctx context.Context,
+	clientActivity *kitchensink.ExecuteActivityAction_ClientActivity,
+) error {
 	info := activity.GetInfo(ctx)
 	executor := &kitchensink.ClientActionsExecutor{
 		Client: ca.Client,
@@ -41,7 +45,10 @@ type KSWorkflowState struct {
 	workflowState *kitchensink.WorkflowState
 }
 
-func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
+func KitchenSinkWorkflow(
+	ctx workflow.Context,
+	params *kitchensink.WorkflowInput,
+) (*common.Payload, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
@@ -68,21 +75,25 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	}
 
 	// Setup update handler.
-	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
+	updateErr := workflow.SetUpdateHandlerWithOptions(
+		ctx,
+		"do_actions_update",
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
 			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
 			if payload != nil {
 				return payload, err
 			}
 			return state.workflowState, err
-		}, workflow.UpdateHandlerOptions{
+		},
+		workflow.UpdateHandlerOptions{
 			Validator: func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) error {
 				if actions.GetRejectMe() != nil {
 					return errors.New("rejected")
 				}
 				return nil
 			},
-		})
+		},
+	)
 	if updateErr != nil {
 		return nil, updateErr
 	}
@@ -102,7 +113,8 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			// Handle signal deduplication if signal ID is provided
 			if receivedID := sigActions.GetSignalId(); receivedID != 0 {
 				if isSignalAlreadyReceived(params, receivedID) {
-					workflow.GetLogger(ctx).Debug("Signal already received, skipping", "signalID", receivedID)
+					workflow.GetLogger(ctx).
+						Debug("Signal already received, skipping", "signalID", receivedID)
 					continue
 				}
 				handleSignalDeduplication(params, receivedID)
@@ -122,7 +134,8 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 	if params != nil && params.InitialActions != nil {
 		for _, actionSet := range params.InitialActions {
 			if ret, err := state.handleActionSet(ctx, actionSet); ret != nil || err != nil {
-				workflow.GetLogger(ctx).Debug("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
+				workflow.GetLogger(ctx).
+					Debug("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
 				// If there's an error, return immediately without waiting for signals
 				if err != nil {
 					return ret, err
@@ -176,9 +189,17 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			})
 		if err != nil || !ok {
 			if !ok {
-				err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
+				err = fmt.Errorf(
+					"timeout waiting for all signals before deadline, missing signals: %v, err: %w",
+					missingSignals,
+					err,
+				)
 			}
-			return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+			return nil, fmt.Errorf(
+				"failed waiting for signals, missing signals: %v, err: %w",
+				missingSignals,
+				err,
+			)
 		}
 	}
 
@@ -204,7 +225,11 @@ func (ws *KSWorkflowState) handleActionSet(
 	for _, action := range set.Actions {
 		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
-			if maybeReturnValue, maybeErr := ws.handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
+			if maybeReturnValue, maybeErr := ws.handleAction(
+				ctx,
+				action,
+			); maybeReturnValue != nil ||
+				maybeErr != nil {
 				returnValue, err = maybeReturnValue, maybeErr
 			}
 			actionsCompleted++
@@ -296,9 +321,12 @@ func (ws *KSWorkflowState) handleAction(
 			WorkflowID:       child.WorkflowId,
 			SearchAttributes: searchAttributes,
 		})
-		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
-			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
-		}, child.AwaitableChoice,
+		err := withAwaitableChoiceCustom(
+			ctx,
+			func(ctx workflow.Context) workflow.ChildWorkflowFuture {
+				return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
+			},
+			child.AwaitableChoice,
 			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
 				return fut.GetChildWorkflowExecution().Get(ctx, nil)
 			},
@@ -475,7 +503,11 @@ func withAwaitableChoiceCustom[F workflow.Future](
 	return err
 }
 
-func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
+func handleNexusOperation(
+	ctx workflow.Context,
+	nexusOp *kitchensink.ExecuteNexusOperation,
+	state *KSWorkflowState,
+) error {
 	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
@@ -522,7 +554,10 @@ func Delay(_ context.Context, delayFor time.Duration) error {
 }
 
 // RetryableError throws retryable errors for N attempts, then succeeds
-func RetryableError(ctx context.Context, config *kitchensink.ExecuteActivityAction_RetryableErrorActivity) error {
+func RetryableError(
+	ctx context.Context,
+	config *kitchensink.ExecuteActivityAction_RetryableErrorActivity,
+) error {
 	info := activity.GetInfo(ctx)
 	if info.Attempt <= config.FailAttempts {
 		return temporal.NewApplicationError("retryable error", "RetryableError", nil)
@@ -550,10 +585,14 @@ func Timeout(ctx context.Context, config *kitchensink.ExecuteActivityAction_Time
 }
 
 // Heartbeat skips heartbeats for N attempts (causing heartbeat timeout), then sends them
-func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_HeartbeatTimeoutActivity) error {
+func Heartbeat(
+	ctx context.Context,
+	config *kitchensink.ExecuteActivityAction_HeartbeatTimeoutActivity,
+) error {
 	info := activity.GetInfo(ctx)
 	shouldSendHeartbeats := info.Attempt > config.FailAttempts
-	// If we should not send heartbeats, run the activity until it is cancelled via heartbeat timeout.
+	// If we should not send heartbeats, run the activity until it is cancelled via heartbeat
+	// timeout.
 	if !shouldSendHeartbeats {
 		<-ctx.Done()
 		return ctx.Err()
@@ -590,7 +629,10 @@ type ReturnOrErr struct {
 	err   error
 }
 
-func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerInput) (string, error) {
+func NexusHandlerWorkflow(
+	ctx workflow.Context,
+	input *kitchensink.NexusHandlerInput,
+) (string, error) {
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},
 	}
@@ -603,17 +645,28 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 }
 
 // EchoSyncOperation returns the input synchronously without starting a workflow.
-var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
-	if len(input.BeforeActions) > 0 {
-		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
-	}
-	return input.Input, nil
-})
+var EchoSyncOperation = nexus.NewSyncOperation(
+	"echo-sync",
+	func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
+		if len(input.BeforeActions) > 0 {
+			return "", nexus.HandlerErrorf(
+				nexus.HandlerErrorTypeBadRequest,
+				"before_actions not supported in echo-sync",
+			)
+		}
+		return input.Input, nil
+	},
+)
 
-// EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
+// EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the
+// input.
 // Cancel is handled automatically by the SDK via the backing workflow.
-var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	return client.StartWorkflowOptions{
-		ID: opts.RequestID,
-	}, nil
-})
+var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation(
+	"echo-async",
+	NexusHandlerWorkflow,
+	func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+		return client.StartWorkflowOptions{
+			ID: opts.RequestID,
+		}, nil
+	},
+)

@@ -12,8 +12,9 @@ import (
 	"strings"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type Builder struct {
@@ -106,7 +107,16 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 	// If version not provided, try to read it from pyproject.toml
 	version := b.SdkOptions.Version
 	if version == "" {
-		cmd := exec.CommandContext(ctx, "uv", "tree", "--quiet", "--depth", "0", "--package", "temporalio")
+		cmd := exec.CommandContext(
+			ctx,
+			"uv",
+			"tree",
+			"--quiet",
+			"--depth",
+			"0",
+			"--package",
+			"temporalio",
+		)
 		cmd.Dir = baseDir
 		out, err := cmd.Output()
 		if err != nil {
@@ -171,7 +181,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		const temporalTypeScriptSDKPackage = "@temporalio/client"
 		version = pkg.Dependencies[temporalTypeScriptSDKPackage]
 		if version == "" {
-			return nil, fmt.Errorf("version not found in package.json for %s", temporalTypeScriptSDKPackage)
+			return nil, fmt.Errorf(
+				"version not found in package.json for %s",
+				temporalTypeScriptSDKPackage,
+			)
 		}
 	}
 
@@ -198,7 +211,11 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
-		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+		Includes: []string{
+			"../src/**/*.ts",
+			"../src/protos/json-module.js",
+			"../src/protos/root.js",
+		},
 		MoreDependencies: map[string]string{
 			"@temporalio/omes-project-harness": "file:../harness",
 			"winston":                          "^3.11.0",

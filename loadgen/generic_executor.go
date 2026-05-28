@@ -97,8 +97,13 @@ func (g *genericRun) Run(ctx context.Context) error {
 
 	var rateLimiter <-chan time.Time
 	if g.config.MaxIterationsPerSecond > 0 {
-		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.MaxIterationsPerSecond)
-		rateLimiter = time.Tick(time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond))
+		g.logger.Debugf(
+			"Will run at rate of %v iteration(s) per second",
+			g.config.MaxIterationsPerSecond,
+		)
+		rateLimiter = time.Tick(
+			time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond),
+		)
 	}
 
 	// Run all until we've gotten an error or reached iteration limit or timeout
@@ -172,8 +177,10 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for
 	// executions to complete. It is expected that whatever is running omes may choose to enforce
 	// a hard timeout if waiting for started executions to complete exceeds a certain threshold.
-	g.logger.Infof("Run cooldown: stopped starting new iterations and waiting for %d iterations to complete",
-		currentlyRunning)
+	g.logger.Infof(
+		"Run cooldown: stopped starting new iterations and waiting for %d iterations to complete",
+		currentlyRunning,
+	)
 	for runErr == nil && currentlyRunning > 0 {
 		waitOne(ctx)
 		if ctx.Err() != nil {

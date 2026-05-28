@@ -20,19 +20,20 @@ package scenarios
 //
 // Options:
 //
-//	fast-activity-count   number of concurrent noop (I/O-bound) activities per workflow (default: 5)
-//	slow-activity-count   number of concurrent delay (compute-bound) activities per workflow (default: 2)
+// 	fast-activity-count   number of concurrent noop (I/O-bound) activities per workflow (default: 5)
+// 	slow-activity-count   number of concurrent delay (compute-bound) activities per workflow
+// (default: 2)
 //	slow-activity-duration duration of each slow activity, e.g. "5s", "1m" (default: 2s)
 
 import (
 	"context"
 	"time"
 
-	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/temporalio/omes/loadgen"
+	. "github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 const (
@@ -59,7 +60,10 @@ func init() {
 				PrepareTestInput: func(_ context.Context, info loadgen.ScenarioInfo, params *TestInput) error {
 					fastCount := info.ScenarioOptionInt(sbFastActivityCountFlag, 5)
 					slowCount := info.ScenarioOptionInt(sbSlowActivityCountFlag, 2)
-					slowDuration := info.ScenarioOptionDuration(sbSlowActivityDuration, 2*time.Second)
+					slowDuration := info.ScenarioOptionDuration(
+						sbSlowActivityDuration,
+						2*time.Second,
+					)
 
 					// StartToCloseTimeout must exceed the activity's own sleep duration.
 					slowTimeout := max(60*time.Second, slowDuration*2)
@@ -71,17 +75,23 @@ func init() {
 
 					slowActions := make([]*Action, slowCount)
 					for i := range slowActions {
-						slowActions[i] = DelayActivity(slowDuration, func(a *ExecuteActivityAction) *Action {
-							a.StartToCloseTimeout = durationpb.New(slowTimeout)
-							a.Locality = &ExecuteActivityAction_Remote{Remote: &RemoteActivityOptions{}}
-							return &Action{Variant: &Action_ExecActivity{ExecActivity: a}}
-						})
+						slowActions[i] = DelayActivity(
+							slowDuration,
+							func(a *ExecuteActivityAction) *Action {
+								a.StartToCloseTimeout = durationpb.New(slowTimeout)
+								a.Locality = &ExecuteActivityAction_Remote{
+									Remote: &RemoteActivityOptions{},
+								}
+								return &Action{Variant: &Action_ExecActivity{ExecActivity: a}}
+							},
+						)
 					}
 
 					params.WorkflowInput.InitialActions = []*ActionSet{
 						// Fast I/O-bound activities — all fire concurrently.
 						{Actions: fastActions, Concurrent: true},
-						// Slow compute-bound activities — all fire concurrently after fast ones complete.
+						// Slow compute-bound activities — all fire concurrently after fast ones
+						// complete.
 						{Actions: slowActions, Concurrent: true},
 						{Actions: []*Action{NewEmptyReturnResultAction()}},
 					}

@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"go.temporal.io/api/workflowservice/v1"
+
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
-	"go.temporal.io/api/workflowservice/v1"
 )
 
 func init() {
@@ -18,9 +19,11 @@ func init() {
 			"example, can be run with: run-scenario-with-worker --scenario state_transitions_steady --language go " +
 			"--embedded-server --duration 5m --option state-transitions-per-second=3",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
-				return (&stateTransitionsSteady{runOptions}).run(ctx)
-			})
+			return loadgen.ExecutorFunc(
+				func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
+					return (&stateTransitionsSteady{runOptions}).run(ctx)
+				},
+			)
 		},
 	})
 }
@@ -67,7 +70,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	} else if err := workflowRun.Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed executing initial workflow: %w", err)
 	}
-	resp, err := s.Client.DescribeWorkflowExecution(ctx, workflowRun.GetID(), workflowRun.GetRunID())
+	resp, err := s.Client.DescribeWorkflowExecution(
+		ctx,
+		workflowRun.GetID(),
+		workflowRun.GetRunID(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed describing workflow: %w", err)
 	}
@@ -101,7 +108,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 			} else {
 				consecutiveErrCount++
 				if consecutiveErrCount >= maxConsecutiveErrors {
-					return fmt.Errorf("got %v consecutive errors, most recent: %w", maxConsecutiveErrors, err)
+					return fmt.Errorf(
+						"got %v consecutive errors, most recent: %w",
+						maxConsecutiveErrors,
+						err,
+					)
 				}
 			}
 		case <-ticker.C:

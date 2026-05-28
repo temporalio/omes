@@ -15,7 +15,8 @@ type distValueType interface {
 }
 
 type distribution[T distValueType] interface {
-	// Sample returns a random value from the distribution using the provided random number generator.
+	// Sample returns a random value from the distribution using the provided random number
+	// generator.
 	Sample(rng *rand.Rand) (T, bool)
 	// GetType returns the distribution type identifier.
 	GetType() string
@@ -607,7 +608,11 @@ func parseFromJSON[T any](rawMap map[string]json.RawMessage, fieldName string) (
 	case time.Duration:
 		var strValue string
 		if err := json.Unmarshal(rawMsg, &strValue); err != nil {
-			return zero, fmt.Errorf("failed to parse '%s' as duration or number: %w", fieldName, err)
+			return zero, fmt.Errorf(
+				"failed to parse '%s' as duration or number: %w",
+				fieldName,
+				err,
+			)
 		}
 
 		durVal, err := time.ParseDuration(strValue)

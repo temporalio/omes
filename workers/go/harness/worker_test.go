@@ -59,7 +59,11 @@ func TestRunWorkerCLIPassesSharedClientAndWorkerContext(t *testing.T) {
 		t.Fatalf("expected 2 worker contexts, got %d", len(gotContexts))
 	}
 	if gotContexts[0].TaskQueue != "omes-1" || gotContexts[1].TaskQueue != "omes-2" {
-		t.Fatalf("unexpected task queues: %q, %q", gotContexts[0].TaskQueue, gotContexts[1].TaskQueue)
+		t.Fatalf(
+			"unexpected task queues: %q, %q",
+			gotContexts[0].TaskQueue,
+			gotContexts[1].TaskQueue,
+		)
 	}
 	for _, context := range gotContexts {
 		if !context.ErrOnUnimplemented {

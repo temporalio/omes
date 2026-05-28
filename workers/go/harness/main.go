@@ -35,7 +35,9 @@ func Run(app App) error {
 		return dispatchLambdaWorker(app.LambdaWorker)
 	case "project-server":
 		if app.Project == nil {
-			return fmt.Errorf("Wanted project-server but no project handlers registered for this app")
+			return fmt.Errorf(
+				"Wanted project-server but no project handlers registered for this app",
+			)
 		}
 		return dispatchProjectCLI(*app.Project, app.ClientFactory, argv[1:])
 	default:

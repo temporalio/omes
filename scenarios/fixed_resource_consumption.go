@@ -5,10 +5,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 // This scenario is meant to be adjusted and run manually to evaluate the performance of different
@@ -40,7 +41,11 @@ func parallelRandomDelays(
 	maxRuntime time.Duration) *kitchensink.ActionSet {
 	actions := make([]*kitchensink.Action, numConccurrent)
 	for i := 0; i < numConccurrent; i++ {
-		randMs := rand.Float64()*float64(maxRuntime.Milliseconds()-minRuntime.Milliseconds()) + float64(minRuntime.Milliseconds())
+		randMs := rand.Float64()*float64(
+			maxRuntime.Milliseconds()-minRuntime.Milliseconds(),
+		) + float64(
+			minRuntime.Milliseconds(),
+		)
 		actions[i] = &kitchensink.Action{
 			Variant: &kitchensink.Action_ExecActivity{
 				ExecActivity: &kitchensink.ExecuteActivityAction{
@@ -76,7 +81,9 @@ func init() {
 												ActivityType: &kitchensink.ExecuteActivityAction_Delay{
 													Delay: durationpb.New(time.Second * 2),
 												},
-												StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
+												StartToCloseTimeout: &durationpb.Duration{
+													Seconds: 30,
+												},
 											},
 										},
 									},
@@ -102,7 +109,9 @@ func init() {
 												ActivityType: &kitchensink.ExecuteActivityAction_Delay{
 													Delay: durationpb.New(time.Second * 5),
 												},
-												StartToCloseTimeout: &durationpb.Duration{Seconds: 30},
+												StartToCloseTimeout: &durationpb.Duration{
+													Seconds: 30,
+												},
 											},
 										},
 									},

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/temporalio/omes/workers/go/harness/api"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 	sdkworker "go.temporal.io/sdk/worker"
@@ -20,6 +19,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+
+	"github.com/temporalio/omes/workers/go/harness/api"
 )
 
 type clientStub struct {
@@ -69,7 +70,10 @@ func TestProjectServerExecutesWorkflowAgainstRealTemporalServer(t *testing.T) {
 	}
 	startEchoWorker := func(client sdkclient.Client) {
 		worker := sdkworker.New(client, taskQueue, sdkworker.Options{})
-		worker.RegisterWorkflowWithOptions(projectHarnessEchoWorkflow, workflow.RegisterOptions{Name: projectHarnessEchoWorkflowName})
+		worker.RegisterWorkflowWithOptions(
+			projectHarnessEchoWorkflow,
+			workflow.RegisterOptions{Name: projectHarnessEchoWorkflowName},
+		)
 		if err := worker.Start(); err != nil {
 			t.Fatalf("failed to start worker: %v", err)
 		}
@@ -161,7 +165,10 @@ func TestProjectServerExecutesWorkflowAgainstRealTemporalServer(t *testing.T) {
 	}()
 	defer server.Stop()
 
-	conn, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		listener.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to dial grpc server: %v", err)
 	}
@@ -189,7 +196,8 @@ func TestProjectInitRejectsInvalidTLSConfiguration(t *testing.T) {
 			TlsCertPath:   "/tmp/cert.pem",
 		},
 	})
-	if status.Code(err) != codes.InvalidArgument || status.Convert(err).Message() != "Client cert specified, but not client key!" {
+	if status.Code(err) != codes.InvalidArgument ||
+		status.Convert(err).Message() != "Client cert specified, but not client key!" {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -246,7 +254,8 @@ func TestProjectExecuteRequiresInit(t *testing.T) {
 	}, nil, nil)
 
 	_, err := server.Execute(context.Background(), makeExecuteRequest())
-	if status.Code(err) != codes.FailedPrecondition || status.Convert(err).Message() != "Init must be called before Execute" {
+	if status.Code(err) != codes.FailedPrecondition ||
+		status.Convert(err).Message() != "Init must be called before Execute" {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -289,7 +298,8 @@ func TestProjectClientFactoryFailureMapsToInternalError(t *testing.T) {
 	}, nil)
 
 	_, err := server.Init(context.Background(), makeInitRequest())
-	if status.Code(err) != codes.Internal || status.Convert(err).Message() != "failed to create client: boom" {
+	if status.Code(err) != codes.Internal ||
+		status.Convert(err).Message() != "failed to create client: boom" {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -303,12 +313,14 @@ func TestProjectInitHandlerFailureLeavesServerUninitialized(t *testing.T) {
 	}, func(ClientConfig) (sdkclient.Client, error) { return clientStub{}, nil }, nil)
 
 	_, err := server.Init(context.Background(), makeInitRequest())
-	if status.Code(err) != codes.Internal || status.Convert(err).Message() != "init handler failed: bad init" {
+	if status.Code(err) != codes.Internal ||
+		status.Convert(err).Message() != "init handler failed: bad init" {
 		t.Fatalf("unexpected init error: %v", err)
 	}
 
 	_, err = server.Execute(context.Background(), makeExecuteRequest())
-	if status.Code(err) != codes.FailedPrecondition || status.Convert(err).Message() != "Init must be called before Execute" {
+	if status.Code(err) != codes.FailedPrecondition ||
+		status.Convert(err).Message() != "Init must be called before Execute" {
 		t.Fatalf("unexpected execute error: %v", err)
 	}
 }
@@ -324,7 +336,8 @@ func TestProjectExecuteHandlerFailureMapsToInternalError(t *testing.T) {
 		t.Fatalf("Init returned error: %v", err)
 	}
 	_, err := server.Execute(context.Background(), makeExecuteRequest())
-	if status.Code(err) != codes.Internal || status.Convert(err).Message() != "execute handler failed: bad execute" {
+	if status.Code(err) != codes.Internal ||
+		status.Convert(err).Message() != "execute handler failed: bad execute" {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -10,8 +10,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/metrics"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/metrics"
 )
 
 // InfoResponse is returned by the /info endpoint on the process metrics server.
@@ -81,8 +82,8 @@ type MetricsOptions struct {
 	// MetricsVersionTag is the SDK version/ref to report in metrics.
 	// This is used by the sidecar's /info endpoint and is NOT passed to the worker.
 	// If empty, falls back to the --version flag value.
-	MetricsVersionTag           string
-	prometheusInstanceOptions   PrometheusInstanceFlags
+	MetricsVersionTag         string
+	prometheusInstanceOptions PrometheusInstanceFlags
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -98,17 +99,40 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 	}
 	m.usedPrefix = prefix
 	m.fs = pflag.NewFlagSet("metrics_options", pflag.ExitOnError)
-	m.fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
-	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
-	m.fs.StringVar(&m.WorkerProcessMetricsAddress, prefix+"process-metrics-address", "", "Address for separate process metrics server (CPU/memory only)")
-	m.fs.StringVar(&m.MetricsVersionTag, prefix+"metrics-version-tag", "", "SDK version/ref to report in metrics (sidecar only, not passed to worker)")
+	m.fs.StringVar(
+		&m.PrometheusListenAddress,
+		prefix+"prom-listen-address",
+		"",
+		"Prometheus listen address",
+	)
+	m.fs.StringVar(
+		&m.PrometheusHandlerPath,
+		prefix+"prom-handler-path",
+		"/metrics",
+		"Prometheus handler path",
+	)
+	m.fs.StringVar(
+		&m.WorkerProcessMetricsAddress,
+		prefix+"process-metrics-address",
+		"",
+		"Address for separate process metrics server (CPU/memory only)",
+	)
+	m.fs.StringVar(
+		&m.MetricsVersionTag,
+		prefix+"metrics-version-tag",
+		"",
+		"SDK version/ref to report in metrics (sidecar only, not passed to worker)",
+	)
 	m.fs.AddFlagSet(m.prometheusInstanceOptions.FlagSet(prefix))
 	return m.fs
 }
 
 // MustCreateMetrics sets up Prometheus based metrics and starts an HTTP server
 // for serving SDK metrics.
-func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.SugaredLogger) *metrics.Metrics {
+func (m *MetricsOptions) MustCreateMetrics(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+) *metrics.Metrics {
 	registry := prometheus.NewRegistry()
 	var server *http.Server
 
@@ -128,7 +152,10 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 	}
 }
 
-func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
+func (m *MetricsOptions) mustInitPrometheusServer(
+	logger *zap.SugaredLogger,
+	registry *prometheus.Registry,
+) *http.Server {
 	address := m.PrometheusListenAddress
 	handlerPath := m.PrometheusHandlerPath
 	if handlerPath == "" {
@@ -165,12 +192,42 @@ func (p *PrometheusInstanceFlags) FlagSet(prefix string) *pflag.FlagSet {
 	}
 	p.fs = pflag.NewFlagSet(prefix+"prom_instance_options", pflag.ExitOnError)
 	p.fs.StringVar(&p.Address, prefix+"prom-instance-addr", "", "Prometheus instance address")
-	p.fs.StringVar(&p.ConfigPath, prefix+"prom-instance-config", "prom-config.yml", "Start a local Prometheus instance with the specified config file")
+	p.fs.StringVar(
+		&p.ConfigPath,
+		prefix+"prom-instance-config",
+		"prom-config.yml",
+		"Start a local Prometheus instance with the specified config file",
+	)
 	p.fs.BoolVar(&p.Snapshot, "prom-snapshot", false, "Create a TSDB snapshot on shutdown")
-	p.fs.StringVar(&p.ExportWorkerMetricsPath, prefix+"prom-export-worker-metrics", "", "Export worker process metrics to the specified file on shutdown")
-	p.fs.StringVar(&p.ExportWorkerMetricsJob, prefix+"prom-export-worker-job", "omes-worker", "Name of the worker job to export SDK metrics for")
-	p.fs.StringVar(&p.ExportProcessMetricsJob, prefix+"prom-export-process-job", "omes-worker-process", "Name of the process metrics job to export")
-	p.fs.DurationVar(&p.ExportMetricsStep, prefix+"prom-export-metrics-step", 15*time.Second, "Step interval to sample timeseries metrics")
-	p.fs.StringVar(&p.ExportWorkerInfoAddress, prefix+"prom-export-worker-info-address", "", "Address to fetch /info from during export (e.g., localhost:9091)")
+	p.fs.StringVar(
+		&p.ExportWorkerMetricsPath,
+		prefix+"prom-export-worker-metrics",
+		"",
+		"Export worker process metrics to the specified file on shutdown",
+	)
+	p.fs.StringVar(
+		&p.ExportWorkerMetricsJob,
+		prefix+"prom-export-worker-job",
+		"omes-worker",
+		"Name of the worker job to export SDK metrics for",
+	)
+	p.fs.StringVar(
+		&p.ExportProcessMetricsJob,
+		prefix+"prom-export-process-job",
+		"omes-worker-process",
+		"Name of the process metrics job to export",
+	)
+	p.fs.DurationVar(
+		&p.ExportMetricsStep,
+		prefix+"prom-export-metrics-step",
+		15*time.Second,
+		"Step interval to sample timeseries metrics",
+	)
+	p.fs.StringVar(
+		&p.ExportWorkerInfoAddress,
+		prefix+"prom-export-worker-info-address",
+		"",
+		"Address to fetch /info from during export (e.g., localhost:9091)",
+	)
 	return p.fs
 }

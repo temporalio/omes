@@ -47,7 +47,10 @@ func (p *PrometheusInstanceOptions) IsConfigured() bool {
 	return p.Address != "" && p.ConfigPath != ""
 }
 
-func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context, logger *zap.SugaredLogger) *PrometheusInstance {
+func (p *PrometheusInstanceOptions) StartPrometheusInstance(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+) *PrometheusInstance {
 	cmd := exec.CommandContext(ctx, "prometheus",
 		"--config.file="+p.ConfigPath,
 		"--web.enable-admin-api", // Required for snapshot API
@@ -60,7 +63,11 @@ func (p *PrometheusInstanceOptions) StartPrometheusInstance(ctx context.Context,
 		logger.Fatalf("Failed to start Prometheus with config %s: %v", p.ConfigPath, err)
 	}
 
-	logger.Infof("Started local Prometheus instance with config: %s (PID: %d)", p.ConfigPath, cmd.Process.Pid)
+	logger.Infof(
+		"Started local Prometheus instance with config: %s (PID: %d)",
+		p.ConfigPath,
+		cmd.Process.Pid,
+	)
 
 	client, err := api.NewClient(api.Config{Address: "http://" + p.Address})
 	if err != nil {
@@ -108,7 +115,11 @@ func (p *PrometheusInstance) waitForReady(ctx context.Context, timeout time.Dura
 	}
 }
 
-func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) {
+func (i *PrometheusInstance) Shutdown(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	scenario, runID, runFamily string,
+) {
 	// Export worker metrics if configured
 	if i.opts.ExportWorkerMetricsPath != "" {
 		err := i.exportWorkerMetrics(ctx, logger, scenario, runID, runFamily)
@@ -146,7 +157,11 @@ func (i *PrometheusInstance) Shutdown(ctx context.Context, logger *zap.SugaredLo
 	}
 }
 
-func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
+func (i *PrometheusInstance) exportWorkerMetrics(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	scenario, runID, runFamily string,
+) error {
 	start, end, err := i.getTimeRange()
 	if err != nil {
 		return fmt.Errorf("failed to get time range: %w", err)
@@ -163,15 +178,35 @@ func (i *PrometheusInstance) exportWorkerMetrics(ctx context.Context, logger *za
 	if i.opts.ExportWorkerInfoAddress != "" {
 		workerInfo, err = fetchWorkerInfo(i.opts.ExportWorkerInfoAddress)
 		if err != nil {
-			logger.Warnf("Failed to fetch worker info from %s: %v (continuing without worker metadata)", i.opts.ExportWorkerInfoAddress, err)
+			logger.Warnf(
+				"Failed to fetch worker info from %s: %v (continuing without worker metadata)",
+				i.opts.ExportWorkerInfoAddress,
+				err,
+			)
 		} else {
-			logger.Infof("Fetched worker info: sdk_version=%s, build_id=%s, language=%s", workerInfo.SDKVersion, workerInfo.BuildID, workerInfo.Language)
+			logger.Infof(
+				"Fetched worker info: sdk_version=%s, build_id=%s, language=%s",
+				workerInfo.SDKVersion,
+				workerInfo.BuildID,
+				workerInfo.Language,
+			)
 		}
 	}
 
 	queries := i.buildMetricQueries()
 
-	return i.exportWorkerMetricsParquet(ctx, file, queries, start, end, workerInfo, logger, scenario, runID, runFamily)
+	return i.exportWorkerMetricsParquet(
+		ctx,
+		file,
+		queries,
+		start,
+		end,
+		workerInfo,
+		logger,
+		scenario,
+		runID,
+		runFamily,
+	)
 }
 
 func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
@@ -181,7 +216,10 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	// Process metrics (from sidecar)
 	queries := []metricQuery{
 		{"process_cpu_percent", fmt.Sprintf(`process_cpu_percent{job="%s"}`, processJob)},
-		{"process_memory_bytes", fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob)},
+		{
+			"process_memory_bytes",
+			fmt.Sprintf(`process_resident_memory_bytes{job="%s"}`, processJob),
+		},
 		{"process_memory_percent", fmt.Sprintf(`process_memory_percent{job="%s"}`, processJob)},
 	}
 
@@ -209,10 +247,16 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 	// Latency histogram metrics
 	histogramMetrics := []struct{ name, promName string }{
 		{"workflow_task_execution_latency_seconds", "temporal_workflow_task_execution_latency"},
-		{"workflow_task_schedule_to_start_latency_seconds", "temporal_workflow_task_schedule_to_start_latency"},
+		{
+			"workflow_task_schedule_to_start_latency_seconds",
+			"temporal_workflow_task_schedule_to_start_latency",
+		},
 		{"workflow_endtoend_latency_seconds", "temporal_workflow_endtoend_latency"},
 		{"activity_execution_latency_seconds", "temporal_activity_execution_latency"},
-		{"activity_schedule_to_start_latency_seconds", "temporal_activity_schedule_to_start_latency"},
+		{
+			"activity_schedule_to_start_latency_seconds",
+			"temporal_activity_schedule_to_start_latency",
+		},
 	}
 	for _, m := range histogramMetrics {
 		queries = append(queries, histogramQuantileQuery(m.name, m.promName, job, 0.50, "p50"))
@@ -269,7 +313,13 @@ func (i *PrometheusInstance) exportWorkerMetricsParquet(
 			return fmt.Errorf("export cancelled: %w", err)
 		}
 
-		dataPoints, err := i.queryPrometheusRange(ctx, q.query, start, end, i.opts.ExportMetricsStep)
+		dataPoints, err := i.queryPrometheusRange(
+			ctx,
+			q.query,
+			start,
+			end,
+			i.opts.ExportMetricsStep,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to query %s: %w", q.name, err)
 		}
@@ -316,13 +366,22 @@ func (i *PrometheusInstance) getTimeRange() (start, end time.Time, err error) {
 	end = time.Now()
 
 	if start.IsZero() || end.IsZero() || !start.Before(end) {
-		return time.Time{}, time.Time{}, fmt.Errorf("invalid time range (start=%v, end=%v)", start, end)
+		return time.Time{}, time.Time{}, fmt.Errorf(
+			"invalid time range (start=%v, end=%v)",
+			start,
+			end,
+		)
 	}
 
 	return start, end, nil
 }
 
-func (i *PrometheusInstance) queryPrometheusRange(ctx context.Context, query string, start, end time.Time, step time.Duration) ([]MetricDataPoint, error) {
+func (i *PrometheusInstance) queryPrometheusRange(
+	ctx context.Context,
+	query string,
+	start, end time.Time,
+	step time.Duration,
+) ([]MetricDataPoint, error) {
 	result, _, err := i.api.QueryRange(ctx, query, v1.Range{
 		Start: start,
 		End:   end,
@@ -411,10 +470,19 @@ func gaugeQuery(name, promName, job string) metricQuery {
 	return metricQuery{name, fmt.Sprintf(`sum(%s{job="%s"})`, promName, job)}
 }
 
-func histogramQuantileQuery(name, promName, job string, quantile float64, percentile string) metricQuery {
+func histogramQuantileQuery(
+	name, promName, job string,
+	quantile float64,
+	percentile string,
+) metricQuery {
 	return metricQuery{
 		name + "_" + percentile,
-		fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`, quantile, promName, job),
+		fmt.Sprintf(
+			`histogram_quantile(%.2f, sum(rate(%s_bucket{job="%s"}[1m])) by (le))`,
+			quantile,
+			promName,
+			job,
+		),
 	}
 }
 

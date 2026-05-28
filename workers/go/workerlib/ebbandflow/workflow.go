@@ -6,16 +6,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/ebbandflow"
-	"github.com/temporalio/omes/workers/go/workerlib/workflowutils"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+
+	"github.com/temporalio/omes/loadgen/ebbandflow"
+	"github.com/temporalio/omes/workers/go/workerlib/workflowutils"
 )
 
 var activityStub = Activities{}
 
-// EbbAndFlowTrackWorkflow executes activities and returns their schedule-to-start times with fairness data
-func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowParams) (*ebbandflow.WorkflowOutput, error) {
+// EbbAndFlowTrackWorkflow executes activities and returns their schedule-to-start times with
+// fairness data
+func EbbAndFlowTrackWorkflow(
+	ctx workflow.Context,
+	params *ebbandflow.WorkflowParams,
+) (*ebbandflow.WorkflowOutput, error) {
 	rng := rand.New(rand.NewSource(workflow.Now(ctx).UnixNano()))
 	activities := params.SleepActivities.Sample(rng)
 
@@ -51,7 +56,8 @@ func EbbAndFlowTrackWorkflow(ctx workflow.Context, params *ebbandflow.WorkflowPa
 			// Execute activity
 			var activityResult ActivityExecutionResult
 			actCtx := workflow.WithActivityOptions(ctx, opts)
-			err := workflow.ExecuteActivity(actCtx, activityStub.MeasureLatencyActivity, activity).Get(ctx, &activityResult)
+			err := workflow.ExecuteActivity(actCtx, activityStub.MeasureLatencyActivity, activity).
+				Get(ctx, &activityResult)
 			if err != nil {
 				workflow.GetLogger(ctx).Error("Activity execution failed", "error", err)
 				return err

@@ -110,8 +110,13 @@ func MinVisibilityCountEventually(
 	return nil
 }
 
-// VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
-func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string) error {
+// VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given
+// search attribute.
+func VerifyNoFailedWorkflows(
+	ctx context.Context,
+	info ScenarioInfo,
+	searchAttribute, runID string,
+) error {
 	var errors []string
 
 	for _, status := range []enums.WorkflowExecutionStatus{
@@ -121,16 +126,26 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 		statusQuery := fmt.Sprintf(
 			"%s='%s' and ExecutionStatus = '%s'",
 			searchAttribute, runID, status)
-		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query:     statusQuery,
-		})
+		visibilityCount, err := info.Client.CountWorkflow(
+			ctx,
+			&workflowservice.CountWorkflowExecutionsRequest{
+				Namespace: info.Namespace,
+				Query:     statusQuery,
+			},
+		)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("failed to run query %q: %v", statusQuery, err))
 			continue
 		}
 		if visibilityCount.Count > 0 {
-			errors = append(errors, fmt.Sprintf("unexpected %d workflows with status %s", visibilityCount.Count, status))
+			errors = append(
+				errors,
+				fmt.Sprintf(
+					"unexpected %d workflows with status %s",
+					visibilityCount.Count,
+					status,
+				),
+			)
 		}
 	}
 
@@ -174,7 +189,10 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 	var exportErrors []string
 	for _, execution := range resp.Executions {
 		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
-			exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
+			exportErrors = append(
+				exportErrors,
+				fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err),
+			)
 		}
 	}
 
@@ -182,7 +200,11 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 		len(resp.Executions)-len(exportErrors), outputDir)
 
 	if len(exportErrors) > 0 {
-		return fmt.Errorf("%d workflow history exports failed: %s", len(exportErrors), strings.Join(exportErrors, "\n "))
+		return fmt.Errorf(
+			"%d workflow history exports failed: %s",
+			len(exportErrors),
+			strings.Join(exportErrors, "\n "),
+		)
 	}
 	return nil
 }
@@ -212,7 +234,13 @@ func exportSingleWorkflowHistory(
 	workflowID := execution.Execution.WorkflowId
 	runID := execution.Execution.RunId
 
-	historyIter := c.GetWorkflowHistory(ctx, workflowID, runID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	historyIter := c.GetWorkflowHistory(
+		ctx,
+		workflowID,
+		runID,
+		false,
+		enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
+	)
 	var events []*history.HistoryEvent
 	for historyIter.HasNext() {
 		event, err := historyIter.Next()

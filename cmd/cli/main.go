@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
 	_ "github.com/temporalio/omes/scenarios"         // Register scenarios (side-effect)
 	_ "github.com/temporalio/omes/scenarios/project" // Register project scenario
 )

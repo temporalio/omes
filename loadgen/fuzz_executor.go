@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/golang/protobuf/proto"
+
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 

@@ -175,17 +175,41 @@ func lintAndFormatTypescriptWorker(ctx context.Context, workerDir string) error 
 	}
 
 	fmt.Println("Formatting TypeScript harness...")
-	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "format"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"npm",
+		"run",
+		"-w",
+		"@temporalio/omes-project-harness",
+		"format",
+	); err != nil {
 		return err
 	}
 
 	fmt.Println("Linting TypeScript harness...")
-	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "lint"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"npm",
+		"run",
+		"-w",
+		"@temporalio/omes-project-harness",
+		"lint",
+	); err != nil {
 		return err
 	}
 
 	fmt.Println("Compiling TypeScript harness...")
-	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "typecheck"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"npm",
+		"run",
+		"-w",
+		"@temporalio/omes-project-harness",
+		"typecheck",
+	); err != nil {
 		return err
 	}
 
@@ -260,7 +284,14 @@ func lintAndFormatDotnetWorker(ctx context.Context, workerDir string) error {
 	}
 
 	fmt.Println("Compiling .NET worker...")
-	if err := runCommandInDir(ctx, workerDir, "dotnet", "build", "--configuration", "Library"); err != nil {
+	if err := runCommandInDir(
+		ctx,
+		workerDir,
+		"dotnet",
+		"build",
+		"--configuration",
+		"Library",
+	); err != nil {
 		return err
 	}
 

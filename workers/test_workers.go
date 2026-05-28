@@ -8,9 +8,10 @@ import (
 	"sync"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
-	"go.uber.org/zap"
 )
 
 type workerPool struct {

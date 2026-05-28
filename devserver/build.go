@@ -30,7 +30,12 @@ var buildMutexes sync.Map // map[srcDir]*sync.Mutex
 // binary records which sha is cached, so the next call with the same gitRef
 // skips clone+build. When clone is false, srcDir is used as-is and always
 // rebuilt (caller may have uncommitted changes).
-func buildServer(ctx context.Context, logger *zap.SugaredLogger, srcDir, gitRef string, clone bool) (string, error) {
+func buildServer(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	srcDir, gitRef string,
+	clone bool,
+) (string, error) {
 	srcDir, err := filepath.Abs(srcDir)
 	if err != nil {
 		return "", fmt.Errorf("resolve source dir: %w", err)

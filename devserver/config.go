@@ -57,7 +57,13 @@ func allocatePorts(host string) ([portCount]int, error) {
 		port, l, err := tryAllocatePort(host, used)
 		if err != nil {
 			return [portCount]int{},
-				fmt.Errorf("allocatePorts: no free port in [%d, %d) after %d attempts: %w", safePortMin, safePortMax, maxPortAllocationAttempts, err)
+				fmt.Errorf(
+					"allocatePorts: no free port in [%d, %d) after %d attempts: %w",
+					safePortMin,
+					safePortMax,
+					maxPortAllocationAttempts,
+					err,
+				)
 		}
 		listeners = append(listeners, l)
 		ports[i] = port
@@ -90,7 +96,12 @@ func tryAllocatePort(host string, used map[int]struct{}) (int, net.Listener, err
 // specific variables that map our Options into the template's env keys. Errors
 // on unsupported drivers so Start surfaces misconfiguration before the
 // expensive clone+build.
-func buildServerEnv(p PersistenceOptions, c ClusterEndpoint, dynConfigPath, host string, ports [portCount]int) ([]string, error) {
+func buildServerEnv(
+	p PersistenceOptions,
+	c ClusterEndpoint,
+	dynConfigPath, host string,
+	ports [portCount]int,
+) ([]string, error) {
 	env := slices.Clone(os.Environ())
 	add := func(k, v string) { env = append(env, k+"="+v) }
 
@@ -139,8 +150,11 @@ func dynamicConfigDefaults(frontendHTTPAddr string) map[string]any {
 		// Allows SDK/server minor version skew.
 		"frontend.enableServerVersionCheck": false,
 		// Older server versions fail Nexus tasks when the callback URL template is unset.
-		"component.nexusoperations.callback.endpoint.template": fmt.Sprintf("http://%s/namespaces/{{.NamespaceName}}/nexus/callback", frontendHTTPAddr),
-		"component.nexusoperations.useSystemCallbackURL":       true,
+		"component.nexusoperations.callback.endpoint.template": fmt.Sprintf(
+			"http://%s/namespaces/{{.NamespaceName}}/nexus/callback",
+			frontendHTTPAddr,
+		),
+		"component.nexusoperations.useSystemCallbackURL": true,
 		// Eliminate cache races.
 		"system.forceSearchAttributesCacheRefreshOnRead": true,
 		"system.forceNexusEndpointRefreshOnRead":         true,
@@ -152,7 +166,10 @@ type dynamicConfigEntry struct {
 	Constraints map[string]any `yaml:"constraints"`
 }
 
-func writeDynamicConfig(workDir, frontendHTTPAddr string, overrides map[string]any) (string, error) {
+func writeDynamicConfig(
+	workDir, frontendHTTPAddr string,
+	overrides map[string]any,
+) (string, error) {
 	cfg := dynamicConfigDefaults(frontendHTTPAddr)
 	maps.Copy(cfg, overrides)
 

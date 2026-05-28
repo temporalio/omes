@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers"
 )
@@ -84,7 +85,11 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	workerErr := <-workerErrCh
 	if scenarioErr != nil {
 		if workerErr != nil {
-			return fmt.Errorf("worker failed with: %v, scenario failed with: %w", workerErr, scenarioErr)
+			return fmt.Errorf(
+				"worker failed with: %v, scenario failed with: %w",
+				workerErr,
+				scenarioErr,
+			)
 		}
 		return fmt.Errorf("scenario failed: %w", scenarioErr)
 	} else if workerErr != nil {

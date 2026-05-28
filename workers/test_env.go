@@ -11,10 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/devserver"
-	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/versions"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
@@ -22,6 +18,11 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/devserver"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/versions"
 )
 
 const (
@@ -202,7 +203,13 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Namespace = testNamespace
 
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
-	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
+	workerShutdownCh := env.workerPool.startWorker(
+		testCtx,
+		logger,
+		sdk,
+		taskQueueName,
+		scenarioInfo,
+	)
 
 	execErr := executor.Run(testCtx, scenarioInfo)
 

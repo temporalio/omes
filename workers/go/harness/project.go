@@ -9,12 +9,13 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/workers/go/harness/api"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/temporalio/omes/workers/go/harness/api"
 )
 
 type ProjectRunMetadata struct {
@@ -56,7 +57,11 @@ type projectServiceServer struct {
 	run    *ProjectRunMetadata
 }
 
-func newProjectServiceServer(handlers ProjectHandlers, clientFactory ClientFactory, logger *zap.SugaredLogger) *projectServiceServer {
+func newProjectServiceServer(
+	handlers ProjectHandlers,
+	clientFactory ClientFactory,
+	logger *zap.SugaredLogger,
+) *projectServiceServer {
 	if logger == nil {
 		nop := zap.NewNop()
 		logger = nop.Sugar()
@@ -68,7 +73,10 @@ func newProjectServiceServer(handlers ProjectHandlers, clientFactory ClientFacto
 	}
 }
 
-func (s *projectServiceServer) Init(ctx context.Context, request *api.InitRequest) (*api.InitResponse, error) {
+func (s *projectServiceServer) Init(
+	ctx context.Context,
+	request *api.InitRequest,
+) (*api.InitResponse, error) {
 	if request.GetTaskQueue() == "" {
 		return nil, status.Error(codes.InvalidArgument, "task_queue required")
 	}
@@ -129,7 +137,10 @@ func (s *projectServiceServer) Init(ctx context.Context, request *api.InitReques
 	return &api.InitResponse{}, nil
 }
 
-func (s *projectServiceServer) Execute(ctx context.Context, request *api.ExecuteRequest) (*api.ExecuteResponse, error) {
+func (s *projectServiceServer) Execute(
+	ctx context.Context,
+	request *api.ExecuteRequest,
+) (*api.ExecuteResponse, error) {
 	if request.GetTaskQueue() == "" {
 		return nil, status.Error(codes.InvalidArgument, "task_queue required")
 	}
@@ -148,7 +159,11 @@ func (s *projectServiceServer) Execute(ctx context.Context, request *api.Execute
 	return &api.ExecuteResponse{}, nil
 }
 
-func runProjectServerCLI(handlers ProjectHandlers, clientFactory ClientFactory, argv []string) error {
+func runProjectServerCLI(
+	handlers ProjectHandlers,
+	clientFactory ClientFactory,
+	argv []string,
+) error {
 	if handlers.Execute == nil {
 		return fmt.Errorf("project handlers must provide an Execute handler")
 	}
@@ -171,7 +186,10 @@ func runProjectServerCLI(handlers ProjectHandlers, clientFactory ClientFactory, 
 		return err
 	}
 	server := grpc.NewServer()
-	api.RegisterProjectServiceServer(server, newProjectServiceServer(handlers, clientFactory, logger))
+	api.RegisterProjectServiceServer(
+		server,
+		newProjectServiceServer(handlers, clientFactory, logger),
+	)
 	logger.Infof("Project server listening on port %d", *port)
 
 	runContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

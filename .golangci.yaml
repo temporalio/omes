@@ -1,0 +1,52 @@
+---
+# golangci-lint configuration for omes.
+#
+# This is a pragmatic baseline for an existing codebase: formatting plus a
+# curated, high-signal set of correctness linters (rather than `default: all`,
+# whose stylistic linters would generate thousands of low-value diffs). The set
+# can be ratcheted up over time.
+version: "2"
+formatters:
+  enable:
+    - gofmt
+    - gci
+    - golines
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/temporalio/omes)
+    golines:
+      shorten-comments: true
+  exclusions:
+    paths:
+      - loadgen/kitchensink
+      - workers/go/harness/api
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose # unclosed HTTP response bodies
+    - copyloopvar # loop variable aliasing bugs
+    - errorlint # correct error wrapping / comparison (%w, errors.Is/As)
+    - forcetypeassert # unchecked type assertions that can panic
+    - intrange # use Go 1.22+ integer range loops
+    - misspell # common misspellings in comments/strings
+    - nilerr # returning nil after a non-nil error check
+    - noctx # HTTP requests that should carry a context
+    - perfsprint # faster alternatives to fmt.Sprintf
+    - prealloc # slices that can be preallocated
+    - protogetter # use generated proto getters instead of direct field access
+    - testifylint # common testify misuse
+    - unconvert # redundant type conversions
+    - usestdlibvars # use stdlib constants (http.MethodGet, etc.)
+  exclusions:
+    paths:
+      - loadgen/kitchensink
+      - workers/go/harness/api
+    rules:
+      - path: (_test\.go)
+        linters:
+          - errcheck
+          - forcetypeassert
+          - noctx

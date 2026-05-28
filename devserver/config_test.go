@@ -44,7 +44,11 @@ func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
 }
 
 func TestBuildCacheLockPath(t *testing.T) {
-	require.Equal(t, filepath.Join("tmp", ".devserver.lock"), buildCacheLockPath(filepath.Join("tmp", ".devserver")))
+	require.Equal(
+		t,
+		filepath.Join("tmp", ".devserver.lock"),
+		buildCacheLockPath(filepath.Join("tmp", ".devserver")),
+	)
 }
 
 func TestWriteDynamicConfig(t *testing.T) {

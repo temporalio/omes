@@ -7,12 +7,14 @@ import (
 	"sort"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	commonpb "go.temporal.io/api/common/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
-// SleepActivityConfig defines the configuration for sleep activities with flexible distribution support
+// SleepActivityConfig defines the configuration for sleep activities with flexible distribution
+// support
 type SleepActivityConfig struct {
 	// Distribution of how many sleep activities to run per iteration. Required.
 	Count *DistributionField[int64] `json:"count"`
@@ -39,7 +41,10 @@ type SleepActivityGroupConfig struct {
 	FairnessWeight *DistributionField[float32] `json:"fairnessWeight"`
 }
 
-func ParseAndValidateSleepActivityConfig(jsonStr string, requireCount, requireSleepDuration bool) (*SleepActivityConfig, error) {
+func ParseAndValidateSleepActivityConfig(
+	jsonStr string,
+	requireCount, requireSleepDuration bool,
+) (*SleepActivityConfig, error) {
 	if jsonStr == "" {
 		return nil, nil
 	}
@@ -51,14 +56,22 @@ func ParseAndValidateSleepActivityConfig(jsonStr string, requireCount, requireSl
 		return nil, fmt.Errorf("SleepActivityConfig: Count field is required")
 	}
 	if config.Groups == nil || len(config.Groups) == 0 {
-		return nil, fmt.Errorf("SleepActivityConfig: Groups field is required and must not be empty")
+		return nil, fmt.Errorf(
+			"SleepActivityConfig: Groups field is required and must not be empty",
+		)
 	}
 	for groupID, groupConfig := range config.Groups {
 		if groupConfig.Weight < 0 {
-			return nil, fmt.Errorf("SleepActivityGroupConfig: Group '%s' Weight must be non-negative", groupID)
+			return nil, fmt.Errorf(
+				"SleepActivityGroupConfig: Group '%s' Weight must be non-negative",
+				groupID,
+			)
 		}
 		if requireSleepDuration && groupConfig.SleepDuration == nil {
-			return nil, fmt.Errorf("SleepActivityGroupConfig: Group '%s' SleepDuration field is required", groupID)
+			return nil, fmt.Errorf(
+				"SleepActivityGroupConfig: Group '%s' SleepDuration field is required",
+				groupID,
+			)
 		}
 	}
 	return config, nil

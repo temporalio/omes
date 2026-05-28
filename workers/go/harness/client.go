@@ -9,10 +9,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/metrics"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/metrics"
 )
 
 type ClientConfig struct {
@@ -135,7 +136,10 @@ func buildAPIKey(authHeader string) string {
 	return strings.TrimPrefix(authHeader, "Bearer ")
 }
 
-func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) (*metrics.Metrics, error) {
+func buildMetrics(
+	logger *zap.SugaredLogger,
+	listenAddress, handlerPath string,
+) (*metrics.Metrics, error) {
 	registry := prometheus.NewRegistry()
 	clientMetrics := &metrics.Metrics{
 		Registry: registry,
@@ -151,7 +155,11 @@ func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) 
 	mux.Handle(handlerPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize Prometheus HTTP listener on %s: %w", listenAddress, err)
+		return nil, fmt.Errorf(
+			"failed to initialize Prometheus HTTP listener on %s: %w",
+			listenAddress,
+			err,
+		)
 	}
 	server := &http.Server{
 		Addr:    listener.Addr().String(),

@@ -2,10 +2,11 @@ package scenarios
 
 import (
 	"context"
+	"strconv"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"strconv"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -34,7 +35,11 @@ func init() {
 					// Get options
 					children := opts.ScenarioOptionInt("children-per-workflow", 30)
 					activities := opts.ScenarioOptionInt("activities-per-workflow", 30)
-					opts.Logger.Infof("Preparing to run with %v child workflow(s) and %v activity execution(s)", children, activities)
+					opts.Logger.Infof(
+						"Preparing to run with %v child workflow(s) and %v activity execution(s)",
+						children,
+						activities,
+					)
 
 					childInput, err := converter.GetDefaultDataConverter().ToPayload(
 						&kitchensink.WorkflowInput{
@@ -70,7 +75,8 @@ func init() {
 						})
 					}
 
-					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions,
+					params.WorkflowInput.InitialActions = append(
+						params.WorkflowInput.InitialActions,
 						&kitchensink.ActionSet{
 							Actions: []*kitchensink.Action{
 								{

@@ -9,8 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"golang.org/x/mod/semver"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 func buildWorkerImageCmd() *cobra.Command {
@@ -65,7 +66,11 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 		if loadedVersion, err := getVersion(lang + "_sdk"); err == nil {
 			sdkVersion = loadedVersion
 		} else {
-			return fmt.Errorf("no version specified and failed to load from versions.env for %s: %w", lang, err)
+			return fmt.Errorf(
+				"no version specified and failed to load from versions.env for %s: %w",
+				lang,
+				err,
+			)
 		}
 	}
 
@@ -130,7 +135,9 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	args, err := b.buildDockerArgs("dockerfiles/"+lang+".Dockerfile", allowPush, buildArgs)
 	if err != nil {
 		if !allowPush {
-			return fmt.Errorf("multi-platform builds require pushing to registry. Use build-push-worker-image command instead")
+			return fmt.Errorf(
+				"multi-platform builds require pushing to registry. Use build-push-worker-image command instead",
+			)
 		}
 		return err
 	}

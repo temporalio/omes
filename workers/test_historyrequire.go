@@ -81,7 +81,10 @@ type HistoryMatcher interface {
 //	WorkflowExecutionCompleted
 type FullHistoryMatcher string
 
-func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m FullHistoryMatcher) Match(
+	t *testing.T,
+	actualHistoryEvents []*historypb.HistoryEvent,
+) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -140,7 +143,8 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 }
 
 // PartialHistoryMatcher checks that the list of history events contains a subsequence
-// that matches the expected spec. The expected spec is a string with each line containing an (1) event type,
+// that matches the expected spec. The expected spec is a string with each line containing an (1)
+// event type,
 // (2) optional JSON literal matching the event attributes and (3) an optional comment.
 // Use "..." as an event type to skip any number of events.
 //
@@ -151,7 +155,10 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 //	WorkflowExecutionCompleted
 type PartialHistoryMatcher string
 
-func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m PartialHistoryMatcher) Match(
+	t *testing.T,
+	actualHistoryEvents []*historypb.HistoryEvent,
+) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -178,7 +185,8 @@ func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*histor
 		}
 
 		actualEvent := actualEvents[actualIdx]
-		if actualEvent.Type == expectedEvent.Type && mapIsSuperset(actualEvent.Attributes, expectedEvent.Attributes) {
+		if actualEvent.Type == expectedEvent.Type &&
+			mapIsSuperset(actualEvent.Attributes, expectedEvent.Attributes) {
 			return matchFromPosition(actualIdx+1, expectedIdx+1)
 		}
 		return matchFromPosition(actualIdx+1, expectedIdx)

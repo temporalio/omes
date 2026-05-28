@@ -40,17 +40,77 @@ func (m *WorkerOptions) FlagSetWithPrefix(prefix string) *pflag.FlagSet {
 	}
 	m.usedPrefix = prefix
 	m.fs = pflag.NewFlagSet("worker_options", pflag.ExitOnError)
-	m.fs.StringVar(&m.BuildID, "build-id", "", "DEPRECATED: Build ID for legacy Build-ID-based worker versioning. Temporal Server will soon stop supporting the Rules-Based Versioning APIs that back this flag - use --deployment-name and --deployment-build-id instead. Mutually exclusive with --deployment-name")
-	m.fs.StringVar(&m.DeploymentName, "deployment-name", "", "Worker Deployment name. When set, enables Worker Deployment Versioning and must be combined with --deployment-build-id")
-	m.fs.StringVar(&m.DeploymentBuildID, "deployment-build-id", "", "Build ID within the Worker Deployment. Required when --deployment-name is set")
-	m.fs.StringVar(&m.DefaultVersioningBehavior, "default-versioning-behavior", "", "Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set")
-	m.fs.IntVar(&m.MaxConcurrentActivityPollers, prefix+"max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
-	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
-	m.fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
-	m.fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
-	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
-	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
-	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"activities-per-second", 0, "Per-worker activity rate limit")
-	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (currently this only applies to concurrent client actions)")
+	m.fs.StringVar(
+		&m.BuildID,
+		"build-id",
+		"",
+		"DEPRECATED: Build ID for legacy Build-ID-based worker versioning. Temporal Server will soon stop supporting the Rules-Based Versioning APIs that back this flag - use --deployment-name and --deployment-build-id instead. Mutually exclusive with --deployment-name",
+	)
+	m.fs.StringVar(
+		&m.DeploymentName,
+		"deployment-name",
+		"",
+		"Worker Deployment name. When set, enables Worker Deployment Versioning and must be combined with --deployment-build-id",
+	)
+	m.fs.StringVar(
+		&m.DeploymentBuildID,
+		"deployment-build-id",
+		"",
+		"Build ID within the Worker Deployment. Required when --deployment-name is set",
+	)
+	m.fs.StringVar(
+		&m.DefaultVersioningBehavior,
+		"default-versioning-behavior",
+		"",
+		"Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set",
+	)
+	m.fs.IntVar(
+		&m.MaxConcurrentActivityPollers,
+		prefix+"max-concurrent-activity-pollers",
+		0,
+		"Max concurrent activity pollers",
+	)
+	m.fs.IntVar(
+		&m.MaxConcurrentWorkflowPollers,
+		prefix+"max-concurrent-workflow-pollers",
+		0,
+		"Max concurrent workflow pollers",
+	)
+	m.fs.IntVar(
+		&m.MaxConcurrentActivities,
+		prefix+"max-concurrent-activities",
+		0,
+		"Max concurrent activities",
+	)
+	m.fs.IntVar(
+		&m.MaxConcurrentWorkflowTasks,
+		prefix+"max-concurrent-workflow-tasks",
+		0,
+		"Max concurrent workflow tasks",
+	)
+	m.fs.IntVar(
+		&m.ActivityPollerAutoscaleMax,
+		prefix+"activity-poller-autoscale-max",
+		0,
+		"Max for activity poller autoscaling (overrides max-concurrent-activity-pollers",
+	)
+	m.fs.IntVar(
+		&m.WorkflowPollerAutoscaleMax,
+		prefix+"workflow-poller-autoscale-max",
+		0,
+		"Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers",
+	)
+	m.fs.Float64Var(
+		&m.WorkerActivitiesPerSecond,
+		prefix+"activities-per-second",
+		0,
+		"Per-worker activity rate limit",
+	)
+	m.fs.BoolVar(
+		&m.ErrOnUnimplemented,
+		prefix+"err-on-unimplemented",
+		false,
+		"Fail on unimplemented actions (currently this only applies to concurrent client actions)",
+	)
 	return m.fs
 }

@@ -14,9 +14,10 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type Runner struct {
@@ -48,7 +49,8 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// Run an embedded server if requested
 	if r.EmbeddedServer || r.EmbeddedServerAddress != "" {
 		// Intentionally don't use context, will stop on defer
-		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" || r.ClientOptions.ClientKeyPath != "" {
+		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" ||
+			r.ClientOptions.ClientKeyPath != "" {
 			return fmt.Errorf("cannot use TLS with embedded server")
 		} else if r.ClientOptions.Address != client.DefaultHostPort {
 			return fmt.Errorf("cannot supply non-default client address when using embedded server")
@@ -143,14 +145,29 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
-		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
-		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
+		args = append(
+			args,
+			"--task-queue-suffix-index-start",
+			strconv.Itoa(r.TaskQueueIndexSuffixStart),
+		)
+		args = append(
+			args,
+			"--task-queue-suffix-index-end",
+			strconv.Itoa(r.TaskQueueIndexSuffixEnd),
+		)
 	}
 	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	args = append(
+		args,
+		passthroughExcluding(
+			r.MetricsOptions.FlagSet("worker-"),
+			"worker-",
+			"process-metrics-address",
+			"metrics-version-tag",
+		)...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)

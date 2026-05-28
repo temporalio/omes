@@ -197,7 +197,13 @@ func installNode(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("Activating pnpm", pnpmVersion, "with Corepack...")
-	if err := runCommand(ctx, "corepack", "prepare", "pnpm@"+pnpmVersion, "--activate"); err != nil {
+	if err := runCommand(
+		ctx,
+		"corepack",
+		"prepare",
+		"pnpm@"+pnpmVersion,
+		"--activate",
+	); err != nil {
 		return err
 	}
 	if err := runCommand(ctx, "corepack", "pnpm", "--version"); err != nil {
@@ -270,7 +276,12 @@ func installProtoc(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := runCommand(ctx, "go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
+	if err := runCommand(
+		ctx,
+		"go",
+		"install",
+		"google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion,
+	); err != nil {
 		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
 	}
 	fmt.Println("✅ protoc-gen-go", protocGenGoVersion, "installed successfully!")
@@ -280,7 +291,12 @@ func installProtoc(ctx context.Context) error {
 
 func installBuf(ctx context.Context) error {
 	fmt.Println("Installing buf...")
-	if err := runCommand(ctx, "go", "install", "github.com/bufbuild/buf/cmd/buf@latest"); err != nil {
+	if err := runCommand(
+		ctx,
+		"go",
+		"install",
+		"github.com/bufbuild/buf/cmd/buf@latest",
+	); err != nil {
 		return fmt.Errorf("failed to install buf: %v", err)
 	}
 	fmt.Println("✅ buf installed successfully!")

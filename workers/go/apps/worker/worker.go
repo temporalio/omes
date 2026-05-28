@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
+	"go.temporal.io/sdk/activity"
+	sdkclient "go.temporal.io/sdk/client"
+	sdkworker "go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/harness"
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
 	"github.com/temporalio/omes/workers/go/workerlib/schedulerstress"
-	"go.temporal.io/sdk/activity"
-	sdkclient "go.temporal.io/sdk/client"
-	sdkworker "go.temporal.io/sdk/worker"
-	"go.temporal.io/sdk/workflow"
 )
 
 var App = harness.App{
@@ -37,19 +38,40 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 		}
 	}
 	w := sdkworker.New(client, context.TaskQueue, context.WorkerOptions)
-	w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
+	w.RegisterWorkflowWithOptions(
+		kitchensink.KitchenSinkWorkflow,
+		workflow.RegisterOptions{Name: "kitchenSink"},
+	)
 	w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 	w.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 	w.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
-	w.RegisterActivityWithOptions(kitchensink.RetryableError, activity.RegisterOptions{Name: "retryable_error"})
+	w.RegisterActivityWithOptions(
+		kitchensink.RetryableError,
+		activity.RegisterOptions{Name: "retryable_error"},
+	)
 	w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
-	w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
-	w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
+	w.RegisterActivityWithOptions(
+		kitchensink.Heartbeat,
+		activity.RegisterOptions{Name: "heartbeat"},
+	)
+	w.RegisterActivityWithOptions(
+		clientActivities.ExecuteClientActivity,
+		activity.RegisterOptions{Name: "client"},
+	)
 	w.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
-	w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
+	w.RegisterWorkflowWithOptions(
+		ebbandflow.EbbAndFlowTrackWorkflow,
+		workflow.RegisterOptions{Name: "ebbAndFlowTrack"},
+	)
 	w.RegisterActivity(&ebbFlowActivities)
-	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
-	w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+	w.RegisterWorkflowWithOptions(
+		schedulerstress.NoopScheduledWorkflow,
+		workflow.RegisterOptions{Name: "NoopScheduledWorkflow"},
+	)
+	w.RegisterWorkflowWithOptions(
+		schedulerstress.SleepScheduledWorkflow,
+		workflow.RegisterOptions{Name: "SleepScheduledWorkflow"},
+	)
 	w.RegisterNexusService(service)
 	return w
 }

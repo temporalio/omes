@@ -118,11 +118,12 @@ func getTargetDir(target string) (string, error) {
 	return filepath.Join(repoDir, "workers", target), nil
 }
 
-
 // checkMise verifies that mise is installed
 func checkMise() error {
 	if _, err := exec.LookPath("mise"); err != nil {
-		return fmt.Errorf("mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html")
+		return fmt.Errorf(
+			"mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html",
+		)
 	}
 	return nil
 }
