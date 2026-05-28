@@ -32,7 +32,6 @@ COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
-COPY versions ./versions
 COPY workers ./workers/
 COPY go.mod go.sum ./
 

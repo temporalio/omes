@@ -28,7 +28,6 @@ COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
-COPY versions ./versions
 COPY internal ./internal
 COPY workers/go/harness/api ./workers/go/harness/api
 COPY workers/proto/harness ./workers/proto/harness

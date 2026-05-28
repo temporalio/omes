@@ -31,7 +31,7 @@ func load() {
 		loadEr = fmt.Errorf("versions: cannot locate package source")
 		return
 	}
-	repoDir := filepath.Dir(filepath.Dir(here)) // versions/ -> repo root
+	repoDir := filepath.Dir(filepath.Dir(filepath.Dir(here))) // internal/versions/ -> repo root
 	path := filepath.Join(repoDir, "versions.env")
 	data, err := os.ReadFile(path)
 	if err != nil {
