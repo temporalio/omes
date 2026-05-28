@@ -209,6 +209,8 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 			"../workerlib/kitchensink/protos/json-module.js",
 			"../workerlib/kitchensink/protos/root.js",
 		},
+		// Generated kitchen-sink proto JS runs inside sdkbuild's isolated package,
+		// so list its runtime deps here instead of relying on workers/typescript.
 		MoreDependencies: map[string]string{
 			"@grpc/proto-loader": "^0.8.0",
 			"long":               "^5.2.3",
