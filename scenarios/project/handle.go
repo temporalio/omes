@@ -13,8 +13,13 @@ import (
 )
 
 const (
-	defaultClientHost               = "localhost"
-	defaultClientReadyTimeout       = 15 * time.Second
+	defaultClientHost = "localhost"
+	// Generous to absorb cold project-server startup: a from-source build must
+	// boot the language runtime and import the harness before it listens, which
+	// can take well over 5s on a loaded CI runner. The loop below exits as soon
+	// as the port accepts a connection, so a healthy server still proceeds
+	// immediately; this only raises the ceiling before we give up.
+	defaultClientReadyTimeout       = 60 * time.Second
 	defaultClientReadyCheckInterval = 100 * time.Millisecond
 )
 
