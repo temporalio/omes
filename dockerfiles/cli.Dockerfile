@@ -32,7 +32,10 @@ COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
-COPY workers ./workers/
+# kitchen-sink-gen needs the proto tree; the CLI build needs the harness/api
+# replace target. The rest of workers/ (language workers) is not needed here.
+COPY workers/proto ./workers/proto
+COPY workers/go/harness/api ./workers/go/harness/api
 COPY go.mod go.sum ./
 
 # Build the CLI
