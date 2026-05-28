@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/devserver"
+	"github.com/temporalio/omes/internal/devserver"
 	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/versions"
