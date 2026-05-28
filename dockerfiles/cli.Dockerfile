@@ -25,18 +25,22 @@ RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y \
      fi
 ENV PATH="$PATH:/root/.cargo/bin"
 
-# Copy CLI build dependencies
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
+COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+RUN go mod download
+
+# Copy CLI source. kitchen-sink-gen needs the proto tree; the rest of workers/
+# (language workers) is not needed here.
 COPY cmd ./cmd
 COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
-# kitchen-sink-gen needs the proto tree; the CLI build needs the harness/api
-# replace target. The rest of workers/ (language workers) is not needed here.
 COPY workers/proto ./workers/proto
-COPY workers/go/harness/api ./workers/go/harness/api
-COPY go.mod go.sum ./
 
 # Build the CLI
 RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
