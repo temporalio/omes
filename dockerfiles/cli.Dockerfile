@@ -33,7 +33,6 @@ COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
 COPY devserver ./devserver
-COPY versions ./versions
 COPY workers ./workers/
 COPY go.mod go.sum ./
 
