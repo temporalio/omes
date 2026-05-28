@@ -32,7 +32,6 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
     throw new Error('Harness worker requires a NativeConnection-backed client');
   }
 
-  const ignoreModules = context.workerOptions.bundlerOptions?.ignoreModules ?? [];
   return await Worker.create({
     connection,
     namespace: client.options.namespace,
@@ -43,11 +42,6 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
     dataConverter: {
       ...context.workerOptions.dataConverter,
       payloadConverterPath: payloadConverterPath(),
-    },
-    bundlerOptions: {
-      ...context.workerOptions.bundlerOptions,
-      // Protobufjs probes fs optionally through the custom payload converter bundle.
-      ignoreModules: [...new Set([...ignoreModules, 'fs'])],
     },
   });
 }

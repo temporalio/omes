@@ -1,5 +1,6 @@
-import type { temporal } from '../protos/root';
+import { temporal } from '../protos/root';
 import {
+  ActivityCancellationType as WFActivityCancellationType,
   ApplicationFailure,
   CancellationScope,
   ChildWorkflowHandle,
@@ -21,8 +22,6 @@ import {
 } from '@temporalio/workflow';
 import {
   ActivityOptions,
-  type ActivityCancellationType as WFActivityCancellationType,
-  decodeActivityCancellationType,
   decodePriority,
   decompileRetryPolicy,
   LocalActivityOptions,
@@ -30,24 +29,25 @@ import {
 } from '@temporalio/common';
 import { decodeTypedSearchAttributes } from '@temporalio/common/lib/converter/payload-search-attributes';
 import { durationConvert, durationConvertMaybeUndefined, numify } from '../proto_help';
-type WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
-type Payload = temporal.api.common.v1.Payload;
-type DoSignalActions = temporal.omes.kitchen_sink.DoSignal.DoSignalActions;
-type IActionSet = temporal.omes.kitchen_sink.IActionSet;
-type DoActionsUpdate = temporal.omes.kitchen_sink.DoActionsUpdate;
-type IAction = temporal.omes.kitchen_sink.IAction;
-type IPayload = temporal.api.common.v1.IPayload;
-type IAwaitableChoice = temporal.omes.kitchen_sink.IAwaitableChoice;
-type IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
-type ActivityCancellationType = temporal.omes.kitchen_sink.ActivityCancellationType;
-type IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
+import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
+import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
+import Payload = temporal.api.common.v1.Payload;
+import DoSignalActions = temporal.omes.kitchen_sink.DoSignal.DoSignalActions;
+import IActionSet = temporal.omes.kitchen_sink.IActionSet;
+import DoActionsUpdate = temporal.omes.kitchen_sink.DoActionsUpdate;
+import IAction = temporal.omes.kitchen_sink.IAction;
+import IPayload = temporal.api.common.v1.IPayload;
+import IAwaitableChoice = temporal.omes.kitchen_sink.IAwaitableChoice;
+import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
+import ActivityCancellationType = temporal.omes.kitchen_sink.ActivityCancellationType;
+import IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
 
 const reportStateQuery = defineQuery<IWorkflowState, [Payload]>('report_state');
 const actionsSignal = defineSignal<[DoSignalActions]>('do_actions_signal');
 const actionsUpdate = defineUpdate<IPayload | undefined, [DoActionsUpdate]>('do_actions_update');
 
 export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPayload | undefined> {
-  let workflowState: IWorkflowState = { kvs: {} };
+  let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
 
   async function handleActionSet(actions: IActionSet): Promise<IPayload | undefined> {
@@ -175,7 +175,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
         return await handleAction(action.setPatchMarker.innerAction);
       }
     } else if (action.setWorkflowState) {
-      workflowState = { kvs: { ...(action.setWorkflowState.kvs ?? {}) } };
+      workflowState = WorkflowState.fromObject(action.setWorkflowState);
     } else if (action.awaitWorkflowState) {
       const key = action.awaitWorkflowState.key!;
       const value = action.awaitWorkflowState.value!;
@@ -326,5 +326,14 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
 function convertCancelType(
   ct: ActivityCancellationType | null | undefined,
 ): WFActivityCancellationType | undefined {
-  return decodeActivityCancellationType(ct);
+  switch (ct) {
+    case temporal.omes.kitchen_sink.ActivityCancellationType.TRY_CANCEL:
+      return WFActivityCancellationType.TRY_CANCEL;
+    case temporal.omes.kitchen_sink.ActivityCancellationType.WAIT_CANCELLATION_COMPLETED:
+      return WFActivityCancellationType.WAIT_CANCELLATION_COMPLETED;
+    case temporal.omes.kitchen_sink.ActivityCancellationType.ABANDON:
+      return WFActivityCancellationType.ABANDON;
+    default:
+      return undefined;
+  }
 }

@@ -56,12 +56,11 @@ RUN . ./versions.env \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
  && corepack pnpm --version
 
-# prepare-worker generates TypeScript proto assets before sdkbuild compiles the
-# prepared registry entrypoint package.
+# prepare-worker builds the TypeScript workspace itself: it installs npm deps,
+# runs the root build, and generates the prepared sdkbuild package.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and TypeScript workspace, including the prepared worker, to a
-# "run" container.
+# Copy the CLI and prepared feature to a "run" container.
 # hadolint ignore=DL3006
 FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian11
 
