@@ -1,7 +1,8 @@
 // Convert a protobuf duration to milliseconds
-import { google } from './protos/root';
-import IDuration = google.protobuf.IDuration;
-import Long from 'long';
+import type { google } from './protos/root';
+import type Long from 'long';
+
+type IDuration = google.protobuf.IDuration;
 
 export function durationConvertMaybeUndefined(d: IDuration | null | undefined): number | undefined {
   if (!d) {
