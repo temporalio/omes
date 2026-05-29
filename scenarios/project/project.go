@@ -25,6 +25,7 @@ func init() {
   One of:   --option project-name=<name>  (build from source; optional --option version=<version> override)
             --option prebuilt-project-dir=<path>  (use pre-built project dir)
   Optional: --option project-config-file=<path>   (project-specific JSON config)
+  Optional: --option project-server-ready-timeout=<duration> (timeout to connect to project-server, default 15s)
   See README.md ("Project" section) for local usage examples and current limitations.`,
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
@@ -33,10 +34,11 @@ func init() {
 }
 
 type projectScenarioOptions struct {
-	sdkOpts     clioptions.SdkOptions
-	projectName string
-	prebuiltDir string
-	configJSON  []byte
+	sdkOpts                   clioptions.SdkOptions
+	projectName               string
+	prebuiltDir               string
+	configJSON                []byte
+	projectServerReadyTimeout time.Duration
 }
 
 type projectScenarioExecutor struct{}
@@ -91,7 +93,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 			DisableHostVerification: co.DisableHostVerification,
 		},
 		ConfigJson: opts.configJSON,
-	})
+	}, opts.projectServerReadyTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to init project: %w", err)
 	}
@@ -144,6 +146,15 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 			return opts, fmt.Errorf("failed to read config file %s: %w", configPath, err)
 		}
 		opts.configJSON = data
+	}
+
+	opts.projectServerReadyTimeout = defaultClientReadyTimeout
+	if timeout := info.ScenarioOptions["project-server-ready-timeout"]; timeout != "" {
+		parsed, err := time.ParseDuration(timeout)
+		if err != nil {
+			return opts, fmt.Errorf("invalid project-server-ready-timeout %q: %w", timeout, err)
+		}
+		opts.projectServerReadyTimeout = parsed
 	}
 
 	return opts, nil
