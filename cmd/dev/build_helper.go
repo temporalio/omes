@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,8 +10,9 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type baseImageBuilder struct {
@@ -30,13 +32,33 @@ func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {
 	fs.AddFlagSet(b.loggingOptions.FlagSet())
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
-	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")
+	fs.StringSliceVar(
+		&b.platforms,
+		"platform",
+		[]string{"amd64"},
+		"Platforms for use in docker build --platform",
+	)
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
-	fs.StringVar(&b.repoPrefix, "repo-prefix", "", "Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.")
-	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
+	fs.StringVar(
+		&b.repoPrefix,
+		"repo-prefix",
+		"",
+		"Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.",
+	)
+	fs.BoolVar(
+		&b.dryRun,
+		"dry-run",
+		false,
+		"If set, just print the commands that would run but do not run them",
+	)
 	fs.StringSliceVar(&b.tags, "image-tag", nil, "Additional tags to add to the image")
 	fs.StringSliceVar(&b.labels, "image-label", nil, "Additional labels to add to the image")
-	fs.StringVar(&b.saveImage, "save-image", "", "If set, will run `docker save` on the produced image, saving it to the provided path")
+	fs.StringVar(
+		&b.saveImage,
+		"save-image",
+		"",
+		"If set, will run `docker save` on the produced image, saving it to the provided path",
+	)
 }
 
 func (b *baseImageBuilder) addLabelIfNotPresent(key, value string) {
@@ -53,14 +75,23 @@ func (b *baseImageBuilder) addDefaultLabels(ctx context.Context, omesVersion, ti
 	if err != nil {
 		return err
 	}
-	b.addLabelIfNotPresent("org.opencontainers.image.created", time.Now().UTC().Format(time.RFC3339))
+	b.addLabelIfNotPresent(
+		"org.opencontainers.image.created",
+		time.Now().UTC().Format(time.RFC3339),
+	)
 	b.addLabelIfNotPresent("org.opencontainers.image.source", "https://github.com/temporalio/omes")
 	b.addLabelIfNotPresent("org.opencontainers.image.vendor", "Temporal Technologies Inc.")
-	b.addLabelIfNotPresent("org.opencontainers.image.authors", "Temporal SDK team <sdk-team@temporal.io>")
+	b.addLabelIfNotPresent(
+		"org.opencontainers.image.authors",
+		"Temporal SDK team <sdk-team@temporal.io>",
+	)
 	b.addLabelIfNotPresent("org.opencontainers.image.licenses", "MIT")
 	b.addLabelIfNotPresent("org.opencontainers.image.revision", gitRef)
 	b.addLabelIfNotPresent("org.opencontainers.image.title", title)
-	b.addLabelIfNotPresent("org.opencontainers.image.documentation", "See README at https://github.com/temporalio/omes")
+	b.addLabelIfNotPresent(
+		"org.opencontainers.image.documentation",
+		"See README at https://github.com/temporalio/omes",
+	)
 	b.addLabelIfNotPresent("io.temporal.omes.githash", omesVersion)
 	return nil
 }
@@ -77,7 +108,11 @@ func (b *baseImageBuilder) generateImageTags() []string {
 	return imageTagsForPublish
 }
 
-func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, buildArgs []string) (dockerArgs []string, err error) {
+func (b *baseImageBuilder) buildDockerArgs(
+	dockerFile string,
+	allowPush bool,
+	buildArgs []string,
+) (dockerArgs []string, err error) {
 	dockerArgs = []string{
 		"buildx",
 		"build",
@@ -89,8 +124,8 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 	// Handle multi-platform build requirements
 	if len(b.platforms) > 1 {
 		if !allowPush {
-			err = fmt.Errorf("multi-platform builds require pushing to registry")
-			return
+			err = errors.New("multi-platform builds require pushing to registry")
+			return dockerArgs, err
 		}
 		dockerArgs = append(dockerArgs, "--push")
 	} else {
@@ -113,10 +148,14 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		dockerArgs = append(dockerArgs, "--build-arg", arg)
 	}
 
-	return
+	return dockerArgs, err
 }
 
-func (b *baseImageBuilder) executeDockerBuild(ctx context.Context, args []string, imageTagsForPublish []string) error {
+func (b *baseImageBuilder) executeDockerBuild(
+	ctx context.Context,
+	args []string,
+	imageTagsForPublish []string,
+) error {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return fmt.Errorf("failed to get root directory: %w", err)
@@ -129,7 +168,7 @@ func (b *baseImageBuilder) executeDockerBuild(ctx context.Context, args []string
 
 	err = writeGitHubEnv("BUILT_IMAGE_TAGS", strings.Join(imageTagsForPublish, ";"))
 	if err != nil {
-		return fmt.Errorf("writing image tags to github env failed: %s", err)
+		return fmt.Errorf("writing image tags to github env failed: %w", err)
 	}
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
@@ -143,16 +182,28 @@ func (b *baseImageBuilder) executeDockerBuild(ctx context.Context, args []string
 	return nil
 }
 
-func (b *baseImageBuilder) handleImageSave(ctx context.Context, imageTagsForPublish []string) error {
+func (b *baseImageBuilder) handleImageSave(
+	ctx context.Context,
+	imageTagsForPublish []string,
+) error {
 	if b.saveImage != "" {
 		err := writeGitHubEnv("SAVED_IMAGE_TAG", imageTagsForPublish[0])
 		if err != nil {
-			return fmt.Errorf("writing image tags to github env failed: %s", err)
+			return fmt.Errorf("writing image tags to github env failed: %w", err)
 		}
 		if len(b.platforms) > 1 {
-			b.logger.Warn("Image saving is not supported for multi-platform builds. Skipping save step.")
+			b.logger.Warn(
+				"Image saving is not supported for multi-platform builds. Skipping save step.",
+			)
 		} else {
-			saveCmd := exec.CommandContext(ctx, "docker", "save", "-o", b.saveImage, imageTagsForPublish[0])
+			saveCmd := exec.CommandContext(
+				ctx,
+				"docker",
+				"save",
+				"-o",
+				b.saveImage,
+				imageTagsForPublish[0],
+			)
 			saveCmd.Stdout = os.Stdout
 			saveCmd.Stderr = os.Stderr
 			err = saveCmd.Run()

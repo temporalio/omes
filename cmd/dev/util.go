@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/temporalio/omes/versions"
@@ -16,7 +18,10 @@ var (
 	supportedTargets = []string{
 		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen",
 	}
-	supportedTools = []string{
+	// supportedLintTargets extends the language targets with "repo", which lints
+	// and formats repo-wide non-language files (shell, YAML, TOML, GH Actions).
+	supportedLintTargets = append(slices.Clone(supportedTargets), "repo")
+	supportedTools       = []string{
 		"buf", "dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",
 	}
 	toolDependencies = map[string][]string{
@@ -57,15 +62,7 @@ func getVersion(tool string) (string, error) {
 	return v, nil
 }
 
-// checkCommand verifies that a command is available in PATH
-func checkCommand(cmd string) error {
-	if _, err := exec.LookPath(cmd); err != nil {
-		return fmt.Errorf("%s is not installed. Please install %s first", cmd, cmd)
-	}
-	return nil
-}
-
-// runCommand executes a command and pipes output to stdout/stderr
+// runCommand executes a command and pipes output to stdout/stderr.
 func runCommand(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = os.Stdout
@@ -73,7 +70,7 @@ func runCommand(ctx context.Context, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// runCommandInDir executes a command in a specific directory
+// runCommandInDir executes a command in a specific directory.
 func runCommandInDir(ctx context.Context, dir, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
@@ -82,18 +79,18 @@ func runCommandInDir(ctx context.Context, dir, name string, args ...string) erro
 	return cmd.Run()
 }
 
-// runCommandOutput executes a command and returns combined stdout and stderr as a string
+// runCommandOutput executes a command and returns combined stdout and stderr as a string.
 func runCommandOutput(ctx context.Context, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
-// getRepoDir returns the project's root directory
+// getRepoDir returns the project's root directory.
 func getRepoDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		return "", fmt.Errorf("failed to get source file location")
+		return "", errors.New("failed to get source file location")
 	}
 	sourceDir := filepath.Dir(filename) // cmd/dev
 	cmdDir := filepath.Dir(sourceDir)   // cmd
@@ -106,7 +103,7 @@ func getKitchenSinkGenDir(repoDir string) string {
 	return filepath.Join(repoDir, "loadgen", "kitchen-sink-gen")
 }
 
-// getTargetDir returns the directory for the given target
+// getTargetDir returns the directory for the given target.
 func getTargetDir(target string) (string, error) {
 	repoDir, err := getRepoDir()
 	if err != nil {
@@ -118,11 +115,12 @@ func getTargetDir(target string) (string, error) {
 	return filepath.Join(repoDir, "workers", target), nil
 }
 
-
-// checkMise verifies that mise is installed
+// checkMise verifies that mise is installed.
 func checkMise() error {
 	if _, err := exec.LookPath("mise"); err != nil {
-		return fmt.Errorf("mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html")
+		return errors.New(
+			"mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html",
+		)
 	}
 	return nil
 }
@@ -150,7 +148,7 @@ func checkTool(ctx context.Context, tool string) error {
 
 		output, err := runCommandOutput(ctx, versionCmd[0], versionCmd[1:]...)
 		if err != nil {
-			return fmt.Errorf("failed to get version for %s at %s: %v", tool, toolPath, err)
+			return fmt.Errorf("failed to get version for %s at %s: %w", tool, toolPath, err)
 		}
 
 		actualVersion := strings.TrimSpace(output)

@@ -73,7 +73,7 @@ func runInstallTools(ctx context.Context, tools []string) error {
 		}
 
 		if err != nil {
-			return fmt.Errorf("failed to install %s: %v", tool, err)
+			return fmt.Errorf("failed to install %s: %w", tool, err)
 		}
 	}
 
@@ -159,7 +159,7 @@ func installPython(ctx context.Context) error {
 
 	fmt.Println("Installing poethepoet...")
 	if err := runCommand(ctx, "uv", "tool", "install", "poethepoet"); err != nil {
-		return fmt.Errorf("failed to install poethepoet: %v", err)
+		return fmt.Errorf("failed to install poethepoet: %w", err)
 	}
 	fmt.Println("✅ poethepoet installed successfully!")
 
@@ -197,7 +197,13 @@ func installNode(ctx context.Context) error {
 		return err
 	}
 	fmt.Println("Activating pnpm", pnpmVersion, "with Corepack...")
-	if err := runCommand(ctx, "corepack", "prepare", "pnpm@"+pnpmVersion, "--activate"); err != nil {
+	if err := runCommand(
+		ctx,
+		"corepack",
+		"prepare",
+		"pnpm@"+pnpmVersion,
+		"--activate",
+	); err != nil {
 		return err
 	}
 	if err := runCommand(ctx, "corepack", "pnpm", "--version"); err != nil {
@@ -270,8 +276,13 @@ func installProtoc(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := runCommand(ctx, "go", "install", "google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion); err != nil {
-		return fmt.Errorf("failed to install protoc-gen-go: %v", err)
+	if err := runCommand(
+		ctx,
+		"go",
+		"install",
+		"google.golang.org/protobuf/cmd/protoc-gen-go@"+protocGenGoVersion,
+	); err != nil {
+		return fmt.Errorf("failed to install protoc-gen-go: %w", err)
 	}
 	fmt.Println("✅ protoc-gen-go", protocGenGoVersion, "installed successfully!")
 
@@ -280,8 +291,13 @@ func installProtoc(ctx context.Context) error {
 
 func installBuf(ctx context.Context) error {
 	fmt.Println("Installing buf...")
-	if err := runCommand(ctx, "go", "install", "github.com/bufbuild/buf/cmd/buf@latest"); err != nil {
-		return fmt.Errorf("failed to install buf: %v", err)
+	if err := runCommand(
+		ctx,
+		"go",
+		"install",
+		"github.com/bufbuild/buf/cmd/buf@latest",
+	); err != nil {
+		return fmt.Errorf("failed to install buf: %w", err)
 	}
 	fmt.Println("✅ buf installed successfully!")
 	return nil
@@ -294,7 +310,7 @@ func installViaMise(ctx context.Context, tool, version string, extraArgs ...stri
 	args = append(args, extraArgs...)
 	cmd := exec.CommandContext(ctx, "mise", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("mise command failed: %v\nOutput: %s", err, output)
+		return fmt.Errorf("mise command failed: %w\nOutput: %s", err, output)
 	}
 
 	fmt.Println("✅", tool, version, "installed successfully!")
