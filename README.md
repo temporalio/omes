@@ -284,34 +284,41 @@ To run a project via Docker:
 ```sh
 docker build \
   -f dockerfiles/python.Dockerfile \
-  --build-arg PROJECT_NAME=helloworld \
   --build-arg SDK_VERSION=v1.25.0 \
-  -t omes-python-project-helloworld .
+  -t omes-python .
 
 docker network create omes-project-net
 
 docker run -d --rm \
   --name omes-python-project-worker \
   --network omes-project-net \
-  omes-python-project-helloworld \
+  omes-python \
+  run-worker \
+  --language python \
+  --dir-name prepared \
+  --app helloworld \
   --run-id local-project-test \
   --embedded-server-address 0.0.0.0:7233
 
 docker run --rm \
   --network omes-project-net \
-  omes-python-project-helloworld \
+  omes-python \
   run-scenario \
   --scenario project \
   --run-id local-project-test \
   --server-address omes-python-project-worker:7233 \
   --iterations 1 \
-  --connect-timeout 30s
+  --connect-timeout 30s \
+  --option language=python \
+  --option project-name=helloworld \
+  --option prebuilt-project-dir=/app/workers/python/prepared
 
 docker stop omes-python-project-worker
 docker network rm omes-project-net
 ```
 
-This docker workflow it is not yet wired into `go run ./cmd/dev build-worker-image`.
+The Python image is a single prepared worker package. Select the app at runtime
+with `--app` for workers and `--option project-name=...` for project scenarios.
 
 ### ThroughputStress
 

@@ -205,7 +205,6 @@ jobs:
         run: |
           docker build \
             -f ${{ matrix.dockerfile }} \
-            --build-arg PROJECT_NAME=${{ matrix.project }} \
             --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
             -t ${PROJECT_IMAGE_TAG} .
       - name: Create Docker network
@@ -219,6 +218,10 @@ jobs:
             --network omes-project-net \
             -p 7233:7233 \
             ${PROJECT_IMAGE_TAG} \
+            run-worker \
+            --language ${{ matrix.sdk }} \
+            --dir-name prepared \
+            --app ${{ matrix.project }} \
             --run-id ${PROJECT_RUN_ID} \
             --embedded-server-address 0.0.0.0:7233 &
       - name: Wait for embedded server
@@ -234,7 +237,10 @@ jobs:
             --run-id ${PROJECT_RUN_ID} \
             --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
             --iterations 1 \
-            --connect-timeout 30s
+            --connect-timeout 30s \
+            --option language=${{ matrix.sdk }} \
+            --option project-name=${{ matrix.project }} \
+            --option prebuilt-project-dir=/app/workers/python/prepared
       - name: Print project worker logs
         if: failure()
         run: |
