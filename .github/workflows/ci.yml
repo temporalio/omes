@@ -176,6 +176,44 @@ jobs:
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m
 
+  build-worker-from-source:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: go
+            sdk_repo: sdk-go
+          - sdk: java
+            sdk_repo: sdk-java
+          - sdk: python
+            sdk_repo: sdk-python
+          - sdk: ruby
+            sdk_repo: sdk-ruby
+          - sdk: typescript
+            sdk_repo: sdk-typescript
+          - sdk: dotnet
+            sdk_repo: sdk-dotnet
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: true
+      - name: Checkout ${{ matrix.sdk }} SDK
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: temporalio/${{ matrix.sdk_repo }}
+          submodules: recursive
+          path: checked-out-sdk
+      - name: Build ${{ matrix.sdk }} worker image from local SDK path
+        run: |
+          args=(
+            --language "${{ matrix.sdk }}"
+            --version checked-out-sdk/
+            --image-tag "${{ matrix.sdk }}-local-sdk-path-test"
+          )
+          go run ./cmd/dev build-worker-image "${args[@]}"
+
   build-project:
     runs-on: ubuntu-latest
     strategy:
