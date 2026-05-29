@@ -219,8 +219,6 @@ jobs:
             -p 7233:7233 \
             ${PROJECT_IMAGE_TAG} \
             run-worker \
-            --language ${{ matrix.sdk }} \
-            --dir-name prepared \
             --app ${{ matrix.project }} \
             --run-id ${PROJECT_RUN_ID} \
             --embedded-server-address 0.0.0.0:7233 &

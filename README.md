@@ -294,8 +294,6 @@ docker run -d --rm \
   --network omes-project-net \
   omes-python \
   run-worker \
-  --language python \
-  --dir-name prepared \
   --app helloworld \
   --run-id local-project-test \
   --embedded-server-address 0.0.0.0:7233

@@ -57,7 +57,11 @@ FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/python /app/workers/python
+COPY dockerfiles/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
+ENV OMES_WORKER_LANGUAGE=python
+ENV OMES_PREPARED_DIR=prepared
 
-ENTRYPOINT ["/app/temporal-omes"]
+ENTRYPOINT ["/app/entrypoint.sh"]
