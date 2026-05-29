@@ -115,7 +115,7 @@ func runPythonHarnessTests(ctx context.Context, repoDir string) error {
 }
 
 func runDotnetHarnessTests(ctx context.Context, repoDir string) error {
-	harnessTestsProj := filepath.Join(repoDir, "workers", "dotnet", "projects", "harness", "tests", "HarnessTests.csproj")
+	harnessTestsProj := filepath.Join(repoDir, "workers", "dotnet", "Tests", "Harness", "HarnessTests.csproj")
 	fmt.Println("Running .NET harness tests...")
 	if err := runCommandInDir(ctx, repoDir, "dotnet", "test", harnessTestsProj); err != nil {
 		return fmt.Errorf("failed .NET harness tests: %w", err)

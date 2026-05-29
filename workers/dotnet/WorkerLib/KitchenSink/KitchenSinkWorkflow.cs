@@ -9,7 +9,7 @@ using Temporalio.Workflows;
 using Priority = Temporalio.Api.Common.V1.Priority;
 using RetryPolicy = Temporalio.Api.Common.V1.RetryPolicy;
 
-namespace Temporalio.Omes;
+namespace Temporalio.Omes.WorkerLib.KitchenSink;
 
 [Workflow("kitchenSink")]
 public class KitchenSinkWorkflow

@@ -2,6 +2,5 @@ namespace Temporalio.Omes;
 
 public static class App
 {
-    public static Task<int> RunAsync(string[] args) =>
-        Temporalio.Omes.Projects.Harness.App.RunAsync(KitchenSinkApp.Create(), args);
+    public static Task<int> RunAsync(string[] args) => Apps.Registry.RunAsync(args);
 }
