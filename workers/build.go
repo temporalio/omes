@@ -139,7 +139,7 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 		BaseDir:           baseDir,
 		DirName:           b.DirName,
 		Version:           b.SdkOptions.Version,
-		MainClass:         "io.temporal.omes.Main",
+		MainClass:         "io.temporal.omes.apps.Registry",
 		HarnessDependency: "io.temporal:omes:0.1.0",
 		Build:             true,
 		Stdout:            b.stdout,

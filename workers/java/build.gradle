@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'com.diffplug.spotless' version '6.18.0'
+    id 'com.google.protobuf' version '0.9.4'
 }
 
 allprojects {
@@ -24,33 +25,79 @@ spotless {
         target project.fileTree(project.rootDir) {
             include '**/*.java'
             exclude '**/build/**'
-            exclude 'io/temporal/omes/KitchenSink.java'
+            exclude '**/KitchenSink.java'
         }
         googleJavaFormat('1.22.0')
     }
 }
 
 compileJava.dependsOn spotlessJava
+compileJava.dependsOn generateProto
 
 dependencies {
-    implementation project(':harness')
     implementation 'com.google.guava:guava:31.0.1-jre'
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'com.jayway.jsonpath:json-path:2.6.0'
     implementation 'io.temporal:temporal-sdk:1.34.0'
     implementation 'org.reflections:reflections:0.10.2'
+    implementation 'ch.qos.logback:logback-classic:1.2.13'
+    implementation 'info.picocli:picocli:4.6.2'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.15.2"))
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "com.fasterxml.jackson.core:jackson-core"
     implementation 'com.google.protobuf:protobuf-java:3.25.5'
     compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
+
+    testImplementation 'io.temporal:temporal-testing:1.34.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
 sourceSets {
     main {
         java {
-            srcDirs = ['io/temporal/omes']
+            srcDirs = [
+                'io/temporal/omes',
+                "$buildDir/generated/source/proto/main/java",
+                "$buildDir/generated/source/proto/main/grpc",
+            ]
+        }
+        proto {
+            srcDirs = ['../proto/harness/api']
+            include 'api.proto'
         }
     }
+    test {
+        java {
+            srcDirs = ['tests']
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.25.5'
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.75.0'
+        }
+    }
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.builtins {
+                java {}
+            }
+            task.plugins {
+                grpc {}
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
 }
