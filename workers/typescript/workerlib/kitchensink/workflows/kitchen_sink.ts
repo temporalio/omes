@@ -326,11 +326,14 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
 function convertCancelType(
   ct: ActivityCancellationType | null | undefined,
 ): WFActivityCancellationType | undefined {
-  if (ct === ActivityCancellationType.TRY_CANCEL) {
-    return WFActivityCancellationType.TRY_CANCEL;
-  } else if (ct === ActivityCancellationType.WAIT_CANCELLATION_COMPLETED) {
-    return WFActivityCancellationType.WAIT_CANCELLATION_COMPLETED;
-  } else if (ct === ActivityCancellationType.ABANDON) {
-    return WFActivityCancellationType.ABANDON;
+  switch (ct) {
+    case temporal.omes.kitchen_sink.ActivityCancellationType.TRY_CANCEL:
+      return WFActivityCancellationType.TRY_CANCEL;
+    case temporal.omes.kitchen_sink.ActivityCancellationType.WAIT_CANCELLATION_COMPLETED:
+      return WFActivityCancellationType.WAIT_CANCELLATION_COMPLETED;
+    case temporal.omes.kitchen_sink.ActivityCancellationType.ABANDON:
+      return WFActivityCancellationType.ABANDON;
+    default:
+      return undefined;
   }
 }

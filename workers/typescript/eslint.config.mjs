@@ -12,20 +12,23 @@ export default tseslint.config(
   {
     ignores: [
       '**/node_modules/**',
+      '**/dist/**',
+      '**/dist-test/**',
       '**/lib/**',
       '**/*.js',
       '**/*.mjs',
       '**/*.cjs',
-      'src/protos/*',
+      'harness/api/**',
+      'workerlib/kitchensink/protos/*',
       'protogen.js',
       'omes-temp-*',
     ],
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['apps/**/*.ts', 'harness/**/*.ts', 'workerlib/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettierConfig],
     languageOptions: {
-      parserOptions: { project: ['./tsconfig.json'] },
+      parserOptions: { project: ['./tsconfig.json', './tsconfig.test.json'] },
     },
     rules: {
       '@typescript-eslint/no-deprecated': 'warn',
@@ -43,7 +46,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/workflows.ts', 'src/workflows-*.ts', 'src/workflows/*.ts'],
+    files: ['workerlib/kitchensink/workflows/**/*.ts'],
     rules: {
       'no-restricted-imports': ['error', ...restrictedBuiltins],
     },

@@ -261,7 +261,8 @@ go run ./cmd run-scenario \
   --server-address <your server address> \
   --run-id local-project-test \
   --option language=python \
-  --option project-name=helloworld
+  --option project-name=helloworld \
+  --option project-server-ready-timeout=15s
 ```
 
 For local all-in-one development, run the worker and scenario together:

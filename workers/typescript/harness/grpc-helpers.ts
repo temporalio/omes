@@ -1,11 +1,12 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import type { ProtoGrpcType } from './generated/api';
+import type { ProtoGrpcType } from './api/api';
 import type {
   ProjectServiceClient,
   ProjectServiceDefinition,
-} from './generated/temporal/omes/projects/v1/ProjectService';
+} from './api/temporal/omes/projects/v1/ProjectService';
 
 export type ProjectServiceClientConstructor = new (
   address: string,
@@ -13,10 +14,20 @@ export type ProjectServiceClientConstructor = new (
   options?: Partial<grpc.ClientOptions>,
 ) => ProjectServiceClient;
 
-// Packaged consumers (e.g. temp worker builds in cmd/dev test) do not have repo-relative
-// access to workers/proto, so the built harness package must carry a copy of api.proto next
-// to the compiled output under dist*/proto.
-const packageDefinition = protoLoader.loadSync(path.resolve(__dirname, '../proto/api.proto'), {
+function harnessApiProtoPath(): string {
+  const candidates = [
+    path.resolve(__dirname, './api/api.proto'),
+    path.resolve(__dirname, '../../harness/api/api.proto'),
+    path.resolve(__dirname, '../../../harness/api/api.proto'),
+  ];
+  const protoPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (protoPath === undefined) {
+    throw new Error(`Could not find harness api.proto in: ${candidates.join(', ')}`);
+  }
+  return protoPath;
+}
+
+const packageDefinition = protoLoader.loadSync(harnessApiProtoPath(), {
   longs: Number,
 });
 const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;

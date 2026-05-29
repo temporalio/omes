@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { Client } from '@temporalio/client';
 import test from 'node:test';
-import type { ClientConfig } from '../src/client.js';
+import type { ClientConfig } from '../client.js';
 import type { Worker } from '@temporalio/worker';
-import { runWorker, runWorkers, type WorkerContext, type WorkerFactory } from '../src/worker.js';
+import { runWorker, runWorkers, type WorkerContext, type WorkerFactory } from '../worker.js';
 import { makeClient } from './test-helpers.js';
 
 interface WorkerFactoryCall {

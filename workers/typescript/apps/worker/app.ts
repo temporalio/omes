@@ -1,10 +1,11 @@
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Client } from '@temporalio/client';
-import { createActivities } from './activities';
-import type { ClientConfig, App, WorkerContext } from '@temporalio/omes-project-harness';
-import { run as runApp } from '@temporalio/omes-project-harness';
+import { createActivities } from '../../workerlib/kitchensink/activities';
+import type { ClientConfig, App, WorkerContext } from '../../harness';
 
-const payloadConverterPath = require.resolve('./payload-converter');
+function payloadConverterPath(): string {
+  return require.resolve('../../workerlib/kitchensink/payload-converter');
+}
 
 async function kitchenSinkClientFactory(config: ClientConfig): Promise<Client> {
   // Use native connection backed client. This client is also used
@@ -20,7 +21,7 @@ async function kitchenSinkClientFactory(config: ClientConfig): Promise<Client> {
     connection,
     namespace: config.namespace,
     dataConverter: {
-      payloadConverterPath,
+      payloadConverterPath: payloadConverterPath(),
     },
   });
 }
@@ -34,29 +35,18 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
   return await Worker.create({
     connection,
     namespace: client.options.namespace,
-    workflowsPath: require.resolve('./workflows'),
+    workflowsPath: require.resolve('../../workerlib/kitchensink/workflows'),
     activities: createActivities(client, context.errOnUnimplemented),
     taskQueue: context.taskQueue,
-    dataConverter: {
-      payloadConverterPath,
-    },
     ...context.workerOptions,
+    dataConverter: {
+      ...context.workerOptions.dataConverter,
+      payloadConverterPath: payloadConverterPath(),
+    },
   });
 }
 
-async function main() {
-  const app: App = {
-    worker: buildWorker,
-    clientFactory: kitchenSinkClientFactory,
-  };
-  await runApp(app);
-}
-
-main()
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+export const app: App = {
+  worker: buildWorker,
+  clientFactory: kitchenSinkClientFactory,
+};

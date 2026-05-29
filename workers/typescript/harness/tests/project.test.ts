@@ -4,12 +4,12 @@ import * as grpc from '@grpc/grpc-js';
 import { Client } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
-import type { ClientConfig, ClientFactory } from '../src/client.js';
+import type { ClientConfig, ClientFactory } from '../client.js';
 import {
   ProjectServiceServer,
   type ProjectExecuteContext,
   type ProjectInitContext,
-} from '../src/project.js';
+} from '../project.js';
 import {
   bindGrpcServer,
   callUnary,
@@ -22,9 +22,9 @@ import {
   shutdownGrpcServer,
   type ProjectServiceClient,
 } from './test-helpers.js';
-import { registerProjectService } from '../src/helpers.js';
-import { InitRequest__Output } from '../src/generated/temporal/omes/projects/v1/InitRequest.js';
-import { ExecuteRequest__Output } from '../src/generated/temporal/omes/projects/v1/ExecuteRequest.js';
+import { registerProjectService } from '../helpers.js';
+import { InitRequest__Output } from '../api/temporal/omes/projects/v1/InitRequest.js';
+import { ExecuteRequest__Output } from '../api/temporal/omes/projects/v1/ExecuteRequest.js';
 
 void test('project server executes workflow against a real Temporal server', async () => {
   let initContext: ProjectInitContext | undefined;

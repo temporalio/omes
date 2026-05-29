@@ -1,4 +1,5 @@
 lib
-src/protos/
-harness/
+harness/api/
+dist-test/
+workerlib/kitchensink/protos/
 omes-temp-*
