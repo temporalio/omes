@@ -67,9 +67,40 @@ type PersistenceOptions struct {
 	Driver string
 }
 
+// Ports are the service ports allocated for a running dev server.
+type Ports struct {
+	Host string
+
+	FrontendGRPC       int
+	FrontendMembership int
+	FrontendHTTP       int
+	HistoryGRPC        int
+	HistoryMembership  int
+	MatchingGRPC       int
+	MatchingMembership int
+	WorkerGRPC         int
+	WorkerMembership   int
+}
+
+func newPorts(host string, ports [portCount]int) Ports {
+	return Ports{
+		Host:               host,
+		FrontendGRPC:       ports[portFrontendGRPC],
+		FrontendMembership: ports[portFrontendMembership],
+		FrontendHTTP:       ports[portFrontendHTTP],
+		HistoryGRPC:        ports[portHistoryGRPC],
+		HistoryMembership:  ports[portHistoryMembership],
+		MatchingGRPC:       ports[portMatchingGRPC],
+		MatchingMembership: ports[portMatchingMembership],
+		WorkerGRPC:         ports[portWorkerGRPC],
+		WorkerMembership:   ports[portWorkerMembership],
+	}
+}
+
 // Server is a running Temporal dev server subprocess.
 type Server struct {
 	frontend string
+	ports    Ports
 	logger   *zap.SugaredLogger
 	workDir  string
 	cancel   context.CancelFunc
@@ -117,7 +148,8 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("devserver: allocate ports: %w", err)
 	}
-	frontendAddr := net.JoinHostPort(host, strconv.Itoa(ports[portFrontendGRPC]))
+	serverPorts := newPorts(host, ports)
+	frontendAddr := net.JoinHostPort(serverPorts.Host, strconv.Itoa(serverPorts.FrontendGRPC))
 	frontendHTTPAddr := net.JoinHostPort(host, strconv.Itoa(ports[portFrontendHTTP]))
 	dynConfigPath, err := writeDynamicConfig(workDir, frontendHTTPAddr, opts.DynamicConfigValues)
 	if err != nil {
@@ -166,6 +198,7 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 
 	s := &Server{
 		frontend: frontendAddr,
+		ports:    serverPorts,
 		logger:   opts.Logger,
 		workDir:  workDir,
 		cancel:   cancel,
@@ -184,6 +217,11 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 // gRPC service.
 func (s *Server) FrontendHostPort() string {
 	return s.frontend
+}
+
+// Ports returns the service ports allocated for the running server.
+func (s *Server) Ports() Ports {
+	return s.ports
 }
 
 // Stop signals the server to terminate and waits for it to exit. The
