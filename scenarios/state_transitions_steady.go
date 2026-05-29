@@ -2,13 +2,15 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"go.temporal.io/api/workflowservice/v1"
+
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
-	"go.temporal.io/api/workflowservice/v1"
 )
 
 func init() {
@@ -18,9 +20,11 @@ func init() {
 			"example, can be run with: run-scenario-with-worker --scenario state_transitions_steady --language go " +
 			"--embedded-server --duration 5m --option state-transitions-per-second=3",
 		ExecutorFn: func() loadgen.Executor {
-			return loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
-				return (&stateTransitionsSteady{runOptions}).run(ctx)
-			})
+			return loadgen.ExecutorFunc(
+				func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
+					return (&stateTransitionsSteady{runOptions}).run(ctx)
+				},
+			)
 		},
 	})
 }
@@ -37,11 +41,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	// backed up and/or slow down this won't match.
 
 	if s.Configuration.Duration == 0 {
-		return fmt.Errorf("duration required for this scenario")
+		return errors.New("duration required for this scenario")
 	}
 	stateTransitionsPerSecond := s.ScenarioOptionInt("state-transitions-per-second", 0)
 	if stateTransitionsPerSecond == 0 {
-		return fmt.Errorf("state-transitions-per-second scenario option required")
+		return errors.New("state-transitions-per-second scenario option required")
 	}
 	durationPerStateTransition := time.Second / time.Duration(stateTransitionsPerSecond)
 	s.Logger.Infof(
@@ -67,11 +71,15 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	} else if err := workflowRun.Get(ctx, nil); err != nil {
 		return fmt.Errorf("failed executing initial workflow: %w", err)
 	}
-	resp, err := s.Client.DescribeWorkflowExecution(ctx, workflowRun.GetID(), workflowRun.GetRunID())
+	resp, err := s.Client.DescribeWorkflowExecution(
+		ctx,
+		workflowRun.GetID(),
+		workflowRun.GetRunID(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed describing workflow: %w", err)
 	}
-	stateTransitionsPerWorkflow := resp.WorkflowExecutionInfo.StateTransitionCount
+	stateTransitionsPerWorkflow := resp.GetWorkflowExecutionInfo().GetStateTransitionCount()
 	workflowStartInterval := durationPerStateTransition * time.Duration(stateTransitionsPerWorkflow)
 	s.Logger.Infof(
 		"Simple workflow takes %v state transitions, which means we need to start a workflow every %v. "+
@@ -101,7 +109,11 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 			} else {
 				consecutiveErrCount++
 				if consecutiveErrCount >= maxConsecutiveErrors {
-					return fmt.Errorf("got %v consecutive errors, most recent: %w", maxConsecutiveErrors, err)
+					return fmt.Errorf(
+						"got %v consecutive errors, most recent: %w",
+						maxConsecutiveErrors,
+						err,
+					)
 				}
 			}
 		case <-ticker.C:

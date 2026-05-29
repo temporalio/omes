@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
 )
@@ -42,6 +43,7 @@ func runWorkerCmd() *cobra.Command {
 
 type workerRunner struct {
 	workers.Runner
+
 	builder workerBuilder
 }
 
@@ -54,9 +56,24 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&r.GracefulShutdownDuration, "graceful-shutdown-duration", 30*time.Second,
 		"Time to wait for worker to respond to interrupt before killing it")
 	fs.BoolVar(&r.EmbeddedServer, "embedded-server", false, "Set to run in a local embedded server")
-	fs.StringVar(&r.EmbeddedServerAddress, "embedded-server-address", "", "Address to bind local embedded server to")
-	fs.IntVar(&r.TaskQueueIndexSuffixStart, "task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
-	fs.IntVar(&r.TaskQueueIndexSuffixEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
+	fs.StringVar(
+		&r.EmbeddedServerAddress,
+		"embedded-server-address",
+		"",
+		"Address to bind local embedded server to",
+	)
+	fs.IntVar(
+		&r.TaskQueueIndexSuffixStart,
+		"task-queue-suffix-index-start",
+		0,
+		"Inclusive start for task queue suffix range",
+	)
+	fs.IntVar(
+		&r.TaskQueueIndexSuffixEnd,
+		"task-queue-suffix-index-end",
+		0,
+		"Inclusive end for task queue suffix range",
+	)
 	fs.AddFlagSet(r.ClientOptions.FlagSet())
 	fs.AddFlagSet(r.MetricsOptions.FlagSet("worker-"))
 	fs.AddFlagSet(r.WorkerOptions.FlagSet())
@@ -64,7 +81,7 @@ func (r *workerRunner) addCLIFlags(fs *pflag.FlagSet) {
 
 func (r *workerRunner) preRun() {
 	r.builder.preRun()
-	r.Runner.Builder = r.builder.Builder
+	r.Builder = r.builder.Builder
 	r.TaskQueueName = loadgen.TaskQueueForRun(r.ScenarioID.RunID)
 }
 

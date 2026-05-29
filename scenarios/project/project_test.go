@@ -10,13 +10,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/features/sdkbuild"
+	sdkclient "go.temporal.io/sdk/client"
+	"go.uber.org/zap/zaptest"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/devserver"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/versions"
 	"github.com/temporalio/omes/workers"
-	sdkclient "go.temporal.io/sdk/client"
-	"go.uber.org/zap/zaptest"
 )
 
 func TestValidateRequiresLanguage(t *testing.T) {
@@ -218,8 +219,14 @@ func startProjectWorker(
 			PreparedLogger: info.Logger.Named(fmt.Sprintf("%s-worker", opts.sdkOpts.Language)),
 		},
 	}
-	require.NoError(t, runner.ClientOptions.FlagSet().Set("server-address", info.ClientOptions.Address))
-	require.NoError(t, runner.ClientOptions.FlagSet().Set("namespace", info.ClientOptions.Namespace))
+	require.NoError(
+		t,
+		runner.ClientOptions.FlagSet().Set("server-address", info.ClientOptions.Address),
+	)
+	require.NoError(
+		t,
+		runner.ClientOptions.FlagSet().Set("namespace", info.ClientOptions.Namespace),
+	)
 
 	workerErrCh := make(chan error, 1)
 	go func() {

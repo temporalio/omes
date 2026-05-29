@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
@@ -41,7 +42,7 @@ func TestThroughputStress(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 
 		state := executor.Snapshot().(tpsState)
-		require.Equal(t, state.CompletedIterations, 2)
+		require.Equal(t, 2, state.CompletedIterations)
 	})
 
 	t.Run("Run executor again, resuming from middle", func(t *testing.T) {
@@ -62,8 +63,7 @@ func TestThroughputStress(t *testing.T) {
 		executor := newThroughputStressExecutor()
 
 		err := executor.LoadState(func(v any) error {
-			s := v.(*tpsState)
-			s.CompletedIterations = s.CompletedIterations
+			// Resume from the end: keep CompletedIterations at its loaded value.
 			return nil
 		})
 		require.NoError(t, err)

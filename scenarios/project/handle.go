@@ -6,10 +6,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/temporalio/omes/loadgen"
-	api "github.com/temporalio/omes/workers/go/harness/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/temporalio/omes/loadgen"
+	api "github.com/temporalio/omes/workers/go/harness/api"
 )
 
 const (
@@ -26,7 +27,12 @@ type ProjectHandle struct {
 	client    api.ProjectServiceClient
 }
 
-func newProjectHandle(ctx context.Context, port int, req *api.InitRequest, readyTimeout time.Duration) (ProjectHandle, error) {
+func newProjectHandle(
+	ctx context.Context,
+	port int,
+	req *api.InitRequest,
+	readyTimeout time.Duration,
+) (ProjectHandle, error) {
 	address := fmt.Sprintf("%s:%d", defaultClientHost, port)
 	c := ProjectHandle{address: address, taskQueue: req.GetTaskQueue()}
 
@@ -47,7 +53,10 @@ func newProjectHandle(ctx context.Context, port int, req *api.InitRequest, ready
 		}
 	}
 	if err != nil {
-		return ProjectHandle{}, fmt.Errorf("project server not ready after %v: %w", readyTimeout, err)
+		return ProjectHandle{}, fmt.Errorf(
+			"project server not ready after %v: %w", readyTimeout,
+			err,
+		)
 	}
 
 	conn, err := grpc.NewClient(
@@ -55,7 +64,11 @@ func newProjectHandle(ctx context.Context, port int, req *api.InitRequest, ready
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return ProjectHandle{}, fmt.Errorf("failed to connect project service %s: %w", c.address, err)
+		return ProjectHandle{}, fmt.Errorf(
+			"failed to connect project service %s: %w",
+			c.address,
+			err,
+		)
 	}
 
 	c.conn = conn
@@ -85,7 +98,10 @@ func (c *ProjectHandle) init(ctx context.Context, req *api.InitRequest) error {
 	return nil
 }
 
-func (c *ProjectHandle) execute(ctx context.Context, req *api.ExecuteRequest) (*api.ExecuteResponse, error) {
+func (c *ProjectHandle) execute(
+	ctx context.Context,
+	req *api.ExecuteRequest,
+) (*api.ExecuteResponse, error) {
 	if req.GetTaskQueue() == "" {
 		req = &api.ExecuteRequest{
 			Iteration: req.GetIteration(),

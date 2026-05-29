@@ -36,7 +36,10 @@ func (lf *Language) Set(value string) error {
 	case string(LangRuby), "rb":
 		*lf = LangRuby
 	default:
-		return fmt.Errorf("invalid language %q, must be one of: [go, python, java, typescript, dotnet, ruby] or aliases [py, ts, cs, rb]", value)
+		return fmt.Errorf(
+			"invalid language %q, must be one of: [go, python, java, typescript, dotnet, ruby] or aliases [py, ts, cs, rb]",
+			value,
+		)
 	}
 	return nil
 }

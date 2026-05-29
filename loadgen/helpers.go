@@ -75,7 +75,7 @@ func MinVisibilityCountEventually(
 		if err != nil {
 			return fmt.Errorf("failed to count workflows in visibility: %w", err)
 		}
-		lastVisibilityCount = visibilityCount.Count
+		lastVisibilityCount = visibilityCount.GetCount()
 		if lastVisibilityCount >= int64(minCount) {
 			done = true
 		}
@@ -110,8 +110,13 @@ func MinVisibilityCountEventually(
 	return nil
 }
 
-// VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
-func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string) error {
+// VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given
+// search attribute.
+func VerifyNoFailedWorkflows(
+	ctx context.Context,
+	info ScenarioInfo,
+	searchAttribute, runID string,
+) error {
 	var errors []string
 
 	for _, status := range []enums.WorkflowExecutionStatus{
@@ -121,16 +126,26 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 		statusQuery := fmt.Sprintf(
 			"%s='%s' and ExecutionStatus = '%s'",
 			searchAttribute, runID, status)
-		visibilityCount, err := info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query:     statusQuery,
-		})
+		visibilityCount, err := info.Client.CountWorkflow(
+			ctx,
+			&workflowservice.CountWorkflowExecutionsRequest{
+				Namespace: info.Namespace,
+				Query:     statusQuery,
+			},
+		)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("failed to run query %q: %v", statusQuery, err))
 			continue
 		}
-		if visibilityCount.Count > 0 {
-			errors = append(errors, fmt.Sprintf("unexpected %d workflows with status %s", visibilityCount.Count, status))
+		if visibilityCount.GetCount() > 0 {
+			errors = append(
+				errors,
+				fmt.Sprintf(
+					"unexpected %d workflows with status %s",
+					visibilityCount.GetCount(),
+					status,
+				),
+			)
 		}
 	}
 
@@ -149,7 +164,7 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 	// Create run-specific output directory
 	outputDir := filepath.Join(
 		info.ExportOptions.ExportHistoriesDir,
-		fmt.Sprintf("histories-%s", info.ExecutionID),
+		"histories-"+info.ExecutionID,
 	)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create histories directory: %w", err)
@@ -166,23 +181,30 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 		return fmt.Errorf("failed to list workflows: %w", err)
 	}
 
-	if len(resp.Executions) == 0 {
+	if len(resp.GetExecutions()) == 0 {
 		info.Logger.Info("No workflows found matching export filter")
 		return nil
 	}
 
 	var exportErrors []string
-	for _, execution := range resp.Executions {
+	for _, execution := range resp.GetExecutions() {
 		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
-			exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
+			exportErrors = append(
+				exportErrors,
+				fmt.Sprintf("%s: %v", execution.GetExecution().GetWorkflowId(), err),
+			)
 		}
 	}
 
 	info.Logger.Infof("Exported %d workflow histories to %s",
-		len(resp.Executions)-len(exportErrors), outputDir)
+		len(resp.GetExecutions())-len(exportErrors), outputDir)
 
 	if len(exportErrors) > 0 {
-		return fmt.Errorf("%d workflow history exports failed: %s", len(exportErrors), strings.Join(exportErrors, "\n "))
+		return fmt.Errorf(
+			"%d workflow history exports failed: %s",
+			len(exportErrors),
+			strings.Join(exportErrors, "\n "),
+		)
 	}
 	return nil
 }
@@ -209,10 +231,16 @@ func exportSingleWorkflowHistory(
 	execution *workflow.WorkflowExecutionInfo,
 	outputDir string,
 ) error {
-	workflowID := execution.Execution.WorkflowId
-	runID := execution.Execution.RunId
+	workflowID := execution.GetExecution().GetWorkflowId()
+	runID := execution.GetExecution().GetRunId()
 
-	historyIter := c.GetWorkflowHistory(ctx, workflowID, runID, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	historyIter := c.GetWorkflowHistory(
+		ctx,
+		workflowID,
+		runID,
+		false,
+		enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
+	)
 	var events []*history.HistoryEvent
 	for historyIter.HasNext() {
 		event, err := historyIter.Next()

@@ -10,11 +10,12 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/metrics"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/metrics"
 )
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
@@ -64,7 +65,7 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		}
 		cert, err := tls.LoadX509KeyPair(c.ClientCertPath, c.ClientKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load certs: %s", err)
+			return nil, fmt.Errorf("failed to load certs: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		return tlsConfig, nil
@@ -78,7 +79,10 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 }
 
 // MustDial connects to a Temporal server, with logging, metrics and loaded TLS certs.
-func (c *ClientOptions) MustDial(metrics *metrics.Metrics, logger *zap.SugaredLogger) client.Client {
+func (c *ClientOptions) MustDial(
+	metrics *metrics.Metrics,
+	logger *zap.SugaredLogger,
+) client.Client {
 	client, err := c.Dial(metrics, logger)
 	if err != nil {
 		logger.Fatal(err)
@@ -87,7 +91,10 @@ func (c *ClientOptions) MustDial(metrics *metrics.Metrics, logger *zap.SugaredLo
 }
 
 // Dial connects to a Temporal server, with logging, metrics, loaded TLS certs and set auth header.
-func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger) (client.Client, error) {
+func (c *ClientOptions) Dial(
+	metrics *metrics.Metrics,
+	logger *zap.SugaredLogger,
+) (client.Client, error) {
 	tlsCfg, err := c.loadTLSConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS config: %w", err)
@@ -139,21 +146,38 @@ func (c *ClientOptions) FlagSet() *pflag.FlagSet {
 	}
 
 	c.fs = pflag.NewFlagSet("client_options", pflag.ExitOnError)
-	c.fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
+	c.fs.StringVar(
+		&c.Address,
+		"server-address",
+		client.DefaultHostPort,
+		"Address of Temporal server",
+	)
 	c.fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
 	c.fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	c.fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	c.fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
-	c.fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
+	c.fs.BoolVar(
+		&c.DisableHostVerification,
+		"disable-tls-host-verification",
+		false,
+		"Disable TLS host verification",
+	)
 	c.fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
-	c.fs.StringVar(&c.AuthHeader, "auth-header", "",
-		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
+	c.fs.StringVar(
+		&c.AuthHeader,
+		"auth-header",
+		"",
+		fmt.Sprintf(
+			"Authorization header value (can also be set via %s env var)",
+			AUTH_HEADER_ENV_VAR,
+		),
+	)
 	return c.fs
 }
 
 type PassThroughPayloadConverter struct{}
 
-func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payload, error) {
+func (p *PassThroughPayloadConverter) ToPayload(value any) (*common.Payload, error) {
 	if valuePayload, ok := value.(*common.Payload); ok {
 		asBytes, err := proto.Marshal(valuePayload)
 		if err != nil {
@@ -170,7 +194,10 @@ func (p *PassThroughPayloadConverter) ToPayload(value interface{}) (*common.Payl
 	return nil, nil
 }
 
-func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, valuePtr interface{}) error {
+func (p *PassThroughPayloadConverter) FromPayload(
+	payload *common.Payload,
+	valuePtr any,
+) error {
 	innerPayload := &common.Payload{}
 	err := proto.Unmarshal(payload.GetData(), innerPayload)
 	if err != nil {

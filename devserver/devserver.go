@@ -155,7 +155,13 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("devserver: write dynamic config: %w", err)
 	}
-	serverEnv, err := buildServerEnv(opts.Persistence, opts.ClusterEndpoint, dynConfigPath, host, ports)
+	serverEnv, err := buildServerEnv(
+		opts.Persistence,
+		opts.ClusterEndpoint,
+		dynConfigPath,
+		host,
+		ports,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("devserver: build env: %w", err)
 	}
@@ -249,7 +255,8 @@ func classifyExitErr(err error) error {
 	if !errors.As(err, &exitErr) {
 		return err
 	}
-	if ws, ok := exitErr.Sys().(syscall.WaitStatus); ok && ws.Signaled() && ws.Signal() == syscall.SIGTERM {
+	if ws, ok := exitErr.Sys().(syscall.WaitStatus); ok && ws.Signaled() &&
+		ws.Signal() == syscall.SIGTERM {
 		return nil
 	}
 	return err
@@ -263,7 +270,9 @@ func (s *Server) registerNamespace(ctx context.Context, namespace string) error 
 		select {
 		case procErr := <-s.done:
 			s.done <- procErr
-			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
+			cancel(
+				fmt.Errorf("process exited before namespace registration completed: %w", procErr),
+			)
 		case <-ctx.Done():
 		}
 	}()

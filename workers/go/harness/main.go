@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"errors"
 	"fmt"
 	"os"
 )
@@ -19,15 +20,15 @@ var dispatchLambdaWorker = runLambdaWorker
 func Run(app App) error {
 	argv := os.Args[1:]
 	if len(argv) == 0 {
-		return fmt.Errorf("No command specified. Expected 'worker' or 'project-server'")
+		return errors.New("No command specified. Expected 'worker' or 'project-server'")
 	}
 	switch argv[0] {
 	case "worker":
 		if app.Worker == nil && app.LambdaWorker == nil {
-			return fmt.Errorf("worker or lambda worker factory is required")
+			return errors.New("worker or lambda worker factory is required")
 		}
 		if app.Worker != nil && app.LambdaWorker != nil {
-			return fmt.Errorf("worker and lambda worker factories are mutually exclusive")
+			return errors.New("worker and lambda worker factories are mutually exclusive")
 		}
 		if app.Worker != nil {
 			return dispatchWorkerCLI(app.Worker, app.ClientFactory, argv[1:])
@@ -35,7 +36,9 @@ func Run(app App) error {
 		return dispatchLambdaWorker(app.LambdaWorker)
 	case "project-server":
 		if app.Project == nil {
-			return fmt.Errorf("Wanted project-server but no project handlers registered for this app")
+			return errors.New(
+				"Wanted project-server but no project handlers registered for this app",
+			)
 		}
 		return dispatchProjectCLI(*app.Project, app.ClientFactory, argv[1:])
 	default:

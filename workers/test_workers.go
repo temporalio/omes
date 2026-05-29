@@ -8,9 +8,10 @@ import (
 	"sync"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
-	"go.uber.org/zap"
 )
 
 type workerPool struct {
@@ -43,6 +44,7 @@ func (w *workerPool) ensureWorkerBuilt(
 	logger *zap.SugaredLogger,
 	sdk clioptions.Language,
 ) error {
+	t.Helper()
 	w.mutex.Lock()
 	once, exists := w.buildOnce[sdk]
 	if !exists {
@@ -114,8 +116,8 @@ func (w *workerPool) startWorker(
 				PreparedLogger: logger.Named(fmt.Sprintf("%s-worker", sdk)),
 			},
 		}
-		runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
-		runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
+		_ = runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
+		_ = runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
 		workerDone <- runner.Run(ctx, baseDir)
 	}()
 

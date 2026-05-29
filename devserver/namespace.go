@@ -18,7 +18,10 @@ import (
 // registerNamespace registers a namespace.
 // No-op if it already exists. Retries transient errors.
 func registerNamespace(ctx context.Context, frontendAddr, namespace string) error {
-	conn, err := grpc.NewClient(frontendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		frontendAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return fmt.Errorf("dial frontend: %w", err)
 	}
@@ -65,7 +68,11 @@ func isRetryable(err error) bool {
 		return true
 	}
 	switch st.Code() {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted, codes.Aborted, codes.Internal:
+	case codes.Unavailable,
+		codes.DeadlineExceeded,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.Internal:
 		return true
 	default:
 		return false

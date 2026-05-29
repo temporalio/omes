@@ -2,12 +2,14 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/golang/protobuf/proto"
+
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -31,7 +33,7 @@ type FuzzExecutor struct {
 
 func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.InitInputs == nil {
-		return fmt.Errorf("InitInputs must be specified")
+		return errors.New("InitInputs must be specified")
 	}
 
 	// Use a user-provided nexus endpoint, or auto-create one for this run
@@ -50,6 +52,9 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	fileOrArgs := k.InitInputs(ctx, info)
 	if fileOrArgs.FilePath != "" {
 		fDat, err := os.ReadFile(fileOrArgs.FilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read test input file %q: %w", fileOrArgs.FilePath, err)
+		}
 		asTInput := &kitchensink.TestInput{}
 		err = proto.Unmarshal(fDat, asTInput)
 		if err != nil {
@@ -75,10 +80,12 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 			return fmt.Errorf("failed to run rust generator (%v): %w", cmd, err)
 		}
 		asTInput := &kitchensink.TestInput{}
-		err = proto.Unmarshal(protoBytes, asTInput)
+		if err = proto.Unmarshal(protoBytes, asTInput); err != nil {
+			return fmt.Errorf("failed to unmarshal test input from generator: %w", err)
+		}
 		testInputs = append(testInputs, asTInput)
 	} else {
-		return fmt.Errorf("InitInputs must specify either a file or args")
+		return errors.New("InitInputs must specify either a file or args")
 	}
 
 	// Create generic executor and run it

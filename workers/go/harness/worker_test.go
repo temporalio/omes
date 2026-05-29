@@ -13,10 +13,10 @@ import (
 type fakeWorker struct {
 	sdkworker.Worker
 
-	run func(<-chan interface{}) error
+	run func(<-chan any) error
 }
 
-func (f fakeWorker) Run(stopCh <-chan interface{}) error {
+func (f fakeWorker) Run(stopCh <-chan any) error {
 	if f.run == nil {
 		return nil
 	}
@@ -59,7 +59,11 @@ func TestRunWorkerCLIPassesSharedClientAndWorkerContext(t *testing.T) {
 		t.Fatalf("expected 2 worker contexts, got %d", len(gotContexts))
 	}
 	if gotContexts[0].TaskQueue != "omes-1" || gotContexts[1].TaskQueue != "omes-2" {
-		t.Fatalf("unexpected task queues: %q, %q", gotContexts[0].TaskQueue, gotContexts[1].TaskQueue)
+		t.Fatalf(
+			"unexpected task queues: %q, %q",
+			gotContexts[0].TaskQueue,
+			gotContexts[1].TaskQueue,
+		)
 	}
 	for _, context := range gotContexts {
 		if !context.ErrOnUnimplemented {
@@ -72,10 +76,10 @@ func TestRunWorkersStopsRemainingWorkersOnFailure(t *testing.T) {
 	stopped := make(chan struct{}, 1)
 
 	err := runWorkers([]sdkworker.Worker{
-		fakeWorker{run: func(<-chan interface{}) error {
+		fakeWorker{run: func(<-chan any) error {
 			return context.Canceled
 		}},
-		fakeWorker{run: func(stopCh <-chan interface{}) error {
+		fakeWorker{run: func(stopCh <-chan any) error {
 			select {
 			case <-stopCh:
 				stopped <- struct{}{}

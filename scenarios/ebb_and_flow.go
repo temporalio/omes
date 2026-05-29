@@ -10,10 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/loadgen/ebbandflow"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
+
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/ebbandflow"
 )
 
 const (
@@ -33,7 +34,8 @@ const (
 	MaxRateFlag = "max-rate"
 	// ControlIntervalFlag defines how often the backlog is controlled.
 	ControlIntervalFlag = "control-interval"
-	// MaxConsecutiveErrorsFlag defines how many consecutive errors are tolerated before stopping the scenario.
+	// MaxConsecutiveErrorsFlag defines how many consecutive errors are tolerated before stopping
+	// the scenario.
 	MaxConsecutiveErrorsFlag = "max-consecutive-errors"
 	// BacklogLogIntervalFlag defines how often the current backlog stats are logged.
 	BacklogLogIntervalFlag = "backlog-log-interval"
@@ -60,6 +62,7 @@ type ebbAndFlowState struct {
 
 type ebbAndFlowExecutor struct {
 	loadgen.ScenarioInfo
+
 	config              *ebbAndFlowConfig
 	rng                 *rand.Rand
 	id                  string
@@ -91,12 +94,24 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
-		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
-		MaxRate:                       int64(info.ScenarioOptionInt(MaxRateFlag, 1000)),
-		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
-		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
-		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
-		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+		SleepDuration: info.ScenarioOptionDuration(
+			SleepDurationFlag,
+			1*time.Millisecond,
+		),
+		MaxRate: int64(info.ScenarioOptionInt(MaxRateFlag, 1000)),
+		ControlInterval: info.ScenarioOptionDuration(
+			ControlIntervalFlag,
+			100*time.Millisecond,
+		),
+		MaxConsecutiveErrors: info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
+		BacklogLogInterval: info.ScenarioOptionDuration(
+			BacklogLogIntervalFlag,
+			30*time.Second,
+		),
+		VisibilityVerificationTimeout: info.ScenarioOptionDuration(
+			VisibilityVerificationTimeoutFlag,
+			30*time.Second,
+		),
 	}
 
 	config.MinBacklog = int64(info.ScenarioOptionInt(MinBacklogFlag, 0))
@@ -106,7 +121,11 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.MaxBacklog = int64(info.ScenarioOptionInt(MaxBacklogFlag, 30))
 	if config.MaxBacklog <= config.MinBacklog {
-		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
+		return fmt.Errorf(
+			"max-backlog must be greater than min-backlog, got max=%d min=%d",
+			config.MaxBacklog,
+			config.MinBacklog,
+		)
 	}
 
 	// TODO: backwards-compatibility, remove later
@@ -119,7 +138,11 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
 		var err error
 		// This scenario overrides "count" and "sleepDuration" so do not require them.
-		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false, false)
+		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(
+			sleepActivitiesStr,
+			false,
+			false,
+		)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
@@ -128,7 +151,9 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		config.SleepActivityConfig = &loadgen.SleepActivityConfig{}
 	}
 	if len(config.SleepActivityConfig.Groups) == 0 {
-		config.SleepActivityConfig.Groups = map[string]loadgen.SleepActivityGroupConfig{"default": {}}
+		config.SleepActivityConfig.Groups = map[string]loadgen.SleepActivityGroupConfig{
+			"default": {},
+		}
 	}
 	for name, group := range config.SleepActivityConfig.Groups {
 		fixedDist := loadgen.NewFixedDistribution(config.SleepDuration)
@@ -147,14 +172,14 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	e.ScenarioInfo = info
-	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
+	e.id = "ebb_and_flow_" + e.ExecutionID
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
 
 	// Get parsed configuration
 	config := e.config
 	if config == nil {
-		return fmt.Errorf("configuration not parsed - Parse must be called before run")
+		return errors.New("configuration not parsed - Parse must be called before run")
 	}
 
 	var consecutiveErrCount int
@@ -169,8 +194,13 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	var startWG sync.WaitGroup
 	var iter int64 = 1
 
-	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
-		config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
+	e.Logger.Infof(
+		"Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
+		config.MinBacklog,
+		config.MaxBacklog,
+		config.Period,
+		e.Configuration.Duration,
+	)
 
 	var started, completed, backlog, target, activities int64
 
@@ -183,7 +213,11 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 				e.Logger.Errorf("Failed to spawn workflow: %v", err)
 				consecutiveErrCount++
 				if consecutiveErrCount >= config.MaxConsecutiveErrors {
-					return fmt.Errorf("got %v consecutive errors, most recent: %w", config.MaxConsecutiveErrors, err)
+					return fmt.Errorf(
+						"got %v consecutive errors, most recent: %w",
+						config.MaxConsecutiveErrors,
+						err,
+					)
 				}
 			} else {
 				consecutiveErrCount = 0
@@ -193,7 +227,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			completed = e.completedActivities.Load()
 			backlog = started - completed
 
-			target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
+			target = calculateBacklogTarget(
+				elapsed,
+				config.Period,
+				config.MinBacklog,
+				config.MaxBacklog,
+			)
 			activities = target - backlog
 			activities = max(activities, 0)
 			activities = min(activities, config.MaxRate)
@@ -221,7 +260,9 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 
 	// Post-scenario: verify that at least one workflow was completed.
 	if totalCompletedWorkflows == 0 {
-		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
+		return errors.New(
+			"No iterations completed. Either the scenario never ran, or it failed to resume correctly.",
+		)
 	}
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
@@ -240,7 +281,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
+	return loadgen.VerifyNoFailedWorkflows(
+		ctx,
+		e.ScenarioInfo,
+		loadgen.OmesExecutionIDSearchAttribute,
+		e.ExecutionID,
+	)
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -281,12 +327,13 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Start workflow.
 	run := e.NewRun(int(iteration))
-	e.RegisterDefaultSearchAttributes(ctx)
+	_ = e.RegisterDefaultSearchAttributes(ctx)
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
 	options.TypedSearchAttributes = temporal.NewSearchAttributes(
-		temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(e.ExecutionID),
+		temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).
+			ValueSet(e.ExecutionID),
 	)
 
 	workflowInput := &ebbandflow.WorkflowParams{
@@ -296,7 +343,11 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	// Start workflow to track activity timings.
 	wf, err := e.Client.ExecuteWorkflow(ctx, options, "ebbAndFlowTrack", workflowInput)
 	if err != nil {
-		return fmt.Errorf("failed to start ebbAndFlowTrack workflow for iteration %d: %w", iteration, err)
+		return fmt.Errorf(
+			"failed to start ebbAndFlowTrack workflow for iteration %d: %w",
+			iteration,
+			err,
+		)
 	}
 	e.scheduledActivities.Add(activities)
 

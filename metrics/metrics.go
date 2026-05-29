@@ -34,7 +34,11 @@ func (m *Metrics) NewHandler() client.MetricsHandler {
 
 // Shutdown the Prometheus HTTP server and local Prometheus process if they were set up.
 // scenario, runID, and runFamily are passed to the export function for metrics metadata.
-func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
+func (m *Metrics) Shutdown(
+	ctx context.Context,
+	logger *zap.SugaredLogger,
+	scenario, runID, runFamily string,
+) error {
 	// Shutdown prometheus process if running
 	if m.PromInstance != nil {
 		m.PromInstance.Shutdown(ctx, logger, scenario, runID, runFamily)
@@ -233,9 +237,7 @@ func (c *processCollector) Collect(ch chan<- prometheus.Metric) {
 	// since the child (e.g. python under uv) may not exist yet at startup.
 	if !c.childrenDiscovered {
 		if children, _ := c.rootProcess.Children(); len(children) > 0 {
-			for _, child := range children {
-				c.procs = append(c.procs, child)
-			}
+			c.procs = append(c.procs, children...)
 			c.childrenDiscovered = true
 		}
 	}

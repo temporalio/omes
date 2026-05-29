@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// LoggingOptions for setting up the logger component
+// LoggingOptions for setting up the logger component.
 type LoggingOptions struct {
 	// Log level
 	LogLevel string
@@ -22,7 +22,8 @@ type LoggingOptions struct {
 	fs *pflag.FlagSet
 }
 
-// BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using built-in `log`).
+// BackupLogger is used in case we can't instantiate zap (it's nicer DX than panicking or using
+// built-in `log`).
 var BackupLogger = log.New(os.Stderr, "", 0)
 
 // MustCreateLogger sets up a zap logger or panics on error.

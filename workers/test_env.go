@@ -11,10 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/devserver"
-	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/versions"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
@@ -22,6 +18,11 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 	"go.uber.org/zap/zaptest/observer"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/devserver"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/versions"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 	workerShutdownTimeout = 5 * time.Second
 )
 
-// Functional options configuration
+// Functional options configuration.
 type testEnvConfig struct {
 	executorTimeout time.Duration
 	runID           string
@@ -69,6 +70,7 @@ type TestResult struct {
 
 type TestEnvironment struct {
 	testEnvConfig
+
 	devServer         *devserver.Server
 	temporalClient    client.Client
 	buildID           string
@@ -90,6 +92,7 @@ func (env *TestEnvironment) NexusEndpointName() string {
 }
 
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+	t.Helper()
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
 	}
@@ -147,7 +150,7 @@ func (env *TestEnvironment) cleanup() {
 		env.temporalClient.Close()
 	}
 	if env.devServer != nil {
-		env.devServer.Stop()
+		_ = env.devServer.Stop()
 	}
 	env.workerPool.cleanup()
 }
@@ -175,13 +178,14 @@ func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, runID strin
 	return endpointName, nil
 }
 
-// RunExecutorTest runs an executor with a specific SDK and server address
+// RunExecutorTest runs an executor with a specific SDK and server address.
 func (env *TestEnvironment) RunExecutorTest(
 	t *testing.T,
 	executor loadgen.Executor,
 	scenarioInfo loadgen.ScenarioInfo,
 	sdk clioptions.Language,
 ) (TestResult, error) {
+	t.Helper()
 	testLogger := zaptest.NewLogger(t).Core()
 	observeLogger, observedLogs := observer.New(zap.DebugLevel)
 	logger := zap.New(zapcore.NewTee(testLogger, observeLogger)).Sugar()
@@ -202,7 +206,13 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Namespace = testNamespace
 
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
-	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
+	workerShutdownCh := env.workerPool.startWorker(
+		testCtx,
+		logger,
+		sdk,
+		taskQueueName,
+		scenarioInfo,
+	)
 
 	execErr := executor.Run(testCtx, scenarioInfo)
 
@@ -217,7 +227,7 @@ func (env *TestEnvironment) RunExecutorTest(
 			t.Logf("Worker shutdown with error: %v", workerErr)
 		}
 	case <-time.After(2 * workerShutdownTimeout):
-		workerErr = fmt.Errorf("timed out waiting for worker shutdown")
+		workerErr = errors.New("timed out waiting for worker shutdown")
 	}
 
 	return TestResult{ObservedLogs: observedLogs},
@@ -225,5 +235,5 @@ func (env *TestEnvironment) RunExecutorTest(
 }
 
 func (env *TestEnvironment) buildDirName() string {
-	return fmt.Sprintf("omes-temp-%s", env.buildID)
+	return "omes-temp-" + env.buildID
 }

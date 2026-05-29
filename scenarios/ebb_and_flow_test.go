@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
@@ -96,21 +97,24 @@ func TestEbbAndFlow(t *testing.T) {
 		require.Greater(t, state.TotalCompletedWorkflows, previouState.TotalCompletedWorkflows)
 	})
 
-	t.Run("Run executor again, resuming from previous state but without any time left", func(t *testing.T) {
-		executor := newEbbAndFlowExecutor()
+	t.Run(
+		"Run executor again, resuming from previous state but without any time left",
+		func(t *testing.T) {
+			executor := newEbbAndFlowExecutor()
 
-		// Load previous state
-		err := executor.LoadState(func(v any) error {
-			s := v.(*ebbAndFlowState)
-			*s = state
-			return nil
-		})
-		require.NoError(t, err, "Should be able to load previous state")
+			// Load previous state
+			err := executor.LoadState(func(v any) error {
+				s := v.(*ebbAndFlowState)
+				*s = state
+				return nil
+			})
+			require.NoError(t, err, "Should be able to load previous state")
 
-		resumeScenarioInfo := scenarioInfo
-		resumeScenarioInfo.Configuration.Duration = 0 // ie no more time left
+			resumeScenarioInfo := scenarioInfo
+			resumeScenarioInfo.Configuration.Duration = 0 // ie no more time left
 
-		_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
-		require.NoError(t, err, "Executor should complete successfully")
-	})
+			_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
+			require.NoError(t, err, "Executor should complete successfully")
+		},
+	)
 }

@@ -9,15 +9,16 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/nexus-rpc/sdk-go/nexus"
+	"go.temporal.io/sdk/activity"
+	sdkclient "go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/contrib/aws/lambdaworker"
+	"go.temporal.io/sdk/workflow"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/workers/go/harness"
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
 	"github.com/temporalio/omes/workers/go/workerlib/schedulerstress"
-	"go.temporal.io/sdk/activity"
-	sdkclient "go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/contrib/aws/lambdaworker"
-	"go.temporal.io/sdk/workflow"
 )
 
 const defaultTaskQueueName = "omes"
@@ -81,17 +82,26 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 		svc := secretsmanager.NewFromConfig(cfg)
 
 		if tlsCertID != "" && tlsKeyID != "" {
-			clientCert, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &tlsCertID})
+			clientCert, err := svc.GetSecretValue(
+				ctx,
+				&secretsmanager.GetSecretValueInput{SecretId: &tlsCertID},
+			)
 			if err != nil {
 				return fmt.Errorf("failed to fetch TLS cert secret: %w", err)
 			}
 
-			clientKey, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &tlsKeyID})
+			clientKey, err := svc.GetSecretValue(
+				ctx,
+				&secretsmanager.GetSecretValueInput{SecretId: &tlsKeyID},
+			)
 			if err != nil {
 				return fmt.Errorf("failed to fetch TLS key secret: %w", err)
 			}
 
-			cert, err := tls.X509KeyPair([]byte(*clientCert.SecretString), []byte(*clientKey.SecretString))
+			cert, err := tls.X509KeyPair(
+				[]byte(*clientCert.SecretString),
+				[]byte(*clientKey.SecretString),
+			)
 			if err != nil {
 				return fmt.Errorf("failed to parse TLS key pair: %w", err)
 			}
@@ -99,7 +109,10 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 		}
 
 		if apiKeyID != "" {
-			apiKeyValue, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &apiKeyID})
+			apiKeyValue, err := svc.GetSecretValue(
+				ctx,
+				&secretsmanager.GetSecretValueInput{SecretId: &apiKeyID},
+			)
 			if err != nil {
 				return fmt.Errorf("failed to fetch API key secret: %w", err)
 			}
@@ -122,17 +135,35 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 		}
 	}
 
-	opts.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
+	opts.RegisterWorkflowWithOptions(
+		kitchensink.KitchenSinkWorkflow,
+		workflow.RegisterOptions{Name: "kitchenSink"},
+	)
 	opts.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
-	opts.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
-	opts.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
-	opts.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+	opts.RegisterWorkflowWithOptions(
+		ebbandflow.EbbAndFlowTrackWorkflow,
+		workflow.RegisterOptions{Name: "ebbAndFlowTrack"},
+	)
+	opts.RegisterWorkflowWithOptions(
+		schedulerstress.NoopScheduledWorkflow,
+		workflow.RegisterOptions{Name: "NoopScheduledWorkflow"},
+	)
+	opts.RegisterWorkflowWithOptions(
+		schedulerstress.SleepScheduledWorkflow,
+		workflow.RegisterOptions{Name: "SleepScheduledWorkflow"},
+	)
 	opts.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
 	opts.RegisterActivityWithOptions(kitchensink.Delay, activity.RegisterOptions{Name: "delay"})
 	opts.RegisterActivityWithOptions(kitchensink.Payload, activity.RegisterOptions{Name: "payload"})
-	opts.RegisterActivityWithOptions(kitchensink.RetryableError, activity.RegisterOptions{Name: "retryable_error"})
+	opts.RegisterActivityWithOptions(
+		kitchensink.RetryableError,
+		activity.RegisterOptions{Name: "retryable_error"},
+	)
 	opts.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
-	opts.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
+	opts.RegisterActivityWithOptions(
+		kitchensink.Heartbeat,
+		activity.RegisterOptions{Name: "heartbeat"},
+	)
 	opts.RegisterActivity(&ebbFlowActivities)
 
 	opts.RegisterNexusService(service)

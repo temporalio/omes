@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,10 +13,11 @@ import (
 	"time"
 
 	"github.com/temporalio/features/sdkbuild"
+	"go.uber.org/zap"
+
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	api "github.com/temporalio/omes/workers/go/harness/api"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -103,12 +105,14 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	return executor.Run(ctx, info)
 }
 
-func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectScenarioOptions, error) {
+func (e *projectScenarioExecutor) validate(
+	info loadgen.ScenarioInfo,
+) (projectScenarioOptions, error) {
 	var opts projectScenarioOptions
 
 	lang := info.ScenarioOptions["language"]
 	if lang == "" {
-		return opts, fmt.Errorf("--option language=<lang> is required")
+		return opts, errors.New("--option language=<lang> is required")
 	}
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
@@ -120,10 +124,12 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	projectName := info.ScenarioOptions["project-name"]
 	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
 	if projectName == "" && prebuiltDir == "" {
-		return opts, fmt.Errorf("either --option project-name or --option prebuilt-project-dir is required")
+		return opts, errors.New(
+			"either --option project-name or --option prebuilt-project-dir is required",
+		)
 	}
 	if projectName != "" && prebuiltDir != "" {
-		return opts, fmt.Errorf("cannot specify both project-name and prebuilt-project-dir")
+		return opts, errors.New("cannot specify both project-name and prebuilt-project-dir")
 	}
 
 	if prebuiltDir != "" {
@@ -170,7 +176,13 @@ func findAvailablePort() (int, error) {
 	return port, nil
 }
 
-func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, port int) (*exec.Cmd, error) {
+func startProjectProcess(
+	ctx context.Context,
+	prog sdkbuild.Program,
+	logger *zap.SugaredLogger,
+	lang clioptions.Language,
+	port int,
+) (*exec.Cmd, error) {
 	var args []string
 	// Python needs module name
 	if lang == clioptions.LangPython {
@@ -201,7 +213,12 @@ func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap
 	return cmd, nil
 }
 
-func stopProjectProcess(name string, cancel context.CancelFunc, cmd *exec.Cmd, logger *zap.SugaredLogger) {
+func stopProjectProcess(
+	name string,
+	cancel context.CancelFunc,
+	cmd *exec.Cmd,
+	logger *zap.SugaredLogger,
+) {
 	cancel()
 	if cmd != nil {
 		if err := cmd.Wait(); err != nil {

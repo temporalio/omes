@@ -2,6 +2,7 @@ package harness
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,11 +10,12 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type WorkerContext struct {
@@ -38,27 +40,30 @@ type workerCLIOptions struct {
 
 func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv []string) error {
 	if workerFactory == nil {
-		return fmt.Errorf("worker factory is required")
+		return errors.New("worker factory is required")
 	}
 	if clientFactory == nil {
-		return fmt.Errorf("client factory is required")
+		return errors.New("client factory is required")
 	}
 	options := newWorkerCLIOptions()
 	if err := options.parse(argv); err != nil {
 		return err
 	}
 	if options.taskQueueSuffixIndexStart > options.taskQueueSuffixIndexEnd {
-		return fmt.Errorf("task queue suffix start after end")
+		return errors.New("task queue suffix start after end")
 	}
 	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions)
 	if err != nil {
 		return err
 	}
-	logger, err := configureLogger(options.loggingOptions.LogLevel, options.loggingOptions.LogEncoding)
+	logger, err := configureLogger(
+		options.loggingOptions.LogLevel,
+		options.loggingOptions.LogEncoding,
+	)
 	if err != nil {
 		return err
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	config, err := buildClientConfig(clientConfigOptions{
 		Logger:                  logger,
@@ -77,7 +82,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		return err
 	}
 	if config.Metrics != nil {
-		defer config.Metrics.Shutdown(context.Background(), logger, "", "", "")
+		defer func() { _ = config.Metrics.Shutdown(context.Background(), logger, "", "", "") }()
 	}
 	client, err := clientFactory(config)
 	if err != nil {
@@ -87,7 +92,12 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		defer client.Close()
 	}
 
-	taskQueues := buildTaskQueues(logger, options.taskQueue, options.taskQueueSuffixIndexStart, options.taskQueueSuffixIndexEnd)
+	taskQueues := buildTaskQueues(
+		logger,
+		options.taskQueue,
+		options.taskQueueSuffixIndexStart,
+		options.taskQueueSuffixIndexEnd,
+	)
 	workers := make([]sdkworker.Worker, 0, len(taskQueues))
 	for _, taskQueue := range taskQueues {
 		context := WorkerContext{
@@ -104,7 +114,11 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 	return runWorkers(workers, runContext.Done())
 }
 
-func buildTaskQueues(logger *zap.SugaredLogger, taskQueue string, suffixStart, suffixEnd int) []string {
+func buildTaskQueues(
+	logger *zap.SugaredLogger,
+	taskQueue string,
+	suffixStart, suffixEnd int,
+) []string {
 	if suffixEnd == 0 {
 		logger.Infof("Go worker will run on task queue %s", taskQueue)
 		return []string{taskQueue}
@@ -124,18 +138,28 @@ func parseVersioningBehavior(value string) (workflow.VersioningBehavior, error) 
 	case "pinned":
 		return workflow.VersioningBehaviorPinned, nil
 	default:
-		return 0, fmt.Errorf("invalid --default-versioning-behavior %q (expected pinned or auto-upgrade)", value)
+		return 0, fmt.Errorf(
+			"invalid --default-versioning-behavior %q (expected pinned or auto-upgrade)",
+			value,
+		)
 	}
 }
 
-func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions) (sdkworker.Options, error) {
+func buildWorkerOptions(
+	flags *pflag.FlagSet,
+	args clioptions.WorkerOptions,
+) (sdkworker.Options, error) {
 	options := sdkworker.Options{}
 	if args.DeploymentName != "" {
 		if args.BuildID != "" {
-			return sdkworker.Options{}, fmt.Errorf("--build-id and --deployment-name are mutually exclusive; use --deployment-build-id with --deployment-name")
+			return sdkworker.Options{}, errors.New(
+				"--build-id and --deployment-name are mutually exclusive; use --deployment-build-id with --deployment-name",
+			)
 		}
 		if args.DeploymentBuildID == "" {
-			return sdkworker.Options{}, fmt.Errorf("--deployment-build-id is required when --deployment-name is set")
+			return sdkworker.Options{}, errors.New(
+				"--deployment-build-id is required when --deployment-name is set",
+			)
 		}
 		behavior, err := parseVersioningBehavior(args.DefaultVersioningBehavior)
 		if err != nil {
@@ -150,30 +174,38 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions) (sd
 			DefaultVersioningBehavior: behavior,
 		}
 	} else if args.DeploymentBuildID != "" {
-		return sdkworker.Options{}, fmt.Errorf("--deployment-build-id requires --deployment-name")
+		return sdkworker.Options{}, errors.New("--deployment-build-id requires --deployment-name")
 	} else if args.BuildID != "" {
 		options.BuildID = args.BuildID
 		options.UseBuildIDForVersioning = true
 	}
 	if flags.Changed("activity-poller-autoscale-max") {
-		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
-			InitialNumberOfPollers: args.ActivityPollerAutoscaleMax,
-			MaximumNumberOfPollers: args.ActivityPollerAutoscaleMax,
-		})
+		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(
+			sdkworker.PollerBehaviorAutoscalingOptions{
+				InitialNumberOfPollers: args.ActivityPollerAutoscaleMax,
+				MaximumNumberOfPollers: args.ActivityPollerAutoscaleMax,
+			},
+		)
 	} else if flags.Changed("max-concurrent-activity-pollers") {
-		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
-			MaximumNumberOfPollers: args.MaxConcurrentActivityPollers,
-		})
+		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(
+			sdkworker.PollerBehaviorSimpleMaximumOptions{
+				MaximumNumberOfPollers: args.MaxConcurrentActivityPollers,
+			},
+		)
 	}
 	if flags.Changed("workflow-poller-autoscale-max") {
-		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
-			InitialNumberOfPollers: args.WorkflowPollerAutoscaleMax,
-			MaximumNumberOfPollers: args.WorkflowPollerAutoscaleMax,
-		})
+		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(
+			sdkworker.PollerBehaviorAutoscalingOptions{
+				InitialNumberOfPollers: args.WorkflowPollerAutoscaleMax,
+				MaximumNumberOfPollers: args.WorkflowPollerAutoscaleMax,
+			},
+		)
 	} else if flags.Changed("max-concurrent-workflow-pollers") {
-		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
-			MaximumNumberOfPollers: args.MaxConcurrentWorkflowPollers,
-		})
+		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(
+			sdkworker.PollerBehaviorSimpleMaximumOptions{
+				MaximumNumberOfPollers: args.MaxConcurrentWorkflowPollers,
+			},
+		)
 	}
 	if flags.Changed("max-concurrent-activities") {
 		options.MaxConcurrentActivityExecutionSize = args.MaxConcurrentActivities
@@ -192,7 +224,7 @@ func runWorkers(workers []sdkworker.Worker, stopCh <-chan struct{}) error {
 		return nil
 	}
 
-	workerStopCh := make(chan interface{})
+	workerStopCh := make(chan any)
 	var stopOnce sync.Once
 	stopWorkers := func() {
 		stopOnce.Do(func() {
@@ -229,8 +261,18 @@ func newWorkerCLIOptions() *workerCLIOptions {
 	options := &workerCLIOptions{taskQueue: "omes"}
 	flags := pflag.NewFlagSet("worker", pflag.ContinueOnError)
 	flags.StringVarP(&options.taskQueue, "task-queue", "q", options.taskQueue, "Task queue to use")
-	flags.IntVar(&options.taskQueueSuffixIndexStart, "task-queue-suffix-index-start", 0, "Inclusive start for task queue suffix range")
-	flags.IntVar(&options.taskQueueSuffixIndexEnd, "task-queue-suffix-index-end", 0, "Inclusive end for task queue suffix range")
+	flags.IntVar(
+		&options.taskQueueSuffixIndexStart,
+		"task-queue-suffix-index-start",
+		0,
+		"Inclusive start for task queue suffix range",
+	)
+	flags.IntVar(
+		&options.taskQueueSuffixIndexEnd,
+		"task-queue-suffix-index-end",
+		0,
+		"Inclusive end for task queue suffix range",
+	)
 	flags.AddFlagSet(options.loggingOptions.FlagSet())
 	flags.AddFlagSet(options.clientOptions.FlagSet())
 	flags.AddFlagSet(options.metricsOptions.FlagSet(""))

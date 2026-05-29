@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -9,10 +10,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/loadgen"
 )
 
 func runScenarioCmd() *cobra.Command {
@@ -32,13 +34,14 @@ func runScenarioCmd() *cobra.Command {
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
-	cmd.MarkFlagRequired("scenario")
-	cmd.MarkFlagRequired("run-id")
+	_ = cmd.MarkFlagRequired("scenario")
+	_ = cmd.MarkFlagRequired("run-id")
 	return cmd
 }
 
 type scenarioRunner struct {
 	scenarioRunConfig
+
 	scenario       clioptions.ScenarioID
 	logger         *zap.SugaredLogger
 	connectTimeout time.Duration
@@ -64,30 +67,74 @@ type scenarioRunConfig struct {
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 	r.scenario.AddCLIFlags(fs)
 	r.scenarioRunConfig.addCLIFlags(fs)
-	fs.DurationVar(&r.connectTimeout, "connect-timeout", 0, "Duration to try to connect to server before failing")
+	fs.DurationVar(
+		&r.connectTimeout,
+		"connect-timeout",
+		0,
+		"Duration to try to connect to server before failing",
+	)
 	fs.AddFlagSet(r.clientOptions.FlagSet())
 	fs.AddFlagSet(r.metricsOptions.FlagSet(""))
 	fs.AddFlagSet(r.loggingOptions.FlagSet())
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
-	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
-		" This is the amount of time for which we will start new iterations of the scenario.")
-	fs.Float64Var(&r.maxIterationsPerSecond, "max-iterations-per-second", 0, "Override iterations per second rate limit for the scenario."+
-		" This is the maximum rate at which we will start new iterations of the scenario.")
-	fs.IntVar(&r.maxIterationAttempts, "max-iteration-attempts", 1, "Maximum attempts per iteration")
+	fs.IntVar(
+		&r.iterations,
+		"iterations",
+		0,
+		"Override default iterations for the scenario (cannot be provided with duration)",
+	)
+	fs.DurationVar(
+		&r.duration,
+		"duration",
+		0,
+		"Override duration for the scenario (cannot be provided with iteration)."+
+			" This is the amount of time for which we will start new iterations of the scenario.",
+	)
+	fs.Float64Var(
+		&r.maxIterationsPerSecond,
+		"max-iterations-per-second",
+		0,
+		"Override iterations per second rate limit for the scenario."+
+			" This is the maximum rate at which we will start new iterations of the scenario.",
+	)
+	fs.IntVar(
+		&r.maxIterationAttempts,
+		"max-iteration-attempts",
+		1,
+		"Maximum attempts per iteration",
+	)
 	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
-	fs.StringArrayVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	fs.StringArrayVar(
+		&r.scenarioOptions,
+		"option",
+		nil,
+		"Additional options for the scenario, in key=value format",
+	)
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
-			"If the search attributes are not registed by the scenario they must be registered through some other method")
-	fs.BoolVar(&r.ignoreAlreadyStarted, "ignore-already-started", false,
-		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
-	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
-	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
+			"If the search attributes are not registered by the scenario they must be registered through some other method")
+	fs.BoolVar(
+		&r.ignoreAlreadyStarted,
+		"ignore-already-started",
+		false,
+		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.",
+	)
+	fs.StringVar(
+		&r.exportHistoriesDir,
+		"export-histories-dir",
+		"",
+		"Export workflow histories to this directory",
+	)
+	fs.StringVar(
+		&r.exportHistoriesFilter,
+		"export-histories-filter",
+		"all",
+		"Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'",
+	)
 }
 
 func (r *scenarioRunner) preRun() {
@@ -97,11 +144,11 @@ func (r *scenarioRunner) preRun() {
 func (r *scenarioRunner) run(ctx context.Context) error {
 	scenario := loadgen.GetScenario(r.scenario.Scenario)
 	if scenario == nil {
-		return fmt.Errorf("scenario not found")
+		return errors.New("scenario not found")
 	} else if r.scenario.RunID == "" {
-		return fmt.Errorf("run ID not found")
+		return errors.New("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
-		return fmt.Errorf("cannot provide both iterations and duration")
+		return errors.New("cannot provide both iterations and duration")
 	}
 
 	// Parse options
@@ -109,13 +156,13 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	for _, v := range r.scenarioOptions {
 		pieces := strings.SplitN(v, "=", 2)
 		if len(pieces) != 2 {
-			return fmt.Errorf("option does not have '='")
+			return errors.New("option does not have '='")
 		}
 		key, value := pieces[0], pieces[1]
 
 		// If the value starts with '@', read the file and use its contents as the value.
-		if strings.HasPrefix(value, "@") {
-			filePath := strings.TrimPrefix(value, "@")
+		if after, ok := strings.CutPrefix(value, "@"); ok {
+			filePath := after
 			data, err := os.ReadFile(filePath)
 			if err != nil {
 				return fmt.Errorf("failed to read file %s: %w", filePath, err)
@@ -126,7 +173,15 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	defer func() {
+		_ = metrics.Shutdown(
+			ctx,
+			r.logger,
+			r.scenario.Scenario,
+			r.scenario.RunID,
+			r.scenario.RunFamily,
+		)
+	}()
 	start := time.Now()
 	var client client.Client
 	var err error

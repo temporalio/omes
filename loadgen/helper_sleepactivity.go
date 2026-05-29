@@ -2,17 +2,21 @@ package loadgen
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	commonpb "go.temporal.io/api/common/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
-// SleepActivityConfig defines the configuration for sleep activities with flexible distribution support
+// SleepActivityConfig defines the configuration for sleep activities with flexible distribution
+// support.
 type SleepActivityConfig struct {
 	// Distribution of how many sleep activities to run per iteration. Required.
 	Count *DistributionField[int64] `json:"count"`
@@ -39,7 +43,10 @@ type SleepActivityGroupConfig struct {
 	FairnessWeight *DistributionField[float32] `json:"fairnessWeight"`
 }
 
-func ParseAndValidateSleepActivityConfig(jsonStr string, requireCount, requireSleepDuration bool) (*SleepActivityConfig, error) {
+func ParseAndValidateSleepActivityConfig(
+	jsonStr string,
+	requireCount, requireSleepDuration bool,
+) (*SleepActivityConfig, error) {
 	if jsonStr == "" {
 		return nil, nil
 	}
@@ -48,17 +55,25 @@ func ParseAndValidateSleepActivityConfig(jsonStr string, requireCount, requireSl
 		return nil, fmt.Errorf("failed to parse SleepActivityConfig JSON: %w", err)
 	}
 	if requireCount && config.Count == nil {
-		return nil, fmt.Errorf("SleepActivityConfig: Count field is required")
+		return nil, errors.New("SleepActivityConfig: Count field is required")
 	}
-	if config.Groups == nil || len(config.Groups) == 0 {
-		return nil, fmt.Errorf("SleepActivityConfig: Groups field is required and must not be empty")
+	if len(config.Groups) == 0 {
+		return nil, errors.New(
+			"SleepActivityConfig: Groups field is required and must not be empty",
+		)
 	}
 	for groupID, groupConfig := range config.Groups {
 		if groupConfig.Weight < 0 {
-			return nil, fmt.Errorf("SleepActivityGroupConfig: Group '%s' Weight must be non-negative", groupID)
+			return nil, fmt.Errorf(
+				"SleepActivityGroupConfig: Group '%s' Weight must be non-negative",
+				groupID,
+			)
 		}
 		if requireSleepDuration && groupConfig.SleepDuration == nil {
-			return nil, fmt.Errorf("SleepActivityGroupConfig: Group '%s' SleepDuration field is required", groupID)
+			return nil, fmt.Errorf(
+				"SleepActivityGroupConfig: Group '%s' SleepDuration field is required",
+				groupID,
+			)
 		}
 	}
 	return config, nil
@@ -118,7 +133,7 @@ func (config *SleepActivityConfig) Sample(rng *rand.Rand) []*kitchensink.Execute
 		// Optional: FairnessKeys
 		if groupConfig.FairnessKeys != nil {
 			if fairnessKey, ok := groupConfig.FairnessKeys.Sample(rng); ok {
-				action.FairnessKey = fmt.Sprintf("%d", fairnessKey)
+				action.FairnessKey = strconv.FormatInt(fairnessKey, 10)
 				action.FairnessWeight = 1.0 // always set default
 			}
 		}

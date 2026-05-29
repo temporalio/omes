@@ -2,7 +2,9 @@ package workers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"strings"
 	"testing"
@@ -17,38 +19,25 @@ type event struct {
 	Attributes map[string]any
 }
 
+// marshalAttrs renders event attributes for log output, falling back to a %v
+// representation if they cannot be marshaled to JSON.
+func marshalAttrs(attrs any) string {
+	b, err := json.Marshal(attrs)
+	if err != nil {
+		return fmt.Sprintf("%v", attrs)
+	}
+	return string(b)
+}
+
 func (e event) String(lineNum int) string {
 	out := e.Type
 	if len(e.Attributes) > 0 {
-		b, _ := json.Marshal(e.Attributes)
-		out += " " + string(b)
+		out += " " + marshalAttrs(e.Attributes)
 	}
 	return fmt.Sprintf("%3d: %s\n", lineNum, out)
 }
 
 type eventList []event
-
-func (el eventList) findAllByType(eventType string) []struct {
-	Event *event
-	Index int
-} {
-	var result []struct {
-		Event *event
-		Index int
-	}
-	for i, evt := range el {
-		if evt.Type == eventType {
-			result = append(result, struct {
-				Event *event
-				Index int
-			}{
-				Event: &evt,
-				Index: i,
-			})
-		}
-	}
-	return result
-}
 
 func (el eventList) Strings() []string {
 	result := make([]string, len(el))
@@ -58,7 +47,7 @@ func (el eventList) Strings() []string {
 	return result
 }
 
-// HistoryMatcher defines the interface for history matching strategies
+// HistoryMatcher defines the interface for history matching strategies.
 type HistoryMatcher interface {
 	Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error
 }
@@ -81,7 +70,10 @@ type HistoryMatcher interface {
 //	WorkflowExecutionCompleted
 type FullHistoryMatcher string
 
-func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m FullHistoryMatcher) Match(
+	t *testing.T,
+	actualHistoryEvents []*historypb.HistoryEvent,
+) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -92,7 +84,7 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 	var expectedDump strings.Builder
 	maxLines := max(len(actualEvents), len(expectedEvents))
 
-	for i := 0; i < maxLines; i++ {
+	for i := range maxLines {
 		lineNumber := i + 1
 
 		var expectedEvent event
@@ -102,7 +94,7 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 		}
 
 		if i >= len(actualEvents) {
-			actualDump.WriteString(fmt.Sprintf("%3d: <missing event>\n", lineNumber))
+			fmt.Fprintf(&actualDump, "%3d: <missing event>\n", lineNumber)
 			diffs = append(diffs, fmt.Sprintf("line %d: missing event", lineNumber))
 			continue
 		}
@@ -140,7 +132,8 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 }
 
 // PartialHistoryMatcher checks that the list of history events contains a subsequence
-// that matches the expected spec. The expected spec is a string with each line containing an (1) event type,
+// that matches the expected spec. The expected spec is a string with each line containing an (1)
+// event type,
 // (2) optional JSON literal matching the event attributes and (3) an optional comment.
 // Use "..." as an event type to skip any number of events.
 //
@@ -151,7 +144,10 @@ func (m FullHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb
 //	WorkflowExecutionCompleted
 type PartialHistoryMatcher string
 
-func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*historypb.HistoryEvent) error {
+func (m PartialHistoryMatcher) Match(
+	t *testing.T,
+	actualHistoryEvents []*historypb.HistoryEvent,
+) error {
 	t.Helper()
 
 	actualEvents := parseEvents(actualHistoryEvents)
@@ -178,7 +174,8 @@ func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*histor
 		}
 
 		actualEvent := actualEvents[actualIdx]
-		if actualEvent.Type == expectedEvent.Type && mapIsSuperset(actualEvent.Attributes, expectedEvent.Attributes) {
+		if actualEvent.Type == expectedEvent.Type &&
+			mapIsSuperset(actualEvent.Attributes, expectedEvent.Attributes) {
 			return matchFromPosition(actualIdx+1, expectedIdx+1)
 		}
 		return matchFromPosition(actualIdx+1, expectedIdx)
@@ -189,10 +186,11 @@ func (m PartialHistoryMatcher) Match(t *testing.T, actualHistoryEvents []*histor
 	}
 
 	logHistoryMismatch(t, string(m), actualEvents)
-	return fmt.Errorf("partialHistory matcher failed: expected sequence not found in history")
+	return errors.New("partialHistory matcher failed: expected sequence not found in history")
 }
 
 func parseSpec(t *testing.T, input string) eventList {
+	t.Helper()
 	var events eventList
 	for lineNum, raw := range strings.Split(strings.TrimSpace(input), "\n") {
 		raw = strings.TrimSpace(raw)
@@ -242,9 +240,7 @@ func extractFields(event *historypb.HistoryEvent) map[string]any {
 	for k, v := range raw {
 		if strings.HasSuffix(k, "Attributes") {
 			if inner, ok := v.(map[string]any); ok {
-				for ik, iv := range inner {
-					result[ik] = iv
-				}
+				maps.Copy(result, inner)
 			}
 		} else if k != "eventId" && k != "eventType" {
 			result[k] = v
@@ -273,7 +269,7 @@ func looselyEqual(x, y any) bool {
 			return x == float64(reflect.ValueOf(y).Int())
 		}
 	case string:
-		return fmt.Sprint(x) == fmt.Sprint(y)
+		return x == fmt.Sprint(y)
 	case map[string]any:
 		if yMap, ok := y.(map[string]any); ok {
 			return mapIsSuperset(x, yMap)
@@ -294,8 +290,7 @@ func logHistoryMismatch(t *testing.T, expectedSpec string, actualEvents eventLis
 		for _, expectedEvent := range expectedEvents {
 			out := expectedEvent.Type
 			if len(expectedEvent.Attributes) > 0 {
-				b, _ := json.Marshal(expectedEvent.Attributes)
-				out += " " + string(b)
+				out += " " + marshalAttrs(expectedEvent.Attributes)
 			}
 			t.Logf("  %s\n", out)
 		}
@@ -315,8 +310,7 @@ func logHistoryEvents(t *testing.T, actualEvents eventList) {
 	for _, actualEvent := range actualEvents {
 		out := actualEvent.Type
 		if len(actualEvent.Attributes) > 0 {
-			b, _ := json.Marshal(actualEvent.Attributes)
-			out += " " + string(b)
+			out += " " + marshalAttrs(actualEvent.Attributes)
 		}
 		t.Logf("  %s\n", out)
 	}

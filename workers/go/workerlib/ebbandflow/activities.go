@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/sdk/activity"
+
+	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
 type Activities struct{}

@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -12,8 +13,9 @@ import (
 	"strings"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type Builder struct {
@@ -27,9 +29,9 @@ type Builder struct {
 
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	if b.DirName == "" {
-		return nil, fmt.Errorf("output directory name required")
+		return nil, errors.New("output directory name required")
 	} else if strings.ContainsAny(b.DirName, `/\`) {
-		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
+		return nil, errors.New("output directory name is not a full path, it is a single name")
 	}
 
 	if b.ProjectName != "" {
@@ -106,7 +108,16 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 	// If version not provided, try to read it from pyproject.toml
 	version := b.SdkOptions.Version
 	if version == "" {
-		cmd := exec.CommandContext(ctx, "uv", "tree", "--quiet", "--depth", "0", "--package", "temporalio")
+		cmd := exec.CommandContext(
+			ctx,
+			"uv",
+			"tree",
+			"--quiet",
+			"--depth",
+			"0",
+			"--package",
+			"temporalio",
+		)
 		cmd.Dir = baseDir
 		out, err := cmd.Output()
 		if err != nil {
@@ -117,7 +128,7 @@ func (b *Builder) buildPython(ctx context.Context, baseDir string) (sdkbuild.Pro
 			version = outStr[len("temporalio v"):]
 		}
 		if version == "" {
-			return nil, fmt.Errorf("version not found in uv tree output")
+			return nil, errors.New("version not found in uv tree output")
 		}
 	}
 
@@ -171,7 +182,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		const temporalTypeScriptSDKPackage = "@temporalio/client"
 		version = pkg.Dependencies[temporalTypeScriptSDKPackage]
 		if version == "" {
-			return nil, fmt.Errorf("version not found in package.json for %s", temporalTypeScriptSDKPackage)
+			return nil, fmt.Errorf(
+				"version not found in package.json for %s",
+				temporalTypeScriptSDKPackage,
+			)
 		}
 	}
 
@@ -196,9 +210,11 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
-		BaseDir:        baseDir,
-		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "registry.ts"))}},
+		BaseDir: baseDir,
+		Version: version,
+		TSConfigPaths: map[string][]string{
+			"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "registry.ts"))},
+		},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
 		Includes: []string{
@@ -234,7 +250,7 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 		csproj := string(csprojBytes)
 		beginIndex := strings.Index(csproj, prefix)
 		if beginIndex == -1 {
-			return nil, fmt.Errorf("cannot find Temporal dependency in csproj")
+			return nil, errors.New("cannot find Temporal dependency in csproj")
 		}
 		beginIndex += len(prefix)
 		length := strings.Index(csproj[beginIndex:], `"`)
@@ -325,6 +341,6 @@ func BaseDir(repoDir string, lang clioptions.Language) string {
 }
 
 func ProjectDir(baseDir string, projectName string) string {
-	projectPath := fmt.Sprintf("projects/tests/%s", projectName)
+	projectPath := "projects/tests/" + projectName
 	return filepath.Join(baseDir, projectPath)
 }

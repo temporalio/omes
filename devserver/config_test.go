@@ -26,7 +26,10 @@ func TestAllocatePorts(t *testing.T) {
 }
 
 func TestServerPorts(t *testing.T) {
-	ports := newPorts("127.0.0.1", [portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240})
+	ports := newPorts(
+		"127.0.0.1",
+		[portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240},
+	)
 	server := &Server{
 		frontend: "127.0.0.1:7233",
 		ports:    ports,
@@ -37,25 +40,27 @@ func TestServerPorts(t *testing.T) {
 }
 
 func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
-	root := t.TempDir()
+	// Resolve symlinks up front (macOS /tmp -> /private/tmp) so the path matches
+	// what os.Getwd reports after t.Chdir sets $PWD.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test\n"), 0644))
 	nested := filepath.Join(root, "scenarios", "project")
 	require.NoError(t, os.MkdirAll(nested, 0755))
 
-	prevDir, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(nested))
-	t.Cleanup(func() { require.NoError(t, os.Chdir(prevDir)) })
+	t.Chdir(nested)
 
 	outputDir, err := defaultOutputDir("")
-	require.NoError(t, err)
-	root, err = filepath.EvalSymlinks(root)
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(root, ".devserver"), outputDir)
 }
 
 func TestBuildCacheLockPath(t *testing.T) {
-	require.Equal(t, filepath.Join("tmp", ".devserver.lock"), buildCacheLockPath(filepath.Join("tmp", ".devserver")))
+	require.Equal(
+		t,
+		filepath.Join("tmp", ".devserver.lock"),
+		buildCacheLockPath(filepath.Join("tmp", ".devserver")),
+	)
 }
 
 func TestWriteDynamicConfig(t *testing.T) {

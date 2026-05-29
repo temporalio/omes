@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
+
 	"github.com/temporalio/omes/loadgen"
 )
 
@@ -23,13 +24,19 @@ func listScenariosCmd() *cobra.Command {
 					config.ApplyDefaults()
 					defaultConfigDesc = "\n    Default configuration:"
 					if config.Iterations != 0 {
-						defaultConfigDesc += fmt.Sprintf("\n        Iterations: %v", config.Iterations)
+						defaultConfigDesc += fmt.Sprintf(
+							"\n        Iterations: %v",
+							config.Iterations,
+						)
 					}
 					if config.Duration != 0 {
 						defaultConfigDesc += fmt.Sprintf("\n        Duration: %v", config.Duration)
 					}
 					if config.MaxConcurrent != 0 {
-						defaultConfigDesc += fmt.Sprintf("\n        Max concurrent: %v", config.MaxConcurrent)
+						defaultConfigDesc += fmt.Sprintf(
+							"\n        Max concurrent: %v",
+							config.MaxConcurrent,
+						)
 					}
 					if config.Timeout != 0 {
 						defaultConfigDesc += fmt.Sprintf("\n        Timeout: %v", config.Timeout)

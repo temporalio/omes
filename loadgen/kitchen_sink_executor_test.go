@@ -10,10 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/clioptions"
-	. "github.com/temporalio/omes/loadgen"
-	. "github.com/temporalio/omes/loadgen/kitchensink"
-	. "github.com/temporalio/omes/workers"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -21,6 +17,11 @@ import (
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	. "github.com/temporalio/omes/loadgen"
+	. "github.com/temporalio/omes/loadgen/kitchensink"
+	. "github.com/temporalio/omes/workers"
 )
 
 const namespace = "default"
@@ -505,17 +506,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t"),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -542,9 +533,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher:        PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled"),
 			expectedWorkflowError: "missing signal",
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
@@ -572,11 +561,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher: PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t"),
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -627,19 +612,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			expectedWorkflowError: "error after signals sent",
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionStarted
-				WorkflowTaskScheduled
-				WorkflowTaskStarted
-				WorkflowTaskCompleted
-				ActivityTaskScheduled
-				...
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				...
-				ActivityTaskCompleted
-				...
-				WorkflowExecutionFailed`), // No TimerStarted - error skips signal waiting
+			historyMatcher:        PartialHistoryMatcher("\n\t\t\t\tWorkflowExecutionStarted\n\t\t\t\tWorkflowTaskScheduled\n\t\t\t\tWorkflowTaskStarted\n\t\t\t\tWorkflowTaskCompleted\n\t\t\t\tActivityTaskScheduled\n\t\t\t\t...\n\t\t\t\tWorkflowExecutionSignaled\n\t\t\t\t...\n\t\t\t\tActivityTaskCompleted\n\t\t\t\t...\n\t\t\t\tWorkflowExecutionFailed"), // No TimerStarted - error skips signal waiting
 		},
 		{
 			name: "ClientSequence/Signal/Custom",
@@ -992,10 +965,12 @@ func TestKitchenSink(t *testing.T) {
 
 			// Ensure the workflow completes by appending a return action at the end.
 			input := tc.testInput
-			if input.WorkflowInput == nil {
+			if input.GetWorkflowInput() == nil {
 				input.WorkflowInput = &WorkflowInput{}
 			}
-			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+			input.WorkflowInput.InitialActions = append(
+				input.WorkflowInput.InitialActions,
+				ListActionSet(NewEmptyReturnResultAction())...)
 
 			for _, sdk := range sdks {
 				if onlySDK != "" && string(sdk) != onlySDK {
@@ -1017,6 +992,7 @@ func testForSDK(
 	env *TestEnvironment,
 	workflowTimeout time.Duration,
 ) {
+	t.Helper()
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
 		javaMutex.Lock()
@@ -1025,7 +1001,11 @@ func testForSDK(
 
 	scenarioInfo := ScenarioInfo{
 		ScenarioName: "kitchenSinkTest",
-		RunID:        fmt.Sprintf("%s-%d", strings.ReplaceAll(t.Name(), "/", "-"), time.Now().Unix()),
+		RunID: fmt.Sprintf(
+			"%s-%d",
+			strings.ReplaceAll(t.Name(), "/", "-"),
+			time.Now().Unix(),
+		),
 		Configuration: RunConfiguration{
 			Iterations: 1,
 		},
@@ -1038,10 +1018,11 @@ func testForSDK(
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
-			if input.WorkflowInput != nil {
-				for _, actionSet := range input.WorkflowInput.InitialActions {
-					for _, action := range actionSet.Actions {
-						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
+			if input.GetWorkflowInput() != nil {
+				for _, actionSet := range input.GetWorkflowInput().GetInitialActions() {
+					for _, action := range actionSet.GetActions() {
+						if nexusOp := action.GetNexusOperation(); nexusOp != nil &&
+							nexusOp.GetEndpoint() == "" {
 							nexusOp.Endpoint = nexusEndpoint
 						}
 					}
@@ -1070,6 +1051,7 @@ func testUnsupportedFeature(
 	sdk clioptions.Language,
 	expectedErr string,
 ) {
+	t.Helper()
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
@@ -1077,8 +1059,20 @@ func testUnsupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
-	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
-	require.Containsf(t, strings.ToLower(execErr.Error()), expectedErr, "SDK %s error should contain '%s'", sdk, expectedErr)
+	require.NotEmptyf(
+		t,
+		expectedErr,
+		"invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported",
+		sdk,
+	)
+	require.Containsf(
+		t,
+		strings.ToLower(execErr.Error()),
+		expectedErr,
+		"SDK %s error should contain '%s'",
+		sdk,
+		expectedErr,
+	)
 }
 
 func testSupportedFeature(
@@ -1089,6 +1083,7 @@ func testSupportedFeature(
 	tc testCase,
 	sdk clioptions.Language,
 ) {
+	t.Helper()
 	testExecutor := &kitchenSinkTestWrapper{
 		executor: executor,
 		sdk:      sdk,
@@ -1107,26 +1102,42 @@ func testSupportedFeature(
 	// Check if workflow failure is expected
 	if tc.expectedWorkflowError != "" {
 		require.Errorf(t, execErr, "SDK %s should fail with workflow error", sdk)
-		require.Containsf(t, strings.ToLower(execErr.Error()), strings.ToLower(tc.expectedWorkflowError),
-			"SDK %s workflow error should contain '%s'", sdk, tc.expectedWorkflowError)
+		require.Containsf(
+			t,
+			strings.ToLower(execErr.Error()),
+			strings.ToLower(tc.expectedWorkflowError),
+			"SDK %s workflow error should contain '%s'",
+			sdk,
+			tc.expectedWorkflowError,
+		)
 		require.NoError(t, historyErr, "failed to get workflow history")
 
 		// Verify workflow failed in history
 		hasWorkflowFailed := false
 		for _, event := range historyEvents {
-			if event.EventType == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
+			if event.GetEventType() == enums.EVENT_TYPE_WORKFLOW_EXECUTION_FAILED {
 				hasWorkflowFailed = true
 				break
 			}
 		}
-		require.Truef(t, hasWorkflowFailed, "SDK %s workflow should have WorkflowExecutionFailed event in history", sdk)
+		require.Truef(
+			t,
+			hasWorkflowFailed,
+			"SDK %s workflow should have WorkflowExecutionFailed event in history",
+			sdk,
+		)
 	} else {
 		require.NoError(t, execErr, "executor failed")
 	}
 
 	require.NoError(t, historyErr, "failed to get workflow history")
 	require.NotNilf(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
-	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
+	require.NoErrorf(
+		t,
+		tc.historyMatcher.Match(t, historyEvents),
+		"Test case '%s': history matcher failed",
+		tc.name,
+	)
 }
 
 type kitchenSinkTestWrapper struct {
@@ -1138,24 +1149,42 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(
+	t *testing.T,
+	taskQueueName string,
+	temporalClient client.Client,
+) ([]*history.HistoryEvent, error) {
+	t.Helper()
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
-			Query:     fmt.Sprintf("TaskQueue = '%s' AND WorkflowType = 'kitchenSink'", taskQueueName),
+			Query: fmt.Sprintf(
+				"TaskQueue = '%s' AND WorkflowType = 'kitchenSink'",
+				taskQueueName,
+			),
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflow executions: %w", err)
 	}
-	if len(executions.Executions) == 0 {
+	if len(executions.GetExecutions()) == 0 {
 		return nil, fmt.Errorf("no workflow executions found for task queue %s", taskQueueName)
 	}
-	if len(executions.Executions) > 1 {
-		t.Logf("Warning: found %d kitchenSink workflow executions for task queue %s, using the first one", len(executions.Executions), taskQueueName)
+	if len(executions.GetExecutions()) > 1 {
+		t.Logf(
+			"Warning: found %d kitchenSink workflow executions for task queue %s, using the first one",
+			len(executions.GetExecutions()),
+			taskQueueName,
+		)
 	}
 
-	execution := executions.Executions[0]
-	historyIter := temporalClient.GetWorkflowHistory(t.Context(), execution.Execution.WorkflowId, execution.Execution.RunId, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	execution := executions.GetExecutions()[0]
+	historyIter := temporalClient.GetWorkflowHistory(
+		t.Context(),
+		execution.GetExecution().GetWorkflowId(),
+		execution.GetExecution().GetRunId(),
+		false,
+		enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT,
+	)
 	var historyEvents []*history.HistoryEvent
 	for historyIter.HasNext() {
 		event, err := historyIter.Next()

@@ -2,10 +2,11 @@ package scenarios
 
 import (
 	"context"
+	"strconv"
+
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"strconv"
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -34,7 +35,11 @@ func init() {
 					// Get options
 					children := opts.ScenarioOptionInt("children-per-workflow", 30)
 					activities := opts.ScenarioOptionInt("activities-per-workflow", 30)
-					opts.Logger.Infof("Preparing to run with %v child workflow(s) and %v activity execution(s)", children, activities)
+					opts.Logger.Infof(
+						"Preparing to run with %v child workflow(s) and %v activity execution(s)",
+						children,
+						activities,
+					)
 
 					childInput, err := converter.GetDefaultDataConverter().ToPayload(
 						&kitchensink.WorkflowInput{
@@ -46,7 +51,7 @@ func init() {
 						return err
 					}
 					// Add children
-					for i := 0; i < children; i++ {
+					for i := range children {
 						actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
 							Variant: &kitchensink.Action_ExecChildWorkflow{
 								ExecChildWorkflow: &kitchensink.ExecuteChildWorkflowAction{
@@ -59,7 +64,7 @@ func init() {
 					}
 
 					// Add activities
-					for i := 0; i < activities; i++ {
+					for range activities {
 						actionSet.Actions = append(actionSet.Actions, &kitchensink.Action{
 							Variant: &kitchensink.Action_ExecActivity{
 								ExecActivity: &kitchensink.ExecuteActivityAction{
@@ -70,7 +75,8 @@ func init() {
 						})
 					}
 
-					params.WorkflowInput.InitialActions = append(params.WorkflowInput.InitialActions,
+					params.WorkflowInput.InitialActions = append(
+						params.WorkflowInput.InitialActions,
 						&kitchensink.ActionSet{
 							Actions: []*kitchensink.Action{
 								{

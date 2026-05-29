@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,13 +15,15 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
+
+	"github.com/temporalio/omes/cmd/clioptions"
 )
 
 type Runner struct {
 	Builder
+
 	AppName                   string
 	RetainTempDir             bool
 	GracefulShutdownDuration  time.Duration
@@ -39,19 +42,20 @@ type Runner struct {
 
 func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.TaskQueueIndexSuffixStart > r.TaskQueueIndexSuffixEnd {
-		return fmt.Errorf("cannot have task queue suffix start past end")
+		return errors.New("cannot have task queue suffix start past end")
 	}
 	if r.TaskQueueName == "" {
-		return fmt.Errorf("task queue name is required")
+		return errors.New("task queue name is required")
 	}
 
 	// Run an embedded server if requested
 	if r.EmbeddedServer || r.EmbeddedServerAddress != "" {
 		// Intentionally don't use context, will stop on defer
-		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" || r.ClientOptions.ClientKeyPath != "" {
-			return fmt.Errorf("cannot use TLS with embedded server")
+		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" ||
+			r.ClientOptions.ClientKeyPath != "" {
+			return errors.New("cannot use TLS with embedded server")
 		} else if r.ClientOptions.Address != client.DefaultHostPort {
-			return fmt.Errorf("cannot supply non-default client address when using embedded server")
+			return errors.New("cannot supply non-default client address when using embedded server")
 		}
 		server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
 			ClientOptions: &client.Options{
@@ -63,7 +67,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		if err != nil {
 			return fmt.Errorf("failed starting embedded server: %w", err)
 		}
-		r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
+		_ = r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
 		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.Address)
 		defer func() {
 			r.Logger.Info("Stopping embedded local server")
@@ -147,14 +151,29 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {
-		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
-		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
+		args = append(
+			args,
+			"--task-queue-suffix-index-start",
+			strconv.Itoa(r.TaskQueueIndexSuffixStart),
+		)
+		args = append(
+			args,
+			"--task-queue-suffix-index-end",
+			strconv.Itoa(r.TaskQueueIndexSuffixEnd),
+		)
 	}
 	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	args = append(
+		args,
+		passthroughExcluding(
+			r.MetricsOptions.FlagSet("worker-"),
+			"worker-",
+			"process-metrics-address",
+			"metrics-version-tag",
+		)...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -191,7 +210,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			r.WorkerOptions.BuildID,
 			r.SdkOptions.Language.String(),
 		)
-		defer sidecar.Shutdown(context.Background())
+		defer func() { _ = sidecar.Shutdown(context.Background()) }()
 	}
 
 	if r.OnWorkerStarted != nil {
@@ -204,7 +223,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	select {
 	case err := <-errCh:
 		if err == nil {
-			err = fmt.Errorf("worker completed unexpectedly without error")
+			err = errors.New("worker completed unexpectedly without error")
 		}
 		return fmt.Errorf("worker failed: %w", err)
 	case <-ctx.Done():
@@ -222,7 +241,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 				return fmt.Errorf("failed to send kill to worker: %w", err)
 			}
 			if err = <-errCh; err == nil {
-				err = fmt.Errorf("worker did not shutdown within graceful timeout")
+				err = errors.New("worker did not shutdown within graceful timeout")
 			}
 			if err != nil {
 				r.Logger.Warnf("Worker exited after kill: %v", err)

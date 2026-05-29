@@ -2,6 +2,7 @@ package harness
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,10 +10,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/temporalio/omes/cmd/clioptions"
-	"github.com/temporalio/omes/metrics"
 	sdkclient "go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/metrics"
 )
 
 type ClientConfig struct {
@@ -110,7 +112,7 @@ func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.C
 	}
 	if opts.TLSCertPath != "" {
 		if opts.TLSKeyPath == "" {
-			return nil, fmt.Errorf("Client cert specified, but not client key!")
+			return nil, errors.New("Client cert specified, but not client key!")
 		}
 		cert, err := tls.LoadX509KeyPair(opts.TLSCertPath, opts.TLSKeyPath)
 		if err != nil {
@@ -120,7 +122,7 @@ func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.C
 		return tlsConfig, nil
 	}
 	if opts.TLSKeyPath != "" {
-		return nil, fmt.Errorf("Client key specified, but not client cert!")
+		return nil, errors.New("Client key specified, but not client cert!")
 	}
 	if opts.EnableTLS {
 		return tlsConfig, nil
@@ -135,7 +137,10 @@ func buildAPIKey(authHeader string) string {
 	return strings.TrimPrefix(authHeader, "Bearer ")
 }
 
-func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) (*metrics.Metrics, error) {
+func buildMetrics(
+	logger *zap.SugaredLogger,
+	listenAddress, handlerPath string,
+) (*metrics.Metrics, error) {
 	registry := prometheus.NewRegistry()
 	clientMetrics := &metrics.Metrics{
 		Registry: registry,
@@ -151,7 +156,11 @@ func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) 
 	mux.Handle(handlerPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize Prometheus HTTP listener on %s: %w", listenAddress, err)
+		return nil, fmt.Errorf(
+			"failed to initialize Prometheus HTTP listener on %s: %w",
+			listenAddress,
+			err,
+		)
 	}
 	server := &http.Server{
 		Addr:    listener.Addr().String(),

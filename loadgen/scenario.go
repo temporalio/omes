@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -15,12 +16,11 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -45,10 +45,12 @@ type Executor interface {
 type Resumable interface {
 	// LoadState loads a snapshot into the executor's internal state.
 	//
-	// Implementations should pass a reference to a state variable to the loader function and assign to their internal state.
+	// Implementations should pass a reference to a state variable to the loader function and assign
+	// to their internal state.
 	// Callers should call this function before invoking the executor's Run method.
 	LoadState(loader func(any) error) error
-	// Snapshot returns a snapshot of the executor's internal state. The returned value must be serializable.
+	// Snapshot returns a snapshot of the executor's internal state. The returned value must be
+	// serializable.
 	//
 	// The serialization format should be supported by the caller of this function.
 	// Callers may call this function periodically to get a snapshot of the executor's state.
@@ -64,7 +66,7 @@ type Configurable interface {
 	Configure(ScenarioInfo) error
 }
 
-// ExecutorFunc is an [Executor] implementation for a function
+// ExecutorFunc is an [Executor] implementation for a function.
 type ExecutorFunc func(context.Context, ScenarioInfo) error
 
 // Run implements [Executor.Run].
@@ -94,7 +96,7 @@ func MustRegisterScenario(scenario Scenario) {
 	registeredScenarios[scenarioName] = &scenario
 }
 
-// GetScenarios gets a copy of registered scenarios
+// GetScenarios gets a copy of registered scenarios.
 func GetScenarios() map[string]*Scenario {
 	ret := make(map[string]*Scenario, len(registeredScenarios))
 	maps.Copy(ret, registeredScenarios)
@@ -177,7 +179,10 @@ func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
 	return v == "true"
 }
 
-func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
+func (s *ScenarioInfo) ScenarioOptionDuration(
+	name string,
+	defaultValue time.Duration,
+) time.Duration {
 	v := s.ScenarioOptions[name]
 	if v == "" {
 		return defaultValue
@@ -227,9 +232,11 @@ type RunConfiguration struct {
 	// If the timeout is hit any pending executions will be cancelled and the scenario will exit
 	// with an error. The default is unlimited.
 	Timeout time.Duration
-	// Do not register the default search attributes used by scenarios. If the SAs are not registered
+	// Do not register the default search attributes used by scenarios. If the SAs are not
+	// registered
 	// by the run, they must be registered by some other method. This is needed because cloud cells
-	// cannot use the SDK to register SAs, instead the SAs must be registered through the control plane.
+	// cannot use the SDK to register SAs, instead the SAs must be registered through the control
+	// plane.
 	// Default is false.
 	DoNotRegisterSearchAttributes bool
 	// IgnoreAlreadyStarted, if set, will not error when a workflow with the same ID already exists.
@@ -237,7 +244,8 @@ type RunConfiguration struct {
 	IgnoreAlreadyStarted bool
 	// OnCompletion, if set, is invoked after each successful iteration completes.
 	OnCompletion func(context.Context, *Run)
-	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
+	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation
+	// of errors.
 	HandleExecuteError func(context.Context, *Run, error) error
 }
 
@@ -253,13 +261,13 @@ func (r *RunConfiguration) ApplyDefaults() {
 	}
 }
 
-func (r RunConfiguration) Validate() error {
+func (r *RunConfiguration) Validate() error {
 	if r.Duration < 0 {
-		return fmt.Errorf("Duration cannot be negative")
+		return errors.New("Duration cannot be negative")
 	}
 	if r.Iterations > 0 {
 		if r.Duration > 0 {
-			return fmt.Errorf("iterations and duration are mutually exclusive")
+			return errors.New("iterations and duration are mutually exclusive")
 		}
 		if r.StartFromIteration > r.Iterations {
 			return fmt.Errorf("StartFromIteration %d is greater than Iterations %d",
@@ -269,7 +277,8 @@ func (r RunConfiguration) Validate() error {
 	return nil
 }
 
-// Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
+// Run represents an individual scenario run (many may be in a single instance (of possibly many) of
+// a scenario).
 type Run struct {
 	// Do not mutate this, this is shared across the entire scenario
 	*ScenarioInfo
@@ -298,18 +307,19 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		return nil
 	}
 	// Ensure custom search attributes are registered that many scenarios rely on
-	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
-			OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
-		},
-		Namespace: s.Namespace,
-	})
+	_, err := s.Client.OperatorService().
+		AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
+			SearchAttributes: map[string]enums.IndexedValueType{
+				"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
+				"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
+				OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
+			},
+			Namespace: s.Namespace,
+		})
 	// Throw an error if the attributes could not be registered, but ignore already exists errs
 	alreadyExistsStrings := []string{
 		"already exists",
-		"attributes mapping unavailble",
+		"attributes mapping unavailable",
 	}
 	if err != nil {
 		isAlreadyExistsErr := false
@@ -337,8 +347,13 @@ func NexusEndpointForRun(runID string) string {
 	return "test-nexus-endpoint-" + sanitized
 }
 
-// ensureNexusEndpoint creates a Nexus endpoint for the given run, or returns nil if it already exists.
-func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID string) (string, error) {
+// ensureNexusEndpoint creates a Nexus endpoint for the given run, or returns nil if it already
+// exists.
+func ensureNexusEndpoint(
+	ctx context.Context,
+	cl client.Client,
+	namespace, runID string,
+) (string, error) {
 	endpointName := NexusEndpointForRun(runID)
 	taskQueue := TaskQueueForRun(runID)
 	_, err := cl.OperatorService().CreateNexusEndpoint(ctx,
@@ -371,11 +386,17 @@ func (r *Run) TaskQueue() string {
 // DefaultStartWorkflowOptions gets default start workflow info.
 func (r *Run) DefaultStartWorkflowOptions() client.StartWorkflowOptions {
 	return client.StartWorkflowOptions{
-		TaskQueue:                                TaskQueueForRun(r.RunID),
-		ID:                                       fmt.Sprintf("w-%s-%s-%d", r.RunID, r.ExecutionID, r.Iteration),
+		TaskQueue: TaskQueueForRun(r.RunID),
+		ID: fmt.Sprintf(
+			"w-%s-%s-%d",
+			r.RunID,
+			r.ExecutionID,
+			r.Iteration,
+		),
 		WorkflowExecutionErrorWhenAlreadyStarted: !r.Configuration.IgnoreAlreadyStarted,
 		TypedSearchAttributes: temporal.NewSearchAttributes(
-			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).ValueSet(r.ExecutionID),
+			temporal.NewSearchAttributeKeyString(OmesExecutionIDSearchAttribute).
+				ValueSet(r.ExecutionID),
 		),
 	}
 }
@@ -392,7 +413,10 @@ func (r *Run) ShouldRetry(err error) (time.Duration, bool) {
 	if r.attemptCount >= r.Configuration.MaxIterationAttempts {
 		return 0, false
 	}
-	backoff := min(MaxIterationRetryBackoff, BaseIterationRetryBackoff*time.Duration(1<<uint(r.attemptCount-1)))
+	backoff := min(
+		MaxIterationRetryBackoff,
+		BaseIterationRetryBackoff*time.Duration(1<<uint(r.attemptCount-1)),
+	)
 	return backoff, true
 }
 
@@ -403,8 +427,11 @@ type KitchenSinkWorkflowOptions struct {
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
 // completion ignoring its result. Concurrently it will perform any client actions specified in
-// kitchensink.TestInput.ClientSequence
-func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
+// kitchensink.TestInput.ClientSequence.
+func (r *Run) ExecuteKitchenSinkWorkflow(
+	ctx context.Context,
+	options *KitchenSinkWorkflowOptions,
+) error {
 	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -415,19 +442,19 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
 	}
-	startErr := executor.Start(ctx, options.Params.WithStartAction)
+	startErr := executor.Start(ctx, options.Params.GetWithStartAction())
 	if startErr != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
 	}
 
 	var clientActionsErrPtr atomic.Pointer[error]
-	clientSeq := options.Params.ClientSequence
-	if clientSeq != nil && len(clientSeq.ActionSets) > 0 {
+	clientSeq := options.Params.GetClientSequence()
+	if clientSeq != nil && len(clientSeq.GetActionSets()) > 0 {
 		go func() {
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
+				r.Logger.Error("Client actions failed: ", err)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag
@@ -452,14 +479,25 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 // ExecuteAnyWorkflow wraps calls to the client executing workflows to include some logging,
 // returning an error if the execution fails.
-func (r *Run) ExecuteAnyWorkflow(ctx context.Context, options client.StartWorkflowOptions, workflow any, valuePtr any, args ...any) error {
+func (r *Run) ExecuteAnyWorkflow(
+	ctx context.Context,
+	options client.StartWorkflowOptions,
+	workflow any,
+	valuePtr any,
+	args ...any,
+) error {
 	r.Logger.Debugf("Executing workflow %s with info: %v", workflow, options)
 	execution, err := r.Client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		return err
 	}
 	if err := execution.Get(ctx, valuePtr); err != nil {
-		return fmt.Errorf("workflow execution failed (ID: %s, run ID: %s): %w", execution.GetID(), execution.GetRunID(), err)
+		return fmt.Errorf(
+			"workflow execution failed (ID: %s, run ID: %s): %w",
+			execution.GetID(),
+			execution.GetRunID(),
+			err,
+		)
 	}
 	return nil
 }

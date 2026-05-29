@@ -53,7 +53,10 @@ func requireFlagsOrEnv(fs *pflag.FlagSet, envPrefix string, names ...string) err
 			return fmt.Errorf("unknown flag --%s", name)
 		}
 		if !f.Changed {
-			missing = append(missing, fmt.Sprintf("--%s (or env %s)", name, envVarFor(envPrefix, name)))
+			missing = append(
+				missing,
+				fmt.Sprintf("--%s (or env %s)", name, envVarFor(envPrefix, name)),
+			)
 		}
 	}
 	if len(missing) > 0 {
