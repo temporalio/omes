@@ -126,38 +126,16 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	var args []string
 	switch r.SdkOptions.Language {
 	case clioptions.LangPython:
-		// Python needs module name and subcommand
+		// Python needs the module name before the harness subcommand.
 		args = append(args, "apps.registry")
-		if r.AppName != "" {
-			args = append(args, "--app", r.AppName)
-		}
-		args = append(args, "worker")
 	case clioptions.LangTypeScript:
 		// Node also needs module before the harness subcommand.
 		args = append(args, "./tslib/apps/registry.js")
-		if r.AppName != "" {
-			args = append(args, "--app", r.AppName)
-		}
-		args = append(args, "worker")
-	case clioptions.LangGo:
-		if r.AppName != "" {
-			args = append(args, "--app", r.AppName)
-		}
-		args = append(args, "worker")
-	case clioptions.LangDotNet:
-    if r.AppName != "" {
-			args = append(args, "--app", r.AppName)
-		}
-		args = append(args, "worker")
-	case clioptions.LangJava:
-		if r.AppName != "" {
-			args = append(args, "--app", r.AppName)
-		}
-		args = append(args, "worker")
-	case clioptions.LangRuby:
-		// Ruby just need the harness worker subcommand
-		args = append(args, "worker")
 	}
+	if r.AppName != "" {
+		args = append(args, "--app", r.AppName)
+	}
+	args = append(args, "worker")
 
 	args = append(args, "--task-queue", r.TaskQueueName)
 	if r.TaskQueueIndexSuffixEnd > 0 {

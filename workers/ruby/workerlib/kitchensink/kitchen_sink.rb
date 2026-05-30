@@ -1,6 +1,6 @@
 require 'temporalio/workflow'
 require 'temporalio/workflow/definition'
-require_relative 'protos/kitchen_sink/kitchen_sink_pb'
+require_relative '../../protos/kitchen_sink/kitchen_sink_pb'
 
 KS = Temporal::Omes::KitchenSink
 

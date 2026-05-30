@@ -135,7 +135,7 @@ func runTypeScriptHarnessTests(ctx context.Context, repoDir string) error {
 }
 
 func runRubyHarnessTests(ctx context.Context, repoDir string) error {
-	harnessDir := filepath.Join(repoDir, "workers", "ruby", "harness")
+	workerDir := filepath.Join(repoDir, "workers", "ruby")
 	rubyVersion, err := getVersion("ruby")
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func runRubyHarnessTests(ctx context.Context, repoDir string) error {
 	fmt.Println("Running Ruby harness tests...")
 	if err := runCommandInDir(
 		ctx,
-		harnessDir,
+		workerDir,
 		"mise",
 		"exec",
 		"ruby@"+rubyVersion,

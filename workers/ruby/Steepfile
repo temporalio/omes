@@ -4,9 +4,9 @@ D = Steep::Diagnostic
 
 target :harness do
   signature 'sig'
-  check 'lib/harness.rb'
-  check 'lib/harness'
-  ignore 'lib/harness/api', 'tests'
+  check 'harness.rb'
+  check 'harness'
+  ignore 'harness/api', 'tests'
   library 'logger', 'optparse'
   configure_code_diagnostics do |hash|
     hash[D::Ruby::UnknownConstant] = :information
