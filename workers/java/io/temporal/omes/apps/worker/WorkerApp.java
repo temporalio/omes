@@ -17,7 +17,8 @@ import io.temporal.omes.workerlib.kitchensink.PassthroughDataConverter;
 import io.temporal.worker.Worker;
 
 public final class WorkerApp {
-  public static final Harness.App APP = new Harness.App(WorkerApp::configureWorker, WorkerApp::createClient);
+  public static final Harness.App APP =
+      new Harness.App(WorkerApp::configureWorker, WorkerApp::createClient);
 
   private WorkerApp() {}
 
