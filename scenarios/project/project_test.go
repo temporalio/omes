@@ -37,15 +37,14 @@ func TestValidateLimitedPythonSupport(t *testing.T) {
 	require.EqualError(t, err, "project scenario is currently limited to Python, got go")
 }
 
-func TestValidateRejectsConflictingProjectSources(t *testing.T) {
+func TestValidateRequiresProjectNameWithPrebuilt(t *testing.T) {
 	_, err := (&projectScenarioExecutor{}).validate(loadgen.ScenarioInfo{
 		ScenarioOptions: map[string]string{
 			"language":             "python",
-			"project-name":         "helloworld",
-			"prebuilt-project-dir": "workers/python/projects/tests/project-build-helloworld",
+			"prebuilt-project-dir": "workers/python/project-build-runner-helloworld",
 		},
 	})
-	require.EqualError(t, err, "cannot specify both project-name and prebuilt-project-dir")
+	require.EqualError(t, err, "--option project-name=<name> is required")
 }
 
 func TestPythonHelloWorldSourceBuild(t *testing.T) {
@@ -75,7 +74,6 @@ func runProjectScenario(
 	if usePrebuilt {
 		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
 		require.NoError(t, err)
-		info.ScenarioOptions["project-name"] = ""
 		info.ScenarioOptions["prebuilt-project-dir"] = prog.Dir()
 	}
 
@@ -195,9 +193,8 @@ func startProjectWorker(
 	require.NotEmpty(t, opts.projectName)
 
 	builder := workers.Builder{
-		ProjectName: opts.projectName,
-		SdkOptions:  opts.sdkOpts,
-		Logger:      info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
+		SdkOptions: opts.sdkOpts,
+		Logger:     info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
 	}
 
 	// If we have a prebuilt program, use it
@@ -208,6 +205,7 @@ func startProjectWorker(
 
 	runner := &workers.Runner{
 		Builder:                  builder,
+		AppName:                  opts.projectName,
 		TaskQueueName:            loadgen.TaskQueueForRun(info.RunID),
 		GracefulShutdownDuration: 5 * time.Second,
 		ScenarioID: clioptions.ScenarioID{
