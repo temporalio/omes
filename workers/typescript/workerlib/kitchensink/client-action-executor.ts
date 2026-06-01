@@ -58,6 +58,12 @@ export class ClientActionExecutor {
       await handle.describe();
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);
+    } else if (action.doStandaloneNexusOperation) {
+      throw ApplicationFailure.create({
+        message: 'DoStandaloneNexusOperation is not supported',
+        type: 'UnsupportedOperation',
+        nonRetryable: true,
+      });
     } else {
       throw new Error('Client action must have a recognized variant');
     }
