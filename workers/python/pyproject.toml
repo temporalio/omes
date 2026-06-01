@@ -27,10 +27,10 @@ harness = { workspace = true }
 members = ["harness"]
 
 [tool.hatch.build.targets.sdist]
-include = ["*.py", "protos/**/*.py"]
+include = ["*.py", "apps/**/*.py", "protos/**/*.py"]
 
 [tool.hatch.build.targets.wheel]
-include = ["*.py", "protos/**/*.py"]
+include = ["*.py", "apps/**/*.py", "protos/**/*.py"]
 
 [build-system]
 requires = ["hatchling"]
@@ -43,7 +43,7 @@ lint = [
   {cmd = "isort --check-only ."},
   {ref = "lint-types"},
 ]
-lint-types = "mypy activities.py client_action_executor.py kitchen_sink.py kitchen_sink_app.py main.py nexus_service.py"
+lint-types = "mypy activities.py client_action_executor.py kitchen_sink.py nexus_service.py apps"
 
 [tool.isort]
 profile = "black"
