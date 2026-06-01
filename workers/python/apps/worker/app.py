@@ -17,13 +17,6 @@ from kitchen_sink import KitchenSinkWorkflow, NexusHandlerWorkflow
 from nexus_service import KitchenSinkNexusServiceHandler
 
 
-def app() -> App:
-    return App(
-        worker=build_worker,
-        client_factory=default_client_factory,
-    )
-
-
 def build_worker(client: Client, context: WorkerContext) -> Worker:
     return Worker(
         client,
@@ -44,3 +37,9 @@ def build_worker(client: Client, context: WorkerContext) -> Worker:
         nexus_service_handlers=[KitchenSinkNexusServiceHandler()],
         **context.worker_kwargs,
     )
+
+
+app = App(
+    worker=build_worker,
+    client_factory=default_client_factory,
+)
