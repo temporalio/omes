@@ -145,12 +145,17 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 		args = append(args, "worker")
 	case clioptions.LangDotNet:
+    if r.AppName != "" {
+			args = append(args, "--app", r.AppName)
+		}
+		args = append(args, "worker")
+	case clioptions.LangJava:
 		if r.AppName != "" {
 			args = append(args, "--app", r.AppName)
 		}
 		args = append(args, "worker")
-	case clioptions.LangRuby, clioptions.LangJava:
-		// Ruby and Java just need the harness worker subcommand
+	case clioptions.LangRuby:
+		// Ruby just need the harness worker subcommand
 		args = append(args, "worker")
 	}
 

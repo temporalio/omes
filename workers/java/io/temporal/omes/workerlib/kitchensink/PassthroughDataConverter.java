@@ -1,4 +1,4 @@
-package io.temporal.omes;
+package io.temporal.omes.workerlib.kitchensink;
 
 import com.google.protobuf.ByteString;
 import io.temporal.api.common.v1.Payload;
@@ -11,7 +11,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-final class PassthroughDataConverter implements PayloadConverter {
+public final class PassthroughDataConverter implements PayloadConverter {
   private static final String METADATA_ENCODING_NAME = "_passthrough";
   private static final ByteString METADATA_ENCODING =
       ByteString.copyFrom(METADATA_ENCODING_NAME, StandardCharsets.UTF_8);

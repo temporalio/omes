@@ -1,5 +1,6 @@
-package io.temporal.omes;
+package io.temporal.omes.workerlib.kitchensink;
 
+import io.temporal.omes.KitchenSink;
 import io.temporal.workflow.*;
 
 @WorkflowInterface

@@ -169,7 +169,7 @@ func runJavaHarnessTests(ctx context.Context, repoDir string) error {
 		ctx,
 		harnessDir,
 		"./gradlew",
-		":harness:test",
+		"test",
 	); err != nil {
 		return fmt.Errorf("failed Java harness tests: %w", err)
 	}
