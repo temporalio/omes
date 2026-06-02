@@ -3,7 +3,7 @@ using Temporalio.Exceptions;
 using Temporal.Omes.KitchenSink;
 using Temporalio.Api.Enums.V1;
 
-namespace Temporalio.Omes;
+namespace Temporalio.Omes.WorkerLib.KitchenSink;
 
 public class ClientActionsExecutor
 {

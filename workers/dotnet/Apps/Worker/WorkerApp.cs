@@ -1,10 +1,11 @@
 using Temporalio.Client;
+using Temporalio.Omes.WorkerLib.KitchenSink;
 using Temporalio.Omes.Projects.Harness;
 using Temporalio.Worker;
 
-namespace Temporalio.Omes;
+namespace Temporalio.Omes.Apps.Worker;
 
-public static class KitchenSinkApp
+public static class WorkerApp
 {
     public static Temporalio.Omes.Projects.Harness.App Create() =>
         new(
