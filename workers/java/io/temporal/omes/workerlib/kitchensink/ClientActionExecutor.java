@@ -1,4 +1,4 @@
-package io.temporal.omes;
+package io.temporal.omes.workerlib.kitchensink;
 
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy;
@@ -8,6 +8,7 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
 import io.temporal.failure.ApplicationFailure;
+import io.temporal.omes.KitchenSink;
 
 public class ClientActionExecutor {
 

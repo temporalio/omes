@@ -1,4 +1,4 @@
-package io.temporal.omes;
+package io.temporal.omes.workerlib.kitchensink;
 
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;

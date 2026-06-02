@@ -1,4 +1,4 @@
-package io.temporal.omes;
+package io.temporal.omes.workerlib.kitchensink;
 
 import com.google.protobuf.util.Durations;
 import io.temporal.activity.ActivityCancellationType;
@@ -15,6 +15,7 @@ import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.internal.common.SearchAttributesUtil;
+import io.temporal.omes.KitchenSink;
 import io.temporal.workflow.*;
 import java.time.Duration;
 import java.util.ArrayList;
