@@ -2,10 +2,22 @@
 ARG TARGETARCH
 FROM --platform=linux/$TARGETARCH ruby:3.3-bullseye AS build
 
+# Install protobuf compiler
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive \
+    apt-get install --no-install-recommends --assume-yes \
+    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+
 # Get go compiler
 ARG TARGETARCH
 RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
     && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
+
+# Install Rust for compiling the Ruby SDK native extension when building from source.
+# hadolint ignore=DL4006
+RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
+
+ENV PATH="$PATH:/root/.cargo/bin"
 
 WORKDIR /app
 

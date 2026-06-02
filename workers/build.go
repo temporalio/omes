@@ -298,6 +298,12 @@ func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Pro
 }
 
 func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
+	if strings.ContainsAny(b.SdkOptions.Version, `/\`) {
+		if err := b.prepareRubySDKSource(ctx, b.SdkOptions.Version); err != nil {
+			return nil, err
+		}
+	}
+
 	options := sdkbuild.BuildRubyProgramOptions{
 		BaseDir:   baseDir,
 		SourceDir: baseDir,
@@ -312,6 +318,39 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
 	return prog, nil
+}
+
+func (b *Builder) prepareRubySDKSource(ctx context.Context, version string) error {
+	sdkPath, err := filepath.Abs(version)
+	if err != nil {
+		return fmt.Errorf("unable to make sdk path absolute: %w", err)
+	}
+
+	gemPath := filepath.Join(sdkPath, "temporalio")
+	if _, err := os.Stat(filepath.Join(gemPath, "Rakefile")); err != nil {
+		gemPath = sdkPath
+	}
+	if _, err := os.Stat(filepath.Join(gemPath, "Rakefile")); err != nil {
+		return nil
+	}
+
+	bundleDir := filepath.Join(gemPath, ".bundle")
+	if err := os.MkdirAll(bundleDir, 0755); err != nil {
+		return fmt.Errorf("failed creating Ruby SDK .bundle dir: %w", err)
+	}
+	bundleConfig := "---\nBUNDLE_PATH: \"vendor/bundle\"\n"
+	if err := os.WriteFile(filepath.Join(bundleDir, "config"), []byte(bundleConfig), 0644); err != nil {
+		return fmt.Errorf("failed writing Ruby SDK .bundle/config: %w", err)
+	}
+
+	cmd := exec.CommandContext(ctx, "bundle", "install")
+	cmd.Dir = gemPath
+	cmd.Stdout = b.stdout
+	cmd.Stderr = b.stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed installing Ruby SDK dependencies: %w", err)
+	}
+	return nil
 }
 
 func BaseDir(repoDir string, lang clioptions.Language) string {
