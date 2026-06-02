@@ -306,12 +306,6 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 		Stdout:    b.stdout,
 		Stderr:    b.stderr,
 	}
-	if b.ProjectName == "" {
-		options.MoreDependencies = []sdkbuild.RubyDependency{{
-			Name: "harness",
-			Path: filepath.Join(baseDir, "harness"),
-		}}
-	}
 
 	prog, err := sdkbuild.BuildRubyProgram(ctx, options)
 	if err != nil {
