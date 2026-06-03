@@ -35,7 +35,6 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	if b.ProjectName != "" {
 		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
-
 	buildDir := filepath.Join(baseDir, b.DirName)
 	b.Logger.Infof("Building %v program at %v", b.SdkOptions.Language, buildDir)
 	if err := os.Mkdir(buildDir, 0755); err != nil && !os.IsExist(err) {
@@ -82,10 +81,10 @@ replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
 
 	goMain := `package main
 
-import "github.com/temporalio/omes/workers/go/apps/worker"
+import "github.com/temporalio/omes/workers/go/apps"
 
 func main() {
-	worker.Main()
+	apps.Main()
 }`
 
 	prog, err := sdkbuild.BuildGoProgram(ctx, sdkbuild.BuildGoProgramOptions{
@@ -140,7 +139,7 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 		BaseDir:           baseDir,
 		DirName:           b.DirName,
 		Version:           b.SdkOptions.Version,
-		MainClass:         "io.temporal.omes.Main",
+		MainClass:         "io.temporal.omes.apps.Registry",
 		HarnessDependency: "io.temporal:omes:0.1.0",
 		Build:             true,
 		Stdout:            b.stdout,
@@ -176,7 +175,10 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		}
 	}
 
-	// Prep the TypeScript runner to be built
+	// Generated TypeScript proto files are source-local and intentionally not
+	// checked in. sdkbuild installs and builds a separate prepared package, so
+	// its pnpm install does not run workers/typescript scripts; generate those
+	// source assets before sdkbuild compiles them through ../ includes.
 	cmd := exec.Command("npm", "install")
 	cmd.Dir = baseDir
 	err := cmd.Run()
@@ -184,25 +186,32 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		return nil, fmt.Errorf("npm install in ./workers/typescript failed: %w", err)
 	}
 
-	cmd = exec.Command("npm", "run", "build")
+	cmd = exec.Command("npm", "run", "proto-gen")
 	cmd.Dir = baseDir
 	cmd.Stdout = b.stdout
 	cmd.Stderr = b.stderr
 	err = cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("npm run build in ./workers/typescript failed: %w", err)
+		return nil, fmt.Errorf("npm run proto-gen in ./workers/typescript failed: %w", err)
 	}
 
 	prog, err := sdkbuild.BuildTypeScriptProgram(ctx, sdkbuild.BuildTypeScriptProgramOptions{
 		BaseDir:        baseDir,
 		Version:        version,
-		TSConfigPaths:  map[string][]string{"@temporalio/omes": {"src/omes.ts"}},
+		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "registry.ts"))}},
 		DirName:        b.DirName,
 		ApplyToCommand: nil,
-		Includes:       []string{"../src/**/*.ts", "../src/protos/json-module.js", "../src/protos/root.js"},
+		Includes: []string{
+			"../apps/**/*.ts",
+			"../harness/*.ts",
+			"../harness/api/**/*.ts",
+			"../workerlib/**/*.ts",
+			"../workerlib/kitchensink/protos/json-module.js",
+			"../workerlib/kitchensink/protos/root.js",
+		},
 		MoreDependencies: map[string]string{
-			"@temporalio/omes-project-harness": "file:../harness",
-			"winston":                          "^3.11.0",
+			"@grpc/proto-loader": "^0.8.0",
+			"winston":            "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
@@ -296,12 +305,6 @@ func (b *Builder) buildRuby(ctx context.Context, baseDir string) (sdkbuild.Progr
 		Version:   b.SdkOptions.Version,
 		Stdout:    b.stdout,
 		Stderr:    b.stderr,
-	}
-	if b.ProjectName == "" {
-		options.MoreDependencies = []sdkbuild.RubyDependency{{
-			Name: "harness",
-			Path: filepath.Join(baseDir, "harness"),
-		}}
 	}
 
 	prog, err := sdkbuild.BuildRubyProgram(ctx, options)

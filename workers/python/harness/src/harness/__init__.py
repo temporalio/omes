@@ -18,11 +18,10 @@ Worker mode runs one or more Temporal workers:
     def build_worker(client: Client, context: WorkerContext) -> Worker:
         return Worker(client, task_queue=context.task_queue)
 
-    def app() -> App:
-        return App(worker=build_worker, client_factory=default_client_factory)
+    app = App(worker=build_worker, client_factory=default_client_factory)
 
     if __name__ == "__main__":
-        run(app())
+        run(app)
 
 Omes will call your provided App in `worker` mode or `project-server` mode directly
 when running your scenario.
@@ -45,12 +44,11 @@ execute hook once per iteration.
     async def execute_project(client, context: ProjectExecuteContext) -> None:
         ...
 
-    def app() -> App:
-        return App(
-            worker=build_worker,
-            client_factory=default_client_factory,
-            project=ProjectHandlers(execute=execute_project, init=init_project),
-        )
+    app = App(
+        worker=build_worker,
+        client_factory=default_client_factory,
+        project=ProjectHandlers(execute=execute_project, init=init_project),
+    )
 
 Most apps only need a worker factory plus `default_client_factory`. Reach for
 `ProjectHandlers` only when you need project mode, and customize

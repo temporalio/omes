@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from harness.client import ClientFactory
@@ -15,10 +16,9 @@ class App:
     project: ProjectHandlers | None = None
 
 
-def run(app: App) -> None:
-    argv = sys.argv[1:]
-    # If no arg provided, fallback to existing worker CLI usage.
-    # Preserves direct `python main.py` usage.
+def run(app: App, argv: Sequence[str] | None = None) -> None:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    # If no arg is provided, fall back to existing direct run(app) worker usage.
     if not argv or argv[:1] == ["worker"]:
         worker_argv = argv[1:] if argv[:1] == ["worker"] else argv
         run_worker_cli(app.worker, app.client_factory, worker_argv)

@@ -1,11 +1,11 @@
 import { promisify } from 'node:util';
 import * as grpc from '@grpc/grpc-js';
 import { Client, type ConnectionLike, type Metadata } from '@temporalio/client';
-import type { ConnectOptions } from '../src/generated/temporal/omes/projects/v1/ConnectOptions';
-import type { ExecuteRequest } from '../src/generated/temporal/omes/projects/v1/ExecuteRequest';
-import type { InitRequest } from '../src/generated/temporal/omes/projects/v1/InitRequest';
-import type { ProjectServiceClient } from '../src/generated/temporal/omes/projects/v1/ProjectService';
-import { projectServiceClientConstructor } from '../src/grpc-helpers';
+import type { ConnectOptions } from '../api/temporal/omes/projects/v1/ConnectOptions';
+import type { ExecuteRequest } from '../api/temporal/omes/projects/v1/ExecuteRequest';
+import type { InitRequest } from '../api/temporal/omes/projects/v1/InitRequest';
+import type { ProjectServiceClient } from '../api/temporal/omes/projects/v1/ProjectService';
+import { projectServiceClientConstructor } from '../grpc-helpers';
 
 type ConnectOptionsOverrides = Partial<ConnectOptions>;
 type InitRequestOverrides = Omit<Partial<InitRequest>, 'connectOptions'> & {

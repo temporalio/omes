@@ -25,6 +25,17 @@ func TestAllocatePorts(t *testing.T) {
 	}
 }
 
+func TestServerPorts(t *testing.T) {
+	ports := newPorts("127.0.0.1", [portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240})
+	server := &Server{
+		frontend: "127.0.0.1:7233",
+		ports:    ports,
+	}
+
+	require.Equal(t, "127.0.0.1:7233", server.FrontendHostPort())
+	require.Equal(t, ports, server.Ports())
+}
+
 func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test\n"), 0644))

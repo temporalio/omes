@@ -115,7 +115,7 @@ func runPythonHarnessTests(ctx context.Context, repoDir string) error {
 }
 
 func runDotnetHarnessTests(ctx context.Context, repoDir string) error {
-	harnessTestsProj := filepath.Join(repoDir, "workers", "dotnet", "projects", "harness", "tests", "HarnessTests.csproj")
+	harnessTestsProj := filepath.Join(repoDir, "workers", "dotnet", "Tests", "Harness", "HarnessTests.csproj")
 	fmt.Println("Running .NET harness tests...")
 	if err := runCommandInDir(ctx, repoDir, "dotnet", "test", harnessTestsProj); err != nil {
 		return fmt.Errorf("failed .NET harness tests: %w", err)
@@ -127,7 +127,7 @@ func runDotnetHarnessTests(ctx context.Context, repoDir string) error {
 func runTypeScriptHarnessTests(ctx context.Context, repoDir string) error {
 	workerDir := filepath.Join(repoDir, "workers", "typescript")
 	fmt.Println("Running TypeScript harness tests...")
-	if err := runCommandInDir(ctx, workerDir, "npm", "run", "-w", "@temporalio/omes-project-harness", "test"); err != nil {
+	if err := runCommandInDir(ctx, workerDir, "npm", "run", "test:harness"); err != nil {
 		return fmt.Errorf("failed TypeScript harness tests: %w", err)
 	}
 	fmt.Println("✅ TypeScript harness tests completed successfully!")
@@ -135,7 +135,7 @@ func runTypeScriptHarnessTests(ctx context.Context, repoDir string) error {
 }
 
 func runRubyHarnessTests(ctx context.Context, repoDir string) error {
-	harnessDir := filepath.Join(repoDir, "workers", "ruby", "harness")
+	workerDir := filepath.Join(repoDir, "workers", "ruby")
 	rubyVersion, err := getVersion("ruby")
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func runRubyHarnessTests(ctx context.Context, repoDir string) error {
 	fmt.Println("Running Ruby harness tests...")
 	if err := runCommandInDir(
 		ctx,
-		harnessDir,
+		workerDir,
 		"mise",
 		"exec",
 		"ruby@"+rubyVersion,
@@ -169,7 +169,7 @@ func runJavaHarnessTests(ctx context.Context, repoDir string) error {
 		ctx,
 		harnessDir,
 		"./gradlew",
-		":harness:test",
+		"test",
 	); err != nil {
 		return fmt.Errorf("failed Java harness tests: %w", err)
 	}

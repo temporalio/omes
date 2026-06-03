@@ -218,9 +218,9 @@ Writing a project should be fairly similar to writing a Temporal sample, and req
 familiarity with the project harness interface.
 
 To get started:
-- projects should be written at `workers/<lang>/projects/tests/<name>`, this is a path convention expected
-  by Omes when building your project
-- use the example `helloworld/` project as a reference to get started
+- projects should be written as apps under `workers/<lang>/apps/<name>`
+- register the app in `workers/<lang>/apps/registry.py`
+- use the example `workers/python/apps/helloworld/` app as a reference to get started
 - take a look at `workers/python/harness/src/harness/__init__.py` as an entrypoint to the harness and 
   how it works
 
@@ -246,7 +246,7 @@ To run a project:
 ```sh
 go run ./cmd run-worker \
   --language python \
-  --project-name helloworld \
+  --app helloworld \
   --run-id local-project-test \
   --server-address <your server address>
 ```
@@ -261,7 +261,8 @@ go run ./cmd run-scenario \
   --server-address <your server address> \
   --run-id local-project-test \
   --option language=python \
-  --option project-name=helloworld
+  --option project-name=helloworld \
+  --option project-server-ready-timeout=15s
 ```
 
 For local all-in-one development, run the worker and scenario together:
@@ -271,7 +272,7 @@ go run ./cmd run-scenario-with-worker \
   --scenario project \
   --iterations 1 \
   --language python \
-  --project-name helloworld \
+  --app helloworld \
   --run-id local-project-test \
   --embedded-server \
   --option language=python \
@@ -283,34 +284,39 @@ To run a project via Docker:
 ```sh
 docker build \
   -f dockerfiles/python.Dockerfile \
-  --build-arg PROJECT_NAME=helloworld \
   --build-arg SDK_VERSION=v1.25.0 \
-  -t omes-python-project-helloworld .
+  -t omes-python .
 
 docker network create omes-project-net
 
 docker run -d --rm \
   --name omes-python-project-worker \
   --network omes-project-net \
-  omes-python-project-helloworld \
+  omes-python \
+  run-worker \
+  --app helloworld \
   --run-id local-project-test \
   --embedded-server-address 0.0.0.0:7233
 
 docker run --rm \
   --network omes-project-net \
-  omes-python-project-helloworld \
+  omes-python \
   run-scenario \
   --scenario project \
   --run-id local-project-test \
   --server-address omes-python-project-worker:7233 \
   --iterations 1 \
-  --connect-timeout 30s
+  --connect-timeout 30s \
+  --option language=python \
+  --option project-name=helloworld \
+  --option prebuilt-project-dir=/app/workers/python/prepared
 
 docker stop omes-python-project-worker
 docker network rm omes-project-net
 ```
 
-This docker workflow it is not yet wired into `go run ./cmd/dev build-worker-image`.
+The Python image is a single prepared worker package. Select the app at runtime
+with `--app` for workers and `--option project-name=...` for project scenarios.
 
 ### ThroughputStress
 

@@ -8,6 +8,7 @@ mise.toml
 # Ignore Gradle project-specific cache directory
 .gradle
 .devserver/
+.devserver.lock
 
 # Ignore Gradle build output directory
 workers/java/bin
