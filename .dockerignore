@@ -1,4 +1,6 @@
 **/node_modules
+workers/*/omes-temp-*/
+workers/*/prepared/
 workers/typescript/lib
 workers/typescript/tsconfig.tsbuildinfo
 workers/typescript/harness/dist*

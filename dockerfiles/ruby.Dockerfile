@@ -6,6 +6,7 @@ FROM --platform=linux/$TARGETARCH ruby:3.3-bullseye AS build
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
+    clang=1:11.0-51+nmu5 \
     protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
 # Get go compiler
