@@ -20,10 +20,9 @@ module Harness
       rescue KeyError
         raise ArgumentError, "Unknown worker profile #{name.inspect}"
       end
-
     end
 
-    self.register(
+    register(
       RESOURCE_BASED_DEFAULT_PROFILE,
       {
         tuner: Temporalio::Worker::Tuner.create_resource_based(
@@ -33,7 +32,7 @@ module Harness
       }
     )
 
-    self.register(
+    register(
       THROUGHPUT_STRESS_BASELINE_PROFILE,
       {
         tuner: Temporalio::Worker::Tuner.create_fixed(
