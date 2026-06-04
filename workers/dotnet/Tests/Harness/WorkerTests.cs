@@ -45,7 +45,8 @@ public class WorkerTests
             {
                 runWorkersInput = workers;
                 return Task.CompletedTask;
-            });
+            },
+            workerProfile: null);
 
         Assert.All(seenClients, client => Assert.Same(sharedClient, client));
         Assert.Equal(["omes-1", "omes-2"], createdWorkers);
