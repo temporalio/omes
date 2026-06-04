@@ -303,62 +303,11 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   }
 
   private void launchActivity(KitchenSink.ExecuteActivityAction executeActivity) {
-    String activityType;
-    List<Object> args = new ArrayList<>();
+    ActivityDispatch dispatch = ActivityDispatch.nameAndArgs(executeActivity);
+    String activityType = dispatch.type;
+    List<Object> args = dispatch.args;
 
-    if (executeActivity.hasDelay()) {
-      activityType = "delay";
-      args.add(executeActivity.getDelay());
-    } else if (executeActivity.hasPayload()) {
-      activityType = "payload";
-      KitchenSink.ExecuteActivityAction.PayloadActivity payload = executeActivity.getPayload();
-      byte[] inputData = new byte[payload.getBytesToReceive()];
-      for (int i = 0; i < inputData.length; i++) {
-        inputData[i] = (byte) (i % 256);
-      }
-      args.add(inputData);
-      args.add(payload.getBytesToReturn());
-    } else if (executeActivity.hasClient()) {
-      activityType = "client";
-      args.add(executeActivity.getClient());
-    } else if (executeActivity.hasRetryableError()) {
-      activityType = "retryable_error";
-      args.add(executeActivity.getRetryableError());
-    } else if (executeActivity.hasTimeout()) {
-      activityType = "timeout";
-      args.add(executeActivity.getTimeout());
-    } else if (executeActivity.hasHeartbeat()) {
-      activityType = "heartbeat";
-      args.add(executeActivity.getHeartbeat());
-    } else {
-      activityType = "noop";
-    }
-
-    RetryOptions.Builder retryOptions =
-        RetryOptions.newBuilder()
-            .setDoNotRetry(
-                executeActivity
-                    .getRetryPolicy()
-                    .getNonRetryableErrorTypesList()
-                    .toArray(new String[0]))
-            .setMaximumAttempts(executeActivity.getRetryPolicy().getMaximumAttempts());
-
-    Duration initialInterval =
-        toJavaDuration(executeActivity.getRetryPolicy().getInitialInterval());
-    if (initialInterval != Duration.ZERO) {
-      retryOptions.setInitialInterval(initialInterval);
-    }
-
-    Duration maximumInterval =
-        toJavaDuration(executeActivity.getRetryPolicy().getMaximumInterval());
-    if (maximumInterval != Duration.ZERO) {
-      retryOptions.setMaximumInterval(maximumInterval);
-    }
-
-    double backoff = executeActivity.getRetryPolicy().getBackoffCoefficient();
-    if (backoff != 0.0) {
-      retryOptions.setBackoffCoefficient(backoff);
-    }
+    RetryOptions retryOptions = buildRetryOptions(executeActivity.getRetryPolicy());
 
     Priority.Builder prio = Priority.newBuilder();
     io.temporal.api.common.v1.Priority priority = executeActivity.getPriority();
@@ -376,7 +325,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       LocalActivityOptions.Builder builder =
           LocalActivityOptions.newBuilder()
               .setStartToCloseTimeout(toJavaDuration(executeActivity.getStartToCloseTimeout()))
-              .setRetryOptions(retryOptions.build());
+              .setRetryOptions(retryOptions);
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
         builder.setScheduleToCloseTimeout(
@@ -407,7 +356,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               .setDisableEagerExecution(remoteOptions.getDoNotEagerlyExecute())
               .setVersioningIntent(getVersioningIntent(remoteOptions.getVersioningIntent()))
               .setCancellationType(getActivityCancellationType(remoteOptions.getCancellationType()))
-              .setRetryOptions(retryOptions.build())
+              .setRetryOptions(retryOptions)
               .setPriority(prio.build());
 
       if (executeActivity.hasScheduleToCloseTimeout()) {
@@ -527,6 +476,26 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       return Duration.ZERO;
     }
     return Duration.ofMillis(Durations.toMillis(d));
+  }
+
+  public static RetryOptions buildRetryOptions(io.temporal.api.common.v1.RetryPolicy proto) {
+    RetryOptions.Builder builder =
+        RetryOptions.newBuilder()
+            .setDoNotRetry(proto.getNonRetryableErrorTypesList().toArray(new String[0]))
+            .setMaximumAttempts(proto.getMaximumAttempts());
+    Duration initialInterval = toJavaDuration(proto.getInitialInterval());
+    if (initialInterval != Duration.ZERO) {
+      builder.setInitialInterval(initialInterval);
+    }
+    Duration maximumInterval = toJavaDuration(proto.getMaximumInterval());
+    if (maximumInterval != Duration.ZERO) {
+      builder.setMaximumInterval(maximumInterval);
+    }
+    double backoff = proto.getBackoffCoefficient();
+    if (backoff != 0.0) {
+      builder.setBackoffCoefficient(backoff);
+    }
+    return builder.build();
   }
 
   public static com.google.protobuf.Duration toProtoDuration(Duration d) {

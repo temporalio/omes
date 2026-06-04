@@ -7,7 +7,6 @@ using Temporalio.Converters;
 using Temporalio.Exceptions;
 using Temporalio.Workflows;
 using Priority = Temporalio.Api.Common.V1.Priority;
-using RetryPolicy = Temporalio.Api.Common.V1.RetryPolicy;
 
 namespace Temporalio.Omes;
 
@@ -340,44 +339,7 @@ public class KitchenSinkWorkflow
 
     private Task LaunchActivity(ExecuteActivityAction eaa, CancellationTokenSource tokenSrc)
     {
-        var actType = "noop";
-        var args = new List<object>();
-        if (eaa.Delay is { } delay)
-        {
-            actType = "delay";
-            args.Add(delay);
-        }
-        else if (eaa.Payload is { } payload)
-        {
-            actType = "payload";
-            var inputData = new byte[payload.BytesToReceive];
-            for (int i = 0; i < inputData.Length; i++)
-            {
-                inputData[i] = (byte)(i % 256);
-            }
-            args.Add(inputData);
-            args.Add(payload.BytesToReturn);
-        }
-        else if (eaa.Client is { } client)
-        {
-            actType = "client";
-            args.Add(client);
-        }
-        else if (eaa.RetryableError is { } retryableError)
-        {
-            actType = "retryable_error";
-            args.Add(retryableError);
-        }
-        else if (eaa.Timeout is { } timeout)
-        {
-            actType = "timeout";
-            args.Add(timeout);
-        }
-        else if (eaa.Heartbeat is { } heartbeat)
-        {
-            actType = "heartbeat";
-            args.Add(heartbeat);
-        }
+        var (actType, args) = ActivityDispatch.NameAndArgs(eaa);
 
         if (eaa.IsLocal != null)
         {
@@ -388,7 +350,7 @@ public class KitchenSinkWorkflow
                 StartToCloseTimeout = eaa.StartToCloseTimeout?.ToTimeSpan(),
                 CancellationToken = tokenSrc.Token,
                 RetryPolicy =
-                    eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
+                    eaa.RetryPolicy != null ? ActivityDispatch.RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
             return Workflow.ExecuteLocalActivityAsync(actType, args, opts);
         }
@@ -404,7 +366,7 @@ public class KitchenSinkWorkflow
                 Priority =
                     eaa.Priority != null ? PriorityFromProto(eaa) : null,
                 RetryPolicy =
-                    eaa.RetryPolicy != null ? RetryPolicyFromProto(eaa.RetryPolicy) : null
+                    eaa.RetryPolicy != null ? ActivityDispatch.RetryPolicyFromProto(eaa.RetryPolicy) : null
             };
             return Workflow.ExecuteActivityAsync(actType, args, opts);
         }
@@ -414,21 +376,6 @@ public class KitchenSinkWorkflow
     {
         await task;
         return true;
-    }
-
-    // Duped for now, if exposed by SDK use it from there.
-    private static Temporalio.Common.RetryPolicy RetryPolicyFromProto(RetryPolicy proto)
-    {
-        return new()
-        {
-            InitialInterval = proto.InitialInterval.ToTimeSpan(),
-            BackoffCoefficient = (float)proto.BackoffCoefficient,
-            MaximumInterval = proto.MaximumInterval?.ToTimeSpan(),
-            MaximumAttempts = proto.MaximumAttempts,
-            NonRetryableErrorTypes = proto.NonRetryableErrorTypes.Count == 0
-                ? null
-                : proto.NonRetryableErrorTypes
-        };
     }
 
     private static Temporalio.Common.Priority PriorityFromProto(ExecuteActivityAction eaa)

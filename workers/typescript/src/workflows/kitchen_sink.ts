@@ -28,7 +28,12 @@ import {
   SearchAttributes,
 } from '@temporalio/common';
 import { decodeTypedSearchAttributes } from '@temporalio/common/lib/converter/payload-search-attributes';
-import { durationConvert, durationConvertMaybeUndefined, numify } from '../proto_help';
+import {
+  activityNameAndArgs,
+  durationConvert,
+  durationConvertMaybeUndefined,
+  numify,
+} from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
 import Payload = temporal.api.common.v1.Payload;
@@ -267,42 +272,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
 }
 
 function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> {
-  let actType = 'noop';
-  const args = [];
-  if (execActivity.delay) {
-    actType = 'delay';
-    args.push(durationConvert(execActivity.delay));
-  }
-  if (execActivity.resources) {
-    actType = 'resources';
-    args.push(execActivity.resources);
-  }
-  if (execActivity.payload) {
-    actType = 'payload';
-    const bytesToReceive = execActivity.payload.bytesToReceive || 0;
-    const inputData = new Uint8Array(bytesToReceive);
-    for (let i = 0; i < inputData.length; i++) {
-      inputData[i] = i % 256;
-    }
-    args.push(inputData);
-    args.push(execActivity.payload.bytesToReturn);
-  }
-  if (execActivity.client) {
-    actType = 'client';
-    args.push(execActivity.client);
-  }
-  if (execActivity.retryableError) {
-    actType = 'retryable_error';
-    args.push(execActivity.retryableError);
-  }
-  if (execActivity.timeout) {
-    actType = 'timeout';
-    args.push(execActivity.timeout);
-  }
-  if (execActivity.heartbeat) {
-    actType = 'heartbeat';
-    args.push(execActivity.heartbeat);
-  }
+  const [actType, args] = activityNameAndArgs(execActivity);
 
   const actArgs: ActivityOptions | LocalActivityOptions = {
     scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
