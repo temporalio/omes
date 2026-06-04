@@ -42,10 +42,10 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	}
 
 	if b.stdout == nil {
-		b.stdout = &logWriter{logger: b.Logger}
+		b.stdout = NewLogWriter(b.Logger)
 	}
 	if b.stderr == nil {
-		b.stderr = &logWriter{logger: b.Logger}
+		b.stderr = NewLogWriter(b.Logger)
 	}
 
 	switch b.SdkOptions.Language {

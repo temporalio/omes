@@ -1,4 +1,4 @@
-package workers
+package workertest
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/temporalio/omes/devserver"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/versions"
+	"github.com/temporalio/omes/workers"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/sdk/client"
@@ -107,7 +108,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		Ref:                 serverRef,
 		Namespace:           testNamespace,
 		DynamicConfigValues: cfg.dynamicConfig,
-		Output:              &logWriter{logger: serverLogger},
+		Output:              workers.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
 	})
 	require.NoError(t, err, "Failed to start dev server")
