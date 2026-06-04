@@ -60,6 +60,7 @@ FROM --platform=linux/$TARGETARCH ruby:3.3-slim-bullseye
 ENV BUNDLE_APP_CONFIG=.bundle
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
+COPY --from=build /app/repo /app/repo
 COPY --from=build /app/workers/ruby /app/workers/ruby
 
 # Put the language and dir, but let other options (like required scenario and run-id) be given by user
