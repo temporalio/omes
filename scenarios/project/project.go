@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	api "github.com/temporalio/omes/workers/go/harness/api"
 	"go.uber.org/zap"

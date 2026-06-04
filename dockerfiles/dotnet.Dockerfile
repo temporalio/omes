@@ -24,6 +24,7 @@ WORKDIR /app
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
+COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY scenarios ./scenarios
 COPY metrics ./metrics
@@ -35,7 +36,7 @@ COPY workers/proto/harness ./workers/proto/harness
 COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 

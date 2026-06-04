@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/workers"
 	"go.uber.org/zap"
 )

@@ -27,6 +27,7 @@ ENV PATH="$PATH:/root/.cargo/bin"
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
+COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
@@ -36,7 +37,7 @@ COPY workers ./workers/
 COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 # Install protoc-gen-go for kitchen-sink-gen build
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
