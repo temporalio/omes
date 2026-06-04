@@ -7,15 +7,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 )
 
 func TestEbbAndFlow(t *testing.T) {
 	t.Parallel()
 
-	env := workers.SetupTestEnvironment(t,
-		workers.WithExecutorTimeout(2*time.Minute))
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(2*time.Minute))
 
 	sleepActivityJson := `{
 		"count": {

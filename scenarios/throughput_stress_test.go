@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 )
 
 func TestThroughputStress(t *testing.T) {
@@ -16,9 +16,9 @@ func TestThroughputStress(t *testing.T) {
 
 	runID := fmt.Sprintf("tps-%d", time.Now().Unix())
 
-	env := workers.SetupTestEnvironment(t,
-		workers.WithExecutorTimeout(1*time.Minute),
-		workers.WithNexusEndpoint(runID))
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute),
+		workertest.WithNexusEndpoint(runID))
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,

@@ -1,4 +1,4 @@
-package workers
+package workertest
 
 import (
 	"encoding/json"
