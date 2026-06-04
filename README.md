@@ -63,7 +63,7 @@ Omes includes a process metrics sidecar - a Go-based HTTP server that monitors C
 
 **Example:**
 ```sh
-go run ./cmd run-worker --language python --run-id my-run \
+go run ./cmd/omes run-worker --language python --run-id my-run \
     --worker-process-metrics-address :9091 \
     --worker-metrics-version-tag v1.24.0
 ```
@@ -125,7 +125,7 @@ You can do that like follows. If you want an embedded server rather than one you
 pass `--embedded-server`.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
+go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
 ```
 
 Notes:
@@ -136,7 +136,7 @@ Notes:
 ### Run a worker for a specific language SDK
 
 ```sh
-go run ./cmd run-worker --run-id local-test-run --language go
+go run ./cmd/omes run-worker --run-id local-test-run --language go
 ```
 
 Notes:
@@ -149,7 +149,7 @@ Notes:
 ### Run a test scenario
 
 ```sh
-go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -163,7 +163,7 @@ Notes:
 ### Cleanup after scenario run
 
 ```sh
-go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+go run ./cmd/omes cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 ### Running a specific version of the SDK
@@ -173,7 +173,7 @@ a version number like `v1.24.0` or you can also pass a local path to use a local
 This is useful while testing unreleased or in-development versions of the SDK.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
+go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
 ```
 
 ### Building and publishing docker images
@@ -244,7 +244,7 @@ the harness to drive load. Consequently, it too needs to build your project + ha
 To run a project:
 1) Run your project worker:
 ```sh
-go run ./cmd run-worker \
+go run ./cmd/omes run-worker \
   --language python \
   --app helloworld \
   --run-id local-project-test \
@@ -255,7 +255,7 @@ Make sure to point your `server-address` to a running Temporal server. Alternati
 
 2) Run the project scenario
 ```sh
-go run ./cmd run-scenario \
+go run ./cmd/omes run-scenario \
   --scenario project \
   --iterations 1 \
   --server-address <your server address> \
@@ -268,7 +268,7 @@ go run ./cmd run-scenario \
 For local all-in-one development, run the worker and scenario together:
 
 ```sh
-go run ./cmd run-scenario-with-worker \
+go run ./cmd/omes run-scenario-with-worker \
   --scenario project \
   --iterations 1 \
   --language python \
@@ -329,7 +329,7 @@ The configuration is done via a JSON file, which is passed to the scenario with 
 
 ```
 echo '{"count":{"type":"fixed","value":5},"groups":{"high":{"weight":2,"sleepDuration":{"type":"uniform","min":"2s","max":"4s"}},"low":{"weight":3,"sleepDuration":{"type":"discrete","weights":{"5s":3,"10s":1}}}}}' > sleep.json
-go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
+go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
 ```
 
 This runs 5 sleep activities per iteration, where "high" has a weight of 2 and sleeps for a random duration between 2-4s,
@@ -351,7 +351,7 @@ The throughput_stress scenario can generate Nexus load if the scenario is starte
 1. Start the scenario with the given run-id:
 
   ```
-  go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
+  go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
   ```
 
 ### Fuzzer
@@ -364,26 +364,26 @@ run by a client inside the scenario executor.
 You can run the fuzzer with new random actions like so:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
 ```
 
 The fuzzer automatically creates a Nexus endpoint and generates Nexus operations. To use an existing endpoint instead:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
 ```
 
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated
 actions. To re-run the same set of actions, you can pass in such a file like so:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option input-file=last_fuzz_run.proto
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option input-file=last_fuzz_run.proto
 ```
 
 Or you can run with a specific seed (seeds are printed at the start of the scenario):
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
 ```
 
 However, the fuzzer is also sensitive to its configuration, and thus the seed will only produce
