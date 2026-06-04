@@ -176,6 +176,81 @@ jobs:
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m
 
+  build-worker-from-source:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: go
+            sdk_repo: sdk-go
+          - sdk: java
+            sdk_repo: sdk-java
+          - sdk: python
+            sdk_repo: sdk-python
+          - sdk: ruby
+            sdk_repo: sdk-ruby
+          - sdk: typescript
+            sdk_repo: sdk-typescript
+          - sdk: dotnet
+            sdk_repo: sdk-dotnet
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: true
+      - name: Checkout ${{ matrix.sdk }} SDK
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: temporalio/${{ matrix.sdk_repo }}
+          submodules: recursive
+          path: checked-out-sdk
+      - name: Build ${{ matrix.sdk }} worker image from local SDK path
+        run: |
+          args=(
+            --language "${{ matrix.sdk }}"
+            --version checked-out-sdk/
+            --image-tag "${{ matrix.sdk }}-local-sdk-path-test"
+          )
+          go run ./cmd/dev build-worker-image "${args[@]}"
+      - name: Start ${{ matrix.sdk }} worker image built from local SDK path
+        run: |
+          docker run \
+            --rm \
+            -i -p 10233:10233 omes:${{ matrix.sdk }}-local-sdk-path-test \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --language ${{ matrix.sdk }} \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --embedded-server-address 0.0.0.0:10233 &
+      - name: Wait for ${{ matrix.sdk }} source-built worker image to start
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
+      - name: Smoke test workflow_with_single_noop_activity against ${{ matrix.sdk }} source-built worker
+        run: |
+          go run ./cmd/omes run-scenario \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --connect-timeout 1m \
+            --iterations 5
+      - name: Smoke test throughput_stress against ${{ matrix.sdk }} source-built worker
+        timeout-minutes: 10
+        run: |
+          go run ./cmd/omes run-scenario \
+            --scenario throughput_stress \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --connect-timeout 1m \
+            --iterations 2 \
+            --timeout 5m \
+            --option internal-iterations=2 \
+            --option continue-as-new-after-iterations=1 \
+            --option sleep-time=1ms \
+            --option visibility-count-timeout=2m
+
   build-project:
     runs-on: ubuntu-latest
     strategy:

@@ -44,18 +44,21 @@ COPY ${SDK_DIR} ./repo
 # Read BUILD_CORE_RELEASE env var. This builds TS worker with core bridge in release mode.
 # This is only relevant if building from source (if using a published version, the worker is already
 # built in release mode).
-ARG BUILD_CORE_RELEASE=false
+ARG BUILD_CORE_RELEASE=1
 ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
 
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
 
-# Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm`.
+# Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm` and
+# TypeScript SDK repo scripts invoke bare `pnpm`.
 RUN . ./versions.env \
  && test -n "${PNPM_VERSION}" \
+ && corepack enable \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
- && corepack pnpm --version
+ && corepack pnpm --version \
+ && pnpm --version
 
 # prepare-worker builds the TypeScript workspace itself: it installs npm deps,
 # runs the root build, and generates the prepared sdkbuild package.
