@@ -10,11 +10,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/devserver"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/versions"
 	"github.com/temporalio/omes/workers"
 	sdkclient "go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/testsuite"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -36,15 +37,14 @@ func TestValidateLimitedPythonSupport(t *testing.T) {
 	require.EqualError(t, err, "project scenario is currently limited to Python, got go")
 }
 
-func TestValidateRejectsConflictingProjectSources(t *testing.T) {
+func TestValidateRequiresProjectNameWithPrebuilt(t *testing.T) {
 	_, err := (&projectScenarioExecutor{}).validate(loadgen.ScenarioInfo{
 		ScenarioOptions: map[string]string{
 			"language":             "python",
-			"project-name":         "helloworld",
-			"prebuilt-project-dir": "workers/python/projects/tests/project-build-helloworld",
+			"prebuilt-project-dir": "workers/python/project-build-runner-helloworld",
 		},
 	})
-	require.EqualError(t, err, "cannot specify both project-name and prebuilt-project-dir")
+	require.EqualError(t, err, "--option project-name=<name> is required")
 }
 
 func TestPythonHelloWorldSourceBuild(t *testing.T) {
@@ -62,7 +62,7 @@ func runProjectScenario(
 	usePrebuilt bool,
 ) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Minute)
 	defer cancel()
 
 	client, clientOptions := startServerAndClient(t, ctx)
@@ -74,7 +74,6 @@ func runProjectScenario(
 	if usePrebuilt {
 		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
 		require.NoError(t, err)
-		info.ScenarioOptions["project-name"] = ""
 		info.ScenarioOptions["prebuilt-project-dir"] = prog.Dir()
 	}
 
@@ -114,10 +113,13 @@ func startServerAndClient(
 ) (sdkclient.Client, clioptions.ClientOptions) {
 	t.Helper()
 
-	server, err := testsuite.StartDevServer(ctx, testsuite.DevServerOptions{
-		ClientOptions: &sdkclient.Options{
-			Namespace: "default",
-		},
+	serverRef, err := versions.Get("SERVER_VERSION")
+	require.NoError(t, err)
+	require.NotEmpty(t, serverRef, "SERVER_VERSION must be set in versions.env")
+	server, err := devserver.Start(ctx, devserver.Options{
+		Ref:       serverRef,
+		Namespace: "default",
+		Logger:    zaptest.NewLogger(t).Named("devserver").Sugar(),
 	})
 	require.NoError(t, err)
 
@@ -191,9 +193,8 @@ func startProjectWorker(
 	require.NotEmpty(t, opts.projectName)
 
 	builder := workers.Builder{
-		ProjectName: opts.projectName,
-		SdkOptions:  opts.sdkOpts,
-		Logger:      info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
+		SdkOptions: opts.sdkOpts,
+		Logger:     info.Logger.Named(fmt.Sprintf("%s-worker-builder", opts.sdkOpts.Language)),
 	}
 
 	// If we have a prebuilt program, use it
@@ -204,6 +205,7 @@ func startProjectWorker(
 
 	runner := &workers.Runner{
 		Builder:                  builder,
+		AppName:                  opts.projectName,
 		TaskQueueName:            loadgen.TaskQueueForRun(info.RunID),
 		GracefulShutdownDuration: 5 * time.Second,
 		ScenarioID: clioptions.ScenarioID{

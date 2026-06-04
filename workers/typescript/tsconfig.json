@@ -6,8 +6,15 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowJs": true,
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./lib"
   },
-  "include": ["src/**/*.ts", "src/protos/json-module.js", "src/protos/root.js"]
+  "include": [
+    "apps/**/*.ts",
+    "harness/**/*.ts",
+    "workerlib/kitchensink/protos/json-module.js",
+    "workerlib/kitchensink/protos/root.js",
+    "workerlib/**/*.ts"
+  ],
+  "exclude": ["harness/tests/**/*.ts", "dist-test", "lib", "node_modules"]
 }

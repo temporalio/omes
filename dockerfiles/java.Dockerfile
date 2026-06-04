@@ -17,15 +17,18 @@ WORKDIR /app
 
 # Copy CLI build dependencies
 COPY cmd ./cmd
+COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
+COPY devserver ./devserver
+COPY versions ./versions
 COPY workers/*.go ./workers/
 COPY workers/go/harness/api ./workers/go/harness/api
 COPY go.mod go.sum ./
 
 # Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
@@ -34,6 +37,7 @@ ARG SDK_DIR=.gitignore
 COPY ${SDK_DIR} ./repo
 
 # Copy the worker files
+COPY workers/proto ./workers/proto
 COPY workers/java ./workers/java
 
 # Download Gradle using wrapper to cache it in build layer
@@ -51,6 +55,7 @@ RUN apt-get update && apt-get install --no-install-recommends --assume-yes git &
 ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
+COPY --from=build /app/workers/proto/harness /app/workers/proto/harness
 COPY --from=build /app/workers/java /app/workers/java
 COPY --from=build /app/repo /app/repo
 COPY --from=build /gradle /gradle

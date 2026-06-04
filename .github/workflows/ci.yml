@@ -24,6 +24,22 @@ jobs:
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
+          cache: false
+      - name: Read Temporal server version
+        id: temporal-server-version
+        run: |
+          set -a && source versions.env && set +a
+          echo "server-version=${SERVER_VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Restore Temporal server Go dependencies
+        id: temporal-server-go-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ steps.temporal-server-version.outputs.server-version }}
+          restore-keys: |
+            omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-
       - name: Install mise
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
@@ -37,6 +53,14 @@ jobs:
           go test -v -race ./... 2>&1 | \
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-omes.xml
+      - name: Save Temporal server Go dependencies
+        if: always() && steps.temporal-server-go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ steps.temporal-server-go-cache.outputs.cache-primary-key }}
       - name: Publish Test Results
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
@@ -129,7 +153,7 @@ jobs:
           timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
       - name: Start ${{ matrix.sdk }} worker image
         run: |
-          go run ./cmd run-scenario \
+          go run ./cmd/omes run-scenario \
             --scenario workflow_with_single_noop_activity \
             --log-level debug \
             --server-address 127.0.0.1:10233 \
@@ -139,7 +163,7 @@ jobs:
       - name: Smoke test throughput_stress to confirm build is usable against ${{ matrix.sdk }} worker
         timeout-minutes: 10
         run: |
-          go run ./cmd run-scenario \
+          go run ./cmd/omes run-scenario \
             --scenario throughput_stress \
             --log-level debug \
             --server-address 127.0.0.1:10233 \
@@ -181,7 +205,6 @@ jobs:
         run: |
           docker build \
             -f ${{ matrix.dockerfile }} \
-            --build-arg PROJECT_NAME=${{ matrix.project }} \
             --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
             -t ${PROJECT_IMAGE_TAG} .
       - name: Create Docker network
@@ -195,6 +218,8 @@ jobs:
             --network omes-project-net \
             -p 7233:7233 \
             ${PROJECT_IMAGE_TAG} \
+            run-worker \
+            --app ${{ matrix.project }} \
             --run-id ${PROJECT_RUN_ID} \
             --embedded-server-address 0.0.0.0:7233 &
       - name: Wait for embedded server
@@ -210,7 +235,10 @@ jobs:
             --run-id ${PROJECT_RUN_ID} \
             --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
             --iterations 1 \
-            --connect-timeout 30s
+            --connect-timeout 30s \
+            --option language=${{ matrix.sdk }} \
+            --option project-name=${{ matrix.project }} \
+            --option prebuilt-project-dir=/app/workers/python/prepared
       - name: Print project worker logs
         if: failure()
         run: |

@@ -7,10 +7,12 @@ mise.toml
 .idea/
 # Ignore Gradle project-specific cache directory
 .gradle
+.devserver/
+.devserver.lock
 
 # Ignore Gradle build output directory
 workers/java/bin
-workers/java/build
+workers/java/**/build
 
 /loadgen/kitchen-sink-gen/target/
 

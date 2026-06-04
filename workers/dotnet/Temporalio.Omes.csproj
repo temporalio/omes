@@ -15,7 +15,8 @@
         <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-        <PackageReference Include="Temporalio" Version="1.14.0">
+        <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
+        <PackageReference Include="Temporalio" Version="1.14.1">
             <!--
               We have to make sure this isn't included transitively so it can be
               overridden.
@@ -23,16 +24,25 @@
 <!--            <PrivateAssets>all</PrivateAssets>-->
         </PackageReference>
         <PackageReference Include="Google.Protobuf" Version="3.26.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="projects/harness/ProjectHarness.csproj" />
+        <PackageReference Include="Grpc.Tools" Version="2.62.0" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
         <Compile Include="App.cs" />
-        <Compile Include="KitchenSinkApp.cs" />
+        <Compile Include="Apps/**/*.cs" />
+        <Compile Include="Harness/*.cs" />
         <Compile Include="Temporalio.Omes/**/*.cs" />
+        <Compile Include="WorkerLib/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf Include="../proto/harness/api/api.proto" GrpcServices="Both" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>HarnessTests</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
 
     <ItemGroup>

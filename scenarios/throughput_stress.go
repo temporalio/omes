@@ -47,6 +47,10 @@ const (
 	// Requires server-side support for workflow-independent activities.
 	// Default is false.
 	EnableStandaloneActivityFlag = "enable-standalone-activity"
+	// IncludeStandaloneNexusFlag enables standalone Nexus operations in throughput_stress.
+	// Requires nexus-endpoint to also be set.
+	// Default is false.
+	IncludeStandaloneNexusFlag = "include-standalone-nexus"
 )
 
 type tpsState struct {
@@ -74,6 +78,7 @@ type tpsConfig struct {
 	IncludeRetryScenarios         bool
 	IncludeDescribe               bool
 	EnableStandaloneActivity      bool
+	IncludeStandaloneNexus        bool
 }
 
 type tpsExecutor struct {
@@ -175,6 +180,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
 	config.EnableStandaloneActivity = info.ScenarioOptionBool(EnableStandaloneActivityFlag, false)
+	config.IncludeStandaloneNexus = info.ScenarioOptionBool(IncludeStandaloneNexusFlag, false)
+	if config.IncludeStandaloneNexus && config.NexusEndpoint == "" {
+		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
+	}
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -441,6 +450,12 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
+			if t.config.IncludeStandaloneNexus {
+				asyncActions = append(asyncActions,
+					t.createStandaloneNexusOperationAction("echo-async"),
+					t.createStandaloneNexusOperationAction("echo-sync"),
+				)
+			}
 		}
 
 		if t.config.EnableStandaloneActivity {
@@ -688,6 +703,18 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 			},
 		},
 	}
+}
+
+func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Action {
+	return ClientActivity(ClientActions(&ClientAction{
+		Variant: &ClientAction_DoStandaloneNexusOperation{
+			DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+				Endpoint:  t.config.NexusEndpoint,
+				Service:   "kitchen-sink",
+				Operation: operation,
+			},
+		},
+	}), DefaultRemoteActivity)
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
