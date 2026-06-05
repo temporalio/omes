@@ -41,6 +41,24 @@ type projectScenarioOptions struct {
 	projectServerReadyTimeout time.Duration
 }
 
+type projectHandleClient interface {
+	close() error
+	execute(context.Context, *api.ExecuteRequest) (*api.ExecuteResponse, error)
+}
+
+var (
+	buildProjectProgram = buildProject
+	loadPrebuiltProgram = loadPrebuilt
+	startProjectProgram = startProjectProcess
+	newProjectHandleFn  = func(ctx context.Context, port int, req *api.InitRequest, readyTimeout time.Duration) (projectHandleClient, error) {
+		handle, err := newProjectHandle(ctx, port, req, readyTimeout)
+		if err != nil {
+			return nil, err
+		}
+		return &handle, nil
+	}
+)
+
 type projectScenarioExecutor struct{}
 
 func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
@@ -52,10 +70,10 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	var prog sdkbuild.Program
 	if opts.prebuiltDir != "" {
 		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
-		prog, err = loadPrebuilt(opts.prebuiltDir, opts.sdkOpts.Language)
+		prog, err = loadPrebuiltProgram(opts.prebuiltDir, info.RootPath, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
-		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
+		prog, err = buildProjectProgram(ctx, info.RootPath, opts, info.Logger)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to prepare project: %w", err)
@@ -71,14 +89,14 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	defer serverCancel()
 
-	serverCmd, err := startProjectProcess(serverCtx, prog, info.Logger, opts.sdkOpts.Language, opts.projectName, port)
+	serverCmd, err := startProjectProgram(serverCtx, prog, info.Logger, opts.sdkOpts.Language, opts.projectName, port)
 	if err != nil {
 		return fmt.Errorf("failed to spawn project server: %w", err)
 	}
 	defer stopProjectProcess("project-server", serverCancel, serverCmd, info.Logger)
 
 	co := info.ClientOptions
-	handle, err := newProjectHandle(ctx, port, &api.InitRequest{
+	handle, err := newProjectHandleFn(ctx, port, &api.InitRequest{
 		ExecutionId: info.ExecutionID,
 		RunId:       info.RunID,
 		TaskQueue:   taskQueue,
@@ -99,7 +117,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	}
 	defer handle.close()
 
-	executor := newSteadyRateExecutor(&handle)
+	executor := newSteadyRateExecutor(handle, taskQueue)
 	return executor.Run(ctx, info)
 }
 
@@ -112,9 +130,6 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	}
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
-	}
-	if opts.sdkOpts.Language != clioptions.LangPython {
-		return opts, fmt.Errorf("project scenario is currently limited to Python, got %s", lang)
 	}
 
 	projectName := info.ScenarioOptions["project-name"]
@@ -168,12 +183,7 @@ func findAvailablePort() (int, error) {
 }
 
 func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, appName string, port int) (*exec.Cmd, error) {
-	var args []string
-	// Python needs module name
-	if lang == clioptions.LangPython {
-		args = append(args, "apps.registry", "--app", appName)
-	}
-	args = append(args, "project-server", "--port", strconv.Itoa(port))
+	args := projectProcessArgs(lang, appName, port)
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err
@@ -196,6 +206,18 @@ func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap
 	}
 	logger.Infof("Started process (PID %d): %v", cmd.Process.Pid, args)
 	return cmd, nil
+}
+
+func projectProcessArgs(lang clioptions.Language, appName string, port int) []string {
+	var args []string
+	switch lang {
+	case clioptions.LangPython:
+		args = append(args, "apps.registry")
+	case clioptions.LangTypeScript:
+		args = append(args, "./tslib/apps/registry.js")
+	}
+	args = append(args, "--app", appName, "project-server", "--port", strconv.Itoa(port))
+	return args
 }
 
 func stopProjectProcess(name string, cancel context.CancelFunc, cmd *exec.Cmd, logger *zap.SugaredLogger) {

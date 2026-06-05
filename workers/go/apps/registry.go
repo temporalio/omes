@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/workers/go/apps/helloworld"
 	"github.com/temporalio/omes/workers/go/apps/lambda"
 	"github.com/temporalio/omes/workers/go/apps/worker"
 	"github.com/temporalio/omes/workers/go/harness"
@@ -13,8 +14,9 @@ import (
 const defaultAppName = "worker"
 
 var registry = map[string]harness.App{
-	"lambda": lambda.App,
-	"worker": worker.App,
+	"helloworld": helloworld.App,
+	"lambda":     lambda.App,
+	"worker":     worker.App,
 }
 
 // Main selects the registered app before handing off to the harness.

@@ -3,10 +3,12 @@ package project
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workerctl"
+	"github.com/temporalio/omes/workers"
 	"go.uber.org/zap"
 )
 
@@ -18,20 +20,24 @@ func buildProject(ctx context.Context, repoRoot string, p projectScenarioOptions
 		Logger:     logger,
 	}
 
-	baseDir := workerctl.BaseDir(repoRoot, p.sdkOpts.Language)
-	switch p.sdkOpts.Language {
-	case clioptions.LangPython:
-		return b.Build(ctx, baseDir)
-	default:
-		return nil, fmt.Errorf("unsupported language for project builds: %s", b.SdkOptions.Language)
-	}
+	return b.Build(ctx, workers.BaseDir(repoRoot, p.sdkOpts.Language))
 }
 
 // loadPrebuilt loads an already-built project program from the given directory.
-func loadPrebuilt(dir string, lang clioptions.Language) (sdkbuild.Program, error) {
+func loadPrebuilt(dir, repoRoot string, lang clioptions.Language) (sdkbuild.Program, error) {
 	switch lang {
+	case clioptions.LangGo:
+		return sdkbuild.GoProgramFromDir(dir)
 	case clioptions.LangPython:
 		return sdkbuild.PythonProgramFromDir(dir)
+	case clioptions.LangJava:
+		return sdkbuild.JavaProgramFromDir(dir)
+	case clioptions.LangTypeScript:
+		return sdkbuild.TypeScriptProgramFromDir(dir)
+	case clioptions.LangDotNet:
+		return sdkbuild.DotNetProgramFromDir(dir)
+	case clioptions.LangRuby:
+		return sdkbuild.RubyProgramFromDir(dir, filepath.Join(repoRoot, "workers", "ruby"))
 	default:
 		return nil, fmt.Errorf("prebuilt projects not supported for language: %s", lang)
 	}

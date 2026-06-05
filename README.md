@@ -225,7 +225,6 @@ As such, it's a **good fit** if you:
 - are more familiar with Temporal-native code than Omes's framework
 
 and are not restricted by the **current limitations**:
-- Python is the only implemented project language right now
 - the load pattern is limited to a steady-rate executor (i.e. "run 'x' times or run for 'y' duration),
   more nuanced load patterns will need to create their own scenario + executor (the existing method)
 
@@ -236,10 +235,10 @@ familiarity with the project harness interface.
 
 To get started:
 - projects should be written as apps under `workers/<lang>/apps/<name>`
-- register the app in `workers/<lang>/apps/registry.py`
-- use the example `workers/python/apps/helloworld/` app as a reference to get started
-- take a look at `workers/python/harness/src/harness/__init__.py` as an entrypoint to the harness and 
-  how it works
+- register the app in `workers/<lang>/apps/registry.*`
+- use the `helloworld` app in each worker language as a reference to get started
+- take a look at the language harness entrypoint (for example
+  `workers/python/harness/src/harness/__init__.py`) to see how worker and project-server modes dispatch
 
 #### How projects run (optional)
 
@@ -262,7 +261,7 @@ To run a project:
 1) Run your project worker:
 ```sh
 go run ./cmd/omes run-worker \
-  --language python \
+  --language <lang> \
   --app helloworld \
   --run-id local-project-test \
   --server-address <your server address>
@@ -277,7 +276,7 @@ go run ./cmd/omes run-scenario \
   --iterations 1 \
   --server-address <your server address> \
   --run-id local-project-test \
-  --option language=python \
+  --option language=<lang> \
   --option project-name=helloworld \
   --option project-server-ready-timeout=15s
 ```
@@ -288,11 +287,11 @@ For local all-in-one development, run the worker and scenario together:
 go run ./cmd/omes run-scenario-with-worker \
   --scenario project \
   --iterations 1 \
-  --language python \
+  --language <lang> \
   --app helloworld \
   --run-id local-project-test \
   --embedded-server \
-  --option language=python \
+  --option language=<lang> \
   --option project-name=helloworld
 ```
 
@@ -300,39 +299,39 @@ To run a project via Docker:
 
 ```sh
 docker build \
-  -f dockerfiles/python.Dockerfile \
-  --build-arg SDK_VERSION=v1.25.0 \
-  -t omes-python .
+  -f dockerfiles/<lang>.Dockerfile \
+  --build-arg SDK_VERSION=<sdk-version> \
+  -t omes-<lang> .
 
 docker network create omes-project-net
 
 docker run -d --rm \
-  --name omes-python-project-worker \
+  --name omes-<lang>-project-worker \
   --network omes-project-net \
-  omes-python \
-  run-worker \
+  omes-<lang> \
   --app helloworld \
   --run-id local-project-test \
   --embedded-server-address 0.0.0.0:7233
 
 docker run --rm \
   --network omes-project-net \
-  omes-python \
+  --entrypoint /app/temporal-omes \
+  omes-<lang> \
   run-scenario \
   --scenario project \
   --run-id local-project-test \
-  --server-address omes-python-project-worker:7233 \
+  --server-address omes-<lang>-project-worker:7233 \
   --iterations 1 \
   --connect-timeout 30s \
-  --option language=python \
+  --option language=<lang> \
   --option project-name=helloworld \
-  --option prebuilt-project-dir=/app/workers/python/prepared
+  --option prebuilt-project-dir=/app/workers/<lang>/prepared
 
-docker stop omes-python-project-worker
+docker stop omes-<lang>-project-worker
 docker network rm omes-project-net
 ```
 
-The Python image is a single prepared worker package. Select the app at runtime
+Worker images contain a single prepared worker package for their language. Select the app at runtime
 with `--app` for workers and `--option project-name=...` for project scenarios.
 
 ### ThroughputStress

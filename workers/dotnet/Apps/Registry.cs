@@ -1,3 +1,4 @@
+using Temporalio.Omes.Apps.HelloWorld;
 using Temporalio.Omes.Apps.Worker;
 using HarnessApp = Temporalio.Omes.Projects.Harness.App;
 
@@ -9,6 +10,7 @@ public static class Registry
 
     private static readonly IReadOnlyDictionary<string, HarnessApp> Apps = new Dictionary<string, HarnessApp>
     {
+        ["helloworld"] = HelloWorldApp.Create(),
         ["worker"] = WorkerApp.Create(),
     };
 
