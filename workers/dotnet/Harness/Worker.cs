@@ -138,7 +138,8 @@ internal static class WorkerHarness
                         workerFactory: (client, workerContext) => app.Worker(client, workerContext),
                         clientFactory: app.ClientFactory,
                         options: options,
-                        runWorkersAsync: RunWorkersAsync);
+                        runWorkersAsync: RunWorkersAsync,
+                        workerProfile: Environment.GetEnvironmentVariable(WorkerProfiles.EnvVarName));
                     context.ExitCode = 0;
                 }
                 catch (ArgumentException err)
@@ -154,7 +155,8 @@ internal static class WorkerHarness
         WorkerFactoryCore<TWorker> workerFactory,
         ClientFactory clientFactory,
         WorkerCliOptions options,
-        Func<IReadOnlyList<TWorker>, Task> runWorkersAsync)
+        Func<IReadOnlyList<TWorker>, Task> runWorkersAsync,
+        string? workerProfile = null)
     {
         if (options.TaskQueueSuffixIndexStart > options.TaskQueueSuffixIndexEnd)
         {
@@ -173,7 +175,7 @@ internal static class WorkerHarness
             promListenAddress: options.PromListenAddress,
             loggerFactory: loggerFactory);
 
-        var workerSettings = BuildWorkerSettings(options);
+        var workerSettings = BuildWorkerSettings(options, workerProfile);
         var client = await clientFactory(clientConfig);
         var taskQueues = BuildTaskQueues(
             logger,
@@ -303,8 +305,9 @@ internal static class WorkerHarness
         return taskQueues;
     }
 
-    private static WorkerSettings BuildWorkerSettings(WorkerCliOptions options) =>
+    private static WorkerSettings BuildWorkerSettings(WorkerCliOptions options, string? profile) =>
         new(
+            Profile: profile,
             MaxConcurrentActivities: options.MaxConcurrentActivities,
             MaxConcurrentWorkflowTasks: options.MaxConcurrentWorkflowTasks,
             ActivitiesPerSecond: options.ActivitiesPerSecond,
@@ -315,6 +318,13 @@ internal static class WorkerHarness
 
     private static TemporalWorkerOptions BuildWorkerOptions(string taskQueue, WorkerSettings settings)
     {
+        if (!string.IsNullOrEmpty(settings.Profile))
+        {
+            var profileOptions = WorkerProfiles.LookupWorkerProfile(settings.Profile);
+            profileOptions.TaskQueue = taskQueue;
+            return profileOptions;
+        }
+
         var workerOptions = new TemporalWorkerOptions(taskQueue);
         if (settings.MaxConcurrentWorkflowTasks is { } maxConcurrentWorkflowTasks)
         {
@@ -406,6 +416,7 @@ internal static class WorkerHarness
     }
 
     private sealed record WorkerSettings(
+        string? Profile,
         int? MaxConcurrentActivities,
         int? MaxConcurrentWorkflowTasks,
         double? ActivitiesPerSecond,

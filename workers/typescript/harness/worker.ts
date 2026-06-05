@@ -3,6 +3,7 @@ import { Logger, Worker, WorkerOptions } from '@temporalio/worker';
 import { Command } from 'commander';
 import { buildClientConfig, ClientFactory } from './client';
 import { configureLogger } from './helpers';
+import { lookupWorkerProfile, WORKER_PROFILE_ENV_VAR } from './profiles';
 
 export interface WorkerContext {
   logger: Logger;
@@ -50,7 +51,13 @@ export async function runWorkerCli(
   const onInterrupt = () => resolveInterrupt();
   process.once('SIGINT', onInterrupt);
   try {
-    await runWorker(workerFactory, clientFactory, interruptPromise, argv);
+    await runWorker(
+      workerFactory,
+      clientFactory,
+      interruptPromise,
+      argv,
+      process.env[WORKER_PROFILE_ENV_VAR],
+    );
   } finally {
     process.off('SIGINT', onInterrupt);
   }
@@ -62,6 +69,7 @@ export async function runWorker(
   interruptPromise: Promise<void>,
   // sdkbuild's prepared package currently uses Commander 8 types, whose parse API expects string[].
   argv: string[],
+  workerProfile?: string,
 ): Promise<void> {
   const args = buildParser().parse(argv, { from: 'user' }).opts<WorkerCliOptions>();
 
@@ -93,7 +101,7 @@ export async function runWorker(
     args.taskQueueSuffixIndexStart,
     args.taskQueueSuffixIndexEnd,
   );
-  const workerOptions = buildWorkerOptions(args);
+  const workerOptions = buildWorkerOptions(args, workerProfile);
   const workers = await Promise.all(
     taskQueues.map(
       async (taskQueue) =>
@@ -229,7 +237,14 @@ function buildTaskQueues(
   return taskQueues;
 }
 
-function buildWorkerOptions(options: WorkerCliOptions): Partial<WorkerOptions> {
+function buildWorkerOptions(
+  options: WorkerCliOptions,
+  profileName?: string,
+): Partial<WorkerOptions> {
+  if (profileName !== undefined && profileName !== '') {
+    return lookupWorkerProfile(profileName);
+  }
+
   const workerOptions: Partial<WorkerOptions> = {};
   if (options.activityPollerAutoscaleMax !== undefined) {
     workerOptions.activityTaskPollerBehavior = {
