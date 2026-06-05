@@ -28,8 +28,7 @@ public final class HelloWorldApp {
         client.newWorkflowStub(
             HelloWorldWorkflow.class,
             WorkflowOptions.newBuilder()
-                .setWorkflowId(
-                    String.format("%s-%d", context.run.executionId, context.iteration))
+                .setWorkflowId(String.format("%s-%d", context.run.executionId, context.iteration))
                 .setTaskQueue(context.taskQueue)
                 .build());
     String result = workflow.run("World");
