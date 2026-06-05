@@ -101,12 +101,12 @@ func (c *ProjectHandle) execute(ctx context.Context, req *api.ExecuteRequest) (*
 }
 
 // newSteadyRateExecutor creates an executor that calls Execute once per iteration.
-func newSteadyRateExecutor(c projectHandleClient, taskQueue string) loadgen.Executor {
+func newSteadyRateExecutor(c *ProjectHandle) loadgen.Executor {
 	return &loadgen.GenericExecutor{
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			_, err := c.execute(ctx, &api.ExecuteRequest{
 				Iteration: int64(run.Iteration),
-				TaskQueue: taskQueue,
+				TaskQueue: c.taskQueue,
 			})
 			return err
 		},

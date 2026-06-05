@@ -14,6 +14,7 @@ import (
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/workers"
 	api "github.com/temporalio/omes/workers/go/harness/api"
 	"go.uber.org/zap"
 )
@@ -41,24 +42,6 @@ type projectScenarioOptions struct {
 	projectServerReadyTimeout time.Duration
 }
 
-type projectHandleClient interface {
-	close() error
-	execute(context.Context, *api.ExecuteRequest) (*api.ExecuteResponse, error)
-}
-
-var (
-	buildProjectProgram = buildProject
-	loadPrebuiltProgram = loadPrebuilt
-	startProjectProgram = startProjectProcess
-	newProjectHandleFn  = func(ctx context.Context, port int, req *api.InitRequest, readyTimeout time.Duration) (projectHandleClient, error) {
-		handle, err := newProjectHandle(ctx, port, req, readyTimeout)
-		if err != nil {
-			return nil, err
-		}
-		return &handle, nil
-	}
-)
-
 type projectScenarioExecutor struct{}
 
 func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
@@ -70,10 +53,14 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	var prog sdkbuild.Program
 	if opts.prebuiltDir != "" {
 		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
-		prog, err = loadPrebuiltProgram(opts.prebuiltDir, info.RootPath, opts.sdkOpts.Language)
+		prog, err = loadPrebuiltProject(opts.prebuiltDir, info.RootPath, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
-		prog, err = buildProjectProgram(ctx, info.RootPath, opts, info.Logger)
+		prog, err = (&workers.Builder{
+			DirName:    fmt.Sprintf("project-build-runner-%s", opts.projectName),
+			SdkOptions: opts.sdkOpts,
+			Logger:     info.Logger,
+		}).Build(ctx, workers.BaseDir(info.RootPath, opts.sdkOpts.Language))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to prepare project: %w", err)
@@ -89,14 +76,14 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	defer serverCancel()
 
-	serverCmd, err := startProjectProgram(serverCtx, prog, info.Logger, opts.sdkOpts.Language, opts.projectName, port)
+	serverCmd, err := startProjectProcess(serverCtx, prog, info.Logger, opts.sdkOpts.Language, opts.projectName, port)
 	if err != nil {
 		return fmt.Errorf("failed to spawn project server: %w", err)
 	}
 	defer stopProjectProcess("project-server", serverCancel, serverCmd, info.Logger)
 
 	co := info.ClientOptions
-	handle, err := newProjectHandleFn(ctx, port, &api.InitRequest{
+	handle, err := newProjectHandle(ctx, port, &api.InitRequest{
 		ExecutionId: info.ExecutionID,
 		RunId:       info.RunID,
 		TaskQueue:   taskQueue,
@@ -117,7 +104,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	}
 	defer handle.close()
 
-	executor := newSteadyRateExecutor(handle, taskQueue)
+	executor := newSteadyRateExecutor(&handle)
 	return executor.Run(ctx, info)
 }
 
@@ -183,7 +170,15 @@ func findAvailablePort() (int, error) {
 }
 
 func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, appName string, port int) (*exec.Cmd, error) {
-	args := projectProcessArgs(lang, appName, port)
+	var args []string
+	switch lang {
+	case clioptions.LangPython:
+		args = append(args, "apps.registry")
+	case clioptions.LangTypeScript:
+		args = append(args, "./tslib/apps/registry.js")
+	}
+	args = append(args, "--app", appName, "project-server", "--port", strconv.Itoa(port))
+
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err
@@ -208,23 +203,30 @@ func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap
 	return cmd, nil
 }
 
-func projectProcessArgs(lang clioptions.Language, appName string, port int) []string {
-	var args []string
-	switch lang {
-	case clioptions.LangPython:
-		args = append(args, "apps.registry")
-	case clioptions.LangTypeScript:
-		args = append(args, "./tslib/apps/registry.js")
-	}
-	args = append(args, "--app", appName, "project-server", "--port", strconv.Itoa(port))
-	return args
-}
-
 func stopProjectProcess(name string, cancel context.CancelFunc, cmd *exec.Cmd, logger *zap.SugaredLogger) {
 	cancel()
 	if cmd != nil {
 		if err := cmd.Wait(); err != nil {
 			logger.Debugf("Process %s exited: %v", name, err)
 		}
+	}
+}
+
+func loadPrebuiltProject(dir, repoRoot string, lang clioptions.Language) (sdkbuild.Program, error) {
+	switch lang {
+	case clioptions.LangGo:
+		return sdkbuild.GoProgramFromDir(dir)
+	case clioptions.LangPython:
+		return sdkbuild.PythonProgramFromDir(dir)
+	case clioptions.LangJava:
+		return sdkbuild.JavaProgramFromDir(dir)
+	case clioptions.LangTypeScript:
+		return sdkbuild.TypeScriptProgramFromDir(dir)
+	case clioptions.LangDotNet:
+		return sdkbuild.DotNetProgramFromDir(dir)
+	case clioptions.LangRuby:
+		return sdkbuild.RubyProgramFromDir(dir, filepath.Join(repoRoot, "workers", "ruby"))
+	default:
+		return nil, fmt.Errorf("prebuilt projects not supported for language: %s", lang)
 	}
 }
