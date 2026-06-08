@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +53,7 @@ func (w *workerPool) ensureWorkerBuilt(
 	w.mutex.Unlock()
 
 	once.Do(func() {
-		baseDir := workers.BaseDir(w.env.repoDir, sdk)
+		baseDir := workerctl.BaseDir(w.env.repoDir, sdk)
 		buildDir := filepath.Join(baseDir, w.env.buildDirName())
 
 		w.mutex.Lock()
@@ -64,7 +64,7 @@ func (w *workerPool) ensureWorkerBuilt(
 		})
 		w.mutex.Unlock()
 
-		builder := workers.Builder{
+		builder := workerctl.Builder{
 			DirName:    w.env.buildDirName(),
 			SdkOptions: clioptions.SdkOptions{Language: sdk},
 			Logger:     logger.Named(fmt.Sprintf("%s-builder", sdk)),
@@ -98,9 +98,9 @@ func (w *workerPool) startWorker(
 
 	go func() {
 		defer close(workerDone)
-		baseDir := workers.BaseDir(w.env.repoDir, sdk)
-		runner := &workers.Runner{
-			Builder: workers.Builder{
+		baseDir := workerctl.BaseDir(w.env.repoDir, sdk)
+		runner := &workerctl.Runner{
+			Builder: workerctl.Builder{
 				DirName:    w.env.buildDirName(),
 				SdkOptions: clioptions.SdkOptions{Language: sdk},
 				Logger:     logger.Named(fmt.Sprintf("%s-worker-builder", sdk)),

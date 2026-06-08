@@ -6,19 +6,19 @@ import (
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/workers"
+	"github.com/temporalio/omes/internal/workerctl"
 	"go.uber.org/zap"
 )
 
 // buildProject builds a project test program for the given language.
 func buildProject(ctx context.Context, repoRoot string, p projectScenarioOptions, logger *zap.SugaredLogger) (sdkbuild.Program, error) {
-	b := workers.Builder{
+	b := workerctl.Builder{
 		DirName:    fmt.Sprintf("project-build-runner-%s", p.projectName),
 		SdkOptions: p.sdkOpts,
 		Logger:     logger,
 	}
 
-	baseDir := workers.BaseDir(repoRoot, p.sdkOpts.Language)
+	baseDir := workerctl.BaseDir(repoRoot, p.sdkOpts.Language)
 	switch p.sdkOpts.Language {
 	case clioptions.LangPython:
 		return b.Build(ctx, baseDir)

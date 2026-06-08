@@ -31,6 +31,7 @@ COPY clioptions ./clioptions
 COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
+COPY internal ./internal
 COPY devserver ./devserver
 COPY versions ./versions
 COPY workers ./workers/
