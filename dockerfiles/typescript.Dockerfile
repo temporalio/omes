@@ -16,23 +16,25 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
 
 # Need Rust to compile core if not already built
 RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:/usr/local/go/bin:${PATH}"
 
 WORKDIR /app
 
-# Copy CLI build dependencies
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
+COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+RUN go mod download
+
+# Copy CLI source and build the CLI.
 COPY cmd ./cmd
 COPY clioptions ./clioptions
 COPY loadgen ./loadgen
-COPY scenarios ./scenarios
 COPY metrics ./metrics
-COPY devserver ./devserver
+COPY scenarios ./scenarios
 COPY internal ./internal
-COPY workers/go/harness/api ./workers/go/harness/api
-COPY go.mod go.sum versions.env ./
-
-# Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd/omes
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
@@ -49,6 +51,7 @@ ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
+COPY versions.env ./
 
 # Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm` and
 # TypeScript SDK repo scripts invoke bare `pnpm`.
