@@ -6,13 +6,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// logWriter implements io.Writer and streams output line by line to a logger
-type logWriter struct {
+// LogWriter implements io.Writer and streams output line by line to a logger
+type LogWriter struct {
 	logger *zap.SugaredLogger
 	buffer bytes.Buffer
 }
 
-func (w *logWriter) Write(p []byte) (n int, err error) {
+// NewLogWriter returns a LogWriter that streams output line by line to logger.
+func NewLogWriter(logger *zap.SugaredLogger) *LogWriter {
+	return &LogWriter{logger: logger}
+}
+
+func (w *LogWriter) Write(p []byte) (n int, err error) {
 	w.buffer.Write(p)
 
 	for {

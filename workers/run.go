@@ -19,6 +19,8 @@ import (
 	"go.temporal.io/sdk/testsuite"
 )
 
+const WorkerProfileEnvVar = "OMES_WORKER_PROFILE"
+
 type Runner struct {
 	Builder
 	AppName                   string
@@ -29,6 +31,7 @@ type Runner struct {
 	TaskQueueName             string
 	TaskQueueIndexSuffixStart int
 	TaskQueueIndexSuffixEnd   int
+	WorkerProfile             string
 	ScenarioID                clioptions.ScenarioID
 	ClientOptions             clioptions.ClientOptions
 	MetricsOptions            clioptions.MetricsOptions
@@ -153,12 +156,13 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
+	cmd.Env = withEnv(cmd.Environ(), WorkerProfileEnvVar, r.WorkerProfile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // set process group ID for shutdown
 
 	// Direct logging output to provided logger, if available.
 	if r.LoggingOptions.PreparedLogger != nil {
-		cmd.Stdout = &logWriter{logger: r.LoggingOptions.PreparedLogger}
-		cmd.Stderr = &logWriter{logger: r.LoggingOptions.PreparedLogger}
+		cmd.Stdout = NewLogWriter(r.LoggingOptions.PreparedLogger)
+		cmd.Stderr = NewLogWriter(r.LoggingOptions.PreparedLogger)
 	}
 
 	// Start the command. Do not use the context so we can send interrupt.

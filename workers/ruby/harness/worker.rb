@@ -4,6 +4,7 @@ require 'optparse'
 require 'temporalio/worker'
 require_relative 'client'
 require_relative 'helpers'
+require_relative 'profiles'
 
 module Harness
   WorkerContext = Data.define(
@@ -16,7 +17,12 @@ module Harness
   module WorkerCLI
     module_function
 
-    def run_cli(worker_factory, client_factory, argv)
+    def run_cli(
+      worker_factory,
+      client_factory,
+      argv,
+      worker_profile: ENV.fetch(Harness::Profiles::WORKER_PROFILE_ENV_VAR, nil)
+    )
       options = default_options
       build_parser(options).parse!(Array(argv).dup)
 
@@ -43,7 +49,7 @@ module Harness
         options[:task_queue_suffix_index_start],
         options[:task_queue_suffix_index_end]
       )
-      worker_kwargs = build_worker_kwargs(options)
+      worker_kwargs = build_worker_kwargs(options, worker_profile)
       workers = task_queues.map do |task_queue|
         worker_factory.call(
           client,
@@ -115,7 +121,9 @@ module Harness
       task_queues
     end
 
-    def build_worker_kwargs(options)
+    def build_worker_kwargs(options, profile_name = nil)
+      return Harness::Profiles.lookup(profile_name) unless profile_name.nil? || profile_name.empty?
+
       worker_kwargs = {}
       if options[:activity_poller_autoscale_max]
         worker_kwargs[:activity_task_poller_behavior] = Temporalio::Worker::PollerBehavior::Autoscaling.new(

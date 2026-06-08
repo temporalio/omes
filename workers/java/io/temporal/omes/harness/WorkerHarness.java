@@ -56,7 +56,8 @@ public final class WorkerHarness {
                 args.promHandlerPath));
     WorkerFactory workerFactory =
         WorkerFactory.newInstance(
-            client, WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000).build());
+            client,
+            buildWorkerFactoryOptions(System.getenv(WorkerProfiles.WORKER_PROFILE_ENV_VAR)));
     AtomicBoolean shutdown = new AtomicBoolean(false);
     CountDownLatch stopSignal = new CountDownLatch(1);
     Thread shutdownHook =
@@ -77,7 +78,7 @@ public final class WorkerHarness {
           buildTaskQueues(
               logger, args.taskQueue, args.taskQueueSuffixIndexStart, args.taskQueueSuffixIndexEnd),
           args.errOnUnimplemented,
-          buildWorkerOptions(args));
+          buildWorkerOptions(args, System.getenv(WorkerProfiles.WORKER_PROFILE_ENV_VAR)));
 
       Runtime.getRuntime().addShutdownHook(shutdownHook);
       shutdownHookAdded = true;
@@ -134,6 +135,14 @@ public final class WorkerHarness {
   }
 
   static WorkerOptions buildWorkerOptions(Arguments args) {
+    return buildWorkerOptions(args, null);
+  }
+
+  static WorkerOptions buildWorkerOptions(Arguments args, String profileName) {
+    if (profileName != null && !profileName.isEmpty()) {
+      return WorkerProfiles.lookupWorkerProfile(profileName).workerOptions();
+    }
+
     WorkerOptions.Builder workerOptions = WorkerOptions.newBuilder();
     if (args.workflowPollerAutoscaleMax != null) {
       workerOptions.setWorkflowTaskPollersBehavior(
@@ -159,6 +168,19 @@ public final class WorkerHarness {
       workerOptions.setMaxWorkerActivitiesPerSecond(args.activitiesPerSecond);
     }
     return workerOptions.build();
+  }
+
+  static WorkerFactoryOptions buildWorkerFactoryOptions(String profileName) {
+    WorkerFactoryOptions.Builder factoryOptions =
+        WorkerFactoryOptions.newBuilder().setMaxWorkflowThreadCount(1000);
+    if (profileName != null && !profileName.isEmpty()) {
+      Integer workflowCacheSize =
+          WorkerProfiles.lookupWorkerProfile(profileName).workflowCacheSize();
+      if (workflowCacheSize != null) {
+        factoryOptions.setWorkflowCacheSize(workflowCacheSize);
+      }
+    }
+    return factoryOptions.build();
   }
 
   static void runWorkerFactory(

@@ -9,9 +9,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/kitchensink"
-	"github.com/temporalio/omes/workers"
 )
 
 // oooSignalKvs extracts the SetWorkflowState key/value map carried by a single
@@ -132,8 +132,8 @@ func TestOutOfOrderSignals_BuildOrderedAwaitActions(t *testing.T) {
 func TestOutOfOrderSignals(t *testing.T) {
 	t.Parallel()
 
-	env := workers.SetupTestEnvironment(t,
-		workers.WithExecutorTimeout(1*time.Minute))
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute))
 
 	baseRunID := fmt.Sprintf("ooo-%d", time.Now().Unix())
 

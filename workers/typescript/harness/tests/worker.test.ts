@@ -51,14 +51,20 @@ void test('runWorker passes shared client and context to each worker factory', a
     return client;
   };
 
-  await runWorker(workerFactory, clientFactory, neverInterrupt(), [
-    '--task-queue',
-    'omes',
-    '--task-queue-suffix-index-start',
-    '1',
-    '--task-queue-suffix-index-end',
-    '2',
-  ]);
+  await runWorker(
+    workerFactory,
+    clientFactory,
+    neverInterrupt(),
+    [
+      '--task-queue',
+      'omes',
+      '--task-queue-suffix-index-start',
+      '1',
+      '--task-queue-suffix-index-end',
+      '2',
+    ],
+    undefined,
+  );
 
   assert.strictEqual(workerFactoryCalls[0]?.client, client);
   assert.strictEqual(workerFactoryCalls[1]?.client, client);

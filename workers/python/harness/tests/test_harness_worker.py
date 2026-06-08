@@ -7,7 +7,7 @@ from typing import cast
 from unittest.mock import AsyncMock, Mock, create_autospec, patch
 
 from temporalio.client import Client
-from temporalio.worker import PollerBehaviorAutoscaling, Worker
+from temporalio.worker import Worker
 
 from harness import worker
 

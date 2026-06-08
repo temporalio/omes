@@ -22,6 +22,7 @@ omes.sln
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
 
+workers/java/harness/bin/
 workers/python/**/__pycache__/
 workers/typescript/harness/dist/
 workers/typescript/harness/dist-test/
