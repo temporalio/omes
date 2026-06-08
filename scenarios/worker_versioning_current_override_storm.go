@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	deploymentpb "go.temporal.io/api/deployment/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
@@ -70,6 +72,19 @@ func init() {
 }
 
 func (e *workerVersioningCurrentOverrideStormExecutor) Configure(info loadgen.ScenarioInfo) error {
+	config, err := configureWorkerVersioningStorm(info, true)
+	if err != nil {
+		return err
+	}
+
+	e.config = config
+	return nil
+}
+
+func configureWorkerVersioningStorm(
+	info loadgen.ScenarioInfo,
+	requireV2BuildID bool,
+) (workerVersioningCurrentOverrideStormConfig, error) {
 	config := workerVersioningCurrentOverrideStormConfig{
 		DeploymentName:           strings.TrimSpace(info.ScenarioOptionString(wvcosDeploymentNameFlag, "")),
 		V1BuildID:                strings.TrimSpace(info.ScenarioOptionString(wvcosV1BuildIDFlag, "v1")),
@@ -84,41 +99,42 @@ func (e *workerVersioningCurrentOverrideStormExecutor) Configure(info loadgen.Sc
 	config.ReleaseConcurrency = info.ScenarioOptionInt(wvcosReleaseConcurrencyFlag, config.StartConcurrency)
 
 	if config.DeploymentName == "" {
-		return fmt.Errorf("%s is required", wvcosDeploymentNameFlag)
+		return config, fmt.Errorf("%s is required", wvcosDeploymentNameFlag)
 	}
 	if config.V1BuildID == "" {
-		return fmt.Errorf("%s is required", wvcosV1BuildIDFlag)
+		return config, fmt.Errorf("%s is required", wvcosV1BuildIDFlag)
 	}
-	if config.V2BuildID == "" {
-		return fmt.Errorf("%s is required", wvcosV2BuildIDFlag)
-	}
-	if config.V1BuildID == config.V2BuildID {
-		return fmt.Errorf("%s and %s must differ", wvcosV1BuildIDFlag, wvcosV2BuildIDFlag)
+	if requireV2BuildID {
+		if config.V2BuildID == "" {
+			return config, fmt.Errorf("%s is required", wvcosV2BuildIDFlag)
+		}
+		if config.V1BuildID == config.V2BuildID {
+			return config, fmt.Errorf("%s and %s must differ", wvcosV1BuildIDFlag, wvcosV2BuildIDFlag)
+		}
 	}
 	if config.WorkflowCount <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosWorkflowCountFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosWorkflowCountFlag)
 	}
 	if config.StartConcurrency <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosStartConcurrencyFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosStartConcurrencyFlag)
 	}
 	if config.ReleaseConcurrency <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosReleaseConcurrencyFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosReleaseConcurrencyFlag)
 	}
 	if config.StatusTimeout <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosStatusTimeoutFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosStatusTimeoutFlag)
 	}
 	if config.SetCurrentTimeout <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosSetCurrentTimeoutFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosSetCurrentTimeoutFlag)
 	}
 	if config.ReleaseTimeout <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosReleaseTimeoutFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosReleaseTimeoutFlag)
 	}
 	if config.WorkflowExecutionTimeout <= 0 {
-		return fmt.Errorf("%s must be positive", wvcosWorkflowExecutionTimeoutFlag)
+		return config, fmt.Errorf("%s must be positive", wvcosWorkflowExecutionTimeoutFlag)
 	}
 
-	e.config = config
-	return nil
+	return config, nil
 }
 
 func (e *workerVersioningCurrentOverrideStormExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) (err error) {
@@ -270,12 +286,12 @@ func (e *workerVersioningCurrentOverrideStormExecutor) releaseWorkflows(
 	config workerVersioningCurrentOverrideStormConfig,
 	workflows []workerVersioningStormWorkflow,
 ) error {
-	group, groupCtx := errgroup.WithContext(ctx)
+	var group errgroup.Group
 	sem := make(chan struct{}, config.ReleaseConcurrency)
 	for _, workflow := range workflows {
 		workflow := workflow
 		group.Go(func() error {
-			if err := acquire(groupCtx, sem); err != nil {
+			if err := acquire(ctx, sem); err != nil {
 				return err
 			}
 			defer release(sem)
@@ -285,16 +301,32 @@ func (e *workerVersioningCurrentOverrideStormExecutor) releaseWorkflows(
 					DoActions: kitchensink.SingleActionSet(kitchensink.NewEmptyReturnResultAction()),
 				},
 			}
-			if err := info.Client.SignalWorkflow(groupCtx, workflow.ID, workflow.RunID, "do_actions_signal", signal); err != nil {
+			if err := info.Client.SignalWorkflow(ctx, workflow.ID, workflow.RunID, "do_actions_signal", signal); err != nil {
+				if workflowCompletedAfterNotFound(ctx, info, workflow, err) {
+					return nil
+				}
 				return fmt.Errorf("failed signaling workflow %s/%s: %w", workflow.ID, workflow.RunID, err)
 			}
-			if err := info.Client.GetWorkflow(groupCtx, workflow.ID, workflow.RunID).Get(groupCtx, nil); err != nil {
+			if err := info.Client.GetWorkflow(ctx, workflow.ID, workflow.RunID).Get(ctx, nil); err != nil {
 				return fmt.Errorf("failed waiting for workflow %s/%s to complete: %w", workflow.ID, workflow.RunID, err)
 			}
 			return nil
 		})
 	}
 	return group.Wait()
+}
+
+func workflowCompletedAfterNotFound(
+	ctx context.Context,
+	info loadgen.ScenarioInfo,
+	workflow workerVersioningStormWorkflow,
+	signalErr error,
+) bool {
+	var notFoundErr *serviceerror.NotFound
+	if !errors.As(signalErr, &notFoundErr) {
+		return false
+	}
+	return info.Client.GetWorkflow(ctx, workflow.ID, workflow.RunID).Get(ctx, nil) == nil
 }
 
 func (e *workerVersioningCurrentOverrideStormExecutor) setCurrentVersion(
