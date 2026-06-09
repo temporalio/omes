@@ -53,7 +53,8 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	var prog sdkbuild.Program
 	if opts.prebuiltDir != "" {
 		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
-		prog, err = loadPrebuiltProject(opts.prebuiltDir, info.RootPath, opts.sdkOpts.Language)
+		baseDir := workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language)
+		prog, err = workerctl.LoadProgramFromDir(opts.prebuiltDir, baseDir, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
 		prog, err = (&workerctl.Builder{
@@ -209,24 +210,5 @@ func stopProjectProcess(name string, cancel context.CancelFunc, cmd *exec.Cmd, l
 		if err := cmd.Wait(); err != nil {
 			logger.Debugf("Process %s exited: %v", name, err)
 		}
-	}
-}
-
-func loadPrebuiltProject(dir, repoRoot string, lang clioptions.Language) (sdkbuild.Program, error) {
-	switch lang {
-	case clioptions.LangGo:
-		return sdkbuild.GoProgramFromDir(dir)
-	case clioptions.LangPython:
-		return sdkbuild.PythonProgramFromDir(dir)
-	case clioptions.LangJava:
-		return sdkbuild.JavaProgramFromDir(dir)
-	case clioptions.LangTypeScript:
-		return sdkbuild.TypeScriptProgramFromDir(dir)
-	case clioptions.LangDotNet:
-		return sdkbuild.DotNetProgramFromDir(dir)
-	case clioptions.LangRuby:
-		return sdkbuild.RubyProgramFromDir(dir, filepath.Join(repoRoot, "workers", "ruby"))
-	default:
-		return nil, fmt.Errorf("prebuilt projects not supported for language: %s", lang)
 	}
 }
