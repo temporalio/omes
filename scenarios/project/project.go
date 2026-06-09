@@ -13,8 +13,8 @@ import (
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
-	"github.com/temporalio/omes/workers"
 	api "github.com/temporalio/omes/workers/go/harness/api"
 	"go.uber.org/zap"
 )
@@ -56,11 +56,11 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 		prog, err = loadPrebuiltProject(opts.prebuiltDir, info.RootPath, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
-		prog, err = (&workers.Builder{
+		prog, err = (&workerctl.Builder{
 			DirName:    fmt.Sprintf("project-build-runner-%s", opts.projectName),
 			SdkOptions: opts.sdkOpts,
 			Logger:     info.Logger,
-		}).Build(ctx, workers.BaseDir(info.RootPath, opts.sdkOpts.Language))
+		}).Build(ctx, workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to prepare project: %w", err)
