@@ -13,6 +13,7 @@ import (
 
 	"github.com/temporalio/features/sdkbuild"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
 	api "github.com/temporalio/omes/workers/go/harness/api"
 	"go.uber.org/zap"
@@ -52,10 +53,15 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	var prog sdkbuild.Program
 	if opts.prebuiltDir != "" {
 		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
-		prog, err = loadPrebuilt(opts.prebuiltDir, opts.sdkOpts.Language)
+		baseDir := workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language)
+		prog, err = workerctl.LoadProgramFromDir(opts.prebuiltDir, baseDir, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
-		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
+		prog, err = (&workerctl.Builder{
+			DirName:    fmt.Sprintf("project-build-runner-%s", opts.projectName),
+			SdkOptions: opts.sdkOpts,
+			Logger:     info.Logger,
+		}).Build(ctx, workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to prepare project: %w", err)
@@ -113,9 +119,6 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
-	if opts.sdkOpts.Language != clioptions.LangPython {
-		return opts, fmt.Errorf("project scenario is currently limited to Python, got %s", lang)
-	}
 
 	projectName := info.ScenarioOptions["project-name"]
 	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
@@ -169,11 +172,14 @@ func findAvailablePort() (int, error) {
 
 func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, appName string, port int) (*exec.Cmd, error) {
 	var args []string
-	// Python needs module name
-	if lang == clioptions.LangPython {
-		args = append(args, "apps.registry", "--app", appName)
+	switch lang {
+	case clioptions.LangPython:
+		args = append(args, "apps.registry")
+	case clioptions.LangTypeScript:
+		args = append(args, "./tslib/apps/registry.js")
 	}
-	args = append(args, "project-server", "--port", strconv.Itoa(port))
+	args = append(args, "--app", appName, "project-server", "--port", strconv.Itoa(port))
+
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err

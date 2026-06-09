@@ -105,22 +105,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			baseDir = ProjectDir(baseDir, r.ProjectName)
 		}
 		loadDir := filepath.Join(baseDir, r.DirName)
-		switch r.SdkOptions.Language {
-		case clioptions.LangGo:
-			prog, err = sdkbuild.GoProgramFromDir(loadDir)
-		case clioptions.LangPython:
-			prog, err = sdkbuild.PythonProgramFromDir(loadDir)
-		case clioptions.LangJava:
-			prog, err = sdkbuild.JavaProgramFromDir(loadDir)
-		case clioptions.LangTypeScript:
-			prog, err = sdkbuild.TypeScriptProgramFromDir(loadDir)
-		case clioptions.LangDotNet:
-			prog, err = sdkbuild.DotNetProgramFromDir(loadDir)
-		case clioptions.LangRuby:
-			prog, err = sdkbuild.RubyProgramFromDir(loadDir, baseDir)
-		default:
-			return fmt.Errorf("unrecognized language %v", r.SdkOptions.Language)
-		}
+		prog, err = LoadProgramFromDir(loadDir, baseDir, r.SdkOptions.Language)
 		if err != nil {
 			return fmt.Errorf("failed preparing: %w", err)
 		}

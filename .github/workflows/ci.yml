@@ -256,11 +256,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sdk: [python]
         include:
+          - sdk: go
+            project: helloworld
+            dockerfile: dockerfiles/go.Dockerfile
+            sdk_version_env: GO_SDK_VERSION
+          - sdk: java
+            project: helloworld
+            dockerfile: dockerfiles/java.Dockerfile
+            sdk_version_env: JAVA_SDK_VERSION
           - sdk: python
             project: helloworld
             dockerfile: dockerfiles/python.Dockerfile
+            sdk_version_env: PYTHON_SDK_VERSION
+          - sdk: ruby
+            project: helloworld
+            dockerfile: dockerfiles/ruby.Dockerfile
+            sdk_version_env: RUBY_SDK_VERSION
+          - sdk: typescript
+            project: helloworld
+            dockerfile: dockerfiles/typescript.Dockerfile
+            sdk_version_env: TYPESCRIPT_SDK_VERSION
+          - sdk: dotnet
+            project: helloworld
+            dockerfile: dockerfiles/dotnet.Dockerfile
+            sdk_version_env: DOTNET_SDK_VERSION
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -272,7 +292,8 @@ jobs:
           printenv >> $GITHUB_ENV
       - name: Set ${{ matrix.sdk }} project image metadata
         run: |
-          echo "PROJECT_IMAGE_SDK_VERSION=v${PYTHON_SDK_VERSION}" >> "$GITHUB_ENV"
+          sdk_version_var="${{ matrix.sdk_version_env }}"
+          echo "PROJECT_IMAGE_SDK_VERSION=v${!sdk_version_var}" >> "$GITHUB_ENV"
           echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
           echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
           echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
@@ -293,7 +314,6 @@ jobs:
             --network omes-project-net \
             -p 7233:7233 \
             ${PROJECT_IMAGE_TAG} \
-            run-worker \
             --app ${{ matrix.project }} \
             --run-id ${PROJECT_RUN_ID} \
             --embedded-server-address 0.0.0.0:7233 &
@@ -304,6 +324,7 @@ jobs:
         run: |
           docker run --rm \
             --network omes-project-net \
+            --entrypoint /app/temporal-omes \
             ${PROJECT_IMAGE_TAG} \
             run-scenario \
             --scenario project \
@@ -313,7 +334,7 @@ jobs:
             --connect-timeout 30s \
             --option language=${{ matrix.sdk }} \
             --option project-name=${{ matrix.project }} \
-            --option prebuilt-project-dir=/app/workers/python/prepared
+            --option prebuilt-project-dir=/app/workers/${{ matrix.sdk }}/prepared
       - name: Print project worker logs
         if: failure()
         run: |

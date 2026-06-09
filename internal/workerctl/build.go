@@ -66,6 +66,26 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 	}
 }
 
+// LoadProgramFromDir reloads a prepared SDK program from loadDir.
+func LoadProgramFromDir(loadDir, baseDir string, lang clioptions.Language) (sdkbuild.Program, error) {
+	switch lang {
+	case clioptions.LangGo:
+		return sdkbuild.GoProgramFromDir(loadDir)
+	case clioptions.LangPython:
+		return sdkbuild.PythonProgramFromDir(loadDir)
+	case clioptions.LangJava:
+		return sdkbuild.JavaProgramFromDir(loadDir)
+	case clioptions.LangTypeScript:
+		return sdkbuild.TypeScriptProgramFromDir(loadDir)
+	case clioptions.LangDotNet:
+		return sdkbuild.DotNetProgramFromDir(loadDir)
+	case clioptions.LangRuby:
+		return sdkbuild.RubyProgramFromDir(loadDir, baseDir)
+	default:
+		return nil, fmt.Errorf("unrecognized language %v", lang)
+	}
+}
+
 func (b *Builder) buildGo(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	goMod := `module github.com/temporalio/omes-worker
 

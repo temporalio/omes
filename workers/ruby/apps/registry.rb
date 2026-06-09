@@ -2,12 +2,14 @@
 
 require 'harness'
 require 'optparse'
+require_relative 'helloworld/app'
 require_relative 'worker/app'
 
 module Apps
   module Registry
     DEFAULT_APP_NAME = 'worker'
     APPS = {
+      'helloworld' => HelloWorld.method(:app),
       'worker' => Worker.method(:app)
     }.freeze
 

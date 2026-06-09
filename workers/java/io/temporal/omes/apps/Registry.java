@@ -1,5 +1,6 @@
 package io.temporal.omes.apps;
 
+import io.temporal.omes.apps.helloworld.HelloWorldApp;
 import io.temporal.omes.apps.worker.WorkerApp;
 import io.temporal.omes.harness.Harness;
 import java.util.Arrays;
@@ -7,7 +8,8 @@ import java.util.Map;
 
 public final class Registry {
   private static final String DEFAULT_APP_NAME = "worker";
-  private static final Map<String, Harness.App> REGISTRY = Map.of("worker", WorkerApp.APP);
+  private static final Map<String, Harness.App> REGISTRY =
+      Map.of("helloworld", HelloWorldApp.APP, "worker", WorkerApp.APP);
 
   private Registry() {}
 

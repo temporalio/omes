@@ -1,11 +1,13 @@
 import { Command } from 'commander';
 import type { App } from '../harness';
 import { run } from '../harness';
+import { app as helloworldApp } from './helloworld/app';
 import { app as workerApp } from './worker/app';
 
 const defaultAppName = 'worker';
 
 const registry: Record<string, App> = {
+  helloworld: helloworldApp,
   worker: workerApp,
 };
 
