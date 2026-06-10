@@ -79,6 +79,11 @@ public class ClientActionsExecutor
             throw new ApplicationFailureException(
                 "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
         }
+        else if (action.DoStandaloneActivity != null)
+        {
+            throw new ApplicationFailureException(
+                "DoStandaloneActivity is not supported", "UnsupportedOperation", nonRetryable: true);
+        }
         else
         {
             throw new ArgumentException("Client action must have a recognized variant");

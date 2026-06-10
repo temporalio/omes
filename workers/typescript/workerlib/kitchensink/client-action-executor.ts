@@ -64,6 +64,12 @@ export class ClientActionExecutor {
         type: 'UnsupportedOperation',
         nonRetryable: true,
       });
+    } else if (action.doStandaloneActivity) {
+      throw ApplicationFailure.create({
+        message: 'DoStandaloneActivity is not supported',
+        type: 'UnsupportedOperation',
+        nonRetryable: true,
+      });
     } else {
       throw new Error('Client action must have a recognized variant');
     }

@@ -7,10 +7,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type ClientActionsExecutor struct {
@@ -131,6 +135,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		return err
 	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
 		return e.executeStandaloneNexusOperation(ctx, sano)
+	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
+		return e.executeStandaloneActivity(ctx, sa)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
@@ -222,6 +228,43 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 	err = handle.Get(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("Get standalone nexus operation: %w", err)
+	}
+	return nil
+}
+
+func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
+	activityID := fmt.Sprintf("standalone-activity-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
+
+	_, err := e.Client.WorkflowService().StartActivityExecution(ctx, &workflowservice.StartActivityExecutionRequest{
+		Namespace:           e.Namespace,
+		RequestId:           uuid.NewString(),
+		ActivityId:          activityID,
+		ActivityType:        &commonpb.ActivityType{Name: sa.ActivityType},
+		TaskQueue:           &taskqueuepb.TaskQueue{Name: e.WorkflowOptions.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+		StartToCloseTimeout: durationpb.New(30 * time.Second),
+		RetryPolicy: &commonpb.RetryPolicy{
+			InitialInterval:    durationpb.New(100 * time.Millisecond),
+			BackoffCoefficient: 1,
+			MaximumAttempts:    3,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("StartActivityExecution: %w", err)
+	}
+
+	pollResp, err := e.Client.WorkflowService().PollActivityExecution(ctx, &workflowservice.PollActivityExecutionRequest{
+		Namespace:  e.Namespace,
+		ActivityId: activityID,
+	})
+	if err != nil {
+		return fmt.Errorf("PollActivityExecution: %w", err)
+	}
+	outcome := pollResp.GetOutcome()
+	if outcome == nil {
+		return fmt.Errorf("PollActivityExecution timed out waiting for activity outcome")
+	}
+	if failure := outcome.GetFailure(); failure != nil {
+		return fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
 	}
 	return nil
 }

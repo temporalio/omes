@@ -46,6 +46,11 @@ const (
 	// Requires nexus-endpoint to also be set.
 	// Default is false.
 	IncludeStandaloneNexusFlag = "include-standalone-nexus"
+	// IncludeStandaloneActivityFlag enables standalone activities (activities started outside
+	// any workflow context via StartActivityExecution) in throughput_stress.
+	// Requires server support for standalone activities (dynamic config `activity.enableStandalone`).
+	// Default is false.
+	IncludeStandaloneActivityFlag = "include-standalone-activity"
 )
 
 type tpsState struct {
@@ -73,6 +78,7 @@ type tpsConfig struct {
 	IncludeRetryScenarios         bool
 	IncludeDescribe               bool
 	IncludeStandaloneNexus        bool
+	IncludeStandaloneActivity     bool
 }
 
 type tpsExecutor struct {
@@ -177,6 +183,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.IncludeStandaloneNexus && config.NexusEndpoint == "" {
 		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
 	}
+	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -451,6 +458,11 @@ func (t *tpsExecutor) createActionsChunk(
 			}
 		}
 
+		// Add standalone activities, if configured.
+		if t.config.IncludeStandaloneActivity {
+			asyncActions = append(asyncActions, t.createStandaloneActivityAction())
+		}
+
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{
 			Variant: &Action_NestedActionSet{
@@ -676,6 +688,16 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Ac
 				Endpoint:  t.config.NexusEndpoint,
 				Service:   "kitchen-sink",
 				Operation: operation,
+			},
+		},
+	}), DefaultRemoteActivity)
+}
+
+func (t *tpsExecutor) createStandaloneActivityAction() *Action {
+	return ClientActivity(ClientActions(&ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				ActivityType: "noop",
 			},
 		},
 	}), DefaultRemoteActivity)

@@ -51,6 +51,11 @@ class ClientActionExecutor
         'DoStandaloneNexusOperation is not supported',
         non_retryable: true
       )
+    when :do_standalone_activity
+      raise Temporalio::Error::ApplicationError.new(
+        'DoStandaloneActivity is not supported',
+        non_retryable: true
+      )
     else
       raise 'Client action must have a recognized variant'
     end

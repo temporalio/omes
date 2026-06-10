@@ -74,6 +74,9 @@ public class ClientActionExecutor {
     } else if (action.hasDoStandaloneNexusOperation()) {
       throw ApplicationFailure.newNonRetryableFailure(
           "DoStandaloneNexusOperation is not supported", "UnsupportedOperation");
+    } else if (action.hasDoStandaloneActivity()) {
+      throw ApplicationFailure.newNonRetryableFailure(
+          "DoStandaloneActivity is not supported", "UnsupportedOperation");
     } else {
       throw new IllegalArgumentException("Client action must have a recognized variant");
     }
