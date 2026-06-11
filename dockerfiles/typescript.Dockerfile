@@ -16,21 +16,25 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
 
 # Need Rust to compile core if not already built
 RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:/usr/local/go/bin:${PATH}"
 
 WORKDIR /app
 
-# Copy CLI build dependencies
-COPY cmd ./cmd
-COPY loadgen ./loadgen
-COPY scenarios ./scenarios
-COPY metrics ./metrics
-COPY workers/*.go ./workers/
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
+COPY go.mod go.sum ./
 COPY workers/go/harness/api ./workers/go/harness/api
-COPY go.mod go.sum versions.env ./
+RUN go mod download
 
-# Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+# Copy CLI source and build the CLI.
+COPY cmd ./cmd
+COPY clioptions ./clioptions
+COPY loadgen ./loadgen
+COPY metrics ./metrics
+COPY scenarios ./scenarios
+COPY internal ./internal
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
@@ -41,18 +45,22 @@ COPY ${SDK_DIR} ./repo
 # Read BUILD_CORE_RELEASE env var. This builds TS worker with core bridge in release mode.
 # This is only relevant if building from source (if using a published version, the worker is already
 # built in release mode).
-ARG BUILD_CORE_RELEASE=false
+ARG BUILD_CORE_RELEASE=1
 ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
 
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
+COPY versions.env ./
 
-# Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm`.
+# Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm` and
+# TypeScript SDK repo scripts invoke bare `pnpm`.
 RUN . ./versions.env \
  && test -n "${PNPM_VERSION}" \
+ && corepack enable \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
- && corepack pnpm --version
+ && corepack pnpm --version \
+ && pnpm --version
 
 # prepare-worker builds the TypeScript workspace itself: it installs npm deps,
 # runs the root build, and generates the prepared sdkbuild package.

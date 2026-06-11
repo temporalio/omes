@@ -1,4 +1,6 @@
 lib
 node_modules
-src/protos/json-module.js
-src/protos/root.d.ts
+harness/api
+dist-test
+workerlib/kitchensink/protos/json-module.js
+workerlib/kitchensink/protos/root.d.ts

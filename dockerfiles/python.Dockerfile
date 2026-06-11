@@ -18,27 +18,30 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
 # hadolint ignore=DL4006
 RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
 
-ENV PATH="$PATH:/root/.cargo/bin"
+ENV PATH="$PATH:/root/.cargo/bin:/usr/local/go/bin"
 
 # Install uv
 COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
-# Copy CLI build dependencies
-COPY cmd ./cmd
-COPY loadgen ./loadgen
-COPY scenarios ./scenarios
-COPY metrics ./metrics
-COPY workers/*.go ./workers/
-COPY workers/go/harness/api ./workers/go/harness/api
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
 COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+RUN go mod download
 
-# Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+# Copy CLI source and build the CLI.
+COPY cmd ./cmd
+COPY clioptions ./clioptions
+COPY loadgen ./loadgen
+COPY metrics ./metrics
+COPY scenarios ./scenarios
+COPY internal ./internal
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
-ARG PROJECT_NAME=""
 
 # Optional SDK dir to copy, defaults to unimportant file
 ARG SDK_DIR=.gitignore
@@ -47,17 +50,11 @@ COPY ${SDK_DIR} ./repo
 # Copy the worker files
 COPY workers/python ./workers/python
 
-# Build the worker or project runner
-RUN if [ -n "$PROJECT_NAME" ]; then \
-      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --project-name "$PROJECT_NAME" --dir-name "project-build-runner-$PROJECT_NAME" --version "$SDK_VERSION" ; \
-    else \
-      CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION" ; \
-    fi
+# Build one prepared package that can run any Python app via --app.
+RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and built worker to a distroless "run" container
+# Copy the CLI and built worker to a run container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
-
-ARG PROJECT_NAME=""
 
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
@@ -68,8 +65,5 @@ RUN chmod +x /app/entrypoint.sh
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
 ENV OMES_WORKER_LANGUAGE=python
 ENV OMES_PREPARED_DIR=prepared
-ENV OMES_PROJECT_NAME=$PROJECT_NAME
-ENV OMES_PROJECT_PREPARED_DIR=project-build-runner-${PROJECT_NAME}
-ENV OMES_PROJECT_PREBUILT_DIR=/app/workers/python/projects/tests/${PROJECT_NAME}/project-build-runner-${PROJECT_NAME}
 
 ENTRYPOINT ["/app/entrypoint.sh"]

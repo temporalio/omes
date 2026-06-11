@@ -22,7 +22,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -411,6 +411,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 	executor := &kitchensink.ClientActionsExecutor{
 		Client:          r.Client,
+		Namespace:       r.Namespace,
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),

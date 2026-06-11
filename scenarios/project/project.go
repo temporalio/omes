@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/temporalio/features/sdkbuild"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/internal/workerctl"
 	"github.com/temporalio/omes/loadgen"
 	api "github.com/temporalio/omes/workers/go/harness/api"
 	"go.uber.org/zap"
@@ -22,9 +23,10 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: `Run a self-contained project test. Builds (or loads) the project program, spawns a project-server, and drives iterations via gRPC.
   Required: --option language=<lang>
-  One of:   --option project-name=<name>  (build from source; optional --option version=<version> override)
-            --option prebuilt-project-dir=<path>  (use pre-built project dir)
+  Required: --option project-name=<name>  (app entrypoint; optional --option version=<version> override)
+  Optional: --option prebuilt-project-dir=<path>  (use pre-built root worker package)
   Optional: --option project-config-file=<path>   (project-specific JSON config)
+  Optional: --option project-server-ready-timeout=<duration> (timeout to connect to project-server, default 15s)
   See README.md ("Project" section) for local usage examples and current limitations.`,
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
@@ -33,10 +35,11 @@ func init() {
 }
 
 type projectScenarioOptions struct {
-	sdkOpts     clioptions.SdkOptions
-	projectName string
-	prebuiltDir string
-	configJSON  []byte
+	sdkOpts                   clioptions.SdkOptions
+	projectName               string
+	prebuiltDir               string
+	configJSON                []byte
+	projectServerReadyTimeout time.Duration
 }
 
 type projectScenarioExecutor struct{}
@@ -50,10 +53,15 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	var prog sdkbuild.Program
 	if opts.prebuiltDir != "" {
 		info.Logger.Infof("Loading prebuilt project from %s", opts.prebuiltDir)
-		prog, err = loadPrebuilt(opts.prebuiltDir, opts.sdkOpts.Language)
+		baseDir := workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language)
+		prog, err = workerctl.LoadProgramFromDir(opts.prebuiltDir, baseDir, opts.sdkOpts.Language)
 	} else {
 		info.Logger.Infof("Building project %s", filepath.Base(opts.projectName))
-		prog, err = buildProject(ctx, info.RootPath, opts, info.Logger)
+		prog, err = (&workerctl.Builder{
+			DirName:    fmt.Sprintf("project-build-runner-%s", opts.projectName),
+			SdkOptions: opts.sdkOpts,
+			Logger:     info.Logger,
+		}).Build(ctx, workerctl.BaseDir(info.RootPath, opts.sdkOpts.Language))
 	}
 	if err != nil {
 		return fmt.Errorf("failed to prepare project: %w", err)
@@ -69,7 +77,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	defer serverCancel()
 
-	serverCmd, err := startProjectProcess(serverCtx, prog, info.Logger, opts.sdkOpts.Language, port)
+	serverCmd, err := startProjectProcess(serverCtx, prog, info.Logger, opts.sdkOpts.Language, opts.projectName, port)
 	if err != nil {
 		return fmt.Errorf("failed to spawn project server: %w", err)
 	}
@@ -91,7 +99,7 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 			DisableHostVerification: co.DisableHostVerification,
 		},
 		ConfigJson: opts.configJSON,
-	})
+	}, opts.projectServerReadyTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to init project: %w", err)
 	}
@@ -111,18 +119,13 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
-	if opts.sdkOpts.Language != clioptions.LangPython {
-		return opts, fmt.Errorf("project scenario is currently limited to Python, got %s", lang)
-	}
 
 	projectName := info.ScenarioOptions["project-name"]
 	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
-	if projectName == "" && prebuiltDir == "" {
-		return opts, fmt.Errorf("either --option project-name or --option prebuilt-project-dir is required")
+	if projectName == "" {
+		return opts, fmt.Errorf("--option project-name=<name> is required")
 	}
-	if projectName != "" && prebuiltDir != "" {
-		return opts, fmt.Errorf("cannot specify both project-name and prebuilt-project-dir")
-	}
+	opts.projectName = projectName
 
 	if prebuiltDir != "" {
 		abs, err := filepath.Abs(prebuiltDir)
@@ -130,12 +133,11 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 			return opts, fmt.Errorf("failed to resolve prebuilt-project-dir: %w", err)
 		}
 		opts.prebuiltDir = abs
-	} else {
-		opts.projectName = projectName
-		version := info.ScenarioOptions["version"]
-		if version != "" {
-			opts.sdkOpts.Version = version
-		}
+	}
+
+	version := info.ScenarioOptions["version"]
+	if version != "" && opts.prebuiltDir == "" {
+		opts.sdkOpts.Version = version
 	}
 
 	if configPath := info.ScenarioOptions["project-config-file"]; configPath != "" {
@@ -144,6 +146,15 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 			return opts, fmt.Errorf("failed to read config file %s: %w", configPath, err)
 		}
 		opts.configJSON = data
+	}
+
+	opts.projectServerReadyTimeout = defaultClientReadyTimeout
+	if timeout := info.ScenarioOptions["project-server-ready-timeout"]; timeout != "" {
+		parsed, err := time.ParseDuration(timeout)
+		if err != nil {
+			return opts, fmt.Errorf("invalid project-server-ready-timeout %q: %w", timeout, err)
+		}
+		opts.projectServerReadyTimeout = parsed
 	}
 
 	return opts, nil
@@ -159,13 +170,16 @@ func findAvailablePort() (int, error) {
 	return port, nil
 }
 
-func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, port int) (*exec.Cmd, error) {
+func startProjectProcess(ctx context.Context, prog sdkbuild.Program, logger *zap.SugaredLogger, lang clioptions.Language, appName string, port int) (*exec.Cmd, error) {
 	var args []string
-	// Python needs module name
-	if lang == clioptions.LangPython {
-		args = append(args, "main")
+	switch lang {
+	case clioptions.LangPython:
+		args = append(args, "apps.registry")
+	case clioptions.LangTypeScript:
+		args = append(args, "./tslib/apps/registry.js")
 	}
-	args = append(args, "project-server", "--port", strconv.Itoa(port))
+	args = append(args, "--app", appName, "project-server", "--port", strconv.Itoa(port))
+
 	cmd, err := prog.NewCommand(ctx, args...)
 	if err != nil {
 		return nil, err

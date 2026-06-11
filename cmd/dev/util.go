@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/temporalio/omes/internal/versions"
 )
 
 var (
@@ -39,26 +40,21 @@ var (
 		"uv":            {"uv", "--version"},
 		"poe":           {"poe", "--version"},
 	}
-	versionsCache map[string]string
 )
 
-// getVersion returns the version for a given tool from versions.env
+// getVersion returns the version for a given tool from versions.env.
+// Tool names map to versions.env keys by lowercasing, replacing "-" with "_",
+// and appending "_version" (e.g. "java-sdk" -> "java_sdk_version").
 func getVersion(tool string) (string, error) {
-	if versionsCache == nil {
-		var err error
-		versionsCache, err = loadVersions()
-		if err != nil {
-			return "", fmt.Errorf("failed to load versions.env: %w", err)
-		}
+	key := strings.ToLower(strings.ReplaceAll(tool, "-", "_")) + "_version"
+	v, err := versions.Get(key)
+	if err != nil {
+		return "", fmt.Errorf("failed to load versions.env: %w", err)
 	}
-
-	key := strings.ToLower(strings.ReplaceAll(strings.ToLower(tool), "-", "_")) + "_version"
-	version := versionsCache[key]
-	if version == "" {
+	if v == "" {
 		return "", fmt.Errorf("version not found for %s (var: %s)", tool, key)
 	}
-
-	return version, nil
+	return v, nil
 }
 
 // checkCommand verifies that a command is available in PATH
@@ -122,48 +118,6 @@ func getTargetDir(target string) (string, error) {
 	return filepath.Join(repoDir, "workers", target), nil
 }
 
-// loadVersions parses versions.env file and returns a map of version variables
-func loadVersions() (map[string]string, error) {
-	repoDir, err := getRepoDir()
-	if err != nil {
-		return nil, err
-	}
-	versionsFile := filepath.Join(repoDir, "versions.env")
-	if _, err := os.Stat(versionsFile); err == nil {
-		return parseVersionsFile(versionsFile)
-	}
-	return nil, fmt.Errorf("versions.env not found")
-}
-
-// parseVersionsFile reads and parses a versions.env file
-func parseVersionsFile(filename string) (map[string]string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	versions := make(map[string]string)
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := strings.ToLower(strings.TrimSpace(parts[0]))
-		value := strings.TrimSpace(parts[1])
-		versions[key] = value
-	}
-
-	return versions, scanner.Err()
-}
 
 // checkMise verifies that mise is installed
 func checkMise() error {

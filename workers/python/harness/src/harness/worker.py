@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from temporalio.worker import PollerBehaviorAutoscaling, Worker
 
 from harness.client import ClientFactory, build_client_config
 from harness.helpers import configure_logger
+from harness.profiles import WORKER_PROFILE_ENV_VAR, lookup_profile
 
 
 @dataclass(frozen=True)
@@ -37,7 +39,13 @@ def run_worker_cli(
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(
-            _run(worker_factory, client_factory, interrupt_event, argv)
+            _run(
+                worker_factory,
+                client_factory,
+                interrupt_event,
+                argv,
+                os.environ.get(WORKER_PROFILE_ENV_VAR),
+            )
         )
     except KeyboardInterrupt:
         interrupt_event.set()
@@ -51,6 +59,7 @@ async def _run(
     client_factory: ClientFactory,
     interrupt_event: asyncio.Event,
     argv: Sequence[str],
+    worker_profile: str | None = None,
 ) -> None:
     args = _build_parser().parse_args(argv)
 
@@ -75,7 +84,7 @@ async def _run(
         args.task_queue_suffix_index_start,
         args.task_queue_suffix_index_end,
     )
-    worker_kwargs = _build_worker_kwargs(args)
+    worker_kwargs = _build_worker_kwargs(args, worker_profile)
     workers = [
         worker_factory(
             client,
@@ -213,7 +222,12 @@ def _build_task_queues(
     return task_queues
 
 
-def _build_worker_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+def _build_worker_kwargs(
+    args: argparse.Namespace, profile_name: str | None = None
+) -> dict[str, Any]:
+    if profile_name:
+        return lookup_profile(profile_name)
+
     worker_kwargs: dict[str, Any] = {}
     if args.activity_poller_autoscale_max is not None:
         worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling(

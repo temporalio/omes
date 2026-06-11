@@ -7,10 +7,12 @@ mise.toml
 .idea/
 # Ignore Gradle project-specific cache directory
 .gradle
+.devserver/
+.devserver.lock
 
 # Ignore Gradle build output directory
 workers/java/bin
-workers/java/build
+workers/java/**/build
 
 /loadgen/kitchen-sink-gen/target/
 
@@ -20,6 +22,7 @@ omes.sln
 /last_fuzz_run.proto
 workers/dotnet/Temporalio.Omes.temp.csproj
 
+workers/java/harness/bin/
 workers/python/**/__pycache__/
 workers/typescript/harness/dist/
 workers/typescript/harness/dist-test/

@@ -1,27 +1,17 @@
 #!/bin/sh
 set -eu
 
-if [ "${1:-}" = "run-scenario" ]; then
-  shift
-  if [ -n "${OMES_PROJECT_NAME:-}" ] && [ -n "${OMES_PROJECT_PREBUILT_DIR:-}" ]; then
-    exec /app/temporal-omes run-scenario "$@" \
-      --option "language=${OMES_WORKER_LANGUAGE}" \
-      --option "prebuilt-project-dir=${OMES_PROJECT_PREBUILT_DIR}"
-  fi
-  exec /app/temporal-omes run-scenario "$@"
-fi
-
-if [ "${1:-}" = "run-worker" ]; then
-  shift
-fi
-
-if [ -n "${OMES_PROJECT_NAME:-}" ]; then
-  exec /app/temporal-omes run-worker \
-    --language "${OMES_WORKER_LANGUAGE}" \
-    --project-name "${OMES_PROJECT_NAME}" \
-    --dir-name "${OMES_PROJECT_PREPARED_DIR}" \
-    "$@"
-fi
+# This image normally behaves like the other worker images: callers pass worker
+# flags and we add run-worker plus the prepared Python package defaults. Explicit
+# omes subcommands pass through so the same image can run project scenarios.
+case "${1:-}" in
+  run-scenario|cleanup-scenario|list-scenarios|prepare-worker|run-scenario-with-worker|completion|help)
+    exec /app/temporal-omes "$@"
+    ;;
+  run-worker)
+    shift
+    ;;
+esac
 
 exec /app/temporal-omes run-worker \
   --language "${OMES_WORKER_LANGUAGE}" \

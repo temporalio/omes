@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -50,7 +50,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 	if options.taskQueueSuffixIndexStart > options.taskQueueSuffixIndexEnd {
 		return fmt.Errorf("task queue suffix start after end")
 	}
-	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions)
+	workerOptions, err := buildWorkerOptions(options.flags, options.workerOptions, os.Getenv(workerProfileEnvVar))
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,18 @@ func parseVersioningBehavior(value string) (workflow.VersioningBehavior, error) 
 	}
 }
 
-func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions) (sdkworker.Options, error) {
+func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, profileName string) (sdkworker.Options, error) {
+	if profileName != "" {
+		profile, err := lookupWorkerProfile(profileName)
+		if err != nil {
+			return sdkworker.Options{}, err
+		}
+		if profile.StickyWorkflowCacheSize > 0 {
+			sdkworker.SetStickyWorkflowCacheSize(profile.StickyWorkflowCacheSize)
+		}
+		return profile.Options, nil
+	}
+
 	options := sdkworker.Options{}
 	if args.DeploymentName != "" {
 		if args.BuildID != "" {
