@@ -116,10 +116,10 @@ class DoStandaloneNexusOperation(_message.Message):
     def __init__(self, endpoint: _Optional[str] = ..., service: _Optional[str] = ..., operation: _Optional[str] = ...) -> None: ...
 
 class DoStandaloneActivity(_message.Message):
-    __slots__ = ("activity_type",)
-    ACTIVITY_TYPE_FIELD_NUMBER: _ClassVar[int]
-    activity_type: str
-    def __init__(self, activity_type: _Optional[str] = ...) -> None: ...
+    __slots__ = ("activity",)
+    ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    activity: ExecuteActivityAction
+    def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")

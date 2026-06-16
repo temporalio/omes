@@ -7,14 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
-	taskqueuepb "go.temporal.io/api/taskqueue/v1"
-	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type ClientActionsExecutor struct {
@@ -233,38 +229,24 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 }
 
 func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
-	activityID := fmt.Sprintf("standalone-activity-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
-
-	_, err := e.Client.WorkflowService().StartActivityExecution(ctx, &workflowservice.StartActivityExecutionRequest{
-		Namespace:           e.Namespace,
-		RequestId:           uuid.NewString(),
-		ActivityId:          activityID,
-		ActivityType:        &commonpb.ActivityType{Name: sa.ActivityType},
-		TaskQueue:           &taskqueuepb.TaskQueue{Name: e.WorkflowOptions.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
-		StartToCloseTimeout: durationpb.New(30 * time.Second),
-		RetryPolicy: &commonpb.RetryPolicy{
-			InitialInterval:    durationpb.New(100 * time.Millisecond),
-			BackoffCoefficient: 1,
-			MaximumAttempts:    3,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("StartActivityExecution: %w", err)
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
 	}
 
-	pollResp, err := e.Client.WorkflowService().PollActivityExecution(ctx, &workflowservice.PollActivityExecutionRequest{
-		Namespace:  e.Namespace,
-		ActivityId: activityID,
-	})
+	actType, args := ActivityNameAndArgs(act)
+
+	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
+		ID:                     fmt.Sprintf("standalone-activity-%s-%s", e.WorkflowOptions.ID, uuid.NewString()),
+		TaskQueue:              act.TaskQueue,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
+		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
+		HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
+		RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
+	}, actType, args...)
 	if err != nil {
-		return fmt.Errorf("PollActivityExecution: %w", err)
+		return fmt.Errorf("failed to start standalone activity: %w", err)
 	}
-	outcome := pollResp.GetOutcome()
-	if outcome == nil {
-		return fmt.Errorf("PollActivityExecution timed out waiting for activity outcome")
-	}
-	if failure := outcome.GetFailure(); failure != nil {
-		return fmt.Errorf("standalone activity failed: %s", failure.GetMessage())
-	}
-	return nil
+	return handle.Get(ctx, nil)
 }

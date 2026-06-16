@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -460,7 +461,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add standalone activities, if configured.
 		if t.config.IncludeStandaloneActivity {
-			asyncActions = append(asyncActions, t.createStandaloneActivityAction())
+			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID)))
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -693,11 +694,24 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Ac
 	}), DefaultRemoteActivity)
 }
 
-func (t *tpsExecutor) createStandaloneActivityAction() *Action {
+func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string) *Action {
 	return ClientActivity(ClientActions(&ClientAction{
 		Variant: &ClientAction_DoStandaloneActivity{
 			DoStandaloneActivity: &DoStandaloneActivity{
-				ActivityType: "noop",
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+					TaskQueue:           taskQueue,
+					StartToCloseTimeout: durationpb.New(30 * time.Second),
+					RetryPolicy: &common.RetryPolicy{
+						InitialInterval:    durationpb.New(100 * time.Millisecond),
+						BackoffCoefficient: 1,
+					},
+				},
 			},
 		},
 	}), DefaultRemoteActivity)

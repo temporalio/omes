@@ -81,8 +81,7 @@ public class ClientActionsExecutor
         }
         else if (action.DoStandaloneActivity != null)
         {
-            throw new ApplicationFailureException(
-                "DoStandaloneActivity is not supported", "UnsupportedOperation", nonRetryable: true);
+            await ExecuteStandaloneActivity(action.DoStandaloneActivity);
         }
         else
         {
@@ -185,6 +184,27 @@ public class ClientActionsExecutor
                 throw;
             }
         }
+    }
+
+    private async Task ExecuteStandaloneActivity(DoStandaloneActivity sa)
+    {
+        var act = sa.Activity;
+        var (actType, args) = ActivityDispatch.NameAndArgs(act);
+        await _client.ExecuteActivityAsync(
+            actType,
+            args,
+            new StartActivityOptions(
+                id: $"standalone-{WorkflowId}-{Guid.NewGuid():N}",
+                taskQueue: act.TaskQueue)
+            {
+                ScheduleToCloseTimeout = act.ScheduleToCloseTimeout?.ToTimeSpan(),
+                ScheduleToStartTimeout = act.ScheduleToStartTimeout?.ToTimeSpan(),
+                StartToCloseTimeout = act.StartToCloseTimeout?.ToTimeSpan(),
+                HeartbeatTimeout = act.HeartbeatTimeout?.ToTimeSpan(),
+                RetryPolicy = act.RetryPolicy != null
+                    ? ActivityDispatch.RetryPolicyFromProto(act.RetryPolicy)
+                    : null,
+            });
     }
 
     private async Task ExecuteQueryAction(DoQuery query)
