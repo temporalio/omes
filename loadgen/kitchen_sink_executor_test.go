@@ -1148,7 +1148,9 @@ func testUnsupportedFeature(
 		executor: executor,
 		sdk:      sdk,
 	}
-	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	// Run the worker in strict mode so unsupported actions fail loudly rather
+	// than being skipped, which is what this test asserts.
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk, WithErrOnUnimplemented())
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
 	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)
