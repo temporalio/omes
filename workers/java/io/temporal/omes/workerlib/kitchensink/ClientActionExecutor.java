@@ -75,8 +75,12 @@ public class ClientActionExecutor {
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
     } else if (action.hasDoStandaloneNexusOperation()) {
-      throw ApplicationFailure.newNonRetryableFailure(
-          "DoStandaloneNexusOperation is not supported", "UnsupportedOperation");
+      if (errOnUnimplemented) {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "DoStandaloneNexusOperation is not supported", "UnsupportedOperation");
+      }
+      // Skip standalone nexus operations when not erroring on unimplemented
+      System.out.println("Skipping standalone nexus operation (not implemented)");
     } else if (action.hasDoStandaloneActivity()) {
       executeStandaloneActivity(action.getDoStandaloneActivity());
     } else {

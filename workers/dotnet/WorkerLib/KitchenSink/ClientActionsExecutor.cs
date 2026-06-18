@@ -76,8 +76,13 @@ public class ClientActionsExecutor
         }
         else if (action.DoStandaloneNexusOperation != null)
         {
-            throw new ApplicationFailureException(
-                "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
+            if (_errOnUnimplemented)
+            {
+                throw new ApplicationFailureException(
+                    "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
+            }
+            // Skip standalone nexus operations when not erroring on unimplemented
+            Console.WriteLine("Skipping standalone nexus operation (not implemented)");
         }
         else if (action.DoStandaloneActivity != null)
         {

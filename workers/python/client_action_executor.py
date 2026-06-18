@@ -61,7 +61,12 @@ class ClientActionExecutor:
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
         elif action.HasField("do_standalone_nexus_operation"):
-            raise NotImplementedError("DoStandaloneNexusOperation is not supported")
+            if self.err_on_unimplemented:
+                raise ApplicationError(
+                    "DoStandaloneNexusOperation is not supported", non_retryable=True
+                )
+            # Skip standalone nexus operations when not erroring on unimplemented
+            print("Skipping standalone nexus operation (not implemented)")
         elif action.HasField("do_standalone_activity"):
             await self._execute_standalone_activity(action.do_standalone_activity)
         else:

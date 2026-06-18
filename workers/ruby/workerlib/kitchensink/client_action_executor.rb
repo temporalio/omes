@@ -47,15 +47,19 @@ class ClientActionExecutor
     when :nested_actions
       execute_client_action_set(action.nested_actions)
     when :do_standalone_nexus_operation
-      raise Temporalio::Error::ApplicationError.new(
-        'DoStandaloneNexusOperation is not supported',
-        non_retryable: true
-      )
+      if @err_on_unimplemented
+        raise Temporalio::Error::ApplicationError.new(
+          'DoStandaloneNexusOperation is not supported',
+          non_retryable: true
+        )
+      end
     when :do_standalone_activity
-      raise Temporalio::Error::ApplicationError.new(
-        'DoStandaloneActivity is not supported',
-        non_retryable: true
-      )
+      if @err_on_unimplemented
+        raise Temporalio::Error::ApplicationError.new(
+          'DoStandaloneActivity is not supported',
+          non_retryable: true
+        )
+      end
     else
       raise 'Client action must have a recognized variant'
     end

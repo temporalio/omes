@@ -61,11 +61,15 @@ export class ClientActionExecutor {
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);
     } else if (action.doStandaloneNexusOperation) {
-      throw ApplicationFailure.create({
-        message: 'DoStandaloneNexusOperation is not supported',
-        type: 'UnsupportedOperation',
-        nonRetryable: true,
-      });
+      if (this.errOnUnimplemented) {
+        throw ApplicationFailure.create({
+          message: 'DoStandaloneNexusOperation is not supported',
+          type: 'UnsupportedOperation',
+          nonRetryable: true,
+        });
+      }
+      // Skip standalone nexus operations when not erroring on unimplemented
+      console.log('Skipping standalone nexus operation (not implemented)');
     } else if (action.doStandaloneActivity) {
       await this.executeStandaloneActivity(action.doStandaloneActivity);
     } else {
