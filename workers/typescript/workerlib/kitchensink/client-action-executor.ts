@@ -152,7 +152,10 @@ export class ClientActionExecutor {
   }
 
   private async executeStandaloneActivity(sa: IDoStandaloneActivity): Promise<void> {
-    const act = sa.activity ?? {};
+    if (!sa.activity) {
+      throw new Error('DoStandaloneActivity.activity is required');
+    }
+    const act = sa.activity;
     const [actType, args] = activityNameAndArgs(act);
     await this.client.activity.execute(actType, {
       id: `standalone-${this.workflowId}-${process.hrtime.bigint()}`,

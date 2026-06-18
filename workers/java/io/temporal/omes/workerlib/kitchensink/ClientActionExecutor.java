@@ -163,6 +163,9 @@ public class ClientActionExecutor {
   }
 
   private void executeStandaloneActivity(KitchenSink.DoStandaloneActivity sa) {
+    if (!sa.hasActivity()) {
+      throw new IllegalArgumentException("DoStandaloneActivity.activity is required");
+    }
     KitchenSink.ExecuteActivityAction act = sa.getActivity();
     ActivityDispatch dispatch = ActivityDispatch.nameAndArgs(act);
 

@@ -130,6 +130,8 @@ class ClientActionExecutor:
                 raise
 
     async def _execute_standalone_activity(self, sa: DoStandaloneActivity):
+        if not sa.HasField("activity"):
+            raise ValueError("DoStandaloneActivity.activity is required")
         act = sa.activity
         act_type, args = activity_name_and_args(act)
         await self.client.execute_activity(

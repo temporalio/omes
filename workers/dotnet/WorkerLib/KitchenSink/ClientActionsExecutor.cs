@@ -194,6 +194,10 @@ public class ClientActionsExecutor
     private async Task ExecuteStandaloneActivity(DoStandaloneActivity sa)
     {
         var act = sa.Activity;
+        if (act == null)
+        {
+            throw new ArgumentException("DoStandaloneActivity.activity is required");
+        }
         var (actType, args) = ActivityDispatch.NameAndArgs(act);
         await _client.ExecuteActivityAsync(
             actType,
