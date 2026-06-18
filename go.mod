@@ -16,7 +16,7 @@ require (
 	github.com/temporalio/features v0.0.0-20260427223549-86e4c0deedd7
 	github.com/temporalio/omes/workers/go/harness/api v0.0.0-00010101000000-000000000000
 	go.temporal.io/api v1.62.12
-	go.temporal.io/sdk v1.44.0
+	go.temporal.io/sdk v1.45.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.31.0
 	golang.org/x/sync v0.19.0
