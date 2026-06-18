@@ -9,6 +9,7 @@ import (
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
 	"github.com/temporalio/omes/workers/go/workerlib/schedulerstress"
+	"github.com/temporalio/omes/workers/go/workerlib/singlenexusopworkflow"
 	"go.temporal.io/sdk/activity"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
@@ -31,7 +32,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{Client: client}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	for _, op := range []nexus.RegisterableOperation{kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation} {
+	for _, op := range []nexus.RegisterableOperation{kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.PayloadSyncOperation} {
 		if err := service.Register(op); err != nil {
 			panic(err)
 		}
@@ -50,6 +51,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterActivity(&ebbFlowActivities)
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 	w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
+	w.RegisterWorkflowWithOptions(singlenexusopworkflow.SingleNexusOpWorkflow, workflow.RegisterOptions{Name: "singleNexusOpWorkflow"})
 	w.RegisterNexusService(service)
 	return w
 }

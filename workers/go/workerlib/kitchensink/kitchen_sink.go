@@ -618,3 +618,10 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Nex
 		ID: opts.RequestID,
 	}, nil
 })
+
+var PayloadSyncOperation = nexus.NewSyncOperation("payload-sync", func(_ context.Context, in *kitchensink.PayloadNexusInput, _ nexus.StartOperationOptions) ([]byte, error) {
+	out := make([]byte, in.BytesToReturn)
+	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
+	rand.Read(out)
+	return out, nil
+})
