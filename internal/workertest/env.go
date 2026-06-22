@@ -68,6 +68,22 @@ type TestResult struct {
 	ObservedLogs *observer.ObservedLogs
 }
 
+// runExecutorConfig holds per-run options for RunExecutorTest.
+type runExecutorConfig struct {
+	errOnUnimplemented bool
+}
+
+type RunExecutorOption func(*runExecutorConfig)
+
+// WithErrOnUnimplemented starts the worker with --err-on-unimplemented, so that
+// actions a worker does not support fail loudly instead of being skipped. Use
+// it for tests that assert a feature is rejected by a given SDK.
+func WithErrOnUnimplemented() RunExecutorOption {
+	return func(c *runExecutorConfig) {
+		c.errOnUnimplemented = true
+	}
+}
+
 type TestEnvironment struct {
 	testEnvConfig
 	devServer         *devserver.Server
@@ -182,7 +198,12 @@ func (env *TestEnvironment) RunExecutorTest(
 	executor loadgen.Executor,
 	scenarioInfo loadgen.ScenarioInfo,
 	sdk clioptions.Language,
+	opts ...RunExecutorOption,
 ) (TestResult, error) {
+	var cfg runExecutorConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	testLogger := zaptest.NewLogger(t).Core()
 	observeLogger, observedLogs := observer.New(zap.DebugLevel)
 	logger := zap.New(zapcore.NewTee(testLogger, observeLogger)).Sugar()
@@ -203,7 +224,7 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Namespace = testNamespace
 
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
-	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo)
+	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo, cfg.errOnUnimplemented)
 
 	execErr := executor.Run(testCtx, scenarioInfo)
 

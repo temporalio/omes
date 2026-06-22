@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
 from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 
 import temporalio.workflow
@@ -16,6 +15,7 @@ from temporalio.common import (
 )
 from temporalio.workflow import ActivityHandle, ChildWorkflowHandle
 
+from activity_dispatch import activity_name_and_args, timeout_or_none
 from protos.kitchen_sink_pb2 import (
     Action,
     ActionSet,
@@ -214,31 +214,7 @@ class KitchenSinkWorkflow:
 
 
 def launch_activity(execute_activity: ExecuteActivityAction) -> ActivityHandle:
-    act_type = "noop"
-    args: list[Any] = []
-
-    if execute_activity.HasField("delay"):
-        act_type = "delay"
-        args.append(execute_activity.delay)
-    elif execute_activity.HasField("payload"):
-        act_type = "payload"
-        input_data = bytes(
-            i % 256 for i in range(execute_activity.payload.bytes_to_receive)
-        )
-        args.append(input_data)
-        args.append(execute_activity.payload.bytes_to_return)
-    elif execute_activity.HasField("client"):
-        act_type = "client"
-        args.append(execute_activity.client)
-    elif execute_activity.HasField("retryable_error"):
-        act_type = "retryable_error"
-        args.append(execute_activity.retryable_error)
-    elif execute_activity.HasField("timeout"):
-        act_type = "timeout"
-        args.append(execute_activity.timeout)
-    elif execute_activity.HasField("heartbeat"):
-        act_type = "heartbeat"
-        args.append(execute_activity.heartbeat)
+    act_type, args = activity_name_and_args(execute_activity)
 
     if execute_activity.HasField("is_local"):
         activity_task = workflow.start_local_activity(
@@ -420,17 +396,6 @@ async def handle_awaitable_choice(
 
 
 # Various proto conversions below ==============================================
-
-
-def timeout_or_none(
-    activity_action: ExecuteActivityAction, timeout_field: str
-) -> Optional[timedelta]:
-    if activity_action.HasField(timeout_field):
-        return timedelta(
-            seconds=getattr(activity_action, timeout_field).seconds,
-            microseconds=getattr(activity_action, timeout_field).nanos / 1000,
-        )
-    return None
 
 
 def convert_act_cancel_type(

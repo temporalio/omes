@@ -1,8 +1,34 @@
 // Convert a protobuf duration to milliseconds
-import { google } from './protos/root';
+import { google, temporal } from './protos/root';
 import Long from 'long';
 
 import IDuration = google.protobuf.IDuration;
+import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
+
+// Map an ExecuteActivityAction to its registered activity name and args.
+// Shared by the workflow-scheduled path and the standalone-activity path.
+export function activityNameAndArgs(act: IExecuteActivityAction): [string, unknown[]] {
+  if (act.delay) {
+    return ['delay', [durationConvert(act.delay)]];
+  } else if (act.resources) {
+    return ['resources', [act.resources]];
+  } else if (act.payload) {
+    const inputData = new Uint8Array(act.payload.bytesToReceive || 0);
+    for (let i = 0; i < inputData.length; i++) {
+      inputData[i] = i % 256;
+    }
+    return ['payload', [inputData, act.payload.bytesToReturn]];
+  } else if (act.client) {
+    return ['client', [act.client]];
+  } else if (act.retryableError) {
+    return ['retryable_error', [act.retryableError]];
+  } else if (act.timeout) {
+    return ['timeout', [act.timeout]];
+  } else if (act.heartbeat) {
+    return ['heartbeat', [act.heartbeat]];
+  }
+  return ['noop', []];
+}
 
 export function durationConvertMaybeUndefined(d: IDuration | null | undefined): number | undefined {
   if (!d) {

@@ -352,36 +352,12 @@ func (ws *KSWorkflowState) handleAction(
 }
 
 func launchActivity(ctx workflow.Context, ws *KSWorkflowState, act *kitchensink.ExecuteActivityAction) error {
-	actType := "noop"
-	args := make([]interface{}, 0)
-	if delay := act.GetDelay(); delay != nil {
-		actType = "delay"
-		args = append(args, delay.AsDuration())
-	} else if payload := act.GetPayload(); payload != nil {
-		actType = "payload"
-		inputData := make([]byte, payload.BytesToReceive)
-		for i := range inputData {
-			inputData[i] = byte(i % 256)
-		}
-		args = append(args, inputData, payload.BytesToReturn)
-	} else if client := act.GetClient(); client != nil {
-		actType = "client"
-		args = append(args, client)
-	} else if retryable := act.GetRetryableError(); retryable != nil {
-		actType = "retryable_error"
-		args = append(args, retryable)
-	} else if timeout := act.GetTimeout(); timeout != nil {
-		actType = "timeout"
-		args = append(args, timeout)
-	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
-		actType = "heartbeat"
-		args = append(args, heartbeat)
-	}
+	actType, args := kitchensink.ActivityNameAndArgs(act)
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
 
@@ -414,7 +390,7 @@ func launchActivity(ctx workflow.Context, ws *KSWorkflowState, act *kitchensink.
 			ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
@@ -601,27 +577,6 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 	<-time.After(config.SuccessDuration.AsDuration())
 	activity.RecordHeartbeat(ctx)
 	return nil
-}
-
-func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
-	if retryPolicy == nil {
-		return nil
-	}
-
-	p := temporal.RetryPolicy{
-		BackoffCoefficient:     retryPolicy.BackoffCoefficient,
-		MaximumAttempts:        retryPolicy.MaximumAttempts,
-		NonRetryableErrorTypes: retryPolicy.NonRetryableErrorTypes,
-	}
-
-	if v := retryPolicy.MaximumInterval; v != nil {
-		p.MaximumInterval = v.AsDuration()
-	}
-	if v := retryPolicy.InitialInterval; v != nil {
-		p.InitialInterval = v.AsDuration()
-	}
-
-	return &p
 }
 
 type ReturnOrErr struct {
