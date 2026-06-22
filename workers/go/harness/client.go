@@ -102,11 +102,12 @@ func buildClientConfig(opts clientConfigOptions) (ClientConfig, error) {
 }
 
 func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.Config, error) {
-	if opts.DisableHostVerification {
-		logger.Warn("disable_host_verification is not supported by the Go harness; ignoring")
-	}
+	// if opts.DisableHostVerification {
+	// 	logger.Warn("disable_host_verification is not supported by the Go harness; ignoring")
+	// }
 	tlsConfig := &tls.Config{
-		ServerName: opts.TLSServerName,
+		ServerName:         opts.TLSServerName,
+		InsecureSkipVerify: opts.DisableHostVerification,
 	}
 	if opts.TLSCertPath != "" {
 		if opts.TLSKeyPath == "" {
