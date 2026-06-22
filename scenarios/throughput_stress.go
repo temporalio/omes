@@ -14,6 +14,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -46,6 +47,18 @@ const (
 	// Requires nexus-endpoint to also be set.
 	// Default is false.
 	IncludeStandaloneNexusFlag = "include-standalone-nexus"
+
+	IncludeSchedulesFlag                  = "include-schedules"
+	StableScheduleCountFlag               = "stable-schedule-count"
+	StableScheduleIntervalFlag            = "stable-schedule-interval"
+	StableScheduleWorkflowDurationFlag    = "stable-schedule-workflow-duration"
+	StableScheduleCompletionModeFlag      = "stable-schedule-completion-mode"
+	StableScheduleWindowFlag              = "stable-schedule-window"
+	IterationSchedulesPerIterationFlag    = "iteration-schedules-per-iteration"
+	IterationScheduleWorkflowDurationFlag = "iteration-schedule-workflow-duration"
+	ScheduleVisibilityTimeoutFlag         = "schedule-visibility-timeout"
+	ScheduleAPIOperationIntervalFlag      = "schedule-api-operation-interval"
+	ScheduleOverlapPoliciesFlag           = "schedule-overlap-policies"
 )
 
 type tpsState struct {
@@ -55,7 +68,14 @@ type tpsState struct {
 	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
 	// AccumulatedDuration is the total execution time across all runs (original + resumes).
 	// This excludes any downtime between runs. Used for accurate throughput calculation.
-	AccumulatedDuration time.Duration `json:"accumulatedDuration"`
+	AccumulatedDuration                  time.Duration `json:"accumulatedDuration"`
+	StableSchedulesCreated               bool          `json:"stableSchedulesCreated"`
+	StableSchedulesFinalized             bool          `json:"stableSchedulesFinalized"`
+	StableWindowStart                    time.Time     `json:"stableWindowStart"`
+	StableWindowEnd                      time.Time     `json:"stableWindowEnd"`
+	MatchingTimesVerified                bool          `json:"matchingTimesVerified"`
+	CompletedIterationScheduledWorkflows int           `json:"completedIterationScheduledWorkflows"`
+	CompletedStableScheduledWorkflows    int           `json:"completedStableScheduledWorkflows"`
 }
 
 type tpsConfig struct {
@@ -73,7 +93,29 @@ type tpsConfig struct {
 	IncludeRetryScenarios         bool
 	IncludeDescribe               bool
 	IncludeStandaloneNexus        bool
+	Schedules                     tpsScheduleConfig
 }
+
+type tpsScheduleConfig struct {
+	Enabled                        bool
+	StableCount                    int
+	StableInterval                 time.Duration
+	StableWorkflowDuration         time.Duration
+	StableCompletionMode           string
+	StableWindow                   time.Duration
+	IterationSchedulesPerIteration int
+	IterationWorkflowDuration      time.Duration
+	VisibilityTimeout              time.Duration
+	APIOperationInterval           time.Duration
+	OverlapPolicies                []enums.ScheduleOverlapPolicy
+}
+
+const (
+	ScheduleCompletionModeTimer   = "timer"
+	ScheduleCompletionModeRelease = "release"
+
+	minScheduleInterval = time.Second
+)
 
 type tpsExecutor struct {
 	lock       sync.Mutex
@@ -178,9 +220,86 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
 	}
 
+	config.Schedules, err = parseTpsScheduleConfig(info, config.VisibilityVerificationTimeout)
+	if err != nil {
+		return err
+	}
+
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
 	return nil
+}
+
+func parseTpsScheduleConfig(info loadgen.ScenarioInfo, defaultVisibilityTimeout time.Duration) (tpsScheduleConfig, error) {
+	config := tpsScheduleConfig{
+		Enabled: info.ScenarioOptionBool(IncludeSchedulesFlag, false),
+	}
+
+	config.StableCount = info.ScenarioOptionInt(StableScheduleCountFlag, 3)
+	if config.StableCount < 0 {
+		return config, fmt.Errorf("%s must be non-negative, got %d", StableScheduleCountFlag, config.StableCount)
+	}
+	config.StableInterval = info.ScenarioOptionDuration(StableScheduleIntervalFlag, 5*time.Second)
+	if config.StableInterval <= 0 {
+		return config, fmt.Errorf("%s must be positive, got %v", StableScheduleIntervalFlag, config.StableInterval)
+	}
+	if config.StableInterval < minScheduleInterval {
+		return config, fmt.Errorf("%s must be at least %v, got %v", StableScheduleIntervalFlag, minScheduleInterval, config.StableInterval)
+	}
+	config.StableWorkflowDuration = info.ScenarioOptionDuration(StableScheduleWorkflowDurationFlag, 15*time.Second)
+	if config.StableWorkflowDuration <= 0 {
+		return config, fmt.Errorf("%s must be positive, got %v", StableScheduleWorkflowDurationFlag, config.StableWorkflowDuration)
+	}
+	config.StableCompletionMode = info.ScenarioOptionString(StableScheduleCompletionModeFlag, ScheduleCompletionModeRelease)
+	if config.StableCompletionMode != ScheduleCompletionModeTimer && config.StableCompletionMode != ScheduleCompletionModeRelease {
+		return config, fmt.Errorf("%s must be %q or %q, got %q",
+			StableScheduleCompletionModeFlag,
+			ScheduleCompletionModeTimer,
+			ScheduleCompletionModeRelease,
+			config.StableCompletionMode)
+	}
+	defaultStableWindow := info.Configuration.Duration
+	if defaultStableWindow <= 0 {
+		defaultStableWindow = time.Duration(max(config.StableCount, 1)*4) * config.StableInterval
+	}
+	config.StableWindow = info.ScenarioOptionDuration(StableScheduleWindowFlag, defaultStableWindow)
+	if config.StableWindow <= 0 {
+		return config, fmt.Errorf("%s must be positive, got %v", StableScheduleWindowFlag, config.StableWindow)
+	}
+	if config.Enabled && config.StableCount > 0 && config.StableWindow < config.StableInterval {
+		return config, fmt.Errorf("%s must be at least %s when stable schedules are enabled", StableScheduleWindowFlag, StableScheduleIntervalFlag)
+	}
+	defaultIterationSchedules := 0
+	if config.Enabled {
+		defaultIterationSchedules = 1
+	}
+	config.IterationSchedulesPerIteration = info.ScenarioOptionInt(IterationSchedulesPerIterationFlag, defaultIterationSchedules)
+	if config.IterationSchedulesPerIteration < 0 {
+		return config, fmt.Errorf("%s must be non-negative, got %d", IterationSchedulesPerIterationFlag, config.IterationSchedulesPerIteration)
+	}
+	config.IterationWorkflowDuration = info.ScenarioOptionDuration(IterationScheduleWorkflowDurationFlag, 1*time.Second)
+	if config.IterationWorkflowDuration <= 0 {
+		return config, fmt.Errorf("%s must be positive, got %v", IterationScheduleWorkflowDurationFlag, config.IterationWorkflowDuration)
+	}
+	config.VisibilityTimeout = info.ScenarioOptionDuration(ScheduleVisibilityTimeoutFlag, defaultVisibilityTimeout)
+	if config.VisibilityTimeout <= 0 {
+		return config, fmt.Errorf("%s must be positive, got %v", ScheduleVisibilityTimeoutFlag, config.VisibilityTimeout)
+	}
+	config.APIOperationInterval = info.ScenarioOptionDuration(ScheduleAPIOperationIntervalFlag, 50*time.Millisecond)
+	if config.APIOperationInterval < 0 {
+		return config, fmt.Errorf("%s must be non-negative, got %v", ScheduleAPIOperationIntervalFlag, config.APIOperationInterval)
+	}
+
+	var err error
+	config.OverlapPolicies, err = parseTpsScheduleOverlapPolicies(info.ScenarioOptionString(ScheduleOverlapPoliciesFlag, "skip,buffer_one,buffer_all"))
+	if err != nil {
+		return config, fmt.Errorf("invalid %s: %w", ScheduleOverlapPoliciesFlag, err)
+	}
+	if config.Enabled && config.StableCount > 0 && !hasRequiredStablePolicies(config.OverlapPolicies) {
+		return config, fmt.Errorf("%s must include skip,buffer_one,buffer_all when %s is true", ScheduleOverlapPoliciesFlag, IncludeSchedulesFlag)
+	}
+
+	return config, nil
 }
 
 // Run executes the throughput stress scenario.
@@ -215,59 +334,45 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Debugf("Completed iteration %d", run.Iteration)
 	}
 
+	var scheduleController *tpsScheduleController
+	if t.config.Schedules.Enabled {
+		scheduleController = newTpsScheduleController(t, info)
+		if err := scheduleController.RegisterSearchAttributes(ctx); err != nil {
+			return fmt.Errorf("failed to register schedule search attributes: %w", err)
+		}
+		if err := scheduleController.StartStableSchedules(ctx); err != nil {
+			return err
+		}
+	}
+
 	// Start the scenario run.
 	//
 	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
 	// In that case, we skip the executor run and go straight to the post-scenario verification.
+	var executorErr error
 	if isResuming && info.Configuration.Duration <= 0 && info.Configuration.Iterations == 0 {
 		info.Logger.Info("Skipping executor run: out of time")
 	} else {
-		ksExec := &loadgen.KitchenSinkExecutor{
-			TestInput: &TestInput{
-				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{},
-				},
-			},
-			UpdateWorkflowOptions: func(ctx context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
-				options.StartOptions = run.DefaultStartWorkflowOptions()
-				if isResuming {
-					// Enforce to never fail on "workflow already started" when resuming.
-					options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
-				}
-
-				// Add search attribute to the workflow options so that it can be used in visibility queries.
-				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
-					temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(info.ExecutionID),
-				)
-
-				// Start some workflows via Update-with-Start.
-				if t.maybeWithStart(0.5) {
-					options.Params.WithStartAction = &WithStartClientAction{
-						Variant: &WithStartClientAction_DoUpdate{
-							DoUpdate: &DoUpdate{
-								Variant: &DoUpdate_DoActions{
-									DoActions: &DoActionsUpdate{
-										Variant: &DoActionsUpdate_DoActions{},
-									},
-								},
-								WithStart: true,
-							},
-						},
+		exec := &loadgen.GenericExecutor{
+			Execute: func(ctx context.Context, run *loadgen.Run) error {
+				if scheduleController != nil {
+					if err := scheduleController.ExecuteIterationSchedules(ctx, run); err != nil {
+						return err
 					}
 				}
-
-				// Generate the actions for the workflow.
-				//
-				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
-				// That means these client actions are sent from the activity worker instead of Omes.
-				options.Params.WorkflowInput.InitialActions = t.createActions(run)
-
-				return nil
+				options := t.buildKitchenSinkWorkflowOptions(run, isResuming)
+				return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 			},
 		}
-		if err := ksExec.Run(ctx, info); err != nil {
-			return err
-		}
+		executorErr = exec.Run(ctx, info)
+	}
+
+	var scheduleFinalizeErr error
+	if scheduleController != nil {
+		scheduleFinalizeErr = scheduleController.FinalizeStableSchedules(ctx)
+	}
+	if executorErr != nil || scheduleFinalizeErr != nil {
+		return errors.Join(executorErr, scheduleFinalizeErr)
 	}
 
 	t.lock.Lock()
@@ -295,6 +400,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	sb.WriteString(fmt.Sprintf("Total child workflows: %d (%d per iteration), ", completedChildWorkflows, t.config.InternalIterations))
 	sb.WriteString(fmt.Sprintf("Total continue-as-new workflows: %d (%d per iteration), ", continueAsNewWorkflows, continueAsNewPerIter))
 	sb.WriteString(fmt.Sprintf("Total workflows completed: %d", completedWorkflows))
+	if t.config.Schedules.Enabled {
+		sb.WriteString(fmt.Sprintf(", Total iteration scheduled workflows: %d, ", t.state.CompletedIterationScheduledWorkflows))
+		sb.WriteString(fmt.Sprintf("Total stable scheduled workflows completed: %d", t.state.CompletedStableScheduledWorkflows))
+	}
 	info.Logger.Info(sb.String())
 
 	// Post-scenario: verify that at least one iteration was completed.
@@ -343,6 +452,49 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	return errors.Join(tpsErrors...)
+}
+
+func (t *tpsExecutor) buildKitchenSinkWorkflowOptions(run *loadgen.Run, isResuming bool) loadgen.KitchenSinkWorkflowOptions {
+	options := run.DefaultKitchenSinkWorkflowOptions()
+	options.Params = &TestInput{
+		WorkflowInput: &WorkflowInput{
+			InitialActions: []*ActionSet{},
+		},
+	}
+	options.StartOptions = run.DefaultStartWorkflowOptions()
+	if isResuming {
+		// Enforce to never fail on "workflow already started" when resuming.
+		options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
+	}
+
+	// Add search attribute to the workflow options so that it can be used in visibility queries.
+	options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
+		temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(t.config.ExecutionID),
+	)
+
+	// Start some workflows via Update-with-Start.
+	if t.maybeWithStart(0.5) {
+		options.Params.WithStartAction = &WithStartClientAction{
+			Variant: &WithStartClientAction_DoUpdate{
+				DoUpdate: &DoUpdate{
+					Variant: &DoUpdate_DoActions{
+						DoActions: &DoActionsUpdate{
+							Variant: &DoActionsUpdate_DoActions{},
+						},
+					},
+					WithStart: true,
+				},
+			},
+		}
+	}
+
+	// Generate the actions for the workflow.
+	//
+	// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
+	// That means these client actions are sent from the activity worker instead of Omes.
+	options.Params.WorkflowInput.InitialActions = t.createActions(run)
+
+	return options
 }
 
 func (t *tpsExecutor) updateStateOnIterationCompletion() {

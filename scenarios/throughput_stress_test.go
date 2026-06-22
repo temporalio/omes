@@ -72,3 +72,117 @@ func TestThroughputStress(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully when resuming from end")
 	})
 }
+
+func TestThroughputStressScheduleConfig(t *testing.T) {
+	t.Parallel()
+
+	baseInfo := loadgen.ScenarioInfo{
+		RunID:       "schedule-config",
+		ExecutionID: "schedule-config-execution",
+		ScenarioOptions: map[string]string{
+			IncludeSchedulesFlag: "true",
+		},
+	}
+
+	t.Run("disabled by default", func(t *testing.T) {
+		info := baseInfo
+		info.ScenarioOptions = nil
+		executor := newThroughputStressExecutor()
+		require.NoError(t, executor.Configure(info))
+		require.False(t, executor.config.Schedules.Enabled)
+		require.Equal(t, 0, executor.config.Schedules.IterationSchedulesPerIteration)
+	})
+
+	t.Run("valid enabled defaults", func(t *testing.T) {
+		executor := newThroughputStressExecutor()
+		require.NoError(t, executor.Configure(baseInfo))
+		require.True(t, executor.config.Schedules.Enabled)
+		require.Equal(t, 3, executor.config.Schedules.StableCount)
+		require.Equal(t, 1, executor.config.Schedules.IterationSchedulesPerIteration)
+		require.True(t, hasRequiredStablePolicies(executor.config.Schedules.OverlapPolicies))
+	})
+
+	t.Run("invalid overlap policy", func(t *testing.T) {
+		info := baseInfo
+		info.ScenarioOptions = map[string]string{
+			IncludeSchedulesFlag:        "true",
+			ScheduleOverlapPoliciesFlag: "skip,buffer_one",
+		}
+		executor := newThroughputStressExecutor()
+		require.ErrorContains(t, executor.Configure(info), ScheduleOverlapPoliciesFlag)
+	})
+
+	t.Run("invalid completion mode", func(t *testing.T) {
+		info := baseInfo
+		info.ScenarioOptions = map[string]string{
+			IncludeSchedulesFlag:             "true",
+			StableScheduleCompletionModeFlag: "wait-forever",
+		}
+		executor := newThroughputStressExecutor()
+		require.ErrorContains(t, executor.Configure(info), StableScheduleCompletionModeFlag)
+	})
+
+	t.Run("invalid schedule duration", func(t *testing.T) {
+		info := baseInfo
+		info.ScenarioOptions = map[string]string{
+			IncludeSchedulesFlag:               "true",
+			StableScheduleWorkflowDurationFlag: "0s",
+		}
+		executor := newThroughputStressExecutor()
+		require.ErrorContains(t, executor.Configure(info), StableScheduleWorkflowDurationFlag)
+	})
+
+	t.Run("invalid schedule interval", func(t *testing.T) {
+		info := baseInfo
+		info.ScenarioOptions = map[string]string{
+			IncludeSchedulesFlag:       "true",
+			StableScheduleIntervalFlag: "500ms",
+		}
+		executor := newThroughputStressExecutor()
+		require.ErrorContains(t, executor.Configure(info), StableScheduleIntervalFlag)
+	})
+}
+
+func TestThroughputStressWithSchedules(t *testing.T) {
+	runID := fmt.Sprintf("tps-schedules-%d", time.Now().Unix())
+
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(90*time.Second))
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID:       runID,
+		ExecutionID: "schedule-execution",
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 1,
+		},
+		ScenarioOptions: map[string]string{
+			IterFlag:                              "1",
+			ContinueAsNewAfterIterFlag:            "0",
+			SleepTimeFlag:                         "1ms",
+			VisibilityVerificationTimeoutFlag:     "20s",
+			IncludeSchedulesFlag:                  "true",
+			StableScheduleIntervalFlag:            "1s",
+			StableScheduleWorkflowDurationFlag:    "100ms",
+			StableScheduleWindowFlag:              "4s",
+			IterationScheduleWorkflowDurationFlag: "100ms",
+			ScheduleVisibilityTimeoutFlag:         "20s",
+			ScheduleAPIOperationIntervalFlag:      "1ms",
+			IterationSchedulesPerIterationFlag:    "1",
+			StableScheduleCompletionModeFlag:      ScheduleCompletionModeRelease,
+			ScheduleOverlapPoliciesFlag:           "skip,buffer_one,buffer_all",
+		},
+	}
+
+	executor := newThroughputStressExecutor()
+
+	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "Executor should complete successfully with schedules")
+
+	state := executor.Snapshot().(tpsState)
+	require.Equal(t, 1, state.CompletedIterations)
+	require.True(t, state.StableSchedulesCreated)
+	require.True(t, state.StableSchedulesFinalized)
+	require.True(t, state.MatchingTimesVerified)
+	require.Equal(t, 1, state.CompletedIterationScheduledWorkflows)
+	require.GreaterOrEqual(t, state.CompletedStableScheduledWorkflows, 3)
+}
