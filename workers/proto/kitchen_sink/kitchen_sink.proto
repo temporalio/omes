@@ -53,6 +53,7 @@ message ClientAction {
     ClientActionSet nested_actions = 4;
     DoDescribe do_describe = 5;
     DoStandaloneNexusOperation do_standalone_nexus_operation = 6;
+    DoStandaloneActivity do_standalone_activity = 7;
   }
 }
 
@@ -62,6 +63,15 @@ message DoStandaloneNexusOperation {
   string endpoint = 1;
   string service = 2;
   string operation = 3;
+}
+
+// DoStandaloneActivity starts an activity outside of any workflow context using
+// StartActivityExecution and polls for its outcome with PollActivityExecution.
+// Reuses ExecuteActivityAction so the activity variant, task queue, timeouts, and
+// retry policy are all configurable. Requires server-side support for
+// workflow-independent activities.
+message DoStandaloneActivity {
+  ExecuteActivityAction activity = 1;
 }
 
 message DoSignal {

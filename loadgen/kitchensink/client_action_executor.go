@@ -131,6 +131,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		return err
 	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
 		return e.executeStandaloneNexusOperation(ctx, sano)
+	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
+		return e.executeStandaloneActivity(ctx, sa)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
@@ -224,4 +226,27 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		return fmt.Errorf("Get standalone nexus operation: %w", err)
 	}
 	return nil
+}
+
+func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
+	}
+
+	actType, args := ActivityNameAndArgs(act)
+
+	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
+		ID:                     fmt.Sprintf("standalone-activity-%s-%s", e.WorkflowOptions.ID, uuid.NewString()),
+		TaskQueue:              act.TaskQueue,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
+		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
+		HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
+		RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
+	}, actType, args...)
+	if err != nil {
+		return fmt.Errorf("failed to start standalone activity: %w", err)
+	}
+	return handle.Get(ctx, nil)
 }

@@ -93,6 +93,7 @@ func (w *workerPool) startWorker(
 	sdk clioptions.Language,
 	taskQueueName string,
 	scenarioInfo loadgen.ScenarioInfo,
+	errOnUnimplemented bool,
 ) <-chan error {
 	workerDone := make(chan error, 1)
 
@@ -117,6 +118,9 @@ func (w *workerPool) startWorker(
 		}
 		runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
 		runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
+		if errOnUnimplemented {
+			runner.WorkerOptions.FlagSet().Set("worker-err-on-unimplemented", "true")
+		}
 		workerDone <- runner.Run(ctx, baseDir)
 	}()
 

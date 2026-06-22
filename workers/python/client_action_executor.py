@@ -1,15 +1,17 @@
-from typing import Any
+import time
 
 from temporalio.client import Client, WithStartWorkflowOperation
-from temporalio.common import WorkflowIDConflictPolicy
+from temporalio.common import RetryPolicy, WorkflowIDConflictPolicy
 from temporalio.exceptions import ApplicationError
 
+from activity_dispatch import activity_name_and_args, timeout_or_none
 from protos.kitchen_sink_pb2 import (
     ClientAction,
     ClientActionSet,
     ClientSequence,
     DoQuery,
     DoSignal,
+    DoStandaloneActivity,
     DoUpdate,
 )
 
@@ -59,7 +61,14 @@ class ClientActionExecutor:
         elif action.HasField("nested_actions"):
             await self._execute_client_action_set(action.nested_actions)
         elif action.HasField("do_standalone_nexus_operation"):
-            raise NotImplementedError("DoStandaloneNexusOperation is not supported")
+            if self.err_on_unimplemented:
+                raise ApplicationError(
+                    "DoStandaloneNexusOperation is not supported", non_retryable=True
+                )
+            # Skip standalone nexus operations when not erroring on unimplemented
+            print("Skipping standalone nexus operation (not implemented)")
+        elif action.HasField("do_standalone_activity"):
+            await self._execute_standalone_activity(action.do_standalone_activity)
         else:
             raise ValueError("Client action must have a recognized variant")
 
@@ -119,6 +128,25 @@ class ClientActionExecutor:
         except Exception:
             if not update.failure_expected:
                 raise
+
+    async def _execute_standalone_activity(self, sa: DoStandaloneActivity):
+        if not sa.HasField("activity"):
+            raise ValueError("DoStandaloneActivity.activity is required")
+        act = sa.activity
+        act_type, args = activity_name_and_args(act)
+        await self.client.execute_activity(
+            act_type,
+            args=args,
+            id=f"standalone-{self.workflow_id}-{time.time_ns()}",
+            task_queue=act.task_queue,
+            schedule_to_close_timeout=timeout_or_none(act, "schedule_to_close_timeout"),
+            schedule_to_start_timeout=timeout_or_none(act, "schedule_to_start_timeout"),
+            start_to_close_timeout=timeout_or_none(act, "start_to_close_timeout"),
+            heartbeat_timeout=timeout_or_none(act, "heartbeat_timeout"),
+            retry_policy=RetryPolicy.from_proto(act.retry_policy)
+            if act.HasField("retry_policy")
+            else None,
+        )
 
     async def _execute_query_action(self, query: DoQuery):
         try:
