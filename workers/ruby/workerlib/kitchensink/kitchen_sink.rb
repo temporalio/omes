@@ -1,6 +1,7 @@
 require 'temporalio/workflow'
 require 'temporalio/workflow/definition'
 require_relative '../../protos/kitchen_sink/kitchen_sink_pb'
+require_relative 'activity_dispatch'
 
 KS = Temporal::Omes::KitchenSink
 
@@ -193,48 +194,16 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
 
   # rubocop:disable Metrics
   def launch_activity(exec_activity)
-    act_type = 'noop'
-    args = []
-
-    case exec_activity.activity_type
-    when :delay
-      act_type = 'delay'
-      args << exec_activity.delay
-    when :noop
-      act_type = 'noop'
-    when :payload
-      act_type = 'payload'
-      input_data = Array.new(exec_activity.payload.bytes_to_receive) { |i| i % 256 }.pack('C*')
-      args << input_data
-      args << exec_activity.payload.bytes_to_return
-    when :client
-      act_type = 'client'
-      args << exec_activity.client
-    when :retryable_error
-      act_type = 'retryable_error'
-      args << exec_activity.retryable_error
-    when :timeout
-      act_type = 'timeout'
-      args << exec_activity.timeout
-    when :heartbeat
-      act_type = 'heartbeat'
-      args << exec_activity.heartbeat
-    end
+    act_type, args = ActivityDispatch.name_and_args(exec_activity)
 
     options = {
-      schedule_to_close_timeout: duration_or_nil(exec_activity, :schedule_to_close_timeout),
-      start_to_close_timeout: duration_or_nil(exec_activity, :start_to_close_timeout),
-      schedule_to_start_timeout: duration_or_nil(exec_activity, :schedule_to_start_timeout)
+      schedule_to_close_timeout: ActivityDispatch.duration_or_nil(exec_activity, :schedule_to_close_timeout),
+      start_to_close_timeout: ActivityDispatch.duration_or_nil(exec_activity, :start_to_close_timeout),
+      schedule_to_start_timeout: ActivityDispatch.duration_or_nil(exec_activity, :schedule_to_start_timeout)
     }.compact
 
-    if exec_activity.retry_policy
-      options[:retry_policy] = Temporalio::RetryPolicy.new(
-        max_attempts: exec_activity.retry_policy.maximum_attempts,
-        initial_interval: exec_activity.retry_policy.initial_interval&.then do |d|
-          d.seconds + (d.nanos / 1_000_000_000.0)
-        end
-      )
-    end
+    retry_policy = ActivityDispatch.retry_policy_from_proto(exec_activity.retry_policy)
+    options[:retry_policy] = retry_policy if retry_policy
 
     if exec_activity.locality == :is_local
       Temporalio::Workflow.execute_local_activity(act_type, *args, **options)
@@ -243,7 +212,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
         raise NotImplementedError, 'priority is not supported yet'
       end
 
-      ht = duration_or_nil(exec_activity, :heartbeat_timeout)
+      ht = ActivityDispatch.duration_or_nil(exec_activity, :heartbeat_timeout)
       options[:heartbeat_timeout] = ht if ht
       options[:task_queue] = exec_activity.task_queue unless exec_activity.task_queue.empty?
       if exec_activity.locality == :remote
@@ -310,12 +279,5 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
     when :ABANDON then Temporalio::Workflow::ActivityCancellationType::ABANDON
     else raise NotImplementedError, "Unknown cancellation type #{ctype}"
     end
-  end
-
-  def duration_or_nil(activity_action, field)
-    val = activity_action.send(field)
-    return nil if val.nil? || (val.seconds.zero? && val.nanos.zero?)
-
-    val.seconds + (val.nanos / 1_000_000_000.0)
   end
 end

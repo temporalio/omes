@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require 'securerandom'
+require_relative 'activity_dispatch'
+
 class ClientActionExecutor
   def initialize(client, workflow_id, task_queue, err_on_unimplemented: false)
     @client = client
@@ -54,15 +57,27 @@ class ClientActionExecutor
         )
       end
     when :do_standalone_activity
-      if @err_on_unimplemented
-        raise Temporalio::Error::ApplicationError.new(
-          'DoStandaloneActivity is not supported',
-          non_retryable: true
-        )
-      end
+      execute_standalone_activity(action.do_standalone_activity)
     else
       raise 'Client action must have a recognized variant'
     end
+  end
+
+  def execute_standalone_activity(standalone)
+    raise 'DoStandaloneActivity.activity is required' if standalone.activity.nil?
+
+    act = standalone.activity
+    act_type, args = ActivityDispatch.name_and_args(act)
+    @client.execute_activity(
+      act_type, *args,
+      id: "standalone-#{@workflow_id}-#{SecureRandom.uuid}",
+      task_queue: act.task_queue,
+      schedule_to_close_timeout: ActivityDispatch.duration_or_nil(act, :schedule_to_close_timeout),
+      schedule_to_start_timeout: ActivityDispatch.duration_or_nil(act, :schedule_to_start_timeout),
+      start_to_close_timeout: ActivityDispatch.duration_or_nil(act, :start_to_close_timeout),
+      heartbeat_timeout: ActivityDispatch.duration_or_nil(act, :heartbeat_timeout),
+      retry_policy: ActivityDispatch.retry_policy_from_proto(act.retry_policy)
+    )
   end
 
   def execute_signal_action(signal)
