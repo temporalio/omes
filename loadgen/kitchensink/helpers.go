@@ -7,9 +7,28 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/failure/v1"
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func ConvertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
+	if retryPolicy == nil {
+		return nil
+	}
+	p := temporal.RetryPolicy{
+		BackoffCoefficient:     retryPolicy.BackoffCoefficient,
+		MaximumAttempts:        retryPolicy.MaximumAttempts,
+		NonRetryableErrorTypes: retryPolicy.NonRetryableErrorTypes,
+	}
+	if v := retryPolicy.MaximumInterval; v != nil {
+		p.MaximumInterval = v.AsDuration()
+	}
+	if v := retryPolicy.InitialInterval; v != nil {
+		p.InitialInterval = v.AsDuration()
+	}
+	return &p
+}
 
 // Using human-readable JSON encoding for payloads to aid with debugging.
 var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
@@ -288,6 +307,29 @@ func RemoteActivityWithHeartbeat(startToCloseTimeout, heartbeatTimeout time.Dura
 			},
 		}
 	}
+}
+
+// ActivityNameAndArgs maps an ExecuteActivityAction's activity_type to the
+// registered activity name and its args. Unrecognized types fall back to "noop".
+func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
+	if delay := act.GetDelay(); delay != nil {
+		return "delay", []any{delay.AsDuration()}
+	} else if payload := act.GetPayload(); payload != nil {
+		inputData := make([]byte, payload.BytesToReceive)
+		for i := range inputData {
+			inputData[i] = byte(i % 256)
+		}
+		return "payload", []any{inputData, payload.BytesToReturn}
+	} else if client := act.GetClient(); client != nil {
+		return "client", []any{client}
+	} else if retryable := act.GetRetryableError(); retryable != nil {
+		return "retryable_error", []any{retryable}
+	} else if timeout := act.GetTimeout(); timeout != nil {
+		return "timeout", []any{timeout}
+	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
+		return "heartbeat", []any{heartbeat}
+	}
+	return "noop", nil
 }
 
 func NewSetWorkflowStateAction(key, value string) *Action {

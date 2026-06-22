@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -42,6 +43,10 @@ const (
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
+	// EnableStandaloneActivityFlag enables standalone activity execution.
+	// Requires server-side support for workflow-independent activities.
+	// Default is false.
+	EnableStandaloneActivityFlag = "enable-standalone-activity"
 	// IncludeStandaloneNexusFlag enables standalone Nexus operations in throughput_stress.
 	// Requires nexus-endpoint to also be set.
 	// Default is false.
@@ -72,6 +77,7 @@ type tpsConfig struct {
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
 	IncludeDescribe               bool
+	EnableStandaloneActivity      bool
 	IncludeStandaloneNexus        bool
 }
 
@@ -90,8 +96,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, EnableStandaloneActivityFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -173,6 +179,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
+	config.EnableStandaloneActivity = info.ScenarioOptionBool(EnableStandaloneActivityFlag, false)
 	config.IncludeStandaloneNexus = info.ScenarioOptionBool(IncludeStandaloneNexusFlag, false)
 	if config.IncludeStandaloneNexus && config.NexusEndpoint == "" {
 		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
@@ -451,6 +458,12 @@ func (t *tpsExecutor) createActionsChunk(
 			}
 		}
 
+		if t.config.EnableStandaloneActivity {
+			asyncActions = append(asyncActions,
+				ClientActivity(ClientActions(t.createStandaloneActivity(loadgen.TaskQueueForRun(run.RunID))), DefaultRemoteActivity),
+			)
+		}
+
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{
 			Variant: &Action_NestedActionSet{
@@ -619,6 +632,29 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 					},
 				},
 				WithStart: t.maybeWithStart(0.5),
+			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createStandaloneActivity(taskQueue string) *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+					TaskQueue:           taskQueue,
+					StartToCloseTimeout: durationpb.New(30 * time.Second),
+					RetryPolicy: &common.RetryPolicy{
+						InitialInterval:    durationpb.New(100 * time.Millisecond),
+						BackoffCoefficient: 1,
+					},
+				},
 			},
 		},
 	}

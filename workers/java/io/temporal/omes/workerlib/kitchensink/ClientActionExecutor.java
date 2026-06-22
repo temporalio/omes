@@ -3,6 +3,9 @@ package io.temporal.omes.workerlib.kitchensink;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest;
+import io.temporal.client.ActivityClient;
+import io.temporal.client.ActivityClientOptions;
+import io.temporal.client.StartActivityOptions;
 import io.temporal.client.UpdateOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -69,6 +72,8 @@ public class ClientActionExecutor {
                   .setNamespace(client.getOptions().getNamespace())
                   .setExecution(WorkflowExecution.newBuilder().setWorkflowId(workflowId).build())
                   .build());
+    } else if (action.hasDoStandaloneActivity()) {
+      executeStandaloneActivity(action.getDoStandaloneActivity());
     } else if (action.hasNestedActions()) {
       executeClientActionSet(action.getNestedActions());
     } else if (action.hasDoStandaloneNexusOperation()) {
@@ -151,6 +156,39 @@ public class ClientActionExecutor {
       }
       // If failure was expected, swallow the exception
     }
+  }
+
+  private void executeStandaloneActivity(KitchenSink.DoStandaloneActivity sa) {
+    KitchenSink.ExecuteActivityAction act = sa.getActivity();
+    ActivityDispatch dispatch = ActivityDispatch.nameAndArgs(act);
+
+    StartActivityOptions.Builder options =
+        StartActivityOptions.newBuilder()
+            .setId("standalone-" + workflowId + "-" + System.nanoTime())
+            .setTaskQueue(act.getTaskQueue())
+            .setStartToCloseTimeout(
+                KitchenSinkWorkflowImpl.toJavaDuration(act.getStartToCloseTimeout()))
+            .setRetryOptions(KitchenSinkWorkflowImpl.buildRetryOptions(act.getRetryPolicy()));
+    if (act.hasScheduleToCloseTimeout()) {
+      options.setScheduleToCloseTimeout(
+          KitchenSinkWorkflowImpl.toJavaDuration(act.getScheduleToCloseTimeout()));
+    }
+    if (act.hasScheduleToStartTimeout()) {
+      options.setScheduleToStartTimeout(
+          KitchenSinkWorkflowImpl.toJavaDuration(act.getScheduleToStartTimeout()));
+    }
+    if (act.hasHeartbeatTimeout()) {
+      options.setHeartbeatTimeout(
+          KitchenSinkWorkflowImpl.toJavaDuration(act.getHeartbeatTimeout()));
+    }
+
+    ActivityClient activityClient =
+        ActivityClient.newInstance(
+            client.getWorkflowServiceStubs(),
+            ActivityClientOptions.newBuilder()
+                .setNamespace(client.getOptions().getNamespace())
+                .build());
+    activityClient.execute(dispatch.type, options.build(), dispatch.args.toArray());
   }
 
   private void executeQueryAction(KitchenSink.DoQuery query) {

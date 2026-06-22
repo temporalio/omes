@@ -1,6 +1,7 @@
 import { Client, WithStartWorkflowOperation } from '@temporalio/client';
-import { ApplicationFailure } from '@temporalio/common';
+import { ApplicationFailure, decompileRetryPolicy } from '@temporalio/common';
 import { WorkflowIdConflictPolicy } from '@temporalio/client';
+import { activityNameAndArgs, durationConvertMaybeUndefined } from './proto_help';
 import { temporal } from './protos/root';
 import IClientSequence = temporal.omes.kitchen_sink.IClientSequence;
 import IClientActionSet = temporal.omes.kitchen_sink.IClientActionSet;
@@ -8,6 +9,7 @@ import IClientAction = temporal.omes.kitchen_sink.IClientAction;
 import IDoSignal = temporal.omes.kitchen_sink.IDoSignal;
 import IDoUpdate = temporal.omes.kitchen_sink.IDoUpdate;
 import IDoQuery = temporal.omes.kitchen_sink.IDoQuery;
+import IDoStandaloneActivity = temporal.omes.kitchen_sink.IDoStandaloneActivity;
 
 export class ClientActionExecutor {
   private client: Client;
@@ -56,6 +58,8 @@ export class ClientActionExecutor {
     } else if (action.doDescribe) {
       const handle = this.client.workflow.getHandle(this.workflowId);
       await handle.describe();
+    } else if (action.doStandaloneActivity) {
+      await this.executeStandaloneActivity(action.doStandaloneActivity);
     } else if (action.nestedActions) {
       await this.executeClientActionSet(action.nestedActions);
     } else if (action.doStandaloneNexusOperation) {
@@ -141,6 +145,21 @@ export class ClientActionExecutor {
         throw error;
       }
     }
+  }
+
+  private async executeStandaloneActivity(sa: IDoStandaloneActivity): Promise<void> {
+    const act = sa.activity ?? {};
+    const [actType, args] = activityNameAndArgs(act);
+    await this.client.activity.execute(actType, {
+      id: `standalone-${this.workflowId}-${process.hrtime.bigint()}`,
+      taskQueue: act.taskQueue ?? '',
+      args,
+      scheduleToCloseTimeout: durationConvertMaybeUndefined(act.scheduleToCloseTimeout),
+      startToCloseTimeout: durationConvertMaybeUndefined(act.startToCloseTimeout),
+      scheduleToStartTimeout: durationConvertMaybeUndefined(act.scheduleToStartTimeout),
+      heartbeatTimeout: durationConvertMaybeUndefined(act.heartbeatTimeout),
+      retry: decompileRetryPolicy(act.retryPolicy),
+    });
   }
 
   private async executeQueryAction(query: IDoQuery): Promise<void> {

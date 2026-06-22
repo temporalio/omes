@@ -70,6 +70,10 @@ public class ClientActionsExecutor
             var handle = _client.GetWorkflowHandle(WorkflowId!);
             await handle.DescribeAsync();
         }
+        else if (action.DoStandaloneActivity != null)
+        {
+            await ExecuteStandaloneActivity(action.DoStandaloneActivity);
+        }
         else if (action.NestedActions != null)
         {
             await ExecuteClientActionSet(action.NestedActions);
@@ -180,6 +184,27 @@ public class ClientActionsExecutor
                 throw;
             }
         }
+    }
+
+    private async Task ExecuteStandaloneActivity(DoStandaloneActivity sa)
+    {
+        var act = sa.Activity;
+        var (actType, args) = ActivityDispatch.NameAndArgs(act);
+        await _client.ExecuteActivityAsync(
+            actType,
+            args,
+            new StartActivityOptions(
+                id: $"standalone-{WorkflowId}-{Guid.NewGuid():N}",
+                taskQueue: act.TaskQueue)
+            {
+                ScheduleToCloseTimeout = act.ScheduleToCloseTimeout?.ToTimeSpan(),
+                ScheduleToStartTimeout = act.ScheduleToStartTimeout?.ToTimeSpan(),
+                StartToCloseTimeout = act.StartToCloseTimeout?.ToTimeSpan(),
+                HeartbeatTimeout = act.HeartbeatTimeout?.ToTimeSpan(),
+                RetryPolicy = act.RetryPolicy != null
+                    ? ActivityDispatch.RetryPolicyFromProto(act.RetryPolicy)
+                    : null,
+            });
     }
 
     private async Task ExecuteQueryAction(DoQuery query)
