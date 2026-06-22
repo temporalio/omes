@@ -370,6 +370,27 @@ The throughput_stress scenario can generate Nexus load if the scenario is starte
   go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
   ```
 
+#### Schedules
+
+The throughput_stress scenario can also exercise Schedule APIs. Schedule load is disabled by default; enable it with `--option include-schedules=true`.
+
+When enabled, the scenario creates 3 stable schedules by default for matching-times verification, plus one short-lived schedule per throughput iteration. The stable schedules use `skip`, `buffer_one`, and `buffer_all` overlap policies and verify expected starts with `ListScheduleMatchingTimes`.
+
+Useful options:
+
+```sh
+--option include-schedules=true
+--option stable-schedule-interval=1s
+--option stable-schedule-workflow-duration=1s
+--option stable-schedule-window=10s
+--option stable-schedule-completion-mode=release
+--option iteration-schedules-per-iteration=1
+--option iteration-schedule-workflow-duration=100ms
+--option schedule-visibility-timeout=20s
+--option schedule-api-operation-interval=1ms
+--option schedule-overlap-policies=skip,buffer_one,buffer_all
+```
+
 ### Fuzzer
 
 The fuzzer scenario makes use of the kitchen sink workflow (see below) to exercise a wide

@@ -27,8 +27,8 @@ const (
 )
 
 const (
-	OmesScheduleKindSearchAttribute = "OmesScheduleKind"
-	OmesScheduleIDSearchAttribute   = "OmesScheduleID"
+	temporalScheduledByIDSearchAttribute      = "TemporalScheduledById"
+	temporalScheduledStartTimeSearchAttribute = "TemporalScheduledStartTime"
 )
 
 type tpsScheduleController struct {
@@ -39,9 +39,6 @@ type tpsScheduleController struct {
 type scheduledWorkflowObservation struct {
 	WorkflowID string
 	RunID      string
-	StartTime  time.Time
-	CloseTime  time.Time
-	Status     enums.WorkflowExecutionStatus
 }
 
 func newTpsScheduleController(executor *tpsExecutor, info loadgen.ScenarioInfo) *tpsScheduleController {
@@ -51,29 +48,17 @@ func newTpsScheduleController(executor *tpsExecutor, info loadgen.ScenarioInfo) 
 	}
 }
 
-func (c *tpsScheduleController) RegisterSearchAttributes(ctx context.Context) error {
-	if !c.executor.config.Schedules.Enabled {
-		return nil
-	}
-	if err := c.info.RegisterDefaultSearchAttributes(ctx); err != nil {
-		return err
-	}
-	for _, attr := range []string{OmesScheduleKindSearchAttribute, OmesScheduleIDSearchAttribute} {
-		if err := loadgen.InitSearchAttribute(ctx, c.info, attr); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (c *tpsScheduleController) StartStableSchedules(ctx context.Context) error {
 	if !c.executor.config.Schedules.Enabled || c.executor.config.Schedules.StableCount == 0 {
+		return nil
+	}
+	if c.stableSchedulesFinalized() {
 		return nil
 	}
 
 	for i := range c.executor.config.Schedules.StableCount {
 		scheduleID := c.stableScheduleID(i)
-		handle, err := c.createSchedule(ctx, scheduleID, stableScheduleKind, c.stablePolicy(i), c.executor.config.Schedules.StableWorkflowDuration, false, true)
+		handle, _, err := c.createSchedule(ctx, scheduleID, stableScheduleKind, c.stablePolicy(i), c.executor.config.Schedules.StableWorkflowDuration, false, true)
 		if err != nil {
 			return fmt.Errorf("create stable schedule %q: %w", scheduleID, err)
 		}
@@ -99,7 +84,7 @@ func (c *tpsScheduleController) ExecuteIterationSchedules(ctx context.Context, r
 
 	for i := range c.executor.config.Schedules.IterationSchedulesPerIteration {
 		scheduleID := c.iterationScheduleID(run.Iteration, i)
-		handle, err := c.createSchedule(
+		handle, created, err := c.createSchedule(
 			ctx,
 			scheduleID,
 			iterationScheduleKind,
@@ -114,27 +99,34 @@ func (c *tpsScheduleController) ExecuteIterationSchedules(ctx context.Context, r
 		if _, err := handle.Describe(ctx); err != nil {
 			return fmt.Errorf("describe iteration schedule %q: %w", scheduleID, err)
 		}
-		if err := handle.Update(ctx, client.ScheduleUpdateOptions{
-			DoUpdate: func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
-				schedule := input.Description.Schedule
-				if schedule.State == nil {
-					schedule.State = &client.ScheduleState{}
-				}
-				schedule.State.Note = fmt.Sprintf("throughput_stress iteration %d schedule %d", run.Iteration, i)
-				return &client.ScheduleUpdate{Schedule: &schedule}, nil
-			},
-		}); err != nil {
-			return fmt.Errorf("update iteration schedule %q: %w", scheduleID, err)
+
+		shouldTrigger, err := c.shouldTriggerIterationSchedule(ctx, handle, scheduleID, created)
+		if err != nil {
+			return fmt.Errorf("inspect iteration schedule %q: %w", scheduleID, err)
 		}
-		if err := c.sleepOperationInterval(ctx); err != nil {
-			return err
+		if shouldTrigger {
+			if err := handle.Update(ctx, client.ScheduleUpdateOptions{
+				DoUpdate: func(input client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+					schedule := input.Description.Schedule
+					if schedule.State == nil {
+						schedule.State = &client.ScheduleState{}
+					}
+					schedule.State.Note = fmt.Sprintf("throughput_stress iteration %d schedule %d", run.Iteration, i)
+					return &client.ScheduleUpdate{Schedule: &schedule}, nil
+				},
+			}); err != nil {
+				return fmt.Errorf("update iteration schedule %q: %w", scheduleID, err)
+			}
+			if err := c.sleepOperationInterval(ctx); err != nil {
+				return err
+			}
+			if err := handle.Trigger(ctx, client.ScheduleTriggerOptions{
+				Overlap: enums.SCHEDULE_OVERLAP_POLICY_ALLOW_ALL,
+			}); err != nil {
+				return fmt.Errorf("trigger iteration schedule %q: %w", scheduleID, err)
+			}
 		}
-		if err := handle.Trigger(ctx, client.ScheduleTriggerOptions{
-			Overlap: enums.SCHEDULE_OVERLAP_POLICY_ALLOW_ALL,
-		}); err != nil {
-			return fmt.Errorf("trigger iteration schedule %q: %w", scheduleID, err)
-		}
-		if err := c.waitForScheduledWorkflowCount(ctx, iterationScheduleKind, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_COMPLETED, 1, c.executor.config.Schedules.VisibilityTimeout); err != nil {
+		if err := c.waitForScheduledWorkflowCount(ctx, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_COMPLETED, 1, c.executor.config.Schedules.VisibilityTimeout); err != nil {
 			return fmt.Errorf("wait for iteration scheduled workflow %q: %w", scheduleID, err)
 		}
 		if _, err := handle.Describe(ctx); err != nil {
@@ -153,6 +145,9 @@ func (c *tpsScheduleController) ExecuteIterationSchedules(ctx context.Context, r
 
 func (c *tpsScheduleController) FinalizeStableSchedules(ctx context.Context) error {
 	if !c.executor.config.Schedules.Enabled || c.executor.config.Schedules.StableCount == 0 {
+		return nil
+	}
+	if c.stableSchedulesFinalized() {
 		return nil
 	}
 
@@ -190,14 +185,14 @@ func (c *tpsScheduleController) FinalizeStableSchedules(ctx context.Context) err
 		}
 	}
 
-	if err := c.releaseRunningScheduledWorkflows(ctx, stableScheduleKind, ""); err != nil {
+	if err := c.releaseRunningStableScheduledWorkflows(ctx); err != nil {
 		errs = append(errs, err)
 	}
-	if err := c.waitForNoRunningScheduledWorkflows(ctx, stableScheduleKind, c.executor.config.Schedules.VisibilityTimeout); err != nil {
+	if err := c.waitForNoRunningStableScheduledWorkflows(ctx, c.executor.config.Schedules.VisibilityTimeout); err != nil {
 		errs = append(errs, err)
 	}
 
-	completed, err := c.countScheduledWorkflows(ctx, stableScheduleKind, "", enums.WORKFLOW_EXECUTION_STATUS_COMPLETED)
+	completed, err := c.countStableScheduledWorkflows(ctx, enums.WORKFLOW_EXECUTION_STATUS_COMPLETED)
 	if err != nil {
 		errs = append(errs, err)
 	} else {
@@ -212,6 +207,12 @@ func (c *tpsScheduleController) FinalizeStableSchedules(ctx context.Context) err
 
 func (c *tpsScheduleController) VerifyStableScheduleExpectedStarts(ctx context.Context) error {
 	var errs []error
+	c.executor.lock.Lock()
+	stableWindowEnd := c.executor.state.StableWindowEnd
+	c.executor.lock.Unlock()
+	if stableWindowEnd.IsZero() {
+		return errors.New("stable window end is not set")
+	}
 
 	for i := range c.executor.config.Schedules.StableCount {
 		scheduleID := c.stableScheduleID(i)
@@ -228,20 +229,19 @@ func (c *tpsScheduleController) VerifyStableScheduleExpectedStarts(ctx context.C
 		}
 
 		minStarts := expectedStableStarts(policy, len(matchingTimes))
-		if policy == enums.SCHEDULE_OVERLAP_POLICY_SKIP && minStarts < 2 {
-			minStarts = 2
-		}
-		if err := c.releaseUntilScheduledWorkflowCount(ctx, scheduleID, minStarts); err != nil {
+		actualStarts, err := c.releaseUntilScheduledWorkflowCount(ctx, scheduleID, minStarts, stableWindowEnd)
+		if err != nil {
 			errs = append(errs, fmt.Errorf("verify stable schedule %q starts: %w", scheduleID, err))
 			continue
 		}
 
 		c.info.Logger.Infof(
-			"Stable schedule verification: scheduleID=%s policy=%s matchingTimes=%d expectedStartsAtLeast=%d",
+			"Stable schedule verification: scheduleID=%s policy=%s matchingTimes=%d expectedStartsAtLeast=%d actualStarts=%d",
 			scheduleID,
 			policy,
 			len(matchingTimes),
 			minStarts,
+			actualStarts,
 		)
 	}
 
@@ -261,7 +261,7 @@ func (c *tpsScheduleController) createSchedule(
 	workflowDuration time.Duration,
 	paused bool,
 	triggerImmediately bool,
-) (client.ScheduleHandle, error) {
+) (client.ScheduleHandle, bool, error) {
 	action := &client.ScheduleWorkflowAction{
 		ID:        fmt.Sprintf("w-%s", scheduleID),
 		Workflow:  "kitchenSink",
@@ -269,8 +269,6 @@ func (c *tpsScheduleController) createSchedule(
 		TaskQueue: loadgen.TaskQueueForRun(c.info.RunID),
 		TypedSearchAttributes: temporal.NewSearchAttributes(
 			temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(c.info.ExecutionID),
-			temporal.NewSearchAttributeKeyString(OmesScheduleKindSearchAttribute).ValueSet(kind),
-			temporal.NewSearchAttributeKeyString(OmesScheduleIDSearchAttribute).ValueSet(scheduleID),
 		),
 	}
 
@@ -294,18 +292,14 @@ func (c *tpsScheduleController) createSchedule(
 		Overlap:            overlap,
 		Paused:             paused,
 		TriggerImmediately: triggerImmediately,
-		TypedSearchAttributes: temporal.NewSearchAttributes(
-			temporal.NewSearchAttributeKeyString(OmesScheduleKindSearchAttribute).ValueSet(kind),
-			temporal.NewSearchAttributeKeyString(OmesScheduleIDSearchAttribute).ValueSet(scheduleID),
-		),
 	})
 	if err != nil {
 		if isAlreadyExists(err) {
-			return c.info.Client.ScheduleClient().GetHandle(ctx, scheduleID), nil
+			return c.info.Client.ScheduleClient().GetHandle(ctx, scheduleID), false, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
-	return handle, nil
+	return handle, true, nil
 }
 
 func (c *tpsScheduleController) scheduledWorkflowInput(workflowDuration time.Duration, completionMode string) *WorkflowInput {
@@ -394,33 +388,70 @@ func expectedStableStarts(policy enums.ScheduleOverlapPolicy, matchingTimes int)
 	}
 }
 
-func (c *tpsScheduleController) releaseUntilScheduledWorkflowCount(ctx context.Context, scheduleID string, minStarts int) error {
+func (c *tpsScheduleController) shouldTriggerIterationSchedule(ctx context.Context, handle client.ScheduleHandle, scheduleID string, created bool) (bool, error) {
+	if created {
+		return true, nil
+	}
+	completed, err := c.countScheduledWorkflows(ctx, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_COMPLETED)
+	if err != nil {
+		return false, err
+	}
+	if completed > 0 {
+		return false, nil
+	}
+	running, err := c.countScheduledWorkflows(ctx, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_RUNNING)
+	if err != nil {
+		return false, err
+	}
+	if running > 0 {
+		return false, nil
+	}
+	desc, err := handle.Describe(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	return desc.Info.NumActions == 0, nil
+}
+
+func (c *tpsScheduleController) releaseUntilScheduledWorkflowCount(ctx context.Context, scheduleID string, minStarts int, scheduledThrough time.Time) (int, error) {
 	if minStarts <= 0 {
-		return nil
+		return 0, nil
 	}
 	deadline := time.Now().Add(c.executor.config.Schedules.VisibilityTimeout)
 	for {
-		count, err := c.countScheduledWorkflows(ctx, stableScheduleKind, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED)
+		count, err := c.countScheduledWorkflowsThrough(ctx, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED, scheduledThrough)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		if count >= minStarts {
-			return nil
+			return count, nil
 		}
-		if err := c.releaseRunningScheduledWorkflows(ctx, stableScheduleKind, scheduleID); err != nil {
-			return err
+		if err := c.releaseRunningScheduledWorkflows(ctx, scheduleID); err != nil {
+			return 0, err
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("expected at least %d starts for schedule %q, got %d", minStarts, scheduleID, count)
+			return count, fmt.Errorf("expected at least %d starts for schedule %q, got %d", minStarts, scheduleID, count)
 		}
 		if err := sleepContext(ctx, min(500*time.Millisecond, time.Until(deadline))); err != nil {
-			return err
+			return count, err
 		}
 	}
 }
 
-func (c *tpsScheduleController) releaseRunningScheduledWorkflows(ctx context.Context, kind, scheduleID string) error {
-	observed, err := c.listScheduledWorkflows(ctx, kind, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_RUNNING)
+func (c *tpsScheduleController) releaseRunningStableScheduledWorkflows(ctx context.Context) error {
+	for i := range c.executor.config.Schedules.StableCount {
+		if err := c.releaseRunningScheduledWorkflows(ctx, c.stableScheduleID(i)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *tpsScheduleController) releaseRunningScheduledWorkflows(ctx context.Context, scheduleID string) error {
+	observed, err := c.listScheduledWorkflows(ctx, scheduleID, enums.WORKFLOW_EXECUTION_STATUS_RUNNING)
 	if err != nil {
 		return err
 	}
@@ -430,25 +461,17 @@ func (c *tpsScheduleController) releaseRunningScheduledWorkflows(ctx context.Con
 		}
 	}
 
-	if kind == stableScheduleKind {
-		for i := range c.executor.config.Schedules.StableCount {
-			id := c.stableScheduleID(i)
-			if scheduleID != "" && scheduleID != id {
-				continue
-			}
-			handle := c.info.Client.ScheduleClient().GetHandle(ctx, id)
-			desc, err := handle.Describe(ctx)
-			if err != nil {
-				if isNotFound(err) {
-					continue
-				}
-				return err
-			}
-			for _, wf := range desc.Info.RunningWorkflows {
-				if err := c.signalRelease(ctx, wf.WorkflowID, wf.FirstExecutionRunID); err != nil {
-					return err
-				}
-			}
+	handle := c.info.Client.ScheduleClient().GetHandle(ctx, scheduleID)
+	desc, err := handle.Describe(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	for _, wf := range desc.Info.RunningWorkflows {
+		if err := c.signalRelease(ctx, wf.WorkflowID, wf.FirstExecutionRunID); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -470,7 +493,6 @@ func (c *tpsScheduleController) signalRelease(ctx context.Context, workflowID, r
 
 func (c *tpsScheduleController) waitForScheduledWorkflowCount(
 	ctx context.Context,
-	kind string,
 	scheduleID string,
 	status enums.WorkflowExecutionStatus,
 	minCount int,
@@ -479,7 +501,7 @@ func (c *tpsScheduleController) waitForScheduledWorkflowCount(
 	deadline := time.Now().Add(waitAtMost)
 	var lastCount int
 	for {
-		count, err := c.countScheduledWorkflows(ctx, kind, scheduleID, status)
+		count, err := c.countScheduledWorkflows(ctx, scheduleID, status)
 		if err != nil {
 			return err
 		}
@@ -488,8 +510,8 @@ func (c *tpsScheduleController) waitForScheduledWorkflowCount(
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("expected at least %d scheduled workflows for kind=%q scheduleID=%q status=%s, got %d after %v",
-				minCount, kind, scheduleID, status, lastCount, waitAtMost)
+			return fmt.Errorf("expected at least %d scheduled workflows for scheduleID=%q status=%s, got %d after %v",
+				minCount, scheduleID, status, lastCount, waitAtMost)
 		}
 		if err := sleepContext(ctx, min(500*time.Millisecond, time.Until(deadline))); err != nil {
 			return err
@@ -497,21 +519,21 @@ func (c *tpsScheduleController) waitForScheduledWorkflowCount(
 	}
 }
 
-func (c *tpsScheduleController) waitForNoRunningScheduledWorkflows(ctx context.Context, kind string, waitAtMost time.Duration) error {
+func (c *tpsScheduleController) waitForNoRunningStableScheduledWorkflows(ctx context.Context, waitAtMost time.Duration) error {
 	deadline := time.Now().Add(waitAtMost)
 	for {
-		count, err := c.countScheduledWorkflows(ctx, kind, "", enums.WORKFLOW_EXECUTION_STATUS_RUNNING)
+		count, err := c.countStableScheduledWorkflows(ctx, enums.WORKFLOW_EXECUTION_STATUS_RUNNING)
 		if err != nil {
 			return err
 		}
 		if count == 0 {
 			return nil
 		}
-		if err := c.releaseRunningScheduledWorkflows(ctx, kind, ""); err != nil {
+		if err := c.releaseRunningStableScheduledWorkflows(ctx); err != nil {
 			return err
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("expected no running scheduled workflows for kind=%q, got %d after %v", kind, count, waitAtMost)
+			return fmt.Errorf("expected no running stable scheduled workflows, got %d after %v", count, waitAtMost)
 		}
 		if err := sleepContext(ctx, min(500*time.Millisecond, time.Until(deadline))); err != nil {
 			return err
@@ -519,10 +541,26 @@ func (c *tpsScheduleController) waitForNoRunningScheduledWorkflows(ctx context.C
 	}
 }
 
-func (c *tpsScheduleController) countScheduledWorkflows(ctx context.Context, kind, scheduleID string, status enums.WorkflowExecutionStatus) (int, error) {
+func (c *tpsScheduleController) countStableScheduledWorkflows(ctx context.Context, status enums.WorkflowExecutionStatus) (int, error) {
+	total := 0
+	for i := range c.executor.config.Schedules.StableCount {
+		count, err := c.countScheduledWorkflows(ctx, c.stableScheduleID(i), status)
+		if err != nil {
+			return 0, err
+		}
+		total += count
+	}
+	return total, nil
+}
+
+func (c *tpsScheduleController) countScheduledWorkflows(ctx context.Context, scheduleID string, status enums.WorkflowExecutionStatus) (int, error) {
+	return c.countScheduledWorkflowsThrough(ctx, scheduleID, status, time.Time{})
+}
+
+func (c *tpsScheduleController) countScheduledWorkflowsThrough(ctx context.Context, scheduleID string, status enums.WorkflowExecutionStatus, scheduledThrough time.Time) (int, error) {
 	resp, err := c.info.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 		Namespace: c.info.Namespace,
-		Query:     c.scheduleVisibilityQuery(kind, scheduleID, status),
+		Query:     c.scheduleVisibilityQuery(scheduleID, status, scheduledThrough),
 	})
 	if err != nil {
 		return 0, err
@@ -534,13 +572,13 @@ func (c *tpsScheduleController) countScheduledWorkflows(ctx context.Context, kin
 	return int(resp.Count), nil
 }
 
-func (c *tpsScheduleController) listScheduledWorkflows(ctx context.Context, kind, scheduleID string, status enums.WorkflowExecutionStatus) ([]scheduledWorkflowObservation, error) {
+func (c *tpsScheduleController) listScheduledWorkflows(ctx context.Context, scheduleID string, status enums.WorkflowExecutionStatus) ([]scheduledWorkflowObservation, error) {
 	var observations []scheduledWorkflowObservation
 	var nextPageToken []byte
 	for {
 		resp, err := c.info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace:     c.info.Namespace,
-			Query:         c.scheduleVisibilityQuery(kind, scheduleID, status),
+			Query:         c.scheduleVisibilityQuery(scheduleID, status, time.Time{}),
 			NextPageToken: nextPageToken,
 		})
 		if err != nil {
@@ -550,9 +588,6 @@ func (c *tpsScheduleController) listScheduledWorkflows(ctx context.Context, kind
 			observations = append(observations, scheduledWorkflowObservation{
 				WorkflowID: execution.Execution.GetWorkflowId(),
 				RunID:      execution.Execution.GetRunId(),
-				StartTime:  timestampAsTime(execution.GetStartTime()),
-				CloseTime:  timestampAsTime(execution.GetCloseTime()),
-				Status:     execution.GetStatus(),
 			})
 		}
 		if len(resp.NextPageToken) == 0 {
@@ -562,17 +597,23 @@ func (c *tpsScheduleController) listScheduledWorkflows(ctx context.Context, kind
 	}
 }
 
-func (c *tpsScheduleController) scheduleVisibilityQuery(kind, scheduleID string, status enums.WorkflowExecutionStatus) string {
+func (c *tpsScheduleController) scheduleVisibilityQuery(scheduleID string, status enums.WorkflowExecutionStatus, scheduledThrough time.Time) string {
 	query := fmt.Sprintf("%s='%s' AND %s='%s'",
 		loadgen.OmesExecutionIDSearchAttribute, c.info.ExecutionID,
-		OmesScheduleKindSearchAttribute, kind)
-	if scheduleID != "" {
-		query += fmt.Sprintf(" AND %s='%s'", OmesScheduleIDSearchAttribute, scheduleID)
-	}
+		temporalScheduledByIDSearchAttribute, scheduleID)
 	if status != enums.WORKFLOW_EXECUTION_STATUS_UNSPECIFIED {
 		query += fmt.Sprintf(" AND ExecutionStatus = '%s'", status)
 	}
+	if !scheduledThrough.IsZero() {
+		query += fmt.Sprintf(" AND %s <= '%s'", temporalScheduledStartTimeSearchAttribute, scheduledThrough.UTC().Format(time.RFC3339Nano))
+	}
 	return query
+}
+
+func (c *tpsScheduleController) stableSchedulesFinalized() bool {
+	c.executor.lock.Lock()
+	defer c.executor.lock.Unlock()
+	return c.executor.state.StableSchedulesFinalized
 }
 
 func (c *tpsScheduleController) deleteSchedule(ctx context.Context, handle client.ScheduleHandle) error {
@@ -612,13 +653,6 @@ func isAlreadyExists(err error) bool {
 func isNotFound(err error) bool {
 	var notFound *serviceerror.NotFound
 	return errors.As(err, &notFound)
-}
-
-func timestampAsTime(ts *timestamppb.Timestamp) time.Time {
-	if ts == nil {
-		return time.Time{}
-	}
-	return ts.AsTime()
 }
 
 func parseTpsScheduleOverlapPolicies(policyStr string) ([]enums.ScheduleOverlapPolicy, error) {

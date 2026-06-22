@@ -337,8 +337,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	var scheduleController *tpsScheduleController
 	if t.config.Schedules.Enabled {
 		scheduleController = newTpsScheduleController(t, info)
-		if err := scheduleController.RegisterSearchAttributes(ctx); err != nil {
-			return fmt.Errorf("failed to register schedule search attributes: %w", err)
+		if !info.Configuration.DoNotRegisterSearchAttributes {
+			if err := info.RegisterDefaultSearchAttributes(ctx); err != nil {
+				return err
+			}
 		}
 		if err := scheduleController.StartStableSchedules(ctx); err != nil {
 			return err
@@ -419,8 +421,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
-			Query: fmt.Sprintf("%s='%s'",
-				loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
+			Query: fmt.Sprintf("%s='%s' AND %s IS NULL",
+				loadgen.OmesExecutionIDSearchAttribute,
+				info.ExecutionID,
+				temporalScheduledByIDSearchAttribute),
 		},
 		completedWorkflows,
 		t.config.VisibilityVerificationTimeout,

@@ -103,20 +103,21 @@ Validation:
 
 ## Search Attributes
 
-Scheduled workflows need their own tags in addition to `OmesExecutionID`.
+Do not add new schedule-specific search attributes. Temporal already adds useful scheduled workflow visibility attributes:
 
-Add schedule-specific keyword search attributes:
+- `TemporalScheduledById`: the schedule ID that started the workflow.
+- `TemporalScheduledStartTime`: the schedule action's scheduled start time.
 
-- `OmesScheduleKind`: `stable` or `iteration`.
-- `OmesScheduleID`: the schedule ID that started the workflow.
+Every `client.ScheduleWorkflowAction` should set `TypedSearchAttributes` with `OmesExecutionID`. The controller should register only the default `OmesExecutionID` search attribute before creating schedules, and only when `DoNotRegisterSearchAttributes` is false.
 
-Register them when schedules are enabled. Use `loadgen.InitSearchAttribute` for these optional attributes, or extend `RegisterDefaultSearchAttributes` if this should become common across scenarios.
+Use visibility queries like:
 
-Every `client.ScheduleWorkflowAction` should set:
-
-- `TypedSearchAttributes` with `OmesExecutionID`.
-- `TypedSearchAttributes` with `OmesScheduleKind`.
-- `TypedSearchAttributes` with `OmesScheduleID`.
+- Scheduled workflows for one schedule:
+  `OmesExecutionID = executionID AND TemporalScheduledById = scheduleID`.
+- Main throughput workflows only:
+  `OmesExecutionID = executionID AND TemporalScheduledById IS NULL`.
+- Stable starts inside the verification window:
+  `OmesExecutionID = executionID AND TemporalScheduledById = scheduleID AND TemporalScheduledStartTime <= stableWindowEnd`.
 
 This makes cleanup and verification reliable without depending on workflow ID prefix queries or `ScheduleDescription.Info.RecentActions`, which only contains a bounded recent history.
 
@@ -143,7 +144,7 @@ The release mode gives the "can then complete" behavior. The workflow stays open
 
 For release:
 
-- List or count open workflows with `OmesExecutionID`, `OmesScheduleKind`, and `ExecutionStatus='Running'`.
+- List or count open workflows with `OmesExecutionID`, `TemporalScheduledById`, and `ExecutionStatus='Running'`.
 - Signal each open scheduled workflow using the kitchen-sink signal payload.
 - Wait until no scheduled workflows for this execution remain running.
 
@@ -169,7 +170,7 @@ Workflow action IDs:
 w-{scheduleID}
 ```
 
-The server may append a timestamp or unique suffix to scheduled workflow IDs. Do not rely on exact workflow IDs for cleanup; rely on search attributes.
+The server may append a timestamp or unique suffix to scheduled workflow IDs. Do not rely on exact workflow IDs for cleanup; rely on `TemporalScheduledById`.
 
 Schedule spec:
 
@@ -212,12 +213,18 @@ For each stable schedule:
 
 1. Call `ListScheduleMatchingTimes(namespace, scheduleID, stableWindowStart, stableWindowEnd)`.
 2. List actual scheduled workflows with:
-   `OmesExecutionID = executionID AND OmesScheduleKind = 'stable' AND OmesScheduleID = scheduleID`.
-3. Read actual start and close times from visibility or workflow histories.
-4. Simulate the overlap policy using matching times and observed workflow intervals.
-5. Assert that the actual workflow starts match the expected starts within a tolerance.
+   `OmesExecutionID = executionID AND TemporalScheduledById = scheduleID`.
+3. For stable-window verification, cap actual starts with:
+   `TemporalScheduledStartTime <= stableWindowEnd`.
+   This prevents workflow starts from post-window matching times from satisfying the stable-window expectation.
+4. Compute the conservative minimum expected starts from the overlap policy and matching times.
+5. Release running scheduled workflows as needed and wait until the expected start count appears in visibility.
 
-The verifier should not use matching times as a raw workflow count. Matching times are opportunities, and overlap policies decide which opportunities produce workflow starts.
+The verifier should not use matching times as a raw workflow count. Matching times are opportunities, and overlap policies decide which opportunities produce workflow starts. The initial implementation should use a lower-bound check rather than an exact simulator:
+
+- `SKIP`: require at least one start in the stable window. Because skipped matches are not buffered, a release that happens after `StableWindowEnd` cannot prove a second in-window start.
+- `BUFFER_ONE`: require up to two starts from the stable-window matching times. The second start proves a buffered action drained after workflow completion.
+- `BUFFER_ALL`: require multiple starts, capped to a small verifier limit, to prove repeated buffered actions drain after completions.
 
 Expected behavior by policy:
 
@@ -384,17 +391,18 @@ Schedule-specific verification:
    - Expected completed count is deterministic:
      `CompletedIterations * iteration-schedules-per-iteration`.
    - Count completed workflows with:
-     `OmesExecutionID = executionID AND OmesScheduleKind = 'iteration' AND ExecutionStatus = 'Completed'`.
+     `OmesExecutionID = executionID AND TemporalScheduledById = scheduleID AND ExecutionStatus = 'Completed'`.
    - Wait until count reaches expected.
 
 2. Stable schedules:
    - Call `ListScheduleMatchingTimes` for each stable schedule over `StableWindowStart..StableWindowEnd`.
-   - Compute expected workflow starts from matching times, actual workflow intervals, and overlap policy.
+   - Compute conservative minimum expected workflow starts from matching times and overlap policy.
+   - Count actual starts with `TemporalScheduledStartTime <= StableWindowEnd`.
    - Assert callback-dependent starts happen:
      `BUFFER_ONE` starts one buffered workflow after completion, and `BUFFER_ALL` drains buffered matches after each completion.
    - Assert at least one completed or running workflow was started per stable schedule.
    - During finalization, release any running stable scheduled workflows.
-   - Wait until no workflows with `OmesScheduleKind = 'stable'` are running.
+   - Wait until no workflows for the stable schedule IDs are running.
    - Count completed stable scheduled workflows for summary output.
 
 3. Global failure check:
@@ -403,29 +411,35 @@ Schedule-specific verification:
 
 4. Open workflow check:
    - Add a schedule-specific no-open-workflows check after finalization:
-     `OmesExecutionID = executionID AND OmesScheduleKind IN (...) AND ExecutionStatus = 'Running'`.
+     `OmesExecutionID = executionID AND TemporalScheduledById = scheduleID AND ExecutionStatus = 'Running'`.
 
 ## Cleanup Strategy
 
 Cleanup order at the end of `Run`:
 
-1. Stop schedule production:
+1. Stop the stable verification window:
    - Record `StableWindowEnd`.
+
+2. Verify callback-dependent stable starts:
+   - Use `ListScheduleMatchingTimes` for `StableWindowStart..StableWindowEnd`.
+   - Release running workflows as needed while stable schedules are still active so `BUFFER_ONE` and `BUFFER_ALL` can drain buffered actions.
+   - Count only workflows whose `TemporalScheduledStartTime <= StableWindowEnd`.
+
+3. Stop schedule production:
    - Pause stable schedules.
    - Delete stable schedules.
    - Delete any known per-iteration schedules that remain.
 
-2. Complete scheduled workflows:
+4. Complete scheduled workflows:
    - If completion mode is `release`, signal all running scheduled workflows to set `schedule_release=true`.
    - If completion mode is `timer`, simply wait for timers to finish.
 
-3. Wait for visibility:
+5. Wait for visibility:
    - Wait for no scheduled workflows to remain running.
    - Wait for expected per-iteration scheduled workflows to be completed.
-   - Verify matching-times expected starts for stable schedules.
    - Count stable completed workflows for the scenario summary.
 
-4. Run existing failure verification.
+6. Run existing failure verification.
 
 This order avoids creating new scheduled workflows while trying to drain old ones.
 
@@ -468,24 +482,24 @@ Metrics can be deferred if this needs to stay small.
 ## Implementation Steps
 
 1. Add schedule config and flags to `scenarios/throughput_stress.go`.
-2. Add schedule-specific search attribute constants.
+2. Add constants for Temporal's built-in scheduled workflow visibility attributes.
 3. Add config parsing and validation.
 4. Add helper to build scheduled `kitchenSink` workflow inputs.
-5. Add helper to create a `client.ScheduleWorkflowAction` with typed search attributes.
+5. Add helper to create a `client.ScheduleWorkflowAction` with `OmesExecutionID` typed search attributes.
 6. Add `tpsScheduleController` with:
    - `StartStableSchedules`
    - `ExecuteIterationSchedules`
    - `FinalizeStableSchedules`
-   - `ListMatchingTimes`
+   - `listMatchingTimes`
    - `VerifyStableScheduleExpectedStarts`
-   - `ReleaseRunningScheduledWorkflows`
-   - `WaitForScheduledWorkflowsClosed`
+   - `releaseRunningScheduledWorkflows`
+   - `waitForNoRunningStableScheduledWorkflows`
 7. Refactor the current `KitchenSinkExecutor` usage into a local `GenericExecutor`.
 8. Wire per-iteration schedules into the new iteration function.
 9. Wire stable schedule start/finalize around the executor run.
 10. Extend `tpsState` and snapshot/resume handling.
-11. Add the matching-times expected-start simulator.
-12. Add schedule-specific verification after the existing visibility min-count check.
+11. Add the matching-times expected-start lower-bound verifier.
+12. Keep scheduled workflows out of the existing visibility min-count check.
 13. Update README option docs.
 14. Add tests.
 
@@ -509,6 +523,7 @@ Functional tests:
    - 1 per-iteration schedule.
    - short intervals and short workflow durations.
    - verify matching-times expected starts for `SKIP`, `BUFFER_ONE`, and `BUFFER_ALL`.
+   - verify stable starts are counted with `TemporalScheduledStartTime <= StableWindowEnd`.
    - verify no failed workflows.
    - verify no running scheduled workflows after finalization.
 3. Release-mode test:
@@ -533,7 +548,7 @@ go test ./scenarios -run TestThroughputStress -count=1
 
 If the new tests need a dev server and worker, keep durations short:
 
-- `stable-schedule-interval=500ms`
+- `stable-schedule-interval=1s`
 - `stable-schedule-workflow-duration=1s`
 - `iteration-schedule-workflow-duration=100ms`
 - `visibility-count-timeout=10s`
@@ -546,7 +561,7 @@ Mitigation: keep interval conservative by default, cap the stable verification w
 
 Risk: schedule recent action history is bounded.
 
-Mitigation: rely on typed search attributes for cleanup and verification.
+Mitigation: rely on `OmesExecutionID` plus Temporal's built-in `TemporalScheduledById` and `TemporalScheduledStartTime` visibility attributes for cleanup and verification.
 
 Risk: matching-times verification can be flaky if the stable window boundaries are ambiguous.
 
@@ -558,7 +573,7 @@ Mitigation: keep scheduled workflows out of the main throughput denominator by d
 
 Risk: schedule create happens before default search attributes are registered.
 
-Mitigation: explicitly register required search attributes before creating schedules when `include-schedules=true`.
+Mitigation: explicitly register the default `OmesExecutionID` search attribute before creating schedules when `include-schedules=true` and search attribute registration is enabled.
 
 Risk: cross-SDK compatibility.
 
