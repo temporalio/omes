@@ -192,7 +192,6 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
   end
   # rubocop:enable Metrics
 
-  # rubocop:disable Metrics
   def launch_activity(exec_activity)
     act_type, args = ActivityDispatch.name_and_args(exec_activity)
 
@@ -222,7 +221,6 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
       Temporalio::Workflow.execute_activity(act_type, *args, **options)
     end
   end
-  # rubocop:enable Metrics
 
   def handle_awaitable_choice(
     start_fn,
