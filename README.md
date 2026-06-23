@@ -377,6 +377,18 @@ any workflow context via `StartActivityExecution`) with `--option include-standa
 This requires server support for standalone activities (dynamic config `activity.enableStandalone`).
 Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
+#### Nexus operation with a standalone activity
+
+The throughput_stress scenario can also exercise a Nexus operation whose handler starts a standalone
+activity and attaches a completion callback so the activity's completion asynchronously resolves the
+operation. Enable it with `--option include-nexus-standalone-activity=true` (also requires
+`--option nexus-endpoint=...`). The same operation is driven through two paths each iteration: once as an
+in-workflow Nexus operation (from the kitchen sink workflow) and once as a standalone Nexus operation
+(via `StartNexusOperationExecution`). This requires server support for standalone activities and activity
+completion callbacks (dynamic config `activity.enableStandalone` and `activity.enableCallbacks`), plus a
+Nexus callback URL (`component.nexusoperations.useSystemCallbackURL`). Implemented for the Go worker; other
+SDKs reject the operation until they add support.
+
 ### Fuzzer
 
 The fuzzer scenario makes use of the kitchen sink workflow (see below) to exercise a wide

@@ -52,6 +52,13 @@ const (
 	// Requires server support for standalone activities (dynamic config `activity.enableStandalone`).
 	// Default is false.
 	IncludeStandaloneActivityFlag = "include-standalone-activity"
+	// IncludeNexusStandaloneActivityFlag enables a Nexus operation whose handler starts a standalone
+	// activity and attaches a completion callback so the activity resolves the operation. It is exercised
+	// both as an in-workflow Nexus operation and as a standalone Nexus operation.
+	// Requires nexus-endpoint to also be set, plus server support for standalone activities and activity
+	// completion callbacks (dynamic config `activity.enableStandalone` and `activity.enableCallbacks`).
+	// Default is false.
+	IncludeNexusStandaloneActivityFlag = "include-nexus-standalone-activity"
 )
 
 type tpsState struct {
@@ -65,21 +72,22 @@ type tpsState struct {
 }
 
 type tpsConfig struct {
-	InternalIterations            int
-	InternalIterTimeout           time.Duration
-	ContinueAsNewAfterIter        int
-	NexusEndpoint                 string
-	SleepTime                     time.Duration
-	SleepActivities               *loadgen.SleepActivityConfig
-	VisibilityVerificationTimeout time.Duration
-	MinThroughputPerHour          float64
-	ScenarioRunID                 string
-	ExecutionID                   string
-	RngSeed                       int64
-	IncludeRetryScenarios         bool
-	IncludeDescribe               bool
-	IncludeStandaloneNexus        bool
-	IncludeStandaloneActivity     bool
+	InternalIterations             int
+	InternalIterTimeout            time.Duration
+	ContinueAsNewAfterIter         int
+	NexusEndpoint                  string
+	SleepTime                      time.Duration
+	SleepActivities                *loadgen.SleepActivityConfig
+	VisibilityVerificationTimeout  time.Duration
+	MinThroughputPerHour           float64
+	ScenarioRunID                  string
+	ExecutionID                    string
+	RngSeed                        int64
+	IncludeRetryScenarios          bool
+	IncludeDescribe                bool
+	IncludeStandaloneNexus         bool
+	IncludeStandaloneActivity      bool
+	IncludeNexusStandaloneActivity bool
 }
 
 type tpsExecutor struct {
@@ -97,8 +105,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag, IncludeNexusStandaloneActivityFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -185,6 +193,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
 	}
 	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
+	config.IncludeNexusStandaloneActivity = info.ScenarioOptionBool(IncludeNexusStandaloneActivityFlag, false)
+	if config.IncludeNexusStandaloneActivity && config.NexusEndpoint == "" {
+		return fmt.Errorf("%s requires %s to be set", IncludeNexusStandaloneActivityFlag, NexusEndpointFlag)
+	}
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -457,6 +469,14 @@ func (t *tpsExecutor) createActionsChunk(
 					t.createStandaloneNexusOperationAction("echo-sync"),
 				)
 			}
+			if t.config.IncludeNexusStandaloneActivity {
+				asyncActions = append(asyncActions,
+					// In-workflow path: the workflow invokes the Nexus operation that starts a standalone activity.
+					t.createNexusStandaloneActivityAction(),
+					// Standalone path: the same Nexus operation is invoked outside any workflow context.
+					t.createStandaloneNexusOperationAction("standalone-activity"),
+				)
+			}
 		}
 
 		// Add standalone activities, if configured.
@@ -677,6 +697,20 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 						CancelAfterStarted: &emptypb.Empty{},
 					},
 				},
+			},
+		},
+	}
+}
+
+// createNexusStandaloneActivityAction invokes, from within the workflow, the Nexus operation whose handler
+// starts a standalone activity and resolves the operation via the activity's completion callback. No
+// ExpectedOutput is set: the operation result is the standalone activity's (empty) result, which is ignored.
+func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{
+			NexusOperation: &ExecuteNexusOperation{
+				Endpoint:  t.config.NexusEndpoint,
+				Operation: "standalone-activity",
 			},
 		},
 	}

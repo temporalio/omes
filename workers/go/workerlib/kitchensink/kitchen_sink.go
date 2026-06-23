@@ -4,17 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math/rand"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
+	taskqueuepb "go.temporal.io/api/taskqueue/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const KitchenSinkServiceName = "kitchen-sink"
@@ -573,3 +579,105 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Nex
 		ID: opts.RequestID,
 	}, nil
 })
+
+// StandaloneActivityNexusOperationName is the registered name of StandaloneActivityNexusOperation.
+const StandaloneActivityNexusOperationName = "standalone-activity"
+
+type standaloneActivityNexusOperation struct {
+	nexus.UnimplementedOperation[*kitchensink.NexusHandlerInput, string]
+}
+
+// StandaloneActivityNexusOperation is a Nexus operation whose handler starts a standalone activity
+// (an activity started outside any workflow context, via StartActivityExecution) and attaches a Nexus
+// completion callback so the activity's completion asynchronously resolves the operation. The handler
+// returns immediately with an async result; the operation is later completed by the server when the
+// standalone activity finishes and invokes the callback.
+//
+// Its input/output types match the echo operations (*NexusHandlerInput / string) so it is invocable
+// through both omes Nexus paths without any executor changes: as an in-workflow Nexus operation (via the
+// kitchen sink ExecuteNexusOperation action) and as a standalone Nexus operation (via the
+// DoStandaloneNexusOperation client action). This mirrors the bench-go
+// EnableNexusOperationWithStandaloneActivity feature (NEXUS-434).
+//
+// Requires server support for standalone activities (dynamic config activity.enableStandalone) and
+// activity completion callbacks (activity.enableCallbacks), plus a Nexus callback URL
+// (component.nexusoperations.useSystemCallbackURL).
+var StandaloneActivityNexusOperation = &standaloneActivityNexusOperation{}
+
+func (*standaloneActivityNexusOperation) Name() string {
+	return StandaloneActivityNexusOperationName
+}
+
+func (*standaloneActivityNexusOperation) Start(
+	ctx context.Context,
+	_ *kitchensink.NexusHandlerInput,
+	opts nexus.StartOperationOptions,
+) (nexus.HandlerStartOperationResult[string], error) {
+	if opts.CallbackURL == "" {
+		return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "callback URL is required")
+	}
+
+	info := temporalnexus.GetOperationInfo(ctx)
+
+	// Derive the standalone activity ID (and operation token) from the Nexus request ID. The request ID is
+	// persisted on the server, so the handler is idempotent across retries: USE_EXISTING re-attaches to the
+	// activity a prior attempt already created instead of failing on an ID conflict.
+	activityID := "nexus-standalone-activity-" + opts.RequestID
+	operationToken := activityID
+
+	// The completion callback carries the operation token so the server can route the standalone
+	// activity's completion back to this operation.
+	callbackHeader := nexus.Header{}
+	maps.Copy(callbackHeader, opts.CallbackHeader)
+	callbackHeader.Set(nexus.HeaderOperationToken, operationToken)
+
+	// Start a noop activity on the worker's own task queue. The activity is the standalone unit of work
+	// whose completion resolves this operation.
+	req := &workflowservice.StartActivityExecutionRequest{
+		Namespace:           info.Namespace,
+		RequestId:           activityID,
+		ActivityId:          activityID,
+		ActivityType:        &common.ActivityType{Name: "noop"},
+		TaskQueue:           &taskqueuepb.TaskQueue{Name: info.TaskQueue, Kind: enumspb.TASK_QUEUE_KIND_NORMAL},
+		StartToCloseTimeout: durationpb.New(30 * time.Second),
+		IdConflictPolicy:    enumspb.ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING,
+		RetryPolicy: &common.RetryPolicy{
+			MaximumAttempts:    3,
+			InitialInterval:    durationpb.New(100 * time.Millisecond),
+			BackoffCoefficient: 1,
+		},
+		CompletionCallbacks: []*common.Callback{
+			newNexusCompletionCallback(opts.CallbackURL, callbackHeader),
+		},
+		OnConflictOptions: &common.OnConflictOptions{
+			AttachCompletionCallbacks: true,
+			AttachRequestId:           true,
+		},
+	}
+
+	if _, err := temporalnexus.GetClient(ctx).WorkflowService().StartActivityExecution(ctx, req); err != nil {
+		// Translate namespace handover into a retryable error so migration pipelines don't fail the operation.
+		var notActive *serviceerror.NamespaceNotActive
+		if errors.As(err, &notActive) {
+			return nil, nexus.HandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
+		}
+		return nil, fmt.Errorf("StartActivityExecution failed: %w", err)
+	}
+
+	return &nexus.HandlerStartOperationResultAsync{OperationToken: operationToken}, nil
+}
+
+// newNexusCompletionCallback builds a Nexus completion callback targeting callbackURL. The supplied
+// headers are copied defensively so the returned callback is unaffected by later mutation of the source map.
+func newNexusCompletionCallback(callbackURL string, header nexus.Header) *common.Callback {
+	headerCopy := make(map[string]string, len(header))
+	maps.Copy(headerCopy, header)
+	return &common.Callback{
+		Variant: &common.Callback_Nexus_{
+			Nexus: &common.Callback_Nexus{
+				Url:    callbackURL,
+				Header: headerCopy,
+			},
+		},
+	}
+}

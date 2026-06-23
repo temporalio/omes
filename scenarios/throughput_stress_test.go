@@ -72,3 +72,45 @@ func TestThroughputStress(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully when resuming from end")
 	})
 }
+
+// TestThroughputStressNexusStandaloneActivity exercises the include-nexus-standalone-activity option:
+// a Nexus operation whose handler starts a standalone activity and attaches a completion callback so the
+// activity resolves the operation. It is driven both as an in-workflow Nexus operation and as a standalone
+// Nexus operation. Requires server support for standalone activities and activity completion callbacks.
+func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
+	t.Parallel()
+
+	runID := fmt.Sprintf("tps-nsa-%d", time.Now().Unix())
+
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute),
+		workertest.WithNexusEndpoint(runID),
+		// Opt-in feature gates required by the nexus-operation-with-standalone-activity flow.
+		workertest.WithDynamicConfig(map[string]any{
+			"activity.enableStandalone":       true,
+			"activity.enableCallbacks":        true,
+			"nexusoperation.enableStandalone": true,
+		}))
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID: runID,
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 2,
+		},
+		ScenarioOptions: map[string]string{
+			IterFlag:                           "2",
+			ContinueAsNewAfterIterFlag:         "1",
+			NexusEndpointFlag:                  env.NexusEndpointName(),
+			IncludeNexusStandaloneActivityFlag: "true",
+			SleepTimeFlag:                      "1ms",
+			VisibilityVerificationTimeoutFlag:  "10s",
+		},
+	}
+
+	executor := newThroughputStressExecutor()
+	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "Executor should complete successfully with nexus standalone activity enabled")
+
+	state := executor.Snapshot().(tpsState)
+	require.Equal(t, 2, state.CompletedIterations)
+}
