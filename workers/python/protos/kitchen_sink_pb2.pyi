@@ -216,7 +216,7 @@ class ActionSet(_message.Message):
     def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., concurrent: bool = ...) -> None: ...
 
 class Action(_message.Message):
-    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation")
+    __slots__ = ("timer", "exec_activity", "exec_child_workflow", "await_workflow_state", "send_signal", "cancel_workflow", "set_patch_marker", "upsert_search_attributes", "upsert_memo", "set_workflow_state", "return_result", "return_error", "continue_as_new", "nested_action_set", "nexus_operation", "await_pending_actions")
     TIMER_FIELD_NUMBER: _ClassVar[int]
     EXEC_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     EXEC_CHILD_WORKFLOW_FIELD_NUMBER: _ClassVar[int]
@@ -232,6 +232,7 @@ class Action(_message.Message):
     CONTINUE_AS_NEW_FIELD_NUMBER: _ClassVar[int]
     NESTED_ACTION_SET_FIELD_NUMBER: _ClassVar[int]
     NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
+    AWAIT_PENDING_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     timer: TimerAction
     exec_activity: ExecuteActivityAction
     exec_child_workflow: ExecuteChildWorkflowAction
@@ -247,21 +248,24 @@ class Action(_message.Message):
     continue_as_new: ContinueAsNewAction
     nested_action_set: ActionSet
     nexus_operation: ExecuteNexusOperation
-    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ...) -> None: ...
+    await_pending_actions: AwaitPendingActions
+    def __init__(self, timer: _Optional[_Union[TimerAction, _Mapping]] = ..., exec_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., exec_child_workflow: _Optional[_Union[ExecuteChildWorkflowAction, _Mapping]] = ..., await_workflow_state: _Optional[_Union[AwaitWorkflowState, _Mapping]] = ..., send_signal: _Optional[_Union[SendSignalAction, _Mapping]] = ..., cancel_workflow: _Optional[_Union[CancelWorkflowAction, _Mapping]] = ..., set_patch_marker: _Optional[_Union[SetPatchMarkerAction, _Mapping]] = ..., upsert_search_attributes: _Optional[_Union[UpsertSearchAttributesAction, _Mapping]] = ..., upsert_memo: _Optional[_Union[UpsertMemoAction, _Mapping]] = ..., set_workflow_state: _Optional[_Union[WorkflowState, _Mapping]] = ..., return_result: _Optional[_Union[ReturnResultAction, _Mapping]] = ..., return_error: _Optional[_Union[ReturnErrorAction, _Mapping]] = ..., continue_as_new: _Optional[_Union[ContinueAsNewAction, _Mapping]] = ..., nested_action_set: _Optional[_Union[ActionSet, _Mapping]] = ..., nexus_operation: _Optional[_Union[ExecuteNexusOperation, _Mapping]] = ..., await_pending_actions: _Optional[_Union[AwaitPendingActions, _Mapping]] = ...) -> None: ...
 
 class AwaitableChoice(_message.Message):
-    __slots__ = ("wait_finish", "abandon", "cancel_before_started", "cancel_after_started", "cancel_after_completed")
+    __slots__ = ("wait_finish", "abandon", "cancel_before_started", "cancel_after_started", "cancel_after_completed", "wait_started")
     WAIT_FINISH_FIELD_NUMBER: _ClassVar[int]
     ABANDON_FIELD_NUMBER: _ClassVar[int]
     CANCEL_BEFORE_STARTED_FIELD_NUMBER: _ClassVar[int]
     CANCEL_AFTER_STARTED_FIELD_NUMBER: _ClassVar[int]
     CANCEL_AFTER_COMPLETED_FIELD_NUMBER: _ClassVar[int]
+    WAIT_STARTED_FIELD_NUMBER: _ClassVar[int]
     wait_finish: _empty_pb2.Empty
     abandon: _empty_pb2.Empty
     cancel_before_started: _empty_pb2.Empty
     cancel_after_started: _empty_pb2.Empty
     cancel_after_completed: _empty_pb2.Empty
-    def __init__(self, wait_finish: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., abandon: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_before_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_completed: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ...) -> None: ...
+    wait_started: _empty_pb2.Empty
+    def __init__(self, wait_finish: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., abandon: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_before_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., cancel_after_completed: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., wait_started: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ...) -> None: ...
 
 class TimerAction(_message.Message):
     __slots__ = ("milliseconds", "awaitable_choice")
@@ -576,7 +580,7 @@ class RemoteActivityOptions(_message.Message):
     def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
-    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output", "before_actions")
+    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output", "before_actions", "handler_workflow_id", "handler_workflow_id_conflict_policy", "wait_for_signal")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -591,6 +595,9 @@ class ExecuteNexusOperation(_message.Message):
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
     BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER: _ClassVar[int]
+    WAIT_FOR_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     endpoint: str
     operation: str
     input: str
@@ -598,12 +605,25 @@ class ExecuteNexusOperation(_message.Message):
     awaitable_choice: AwaitableChoice
     expected_output: str
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+    handler_workflow_id: str
+    handler_workflow_id_conflict_policy: _workflow_pb2.WorkflowIdConflictPolicy
+    wait_for_signal: bool
+    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[str] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., handler_workflow_id: _Optional[str] = ..., handler_workflow_id_conflict_policy: _Optional[_Union[_workflow_pb2.WorkflowIdConflictPolicy, str]] = ..., wait_for_signal: bool = ...) -> None: ...
 
 class NexusHandlerInput(_message.Message):
-    __slots__ = ("input", "before_actions")
+    __slots__ = ("input", "before_actions", "handler_workflow_id", "handler_workflow_id_conflict_policy", "wait_for_signal")
     INPUT_FIELD_NUMBER: _ClassVar[int]
     BEFORE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
+    HANDLER_WORKFLOW_ID_CONFLICT_POLICY_FIELD_NUMBER: _ClassVar[int]
+    WAIT_FOR_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     input: str
     before_actions: _containers.RepeatedCompositeFieldContainer[ActionSet]
-    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ...) -> None: ...
+    handler_workflow_id: str
+    handler_workflow_id_conflict_policy: _workflow_pb2.WorkflowIdConflictPolicy
+    wait_for_signal: bool
+    def __init__(self, input: _Optional[str] = ..., before_actions: _Optional[_Iterable[_Union[ActionSet, _Mapping]]] = ..., handler_workflow_id: _Optional[str] = ..., handler_workflow_id_conflict_policy: _Optional[_Union[_workflow_pb2.WorkflowIdConflictPolicy, str]] = ..., wait_for_signal: bool = ...) -> None: ...
+
+class AwaitPendingActions(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
