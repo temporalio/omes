@@ -14,7 +14,7 @@ import (
 // Using human-readable JSON encoding for payloads to aid with debugging.
 var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
 
-// PayloadNexusInput is the input/output shape for the "payload-sync" Nexus operation.
+// PayloadNexusInput is the input/output shape for the "payload-sync" and "payload-async" Nexus operations.
 type PayloadNexusInput struct {
 	Input         []byte
 	BytesToReturn int32

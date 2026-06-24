@@ -603,6 +603,14 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 	return input.Input, nil
 }
 
+func PayloadNexusHandlerWorkflow(_ workflow.Context, input *kitchensink.PayloadNexusInput) ([]byte, error) {
+	out := make([]byte, input.BytesToReturn)
+	for i := range out {
+		out[i] = byte(i % 256)
+	}
+	return out, nil
+}
+
 // EchoSyncOperation returns the input synchronously without starting a workflow.
 var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
 	if len(input.BeforeActions) > 0 {
@@ -624,4 +632,10 @@ var PayloadSyncOperation = nexus.NewSyncOperation("payload-sync", func(_ context
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
 	rand.Read(out)
 	return out, nil
+})
+
+var PayloadAsyncOperation = temporalnexus.NewWorkflowRunOperation("payload-async", PayloadNexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.PayloadNexusInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	return client.StartWorkflowOptions{
+		ID: opts.RequestID,
+	}, nil
 })
