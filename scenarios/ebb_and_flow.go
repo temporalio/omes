@@ -230,7 +230,9 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 	}
 
-	e.RegisterDefaultSearchAttributes(ctx)
+	if err := e.RegisterDefaultSearchAttributes(ctx); err != nil {
+		return fmt.Errorf("failed to register search attributes: %w", err)
+	}
 
 	var started, completed, backlog, target int64
 	lastIteration := time.Now()
