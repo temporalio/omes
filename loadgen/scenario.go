@@ -428,14 +428,13 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
+				r.Logger.Error("Client actions failed: ", err)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag
-				err := r.Client.TerminateWorkflow(
-					ctx, options.StartOptions.ID, "", "client actions failed", nil)
-				if err != nil {
-					return
+				if terminateErr := r.Client.TerminateWorkflow(
+					ctx, options.StartOptions.ID, "", "client actions failed", nil); terminateErr != nil {
+					r.Logger.Errorf("Failed to terminate workflow after client actions failure: %v", terminateErr)
 				}
 			}
 		}()
