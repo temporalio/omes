@@ -64,7 +64,7 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		}
 		cert, err := tls.LoadX509KeyPair(c.ClientCertPath, c.ClientKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load certs: %s", err)
+			return nil, fmt.Errorf("failed to load certs: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		return tlsConfig, nil
