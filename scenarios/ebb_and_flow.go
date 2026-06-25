@@ -281,7 +281,9 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Start workflow.
 	run := e.NewRun(int(iteration))
-	e.RegisterDefaultSearchAttributes(ctx)
+	if err := e.RegisterDefaultSearchAttributes(ctx); err != nil {
+		return fmt.Errorf("failed to register search attributes for iteration %d: %w", iteration, err)
+	}
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
