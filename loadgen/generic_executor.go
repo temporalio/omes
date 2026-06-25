@@ -151,11 +151,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 
 				backoff, retry := run.ShouldRetry(err)
 				if retry {
+					// Transient: this attempt is superseded by the retry and
+					// never propagated, so log it here as the only record.
 					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
 					g.logger.Error(err)
 				} else {
+					// Terminal: propagated via doneCh and reported by Run's
+					// caller, so don't also log it here.
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-					g.logger.Error(err)
 					break retryLoop
 				}
 
