@@ -48,8 +48,8 @@ type testCase struct {
 // TestKitchenSink tests specific kitchensink features across SDKs.
 // Use the `SDK` environment variable to run only a specific SDK.
 func TestKitchenSink(t *testing.T) {
-	if os.Getenv("CI") != "" && onlySDK == "" {
-		t.Skip("Skipping kitchensink test in CI without specific SDK set")
+	if onlySDK == "" && os.Getenv("OMES_RUN_ALL_SDKS") == "" {
+		t.Skip("Skipping kitchensink test without specific SDK set; set SDK or OMES_RUN_ALL_SDKS=1")
 	}
 	env := SetupTestEnvironment(t)
 

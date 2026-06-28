@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,6 +29,8 @@ const (
 	workerBuildTimeout    = 1 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
 )
+
+var testBuildDirSequence atomic.Uint64
 
 // Functional options configuration
 type testEnvConfig struct {
@@ -62,6 +65,7 @@ type TestEnvironment struct {
 	temporalClient    client.Client
 	baseDir           string
 	buildDir          string
+	buildDirNameValue string
 	repoDir           string
 	nexusEndpointName string
 	workerPool        *workerPool
@@ -115,6 +119,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		repoDir:        repoDir,
 		createdAt:      time.Now(),
 	}
+	env.buildDirNameValue = fmt.Sprintf("omes-temp-%d-%d", env.createdAt.UnixMilli(), testBuildDirSequence.Add(1))
 	env.workerPool = NewWorkerPool(env)
 
 	// Optionally create a Nexus endpoint
@@ -213,5 +218,8 @@ func (env *TestEnvironment) RunExecutorTest(
 }
 
 func (env *TestEnvironment) buildDirName() string {
-	return fmt.Sprintf("omes-temp-%d", env.createdAt.UnixMilli())
+	if env.buildDirNameValue == "" {
+		env.buildDirNameValue = fmt.Sprintf("omes-temp-%d-%d", env.createdAt.UnixMilli(), testBuildDirSequence.Add(1))
+	}
+	return env.buildDirNameValue
 }
