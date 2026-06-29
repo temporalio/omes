@@ -58,56 +58,66 @@ func MinVisibilityCountEventually(
 	minCount int,
 	waitAtMost time.Duration,
 ) error {
+	lastPrint := time.Now()
+	return retryVisibilityCount(
+		ctx,
+		int64(minCount),
+		waitAtMost,
+		3*time.Second,
+		func(countCtx context.Context) (int64, error) {
+			visibilityCount, err := info.Client.CountWorkflow(countCtx, request)
+			if err != nil {
+				return 0, err
+			}
+			if time.Since(lastPrint) >= 30*time.Second {
+				info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
+					visibilityCount.Count, minCount)
+				lastPrint = time.Now()
+			}
+			return visibilityCount.Count, nil
+		},
+	)
+}
+
+func retryVisibilityCount(
+	ctx context.Context,
+	minCount int64,
+	waitAtMost time.Duration,
+	retryInterval time.Duration,
+	count func(context.Context) (int64, error),
+) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, waitAtMost)
 	defer cancel()
-
-	countTicker := time.NewTicker(3 * time.Second)
-	defer countTicker.Stop()
-
-	printTicker := time.NewTicker(30 * time.Second)
-	defer printTicker.Stop()
-
-	var lastVisibilityCount int64
-	done := false
-
-	check := func() error {
-		visibilityCount, err := info.Client.CountWorkflow(timeoutCtx, request)
-		if err != nil {
-			return fmt.Errorf("failed to count workflows in visibility: %w", err)
+	var lastCount int64
+	var lastErr error
+	for {
+		current, err := count(timeoutCtx)
+		if err == nil {
+			lastCount = current
+			lastErr = nil
+			if current >= minCount {
+				return nil
+			}
+		} else {
+			lastErr = err
 		}
-		lastVisibilityCount = visibilityCount.Count
-		if lastVisibilityCount >= int64(minCount) {
-			done = true
-		}
-		return nil
-	}
-
-	// Initial check before entering the loop.
-	if err := check(); err != nil {
-		return err
-	}
-
-	// Loop until we reach the desired count or timeout.
-	for !done {
+		timer := time.NewTimer(retryInterval)
 		select {
 		case <-timeoutCtx.Done():
+			timer.Stop()
+			if lastErr != nil {
+				return fmt.Errorf(
+					"expected at least %d workflows in visibility, got %d after waiting %v; last count error: %w",
+					minCount, lastCount, waitAtMost, lastErr,
+				)
+			}
 			return fmt.Errorf(
 				"expected at least %d workflows in visibility, got %d after waiting %v",
-				minCount, lastVisibilityCount, waitAtMost,
+				minCount, lastCount, waitAtMost,
 			)
-
-		case <-printTicker.C:
-			info.Logger.Infof("current visibility count: %d (expected at least: %d)\n",
-				lastVisibilityCount, minCount)
-
-		case <-countTicker.C:
-			if err := check(); err != nil {
-				return err
-			}
+		case <-timer.C:
 		}
 	}
-
-	return nil
 }
 
 // VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
