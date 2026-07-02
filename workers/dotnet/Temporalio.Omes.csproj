@@ -16,7 +16,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
         <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
-        <PackageReference Include="Temporalio" Version="1.15.0">
+        <PackageReference Include="Temporalio" Version="1.16.0">
             <!--
               We have to make sure this isn't included transitively so it can be
               overridden.
