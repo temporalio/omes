@@ -49,6 +49,7 @@ type ebbAndFlowConfig struct {
 	MaxConsecutiveErrors          int
 	BacklogLogInterval            time.Duration
 	VisibilityVerificationTimeout time.Duration
+	VerifyVisibility              bool
 	SleepActivityConfig           *loadgen.SleepActivityConfig
 }
 
@@ -97,6 +98,7 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
 		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
 		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+		VerifyVisibility:              info.ScenarioOptionBool(VerifyVisibilityFlag, true),
 	}
 
 	config.MinBacklog = int64(info.ScenarioOptionInt(MinBacklogFlag, 0))
@@ -224,23 +226,26 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
 	}
 
-	// Post-scenario: verify reported workflow completion count from Visibility.
-	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
-		e.ScenarioInfo,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: e.Namespace,
-			Query: fmt.Sprintf("%s='%s'",
-				loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID),
-		},
-		totalCompletedWorkflows,
-		config.VisibilityVerificationTimeout,
-	); err != nil {
-		return err
-	}
+	if config.VerifyVisibility {
+		// Post-scenario: verify reported workflow completion count from Visibility.
+		if err := loadgen.MinVisibilityCountEventually(
+			ctx,
+			e.ScenarioInfo,
+			&workflowservice.CountWorkflowExecutionsRequest{
+				Namespace: e.Namespace,
+				Query: fmt.Sprintf("%s='%s'",
+					loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID),
+			},
+			totalCompletedWorkflows,
+			config.VisibilityVerificationTimeout,
+		); err != nil {
+			return err
+		}
 
-	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
+		// Post-scenario: ensure there are no failed or terminated workflows for this run.
+		return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
+	}
+	return nil
 }
 
 // Snapshot returns a snapshot of the current state.

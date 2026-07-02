@@ -114,3 +114,13 @@ func TestEbbAndFlow(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully")
 	})
 }
+
+func TestEbbAndFlowCanDisableVisibilityVerification(t *testing.T) {
+	executor := newEbbAndFlowExecutor()
+	info := loadgen.ScenarioInfo{
+		ScenarioOptions: map[string]string{VerifyVisibilityFlag: "false"},
+	}
+
+	require.NoError(t, executor.Configure(info))
+	require.False(t, executor.config.VerifyVisibility)
+}

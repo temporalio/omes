@@ -73,3 +73,15 @@ func TestThroughputStress(t *testing.T) {
 		require.NoError(t, err, "Executor should complete successfully when resuming from end")
 	})
 }
+
+func TestThroughputStressCanDisableVisibilityVerification(t *testing.T) {
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:           "run-1",
+		ExecutionID:     "execution-1",
+		ScenarioOptions: map[string]string{VerifyVisibilityFlag: "false"},
+	}
+
+	require.NoError(t, executor.Configure(info))
+	require.False(t, executor.config.VerifyVisibility)
+}

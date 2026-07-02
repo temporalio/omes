@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"fmt"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -83,6 +84,26 @@ func init() {
 							},
 						},
 					)
+					return nil
+				},
+				UpdateWorkflowOptions: func(_ context.Context, run *loadgen.Run, options *loadgen.KitchenSinkWorkflowOptions) error {
+					childIndex := 0
+					for _, actionSet := range options.Params.WorkflowInput.InitialActions {
+						for _, action := range actionSet.Actions {
+							child := action.GetExecChildWorkflow()
+							if child == nil {
+								continue
+							}
+							child.WorkflowId = fmt.Sprintf(
+								"%s-%s-%d-child-wf-%d",
+								run.RunID,
+								run.ExecutionID,
+								run.Iteration,
+								childIndex,
+							)
+							childIndex++
+						}
+					}
 					return nil
 				},
 			}

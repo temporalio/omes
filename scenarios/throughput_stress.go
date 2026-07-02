@@ -39,6 +39,9 @@ const (
 	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
+	// VerifyVisibilityFlag controls the post-load visibility count and failed-workflow checks.
+	// Default is true.
+	VerifyVisibilityFlag = "verify-visibility"
 )
 
 type tpsState struct {
@@ -64,6 +67,7 @@ type tpsConfig struct {
 	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
+	VerifyVisibility              bool
 }
 
 type tpsExecutor struct {
@@ -163,6 +167,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
+	config.VerifyVisibility = info.ScenarioOptionBool(VerifyVisibilityFlag, true)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -290,19 +295,26 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	var tpsErrors []error
 
-	// Post-scenario: verify reported workflow completion count from Visibility.
-	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
-		info,
-		&workflowservice.CountWorkflowExecutionsRequest{
-			Namespace: info.Namespace,
-			Query: fmt.Sprintf("%s='%s'",
-				loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
-		},
-		completedWorkflows,
-		t.config.VisibilityVerificationTimeout,
-	); err != nil {
-		tpsErrors = append(tpsErrors, err)
+	if t.config.VerifyVisibility {
+		// Post-scenario: verify reported workflow completion count from Visibility.
+		if err := loadgen.MinVisibilityCountEventually(
+			ctx,
+			info,
+			&workflowservice.CountWorkflowExecutionsRequest{
+				Namespace: info.Namespace,
+				Query: fmt.Sprintf("%s='%s'",
+					loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
+			},
+			completedWorkflows,
+			t.config.VisibilityVerificationTimeout,
+		); err != nil {
+			tpsErrors = append(tpsErrors, err)
+		}
+
+		// Post-scenario: ensure there are no failed or terminated workflows for this run.
+		if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
+			tpsErrors = append(tpsErrors, err)
+		}
 	}
 
 	// Post-scenario: check throughput threshold
@@ -321,11 +333,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				totalDuration.Round(time.Second))
 			tpsErrors = append(tpsErrors, err)
 		}
-	}
-
-	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
-		tpsErrors = append(tpsErrors, err)
 	}
 
 	return errors.Join(tpsErrors...)
