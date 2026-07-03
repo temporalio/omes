@@ -370,6 +370,8 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
 		actType = "heartbeat"
 		args = append(args, heartbeat)
+	} else if generic := act.GetGeneric(); generic != nil {
+		actType = generic.Type
 	}
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
@@ -501,6 +503,19 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 
 // Noop is used as a no-op activity.
 func Noop(_ context.Context) error {
+	return nil
+}
+
+func MatchedResource(_ context.Context) error {
+	buffer := make([]byte, 65_536)
+	var sink uint64
+	for i := 0; i < 25_000; i++ {
+		sink += uint64(i + 1)
+		buffer[i%len(buffer)] = byte(sink)
+	}
+	if len(buffer) == 0 {
+		return errors.New("resource buffer was not allocated")
+	}
 	return nil
 }
 

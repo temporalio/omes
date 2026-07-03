@@ -15,6 +15,10 @@ type visibilityQueryExecutor struct {
 	completed atomic.Int64
 }
 
+func visibilityWorkflowQuery(runID string) string {
+	return fmt.Sprintf(`WorkflowId STARTS_WITH %q`, "w-"+runID+"-")
+}
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Each iteration starts and completes one simple workflow, then verifies visibility count for the run.",
@@ -55,7 +59,7 @@ func (v *visibilityQueryExecutor) Run(ctx context.Context, info loadgen.Scenario
 		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
-			Query:     fmt.Sprintf("%s='%s'", loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID),
+			Query:     visibilityWorkflowQuery(info.RunID),
 		},
 		int(completed),
 		timeout,
