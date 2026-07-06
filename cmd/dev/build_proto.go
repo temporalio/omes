@@ -13,10 +13,13 @@ import (
 func buildProtoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "build-proto",
-		Short: "Build kitchen-sink proto",
-		Long:  "Build the kitchen-sink proto files",
+		Short: "Build proto files",
+		Long:  "Build the kitchen-sink and harness proto files",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBuildKitchensink(cmd.Context())
+			if err := runBuildKitchensink(cmd.Context()); err != nil {
+				return err
+			}
+			return runBuildHarnessProto(cmd.Context())
 		},
 	}
 }
@@ -59,5 +62,26 @@ func runBuildKitchensink(ctx context.Context) error {
 	}
 
 	fmt.Println("✅ Kitchen-sink proto build complete!")
+	return nil
+}
+
+func runBuildHarnessProto(ctx context.Context) error {
+	fmt.Println("Building harness proto...")
+
+	if err := checkTool(ctx, "buf"); err != nil {
+		return err
+	}
+
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return err
+	}
+
+	harnessProtoDir := filepath.Join(repoDir, "workers", "proto")
+	if err := runCommandInDir(ctx, harnessProtoDir, "buf", "generate"); err != nil {
+		return err
+	}
+
+	fmt.Println("✅ Harness proto build complete!")
 	return nil
 }

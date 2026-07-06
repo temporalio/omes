@@ -1,14 +1,17 @@
 {
   "name": "omes",
   "version": "0.1.0",
+  "private": true,
   "scripts": {
     "build": "npm run proto-gen && tsc --build",
     "build.watch": "tsc --build --watch",
-    "clean": "rm -rf node_modules dist build",
+    "clean": "rm -rf node_modules lib dist-test harness/api workerlib/kitchensink/protos/json-module.js workerlib/kitchensink/protos/root.d.ts",
     "proto-gen": "node ./protogen.js",
     "lint": "eslint .",
     "lint-ci": "eslint . && prettier --check .",
     "format": "prettier --write .",
+    "test:harness": "npm run harness:build-test && node --test dist-test/harness/tests/*.test.js",
+    "harness:build-test": "rm -rf dist-test && npm run proto-gen && tsc --project tsconfig.test.json",
     "typecheck": "tsc --noEmit"
   },
   "nodemonConfig": {
@@ -17,19 +20,25 @@
     },
     "ext": "ts",
     "watch": [
-      "src"
+      "apps",
+      "harness",
+      "workerlib"
     ]
   },
   "dependencies": {
-    "@temporalio/activity": "^1.15.0",
-    "@temporalio/client": "^1.15.0",
-    "@temporalio/worker": "^1.15.0",
-    "@temporalio/workflow": "^1.15.0",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
+    "@temporalio/activity": "^1.17.1",
+    "@temporalio/client": "^1.17.1",
+    "@temporalio/common": "^1.17.1",
+    "@temporalio/worker": "^1.17.1",
+    "@temporalio/workflow": "^1.17.1",
     "commander": "^11.1.0",
     "long": "^5.2.3",
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@temporalio/testing": "^1.17.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",

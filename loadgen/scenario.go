@@ -22,6 +22,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -122,6 +123,8 @@ type ScenarioInfo struct {
 	Logger *zap.SugaredLogger
 	// A Temporal client.
 	Client client.Client
+	// Temporal client options
+	ClientOptions clioptions.ClientOptions
 	// Configuration info passed by user if any.
 	Configuration RunConfiguration
 	// ScenarioOptions are info passed from the command line. Do not mutate these.
@@ -408,6 +411,7 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 
 	executor := &kitchensink.ClientActionsExecutor{
 		Client:          r.Client,
+		Namespace:       r.Namespace,
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),

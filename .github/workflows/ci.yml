@@ -20,17 +20,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
-      - uses: actions/setup-go@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
+          cache: false
+      - name: Read Temporal server version
+        id: temporal-server-version
+        run: |
+          set -a && source versions.env && set +a
+          echo "server-version=${SERVER_VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Restore Temporal server Go dependencies
+        id: temporal-server-go-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ steps.temporal-server-version.outputs.server-version }}
+          restore-keys: |
+            omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+      # Scope to just Python for project build tests
+      - name: Install Tools
+        run: |
+          go run ./cmd/dev install python
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-omes.xml
+      - name: Save Temporal server Go dependencies
+        if: always() && steps.temporal-server-go-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ steps.temporal-server-go-cache.outputs.cache-primary-key }}
       - name: Publish Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-omes.xml"
@@ -63,11 +95,11 @@ jobs:
             tools: rust go protoc
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -98,7 +130,7 @@ jobs:
         sdk: [go, java, python, ruby, typescript, dotnet]
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Build ${{ matrix.sdk }} worker image
@@ -121,13 +153,200 @@ jobs:
           timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
       - name: Start ${{ matrix.sdk }} worker image
         run: |
-          go run ./cmd run-scenario \
+          go run ./cmd/omes run-scenario \
             --scenario workflow_with_single_noop_activity \
             --log-level debug \
             --server-address 127.0.0.1:10233 \
             --run-id ${{ github.run_id }} \
             --connect-timeout 1m \
             --iterations 5
+      - name: Smoke test throughput_stress to confirm build is usable against ${{ matrix.sdk }} worker
+        timeout-minutes: 10
+        run: |
+          go run ./cmd/omes run-scenario \
+            --scenario throughput_stress \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }} \
+            --connect-timeout 1m \
+            --iterations 2 \
+            --timeout 5m \
+            --option internal-iterations=2 \
+            --option continue-as-new-after-iterations=1 \
+            --option sleep-time=1ms \
+            --option visibility-count-timeout=2m
+
+  build-worker-from-source:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: go
+            sdk_repo: sdk-go
+          - sdk: java
+            sdk_repo: sdk-java
+          - sdk: python
+            sdk_repo: sdk-python
+          - sdk: ruby
+            sdk_repo: sdk-ruby
+          - sdk: typescript
+            sdk_repo: sdk-typescript
+          - sdk: dotnet
+            sdk_repo: sdk-dotnet
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: true
+      - name: Checkout ${{ matrix.sdk }} SDK
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: temporalio/${{ matrix.sdk_repo }}
+          submodules: recursive
+          path: checked-out-sdk
+      - name: Build ${{ matrix.sdk }} worker image from local SDK path
+        run: |
+          args=(
+            --language "${{ matrix.sdk }}"
+            --version checked-out-sdk/
+            --image-tag "${{ matrix.sdk }}-local-sdk-path-test"
+          )
+          go run ./cmd/dev build-worker-image "${args[@]}"
+      - name: Start ${{ matrix.sdk }} worker image built from local SDK path
+        run: |
+          docker run \
+            --rm \
+            -i -p 10233:10233 omes:${{ matrix.sdk }}-local-sdk-path-test \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --language ${{ matrix.sdk }} \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --embedded-server-address 0.0.0.0:10233 &
+      - name: Wait for ${{ matrix.sdk }} source-built worker image to start
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 10233; do sleep 1; done' || (echo "Server failed to start" && exit 1)
+      - name: Smoke test workflow_with_single_noop_activity against ${{ matrix.sdk }} source-built worker
+        run: |
+          go run ./cmd/omes run-scenario \
+            --scenario workflow_with_single_noop_activity \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --connect-timeout 1m \
+            --iterations 5
+      - name: Smoke test throughput_stress against ${{ matrix.sdk }} source-built worker
+        timeout-minutes: 10
+        run: |
+          go run ./cmd/omes run-scenario \
+            --scenario throughput_stress \
+            --log-level debug \
+            --server-address 127.0.0.1:10233 \
+            --run-id ${{ github.run_id }}-${{ matrix.sdk }}-source \
+            --connect-timeout 1m \
+            --iterations 2 \
+            --timeout 5m \
+            --option internal-iterations=2 \
+            --option continue-as-new-after-iterations=1 \
+            --option sleep-time=1ms \
+            --option visibility-count-timeout=2m
+
+  build-project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: go
+            project: helloworld
+            dockerfile: dockerfiles/go.Dockerfile
+            sdk_version_env: GO_SDK_VERSION
+          - sdk: java
+            project: helloworld
+            dockerfile: dockerfiles/java.Dockerfile
+            sdk_version_env: JAVA_SDK_VERSION
+          - sdk: python
+            project: helloworld
+            dockerfile: dockerfiles/python.Dockerfile
+            sdk_version_env: PYTHON_SDK_VERSION
+          - sdk: ruby
+            project: helloworld
+            dockerfile: dockerfiles/ruby.Dockerfile
+            sdk_version_env: RUBY_SDK_VERSION
+          - sdk: typescript
+            project: helloworld
+            dockerfile: dockerfiles/typescript.Dockerfile
+            sdk_version_env: TYPESCRIPT_SDK_VERSION
+          - sdk: dotnet
+            project: helloworld
+            dockerfile: dockerfiles/dotnet.Dockerfile
+            sdk_version_env: DOTNET_SDK_VERSION
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Load versions
+        run: |
+          set -a && source versions.env && set +a
+          printenv >> $GITHUB_ENV
+      - name: Set ${{ matrix.sdk }} project image metadata
+        run: |
+          sdk_version_var="${{ matrix.sdk_version_env }}"
+          echo "PROJECT_IMAGE_SDK_VERSION=v${!sdk_version_var}" >> "$GITHUB_ENV"
+          echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+          echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
+          echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.sdk }} ${{ matrix.project }} project image
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
+            -t ${PROJECT_IMAGE_TAG} .
+      - name: Create Docker network
+        run: |
+          docker network create omes-project-net
+      - name: Start ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        run: |
+          docker run \
+            --rm \
+            --name ${PROJECT_WORKER_CONTAINER} \
+            --network omes-project-net \
+            -p 7233:7233 \
+            ${PROJECT_IMAGE_TAG} \
+            --app ${{ matrix.project }} \
+            --run-id ${PROJECT_RUN_ID} \
+            --embedded-server-address 0.0.0.0:7233 &
+      - name: Wait for embedded server
+        run: |
+          timeout 30 bash -c 'until nc -z 127.0.0.1 7233; do sleep 1; done' || (echo "Project worker failed to start" && exit 1)
+      - name: Run project scenario against ${{ matrix.sdk }} ${{ matrix.project }} worker image
+        run: |
+          docker run --rm \
+            --network omes-project-net \
+            --entrypoint /app/temporal-omes \
+            ${PROJECT_IMAGE_TAG} \
+            run-scenario \
+            --scenario project \
+            --run-id ${PROJECT_RUN_ID} \
+            --server-address ${PROJECT_WORKER_CONTAINER}:7233 \
+            --iterations 1 \
+            --connect-timeout 30s \
+            --option language=${{ matrix.sdk }} \
+            --option project-name=${{ matrix.project }} \
+            --option prebuilt-project-dir=/app/workers/${{ matrix.sdk }}/prepared
+      - name: Print project worker logs
+        if: failure()
+        run: |
+          docker logs ${PROJECT_WORKER_CONTAINER} || true
+      - name: Stop ${{ matrix.sdk }} ${{ matrix.project }} project worker image
+        if: always()
+        run: |
+          docker stop ${PROJECT_WORKER_CONTAINER} || true
+      - name: Remove Docker network
+        if: always()
+        run: |
+          docker network rm omes-project-net || true
 
   test-kitchensink:
     runs-on: ubuntu-latest
@@ -150,11 +369,11 @@ jobs:
             tools: dotnet go
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
@@ -170,7 +389,7 @@ jobs:
             go run github.com/jstemmer/go-junit-report/v2@latest \
             -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
       - name: Publish Kitchensink Test Results
-        uses: mikepenz/action-junit-report@v5.6.2
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
         with:
           report_paths: "junit-kitchensink-${{ matrix.sdk }}.xml"
@@ -184,16 +403,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "true"
       - name: Install mise
-        uses: jdx/mise-action@v2.4.4
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
       - name: Install Tools
         run: |
-          go run ./cmd/dev install rust go protoc node
+          go run ./cmd/dev install rust go protoc node buf
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
@@ -206,7 +425,7 @@ jobs:
           git diff > generator.diff
           git diff --exit-code
       - name: Upload generator diff
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         if: always()
         with:
           name: generator-diff
@@ -217,14 +436,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: true
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: "go.mod"
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
       - name: Build CLI image
         run: |
           go run ./cmd/dev build-cli-image
@@ -248,7 +467,7 @@ jobs:
       ruby-sdk-version: ${{ steps.set-output.outputs.ruby-sdk-version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Load versions
         run: |
           set -a && source versions.env && set +a

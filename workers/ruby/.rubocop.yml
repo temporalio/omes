@@ -1,7 +1,9 @@
 AllCops:
   TargetRubyVersion: 3.3
   NewCops: enable
+  SuggestExtensions: false
   Exclude:
+    - "harness/api/**/*"
     - "protos/**/*"
     - "vendor/**/*"
     - "omes-temp-*/**/*"
@@ -28,10 +30,15 @@ Style/GuardClause:
 # These methods are inherently branchy — they dispatch protobuf action
 # types via large case statements that mirror the proto schema.
 Metrics/MethodLength:
-  Max: 35
+  Max: 60
+  Exclude:
+    - "tests/**/*"
 
 Metrics/ClassLength:
   Max: 300
+
+Metrics/ModuleLength:
+  Max: 200
 
 Metrics/BlockLength:
   Enabled: false
@@ -43,4 +50,7 @@ Metrics/PerceivedComplexity:
   Max: 15
 
 Metrics/AbcSize:
-  Max: 25
+  Max: 75
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false

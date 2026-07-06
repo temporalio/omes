@@ -51,7 +51,27 @@ message ClientAction {
     DoQuery do_query = 2;
     DoUpdate do_update = 3;
     ClientActionSet nested_actions = 4;
+    DoDescribe do_describe = 5;
+    DoStandaloneNexusOperation do_standalone_nexus_operation = 6;
+    DoStandaloneActivity do_standalone_activity = 7;
   }
+}
+
+// DoStandaloneNexusOperation starts a Nexus operation outside of any workflow context using
+// StartNexusOperationExecution and polls for its completion with PollNexusOperationExecution.
+message DoStandaloneNexusOperation {
+  string endpoint = 1;
+  string service = 2;
+  string operation = 3;
+}
+
+// DoStandaloneActivity starts an activity outside of any workflow context using
+// StartActivityExecution and polls for its outcome with PollActivityExecution.
+// Reuses ExecuteActivityAction so the activity variant, task queue, timeouts, and
+// retry policy are all configurable. Requires server-side support for
+// workflow-independent activities.
+message DoStandaloneActivity {
+  ExecuteActivityAction activity = 1;
 }
 
 message DoSignal {
@@ -78,6 +98,9 @@ message DoSignal {
   }
   // If set, the Signal is a Signal-with-Start.
   bool with_start = 3;
+}
+
+message DoDescribe {
 }
 
 message DoQuery {
@@ -170,6 +193,7 @@ message Action {
     ActionSet nested_action_set = 14;
 
     ExecuteNexusOperation nexus_operation = 15;
+    AwaitPendingActions await_pending_actions = 17;
   }
 }
 
@@ -195,6 +219,8 @@ message AwaitableChoice {
     google.protobuf.Empty cancel_after_started = 4;
     // Cancel the command after it's already completed.
     google.protobuf.Empty cancel_after_completed = 5;
+    // Wait for the command to reach STARTED, then return without awaiting completion.
+    google.protobuf.Empty wait_started = 6;
   }
 }
 
@@ -500,11 +526,26 @@ message ExecuteNexusOperation {
   string expected_output = 6;
   // Actions to execute before returning from the handler workflow
   repeated ActionSet before_actions = 7;
+  // Override the handler workflow ID (defaults to per-request random).
+  string handler_workflow_id = 8;
+  // Conflict policy when starting the handler workflow. Only applied when handler_workflow_id is set.
+  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 9;
+  // If true, the handler workflow waits on the "unblock" signal before returning.
+  bool wait_for_signal = 10;
 }
 
 // Input for the Nexus handler workflow that backs echo-sync and echo-async operations
 message NexusHandlerInput {
   string input = 1;
   repeated ActionSet before_actions = 2;
+  string handler_workflow_id = 3;
+  temporal.api.enums.v1.WorkflowIdConflictPolicy handler_workflow_id_conflict_policy = 4;
+  // If true, the handler workflow waits on the "unblock" signal before returning.
+  bool wait_for_signal = 5;
+}
+
+// Await completion of all actions that were started in the same workflow with
+// AwaitableChoice.wait_started and not yet awaited.
+message AwaitPendingActions {
 }
 

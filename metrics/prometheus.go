@@ -195,6 +195,17 @@ func (i *PrometheusInstance) buildMetricQueries() []metricQuery {
 		queries = append(queries, gaugeQuery(m.name, m.promName, job))
 	}
 
+	// Raw task totals for downstream throughput derivation
+	counterMetrics := []struct{ name, promName string }{
+		{"workflow_task_pickups_total", "temporal_workflow_task_schedule_to_start_latency_count"},
+		{"activity_task_pickups_total", "temporal_activity_schedule_to_start_latency_count"},
+		{"workflow_task_executions_total", "temporal_workflow_task_execution_latency_count"},
+		{"activity_task_executions_total", "temporal_activity_execution_latency_count"},
+	}
+	for _, m := range counterMetrics {
+		queries = append(queries, gaugeQuery(m.name, m.promName, job))
+	}
+
 	// Latency histogram metrics
 	histogramMetrics := []struct{ name, promName string }{
 		{"workflow_task_execution_latency_seconds", "temporal_workflow_task_execution_latency"},

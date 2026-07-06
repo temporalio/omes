@@ -133,6 +133,18 @@ func lintAndFormatPythonWorker(ctx context.Context, workerDir string) error {
 		return err
 	}
 
+	harnessDir := workerDir + "/harness"
+
+	fmt.Println("Formatting Python harness...")
+	if err := runCommandInDir(ctx, harnessDir, "uv", "run", "poe", "format"); err != nil {
+		return err
+	}
+
+	fmt.Println("Linting Python harness...")
+	if err := runCommandInDir(ctx, harnessDir, "uv", "run", "poe", "lint"); err != nil {
+		return err
+	}
+
 	fmt.Println("✅ Python lint-and-format completed successfully!")
 	return nil
 }
@@ -198,6 +210,11 @@ func lintAndFormatRubyWorker(ctx context.Context, workerDir string) error {
 
 	fmt.Println("Linting Ruby worker...")
 	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "rubocop"); err != nil {
+		return err
+	}
+
+	fmt.Println("Type checking Ruby harness...")
+	if err := runCommandInDir(ctx, workerDir, "bundle", "exec", "steep", "check"); err != nil {
 		return err
 	}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -14,6 +15,7 @@ import (
 
 type ClientActionsExecutor struct {
 	Client          client.Client
+	Namespace       string
 	WorkflowOptions client.StartWorkflowOptions
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
@@ -121,9 +123,16 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 			err = nil
 		}
 		return err
+	} else if action.GetDoDescribe() != nil {
+		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+		return err
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
+	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
+		return e.executeStandaloneNexusOperation(ctx, sano)
+	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
+		return e.executeStandaloneActivity(ctx, sa)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
@@ -192,4 +201,52 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 		err = nil
 	}
 	return run, err
+}
+
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
+	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
+	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
+		Endpoint: sno.Endpoint,
+		Service:  sno.Service,
+	})
+	if err != nil {
+		return fmt.Errorf("NewNexusClient: %w", err)
+	}
+
+	handle, err := nexusClient.ExecuteOperation(ctx, sno.Operation, &NexusHandlerInput{}, client.StartNexusOperationOptions{
+		ID:                     operationID,
+		ScheduleToCloseTimeout: 90 * time.Second,
+	})
+	if err != nil {
+		return fmt.Errorf("ExecuteOperation: %w", err)
+	}
+
+	err = handle.Get(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("Get standalone nexus operation: %w", err)
+	}
+	return nil
+}
+
+func (e *ClientActionsExecutor) executeStandaloneActivity(ctx context.Context, sa *DoStandaloneActivity) error {
+	act := sa.GetActivity()
+	if act == nil {
+		return fmt.Errorf("DoStandaloneActivity.activity is required")
+	}
+
+	actType, args := ActivityNameAndArgs(act)
+
+	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
+		ID:                     fmt.Sprintf("standalone-activity-%s-%s", e.WorkflowOptions.ID, uuid.NewString()),
+		TaskQueue:              act.TaskQueue,
+		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
+		ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
+		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
+		HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
+		RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
+	}, actType, args...)
+	if err != nil {
+		return fmt.Errorf("failed to start standalone activity: %w", err)
+	}
+	return handle.Get(ctx, nil)
 }

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFramework>net8.0</TargetFramework>
         <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -11,16 +11,12 @@
         <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
     </PropertyGroup>
 
-    <!-- When testing/linting, treat this as a library so no Main method is needed. -->
-    <PropertyGroup Condition="'$(Configuration)' == 'Library'">
-        <OutputType>Library</OutputType>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-        <PackageReference Include="Temporalio" Version="1.11.1">
+        <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
+        <PackageReference Include="Temporalio" Version="1.16.0">
             <!--
               We have to make sure this isn't included transitively so it can be
               overridden.
@@ -28,6 +24,25 @@
 <!--            <PrivateAssets>all</PrivateAssets>-->
         </PackageReference>
         <PackageReference Include="Google.Protobuf" Version="3.26.1" />
+        <PackageReference Include="Grpc.Tools" Version="2.62.0" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="App.cs" />
+        <Compile Include="Apps/**/*.cs" />
+        <Compile Include="Harness/*.cs" />
+        <Compile Include="Temporalio.Omes/**/*.cs" />
+        <Compile Include="WorkerLib/**/*.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf Include="../proto/harness/api/api.proto" GrpcServices="Both" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>HarnessTests</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
 
     <ItemGroup>

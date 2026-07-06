@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/cmd/clioptions"
+	"github.com/temporalio/omes/clioptions"
+	. "github.com/temporalio/omes/internal/workertest"
 	. "github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
-	. "github.com/temporalio/omes/workers"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
@@ -43,6 +43,14 @@ var (
 		clioptions.LangTypeScript: "executenexusoperation is not supported",
 		clioptions.LangDotNet:     "executenexusoperation is not supported",
 	}
+
+	standaloneNexusUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangJava:       "dostandalonenexusoperation is not supported",
+		clioptions.LangPython:     "dostandalonenexusoperation is not supported",
+		clioptions.LangRuby:       "dostandalonenexusoperation is not supported",
+		clioptions.LangTypeScript: "dostandalonenexusoperation is not supported",
+		clioptions.LangDotNet:     "dostandalonenexusoperation is not supported",
+	}
 )
 
 type testCase struct {
@@ -59,7 +67,14 @@ func TestKitchenSink(t *testing.T) {
 	if os.Getenv("CI") != "" && onlySDK == "" {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
-	env := SetupTestEnvironment(t)
+	env := SetupTestEnvironment(t, WithDynamicConfig(map[string]any{
+		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
+		"nexusoperation.enableStandalone": true,
+		// Standalone Nexus system callbacks require CHASM callbacks.
+		"history.enableCHASMCallbacks": true,
+		// Enable StartActivityExecution for the standalone-activity subtest.
+		"activity.enableStandalone": true,
+	}))
 
 	// Default workflow execution timeout for tests
 	defaultWorkflowTimeout := 30 * time.Second
@@ -970,6 +985,85 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
+			name: "ExecActivity/Client/StandaloneNexusOperation/Async",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneNexusOperation{
+									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+										// Endpoint filled by PrepareTestInput
+										Service:   "kitchen-sink",
+										Operation: "echo-async",
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: standaloneNexusUnsupportedSDKs,
+		},
+		{
+			name: "ExecActivity/Client/StandaloneNexusOperation/Sync",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneNexusOperation{
+									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+										// Endpoint filled by PrepareTestInput
+										Service:   "kitchen-sink",
+										Operation: "echo-sync",
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: standaloneNexusUnsupportedSDKs,
+		},
+		{
+			name: "ExecActivity/Client/StandaloneActivity",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneActivity{
+									DoStandaloneActivity: &DoStandaloneActivity{
+										Activity: &ExecuteActivityAction{
+											ActivityType:        &ExecuteActivityAction_Noop{},
+											StartToCloseTimeout: &durationpb.Duration{Seconds: 5},
+											// TaskQueue filled by PrepareTestInput
+										},
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1035,6 +1129,10 @@ func testForSDK(
 	nexusEndpoint, err := env.CreateNexusEndpoint(t.Context(), scenarioInfo.RunID)
 	require.NoError(t, err, "Failed to create Nexus endpoint")
 
+	// Task queue this run's worker polls; standalone activities target it so the
+	// worker picks them up.
+	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
+
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
@@ -1043,6 +1141,18 @@ func testForSDK(
 					for _, action := range actionSet.Actions {
 						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
 							nexusOp.Endpoint = nexusEndpoint
+						}
+						if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
+							for _, cas := range clientSeq.ActionSets {
+								for _, ca := range cas.Actions {
+									if sno := ca.GetDoStandaloneNexusOperation(); sno != nil && sno.Endpoint == "" {
+										sno.Endpoint = nexusEndpoint
+									}
+									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
+										sa.GetActivity().TaskQueue = runTaskQueue
+									}
+								}
+							}
 						}
 					}
 				}
@@ -1074,7 +1184,9 @@ func testUnsupportedFeature(
 		executor: executor,
 		sdk:      sdk,
 	}
-	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	// Run the worker in strict mode so unsupported actions fail loudly rather
+	// than being skipped, which is what this test asserts.
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk, WithErrOnUnimplemented())
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
 	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)

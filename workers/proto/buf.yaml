@@ -1,0 +1,14 @@
+version: v2
+modules:
+  - path: .
+    excludes:
+      - api_upstream
+      - kitchen_sink
+lint:
+  use:
+    - STANDARD
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

@@ -11,11 +11,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -39,6 +42,18 @@ const (
 	// IncludeRetryScenariosFlag enables retry/timeout/heartbeat activities in throughput_stress.
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
+	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
+	// Default is false.
+	IncludeDescribeFlag = "include-describe"
+	// IncludeStandaloneNexusFlag enables standalone Nexus operations in throughput_stress.
+	// Requires nexus-endpoint to also be set.
+	// Default is false.
+	IncludeStandaloneNexusFlag = "include-standalone-nexus"
+	// IncludeStandaloneActivityFlag enables standalone activities (activities started outside
+	// any workflow context via StartActivityExecution) in throughput_stress.
+	// Requires server support for standalone activities (dynamic config `activity.enableStandalone`).
+	// Default is false.
+	IncludeStandaloneActivityFlag = "include-standalone-activity"
 )
 
 type tpsState struct {
@@ -64,6 +79,9 @@ type tpsConfig struct {
 	ExecutionID                   string
 	RngSeed                       int64
 	IncludeRetryScenarios         bool
+	IncludeDescribe               bool
+	IncludeStandaloneNexus        bool
+	IncludeStandaloneActivity     bool
 }
 
 type tpsExecutor struct {
@@ -81,8 +99,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -163,6 +181,12 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
+	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
+	config.IncludeStandaloneNexus = info.ScenarioOptionBool(IncludeStandaloneNexusFlag, false)
+	if config.IncludeStandaloneNexus && config.NexusEndpoint == "" {
+		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
+	}
+	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -374,6 +398,12 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 		}
 
+		if t.config.IncludeDescribe {
+			syncActions = append(syncActions,
+				ClientActivity(ClientActions(t.createSelfDescribe()), DefaultRemoteActivity),
+			)
+		}
+
 		childCount++
 		asyncActions := []*Action{
 			t.createChildWorkflowAction(run, childCount),
@@ -422,6 +452,19 @@ func (t *tpsExecutor) createActionsChunk(
 		if t.config.NexusEndpoint != "" {
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
+			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
+			if t.config.IncludeStandaloneNexus {
+				asyncActions = append(asyncActions,
+					t.createStandaloneNexusOperationAction("echo-async"),
+					t.createStandaloneNexusOperationAction("echo-sync"),
+				)
+			}
+		}
+
+		// Add standalone activities, if configured.
+		if t.config.IncludeStandaloneActivity {
+			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID)))
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -498,6 +541,14 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 					},
 				},
 			},
+		},
+	}
+}
+
+func (t *tpsExecutor) createSelfDescribe() *ClientAction {
+	return &ClientAction{
+		Variant: &ClientAction_DoDescribe{
+			DoDescribe: &DoDescribe{},
 		},
 	}
 }
@@ -620,8 +671,10 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
 				Endpoint:  t.config.NexusEndpoint,
-				Operation: "wait-for-cancel",
-				Input:     "",
+				Operation: "echo-async",
+				BeforeActions: ListActionSet(
+					NewAwaitWorkflowStateAction("never", "resolves"),
+				),
 				AwaitableChoice: &AwaitableChoice{
 					Condition: &AwaitableChoice_CancelAfterStarted{
 						CancelAfterStarted: &emptypb.Empty{},
@@ -630,6 +683,93 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 			},
 		},
 	}
+}
+
+// createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
+// fire N ops with wait_started, signal the handler to unblock, then await its completion.
+func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
+	const numOps = 3
+	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
+
+	waitStartedOp := func() *Action {
+		return &Action{
+			Variant: &Action_NexusOperation{
+				NexusOperation: &ExecuteNexusOperation{
+					Endpoint:                        t.config.NexusEndpoint,
+					Operation:                       "echo-async",
+					Input:                           "hello",
+					HandlerWorkflowId:               handlerWfID,
+					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+					WaitForSignal:                   true,
+					AwaitableChoice: &AwaitableChoice{
+						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
+					},
+				},
+			},
+		}
+	}
+	fanout := make([]*Action, 0, numOps)
+	for i := 0; i < numOps; i++ {
+		fanout = append(fanout, waitStartedOp())
+	}
+
+	return &Action{Variant: &Action_NestedActionSet{
+		NestedActionSet: &ActionSet{
+			Concurrent: false,
+			Actions: []*Action{
+				{Variant: &Action_NestedActionSet{
+					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
+				}},
+				{Variant: &Action_SendSignal{
+					SendSignal: &SendSignalAction{
+						WorkflowId: handlerWfID,
+						SignalName: "unblock",
+						AwaitableChoice: &AwaitableChoice{
+							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+						},
+					},
+				}},
+				{Variant: &Action_AwaitPendingActions{
+					AwaitPendingActions: &AwaitPendingActions{},
+				}},
+			},
+		},
+	}}
+}
+
+func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Action {
+	return ClientActivity(ClientActions(&ClientAction{
+		Variant: &ClientAction_DoStandaloneNexusOperation{
+			DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
+				Endpoint:  t.config.NexusEndpoint,
+				Service:   "kitchen-sink",
+				Operation: operation,
+			},
+		},
+	}), DefaultRemoteActivity)
+}
+
+func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string) *Action {
+	return ClientActivity(ClientActions(&ClientAction{
+		Variant: &ClientAction_DoStandaloneActivity{
+			DoStandaloneActivity: &DoStandaloneActivity{
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Payload{
+						Payload: &ExecuteActivityAction_PayloadActivity{
+							BytesToReceive: 256,
+							BytesToReturn:  256,
+						},
+					},
+					TaskQueue:           taskQueue,
+					StartToCloseTimeout: durationpb.New(30 * time.Second),
+					RetryPolicy: &common.RetryPolicy{
+						InitialInterval:    durationpb.New(100 * time.Millisecond),
+						BackoffCoefficient: 1,
+					},
+				},
+			},
+		},
+	}), DefaultRemoteActivity)
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {

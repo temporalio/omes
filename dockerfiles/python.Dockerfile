@@ -18,23 +18,28 @@ RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
 # hadolint ignore=DL4006
 RUN wget -q -O - https://sh.rustup.rs | sh -s -- -y
 
-ENV PATH="$PATH:/root/.cargo/bin"
+ENV PATH="$PATH:/root/.cargo/bin:/usr/local/go/bin"
 
 # Install uv
 COPY --from=uv /uv /uvx /bin/
 
 WORKDIR /app
 
-# Copy CLI build dependencies
-COPY cmd ./cmd
-COPY loadgen ./loadgen
-COPY scenarios ./scenarios
-COPY metrics ./metrics
-COPY workers/*.go ./workers/
+# Download Go dependencies first so this layer caches independently of source
+# changes. The harness/api replace target must be present for `go mod download`
+# to resolve the module graph.
 COPY go.mod go.sum ./
+COPY workers/go/harness/api ./workers/go/harness/api
+RUN go mod download
 
-# Build the CLI
-RUN CGO_ENABLED=0 /usr/local/go/bin/go build -o temporal-omes ./cmd
+# Copy CLI source and build the CLI.
+COPY cmd ./cmd
+COPY clioptions ./clioptions
+COPY loadgen ./loadgen
+COPY metrics ./metrics
+COPY scenarios ./scenarios
+COPY internal ./internal
+RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
@@ -45,17 +50,20 @@ COPY ${SDK_DIR} ./repo
 # Copy the worker files
 COPY workers/python ./workers/python
 
-# Build the worker
+# Build one prepared package that can run any Python app via --app.
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and built worker to a distroless "run" container
+# Copy the CLI and built worker to a run container
 FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
 
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/python /app/workers/python
+COPY dockerfiles/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV UV_NO_SYNC=1 UV_FROZEN=1 UV_OFFLINE=1
+ENV OMES_WORKER_LANGUAGE=python
+ENV OMES_PREPARED_DIR=prepared
 
-# Put the language and dir, but let other options (like required scenario and run-id) be given by user
-ENTRYPOINT ["/app/temporal-omes", "run-worker", "--language", "python", "--dir-name", "prepared"]
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -63,7 +63,7 @@ Omes includes a process metrics sidecar - a Go-based HTTP server that monitors C
 
 **Example:**
 ```sh
-go run ./cmd run-worker --language python --run-id my-run \
+go run ./cmd/omes run-worker --language python --run-id my-run \
     --worker-process-metrics-address :9091 \
     --worker-metrics-version-tag v1.24.0
 ```
@@ -85,7 +85,7 @@ multiple defined that can be used.
 
 A scenario must select an `Executor`. The most common is the `KitchenSinkExecutor` which is a wrapper on the
 `GenericExecutor` specific for executing the Kitchen Sink workflow. The Kitchen Sink workflow accepts
-[actions](./workers/go/kitchensink/kitchen_sink.go) and is implemented in every worker language.
+[actions](./workers/go/workerlib/kitchensink/kitchen_sink.go) and is implemented in every worker language.
 
 For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios/workflow_with_single_noop_activity.go):
 
@@ -125,7 +125,7 @@ You can do that like follows. If you want an embedded server rather than one you
 pass `--embedded-server`.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
+go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
 ```
 
 Notes:
@@ -136,7 +136,7 @@ Notes:
 ### Run a worker for a specific language SDK
 
 ```sh
-go run ./cmd run-worker --run-id local-test-run --language go
+go run ./cmd/omes run-worker --run-id local-test-run --language go
 ```
 
 Notes:
@@ -145,11 +145,28 @@ Notes:
 - `--task-queue-suffix-index-start` and `--task-queue-suffix-index-end` represent an inclusive range for running the
   worker on multiple task queues. The process will create a worker for every task queue from `<task-queue>-<start>`
   through `<task-queue>-end`. This only applies to multi-task-queue scenarios.
+- `--worker-profile` selects a code-defined worker configuration profile in the language harness. Omes forwards the
+  selected profile to the worker process via `OMES_WORKER_PROFILE`; the profile is not a worker CLI flag.
+
+Worker profiles provide a named worker configuration selected with `--worker-profile`. When a profile is selected, it
+takes precedence over worker configuration flags such as poller counts, autoscale poller settings, activity rate limits,
+slot counts, and worker versioning options. Non-worker-configuration flags, such as task queue selection, client
+connection settings, logging, metrics, and `--worker-err-on-unimplemented`, continue to apply normally.
+
+The shared `resource-based-default` profile uses the SDK resource-based worker tuner. The worker harnesses also provide
+`throughput-stress-baseline`, a fixed worker configuration for `throughput_stress` runs. It sets a workflow cache size
+of 50, 8 workflow task slots, 32 activity and local activity slots, 2 workflow task pollers, and 4 activity task pollers
+in each SDK.
+
+```sh
+go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go \
+    --run-id local-profile-test --worker-profile resource-based-default
+```
 
 ### Run a test scenario
 
 ```sh
-go run ./cmd run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 Notes:
@@ -163,7 +180,7 @@ Notes:
 ### Cleanup after scenario run
 
 ```sh
-go run ./cmd cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
+go run ./cmd/omes cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
 ```
 
 ### Running a specific version of the SDK
@@ -173,7 +190,7 @@ a version number like `v1.24.0` or you can also pass a local path to use a local
 This is useful while testing unreleased or in-development versions of the SDK.
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
+go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
 ```
 
 ### Building and publishing docker images
@@ -192,7 +209,132 @@ See the GHA workflows for more information.
 
 ## Specific Scenarios
 
-### ThroughputStress (Go only)
+### Project
+
+The `project` scenario is different from the built-in kitchen-sink style scenarios. It is intended
+to be a more ergnomomic way of writing load tests, akin to writing a Temporal sample.
+
+Instead of driving workflows and activities that Omes owns (through a client that Omes owns), the 
+`project` scenario enables you to write a project where you configure the worker(s), client, and load 
+(workflows, activites, Nexus operations, etc.), and pass them as entrypoints to a harness. Omes calls into
+this harness repeatedly (i.e. for 'x' `--iterations` or 'y' `--duration`) through a gRPC interface to 
+generate load.
+
+As such, it's a **good fit** if you:
+- need to write a load test
+- are more familiar with Temporal-native code than Omes's framework
+
+and are not restricted by the **current limitations**:
+- the load pattern is limited to a steady-rate executor (i.e. "run 'x' times or run for 'y' duration),
+  more nuanced load patterns will need to create their own scenario + executor (the existing method)
+
+#### Writing your first project
+
+Writing a project should be fairly similar to writing a Temporal sample, and requires only a little
+familiarity with the project harness interface.
+
+To get started:
+- projects should be written as apps under `workers/<lang>/apps/<name>`
+- register the app in `workers/<lang>/apps/registry.*`
+- use the `helloworld` app in each worker language as a reference to get started
+- take a look at the language harness entrypoint (for example
+  `workers/python/harness/src/harness/__init__.py`) to see how worker and project-server modes dispatch
+
+#### How projects run (optional)
+
+On the worker-side, it's fairly similar to how Omes starts and runs workers already:
+  - Omes builds a program that can start a worker via a command
+  - Omes executes the command that starts the worker process against the built program
+The only difference is that the program is now your project + harness.
+
+On the runner-side, it's a bit different than typical Omes scenarios because the runner needs to call into
+the harness to drive load. Consequently, it too needs to build your project + harness to run. So the flow looks like:
+  - Omes runner builds a program that can start a gRPC server (`project-server`) via a command
+    - `project-server` is language-agnostic interface for runner to tell your project to create load
+  - Omes runner executes the command that starts the `project-server` in another process
+  - Omes runner calls into gRPC server repeatedly over the course of the load test to spawn load
+  - Omes runner shuts down `project-server` on conclusion of load test
+
+#### Running a Project
+
+To run a project:
+1) Run your project worker:
+```sh
+go run ./cmd/omes run-worker \
+  --language <lang> \
+  --app helloworld \
+  --run-id local-project-test \
+  --server-address <your server address>
+```
+Make sure to point your `server-address` to a running Temporal server. Alternatively, use the
+`--embedded-server` to spin one up for you.
+
+2) Run the project scenario
+```sh
+go run ./cmd/omes run-scenario \
+  --scenario project \
+  --iterations 1 \
+  --server-address <your server address> \
+  --run-id local-project-test \
+  --option language=<lang> \
+  --option project-name=helloworld \
+  --option project-server-ready-timeout=15s
+```
+
+For local all-in-one development, run the worker and scenario together:
+
+```sh
+go run ./cmd/omes run-scenario-with-worker \
+  --scenario project \
+  --iterations 1 \
+  --language <lang> \
+  --app helloworld \
+  --run-id local-project-test \
+  --embedded-server \
+  --option language=<lang> \
+  --option project-name=helloworld
+```
+
+To run a project via Docker:
+
+```sh
+docker build \
+  -f dockerfiles/<lang>.Dockerfile \
+  --build-arg SDK_VERSION=<sdk-version> \
+  -t omes-<lang> .
+
+docker network create omes-project-net
+
+docker run -d --rm \
+  --name omes-<lang>-project-worker \
+  --network omes-project-net \
+  omes-<lang> \
+  --app helloworld \
+  --run-id local-project-test \
+  --embedded-server-address 0.0.0.0:7233
+
+docker run --rm \
+  --network omes-project-net \
+  --entrypoint /app/temporal-omes \
+  omes-<lang> \
+  run-scenario \
+  --scenario project \
+  --run-id local-project-test \
+  --server-address omes-<lang>-project-worker:7233 \
+  --iterations 1 \
+  --connect-timeout 30s \
+  --option language=<lang> \
+  --option project-name=helloworld \
+  --option prebuilt-project-dir=/app/workers/<lang>/prepared
+
+docker stop omes-<lang>-project-worker
+docker network rm omes-project-net
+```
+
+Worker images contain a single prepared worker package for their language. Select the app at runtime
+with `--app` for workers and `--option project-name=...` for project scenarios.
+
+### ThroughputStress
 
 #### Sleep Activity
 
@@ -203,7 +345,7 @@ The configuration is done via a JSON file, which is passed to the scenario with 
 
 ```
 echo '{"count":{"type":"fixed","value":5},"groups":{"high":{"weight":2,"sleepDuration":{"type":"uniform","min":"2s","max":"4s"}},"low":{"weight":3,"sleepDuration":{"type":"discrete","weights":{"5s":3,"10s":1}}}}}' > sleep.json
-go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
+go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
 ```
 
 This runs 5 sleep activities per iteration, where "high" has a weight of 2 and sleeps for a random duration between 2-4s,
@@ -225,8 +367,15 @@ The throughput_stress scenario can generate Nexus load if the scenario is starte
 1. Start the scenario with the given run-id:
 
   ```
-  go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
+  go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
   ```
+
+#### Standalone activities
+
+The throughput_stress scenario can generate standalone-activity load (activities started outside
+any workflow context via `StartActivityExecution`) with `--option include-standalone-activity=true`.
+This requires server support for standalone activities (dynamic config `activity.enableStandalone`).
+Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
 ### Fuzzer
 
@@ -238,26 +387,26 @@ run by a client inside the scenario executor.
 You can run the fuzzer with new random actions like so:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs
 ```
 
 The fuzzer automatically creates a Nexus endpoint and generates Nexus operations. To use an existing endpoint instead:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language go --option nexus-endpoint=my-endpoint
 ```
 
 By default, the scenario will spit out a `last_fuzz_run.proto` binary file containing the generated
 actions. To re-run the same set of actions, you can pass in such a file like so:
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option input-file=last_fuzz_run.proto
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option input-file=last_fuzz_run.proto
 ```
 
 Or you can run with a specific seed (seeds are printed at the start of the scenario):
 
 ```sh
-go run ./cmd run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
+go run ./cmd/omes run-scenario-with-worker --scenario fuzzer --iterations 1 --language cs --option seed=131962944538087455
 ```
 
 However, the fuzzer is also sensitive to its configuration, and thus the seed will only produce
