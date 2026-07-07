@@ -1,6 +1,6 @@
 module github.com/temporalio/omes/workers/go
 
-go 1.25.0
+go 1.25.4
 
 require (
 	github.com/temporalio/omes v1.0.0
@@ -13,8 +13,8 @@ require (
 	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/pflag v1.0.5
-	go.temporal.io/api v1.62.12
-	go.temporal.io/sdk v1.45.0
+	go.temporal.io/api v1.63.0
+	go.temporal.io/sdk v1.46.0
 	go.temporal.io/sdk/contrib/aws/lambdaworker v0.1.1
 	go.temporal.io/sdk/contrib/sysinfo v0.1.0
 	go.uber.org/zap v1.27.0
@@ -78,10 +78,10 @@ require (
 	go.temporal.io/sdk/contrib/envconfig v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect

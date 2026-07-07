@@ -1,6 +1,6 @@
 module github.com/temporalio/omes
 
-go 1.25.0
+go 1.25.4
 
 require (
 	github.com/gofrs/flock v0.13.0
@@ -15,11 +15,11 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20260427223549-86e4c0deedd7
 	github.com/temporalio/omes/workers/go/harness/api v0.0.0-00010101000000-000000000000
-	go.temporal.io/api v1.62.12
-	go.temporal.io/sdk v1.45.0
+	go.temporal.io/api v1.63.0
+	go.temporal.io/sdk v1.46.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/mod v0.31.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/mod v0.35.0
+	golang.org/x/sync v0.20.0
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
@@ -59,9 +59,9 @@ require (
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
