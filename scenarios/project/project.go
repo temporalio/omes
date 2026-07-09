@@ -84,13 +84,16 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 	defer stopProjectProcess("project-server", serverCancel, serverCmd, info.Logger)
 
 	co := info.ClientOptions
+	if len(co.ServerAddresses()) != 1 {
+		return fmt.Errorf("project scenario supports exactly one server address")
+	}
 	handle, err := newProjectHandle(ctx, port, &api.InitRequest{
 		ExecutionId: info.ExecutionID,
 		RunId:       info.RunID,
 		TaskQueue:   taskQueue,
 		ConnectOptions: &api.ConnectOptions{
 			Namespace:               co.Namespace,
-			ServerAddress:           co.Address,
+			ServerAddress:           co.ServerAddress(),
 			AuthHeader:              co.AuthHeader,
 			EnableTls:               co.EnableTLS,
 			TlsCertPath:             co.ClientCertPath,

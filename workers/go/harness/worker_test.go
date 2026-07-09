@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,6 +66,31 @@ func TestRunWorkerCLIPassesSharedClientAndWorkerContext(t *testing.T) {
 		if !context.ErrOnUnimplemented {
 			t.Fatal("expected err-on-unimplemented in worker context")
 		}
+	}
+}
+
+func TestRunWorkerCLIUsesResolverForMultipleServerAddresses(t *testing.T) {
+	var gotConfig ClientConfig
+
+	err := runWorkerCLI(
+		func(client sdkclient.Client, context WorkerContext) sdkworker.Worker {
+			return fakeWorker{}
+		},
+		func(config ClientConfig) (sdkclient.Client, error) {
+			gotConfig = config
+			return clientStub{}, nil
+		},
+		[]string{
+			"--task-queue", "omes",
+			"--server-address", "127.0.0.1:7234",
+			"--server-address", "127.0.0.1:8234",
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(gotConfig.TargetHost, "omes-manual-") || !strings.HasSuffix(gotConfig.TargetHost, ":///temporal") {
+		t.Fatalf("expected resolver target, got %q", gotConfig.TargetHost)
 	}
 }
 

@@ -48,13 +48,16 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	if r.TaskQueueName == "" {
 		return fmt.Errorf("task queue name is required")
 	}
+	if len(r.ClientOptions.ServerAddresses()) > 1 && r.SdkOptions.Language != clioptions.LangGo {
+		return fmt.Errorf("multiple server addresses are only supported by Go workers")
+	}
 
 	// Run an embedded server if requested
 	if r.EmbeddedServer || r.EmbeddedServerAddress != "" {
 		// Intentionally don't use context, will stop on defer
 		if r.ClientOptions.EnableTLS || r.ClientOptions.ClientCertPath != "" || r.ClientOptions.ClientKeyPath != "" {
 			return fmt.Errorf("cannot use TLS with embedded server")
-		} else if r.ClientOptions.Address != client.DefaultHostPort {
+		} else if !r.ClientOptions.UsesDefaultServerAddress() {
 			return fmt.Errorf("cannot supply non-default client address when using embedded server")
 		}
 		server, err := testsuite.StartDevServer(context.Background(), testsuite.DevServerOptions{
@@ -68,7 +71,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 			return fmt.Errorf("failed starting embedded server: %w", err)
 		}
 		r.ClientOptions.FlagSet().Set("server-address", server.FrontendHostPort())
-		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.Address)
+		r.Logger.Infof("Started embedded local server at: %v", r.ClientOptions.ServerAddress())
 		defer func() {
 			r.Logger.Info("Stopping embedded local server")
 			if err := server.Stop(); err != nil {
@@ -219,10 +222,14 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 		if !f.Changed {
 			return
 		}
-		flags = append(flags, fmt.Sprintf("--%s=%s",
-			strings.TrimPrefix(f.Name, prefix),
-			f.Value.String(),
-		))
+		name := strings.TrimPrefix(f.Name, prefix)
+		if value, ok := f.Value.(pflag.SliceValue); ok {
+			for _, item := range value.GetSlice() {
+				flags = append(flags, fmt.Sprintf("--%s=%s", name, item))
+			}
+			return
+		}
+		flags = append(flags, fmt.Sprintf("--%s=%s", name, f.Value.String()))
 	})
 	return
 }
@@ -238,6 +245,12 @@ func passthroughExcluding(fs *pflag.FlagSet, prefix string, exclude ...string) (
 		}
 		name := strings.TrimPrefix(f.Name, prefix)
 		if excludeSet[name] {
+			return
+		}
+		if value, ok := f.Value.(pflag.SliceValue); ok {
+			for _, item := range value.GetSlice() {
+				flags = append(flags, fmt.Sprintf("--%s=%s", name, item))
+			}
 			return
 		}
 		flags = append(flags, fmt.Sprintf("--%s=%s", name, f.Value.String()))

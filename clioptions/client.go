@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"sync/atomic"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
@@ -15,9 +17,13 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/resolver/manual"
 )
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
+
+var manualResolverID atomic.Int64
 
 type headersProvider map[string]string
 
@@ -33,6 +39,8 @@ func newHeadersProvider(headers map[string]string) headersProvider {
 type ClientOptions struct {
 	// Address of Temporal server to connect to
 	Address string
+	// Addresses of Temporal servers to connect to
+	Addresses []string
 	// Temporal namespace
 	Namespace string
 	// Enable TLS
@@ -49,6 +57,55 @@ type ClientOptions struct {
 	DisableHostVerification bool
 
 	fs *pflag.FlagSet
+}
+
+func (c *ClientOptions) ServerAddresses() []string {
+	addresses := c.Addresses
+	if len(addresses) == 0 {
+		address := c.Address
+		if address == "" {
+			address = client.DefaultHostPort
+		}
+		addresses = []string{address}
+	}
+
+	out := make([]string, 0, len(addresses))
+	for _, address := range addresses {
+		address = strings.TrimSpace(address)
+		if address != "" {
+			out = append(out, address)
+		}
+	}
+	return out
+}
+
+func (c *ClientOptions) ServerAddress() string {
+	return strings.Join(c.ServerAddresses(), ",")
+}
+
+func (c *ClientOptions) UsesDefaultServerAddress() bool {
+	addresses := c.ServerAddresses()
+	return len(addresses) == 1 && addresses[0] == client.DefaultHostPort
+}
+
+func (c *ClientOptions) HostPort() (string, error) {
+	addresses := c.ServerAddresses()
+	if len(addresses) == 0 {
+		return "", errors.New("at least one server address is required")
+	}
+	if len(addresses) == 1 {
+		return addresses[0], nil
+	}
+
+	scheme := fmt.Sprintf("omes-manual-%d", manualResolverID.Add(1))
+	builder := manual.NewBuilderWithScheme(scheme)
+	resolverAddresses := make([]resolver.Address, len(addresses))
+	for i, address := range addresses {
+		resolverAddresses[i] = resolver.Address{Addr: address}
+	}
+	builder.InitialState(resolver.State{Addresses: resolverAddresses})
+	resolver.Register(builder)
+	return scheme + ":///temporal", nil
 }
 
 // loadTLSConfig inits a TLS config from the provided cert and key files.
@@ -92,8 +149,12 @@ func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger
 	if err != nil {
 		return nil, fmt.Errorf("failed to load TLS config: %w", err)
 	}
+	hostPort, err := c.HostPort()
+	if err != nil {
+		return nil, err
+	}
 	var clientOptions client.Options
-	clientOptions.HostPort = c.Address
+	clientOptions.HostPort = hostPort
 	clientOptions.Namespace = c.Namespace
 	clientOptions.ConnectionOptions.TLS = tlsCfg
 	clientOptions.Logger = NewZapAdapter(logger.Desugar())
@@ -117,7 +178,7 @@ func (c *ClientOptions) Dial(metrics *metrics.Metrics, logger *zap.SugaredLogger
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %w", err)
 	}
-	logger.Infof("Client connected to %s, namespace: %s", c.Address, c.Namespace)
+	logger.Infof("Client connected to %s, namespace: %s", c.ServerAddress(), c.Namespace)
 	return client, nil
 }
 
@@ -139,7 +200,15 @@ func (c *ClientOptions) FlagSet() *pflag.FlagSet {
 	}
 
 	c.fs = pflag.NewFlagSet("client_options", pflag.ExitOnError)
-	c.fs.StringVar(&c.Address, "server-address", client.DefaultHostPort, "Address of Temporal server")
+	defaultAddresses := c.Addresses
+	if len(defaultAddresses) == 0 {
+		address := c.Address
+		if address == "" {
+			address = client.DefaultHostPort
+		}
+		defaultAddresses = []string{address}
+	}
+	c.fs.StringArrayVar(&c.Addresses, "server-address", defaultAddresses, "Address of Temporal server; may be supplied multiple times")
 	c.fs.StringVar(&c.Namespace, "namespace", client.DefaultNamespace, "Namespace to connect to")
 	c.fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	c.fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")

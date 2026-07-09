@@ -1,8 +1,12 @@
 package workerctl
 
 import (
+	"context"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/temporalio/omes/clioptions"
 )
 
 func TestWithEnv(t *testing.T) {
@@ -62,5 +66,42 @@ func TestWithEnv(t *testing.T) {
 				t.Fatalf("expected %v, got %v", test.want, got)
 			}
 		})
+	}
+}
+
+func TestPassthroughPreservesRepeatedServerAddresses(t *testing.T) {
+	var opts clioptions.ClientOptions
+	fs := opts.FlagSet()
+	if err := fs.Set("server-address", "127.0.0.1:7234"); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Set("server-address", "127.0.0.1:8234"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := passthrough(fs, "")
+	want := []string{
+		"--server-address=127.0.0.1:7234",
+		"--server-address=127.0.0.1:8234",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("expected %v, got %v", want, got)
+	}
+}
+
+func TestRunnerRejectsMultipleServerAddressesForNonGoWorkers(t *testing.T) {
+	r := Runner{
+		Builder: Builder{
+			SdkOptions: clioptions.SdkOptions{Language: clioptions.LangTypeScript},
+		},
+		TaskQueueName: "omes",
+		ClientOptions: clioptions.ClientOptions{
+			Addresses: []string{"127.0.0.1:7234", "127.0.0.1:8234"},
+		},
+	}
+
+	err := r.Run(context.Background(), t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "multiple server addresses") {
+		t.Fatalf("expected multiple server addresses error, got %v", err)
 	}
 }

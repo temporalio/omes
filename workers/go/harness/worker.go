@@ -60,9 +60,13 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 	}
 	defer logger.Sync()
 
+	serverAddress, err := options.clientOptions.HostPort()
+	if err != nil {
+		return err
+	}
 	config, err := buildClientConfig(clientConfigOptions{
 		Logger:                  logger,
-		ServerAddress:           options.clientOptions.Address,
+		ServerAddress:           serverAddress,
 		Namespace:               options.clientOptions.Namespace,
 		AuthHeader:              options.clientOptions.AuthHeader,
 		EnableTLS:               options.clientOptions.EnableTLS,
