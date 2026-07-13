@@ -57,6 +57,26 @@ const (
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
+	// MemoDistributionJsonFlag is a JSON string (or @file) configuring a memo blob that is
+	// probabilistically present, distribution-sized, and attached to workflows throughout the
+	// tree (root, children, continue-as-new). See loadgen.MemoConfig for details.
+	MemoDistributionJsonFlag = "memo-distribution-json"
+)
+
+// Distinct rng salts so memo probability rolls are independent of the payload-size rng
+// stream (enabling memo doesn't perturb payload sampling) and independent across node
+// types (root/child/continue-as-new). memoIterationStride spaces per-iteration node
+// indices apart so the same tree position (e.g. "child #1") rolls independently across
+// iterations; salts are spaced well above iteration*stride to avoid cross-role collisions.
+const (
+	memoSaltRoot          = 1 << 54
+	memoSaltChildWorkflow = 2 << 54
+	memoSaltContinueAsNew = 3 << 54
+	// memoIterationStride spaces per-iteration node indices apart. It is far larger than
+	// any realistic per-chain node count (a workflow's history caps node counts well below
+	// this), so a node index never collides into the next iteration's stream; salts are in
+	// turn spaced well above iteration*stride to avoid cross-role collisions.
+	memoIterationStride = 1 << 32
 )
 
 type tpsState struct {
@@ -86,6 +106,7 @@ type tpsConfig struct {
 	IncludeStandaloneNexus        bool
 	IncludeStandaloneActivity     bool
 	Payload                       *loadgen.PayloadConfig
+	Memo                          *loadgen.MemoConfig
 }
 
 type tpsExecutor struct {
@@ -103,8 +124,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag, PayloadDistributionJsonFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag, PayloadDistributionJsonFlag, MemoDistributionJsonFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -199,6 +220,13 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		}
 	}
 
+	if memoStr, ok := info.ScenarioOptions[MemoDistributionJsonFlag]; ok {
+		config.Memo, err = loadgen.ParseAndValidateMemoConfig(memoStr)
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", MemoDistributionJsonFlag, err)
+		}
+	}
+
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
 	return nil
@@ -256,6 +284,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 					options.StartOptions.WorkflowExecutionErrorWhenAlreadyStarted = false
 				}
 
+				// Maybe attach a memo to the root workflow.
+				rootMemo := t.sampleMemo(memoSaltRoot, run.Iteration, 0)
+				if rootMemo != nil {
+					options.StartOptions.Memo = map[string]interface{}{"MemoBlob": rootMemo}
+				}
+
 				// Add search attribute to the workflow options so that it can be used in visibility queries.
 				options.StartOptions.TypedSearchAttributes = temporal.NewSearchAttributes(
 					temporal.NewSearchAttributeKeyString(loadgen.OmesExecutionIDSearchAttribute).ValueSet(info.ExecutionID),
@@ -281,7 +315,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				//
 				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
 				// That means these client actions are sent from the activity worker instead of Omes.
-				options.Params.WorkflowInput.InitialActions = t.createActions(run)
+				options.Params.WorkflowInput.InitialActions = t.createActions(run, rootMemo)
 
 				return nil
 			},
@@ -372,6 +406,28 @@ func (t *tpsExecutor) samplePayloadSize(rng *rand.Rand) int {
 	return int(t.config.Payload.SamplePayloadSize(rng, 256))
 }
 
+// sampleMemo rolls the configured memo probability for one workflow node and returns the
+// memo blob bytes (or nil). Each node seeds its own rng from a salt + iteration + index so
+// memo rolls are deterministic, independent of the payload-size stream, and independent
+// across nodes and across iterations (the same tree position rolls differently each run).
+func (t *tpsExecutor) sampleMemo(salt int64, iteration, index int) []byte {
+	seed := t.config.RngSeed + salt + int64(iteration)*memoIterationStride + int64(index)
+	return t.config.Memo.SampleMemoBytes(rand.New(rand.NewSource(seed)))
+}
+
+// memoMap wraps a memo blob into a kitchen-sink action Memo map (binary/plain), or nil.
+func (t *tpsExecutor) memoMap(blob []byte) map[string]*common.Payload {
+	if blob == nil {
+		return nil
+	}
+	return map[string]*common.Payload{
+		"MemoBlob": {
+			Metadata: map[string][]byte{"encoding": []byte("binary/plain")},
+			Data:     blob,
+		},
+	}
+}
+
 func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -379,13 +435,13 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	t.state.LastCompletedIterationAt = time.Now()
 }
 
-func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
-	// We thread one rng throughout so the sampled sequence continues across
-	// continue-as-new boundaries instead of restarting per chunk.
+func (t *tpsExecutor) createActions(run *loadgen.Run, carriedMemo []byte) []*ActionSet {
+	// One rng per iteration, threaded through the recursion so the sampled sequence
+	// continues across continue-as-new boundaries instead of restarting per chunk.
 	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
 	return []*ActionSet{
 		{
-			Actions:    t.createActionsChunk(run, rng, 0, 0, t.config.InternalIterations),
+			Actions:    t.createActionsChunk(run, rng, carriedMemo, 0, 0, t.config.InternalIterations),
 			Concurrent: false,
 		},
 	}
@@ -394,6 +450,7 @@ func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 func (t *tpsExecutor) createActionsChunk(
 	run *loadgen.Run,
 	rng *rand.Rand,
+	carriedMemo []byte,
 	childCount int,
 	continueAsNewCounter int,
 	remainingInternalIters int,
@@ -508,9 +565,16 @@ func (t *tpsExecutor) createActionsChunk(
 		})
 	} else {
 		// More iterations remain, create nested ContinueAsNew with more actions.
+		// Roll a memo for the next run; if it misses but a memo is already active in this
+		// chain, carry the existing blob forward (sticky/additive across continue-as-new).
+		nextMemo := t.sampleMemo(memoSaltContinueAsNew, run.Iteration, continueAsNewCounter+1)
+		if nextMemo == nil {
+			nextMemo = carriedMemo
+		}
 		chunkActions = append(chunkActions, &Action{
 			Variant: &Action_ContinueAsNew{
 				ContinueAsNew: &ContinueAsNewAction{
+					Memo: t.memoMap(nextMemo),
 					Arguments: []*common.Payload{
 						ConvertToPayload(&WorkflowInput{
 							InitialActions: []*ActionSet{
@@ -518,6 +582,7 @@ func (t *tpsExecutor) createActionsChunk(
 									Actions: t.createActionsChunk(
 										run,
 										rng,
+										nextMemo,
 										childCount,
 										continueAsNewCounter+1,
 										remainingInternalIters-itersPerChunk),
@@ -560,6 +625,8 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, r
 						Data:     []byte(fmt.Sprintf("%q", t.config.ExecutionID)), // quoted to be valid JSON string
 					},
 				},
+				// Roll a memo for this child independently, keyed by iteration + child ID.
+				Memo: t.memoMap(t.sampleMemo(memoSaltChildWorkflow, run.Iteration, childID)),
 			},
 		},
 	}

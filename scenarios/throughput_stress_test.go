@@ -137,7 +137,7 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 	}
 	require.NoError(t, executor.Configure(info))
 
-	sets := executor.createActions(info.NewRun(1))
+	sets := executor.createActions(info.NewRun(1), nil)
 	require.Len(t, sets, 1)
 
 	chunk1 := sets[0].GetActions()
@@ -186,5 +186,126 @@ func decodeContinueAsNewChunk(t *testing.T, actions []*ks.Action) []*ks.Action {
 		return input.GetInitialActions()[0].GetActions()
 	}
 	t.Fatal("no ContinueAsNew action found in chunk")
+	return nil
+}
+
+// TestThroughputStressMemoAcrossTree verifies that, with probability 1, a memo is attached
+// throughout the workflow tree: the root workflow, child workflows, and continue-as-new.
+func TestThroughputStressMemoAcrossTree(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:       "tps-memo",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+		ScenarioOptions: map[string]string{
+			IterFlag:                   "4",
+			ContinueAsNewAfterIterFlag: "1",
+			MemoDistributionJsonFlag:   `{"probability":1.0,"size":{"type":"fixed","value":"512"}}`,
+		},
+	}
+	require.NoError(t, executor.Configure(info))
+
+	// Root: the sampler yields a blob at probability 1.
+	require.NotNil(t, executor.sampleMemo(memoSaltRoot, 1, 0))
+
+	chunk1 := executor.createActions(info.NewRun(1), nil)[0].GetActions()
+
+	child := findChildWorkflow(chunk1)
+	require.NotNil(t, child)
+	require.Contains(t, child.GetMemo(), "MemoBlob")
+
+	can := findContinueAsNew(chunk1)
+	require.NotNil(t, can)
+	require.Contains(t, can.GetMemo(), "MemoBlob")
+}
+
+// TestThroughputStressNoMemoByDefault verifies that without the memo option, no memo is
+// attached anywhere in the tree.
+func TestThroughputStressNoMemoByDefault(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:       "tps-no-memo",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+		ScenarioOptions: map[string]string{
+			IterFlag:                   "4",
+			ContinueAsNewAfterIterFlag: "1",
+		},
+	}
+	require.NoError(t, executor.Configure(info))
+
+	require.Nil(t, executor.sampleMemo(memoSaltRoot, 1, 0))
+
+	chunk1 := executor.createActions(info.NewRun(1), nil)[0].GetActions()
+	require.Empty(t, findChildWorkflow(chunk1).GetMemo())
+	require.Empty(t, findContinueAsNew(chunk1).GetMemo())
+}
+
+// TestThroughputStressMemoStickyAcrossContinueAsNew verifies the sticky/additive semantics:
+// with per-node probability 0 (so no node rolls its own memo) but a memo carried in from the
+// root, every continue-as-new run in the chain keeps the memo, while independently-rolled
+// child workflows get none.
+func TestThroughputStressMemoStickyAcrossContinueAsNew(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:       "tps-memo-sticky",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+		ScenarioOptions: map[string]string{
+			IterFlag:                   "4",
+			ContinueAsNewAfterIterFlag: "1",
+			MemoDistributionJsonFlag:   `{"probability":0,"size":{"type":"fixed","value":"128"}}`,
+		},
+	}
+	require.NoError(t, executor.Configure(info))
+
+	carried := []byte("root-memo")
+	chunk := executor.createActions(info.NewRun(1), carried)[0].GetActions()
+
+	// Walk the full continue-as-new chain; every run must carry the memo forward.
+	for level := 0; ; level++ {
+		require.Empty(t, findChildWorkflow(chunk).GetMemo(),
+			"child at level %d rolled independently at probability 0, should have no memo", level)
+		can := findContinueAsNew(chunk)
+		if can == nil {
+			break // last run in the chain
+		}
+		require.Contains(t, can.GetMemo(), "MemoBlob",
+			"continue-as-new at level %d must carry the memo forward", level)
+		chunk = decodeContinueAsNewChunk(t, chunk)
+	}
+}
+
+func findChildWorkflow(actions []*ks.Action) *ks.ExecuteChildWorkflowAction {
+	for _, a := range actions {
+		switch v := a.GetVariant().(type) {
+		case *ks.Action_ExecChildWorkflow:
+			return v.ExecChildWorkflow
+		case *ks.Action_NestedActionSet:
+			if r := findChildWorkflow(v.NestedActionSet.GetActions()); r != nil {
+				return r
+			}
+		}
+	}
+	return nil
+}
+
+func findContinueAsNew(actions []*ks.Action) *ks.ContinueAsNewAction {
+	for _, a := range actions {
+		switch v := a.GetVariant().(type) {
+		case *ks.Action_ContinueAsNew:
+			return v.ContinueAsNew
+		case *ks.Action_NestedActionSet:
+			if r := findContinueAsNew(v.NestedActionSet.GetActions()); r != nil {
+				return r
+			}
+		}
+	}
 	return nil
 }

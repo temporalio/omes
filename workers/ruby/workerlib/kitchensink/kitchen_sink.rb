@@ -108,8 +108,10 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
     when :return_error
       raise Temporalio::Error::ApplicationError, action.return_error.failure.message
     when :continue_as_new
-      args = action.continue_as_new.arguments.map { |a| Temporalio::Converters::RawValue.new(a) }
-      raise Temporalio::Workflow::ContinueAsNewError.new(*args)
+      can_action = action.continue_as_new
+      args = can_action.arguments.map { |a| Temporalio::Converters::RawValue.new(a) }
+      memo = can_action.memo.to_h.transform_values { |v| Temporalio::Converters::RawValue.new(v) }
+      raise Temporalio::Workflow::ContinueAsNewError.new(*args, memo: memo.empty? ? nil : memo)
     when :timer
       handle_awaitable_choice(
         -> { Temporalio::Workflow.sleep(action.timer.milliseconds / 1000.0) },
@@ -128,6 +130,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
       proto_sa = Temporalio::Api::Common::V1::SearchAttributes.new(
         indexed_fields: child_action.search_attributes.to_h
       )
+      memo = child_action.memo.to_h.transform_values { |v| Temporalio::Converters::RawValue.new(v) }
 
       handle_awaitable_choice(
         lambda {
@@ -136,6 +139,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
             *args,
             id: child_action.workflow_id,
             task_queue: child_action.task_queue.empty? ? nil : child_action.task_queue,
+            memo: memo.empty? ? nil : memo,
             search_attributes: Temporalio::SearchAttributes._from_proto(proto_sa)
           )
         },
