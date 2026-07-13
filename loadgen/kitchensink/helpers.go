@@ -2,6 +2,7 @@ package kitchensink
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 
 	"go.temporal.io/api/common/v1"
@@ -23,10 +24,14 @@ func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
 	if delay := act.GetDelay(); delay != nil {
 		return "delay", []any{delay.AsDuration()}
 	} else if payload := act.GetPayload(); payload != nil {
+		// Fill with pseudo-random, incompressible bytes so the payload occupies its full
+		// configured size in history/persistence instead of compressing away. The rng is
+		// seeded by size (not the global source) to stay deterministic: this runs in workflow
+		// context (worker launchActivity), where the activity input is recorded in history and
+		// must match on replay.
 		inputData := make([]byte, payload.BytesToReceive)
-		for i := range inputData {
-			inputData[i] = byte(i % 256)
-		}
+		r := rand.New(rand.NewSource(int64(payload.BytesToReceive)))
+		_, _ = r.Read(inputData)
 		return "payload", []any{inputData, payload.BytesToReturn}
 	} else if client := act.GetClient(); client != nil {
 		return "client", []any{client}
