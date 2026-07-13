@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -158,8 +159,9 @@ func (d *fixedDistribution[T]) UnmarshalJSON(data []byte) error {
 }
 
 type discreteDistribution[T distValueType] struct {
-	weights map[T]int
-	cache   *discreteCache[T]
+	weights   map[T]int
+	cacheOnce sync.Once
+	cache     *discreteCache[T]
 }
 
 // discreteCache holds pre-computed values for discreteDistribution sampling
@@ -203,7 +205,9 @@ func (d *discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		}
 	}
 
-	if d.cache == nil {
+	// Build the sampling cache exactly once; Sample is called concurrently from
+	// multiple iteration goroutines that share a distribution instance.
+	d.cacheOnce.Do(func() {
 		keys := make([]T, 0, len(d.weights))
 		for k := range d.weights {
 			keys = append(keys, k)
@@ -235,7 +239,7 @@ func (d *discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 			weights:     weights,
 			totalWeight: totalWeight,
 		}
-	}
+	})
 
 	// Perform weighted sampling
 	r := rng.Intn(d.cache.totalWeight)
