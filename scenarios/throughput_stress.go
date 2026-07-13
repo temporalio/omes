@@ -537,7 +537,7 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 				SearchAttributes: map[string]*common.Payload{
 					loadgen.OmesExecutionIDSearchAttribute: &common.Payload{
 						Metadata: map[string][]byte{"encoding": []byte("json/plain"), "type": []byte("Keyword")},
-						Data:     []byte(fmt.Sprintf("%q", t.config.ExecutionID)), // quoted to be valid JSON string
+						Data:     fmt.Appendf(nil, "%q", t.config.ExecutionID), // quoted to be valid JSON string
 					},
 				},
 			},
@@ -709,7 +709,7 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 		}
 	}
 	fanout := make([]*Action, 0, numOps)
-	for i := 0; i < numOps; i++ {
+	for range numOps {
 		fanout = append(fanout, waitStartedOp())
 	}
 

@@ -108,7 +108,7 @@ func TestOutOfOrderSignals_BuildOrderedAwaitActions(t *testing.T) {
 		require.Len(t, sets, 1)
 		actions := sets[0].Actions
 		require.Len(t, actions, n+1)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			await := actions[i].GetAwaitWorkflowState()
 			require.NotNil(t, await, "action %d should await workflow state", i)
 			require.Equal(t, oooEventKey(i+1), await.Key)
@@ -121,7 +121,7 @@ func TestOutOfOrderSignals_BuildOrderedAwaitActions(t *testing.T) {
 		sets := buildOrderedAwaitActions(n, time.Millisecond)
 		actions := sets[0].Actions
 		require.Len(t, actions, 2*n+1)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			require.NotNil(t, actions[2*i].GetAwaitWorkflowState())
 			require.NotNil(t, actions[2*i+1].GetExecActivity())
 		}

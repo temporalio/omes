@@ -67,7 +67,7 @@ func TestWorkflowWithManyTimers_BuildActions(t *testing.T) {
 		sets := buildManyTimersActions(cfg, manyTimersSeededRng("test"))
 		require.Len(t, sets, 4, "3 timer batches + 1 terminal return set")
 
-		for i := 0; i < 3; i++ {
+		for i := range 3 {
 			require.True(t, sets[i].Concurrent, "timer batch %d should fire concurrently", i)
 			require.Len(t, sets[i].Actions, 4, "batch %d should hold concurrent-timers timers", i)
 			for _, a := range sets[i].Actions {

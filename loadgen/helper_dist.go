@@ -136,7 +136,7 @@ func (d *fixedDistribution[T]) Sample(_ *rand.Rand) (T, bool) {
 }
 
 func (d *fixedDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":  d.GetType(),
 		"value": renderToJSON(d.value),
 	})
@@ -255,7 +255,7 @@ func (d *discreteDistribution[T]) MarshalJSON() ([]byte, error) {
 		weights[renderToJSON(value)] = weight
 	}
 
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":    d.GetType(),
 		"weights": weights,
 	})
@@ -340,7 +340,7 @@ func (d *uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *uniformDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type": d.GetType(),
 		"min":  renderToJSON(d.min),
 		"max":  renderToJSON(d.max),
@@ -398,7 +398,7 @@ func (d *zipfDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *zipfDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type": d.GetType(),
 		"s":    d.s,
 		"v":    d.v,
@@ -478,10 +478,7 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)
 		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
 
-		result := mean + int64(float64(stdDev)*rng.NormFloat64())
-		if result < minVal {
-			result = minVal
-		}
+		result := max(mean+int64(float64(stdDev)*rng.NormFloat64()), minVal)
 		if result > maxVal {
 			result = maxVal
 		}
@@ -502,10 +499,7 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		mean, stdDev := any(d.mean).(time.Duration), any(d.stdDev).(time.Duration)
 		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
 
-		result := time.Duration(int64(mean) + int64(float64(stdDev)*rng.NormFloat64()))
-		if result < minVal {
-			result = minVal
-		}
+		result := max(time.Duration(int64(mean)+int64(float64(stdDev)*rng.NormFloat64())), minVal)
 		if result > maxVal {
 			result = maxVal
 		}
@@ -516,7 +510,7 @@ func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 }
 
 func (d *normalDistribution[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"type":   d.GetType(),
 		"mean":   renderToJSON(d.mean),
 		"stdDev": renderToJSON(d.stdDev),
