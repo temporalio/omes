@@ -1,7 +1,6 @@
 package loadgen
 
 import (
-	"math"
 	"math/rand"
 	"testing"
 
@@ -36,32 +35,26 @@ func TestPayloadConfigSamplePayloadSize(t *testing.T) {
 
 	t.Run("nil config returns fallback", func(t *testing.T) {
 		var config *PayloadConfig
-		assert.Equal(t, 256, config.SamplePayloadSize(rng, 256))
+		assert.Equal(t, int32(256), config.SamplePayloadSize(rng, 256))
 	})
 
 	t.Run("config with nil Size returns fallback", func(t *testing.T) {
 		config := &PayloadConfig{}
-		assert.Equal(t, 256, config.SamplePayloadSize(rng, 256))
+		assert.Equal(t, int32(256), config.SamplePayloadSize(rng, 256))
 	})
 
 	t.Run("fixed distribution returns the fixed value", func(t *testing.T) {
-		dist := NewFixedDistribution[int64](1024)
+		dist := NewFixedDistribution[int32](1024)
 		config := &PayloadConfig{Size: &dist}
-		assert.Equal(t, 1024, config.SamplePayloadSize(rng, 256))
-	})
-
-	t.Run("values above int32 max are clamped (no negative-length panic)", func(t *testing.T) {
-		dist := NewFixedDistribution[int64](int64(math.MaxInt32) + 5000)
-		config := &PayloadConfig{Size: &dist}
-		assert.Equal(t, math.MaxInt32, config.SamplePayloadSize(rng, 256))
+		assert.Equal(t, int32(1024), config.SamplePayloadSize(rng, 256))
 	})
 
 	t.Run("discrete distribution respects weights over many samples", func(t *testing.T) {
-		dist := NewDiscreteDistribution(map[int64]int{100: 70, 200: 25, 300: 5})
+		dist := NewDiscreteDistribution(map[int32]int{100: 70, 200: 25, 300: 5})
 		config := &PayloadConfig{Size: &dist}
 
 		const iterations = 10000
-		counts := map[int]int{}
+		counts := map[int32]int{}
 		rng := rand.New(rand.NewSource(42))
 		for i := 0; i < iterations; i++ {
 			counts[config.SamplePayloadSize(rng, 0)]++
@@ -69,7 +62,7 @@ func TestPayloadConfigSamplePayloadSize(t *testing.T) {
 
 		// Only the configured keys should ever appear.
 		for k := range counts {
-			assert.Contains(t, []int{100, 200, 300}, k)
+			assert.Contains(t, []int32{100, 200, 300}, k)
 		}
 
 		// Loose bounds on the proportions to guard against gross weighting bugs.
