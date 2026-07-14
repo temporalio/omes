@@ -30,9 +30,7 @@ func ParseAndValidatePayloadConfig(jsonStr string) (*PayloadConfig, error) {
 
 // SamplePayloadSize samples an activity payload size (in bytes) from the configured Size
 // distribution. If c is nil or Size is unset, fallback is returned. The result is clamped to
-// [0, math.MaxInt32] because payload sizes are stored in int32 proto fields; without the
-// upper clamp a large sampled value would wrap to a negative int32 and panic the worker's
-// make([]byte, size).
+// [0, math.MaxInt32] to match the protobuf field.
 func (c *PayloadConfig) SamplePayloadSize(rng *rand.Rand, fallback int) int {
 	if c == nil || c.Size == nil {
 		return fallback
