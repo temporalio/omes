@@ -587,6 +587,7 @@ func stringToValue[T distValueType](valueStr string) (T, error) {
 		if err != nil {
 			return zero, fmt.Errorf("failed to parse int32 value '%s': %w", valueStr, err)
 		}
+		// Need to downcast here specifically
 		return any(int32(intVal)).(T), nil
 	case float32:
 		floatVal, err := strconv.ParseFloat(valueStr, 32)
