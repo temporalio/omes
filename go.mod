@@ -1,6 +1,6 @@
 module github.com/temporalio/omes
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/gofrs/flock v0.13.0

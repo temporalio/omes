@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -62,7 +63,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// Setup query handler.
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
-		func(input interface{}) (*kitchensink.WorkflowState, error) {
+		func(input any) (*kitchensink.WorkflowState, error) {
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
@@ -71,7 +72,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// Setup update handler.
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
-		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
+		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval any, err error) {
 			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
 			if payload != nil {
 				return payload, err
@@ -204,7 +205,6 @@ func (ws *KSWorkflowState) handleActionSet(
 	// return values if we should return, then awaiting on that or completion
 	var actionsCompleted int
 	for _, action := range set.Actions {
-		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			if maybeReturnValue, maybeErr := ws.handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
 				returnValue, err = maybeReturnValue, maybeErr
@@ -236,12 +236,7 @@ func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) 
 		return true
 	}
 	// If the signal ID is not in the expected list, it means we already processed it
-	for _, id := range params.ExpectedSignalIds {
-		if id == signalID {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(params.ExpectedSignalIds, signalID)
 }
 
 // handleSignalDeduplication removes a received signal ID from the expected list.
@@ -287,9 +282,9 @@ func (ws *KSWorkflowState) handleAction(
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		var searchAttributes map[string]interface{}
+		var searchAttributes map[string]any
 		if child.SearchAttributes != nil {
-			searchAttributes = make(map[string]interface{})
+			searchAttributes = make(map[string]any)
 			for k, v := range child.SearchAttributes {
 				searchAttributes[k] = v
 			}
@@ -324,14 +319,14 @@ func (ws *KSWorkflowState) handleAction(
 		})
 		return nil, err
 	} else if upsertMemo := action.GetUpsertMemo(); upsertMemo != nil {
-		convertedMap := make(map[string]interface{}, len(upsertMemo.GetUpsertedMemo().Fields))
+		convertedMap := make(map[string]any, len(upsertMemo.GetUpsertedMemo().Fields))
 		for k, v := range upsertMemo.GetUpsertedMemo().Fields {
 			convertedMap[k] = v
 		}
 		err := workflow.UpsertMemo(ctx, convertedMap)
 		return nil, err
 	} else if upsertSA := action.GetUpsertSearchAttributes(); upsertSA != nil {
-		convertedMap := make(map[string]interface{}, len(upsertSA.GetSearchAttributes()))
+		convertedMap := make(map[string]any, len(upsertSA.GetSearchAttributes()))
 		for k, v := range upsertSA.GetSearchAttributes() {
 			convertedMap[k] = v
 		}

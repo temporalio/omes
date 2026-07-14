@@ -17,7 +17,7 @@ func TestFetchWorkerInfo(t *testing.T) {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"sdk_version": "v1.24.0",
 				"build_id":    "test-build-456",
 			})
