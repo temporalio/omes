@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.21.12-11 libprotoc-dev=3.21.12-11 \
+      protobuf-compiler=3.21.12-16 libprotoc-dev=3.21.12-16 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Rust for kitchen-sink-gen
