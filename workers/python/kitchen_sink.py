@@ -136,7 +136,10 @@ class KitchenSinkWorkflow:
             raise exceptions.ApplicationError(action.return_error.failure.message)
         elif action.HasField("continue_as_new"):
             args = [RawValue(i) for i in action.continue_as_new.arguments]
-            workflow.continue_as_new(args=args)
+            memo = {
+                k: RawValue(v) for k, v in action.continue_as_new.memo.items()
+            }
+            workflow.continue_as_new(args=args, memo=memo or None)
         elif action.HasField("timer"):
             await handle_awaitable_choice(
                 asyncio.sleep(action.timer.milliseconds / 1000),
@@ -155,11 +158,13 @@ class KitchenSinkWorkflow:
             args = [RawValue(i) for i in child_action.input]
             proto_sa = SearchAttributes(indexed_fields=child_action.search_attributes)
             typed_attrs = temporalio.converter.decode_typed_search_attributes(proto_sa)
+            memo = {k: RawValue(v) for k, v in child_action.memo.items()}
             await handle_awaitable_choice(
                 workflow.start_child_workflow(
                     child,
                     id=child_action.workflow_id,
                     args=args,
+                    memo=memo or None,
                     search_attributes=typed_attrs,
                 ),
                 child_action.awaitable_choice,

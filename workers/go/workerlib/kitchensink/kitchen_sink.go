@@ -12,6 +12,7 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
@@ -269,6 +270,17 @@ func (ws *KSWorkflowState) handleAction(
 	} else if re := action.GetReturnError(); re != nil {
 		return nil, temporal.NewApplicationError(re.Failure.Message, "")
 	} else if can := action.GetContinueAsNew(); can != nil {
+		if len(can.GetMemo()) > 0 {
+			convertedMap := make(map[string]interface{}, len(can.GetMemo()))
+			for k, v := range can.GetMemo() {
+				// Wrap the already-encoded payload so the data converter passes it
+				// through unchanged instead of re-wrapping it (_passthrough).
+				convertedMap[k] = converter.NewRawValue(v)
+			}
+			if err := workflow.UpsertMemo(ctx, convertedMap); err != nil {
+				return nil, err
+			}
+		}
 		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
 		return nil, withAwaitableChoice(ctx, ws, func(ctx workflow.Context) workflow.Future {
@@ -294,9 +306,19 @@ func (ws *KSWorkflowState) handleAction(
 				searchAttributes[k] = v
 			}
 		}
+		var memo map[string]interface{}
+		if child.GetMemo() != nil {
+			memo = make(map[string]interface{})
+			for k, v := range child.GetMemo() {
+				// Wrap the already-encoded payload so the data converter passes it
+				// through unchanged instead of re-wrapping it (_passthrough).
+				memo[k] = converter.NewRawValue(v)
+			}
+		}
 		cCtx := workflow.WithChildOptions(ctx, workflow.ChildWorkflowOptions{
 			WorkflowID:       child.WorkflowId,
 			SearchAttributes: searchAttributes,
+			Memo:             memo,
 		})
 		err := withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
 			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])

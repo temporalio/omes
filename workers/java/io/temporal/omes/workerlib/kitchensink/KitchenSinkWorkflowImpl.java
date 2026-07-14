@@ -15,6 +15,7 @@ import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
 import io.temporal.failure.ChildWorkflowFailure;
 import io.temporal.internal.common.SearchAttributesUtil;
+import io.temporal.common.converter.RawValue;
 import io.temporal.omes.KitchenSink;
 import io.temporal.workflow.*;
 import java.time.Duration;
@@ -159,16 +160,26 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       // Preserve search attributes across continue-as-new
       io.temporal.common.SearchAttributes currentSearchAttributes =
           Workflow.getTypedSearchAttributes();
+      boolean hasSearchAttributes =
+          currentSearchAttributes != null && currentSearchAttributes.size() > 0;
+      boolean hasMemo = !continueAsNew.getMemoMap().isEmpty();
 
-      if (currentSearchAttributes != null && currentSearchAttributes.size() > 0) {
-        // Explicitly preserve search attributes
-        ContinueAsNewOptions options =
-            ContinueAsNewOptions.newBuilder()
-                .setTypedSearchAttributes(currentSearchAttributes)
-                .build();
-        Workflow.continueAsNew(options, continueAsNew.getArgumentsList().get(0));
+      if (hasSearchAttributes || hasMemo) {
+        ContinueAsNewOptions.Builder optionsBuilder = ContinueAsNewOptions.newBuilder();
+        if (hasSearchAttributes) {
+          // Explicitly preserve search attributes
+          optionsBuilder.setTypedSearchAttributes(currentSearchAttributes);
+        }
+        if (hasMemo) {
+          Map<String, Object> memo = new HashMap<>();
+          // Wrap the already-encoded payload so the data converter passes it through
+          // unchanged instead of re-wrapping it (_passthrough).
+          continueAsNew.getMemoMap().forEach((k, v) -> memo.put(k, new RawValue(v)));
+          optionsBuilder.setMemo(memo);
+        }
+        Workflow.continueAsNew(optionsBuilder.build(), continueAsNew.getArgumentsList().get(0));
       } else {
-        // No search attributes to preserve
+        // Nothing to preserve
         Workflow.continueAsNew(continueAsNew.getArgumentsList().get(0));
       }
     } else if (action.hasTimer()) {
@@ -260,6 +271,15 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
                         .build();
                 optionsBuilder.setTypedSearchAttributes(
                     SearchAttributesUtil.decodeTyped(protoSearchAttributes));
+              }
+
+              // Add memo if present
+              if (!executeChildWorkflow.getMemoMap().isEmpty()) {
+                Map<String, Object> memo = new HashMap<>();
+                // Wrap the already-encoded payload so the data converter passes it
+                // through unchanged instead of re-wrapping it (_passthrough).
+                executeChildWorkflow.getMemoMap().forEach((k, v) -> memo.put(k, new RawValue(v)));
+                optionsBuilder.setMemo(memo);
               }
 
               ChildWorkflowStub stub =

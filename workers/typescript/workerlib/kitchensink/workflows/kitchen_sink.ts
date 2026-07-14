@@ -11,6 +11,7 @@ import {
   defineUpdate,
   deprecatePatch,
   isCancellation,
+  makeContinueAsNewFunc,
   patched,
   scheduleActivity,
   scheduleLocalActivity,
@@ -132,7 +133,10 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     } else if (action.returnError) {
       throw new ApplicationFailure(action.returnError.failure?.message);
     } else if (action.continueAsNew) {
-      await continueAsNew(action.continueAsNew.arguments![0]);
+      const memo = action.continueAsNew.memo;
+      const doContinueAsNew =
+        memo && Object.keys(memo).length > 0 ? makeContinueAsNewFunc({ memo }) : continueAsNew;
+      await doContinueAsNew(action.continueAsNew.arguments![0]);
     } else if (action.timer) {
       const ms = numify(action.timer.milliseconds);
       const sleeper = () => sleep(ms);
@@ -154,6 +158,8 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
             typedSearchAttributes: decodeTypedSearchAttributes(
               action?.execChildWorkflow?.searchAttributes,
             ),
+            ...(execChild.memo &&
+              Object.keys(execChild.memo).length > 0 && { memo: execChild.memo }),
           });
         },
         action.execChildWorkflow.awaitableChoice,

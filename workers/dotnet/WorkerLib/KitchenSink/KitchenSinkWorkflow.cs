@@ -160,7 +160,13 @@ public class KitchenSinkWorkflow
         else if (action.ContinueAsNew is { } can)
         {
             var args = can.Arguments.Select(p => new RawValue(p)).ToArray();
-            throw Workflow.CreateContinueAsNewException("kitchenSink", args);
+            var canOptions = new ContinueAsNewOptions
+            {
+                Memo = can.Memo.Count == 0
+                    ? null
+                    : can.Memo.ToDictionary(kv => kv.Key, kv => (object)new RawValue(kv.Value)),
+            };
+            throw Workflow.CreateContinueAsNewException("kitchenSink", args, canOptions);
         }
         else if (action.Timer is { } timer)
         {
@@ -193,6 +199,9 @@ public class KitchenSinkWorkflow
                 TypedSearchAttributes = execChild.SearchAttributes.Count == 0
                     ? SearchAttributeCollection.Empty
                     : SearchAttributeCollection.FromProto(new SearchAttributes { IndexedFields = { execChild.SearchAttributes } }),
+                Memo = execChild.Memo.Count == 0
+                    ? null
+                    : execChild.Memo.ToDictionary(kv => kv.Key, kv => (object)new RawValue(kv.Value)),
             };
             var childTask = Workflow.StartChildWorkflowAsync(childType, args, options);
             await HandleAwaitableChoiceAsync(childTask, tokenSrc, execChild.AwaitableChoice,
