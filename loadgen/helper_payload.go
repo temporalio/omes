@@ -3,7 +3,6 @@ package loadgen
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/rand"
 )
 
@@ -12,7 +11,7 @@ import (
 type PayloadConfig struct {
 	// Size is the distribution (in bytes) of activity payload sizes. See DistributionField
 	// for the supported distribution types and their JSON format.
-	Size *DistributionField[int64] `json:"size"`
+	Size *DistributionField[int32] `json:"size"`
 }
 
 // ParseAndValidatePayloadConfig parses a PayloadConfig from JSON. An empty input indicates
@@ -30,8 +29,8 @@ func ParseAndValidatePayloadConfig(jsonStr string) (*PayloadConfig, error) {
 
 // SamplePayloadSize samples an activity payload size (in bytes) from the configured Size
 // distribution. If c is nil or Size is unset, fallback is returned. The result is clamped to
-// [0, math.MaxInt32] to match the protobuf field.
-func (c *PayloadConfig) SamplePayloadSize(rng *rand.Rand, fallback int) int {
+// [0, math.MaxInt32] to match bytes_to_receive etc in the kitchensink proto.
+func (c *PayloadConfig) SamplePayloadSize(rng *rand.Rand, fallback int32) int32 {
 	if c == nil || c.Size == nil {
 		return fallback
 	}
@@ -42,8 +41,5 @@ func (c *PayloadConfig) SamplePayloadSize(rng *rand.Rand, fallback int) int {
 	if value < 0 {
 		value = 0
 	}
-	if value > math.MaxInt32 {
-		value = math.MaxInt32
-	}
-	return int(value)
+	return value
 }

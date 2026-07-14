@@ -369,7 +369,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 // samplePayloadSize samples an activity payload size (in bytes) from the configured
 // Payload distribution, falling back to 256 bytes when none is configured.
 func (t *tpsExecutor) samplePayloadSize(rng *rand.Rand) int {
-	return t.config.Payload.SamplePayloadSize(rng, 256)
+	return int(t.config.Payload.SamplePayloadSize(rng, 256))
 }
 
 func (t *tpsExecutor) updateStateOnIterationCompletion() {
