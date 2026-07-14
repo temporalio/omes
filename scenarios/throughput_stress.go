@@ -54,6 +54,9 @@ const (
 	// Requires server support for standalone activities (dynamic config `activity.enableStandalone`).
 	// Default is false.
 	IncludeStandaloneActivityFlag = "include-standalone-activity"
+	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
+	// activity payload-size distribution. See loadgen.PayloadConfig for details.
+	PayloadDistributionJsonFlag = "payload-distribution-json"
 )
 
 type tpsState struct {
@@ -82,6 +85,7 @@ type tpsConfig struct {
 	IncludeDescribe               bool
 	IncludeStandaloneNexus        bool
 	IncludeStandaloneActivity     bool
+	Payload                       *loadgen.PayloadConfig
 }
 
 type tpsExecutor struct {
@@ -99,8 +103,8 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag),
+			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
+			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag, PayloadDistributionJsonFlag),
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }
@@ -187,6 +191,13 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
 	}
 	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
+
+	if payloadStr, ok := info.ScenarioOptions[PayloadDistributionJsonFlag]; ok {
+		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", PayloadDistributionJsonFlag, err)
+		}
+	}
 
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
@@ -355,6 +366,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	return errors.Join(tpsErrors...)
 }
 
+// samplePayloadSize samples an activity payload size (in bytes) from the configured
+// Payload distribution, falling back to 256 bytes when none is configured.
+func (t *tpsExecutor) samplePayloadSize(rng *rand.Rand) int {
+	return int(t.config.Payload.SamplePayloadSize(rng, 256))
+}
+
 func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -363,9 +380,12 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 }
 
 func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
+	// We thread one rng throughout so the sampled sequence continues across
+	// continue-as-new boundaries instead of restarting per chunk.
+	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
 	return []*ActionSet{
 		{
-			Actions:    t.createActionsChunk(run, 0, 0, t.config.InternalIterations),
+			Actions:    t.createActionsChunk(run, rng, 0, 0, t.config.InternalIterations),
 			Concurrent: false,
 		},
 	}
@@ -373,6 +393,7 @@ func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 
 func (t *tpsExecutor) createActionsChunk(
 	run *loadgen.Run,
+	rng *rand.Rand,
 	childCount int,
 	continueAsNewCounter int,
 	remainingInternalIters int,
@@ -386,14 +407,12 @@ func (t *tpsExecutor) createActionsChunk(
 	isLastChunk := remainingInternalIters <= itersPerChunk
 	itersPerChunk = min(itersPerChunk, remainingInternalIters) // cap chunk size to remaining iterations
 
-	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
-
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
 		syncActions := []*Action{
-			PayloadActivity(256, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
+			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultLocalActivity),
+			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
+			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 		}
@@ -406,11 +425,11 @@ func (t *tpsExecutor) createActionsChunk(
 
 		childCount++
 		asyncActions := []*Action{
-			t.createChildWorkflowAction(run, childCount),
-			PayloadActivity(256, 256, DefaultRemoteActivity),
-			PayloadActivity(256, 256, DefaultRemoteActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
-			PayloadActivity(0, 256, DefaultLocalActivity),
+			t.createChildWorkflowAction(run, childCount, rng),
+			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
+			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			GenericActivity("noop", DefaultLocalActivity),
 			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 			ClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
@@ -464,7 +483,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add standalone activities, if configured.
 		if t.config.IncludeStandaloneActivity {
-			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID)))
+			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -498,6 +517,7 @@ func (t *tpsExecutor) createActionsChunk(
 								{
 									Actions: t.createActionsChunk(
 										run,
+										rng,
 										childCount,
 										continueAsNewCounter+1,
 										remainingInternalIters-itersPerChunk),
@@ -514,7 +534,7 @@ func (t *tpsExecutor) createActionsChunk(
 	return chunkActions
 }
 
-func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *Action {
+func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, rng *rand.Rand) *Action {
 	return &Action{
 		Variant: &Action_ExecChildWorkflow{
 			ExecChildWorkflow: &ExecuteChildWorkflowAction{
@@ -523,9 +543,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int) *
 						InitialActions: []*ActionSet{
 							{
 								Actions: []*Action{
-									PayloadActivity(256, 256, DefaultRemoteActivity),
-									PayloadActivity(256, 256, DefaultRemoteActivity),
-									PayloadActivity(256, 256, DefaultRemoteActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
 									NewEmptyReturnResultAction(),
 								},
 								Concurrent: false,
@@ -749,15 +769,16 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Ac
 	}), DefaultRemoteActivity)
 }
 
-func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string) *Action {
+func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand.Rand) *Action {
+	size := int32(t.samplePayloadSize(rng))
 	return ClientActivity(ClientActions(&ClientAction{
 		Variant: &ClientAction_DoStandaloneActivity{
 			DoStandaloneActivity: &DoStandaloneActivity{
 				Activity: &ExecuteActivityAction{
 					ActivityType: &ExecuteActivityAction_Payload{
 						Payload: &ExecuteActivityAction_PayloadActivity{
-							BytesToReceive: 256,
-							BytesToReturn:  256,
+							BytesToReceive: size,
+							BytesToReturn:  size,
 						},
 					},
 					TaskQueue:           taskQueue,

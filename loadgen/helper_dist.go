@@ -6,12 +6,13 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
 // distValueType constrains the types that can be used as distribution values.
 type distValueType interface {
-	int64 | time.Duration | float32
+	int64 | time.Duration | float32 | int32
 }
 
 type distribution[T distValueType] interface {
@@ -158,8 +159,9 @@ func (d *fixedDistribution[T]) UnmarshalJSON(data []byte) error {
 }
 
 type discreteDistribution[T distValueType] struct {
-	weights map[T]int
-	cache   *discreteCache[T]
+	weights   map[T]int
+	cacheOnce sync.Once
+	cache     *discreteCache[T]
 }
 
 // discreteCache holds pre-computed values for discreteDistribution sampling
@@ -203,25 +205,16 @@ func (d *discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		}
 	}
 
-	if d.cache == nil {
+	// Build the sampling cache exactly once; Sample is called concurrently from
+	// multiple iteration goroutines that share a distribution instance.
+	d.cacheOnce.Do(func() {
 		keys := make([]T, 0, len(d.weights))
 		for k := range d.weights {
 			keys = append(keys, k)
 		}
-		switch any(keys[0]).(type) {
-		case int64:
-			sort.Slice(keys, func(i, j int) bool {
-				return any(keys[i]).(int64) < any(keys[j]).(int64)
-			})
-		case float32:
-			sort.Slice(keys, func(i, j int) bool {
-				return any(keys[i]).(float32) < any(keys[j]).(float32)
-			})
-		case time.Duration:
-			sort.Slice(keys, func(i, j int) bool {
-				return any(keys[i]).(time.Duration) < any(keys[j]).(time.Duration)
-			})
-		}
+		sort.Slice(keys, func(i, j int) bool {
+			return keys[i] < keys[j]
+		})
 
 		totalWeight := 0
 		weights := make([]int, len(keys))
@@ -235,7 +228,7 @@ func (d *discreteDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 			weights:     weights,
 			totalWeight: totalWeight,
 		}
-	}
+	})
 
 	// Perform weighted sampling
 	r := rng.Intn(d.cache.totalWeight)
@@ -294,19 +287,8 @@ func (d *uniformDistribution[T]) GetType() string {
 }
 
 func (d *uniformDistribution[T]) Validate() error {
-	switch any(d.min).(type) {
-	case int64:
-		if any(d.max).(int64) < any(d.min).(int64) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
-	case float32:
-		if any(d.max).(float32) < any(d.min).(float32) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
-	case time.Duration:
-		if any(d.max).(time.Duration) < any(d.min).(time.Duration) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
+	if d.max < d.min {
+		return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
 	}
 	return nil
 }
@@ -320,13 +302,20 @@ func (d *uniformDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
 		}
 		result := minVal + rng.Int63n(maxVal-minVal+1)
 		return T(result), true
+	case int32:
+		minVal, maxVal := any(d.min).(int32), any(d.max).(int32)
+		if maxVal <= minVal {
+			return d.min, true
+		}
+		result := minVal + rng.Int31n(maxVal-minVal+1)
+		return T(result), true
 	case float32:
 		minVal, maxVal := any(d.min).(float32), any(d.max).(float32)
 		if maxVal <= minVal {
 			return d.min, true
 		}
 		result := minVal + rng.Float32()*(maxVal-minVal)
-		return any(result).(T), true
+		return T(result), true
 	case time.Duration:
 		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
 		if maxVal <= minVal {
@@ -446,67 +435,18 @@ func (d *normalDistribution[T]) GetType() string {
 }
 
 func (d *normalDistribution[T]) Validate() error {
-	switch any(d.stdDev).(type) {
-	case int64:
-		if any(d.stdDev).(int64) <= 0 {
-			return fmt.Errorf("standard deviation must be positive, got %v", d.stdDev)
-		}
-		if any(d.max).(int64) < any(d.min).(int64) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
-	case float32:
-		if any(d.stdDev).(float32) <= 0 {
-			return fmt.Errorf("standard deviation must be positive, got %v", d.stdDev)
-		}
-		if any(d.max).(float32) < any(d.min).(float32) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
-	case time.Duration:
-		if any(d.stdDev).(time.Duration) <= 0 {
-			return fmt.Errorf("standard deviation must be positive, got %v", d.stdDev)
-		}
-		if any(d.max).(time.Duration) < any(d.min).(time.Duration) {
-			return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
-		}
+	if d.stdDev <= 0 {
+		return fmt.Errorf("standard deviation must be positive, got %v", d.stdDev)
+	}
+	if d.max < d.min {
+		return fmt.Errorf("max value (%v) cannot be less than min value (%v)", d.max, d.min)
 	}
 	return nil
 }
 
 func (d *normalDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
-	switch any(d.mean).(type) {
-	case int64:
-		mean, stdDev := any(d.mean).(int64), any(d.stdDev).(int64)
-		minVal, maxVal := any(d.min).(int64), any(d.max).(int64)
-
-		result := max(mean+int64(float64(stdDev)*rng.NormFloat64()), minVal)
-		if result > maxVal {
-			result = maxVal
-		}
-		return T(result), true
-	case float32:
-		mean, stdDev := any(d.mean).(float32), any(d.stdDev).(float32)
-		minVal, maxVal := any(d.min).(float32), any(d.max).(float32)
-
-		result := mean + float32(float64(stdDev)*rng.NormFloat64())
-		if result < minVal {
-			result = minVal
-		}
-		if result > maxVal {
-			result = maxVal
-		}
-		return any(result).(T), true
-	case time.Duration:
-		mean, stdDev := any(d.mean).(time.Duration), any(d.stdDev).(time.Duration)
-		minVal, maxVal := any(d.min).(time.Duration), any(d.max).(time.Duration)
-
-		result := max(time.Duration(int64(mean)+int64(float64(stdDev)*rng.NormFloat64())), minVal)
-		if result > maxVal {
-			result = maxVal
-		}
-		return T(result), true
-	default:
-		return d.mean, false
-	}
+	result := min(d.max, max(d.min, d.mean+T(float64(d.stdDev)*rng.NormFloat64())))
+	return result, true
 }
 
 func (d *normalDistribution[T]) MarshalJSON() ([]byte, error) {
@@ -580,6 +520,22 @@ func parseFromJSON[T any](rawMap map[string]json.RawMessage, fieldName string) (
 			return zero, fmt.Errorf("failed to parse int64 value '%s': %w", strValue, err)
 		}
 		return any(intVal).(T), nil
+	case int32:
+		var numValue int32
+		if err := json.Unmarshal(rawMsg, &numValue); err == nil {
+			return any(numValue).(T), nil
+		}
+
+		var strValue string
+		if err := json.Unmarshal(rawMsg, &strValue); err != nil {
+			return zero, fmt.Errorf("failed to parse '%s' as int32 or string: %w", fieldName, err)
+		}
+
+		intVal, err := strconv.ParseInt(strValue, 10, 32)
+		if err != nil {
+			return zero, fmt.Errorf("failed to parse int32 value '%s': %w", strValue, err)
+		}
+		return any(int32(intVal)).(T), nil
 
 	case float32:
 		var numValue float32
@@ -646,7 +602,13 @@ func stringToValue[T distValueType](valueStr string) (T, error) {
 		if err != nil {
 			return zero, fmt.Errorf("failed to parse int64 value '%s': %w", valueStr, err)
 		}
-		return T(intVal), nil
+		return any(intVal).(T), nil
+	case int32:
+		intVal, err := strconv.ParseInt(valueStr, 10, 32)
+		if err != nil {
+			return zero, fmt.Errorf("failed to parse int32 value '%s': %w", valueStr, err)
+		}
+		return any(int32(intVal)).(T), nil
 	case float32:
 		floatVal, err := strconv.ParseFloat(valueStr, 32)
 		if err != nil {
