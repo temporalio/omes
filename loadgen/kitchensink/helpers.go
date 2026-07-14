@@ -26,9 +26,7 @@ func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
 	} else if payload := act.GetPayload(); payload != nil {
 		// Fill with pseudo-random, incompressible bytes so the payload occupies its full
 		// configured size in history/persistence instead of compressing away. The rng is
-		// seeded by size (not the global source) to stay deterministic: this runs in workflow
-		// context (worker launchActivity), where the activity input is recorded in history and
-		// must match on replay.
+		// seeded by size so its deterministic on replay
 		inputData := make([]byte, payload.BytesToReceive)
 		r := rand.New(rand.NewSource(int64(payload.BytesToReceive)))
 		_, _ = r.Read(inputData)

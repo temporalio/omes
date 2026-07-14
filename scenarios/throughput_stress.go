@@ -380,8 +380,8 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 }
 
 func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
-	// One rng per iteration, threaded through the recursion so the sampled sequence
-	// continues across continue-as-new boundaries instead of restarting per chunk.
+	// We thread one rng throughout so the sampled sequence continues across
+	// continue-as-new boundaries instead of restarting per chunk.
 	rng := rand.New(rand.NewSource(t.config.RngSeed + int64(run.Iteration)))
 	return []*ActionSet{
 		{
