@@ -479,6 +479,120 @@ func TestDistributionField(t *testing.T) {
 		// no need to test other dist types ...
 	})
 
+	t.Run("Mixture Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":3,"distribution":{"type":"uniform","min":"0","max":"100"}},{"weight":7,"distribution":{"type":"uniform","min":"1000","max":"2000"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			// Test exact values with specific seeds
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
+			assert.True(t, ok)
+			assert.Equal(t, int64(1234), value)
+
+			// Verify deterministic behavior
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values, including a
+			// draw that picks the low-weight component.
+			rng3 := rand.New(rand.NewSource(1))
+			value3, ok3 := df.Sample(rng3)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(35), value3)
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Nested mixture", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":{"type":"mixture","components":[{"weight":1,"distribution":{"type":"uniform","min":"0","max":"100"}},{"weight":1,"distribution":{"type":"uniform","min":"1000","max":"2000"}}]}},{"weight":1,"distribution":{"type":"fixed","value":"9999"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			rng := rand.New(rand.NewSource(0))
+			value, ok := df.Sample(rng)
+			assert.True(t, ok)
+			assert.Equal(t, int64(63), value)
+
+			// Verify deterministic behavior
+			rng2 := rand.New(rand.NewSource(0))
+			value2, ok2 := df.Sample(rng2)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Single component is valid and always samples that component", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":5,"distribution":{"type":"fixed","value":"777"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			for i := range 10 {
+				rng := rand.New(rand.NewSource(testSeed + int64(i)))
+				v, ok := df.Sample(rng)
+				assert.True(t, ok)
+				assert.Equal(t, int64(777), v)
+			}
+
+			checkJsonRoundtrip(t, err, df)
+		})
+
+		t.Run("Empty components is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "components cannot be empty")
+		})
+
+		t.Run("Non-positive weight is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":0,"distribution":{"type":"fixed","value":"1"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 weight must be positive")
+		})
+
+		t.Run("Null component distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":null}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 is missing a distribution")
+		})
+
+		t.Run("Missing component distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 is missing a distribution")
+		})
+
+		t.Run("Invalid nested distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":{"type":"normal","mean":"5","stdDev":"0","min":"0","max":"10"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "standard deviation must be positive")
+		})
+	})
+
 	t.Run("Error Cases", func(t *testing.T) {
 		t.Run("Unknown distribution type", func(t *testing.T) {
 			jsonData := `{"type":"unknown"}`
@@ -516,11 +630,16 @@ func checkJsonRoundtrip[T distValueType](t *testing.T, err error, df Distributio
 	t.Helper()
 
 	marshaled, err := json.Marshal(df)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var unmarshalled DistributionField[T]
 	err = json.Unmarshal(marshaled, &unmarshalled)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.EqualExportedValues(t, df, unmarshalled)
+	// The distribution structs expose no exported fields (and some hold
+	// sampling caches), so EqualExportedValues would pass vacuously. Compare
+	// the re-marshaled JSON instead: a faithful roundtrip must reproduce it.
+	remarshaled, err := json.Marshal(unmarshalled)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(marshaled), string(remarshaled))
 }

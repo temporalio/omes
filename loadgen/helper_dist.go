@@ -42,6 +42,9 @@ type distribution[T distValueType] interface {
 //
 //   - "normal" - Normal distribution.
 //     Example: {"type": "normal", "mean": "500", "stdDev": "100", "min": "0", "max": "1000"}
+//
+//   - "mixture" - Mixture of weighted nested distributions.
+//     Example: {"type": "mixture", "components": [{"weight": 3, "distribution": {"type": "normal", "mean": "500", "stdDev": "100", "min": "0", "max": "1000"}}, {"weight": 7, "distribution": {"type": "uniform", "min": "100", "max": "1000"}}]}
 type DistributionField[T distValueType] struct {
 	distribution[T]
 	distType string
@@ -95,6 +98,10 @@ func (df *DistributionField[T]) UnmarshalJSON(data []byte) error {
 		df.distribution = &dist
 	case "normal":
 		var dist normalDistribution[T]
+		err = json.Unmarshal(data, &dist)
+		df.distribution = &dist
+	case "mixture":
+		var dist mixtureDistribution[T]
 		err = json.Unmarshal(data, &dist)
 		df.distribution = &dist
 	default:
@@ -489,6 +496,107 @@ func (d *normalDistribution[T]) UnmarshalJSON(data []byte) error {
 	d.stdDev = stdDev
 	d.min = minVal
 	d.max = maxVal
+
+	return nil
+}
+
+type mixtureComponent[T distValueType] struct {
+	weight       int
+	distribution DistributionField[T]
+}
+
+type mixtureDistribution[T distValueType] struct {
+	components []mixtureComponent[T]
+
+	// totalWeight is the sum of component weights, cached on first Sample.
+	// Sample is called concurrently from multiple iteration goroutines that
+	// share a distribution instance, so it is computed exactly once.
+	totalWeightOnce sync.Once
+	totalWeight     int
+}
+
+func (d *mixtureDistribution[T]) GetType() string {
+	return "mixture"
+}
+
+func (d *mixtureDistribution[T]) Validate() error {
+	if len(d.components) == 0 {
+		return fmt.Errorf("components cannot be empty")
+	}
+	for i, component := range d.components {
+		if component.weight <= 0 {
+			return fmt.Errorf("component %d weight must be positive, got %d", i, component.weight)
+		}
+		if component.distribution.distribution == nil {
+			return fmt.Errorf("component %d is missing a distribution", i)
+		}
+		if err := component.distribution.Validate(); err != nil {
+			return fmt.Errorf("invalid component %d distribution: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func (d *mixtureDistribution[T]) Sample(rng *rand.Rand) (T, bool) {
+	var zero T
+	if len(d.components) == 0 {
+		return zero, false
+	}
+
+	d.totalWeightOnce.Do(func() {
+		for _, component := range d.components {
+			d.totalWeight += component.weight
+		}
+	})
+	if d.totalWeight <= 0 {
+		return zero, false
+	}
+
+	// Perform weighted sampling to pick a component, then sample from it.
+	r := rng.Intn(d.totalWeight)
+	cumulativeWeight := 0
+	for _, component := range d.components {
+		cumulativeWeight += component.weight
+		if r < cumulativeWeight {
+			return component.distribution.Sample(rng)
+		}
+	}
+	return zero, false
+}
+
+func (d *mixtureDistribution[T]) MarshalJSON() ([]byte, error) {
+	components := make([]map[string]any, len(d.components))
+	for i, component := range d.components {
+		components[i] = map[string]any{
+			"weight":       component.weight,
+			"distribution": component.distribution,
+		}
+	}
+
+	return json.Marshal(map[string]any{
+		"type":       d.GetType(),
+		"components": components,
+	})
+}
+
+func (d *mixtureDistribution[T]) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Components []struct {
+			Weight       int                  `json:"weight"`
+			Distribution DistributionField[T] `json:"distribution"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	d.components = make([]mixtureComponent[T], len(raw.Components))
+	for i, component := range raw.Components {
+		d.components[i] = mixtureComponent[T]{
+			weight:       component.Weight,
+			distribution: component.Distribution,
+		}
+	}
 
 	return nil
 }
