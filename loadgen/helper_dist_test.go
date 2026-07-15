@@ -88,7 +88,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1.5), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -194,7 +194,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(38.205994), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -224,7 +224,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -264,7 +264,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, int64(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -339,7 +339,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, time.Duration(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -415,7 +415,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(66.34703), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -447,7 +447,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -506,7 +506,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, int64(35), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Nested mixture", func(t *testing.T) {
@@ -527,7 +527,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Single component is valid and always samples that component", func(t *testing.T) {
@@ -544,7 +544,7 @@ func TestDistributionField(t *testing.T) {
 				assert.Equal(t, int64(777), v)
 			}
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Empty components is invalid", func(t *testing.T) {
@@ -626,7 +626,7 @@ func TestDistributionField(t *testing.T) {
 	})
 }
 
-func checkJsonRoundtrip[T distValueType](t *testing.T, err error, df DistributionField[T]) {
+func checkJsonRoundtrip[T distValueType](t *testing.T, df DistributionField[T]) {
 	t.Helper()
 
 	marshaled, err := json.Marshal(df)
