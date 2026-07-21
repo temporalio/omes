@@ -20,7 +20,7 @@ type Distribution[T DistValueType] interface {
 	Sample(rng *rand.Rand) (T, bool)
 	// GetType returns the distribution type identifier.
 	GetType() string
-	// Validate checks if the distribution is valid.
+	// Validate returns an error if the distribution is invalid.
 	Validate() error
 }
 
