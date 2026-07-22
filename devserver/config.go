@@ -3,6 +3,7 @@ package devserver
 import (
 	"bytes"
 	"cmp"
+	"errors"
 	"fmt"
 	"maps"
 	"math/rand"
@@ -39,6 +40,51 @@ const (
 )
 
 const maxPortAllocationAttempts = 50
+
+func resolvePorts(supplied *Ports) (Ports, error) {
+	if supplied == nil {
+		ports, err := allocatePorts("127.0.0.1")
+		if err != nil {
+			return Ports{}, err
+		}
+		return newPorts("127.0.0.1", ports), nil
+	}
+	if err := supplied.validate(); err != nil {
+		return Ports{}, err
+	}
+	return *supplied, nil
+}
+
+func (p Ports) validate() error {
+	if p.Host == "" {
+		return errors.New("host is required")
+	}
+	seen := make(map[int]struct{}, portCount)
+	for _, port := range p.portArray() {
+		if port <= 0 || port > 65535 {
+			return fmt.Errorf("invalid port %d", port)
+		}
+		if _, ok := seen[port]; ok {
+			return fmt.Errorf("duplicate port %d", port)
+		}
+		seen[port] = struct{}{}
+	}
+	return nil
+}
+
+func (p Ports) portArray() [portCount]int {
+	return [portCount]int{
+		p.FrontendGRPC,
+		p.FrontendMembership,
+		p.FrontendHTTP,
+		p.HistoryGRPC,
+		p.HistoryMembership,
+		p.MatchingGRPC,
+		p.MatchingMembership,
+		p.WorkerGRPC,
+		p.WorkerMembership,
+	}
+}
 
 // allocatePorts returns portCount free ports in the postgres-safe
 // range (<32768). It binds each port to prove it's free, then releases the
