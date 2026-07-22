@@ -1,6 +1,6 @@
 module github.com/temporalio/omes/workers/go
 
-go 1.25.0
+go 1.25.4
 
 require (
 	github.com/temporalio/omes v1.0.0
@@ -13,7 +13,7 @@ require (
 	github.com/nexus-rpc/sdk-go v0.6.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/pflag v1.0.5
-	go.temporal.io/api v1.62.12
+	go.temporal.io/api v1.63.0
 	go.temporal.io/sdk v1.45.0
 	go.temporal.io/sdk/contrib/aws/lambdaworker v0.1.1
 	go.temporal.io/sdk/contrib/sysinfo v0.1.0
@@ -59,6 +59,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/nexus-rpc/nexus-proto-annotations v0.1.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
 	github.com/parquet-go/parquet-go v0.25.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
@@ -78,10 +79,10 @@ require (
 	go.temporal.io/sdk/contrib/envconfig v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260120221211-b8f7ae30c516 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
@@ -92,4 +93,8 @@ require (
 replace (
 	github.com/temporalio/omes => ../../
 	github.com/temporalio/omes/workers/go/harness/api => ./harness/api
+	// TEMPORARY (do not merge): pin the SDK fork that adds temporalnexus.StartActivity
+	// (standalone-activity support for Nexus operations) until it lands in a released SDK.
+	// Mirrors canary-go PR #367. See NEXUS-434.
+	go.temporal.io/sdk => github.com/Quinn-With-Two-Ns/sdk-go v0.0.0-20260709224156-c91b0e83dc14
 )

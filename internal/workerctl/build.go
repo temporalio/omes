@@ -97,7 +97,14 @@ require github.com/temporalio/omes/workers/go/harness/api v0.0.0
 
 replace github.com/temporalio/omes => ../../../
 replace github.com/temporalio/omes/workers/go => ../
-replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api`
+replace github.com/temporalio/omes/workers/go/harness/api => ../harness/api
+
+// TEMPORARY (do not merge): pin the SDK fork that adds temporalnexus.StartActivity
+// (standalone-activity support for Nexus operations) until it lands in a released SDK.
+// Must live here (not only in workers/go/go.mod) because this generated module is the main
+// module for the worker build, and Go ignores replace directives from non-main modules.
+// Mirrors canary-go PR #367. See NEXUS-434.
+replace go.temporal.io/sdk => github.com/Quinn-With-Two-Ns/sdk-go v0.0.0-20260709224156-c91b0e83dc14`
 
 	goMain := `package main
 
