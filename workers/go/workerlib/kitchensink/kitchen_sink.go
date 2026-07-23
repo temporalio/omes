@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -39,7 +40,8 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 }
 
 type KSWorkflowState struct {
-	workflowState *kitchensink.WorkflowState
+	workflowState  *kitchensink.WorkflowState
+	pendingActions []workflow.Future
 }
 
 func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
@@ -61,7 +63,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// Setup query handler.
 	queryErr := workflow.SetQueryHandler(ctx, "report_state",
-		func(input interface{}) (*kitchensink.WorkflowState, error) {
+		func(input any) (*kitchensink.WorkflowState, error) {
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
@@ -70,7 +72,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// Setup update handler.
 	updateErr := workflow.SetUpdateHandlerWithOptions(ctx, "do_actions_update",
-		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval interface{}, err error) {
+		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval any, err error) {
 			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
 			if payload != nil {
 				return payload, err
@@ -203,7 +205,6 @@ func (ws *KSWorkflowState) handleActionSet(
 	// return values if we should return, then awaiting on that or completion
 	var actionsCompleted int
 	for _, action := range set.Actions {
-		action := action
 		workflow.Go(ctx, func(ctx workflow.Context) {
 			if maybeReturnValue, maybeErr := ws.handleAction(ctx, action); maybeReturnValue != nil || maybeErr != nil {
 				returnValue, err = maybeReturnValue, maybeErr
@@ -235,12 +236,7 @@ func isSignalAlreadyReceived(params *kitchensink.WorkflowInput, signalID int32) 
 		return true
 	}
 	// If the signal ID is not in the expected list, it means we already processed it
-	for _, id := range params.ExpectedSignalIds {
-		if id == signalID {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(params.ExpectedSignalIds, signalID)
 }
 
 // handleSignalDeduplication removes a received signal ID from the expected list.
@@ -270,7 +266,7 @@ func (ws *KSWorkflowState) handleAction(
 	} else if can := action.GetContinueAsNew(); can != nil {
 		return nil, workflow.NewContinueAsNewError(ctx, "kitchenSink", can.GetArguments()[0])
 	} else if timer := action.GetTimer(); timer != nil {
-		return nil, withAwaitableChoice(ctx, func(ctx workflow.Context) workflow.Future {
+		return nil, withAwaitableChoice(ctx, ws, func(ctx workflow.Context) workflow.Future {
 			fut, setter := workflow.NewFuture(ctx)
 			workflow.Go(ctx, func(ctx workflow.Context) {
 				_ = workflow.Sleep(ctx, time.Duration(timer.Milliseconds)*time.Millisecond)
@@ -279,16 +275,16 @@ func (ws *KSWorkflowState) handleAction(
 			return fut
 		}, timer.AwaitableChoice)
 	} else if act := action.GetExecActivity(); act != nil {
-		return nil, launchActivity(ctx, action.GetExecActivity())
+		return nil, launchActivity(ctx, ws, action.GetExecActivity())
 	} else if child := action.GetExecChildWorkflow(); child != nil {
 		// Use name if present, otherwise use this one
 		childType := "kitchenSink"
 		if child.WorkflowType != "" {
 			childType = child.WorkflowType
 		}
-		var searchAttributes map[string]interface{}
+		var searchAttributes map[string]any
 		if child.SearchAttributes != nil {
-			searchAttributes = make(map[string]interface{})
+			searchAttributes = make(map[string]any)
 			for k, v := range child.SearchAttributes {
 				searchAttributes[k] = v
 			}
@@ -297,7 +293,7 @@ func (ws *KSWorkflowState) handleAction(
 			WorkflowID:       child.WorkflowId,
 			SearchAttributes: searchAttributes,
 		})
-		err := withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
+		err := withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.ChildWorkflowFuture {
 			return workflow.ExecuteChildWorkflow(cCtx, childType, child.GetInput()[0])
 		}, child.AwaitableChoice,
 			func(ctx workflow.Context, fut workflow.ChildWorkflowFuture) error {
@@ -323,14 +319,14 @@ func (ws *KSWorkflowState) handleAction(
 		})
 		return nil, err
 	} else if upsertMemo := action.GetUpsertMemo(); upsertMemo != nil {
-		convertedMap := make(map[string]interface{}, len(upsertMemo.GetUpsertedMemo().Fields))
+		convertedMap := make(map[string]any, len(upsertMemo.GetUpsertedMemo().Fields))
 		for k, v := range upsertMemo.GetUpsertedMemo().Fields {
 			convertedMap[k] = v
 		}
 		err := workflow.UpsertMemo(ctx, convertedMap)
 		return nil, err
 	} else if upsertSA := action.GetUpsertSearchAttributes(); upsertSA != nil {
-		convertedMap := make(map[string]interface{}, len(upsertSA.GetSearchAttributes()))
+		convertedMap := make(map[string]any, len(upsertSA.GetSearchAttributes()))
 		for k, v := range upsertSA.GetSearchAttributes() {
 			convertedMap[k] = v
 		}
@@ -340,47 +336,27 @@ func (ws *KSWorkflowState) handleAction(
 		return ws.handleActionSet(ctx, action.GetNestedActionSet())
 	} else if nexusOp := action.GetNexusOperation(); nexusOp != nil {
 		return nil, handleNexusOperation(ctx, nexusOp, ws)
+	} else if action.GetAwaitPendingActions() != nil {
+		return nil, handleAwaitPendingActions(ctx, ws)
+	} else if sig := action.GetSendSignal(); sig != nil {
+		return nil, handleSendSignal(ctx, ws, sig)
 	} else {
 		return nil, fmt.Errorf("unrecognized action")
 	}
 	return nil, nil
 }
 
-func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction) error {
-	actType := "noop"
-	args := make([]interface{}, 0)
-	if delay := act.GetDelay(); delay != nil {
-		actType = "delay"
-		args = append(args, delay.AsDuration())
-	} else if payload := act.GetPayload(); payload != nil {
-		actType = "payload"
-		inputData := make([]byte, payload.BytesToReceive)
-		for i := range inputData {
-			inputData[i] = byte(i % 256)
-		}
-		args = append(args, inputData, payload.BytesToReturn)
-	} else if client := act.GetClient(); client != nil {
-		actType = "client"
-		args = append(args, client)
-	} else if retryable := act.GetRetryableError(); retryable != nil {
-		actType = "retryable_error"
-		args = append(args, retryable)
-	} else if timeout := act.GetTimeout(); timeout != nil {
-		actType = "timeout"
-		args = append(args, timeout)
-	} else if heartbeat := act.GetHeartbeat(); heartbeat != nil {
-		actType = "heartbeat"
-		args = append(args, heartbeat)
-	}
+func launchActivity(ctx workflow.Context, ws *KSWorkflowState, act *kitchensink.ExecuteActivityAction) error {
+	actType, args := kitchensink.ActivityNameAndArgs(act)
 	if act.GetIsLocal() != nil {
 		opts := workflow.LocalActivityOptions{
 			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
 			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 		}
 		actCtx := workflow.WithLocalActivityOptions(ctx, opts)
 
-		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+		return withAwaitableChoice(actCtx, ws, func(ctx workflow.Context) workflow.Future {
 			return workflow.ExecuteLocalActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	} else {
@@ -409,11 +385,11 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 			ScheduleToStartTimeout: act.ScheduleToStartTimeout.AsDuration(),
 			WaitForCancellation:    waitForCancel,
 			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
-			RetryPolicy:            convertFromPBRetryPolicy(act.GetRetryPolicy()),
+			RetryPolicy:            kitchensink.ConvertFromPBRetryPolicy(act.GetRetryPolicy()),
 			Priority:               priority,
 		}
 		actCtx := workflow.WithActivityOptions(ctx, opts)
-		return withAwaitableChoice(actCtx, func(ctx workflow.Context) workflow.Future {
+		return withAwaitableChoice(actCtx, ws, func(ctx workflow.Context) workflow.Future {
 			return workflow.ExecuteActivity(ctx, actType, args...)
 		}, act.GetAwaitableChoice())
 	}
@@ -421,10 +397,11 @@ func launchActivity(ctx workflow.Context, act *kitchensink.ExecuteActivityAction
 
 func withAwaitableChoice[F workflow.Future](
 	ctx workflow.Context,
+	ws *KSWorkflowState,
 	starter func(workflow.Context) F,
 	awaitChoice *kitchensink.AwaitableChoice,
 ) error {
-	return withAwaitableChoiceCustom(ctx, starter, awaitChoice,
+	return withAwaitableChoiceCustom(ctx, ws, starter, awaitChoice,
 		func(ctx workflow.Context, fut F) error {
 			_ = workflow.Sleep(ctx, 1)
 			return nil
@@ -436,6 +413,7 @@ func withAwaitableChoice[F workflow.Future](
 
 func withAwaitableChoiceCustom[F workflow.Future](
 	ctx workflow.Context,
+	ws *KSWorkflowState,
 	starter func(workflow.Context) F,
 	awaitChoice *kitchensink.AwaitableChoice,
 	afterStartedWaiter func(workflow.Context, F) error,
@@ -463,6 +441,11 @@ func withAwaitableChoiceCustom[F workflow.Future](
 		res := afterCompletedWaiter(ctx, fut)
 		cancel()
 		err = res
+	} else if awaitChoice.GetWaitStarted() != nil {
+		err = afterStartedWaiter(ctx, fut)
+		if err == nil && ws != nil {
+			ws.pendingActions = append(ws.pendingActions, fut)
+		}
 	} else {
 		err = fut.Get(ctx, nil)
 	}
@@ -477,12 +460,15 @@ func withAwaitableChoiceCustom[F workflow.Future](
 }
 
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
-	return withAwaitableChoiceCustom(ctx, func(ctx workflow.Context) workflow.NexusOperationFuture {
+	return withAwaitableChoiceCustom(ctx, state, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
 		nexusOptions := workflow.NexusOperationOptions{}
 		input := &kitchensink.NexusHandlerInput{
-			Input:         nexusOp.Input,
-			BeforeActions: nexusOp.BeforeActions,
+			Input:                           nexusOp.Input,
+			BeforeActions:                   nexusOp.BeforeActions,
+			HandlerWorkflowId:               nexusOp.HandlerWorkflowId,
+			HandlerWorkflowIdConflictPolicy: nexusOp.HandlerWorkflowIdConflictPolicy,
+			WaitForSignal:                   nexusOp.WaitForSignal,
 		}
 		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
 	}, nexusOp.AwaitableChoice,
@@ -502,6 +488,29 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 			}
 			return fut.Get(ctx, nil)
 		})
+}
+
+func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
+	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
+	}, action.AwaitableChoice,
+		func(ctx workflow.Context, fut workflow.Future) error {
+			return fut.Get(ctx, nil)
+		},
+		func(ctx workflow.Context, fut workflow.Future) error {
+			return fut.Get(ctx, nil)
+		})
+}
+
+func handleAwaitPendingActions(ctx workflow.Context, ws *KSWorkflowState) error {
+	pending := ws.pendingActions
+	ws.pendingActions = nil
+	for i, fut := range pending {
+		if err := fut.Get(ctx, nil); err != nil {
+			return fmt.Errorf("pending action %d failed: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // Noop is used as a no-op activity.
@@ -565,27 +574,6 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 	return nil
 }
 
-func convertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
-	if retryPolicy == nil {
-		return nil
-	}
-
-	p := temporal.RetryPolicy{
-		BackoffCoefficient:     retryPolicy.BackoffCoefficient,
-		MaximumAttempts:        retryPolicy.MaximumAttempts,
-		NonRetryableErrorTypes: retryPolicy.NonRetryableErrorTypes,
-	}
-
-	if v := retryPolicy.MaximumInterval; v != nil {
-		p.MaximumInterval = v.AsDuration()
-	}
-	if v := retryPolicy.InitialInterval; v != nil {
-		p.InitialInterval = v.AsDuration()
-	}
-
-	return &p
-}
-
 type ReturnOrErr struct {
 	retme *common.Payload
 	err   error
@@ -600,6 +588,9 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 			return "", err
 		}
 	}
+	if input.WaitForSignal {
+		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
+	}
 	return input.Input, nil
 }
 
@@ -611,9 +602,15 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 	return input.Input, nil
 })
 
-// EchoAsyncOperation starts a NexusHandlerWorkflow to execute before_actions, then returns the input.
-// Cancel is handled automatically by the SDK via the backing workflow.
+// EchoAsyncOperation starts a NexusHandlerWorkflow that runs before_actions and returns the input.
 var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
+	if input.HandlerWorkflowId != "" {
+		return client.StartWorkflowOptions{
+			ID:                       input.HandlerWorkflowId,
+			WorkflowIDConflictPolicy: input.HandlerWorkflowIdConflictPolicy,
+			WorkflowExecutionTimeout: 60 * time.Minute,
+		}, nil
+	}
 	return client.StartWorkflowOptions{
 		ID: opts.RequestID,
 	}, nil

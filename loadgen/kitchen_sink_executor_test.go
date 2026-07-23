@@ -72,6 +72,8 @@ func TestKitchenSink(t *testing.T) {
 		"nexusoperation.enableStandalone": true,
 		// Standalone Nexus system callbacks require CHASM callbacks.
 		"history.enableCHASMCallbacks": true,
+		// Enable StartActivityExecution for the standalone-activity subtest.
+		"activity.enableStandalone": true,
 	}))
 
 	// Default workflow execution timeout for tests
@@ -1035,6 +1037,33 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: standaloneNexusUnsupportedSDKs,
 		},
 		{
+			name: "ExecActivity/Client/StandaloneActivity",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneActivity{
+									DoStandaloneActivity: &DoStandaloneActivity{
+										Activity: &ExecuteActivityAction{
+											ActivityType:        &ExecuteActivityAction_Noop{},
+											StartToCloseTimeout: &durationpb.Duration{Seconds: 5},
+											// TaskQueue filled by PrepareTestInput
+										},
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1100,6 +1129,10 @@ func testForSDK(
 	nexusEndpoint, err := env.CreateNexusEndpoint(t.Context(), scenarioInfo.RunID)
 	require.NoError(t, err, "Failed to create Nexus endpoint")
 
+	// Task queue this run's worker polls; standalone activities target it so the
+	// worker picks them up.
+	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
+
 	executor := &KitchenSinkExecutor{
 		TestInput: tc.testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
@@ -1114,6 +1147,9 @@ func testForSDK(
 								for _, ca := range cas.Actions {
 									if sno := ca.GetDoStandaloneNexusOperation(); sno != nil && sno.Endpoint == "" {
 										sno.Endpoint = nexusEndpoint
+									}
+									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
+										sa.GetActivity().TaskQueue = runTaskQueue
 									}
 								}
 							}
@@ -1148,7 +1184,9 @@ func testUnsupportedFeature(
 		executor: executor,
 		sdk:      sdk,
 	}
-	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
+	// Run the worker in strict mode so unsupported actions fail loudly rather
+	// than being skipped, which is what this test asserts.
+	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk, WithErrOnUnimplemented())
 
 	require.Errorf(t, execErr, "SDK %s should fail for unsupported feature", sdk)
 	require.NotEmptyf(t, expectedErr, "invalid test case: expectedUnsupportedErrs must be set for SDK %s if the feature is unsupported", sdk)

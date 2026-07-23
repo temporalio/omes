@@ -43,7 +43,7 @@ lint = [
   {cmd = "isort --check-only ."},
   {ref = "lint-types"},
 ]
-lint-types = "mypy activities.py client_action_executor.py kitchen_sink.py nexus_service.py apps"
+lint-types = "mypy activities.py activity_dispatch.py client_action_executor.py kitchen_sink.py nexus_service.py apps"
 
 [tool.isort]
 profile = "black"

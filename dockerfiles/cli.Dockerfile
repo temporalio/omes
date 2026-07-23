@@ -1,7 +1,7 @@
 # Build in a full featured container
 ARG TARGETARCH
 
-FROM --platform=linux/$TARGETARCH golang:1.25 AS build
+FROM --platform=linux/$TARGETARCH golang:1.26 AS build
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.21.12-11 libprotoc-dev=3.21.12-11 \
+      protobuf-compiler=3.21.12-* libprotoc-dev=3.21.12-* \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Rust for kitchen-sink-gen

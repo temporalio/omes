@@ -76,8 +76,17 @@ public class ClientActionsExecutor
         }
         else if (action.DoStandaloneNexusOperation != null)
         {
-            throw new ApplicationFailureException(
-                "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
+            if (_errOnUnimplemented)
+            {
+                throw new ApplicationFailureException(
+                    "DoStandaloneNexusOperation is not supported", "UnsupportedOperation", nonRetryable: true);
+            }
+            // Skip standalone nexus operations when not erroring on unimplemented
+            Console.WriteLine("Skipping standalone nexus operation (not implemented)");
+        }
+        else if (action.DoStandaloneActivity != null)
+        {
+            await ExecuteStandaloneActivity(action.DoStandaloneActivity);
         }
         else
         {
@@ -180,6 +189,31 @@ public class ClientActionsExecutor
                 throw;
             }
         }
+    }
+
+    private async Task ExecuteStandaloneActivity(DoStandaloneActivity sa)
+    {
+        var act = sa.Activity;
+        if (act == null)
+        {
+            throw new ArgumentException("DoStandaloneActivity.activity is required");
+        }
+        var (actType, args) = ActivityDispatch.NameAndArgs(act);
+        await _client.ExecuteActivityAsync(
+            actType,
+            args,
+            new StartActivityOptions(
+                id: $"standalone-{WorkflowId}-{Guid.NewGuid():N}",
+                taskQueue: act.TaskQueue)
+            {
+                ScheduleToCloseTimeout = act.ScheduleToCloseTimeout?.ToTimeSpan(),
+                ScheduleToStartTimeout = act.ScheduleToStartTimeout?.ToTimeSpan(),
+                StartToCloseTimeout = act.StartToCloseTimeout?.ToTimeSpan(),
+                HeartbeatTimeout = act.HeartbeatTimeout?.ToTimeSpan(),
+                RetryPolicy = act.RetryPolicy != null
+                    ? ActivityDispatch.RetryPolicyFromProto(act.RetryPolicy)
+                    : null,
+            });
     }
 
     private async Task ExecuteQueryAction(DoQuery query)

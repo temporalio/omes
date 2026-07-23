@@ -1,17 +1,19 @@
 # Build in a full featured container
-ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH eclipse-temurin:21-jammy AS build
+# Use BUILDPLATFORM so the build stage runs natively (avoids QEMU networking issues
+# with apt-get when cross-building for arm64 on an amd64 host).
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jammy AS build
 
-# Install protobuf compiler and dependencies
+# Install protobuf compiler and dependencies (runs on native build platform, no QEMU)
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
       protobuf-compiler=3.12.4* git=1:2.34.1-1ubuntu1
 
-# Get go compiler
+# Get go compiler for the build platform
+ARG BUILDARCH
 ARG TARGETARCH
-RUN wget -q https://go.dev/dl/go1.21.12.linux-${TARGETARCH}.tar.gz \
-    && tar -C /usr/local -xzf go1.21.12.linux-${TARGETARCH}.tar.gz
+RUN wget -q https://go.dev/dl/go1.21.12.linux-${BUILDARCH}.tar.gz \
+    && tar -C /usr/local -xzf go1.21.12.linux-${BUILDARCH}.tar.gz
 ENV PATH="$PATH:/usr/local/go/bin"
 
 WORKDIR /app
@@ -30,7 +32,10 @@ COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
+# Build a native binary to use during Docker build (for the prepare-worker step below)
+RUN CGO_ENABLED=0 go build -o temporal-omes-build ./cmd/omes
+# Cross-compile the binary for the target platform (included in the final image)
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o temporal-omes ./cmd/omes
 
 ARG SDK_VERSION
 
@@ -46,14 +51,14 @@ COPY workers/java ./workers/java
 ENV GRADLE_USER_HOME="/gradle"
 RUN /app/workers/java/gradlew --version
 
-# Build the worker
+# Build the worker using the native binary (avoids running a TARGETARCH binary under QEMU)
 WORKDIR /app
-RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
+RUN CGO_ENABLED=0 ./temporal-omes-build prepare-worker --language java --dir-name prepared --version "$SDK_VERSION"
 
-# Copy the CLI and prepared feature to a "run" container. Distroless isn't used here since we run
-# through Gradle and it's more annoying than it's worth to get its deps to line up
-FROM --platform=linux/$TARGETARCH eclipse-temurin:21
-RUN apt-get update && apt-get install --no-install-recommends --assume-yes git && rm -rf /var/lib/apt/lists/*
+# Copy the CLI and prepared feature to a "run" container. Use Alpine to avoid apt-get
+# networking issues with ports.ubuntu.com in QEMU-emulated arm64 containers.
+FROM --platform=linux/$TARGETARCH eclipse-temurin:21-alpine
+RUN apk add --no-cache git
 ENV GRADLE_USER_HOME="/gradle"
 
 COPY --from=build /app/temporal-omes /app/temporal-omes

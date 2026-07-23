@@ -370,6 +370,13 @@ The throughput_stress scenario can generate Nexus load if the scenario is starte
   go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
   ```
 
+#### Standalone activities
+
+The throughput_stress scenario can generate standalone-activity load (activities started outside
+any workflow context via `StartActivityExecution`) with `--option include-standalone-activity=true`.
+This requires server support for standalone activities (dynamic config `activity.enableStandalone`).
+Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
+
 ### Fuzzer
 
 The fuzzer scenario makes use of the kitchen sink workflow (see below) to exercise a wide

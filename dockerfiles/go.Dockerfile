@@ -1,6 +1,6 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH golang:1.25 AS build
+FROM --platform=linux/$TARGETARCH golang:1.26 AS build
 
 WORKDIR /app
 

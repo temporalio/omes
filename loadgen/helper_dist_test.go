@@ -22,14 +22,14 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: &discreteDistribution[int64]{
-					weights: map[int64]int{
+				Distribution: &DiscreteDistribution[int64]{
+					Weights: map[int64]int{
 						1:  10,
 						5:  20,
 						10: 70,
 					},
 				},
-				distType: "discrete",
+				DistType: "discrete",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -60,14 +60,14 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: &discreteDistribution[float32]{
-					weights: map[float32]int{
+				Distribution: &DiscreteDistribution[float32]{
+					Weights: map[float32]int{
 						1.5:   10,
 						5.25:  20,
 						10.75: 70,
 					},
 				},
-				distType: "discrete",
+				DistType: "discrete",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -88,7 +88,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1.5), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -99,14 +99,14 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: &discreteDistribution[time.Duration]{
-					weights: map[time.Duration]int{
+				Distribution: &DiscreteDistribution[time.Duration]{
+					Weights: map[time.Duration]int{
 						1 * time.Second:  10,
 						5 * time.Second:  20,
 						10 * time.Second: 70,
 					},
 				},
-				distType: "discrete",
+				DistType: "discrete",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -121,7 +121,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -134,11 +134,11 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: &uniformDistribution[int64]{
-					min: 1,
-					max: 100,
+				Distribution: &UniformDistribution[int64]{
+					Min: 1,
+					Max: 100,
 				},
-				distType: "uniform",
+				DistType: "uniform",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -169,11 +169,11 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: &uniformDistribution[float32]{
-					min: 1.5,
-					max: 99.9,
+				Distribution: &UniformDistribution[float32]{
+					Min: 1.5,
+					Max: 99.9,
 				},
-				distType: "uniform",
+				DistType: "uniform",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -194,7 +194,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(38.205994), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -205,11 +205,11 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: &uniformDistribution[time.Duration]{
-					min: 1 * time.Second,
-					max: 1 * time.Minute,
+				Distribution: &UniformDistribution[time.Duration]{
+					Min: 1 * time.Second,
+					Max: 1 * time.Minute,
 				},
-				distType: "uniform",
+				DistType: "uniform",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -224,7 +224,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -238,12 +238,12 @@ func TestDistributionField(t *testing.T) {
 			require.NotNil(t, df)
 
 			expected := DistributionField[int64]{
-				distribution: &zipfDistribution[int64]{
-					s: 2.0,
-					v: 1.0,
-					n: 100,
+				Distribution: &ZipfDistribution[int64]{
+					S: 2.0,
+					V: 1.0,
+					N: 100,
 				},
-				distType: "zipf",
+				DistType: "zipf",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -264,7 +264,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, int64(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Float32", func(t *testing.T) {
@@ -276,12 +276,12 @@ func TestDistributionField(t *testing.T) {
 			require.NotNil(t, df)
 
 			expected := DistributionField[float32]{
-				distribution: &zipfDistribution[float32]{
-					s: 2.0,
-					v: 1.0,
-					n: 100,
+				Distribution: &ZipfDistribution[float32]{
+					S: 2.0,
+					V: 1.0,
+					N: 100,
 				},
-				distType: "zipf",
+				DistType: "zipf",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -302,7 +302,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -313,12 +313,12 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: &zipfDistribution[time.Duration]{
-					s: 2.0,
-					v: 1.0,
-					n: 100,
+				Distribution: &ZipfDistribution[time.Duration]{
+					S: 2.0,
+					V: 1.0,
+					N: 100,
 				},
-				distType: "zipf",
+				DistType: "zipf",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -339,7 +339,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, time.Duration(1), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -352,13 +352,13 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: &normalDistribution[int64]{
-					mean:   50,
-					stdDev: 10,
-					min:    30,
-					max:    70,
+				Distribution: &NormalDistribution[int64]{
+					Mean:   50,
+					StdDev: 10,
+					Min:    30,
+					Max:    70,
 				},
-				distType: "normal",
+				DistType: "normal",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -388,13 +388,13 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[float32]{
-				distribution: &normalDistribution[float32]{
-					mean:   50.5,
-					stdDev: 10.2,
-					min:    30.1,
-					max:    70.9,
+				Distribution: &NormalDistribution[float32]{
+					Mean:   50.5,
+					StdDev: 10.2,
+					Min:    30.1,
+					Max:    70.9,
 				},
-				distType: "normal",
+				DistType: "normal",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -415,7 +415,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok3)
 			assert.Equal(t, float32(66.34703), value3)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 
 		t.Run("Duration", func(t *testing.T) {
@@ -426,13 +426,13 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[time.Duration]{
-				distribution: &normalDistribution[time.Duration]{
-					mean:   20 * time.Second,
-					stdDev: 5 * time.Second,
-					min:    1 * time.Second,
-					max:    60 * time.Second,
+				Distribution: &NormalDistribution[time.Duration]{
+					Mean:   20 * time.Second,
+					StdDev: 5 * time.Second,
+					Min:    1 * time.Second,
+					Max:    60 * time.Second,
 				},
-				distType: "normal",
+				DistType: "normal",
 			}
 			assert.EqualExportedValues(t, expected, df)
 
@@ -447,7 +447,7 @@ func TestDistributionField(t *testing.T) {
 			assert.True(t, ok2)
 			assert.Equal(t, value, value2)
 
-			checkJsonRoundtrip(t, err, df)
+			checkJsonRoundtrip(t, df)
 		})
 	})
 
@@ -460,15 +460,15 @@ func TestDistributionField(t *testing.T) {
 			require.NoError(t, err)
 
 			expected := DistributionField[int64]{
-				distribution: &fixedDistribution[int64]{
-					value: 42,
+				Distribution: &FixedDistribution[int64]{
+					Value: 42,
 				},
-				distType: "fixed",
+				DistType: "fixed",
 			}
-			assert.Equal(t, expected.distType, df.distType)
+			assert.Equal(t, expected.DistType, df.DistType)
 
 			// Test all samples return the same value regardless of seed.
-			for i := 0; i < 10; i++ {
+			for i := range 10 {
 				rng := rand.New(rand.NewSource(testSeed + int64(i)))
 				v, ok := df.Sample(rng)
 				assert.True(t, ok)
@@ -477,6 +477,120 @@ func TestDistributionField(t *testing.T) {
 		})
 
 		// no need to test other dist types ...
+	})
+
+	t.Run("Mixture Distribution", func(t *testing.T) {
+		t.Run("Int64", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":3,"distribution":{"type":"uniform","min":"0","max":"100"}},{"weight":7,"distribution":{"type":"uniform","min":"1000","max":"2000"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			// Test exact values with specific seeds
+			rng := rand.New(rand.NewSource(testSeed))
+			value, ok := df.Sample(rng)
+			assert.True(t, ok)
+			assert.Equal(t, int64(1234), value)
+
+			// Verify deterministic behavior
+			rng2 := rand.New(rand.NewSource(testSeed))
+			value2, ok2 := df.Sample(rng2)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			// Test with other specific seeds for different values, including a
+			// draw that picks the low-weight component.
+			rng3 := rand.New(rand.NewSource(1))
+			value3, ok3 := df.Sample(rng3)
+			assert.True(t, ok3)
+			assert.Equal(t, int64(35), value3)
+
+			checkJsonRoundtrip(t, df)
+		})
+
+		t.Run("Nested mixture", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":{"type":"mixture","components":[{"weight":1,"distribution":{"type":"uniform","min":"0","max":"100"}},{"weight":1,"distribution":{"type":"uniform","min":"1000","max":"2000"}}]}},{"weight":1,"distribution":{"type":"fixed","value":"9999"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			rng := rand.New(rand.NewSource(0))
+			value, ok := df.Sample(rng)
+			assert.True(t, ok)
+			assert.Equal(t, int64(63), value)
+
+			// Verify deterministic behavior
+			rng2 := rand.New(rand.NewSource(0))
+			value2, ok2 := df.Sample(rng2)
+			assert.True(t, ok2)
+			assert.Equal(t, value, value2)
+
+			checkJsonRoundtrip(t, df)
+		})
+
+		t.Run("Single component is valid and always samples that component", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":5,"distribution":{"type":"fixed","value":"777"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			require.NoError(t, err)
+
+			for i := range 10 {
+				rng := rand.New(rand.NewSource(testSeed + int64(i)))
+				v, ok := df.Sample(rng)
+				assert.True(t, ok)
+				assert.Equal(t, int64(777), v)
+			}
+
+			checkJsonRoundtrip(t, df)
+		})
+
+		t.Run("Empty components is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "components cannot be empty")
+		})
+
+		t.Run("Non-positive weight is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":0,"distribution":{"type":"fixed","value":"1"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 weight must be positive")
+		})
+
+		t.Run("Null component distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":null}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 is missing a distribution")
+		})
+
+		t.Run("Missing component distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "component 0 is missing a distribution")
+		})
+
+		t.Run("Invalid nested distribution is invalid", func(t *testing.T) {
+			jsonData := `{"type":"mixture","components":[{"weight":1,"distribution":{"type":"normal","mean":"5","stdDev":"0","min":"0","max":"10"}}]}`
+			var df DistributionField[int64]
+
+			err := json.Unmarshal([]byte(jsonData), &df)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "standard deviation must be positive")
+		})
 	})
 
 	t.Run("Error Cases", func(t *testing.T) {
@@ -507,20 +621,25 @@ func TestDistributionField(t *testing.T) {
 			var parsedDF DistributionField[int64]
 			err = json.Unmarshal(marshaled, &parsedDF)
 			assert.NoError(t, err)
-			assert.Nil(t, parsedDF.distribution)
+			assert.Nil(t, parsedDF.Distribution)
 		})
 	})
 }
 
-func checkJsonRoundtrip[T distValueType](t *testing.T, err error, df DistributionField[T]) {
+func checkJsonRoundtrip[T DistValueType](t *testing.T, df DistributionField[T]) {
 	t.Helper()
 
 	marshaled, err := json.Marshal(df)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var unmarshalled DistributionField[T]
 	err = json.Unmarshal(marshaled, &unmarshalled)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.EqualExportedValues(t, df, unmarshalled)
+	// The distribution structs expose no exported fields (and some hold
+	// sampling caches), so EqualExportedValues would pass vacuously. Compare
+	// the re-marshaled JSON instead: a faithful roundtrip must reproduce it.
+	remarshaled, err := json.Marshal(unmarshalled)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(marshaled), string(remarshaled))
 }
