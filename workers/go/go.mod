@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/temporalio/omes v1.0.0
-	github.com/temporalio/omes/workers/go/harness/api v0.0.0-00010101000000-000000000000
+	github.com/temporalio/omes/workers/go/harness/api v0.0.0-20260601200529-2419bd37e739
 )
 
 require (
