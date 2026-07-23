@@ -14,7 +14,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
 	github.com/temporalio/features v0.0.0-20260427223549-86e4c0deedd7
-	github.com/temporalio/omes/workers/go/harness/api v0.0.0-00010101000000-000000000000
+	// harness/api is a module nested in this repo. This MUST stay a real pseudo-version
+	// (a pushed commit whose workers/go/harness/api tree matches the local one), never the
+	// v0.0.0-00010101... placeholder: downstream consumers inherit this require but NOT the
+	// local replace below, so a placeholder breaks their `go list -m all`/module graph.
+	// Bump this whenever workers/go/harness/api changes.
+	github.com/temporalio/omes/workers/go/harness/api v0.0.0-20260601200529-2419bd37e739
 	go.temporal.io/api v1.62.12
 	go.temporal.io/sdk v1.45.0
 	go.uber.org/zap v1.27.0
@@ -72,5 +77,7 @@ require (
 replace (
 	github.com/temporalio/features/features => github.com/temporalio/features/features v0.0.0-20260324215619-e5868d9ba03f
 	github.com/temporalio/features/harness/go => github.com/temporalio/features/harness/go v0.0.0-20260324215619-e5868d9ba03f
+	// Local dev of the nested harness/api module; downstream consumers ignore this and use
+	// the real pseudo-version required above instead.
 	github.com/temporalio/omes/workers/go/harness/api => ./workers/go/harness/api
 )
