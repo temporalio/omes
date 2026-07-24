@@ -62,6 +62,9 @@ const (
 type tpsState struct {
 	// CompletedIterations is the number of iteration that have been completed.
 	CompletedIterations int `json:"completedIterations"`
+	// FailedIterations is the number of iterations that terminally failed while
+	// the run tolerated failures (RunConfiguration.ContinueOnIterationFailure).
+	FailedIterations int `json:"failedIterations"`
 	// LastCompletedIterationAt is the time when the last iteration was completed. Helpful for debugging.
 	LastCompletedIterationAt time.Time `json:"lastCompletedIterationAt"`
 	// AccumulatedDuration is the total execution time across all runs (original + resumes).
@@ -236,6 +239,15 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Debugf("Completed iteration %d", run.Iteration)
 	}
 
+	// Tally terminal iteration failures into the state so the failed count is
+	// carried in the snapshot. This only fires when the run tolerates failures
+	// (RunConfiguration.ContinueOnIterationFailure); otherwise the first failure
+	// aborts the run before this is reached.
+	info.Configuration.OnIterationFailure = func(ctx context.Context, run *loadgen.Run, err error) {
+		t.updateStateOnIterationFailure()
+		info.Logger.Warnf("Iteration %d failed (tolerated): %v", run.Iteration, err)
+	}
+
 	// Start the scenario run.
 	//
 	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
@@ -359,8 +371,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
-		tpsErrors = append(tpsErrors, err)
+	// When the run tolerates iteration failures, some workflows are expected to
+	// fail, so this zero-failure check is left to the caller's policy (which can
+	// read FailedIterations from the snapshot).
+	if !info.Configuration.ContinueOnIterationFailure {
+		if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
+			tpsErrors = append(tpsErrors, err)
+		}
 	}
 
 	return errors.Join(tpsErrors...)
@@ -377,6 +394,12 @@ func (t *tpsExecutor) updateStateOnIterationCompletion() {
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
+}
+
+func (t *tpsExecutor) updateStateOnIterationFailure() {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.state.FailedIterations += 1
 }
 
 func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
