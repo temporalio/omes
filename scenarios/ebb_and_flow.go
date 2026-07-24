@@ -281,7 +281,9 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 
 	// Start workflow.
 	run := e.NewRun(int(iteration))
-	e.RegisterDefaultSearchAttributes(ctx)
+	if err := e.RegisterDefaultSearchAttributes(ctx); err != nil {
+		return fmt.Errorf("failed to register search attributes for iteration %d: %w", iteration, err)
+	}
 	options := run.DefaultStartWorkflowOptions()
 	options.ID = fmt.Sprintf("%s-track-%d", e.id, iteration)
 	options.WorkflowExecutionErrorWhenAlreadyStarted = false
@@ -303,10 +305,12 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	// Wait for workflow completion
 	var result ebbandflow.WorkflowOutput
 	err = wf.Get(ctx, &result)
-	if err != nil {
-		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
-	}
+	// The batch has settled either way, so drain it from the backlog the
+	// controller tracks; only a successful workflow counts as completed.
 	e.completedActivities.Add(activities)
+	if err != nil {
+		return fmt.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %w", iteration, err)
+	}
 	e.incrementTotalCompletedWorkflow()
 
 	return nil

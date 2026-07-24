@@ -306,22 +306,10 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		},
 		Namespace: s.Namespace,
 	})
-	// Throw an error if the attributes could not be registered, but ignore already exists errs
-	alreadyExistsStrings := []string{
-		"already exists",
-		"attributes mapping unavailble",
-	}
-	if err != nil {
-		isAlreadyExistsErr := false
-		for _, s := range alreadyExistsStrings {
-			if strings.Contains(err.Error(), s) {
-				isAlreadyExistsErr = true
-				break
-			}
-		}
-		if !isAlreadyExistsErr {
-			return fmt.Errorf("failed to register search attributes: %w", err)
-		}
+	// Throw an error if the attributes could not be registered, but ignore the
+	// case where they already exist (re-registration on a reused namespace).
+	if err != nil && status.Code(err) != codes.AlreadyExists {
+		return fmt.Errorf("failed to register search attributes: %w", err)
 	}
 	return nil
 }
@@ -428,14 +416,13 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
+				r.Logger.Error("Client actions failed: ", err)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag
-				err := r.Client.TerminateWorkflow(
-					ctx, options.StartOptions.ID, "", "client actions failed", nil)
-				if err != nil {
-					return
+				if terminateErr := r.Client.TerminateWorkflow(
+					ctx, options.StartOptions.ID, "", "client actions failed", nil); terminateErr != nil {
+					r.Logger.Errorf("Failed to terminate workflow after client actions failure: %v", terminateErr)
 				}
 			}
 		}()
