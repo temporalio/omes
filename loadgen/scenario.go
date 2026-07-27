@@ -239,6 +239,17 @@ type RunConfiguration struct {
 	OnCompletion func(context.Context, *Run)
 	// HandleExecuteError, if set, is called when Execute returns an error, allowing transformation of errors.
 	HandleExecuteError func(context.Context, *Run, error) error
+	// ContinueOnIterationFailure, if set, keeps the run going after an iteration
+	// terminally fails (i.e. exhausts MaxIterationAttempts) instead of aborting on
+	// the first failure. The failed iteration is reported via OnIterationFailure
+	// and new iterations keep starting until the duration or iteration limit is
+	// reached. This is the mechanism for failure-tolerant runs; the policy for how
+	// many failures are acceptable belongs to the caller. Default is false.
+	ContinueOnIterationFailure bool
+	// OnIterationFailure, if set, is invoked when an iteration terminally fails
+	// (after exhausting retries). It is the hook callers use to tally failures
+	// when running with ContinueOnIterationFailure.
+	OnIterationFailure func(context.Context, *Run, error)
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
