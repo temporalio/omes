@@ -83,7 +83,7 @@ func buildClientConfig(opts clientConfigOptions) (ClientConfig, error) {
 		nop := zap.NewNop()
 		logger = nop.Sugar()
 	}
-	tlsConfig, err := buildTLSConfig(logger, opts)
+	tlsConfig, err := buildTLSConfig(opts)
 	if err != nil {
 		return ClientConfig{}, err
 	}
@@ -101,12 +101,10 @@ func buildClientConfig(opts clientConfigOptions) (ClientConfig, error) {
 	}, nil
 }
 
-func buildTLSConfig(logger *zap.SugaredLogger, opts clientConfigOptions) (*tls.Config, error) {
-	if opts.DisableHostVerification {
-		logger.Warn("disable_host_verification is not supported by the Go harness; ignoring")
-	}
+func buildTLSConfig(opts clientConfigOptions) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
-		ServerName: opts.TLSServerName,
+		InsecureSkipVerify: opts.DisableHostVerification,
+		ServerName:         opts.TLSServerName,
 	}
 	if opts.TLSCertPath != "" {
 		if opts.TLSKeyPath == "" {
