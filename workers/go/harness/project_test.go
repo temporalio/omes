@@ -228,6 +228,7 @@ func TestProjectInitPassesRunMetadataToHandler(t *testing.T) {
 		capturedConfig.Namespace != "default" ||
 		capturedConfig.APIKey != "token" ||
 		capturedConfig.TLS == nil ||
+		!capturedConfig.TLS.InsecureSkipVerify ||
 		capturedConfig.TLS.ServerName != "server.local" ||
 		len(capturedConfig.TLS.Certificates) != 0 {
 		t.Fatalf("unexpected client config: %+v", capturedConfig)
