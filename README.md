@@ -3,6 +3,11 @@
 This project is for testing load generation scenarios against Temporal. This is primarily used by the Temporal team to
 benchmark features and situations. Backwards compatibility may not be maintained.
 
+## Documentation
+
+- **[Running & configuring omes](./docs/running.md)** — run commands, load configuration, worker
+  profiles, and running against a specific SDK version.
+
 ## Why the weird name?
 
 Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
@@ -118,80 +123,11 @@ func init() {
 1. When using `GenericExecutor`, use methods of `*loadgen.Run` in your `Execute` as much as possible.
 1. Liberally add helpers to the `loadgen` package that will be useful to other scenario authors.
 
-### Run scenario with worker - Start a worker, an optional dev server, and run a scenario
+### Running and configuring omes
 
-During local development it's typically easiest to run both the worker and the scenario together.
-You can do that like follows. If you want an embedded server rather than one you've already started,
-pass `--embedded-server`.
-
-```sh
-go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go
-```
-
-Notes:
-
-- Cleanup is **not** automatically performed here
-- Accepts combined flags for `run-worker` and `run-scenario` commands
-
-### Run a worker for a specific language SDK
-
-```sh
-go run ./cmd/omes run-worker --run-id local-test-run --language go
-```
-
-Notes:
-
-- `--embedded-server` can be passed here to start an embedded localhost server
-- `--task-queue-suffix-index-start` and `--task-queue-suffix-index-end` represent an inclusive range for running the
-  worker on multiple task queues. The process will create a worker for every task queue from `<task-queue>-<start>`
-  through `<task-queue>-end`. This only applies to multi-task-queue scenarios.
-- `--worker-profile` selects a code-defined worker configuration profile in the language harness. Omes forwards the
-  selected profile to the worker process via `OMES_WORKER_PROFILE`; the profile is not a worker CLI flag.
-
-Worker profiles provide a named worker configuration selected with `--worker-profile`. When a profile is selected, it
-takes precedence over worker configuration flags such as poller counts, autoscale poller settings, activity rate limits,
-slot counts, and worker versioning options. Non-worker-configuration flags, such as task queue selection, client
-connection settings, logging, metrics, and `--worker-err-on-unimplemented`, continue to apply normally.
-
-The shared `resource-based-default` profile uses the SDK resource-based worker tuner. The worker harnesses also provide
-`throughput-stress-baseline`, a fixed worker configuration for `throughput_stress` runs. It sets a workflow cache size
-of 50, 8 workflow task slots, 32 activity and local activity slots, 2 workflow task pollers, and 4 activity task pollers
-in each SDK.
-
-```sh
-go run ./cmd run-scenario-with-worker --scenario throughput_stress --language go \
-    --run-id local-profile-test --worker-profile resource-based-default
-```
-
-### Run a test scenario
-
-```sh
-go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
-```
-
-Notes:
-
-- Run ID is used to derive ID prefixes and the task queue name, it should be used to start a worker on the correct task queue
-  and by the cleanup script.
-- By default the number of iterations or duration is specified in the scenario config. They can be overridden with CLI
-  flags.
-- See help output for available flags.
-
-### Cleanup after scenario run
-
-```sh
-go run ./cmd/omes cleanup-scenario --scenario workflow_with_single_noop_activity --run-id local-test-run
-```
-
-### Running a specific version of the SDK
-
-The `--version` flag can be used to specify a version of the SDK to use, it accepts either
-a version number like `v1.24.0` or you can also pass a local path to use a local SDK version.
-This is useful while testing unreleased or in-development versions of the SDK.
-
-```sh
-go run ./cmd/omes run-scenario-with-worker --scenario workflow_with_single_noop_activity --language go --version /path/to/go-sdk
-```
+See **[docs/running.md](./docs/running.md)** for how to run omes (`run-scenario-with-worker`,
+`run-worker`, `run-scenario`, `cleanup-scenario`), configure the offered load, select a worker profile,
+and run against a specific SDK version.
 
 ### Building and publishing docker images
 
