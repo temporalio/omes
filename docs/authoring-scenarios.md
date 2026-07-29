@@ -1,9 +1,76 @@
 # Authoring scenarios
 
-A **scenario** is a named load shape: a Go file that tells omes what work to generate each iteration.
-This guide covers writing one, exposing options, and the conventions that keep scenarios consistent.
+There are two ways to add load shapes to omes:
 
-For running scenarios, see [running.md](./running.md).
+|                     | You write                                                                                                       | Reach for it when                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **A project (app)** | Plain Temporal code — workflows, activities, Nexus operations — like a sample, in any supported worker language | You want to run _your own_ workload concurrently. **Start here.** |
+| **A scenario**      | A Go file in `scenarios/` using the omes loadgen framework                                                      | You need a load _shape_ omes's steady-rate executor can't express |
+
+A project needs no knowledge of omes internals: you write the workload the way you normally would, and
+omes runs it repeatedly at a configured concurrency. A scenario gives you control over how load is
+generated, at the cost of learning the framework.
+
+For running either, see [running.md](./running.md).
+
+## Writing a project
+
+A project is an **app** under `workers/<lang>/apps/<name>`, registered in `workers/<lang>/apps/registry.*`.
+Each language ships a `helloworld` app to copy — Go, Python, TypeScript, .NET, and Ruby.
+
+You provide a worker that registers your workflows and activities as usual, plus an `Execute` handler that
+performs **one iteration**. omes calls `Execute` repeatedly, concurrently, for as many iterations or as
+long as you ask. From [`workers/go/apps/helloworld/helloworld.go`](../workers/go/apps/helloworld/helloworld.go):
+
+```go
+var App = harness.App{
+	Worker:        buildWorker,
+	ClientFactory: harness.DefaultClientFactory,
+	Project:       &harness.ProjectHandlers{Execute: executeProjectIteration},
+}
+
+func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkworker.Worker {
+	w := sdkworker.New(client, context.TaskQueue, context.WorkerOptions)
+	w.RegisterWorkflowWithOptions(helloWorldWorkflow, workflow.RegisterOptions{Name: workflowName})
+	return w
+}
+
+func executeProjectIteration(client sdkclient.Client, executeContext harness.ProjectExecuteContext) error {
+	run, err := client.ExecuteWorkflow(context.Background(), sdkclient.StartWorkflowOptions{
+		ID:        fmt.Sprintf("%s-%d", executeContext.Run.ExecutionID, executeContext.Iteration),
+		TaskQueue: executeContext.TaskQueue,
+	}, workflowName, "World")
+	if err != nil {
+		return err
+	}
+	return run.Get(context.Background(), nil)
+}
+```
+
+That is the whole surface: nothing omes-specific beyond `harness.App`. `ProjectHandlers` also takes an
+optional `Init` handler for one-time setup before iterations begin. Give each iteration a unique workflow
+ID — `ExecutionID` plus `Iteration`, as above — so concurrent iterations don't collide.
+
+Your project runs through the built-in `project` scenario, selected with `--option language=<lang>` and
+`--option project-name=<name>`:
+
+```sh
+go run ./cmd/omes run-scenario-with-worker --scenario project \
+  --language go --app helloworld --run-id local-project-test --embedded-server \
+  --iterations 5 --option language=go --option project-name=helloworld
+```
+
+See the [README's Project section](../README.md#project) for the remaining options, running the worker and
+scenario separately, and running under Docker.
+
+**The limitation to know:** the `project` scenario drives load at a steady rate — run _x_ iterations, or
+run for _y_ duration. If you need a load shape it can't express (oscillating backlog, bursts, a custom
+control loop), that's when you write a scenario instead.
+
+## Writing a scenario
+
+A scenario is a Go file in `scenarios/` that tells omes what work to generate each iteration. It registers
+itself, chooses an executor, and reads any options it accepts. The rest of this guide covers that path.
 
 ## Registration, and the filename rule
 
@@ -117,7 +184,7 @@ against a real cluster they generally have to be pre-registered.
 
 ## Conventions summary
 
-1. snake_case filenames — the filename *is* the scenario name.
+1. snake_case filenames — the filename _is_ the scenario name.
 2. Prefer `KitchenSinkExecutor`; go custom only when you must, and reuse `GenericExecutor` and
    `*loadgen.Run` when you do.
 3. Document every option and its default in the `Description`.
