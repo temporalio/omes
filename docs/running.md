@@ -9,8 +9,13 @@ cells inside Temporal's own infra (scaffold / VCR), see the internal runbooks.
 
 ## The commands
 
-omes has three ways to run, plus cleanup. Each takes a **scenario** and a **run-id**; the run-id derives
-the task queue, so a worker and the scenario that drives it must share it.
+omes has three ways to run, plus cleanup. Each takes a **scenario** and a **run-id**.
+
+> **`--run-id` is not a Temporal workflow Run ID.** A Temporal Run ID identifies a single workflow
+> execution; omes's run-id is a label for the entire load run. omes uses it to name the task queue
+> (`omes-<run-id>`) and to prefix the workflow IDs it starts
+> (`w-<run-id>-<execution-id>-<iteration>`). Because the task queue is derived from it, a worker and the
+> scenario driving it **must be given the same run-id**.
 
 ### Run a scenario with a worker (local all-in-one)
 
