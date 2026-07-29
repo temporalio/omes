@@ -76,11 +76,20 @@ var _ loadgen.Resumable = (*ebbAndFlowExecutor)(nil)
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Oscillates backlog between min and max.\n" +
-			"Options:\n" +
-			"  min-backlog, max-backlog, period, sleep-duration, max-rate,\n" +
-			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
-			"Duration must be set.",
+		Description: "Oscillates backlog between min and max. Duration must be set.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(MinBacklogFlag, 0, "Minimum total backlog to target.")
+			o.Int(MaxBacklogFlag, 30, "Maximum total backlog to target.")
+			o.Duration(PeriodFlag, 60*time.Second, "Period of backlog-size oscillation.")
+			o.Duration("phase-time", 60*time.Second, "Deprecated alias for "+PeriodFlag+".")
+			o.Duration(SleepDurationFlag, time.Millisecond, "How long each activity sleeps.")
+			o.Int(MaxRateFlag, 1000, "Maximum workflows spawned per control interval.")
+			o.Duration(ControlIntervalFlag, 100*time.Millisecond, "How often the backlog is controlled.")
+			o.Int(MaxConsecutiveErrorsFlag, 10, "Consecutive errors tolerated before stopping.")
+			o.Duration(BacklogLogIntervalFlag, 30*time.Second, "How often backlog stats are logged.")
+			o.Duration(VisibilityVerificationTimeoutFlag, 30*time.Second, "Timeout for the visibility count check.")
+			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
+		},
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
 	})
 }

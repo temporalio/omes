@@ -33,14 +33,13 @@ const (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Run workflows that hold many concurrent active timers. "+
-				"Options: '%s' (default 30), '%s' (default 10s), '%s' (default 0), '%s' (default 1).",
-			manyTimersConcurrentTimersFlag,
-			manyTimersTimerDurationFlag,
-			manyTimersTimerJitterFlag,
-			manyTimersIterationsFlag,
-		),
+		Description: "Run workflows that hold many concurrent active timers.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(manyTimersConcurrentTimersFlag, 30, "Concurrent active timers per workflow.")
+			o.Duration(manyTimersTimerDurationFlag, 10*time.Second, "Base duration of each timer.")
+			o.Duration(manyTimersTimerJitterFlag, 0, "Random jitter added to each timer duration.")
+			o.Int(manyTimersIterationsFlag, 1, "Timer rounds per workflow.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{

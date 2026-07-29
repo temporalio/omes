@@ -105,9 +105,22 @@ var _ loadgen.Configurable = (*tpsExecutor)(nil)
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Throughput stress scenario. Use --option with '%s', '%s', '%s', '%s', '%s', '%s', '%s' to control internal parameters",
-			IterFlag, ContinueAsNewAfterIterFlag, IncludeRetryScenariosFlag, IncludeDescribeFlag, IncludeStandaloneNexusFlag, IncludeStandaloneActivityFlag, PayloadDistributionJsonFlag),
+		Description: "Throughput stress scenario.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(IterFlag, 10, "Internal iterations per workflow.")
+			o.Duration(IterTimeoutFlag, 0, "Timeout for internal iterations; defaults to the run duration plus a minute.")
+			o.Int(ContinueAsNewAfterIterFlag, 3, "Internal iterations before continue-as-new.")
+			o.Duration(SleepTimeFlag, time.Second, "How long each sleep activity sleeps.")
+			o.String(NexusEndpointFlag, "", "Nexus endpoint to exercise; empty disables Nexus operations.")
+			o.Duration(VisibilityVerificationTimeoutFlag, 3*time.Minute, "Timeout for the post-run visibility count check.")
+			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
+			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
+			o.Bool(IncludeRetryScenariosFlag, false, "Include activities that exercise retries.")
+			o.Bool(IncludeDescribeFlag, false, "Include DescribeWorkflowExecution calls.")
+			o.Bool(IncludeStandaloneNexusFlag, false, "Include standalone Nexus operations.")
+			o.Bool(IncludeStandaloneActivityFlag, false, "Include standalone activities; requires server support.")
+			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
+		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
 }

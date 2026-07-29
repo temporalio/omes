@@ -10,6 +10,13 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "This scenario uses the kitchen sink input generation tool to run fuzzy" +
 			" workflows",
+		Options: func(o *loadgen.OptionSet) {
+			loadgen.DeclareFuzzExecutorOptions(o)
+			o.String("input-file", "", "Pre-generated input file to replay instead of generating actions.")
+			o.String("seed", "", "Explicit seed for action generation.")
+			o.String("config", "", "Generator config override.")
+			o.Bool("no-output-file", false, "Skip writing last_fuzz_run.proto.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.FuzzExecutor{
 				InitInputs: func(ctx context.Context, info loadgen.ScenarioInfo) loadgen.FileOrArgs {
@@ -34,8 +41,7 @@ func init() {
 						nexusEndpoint = loadgen.NexusEndpointForRun(info.RunID)
 					}
 					args = append(args, "--nexus-endpoint", nexusEndpoint)
-					_, ok = info.ScenarioOptions["no-output-file"]
-					if !ok {
+					if !info.ScenarioOptionBool("no-output-file", false) {
 						args = append(args, "--output-path", "last_fuzz_run.proto")
 					}
 					return loadgen.FileOrArgs{

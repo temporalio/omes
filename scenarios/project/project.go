@@ -22,12 +22,16 @@ import (
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: `Run a self-contained project test. Builds (or loads) the project program, spawns a project-server, and drives iterations via gRPC.
-  Required: --option language=<lang>
-  Required: --option project-name=<name>  (app entrypoint; optional --option version=<version> override)
-  Optional: --option prebuilt-project-dir=<path>  (use pre-built root worker package)
-  Optional: --option project-config-file=<path>   (project-specific JSON config)
-  Optional: --option project-server-ready-timeout=<duration> (timeout to connect to project-server, default 15s)
   See README.md ("Project" section) for local usage examples and current limitations.`,
+		Options: func(o *loadgen.OptionSet) {
+			o.String("language", "", "Worker language the project is written in.")
+			o.String("project-name", "", "App entrypoint to run.")
+			o.MarkRequired("language", "project-name")
+			o.String("version", "", "SDK version override for the project build.")
+			o.String("prebuilt-project-dir", "", "Use this pre-built root worker package instead of building.")
+			o.String("project-config-file", "", "Project-specific JSON config file.")
+			o.Duration("project-server-ready-timeout", 15*time.Second, "Timeout waiting for project-server to accept connections.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return &projectScenarioExecutor{}
 		},

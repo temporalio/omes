@@ -136,8 +136,8 @@ and attempts) and use the `*loadgen.Run` helpers — `DefaultStartWorkflowOption
 `ExecuteKitchenSinkWorkflow` — rather than re-deriving IDs and task queues yourself.
 
 Optional interfaces an executor may implement: `Configurable` (a `Configure` hook for validating options
-up front), `Resumable` (`Snapshot`/`LoadState`), and `HasDefaultConfiguration` (declare the scenario's
-default iterations/concurrency).
+up front) and `Resumable` (`Snapshot`/`LoadState`). To declare default iterations/concurrency, prefer the
+scenario's `DefaultConfiguration` field over the older `HasDefaultConfiguration` executor interface.
 
 ## Exposing options
 
@@ -146,28 +146,72 @@ Scenario configuration arrives through **two separate channels**, and knowing wh
 1. **Built-in run flags** — iterations, duration, concurrency, rate, attempts, timeout. These are
    framework-level and apply to every scenario, so you neither declare nor read them; see
    [running.md](./running.md#configuring-the-load) for the list.
-2. **Your own options** — arbitrary `--option key=value` pairs, read from `ScenarioInfo`:
+2. **Your own options** — `--option key=value` pairs that you **declare** on the scenario.
+
+### Declare them
+
+Declare options with the same typed registrars used for omes's own CLI flags — an `OptionSet` embeds a
+`pflag.FlagSet`, so `Int`, `Duration`, `Bool`, `Float64`, `String` and the rest are all available, and
+pflag does the parsing and type checking:
+
+```go
+loadgen.MustRegisterScenario(loadgen.Scenario{
+	Description: "Each iteration executes a single workflow with child workflows and/or activities.",
+	Options: func(o *loadgen.OptionSet) {
+		o.Int("children-per-workflow", 30, "Number of child workflows started per iteration.")
+		o.Duration("sleep-time", time.Second, "How long each sleep activity sleeps.")
+
+		o.Int("task-queue-count", 0, "Number of task queues to spread iterations across.")
+		o.MarkRequired("task-queue-count")
+	},
+	ExecutorFn: /* ... */,
+})
+```
+
+Declaring buys you three things:
+
+- **Unknown names are rejected.** A user who types `--option activites-per-workflow=50` gets an error
+  listing what the scenario actually accepts, instead of a silently-ignored option and a run at the default.
+- **Malformed values are rejected before the run starts**, with a message naming the option and the
+  expected type — and every problem is reported at once, not one per attempt.
+- **`list-scenarios` shows your options**, their types, defaults, and descriptions, so users can discover
+  them without reading your source.
+
+If your scenario uses a shared executor that reads options of its own, call that executor's declaration
+helper from yours — for example `loadgen.DeclareFuzzExecutorOptions(o)`.
+
+### Read them
 
 ```go
 children := info.ScenarioOptionInt("children-per-workflow", 30)
 sleep := info.ScenarioOptionDuration("sleep-duration", 5*time.Second)
 ```
 
-Accessors exist for int, float, bool, duration, and string, each taking the default inline.
+Accessors exist for int, float, bool, duration, and string. Note that **declared defaults are used for
+validation and display, not injected into the run** — a scenario reads its own default through the
+accessor. That is deliberate: some scenarios treat an option's *absence* as meaningful, and injecting
+defaults would silently change what they do. Keep the accessor's inline default and the declared default
+the same, since the declared one is what `list-scenarios` advertises.
+
+### Declaring a default run configuration
+
+If your scenario only makes sense at a particular scale, declare it and `list-scenarios` will show that
+too:
+
+```go
+DefaultConfiguration: &loadgen.RunConfiguration{Iterations: 100, MaxConcurrent: 5},
+```
 
 ### Conventions for options
 
-- **Document every option in the scenario's `Description`, with its default.** That string is the only
-  thing `list-scenarios` shows a user, so an undocumented option is an invisible one.
-- **Validate required options explicitly** and return a clear error naming the option. If your executor
-  implements `Configurable`, validate in `Configure` so the run fails immediately rather than mid-load.
+- **Declare every option.** A scenario that declares none keeps the legacy behavior — any option name is
+  accepted and nothing is validated — so an undeclared option is both unvalidated and undiscoverable.
+- **Give each option a usage string.** It's what a user sees in `list-scenarios`.
+- **Use `MarkRequired` instead of hand-rolling a check** in `PrepareTestInput` or `Configure`; the
+  framework fails the run before any load starts.
+- **Don't restate options in the `Description`.** `list-scenarios` renders the declarations, so listing
+  names and defaults in prose only creates something to drift.
 - **Prefer the typed accessors** over reading the raw map, so values parse consistently.
-
-> **Current sharp edges to be aware of** (they affect how carefully you document):
-> the typed accessors **panic** on a malformed value rather than returning a friendly error, and an
-> **unknown or misspelled option key is silently ignored** — the default is used and nothing warns. A
-> user who typos your option name gets a quiet, wrong-shaped run, so exact option names in the
-> description matter.
 
 ## Testing your scenario
 
@@ -187,6 +231,6 @@ against a real cluster they generally have to be pre-registered.
 1. snake_case filenames — the filename _is_ the scenario name.
 2. Prefer `KitchenSinkExecutor`; go custom only when you must, and reuse `GenericExecutor` and
    `*loadgen.Run` when you do.
-3. Document every option and its default in the `Description`.
-4. Validate required options up front, with errors that name the option.
+3. Declare every option, with a type, a default or `Required`, and a description.
+4. Declare a `DefaultConfiguration` if the scenario assumes a particular scale.
 5. Put helpers other scenario authors would want in the `loadgen` package, not in your scenario file.

@@ -21,21 +21,21 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf("Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently. "+
-			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), '%s' (default: %v), "+
-			"'%s' (default: '%s'), '%s' (default: '%s', options: skip,buffer_one,buffer_all,cancel_other,terminate_other,all), "+
-			"'%s' (default: '%s', options: %s,%s), '%s' (default: %v)",
-			ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration,
-			ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation,
-			ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation,
-			SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration,
-			PayloadSizeFlag, DefaultPayloadSize,
-			WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup,
-			OperationIntervalFlag, DefaultOperationInterval,
-			CronExpressionFlag, DefaultCronExpression,
-			OverlapPolicyFlag, DefaultOverlapPolicy,
-			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType,
-			EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+		Description: "Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration, "Schedules created per iteration.")
+			o.Int(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation, "Schedule reads per created schedule.")
+			o.Int(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation, "Schedule updates per created schedule.")
+			o.Duration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration, "How long each iteration exercises its schedules.")
+			o.Int(PayloadSizeFlag, DefaultPayloadSize, "Payload size in bytes for scheduled workflows.")
+			o.Duration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup, "Wait before deleting schedules.")
+			o.Duration(OperationIntervalFlag, DefaultOperationInterval, "Interval between schedule operations.")
+			o.String(CronExpressionFlag, DefaultCronExpression, "Cron expression for created schedules.")
+			o.String(OverlapPolicyFlag, DefaultOverlapPolicy, "Overlap policy: skip, buffer_one, buffer_all, cancel_other, terminate_other, all.")
+			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
+				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
+			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
 				Execute: func(ctx context.Context, run *loadgen.Run) error {

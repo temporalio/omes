@@ -29,6 +29,14 @@ type FuzzExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
+// DeclareFuzzExecutorOptions declares the options [FuzzExecutor] itself reads.
+// Scenarios using it should call this from their own Options declaration so the
+// options validate and appear in `list-scenarios`.
+func DeclareFuzzExecutorOptions(o *OptionSet) {
+	o.String("nexus-endpoint", "", "Existing Nexus endpoint to use instead of creating one for the run.")
+	o.String("kitchen-sink-gen", "", "Name of, or absolute path to, the kitchen-sink-gen executable.")
+}
+
 func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.InitInputs == nil {
 		return fmt.Errorf("InitInputs must be specified")

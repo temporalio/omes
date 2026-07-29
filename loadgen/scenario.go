@@ -32,7 +32,38 @@ const OmesExecutionIDSearchAttribute = "OmesExecutionID"
 
 type Scenario struct {
 	Description string
-	ExecutorFn  func() Executor
+	// Options declares the options a user may set with `--option <name>=<value>`,
+	// using the same typed pflag registrars as omes's own CLI flags:
+	//
+	//	Options: func(o *loadgen.OptionSet) {
+	//		o.Int("children-per-workflow", 30, "Child workflows per iteration.")
+	//		o.MarkRequired("task-queue-count")
+	//	}
+	//
+	// Declaring lets omes reject unknown names and malformed values before the
+	// run starts, and lets `list-scenarios` show what the scenario accepts.
+	// Leaving it nil keeps the legacy behavior of accepting any option.
+	Options func(*OptionSet)
+	// DefaultConfiguration is the scenario's own default run configuration,
+	// shown by `list-scenarios` and used for any field the user does not
+	// override. It supersedes the [HasDefaultConfiguration] executor interface.
+	DefaultConfiguration *RunConfiguration
+	ExecutorFn           func() Executor
+}
+
+// GetDefaultConfiguration prefers the scenario's declared configuration and
+// falls back to the executor's [HasDefaultConfiguration] implementation,
+// reporting whether either was present.
+func (s *Scenario) GetDefaultConfiguration() (RunConfiguration, bool) {
+	if s.DefaultConfiguration != nil {
+		return *s.DefaultConfiguration, true
+	}
+	if s.ExecutorFn != nil {
+		if iface, _ := s.ExecutorFn().(HasDefaultConfiguration); iface != nil {
+			return iface.GetDefaultConfiguration(), true
+		}
+	}
+	return RunConfiguration{}, false
 }
 
 // Executor for a scenario.
@@ -145,6 +176,15 @@ type ExportOptions struct {
 	ExportHistoriesFilter string
 }
 
+// The ScenarioOption* accessors return the value the user supplied, or
+// defaultValue. Keep defaultValue consistent with the scenario's declared
+// default (see [Scenario.Options]); the declaration is what `list-scenarios`
+// advertises, and it is not injected here.
+//
+// For a declared option a malformed value is rejected before the run starts. For
+// an undeclared one there is nothing to validate against, so a value that does
+// not parse falls back to defaultValue and logs a warning rather than panicking.
+
 func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 	v := s.ScenarioOptions[name]
 	if v == "" {
@@ -152,7 +192,8 @@ func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
 	}
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		panic(err)
+		s.warnUnparseableOption(name, v, "int", defaultValue)
+		return defaultValue
 	}
 	return i
 }
@@ -164,7 +205,8 @@ func (s *ScenarioInfo) ScenarioOptionFloat(name string, defaultValue float64) fl
 	}
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		panic(err)
+		s.warnUnparseableOption(name, v, "float", defaultValue)
+		return defaultValue
 	}
 	return f
 }
@@ -174,7 +216,12 @@ func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
 	if v == "" {
 		return defaultValue
 	}
-	return v == "true"
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		s.warnUnparseableOption(name, v, "bool", defaultValue)
+		return defaultValue
+	}
+	return b
 }
 
 func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
@@ -184,16 +231,26 @@ func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Dur
 	}
 	d, err := time.ParseDuration(v)
 	if err != nil {
-		panic(err)
+		s.warnUnparseableOption(name, v, "duration", defaultValue)
+		return defaultValue
 	}
 	return d
 }
+
 func (s *ScenarioInfo) ScenarioOptionString(name string, defaultValue string) string {
 	v := s.ScenarioOptions[name]
 	if v == "" {
 		return defaultValue
 	}
 	return v
+}
+
+func (s *ScenarioInfo) warnUnparseableOption(name, value, want string, fallback any) {
+	if s.Logger == nil {
+		return
+	}
+	s.Logger.Warnf("option %q is not a valid %s (got %q); using %v. Declare the option on the scenario to have this rejected before the run starts.",
+		name, want, value, fallback)
 }
 
 const DefaultIterations = 10

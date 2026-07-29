@@ -45,10 +45,12 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Burst workload for serverless workers: each iteration runs a workflow with " +
 			"concurrent fast (noop) and slow (delay) activities. Tests auto-scale speed from zero " +
-			"and sustained throughput under mixed I/O and compute load. " +
-			"Options: " + sbFastActivityCountFlag + " (default 5), " +
-			sbSlowActivityCountFlag + " (default 2), " +
-			sbSlowActivityDuration + " (default 2s).",
+			"and sustained throughput under mixed I/O and compute load.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(sbFastActivityCountFlag, 5, "Concurrent noop activities per iteration.")
+			o.Int(sbSlowActivityCountFlag, 2, "Concurrent delay activities per iteration.")
+			o.Duration(sbSlowActivityDuration, 2*time.Second, "How long each delay activity sleeps.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &TestInput{
