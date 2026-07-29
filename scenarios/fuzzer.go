@@ -6,6 +6,10 @@ import (
 	"github.com/temporalio/omes/loadgen"
 )
 
+// defaultFuzzOutputFile is where generated actions are written so a run can be
+// replayed with --option input-file.
+const defaultFuzzOutputFile = "last_fuzz_run.proto"
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "This scenario uses the kitchen sink input generation tool to run fuzzy" +
@@ -15,7 +19,8 @@ func init() {
 			o.String("input-file", "", "Pre-generated input file to replay instead of generating actions.")
 			o.String("seed", "", "Explicit seed for action generation.")
 			o.String("config", "", "Generator config override.")
-			o.Bool("no-output-file", false, "Skip writing last_fuzz_run.proto.")
+			o.String("output-file", defaultFuzzOutputFile,
+				"Path to write the generated actions to for replay. Empty writes nothing.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.FuzzExecutor{
@@ -41,8 +46,8 @@ func init() {
 						nexusEndpoint = loadgen.NexusEndpointForRun(info.RunID)
 					}
 					args = append(args, "--nexus-endpoint", nexusEndpoint)
-					if !info.ScenarioOptionBool("no-output-file", false) {
-						args = append(args, "--output-path", "last_fuzz_run.proto")
+					if outputFile := info.ScenarioOptionString("output-file", defaultFuzzOutputFile); outputFile != "" {
+						args = append(args, "--output-path", outputFile)
 					}
 					return loadgen.FileOrArgs{
 						Args: args,

@@ -81,7 +81,6 @@ func init() {
 			o.Int(MinBacklogFlag, 0, "Minimum total backlog to target.")
 			o.Int(MaxBacklogFlag, 30, "Maximum total backlog to target.")
 			o.Duration(PeriodFlag, 60*time.Second, "Period of backlog-size oscillation.")
-			o.Duration("phase-time", 60*time.Second, "Deprecated alias for "+PeriodFlag+".")
 			o.Duration(SleepDurationFlag, time.Millisecond, "How long each activity sleeps.")
 			o.Int(MaxRateFlag, 1000, "Maximum workflows spawned per control interval.")
 			o.Duration(ControlIntervalFlag, 100*time.Millisecond, "How often the backlog is controlled.")
@@ -118,9 +117,7 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
 	}
 
-	// TODO: backwards-compatibility, remove later
-	pt := info.ScenarioOptionDuration("phase-time", 60*time.Second)
-	config.Period = info.ScenarioOptionDuration(PeriodFlag, pt)
+	config.Period = info.ScenarioOptionDuration(PeriodFlag, 60*time.Second)
 	if config.Period <= 0 {
 		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
 	}

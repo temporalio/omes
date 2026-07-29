@@ -33,7 +33,7 @@ type FuzzExecutor struct {
 // Scenarios using it should call this from their own Options declaration so the
 // options validate and appear in `list-scenarios`.
 func DeclareFuzzExecutorOptions(o *OptionSet) {
-	o.String("nexus-endpoint", "", "Existing Nexus endpoint to use instead of creating one for the run.")
+	o.String("nexus-endpoint", "", "Nexus endpoint to use. Empty creates one for this run.")
 	o.String("kitchen-sink-gen", "", "Name of, or absolute path to, the kitchen-sink-gen executable.")
 }
 

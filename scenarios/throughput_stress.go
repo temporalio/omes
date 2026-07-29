@@ -28,7 +28,11 @@ const (
 	ContinueAsNewAfterIterFlag = "continue-as-new-after-iterations"
 	// SleepTimeFlag controls the duration used for internal timer-based sleep actions (e.g. signal/update timers).
 	// Default is 1s.
-	SleepTimeFlag     = "sleep-time"
+	SleepTimeFlag = "sleep-time"
+	// NexusEnabledFlag turns Nexus operations on.
+	NexusEnabledFlag = "nexus-enabled"
+	// NexusEndpointFlag names the Nexus endpoint to use. Empty means one is created
+	// for this run. Only consulted when NexusEnabledFlag is set.
 	NexusEndpointFlag = "nexus-endpoint"
 	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
@@ -76,6 +80,7 @@ type tpsConfig struct {
 	InternalIterations            int
 	InternalIterTimeout           time.Duration
 	ContinueAsNewAfterIter        int
+	NexusEnabled                  bool
 	NexusEndpoint                 string
 	SleepTime                     time.Duration
 	SleepActivities               *loadgen.SleepActivityConfig
@@ -108,10 +113,11 @@ func init() {
 		Description: "Throughput stress scenario.",
 		Options: func(o *loadgen.OptionSet) {
 			o.Int(IterFlag, 10, "Internal iterations per workflow.")
-			o.Duration(IterTimeoutFlag, 0, "Timeout for internal iterations; defaults to the run duration plus a minute.")
+			o.Duration(IterTimeoutFlag, 0, "Timeout for internal iterations. 0 means auto: the run duration plus a minute.")
 			o.Int(ContinueAsNewAfterIterFlag, 3, "Internal iterations before continue-as-new.")
 			o.Duration(SleepTimeFlag, time.Second, "How long each sleep activity sleeps.")
-			o.String(NexusEndpointFlag, "", "Nexus endpoint to exercise; empty disables Nexus operations.")
+			o.Bool(NexusEnabledFlag, false, "Include Nexus operations.")
+			o.String(NexusEndpointFlag, "", "Nexus endpoint to use when Nexus is enabled. Empty creates one for this run.")
 			o.Duration(VisibilityVerificationTimeoutFlag, 3*time.Minute, "Timeout for the post-run visibility count check.")
 			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
 			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
@@ -157,6 +163,7 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
 		InternalIterTimeout:  info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
+		NexusEnabled:         info.ScenarioOptionBool(NexusEnabledFlag, false),
 		NexusEndpoint:        info.ScenarioOptions[NexusEndpointFlag],
 		MinThroughputPerHour: info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
 		ScenarioRunID:        info.RunID,
@@ -203,8 +210,11 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
 	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
 	config.IncludeStandaloneNexus = info.ScenarioOptionBool(IncludeStandaloneNexusFlag, false)
-	if config.IncludeStandaloneNexus && config.NexusEndpoint == "" {
-		return fmt.Errorf("%s requires %s to be set", IncludeStandaloneNexusFlag, NexusEndpointFlag)
+	if config.IncludeStandaloneNexus && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeStandaloneNexusFlag, NexusEnabledFlag)
+	}
+	if config.NexusEndpoint != "" && !config.NexusEnabled {
+		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
 	}
 	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
 
@@ -232,6 +242,17 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
 	t.runID = info.RunID
+
+	// Creating the endpoint needs a context, so it happens here rather than in
+	// Configure.
+	if t.config.NexusEnabled && t.config.NexusEndpoint == "" {
+		endpoint, err := info.EnsureNexusEndpoint(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create nexus endpoint: %w", err)
+		}
+		t.config.NexusEndpoint = endpoint
+		info.Logger.Infof("Using nexus endpoint %q", endpoint)
+	}
 
 	// Track start time of current run
 	currentRunStartTime := time.Now()
@@ -507,7 +528,7 @@ func (t *tpsExecutor) createActionsChunk(
 		}
 
 		// Add Nexus operations, if configured.
-		if t.config.NexusEndpoint != "" {
+		if t.config.NexusEnabled {
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
 			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())

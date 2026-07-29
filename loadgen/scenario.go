@@ -399,6 +399,12 @@ func TaskQueueForRun(runID string) string {
 	return "omes-" + runID
 }
 
+// EnsureNexusEndpoint returns the Nexus endpoint for this run, creating it if it
+// does not already exist. Call this when Nexus is enabled without a named endpoint.
+func (s *ScenarioInfo) EnsureNexusEndpoint(ctx context.Context) (string, error) {
+	return ensureNexusEndpoint(ctx, s.Client, s.Namespace, s.RunID)
+}
+
 // NexusEndpointForRun returns a sanitized Nexus endpoint name for the given run ID.
 func NexusEndpointForRun(runID string) string {
 	sanitized := sanitizeRunID.ReplaceAllString(strings.ReplaceAll(runID, "/", "-"), "")
