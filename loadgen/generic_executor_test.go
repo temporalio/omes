@@ -238,6 +238,46 @@ func TestExecutorRetries(t *testing.T) {
 	})
 }
 
+func TestRunContinueOnIterationFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var mu sync.Mutex
+		var completed, failed []int
+
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				if run.Iteration%2 == 0 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			}},
+			RunConfiguration{
+				Iterations:                 6,
+				MaxConcurrent:              1,
+				ContinueOnIterationFailure: true,
+				OnCompletion: func(ctx context.Context, run *Run) {
+					mu.Lock()
+					defer mu.Unlock()
+					completed = append(completed, run.Iteration)
+				},
+				OnIterationFailure: func(ctx context.Context, run *Run, err error) {
+					mu.Lock()
+					defer mu.Unlock()
+					failed = append(failed, run.Iteration)
+				},
+			},
+		)
+
+		// Every iteration runs (tolerated failures don't abort), but the verdict is
+		// unchanged: the run still fails because iterations failed.
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "3 of 6 iterations failed")
+		mu.Lock()
+		defer mu.Unlock()
+		require.ElementsMatch(t, []int{1, 3, 5}, completed)
+		require.ElementsMatch(t, []int{2, 4, 6}, failed)
+	})
+}
+
 func TestExecutorRetriesLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		totalTracker := newIterationTracker()
