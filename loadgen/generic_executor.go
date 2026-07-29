@@ -3,6 +3,7 @@ package loadgen
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"go.temporal.io/sdk/client"
@@ -21,6 +22,10 @@ type genericRun struct {
 	logger   *zap.SugaredLogger
 	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
+	// Iteration outcome tallies, used for the end-of-run summary. failed counts
+	// only terminal failures tolerated via ContinueOnIterationFailure.
+	completed atomic.Int64
+	failed    atomic.Int64
 }
 
 func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
@@ -130,11 +135,28 @@ func (g *genericRun) Run(ctx context.Context) error {
 			defer func() {
 				g.executeTimer.Record(time.Since(iterStart))
 
+				// Swallow the error for the spawn loop only, so a tolerated failure
+				// doesn't stop new iterations from starting. It is not ignored: it is
+				// counted (g.failed) and surfaced via OnIterationFailure, and the run
+				// still fails at the end if the tally is nonzero.
+				iterErr := err
+				if iterErr != nil && g.config.ContinueOnIterationFailure {
+					err = nil
+				}
+
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					if err == nil && g.config.OnCompletion != nil {
-						g.config.OnCompletion(ctx, run)
+					if iterErr == nil {
+						g.completed.Add(1)
+						if g.config.OnCompletion != nil {
+							g.config.OnCompletion(ctx, run)
+						}
+					} else {
+						g.failed.Add(1)
+						if g.config.OnIterationFailure != nil {
+							g.config.OnIterationFailure(ctx, run, iterErr)
+						}
 					}
 				}
 			}()
@@ -182,6 +204,17 @@ func (g *genericRun) Run(ctx context.Context) error {
 	}
 	if runErr != nil {
 		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
+	}
+	// ContinueOnIterationFailure changed only when the run stops (it ran to
+	// completion instead of aborting on the first failure); the verdict is
+	// unchanged — any terminal iteration failure fails the run. Per-iteration
+	// outcomes were tallied into the snapshot, so the caller can read the
+	// success/failure counts and apply its own policy on top.
+	if failed := g.failed.Load(); failed > 0 {
+		completed := g.completed.Load()
+		g.logger.Infof("Run completed in %v: %d iterations succeeded, %d failed",
+			time.Since(startTime), completed, failed)
+		return fmt.Errorf("run completed with %d of %d iterations failed", failed, completed+failed)
 	}
 	g.logger.Infof("Run completed in %v", time.Since(startTime))
 	return nil
