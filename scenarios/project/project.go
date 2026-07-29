@@ -116,20 +116,15 @@ func (e *projectScenarioExecutor) Run(ctx context.Context, info loadgen.Scenario
 func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectScenarioOptions, error) {
 	var opts projectScenarioOptions
 
-	lang := info.ScenarioOptions["language"]
-	if lang == "" {
-		return opts, fmt.Errorf("--option language=<lang> is required")
-	}
+	// language and project-name are declared required, so the run fails before
+	// reaching here if either is missing.
+	lang := info.OptionString("language")
 	if err := opts.sdkOpts.Language.Set(lang); err != nil {
 		return opts, fmt.Errorf("unrecognized language: %s", lang)
 	}
 
-	projectName := info.ScenarioOptions["project-name"]
-	prebuiltDir := info.ScenarioOptions["prebuilt-project-dir"]
-	if projectName == "" {
-		return opts, fmt.Errorf("--option project-name=<name> is required")
-	}
-	opts.projectName = projectName
+	prebuiltDir := info.OptionString("prebuilt-project-dir")
+	opts.projectName = info.OptionString("project-name")
 
 	if prebuiltDir != "" {
 		abs, err := filepath.Abs(prebuiltDir)
@@ -139,12 +134,12 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 		opts.prebuiltDir = abs
 	}
 
-	version := info.ScenarioOptions["version"]
+	version := info.OptionString("version")
 	if version != "" && opts.prebuiltDir == "" {
 		opts.sdkOpts.Version = version
 	}
 
-	if configPath := info.ScenarioOptions["project-config-file"]; configPath != "" {
+	if configPath := info.OptionString("project-config-file"); configPath != "" {
 		data, err := os.ReadFile(configPath)
 		if err != nil {
 			return opts, fmt.Errorf("failed to read config file %s: %w", configPath, err)
@@ -152,14 +147,7 @@ func (e *projectScenarioExecutor) validate(info loadgen.ScenarioInfo) (projectSc
 		opts.configJSON = data
 	}
 
-	opts.projectServerReadyTimeout = defaultClientReadyTimeout
-	if timeout := info.ScenarioOptions["project-server-ready-timeout"]; timeout != "" {
-		parsed, err := time.ParseDuration(timeout)
-		if err != nil {
-			return opts, fmt.Errorf("invalid project-server-ready-timeout %q: %w", timeout, err)
-		}
-		opts.projectServerReadyTimeout = parsed
-	}
+	opts.projectServerReadyTimeout = info.OptionDuration("project-server-ready-timeout")
 
 	return opts, nil
 }

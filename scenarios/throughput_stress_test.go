@@ -29,13 +29,14 @@ func TestThroughputStress(t *testing.T) {
 		Configuration: loadgen.RunConfiguration{
 			Iterations: 2,
 		},
-		ScenarioOptions: map[string]string{
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			IterFlag:                          "2",
 			ContinueAsNewAfterIterFlag:        "1",
+			NexusEnabledFlag:                  "true",
 			NexusEndpointFlag:                 env.NexusEndpointName(),
 			SleepTimeFlag:                     "1ms", // reduce to safe time
 			VisibilityVerificationTimeoutFlag: "10s", // lower timeout to fail fast
-		},
+		}),
 	}
 
 	t.Run("Run executor", func(t *testing.T) {
@@ -83,9 +84,9 @@ func TestThroughputStressConfigurePayload(t *testing.T) {
 	executor := newThroughputStressExecutor()
 	info := loadgen.ScenarioInfo{
 		RunID: "tps-payload",
-		ScenarioOptions: map[string]string{
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			PayloadDistributionJsonFlag: `{"size":{"type":"discrete","weights":{"1024":1}}}`,
-		},
+		}),
 	}
 	require.NoError(t, executor.Configure(info))
 	require.NotNil(t, executor.config.Payload)
@@ -99,7 +100,10 @@ func TestThroughputStressConfigureNoPayload(t *testing.T) {
 
 	// Without the option, payload sizing falls back to the previous hardcoded 256.
 	executor := newThroughputStressExecutor()
-	require.NoError(t, executor.Configure(loadgen.ScenarioInfo{RunID: "tps-no-payload"}))
+	require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
+		RunID:   "tps-no-payload",
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", nil),
+	}))
 	require.Nil(t, executor.config.Payload)
 	require.Equal(t, 256, executor.samplePayloadSize(rand.New(rand.NewSource(1))))
 }
@@ -110,9 +114,9 @@ func TestThroughputStressConfigureInvalidPayload(t *testing.T) {
 	executor := newThroughputStressExecutor()
 	info := loadgen.ScenarioInfo{
 		RunID: "tps-payload-invalid",
-		ScenarioOptions: map[string]string{
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			PayloadDistributionJsonFlag: `{"size":{"type":"bogus"}}`,
-		},
+		}),
 	}
 	require.Error(t, executor.Configure(info))
 }
@@ -129,11 +133,11 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 		RunID:       "tps-can-seq",
 		ExecutionID: "exec",
 		Logger:      zap.NewNop().Sugar(),
-		ScenarioOptions: map[string]string{
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			IterFlag:                    "4", // > ContinueAsNewAfterIter, so chunks are nested via CAN
 			ContinueAsNewAfterIterFlag:  "1",
 			PayloadDistributionJsonFlag: `{"size":{"type":"uniform","min":"1","max":"1000000"}}`,
-		},
+		}),
 	}
 	require.NoError(t, executor.Configure(info))
 

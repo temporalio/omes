@@ -99,31 +99,32 @@ func (e *InvalidOptionsError) Error() string {
 func (e *InvalidOptionsError) Unwrap() error { return e.Err }
 
 // ResolveOptions validates user-supplied options against the scenario's
-// declarations and returns the values the run should use.
+// declarations and returns the set the run should read from.
 //
 // Every problem is reported at once rather than one per run attempt: unknown
 // option names, values that do not parse as their declared type, and missing
-// required options.
+// required options. A scenario that declares no options accepts none.
 //
-// Declared defaults describe and validate; they are deliberately not written
-// into the returned map. Scenarios read their own defaults through the
-// ScenarioOption* accessors, and some treat an option's *absence* as meaningful
-// — injecting defaults here would silently change what those scenarios do.
-//
-// A scenario that declares no options is passed through untouched, which keeps
-// scenarios outside this repository working unchanged.
-func (s *Scenario) ResolveOptions(provided map[string]string) (map[string]string, error) {
+// The returned set holds each option's declared default, overwritten by whatever
+// the user supplied — so the declaration is the single source of truth for both
+// the value and the default.
+func (s *Scenario) ResolveOptions(provided map[string]string) (*OptionSet, error) {
 	set := s.optionSet()
 	if set == nil {
-		return provided, nil
+		set = newOptionSet("")
 	}
 
 	var errs []error
 	for _, name := range sortedKeys(provided) {
 		flag := set.Lookup(name)
 		if flag == nil {
-			errs = append(errs, fmt.Errorf("unknown option %q; this scenario accepts: %s",
-				name, strings.Join(set.names(), ", ")))
+			accepted := set.names()
+			if len(accepted) == 0 {
+				errs = append(errs, fmt.Errorf("unknown option %q; this scenario accepts no options", name))
+			} else {
+				errs = append(errs, fmt.Errorf("unknown option %q; this scenario accepts: %s",
+					name, strings.Join(accepted, ", ")))
+			}
 			continue
 		}
 		// pflag does the type checking, but phrases its error for a `--flag`;
@@ -148,14 +149,29 @@ func (s *Scenario) ResolveOptions(provided map[string]string) (map[string]string
 	if len(errs) > 0 {
 		return nil, errors.Join(errs...)
 	}
+	return set, nil
+}
 
-	resolved := make(map[string]string, len(provided))
-	set.VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			resolved[f.Name] = f.Value.String()
-		}
-	})
-	return resolved, nil
+// MustResolveOptions is [Scenario.ResolveOptions] for tests and other callers that
+// treat a bad option as a programming error. It panics instead of returning one.
+func (s *Scenario) MustResolveOptions(provided map[string]string) *OptionSet {
+	set, err := s.ResolveOptions(provided)
+	if err != nil {
+		panic(err)
+	}
+	return set
+}
+
+// MustResolveScenarioOptions resolves options for a registered scenario by name,
+// for building a [ScenarioInfo] in tests. Resolving through the real declarations
+// means a test that misspells an option fails rather than silently testing a
+// default.
+func MustResolveScenarioOptions(scenarioName string, provided map[string]string) *OptionSet {
+	s := GetScenario(scenarioName)
+	if s == nil {
+		panic(fmt.Errorf("no registered scenario named %q", scenarioName))
+	}
+	return s.MustResolveOptions(provided)
 }
 
 func sortedRequired(m map[string]struct{}) []string {

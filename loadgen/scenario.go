@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -40,9 +39,11 @@ type Scenario struct {
 	//		o.MarkRequired("task-queue-count")
 	//	}
 	//
-	// Declaring lets omes reject unknown names and malformed values before the
-	// run starts, and lets `list-scenarios` show what the scenario accepts.
-	// Leaving it nil keeps the legacy behavior of accepting any option.
+	// Declarations are the single source of truth for an option's type and
+	// default: omes rejects unknown names and malformed values before the run
+	// starts, `list-scenarios` shows what the scenario accepts, and the Option*
+	// accessors read from them. A scenario that declares nothing accepts no
+	// options.
 	Options func(*OptionSet)
 	// DefaultConfiguration is the scenario's own default run configuration,
 	// shown by `list-scenarios` and used for any field the user does not
@@ -158,8 +159,10 @@ type ScenarioInfo struct {
 	ClientOptions clioptions.ClientOptions
 	// Configuration info passed by user if any.
 	Configuration RunConfiguration
-	// ScenarioOptions are info passed from the command line. Do not mutate these.
-	ScenarioOptions map[string]string
+	// Options holds the scenario's options: each declared default, overwritten by
+	// whatever the user passed with `--option`. Read them with the Option*
+	// accessors. Do not mutate.
+	Options *OptionSet
 	// The namespace that was used when connecting the client.
 	Namespace string
 	// Path to the root of the omes dir
@@ -176,81 +179,70 @@ type ExportOptions struct {
 	ExportHistoriesFilter string
 }
 
-// The ScenarioOption* accessors return the value the user supplied, or
-// defaultValue. Keep defaultValue consistent with the scenario's declared
-// default (see [Scenario.Options]); the declaration is what `list-scenarios`
-// advertises, and it is not injected here.
+// The Option* accessors return the option's value: what the user passed, or the
+// default the scenario declared. Values are validated before the run starts, so
+// these cannot fail on user input.
 //
-// For a declared option a malformed value is rejected before the run starts. For
-// an undeclared one there is nothing to validate against, so a value that does
-// not parse falls back to defaultValue and logs a warning rather than panicking.
+// Reading an option the scenario did not declare is a bug in the scenario, not
+// something a user can cause. It logs and returns the zero value.
 
-func (s *ScenarioInfo) ScenarioOptionInt(name string, defaultValue int) int {
-	v := s.ScenarioOptions[name]
-	if v == "" {
-		return defaultValue
-	}
-	i, err := strconv.Atoi(v)
+func (s *ScenarioInfo) OptionInt(name string) int {
+	v, err := s.options().GetInt(name)
 	if err != nil {
-		s.warnUnparseableOption(name, v, "int", defaultValue)
-		return defaultValue
-	}
-	return i
-}
-
-func (s *ScenarioInfo) ScenarioOptionFloat(name string, defaultValue float64) float64 {
-	v := s.ScenarioOptions[name]
-	if v == "" {
-		return defaultValue
-	}
-	f, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		s.warnUnparseableOption(name, v, "float", defaultValue)
-		return defaultValue
-	}
-	return f
-}
-
-func (s *ScenarioInfo) ScenarioOptionBool(name string, defaultValue bool) bool {
-	v := s.ScenarioOptions[name]
-	if v == "" {
-		return defaultValue
-	}
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		s.warnUnparseableOption(name, v, "bool", defaultValue)
-		return defaultValue
-	}
-	return b
-}
-
-func (s *ScenarioInfo) ScenarioOptionDuration(name string, defaultValue time.Duration) time.Duration {
-	v := s.ScenarioOptions[name]
-	if v == "" {
-		return defaultValue
-	}
-	d, err := time.ParseDuration(v)
-	if err != nil {
-		s.warnUnparseableOption(name, v, "duration", defaultValue)
-		return defaultValue
-	}
-	return d
-}
-
-func (s *ScenarioInfo) ScenarioOptionString(name string, defaultValue string) string {
-	v := s.ScenarioOptions[name]
-	if v == "" {
-		return defaultValue
+		s.undeclaredOption(name, err)
 	}
 	return v
 }
 
-func (s *ScenarioInfo) warnUnparseableOption(name, value, want string, fallback any) {
-	if s.Logger == nil {
-		return
+func (s *ScenarioInfo) OptionFloat64(name string) float64 {
+	v, err := s.options().GetFloat64(name)
+	if err != nil {
+		s.undeclaredOption(name, err)
 	}
-	s.Logger.Warnf("option %q is not a valid %s (got %q); using %v. Declare the option on the scenario to have this rejected before the run starts.",
-		name, want, value, fallback)
+	return v
+}
+
+func (s *ScenarioInfo) OptionBool(name string) bool {
+	v, err := s.options().GetBool(name)
+	if err != nil {
+		s.undeclaredOption(name, err)
+	}
+	return v
+}
+
+func (s *ScenarioInfo) OptionDuration(name string) time.Duration {
+	v, err := s.options().GetDuration(name)
+	if err != nil {
+		s.undeclaredOption(name, err)
+	}
+	return v
+}
+
+func (s *ScenarioInfo) OptionString(name string) string {
+	v, err := s.options().GetString(name)
+	if err != nil {
+		s.undeclaredOption(name, err)
+	}
+	return v
+}
+
+// options returns the resolved set, or an empty one so a ScenarioInfo built
+// without options (in tests, say) reads zero values rather than panicking.
+func (s *ScenarioInfo) options() *OptionSet {
+	if s.Options == nil {
+		s.Options = newOptionSet("")
+	}
+	return s.Options
+}
+
+func (s *ScenarioInfo) undeclaredOption(name string, err error) {
+	msg := fmt.Sprintf("scenario %q read option %q, which it does not declare: %v",
+		s.ScenarioName, name, err)
+	if s.Logger != nil {
+		s.Logger.Error(msg)
+	} else {
+		clioptions.BackupLogger.Println(msg)
+	}
 }
 
 const DefaultIterations = 10

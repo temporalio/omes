@@ -7,16 +7,14 @@ import (
 	"time"
 )
 
-func TestResolveOptionsUndeclaredPassesThrough(t *testing.T) {
-	// Scenarios that declare nothing keep the legacy behavior: anything goes.
-	// This is what keeps scenarios outside this repo working.
+func TestResolveOptionsRejectsWhenNoneDeclared(t *testing.T) {
 	s := &Scenario{}
-	got, err := s.ResolveOptions(map[string]string{"anything": "goes", "even": "nonsense"})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	_, err := s.ResolveOptions(map[string]string{"anything": "goes"})
+	if err == nil {
+		t.Fatal("expected an error: a scenario declaring no options accepts none")
 	}
-	if len(got) != 2 || got["anything"] != "goes" {
-		t.Fatalf("expected provided options untouched, got %v", got)
+	if !strings.Contains(err.Error(), "accepts no options") {
+		t.Errorf("error should say the scenario accepts no options, got: %v", err)
 	}
 }
 
@@ -25,34 +23,48 @@ func TestResolveOptionsKeepsProvidedValues(t *testing.T) {
 		o.Int("count", 30, "")
 		o.Duration("wait", time.Second, "")
 	}}
-	got, err := s.ResolveOptions(map[string]string{"count": "7", "wait": "2m"})
+	set, err := s.ResolveOptions(map[string]string{"count": "7", "wait": "2m"})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if got["count"] != "7" {
-		t.Errorf("count: want 7, got %q", got["count"])
+	info := &ScenarioInfo{Options: set}
+	if got := info.OptionInt("count"); got != 7 {
+		t.Errorf("count: want 7, got %v", got)
 	}
-	if got["wait"] != "2m0s" {
-		t.Errorf("wait: want 2m0s, got %q", got["wait"])
+	if got := info.OptionDuration("wait"); got != 2*time.Minute {
+		t.Errorf("wait: want 2m, got %v", got)
 	}
 }
 
-func TestResolveOptionsDoesNotInjectDefaults(t *testing.T) {
-	// Declared defaults describe and validate; they must not be written into the
-	// map. Some scenarios treat an option's absence as meaningful (a deprecated
-	// alias feeding another option's default, or a presence-only flag), and
-	// injecting defaults would silently change what those scenarios do.
+func TestOptionAccessorsReturnDeclaredDefaults(t *testing.T) {
+	// The declaration is the only place a default lives, so an unsupplied option
+	// reads back as whatever was declared.
 	s := &Scenario{Options: func(o *OptionSet) {
 		o.Int("count", 30, "")
-		o.Bool("enabled", false, "")
-		o.String("label", "", "")
+		o.Duration("wait", 5*time.Second, "")
+		o.Bool("enabled", true, "")
+		o.Float64("ratio", 1.5, "")
+		o.String("label", "hello", "")
 	}}
-	got, err := s.ResolveOptions(nil)
+	set, err := s.ResolveOptions(nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if len(got) != 0 {
-		t.Errorf("expected no values for unsupplied options, got %v", got)
+	info := &ScenarioInfo{Options: set}
+	if got := info.OptionInt("count"); got != 30 {
+		t.Errorf("count: want 30, got %v", got)
+	}
+	if got := info.OptionDuration("wait"); got != 5*time.Second {
+		t.Errorf("wait: want 5s, got %v", got)
+	}
+	if got := info.OptionBool("enabled"); !got {
+		t.Errorf("enabled: want true, got %v", got)
+	}
+	if got := info.OptionFloat64("ratio"); got != 1.5 {
+		t.Errorf("ratio: want 1.5, got %v", got)
+	}
+	if got := info.OptionString("label"); got != "hello" {
+		t.Errorf("label: want hello, got %q", got)
 	}
 }
 
@@ -177,33 +189,18 @@ func TestDeclaredOptionsEmptyWhenUndeclared(t *testing.T) {
 	}
 }
 
-func TestScenarioOptionAccessorsDoNotPanic(t *testing.T) {
-	// Undeclared options are still parsed lazily; a bad value must fall back
-	// rather than take the process down.
-	info := &ScenarioInfo{ScenarioOptions: map[string]string{
-		"i": "abc", "f": "abc", "b": "maybe", "d": "abc",
-	}}
-	if got := info.ScenarioOptionInt("i", 7); got != 7 {
-		t.Errorf("int: want fallback 7, got %v", got)
+func TestOptionAccessorsTolerateUndeclaredReads(t *testing.T) {
+	// Reading an option the scenario never declared is a bug in the scenario. It
+	// must report rather than take the process down mid-run.
+	info := &ScenarioInfo{ScenarioName: "buggy"}
+	if got := info.OptionInt("nope"); got != 0 {
+		t.Errorf("int: want zero value, got %v", got)
 	}
-	if got := info.ScenarioOptionFloat("f", 1.5); got != 1.5 {
-		t.Errorf("float: want fallback 1.5, got %v", got)
+	if got := info.OptionString("nope"); got != "" {
+		t.Errorf("string: want empty, got %q", got)
 	}
-	if got := info.ScenarioOptionBool("b", true); !got {
-		t.Errorf("bool: want fallback true, got %v", got)
-	}
-	if got := info.ScenarioOptionDuration("d", time.Second); got != time.Second {
-		t.Errorf("duration: want fallback 1s, got %v", got)
-	}
-}
-
-func TestScenarioOptionBoolAcceptsParseBoolForms(t *testing.T) {
-	info := &ScenarioInfo{ScenarioOptions: map[string]string{"on": "1", "off": "0"}}
-	if !info.ScenarioOptionBool("on", false) {
-		t.Error(`expected "1" to read as true`)
-	}
-	if info.ScenarioOptionBool("off", true) {
-		t.Error(`expected "0" to read as false`)
+	if got := info.OptionDuration("nope"); got != 0 {
+		t.Errorf("duration: want zero, got %v", got)
 	}
 }
 

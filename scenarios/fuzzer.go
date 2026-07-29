@@ -25,28 +25,25 @@ func init() {
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.FuzzExecutor{
 				InitInputs: func(ctx context.Context, info loadgen.ScenarioInfo) loadgen.FileOrArgs {
-					fPath, ok := info.ScenarioOptions["input-file"]
-					if ok && fPath != "" {
+					if fPath := info.OptionString("input-file"); fPath != "" {
 						return loadgen.FileOrArgs{
 							FilePath: fPath,
 						}
 					}
 
 					args := []string{"generate"}
-					seed, ok := info.ScenarioOptions["seed"]
-					if ok && seed != "" {
+					if seed := info.OptionString("seed"); seed != "" {
 						args = append(args, "--explicit-seed", seed)
 					}
-					config, ok := info.ScenarioOptions["config"]
-					if ok && config != "" {
+					if config := info.OptionString("config"); config != "" {
 						args = append(args, "--generator-config-override", config)
 					}
-					nexusEndpoint := info.ScenarioOptions["nexus-endpoint"]
+					nexusEndpoint := info.OptionString("nexus-endpoint")
 					if nexusEndpoint == "" {
 						nexusEndpoint = loadgen.NexusEndpointForRun(info.RunID)
 					}
 					args = append(args, "--nexus-endpoint", nexusEndpoint)
-					if outputFile := info.ScenarioOptionString("output-file", defaultFuzzOutputFile); outputFile != "" {
+					if outputFile := info.OptionString("output-file"); outputFile != "" {
 						args = append(args, "--output-path", outputFile)
 					}
 					return loadgen.FileOrArgs{

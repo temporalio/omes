@@ -113,17 +113,17 @@ var (
 // Configure implements the loadgen.Configurable interface
 func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
-		ScheduleCreationPerIteration:  info.ScenarioOptionInt(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration),
-		ScheduleReadsPerCreation:      info.ScenarioOptionInt(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation),
-		ScheduleUpdatesPerCreation:    info.ScenarioOptionInt(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation),
-		SchedulerDurationPerIteration: info.ScenarioOptionDuration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration),
-		PayloadSize:                   info.ScenarioOptionInt(PayloadSizeFlag, DefaultPayloadSize),
-		WaitTimeBeforeCleanup:         info.ScenarioOptionDuration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup),
-		OperationInterval:             info.ScenarioOptionDuration(OperationIntervalFlag, DefaultOperationInterval),
-		CronExpression:                info.ScenarioOptionString(CronExpressionFlag, DefaultCronExpression),
-		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
-		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
-		EnableChasmScheduler:          info.ScenarioOptionBool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+		ScheduleCreationPerIteration:  info.OptionInt(ScheduleCreationPerIterationFlag),
+		ScheduleReadsPerCreation:      info.OptionInt(ScheduleReadsPerCreationFlag),
+		ScheduleUpdatesPerCreation:    info.OptionInt(ScheduleUpdatesPerCreationFlag),
+		SchedulerDurationPerIteration: info.OptionDuration(SchedulerDurationPerIterationFlag),
+		PayloadSize:                   info.OptionInt(PayloadSizeFlag),
+		WaitTimeBeforeCleanup:         info.OptionDuration(WaitTimeBeforeCleanupFlag),
+		OperationInterval:             info.OptionDuration(OperationIntervalFlag),
+		CronExpression:                info.OptionString(CronExpressionFlag),
+		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
+		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
+		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {

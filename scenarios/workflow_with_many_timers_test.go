@@ -15,7 +15,7 @@ func TestWorkflowWithManyTimers_ParseConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("defaults", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{}}
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("workflow_with_many_timers", nil)}
 		cfg, err := parseManyTimersConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, 30, cfg.concurrentTimers)
@@ -25,12 +25,12 @@ func TestWorkflowWithManyTimers_ParseConfig(t *testing.T) {
 	})
 
 	t.Run("overrides", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("workflow_with_many_timers", map[string]string{
 			manyTimersConcurrentTimersFlag: "4",
 			manyTimersTimerDurationFlag:    "10ms",
 			manyTimersTimerJitterFlag:      "5ms",
 			manyTimersIterationsFlag:       "3",
-		}}
+		})}
 		cfg, err := parseManyTimersConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, 4, cfg.concurrentTimers)
@@ -48,7 +48,7 @@ func TestWorkflowWithManyTimers_ParseConfig(t *testing.T) {
 		}
 		for name, opts := range cases {
 			t.Run(name, func(t *testing.T) {
-				_, err := parseManyTimersConfig(&loadgen.ScenarioInfo{ScenarioOptions: opts})
+				_, err := parseManyTimersConfig(&loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("workflow_with_many_timers", opts)})
 				require.Error(t, err)
 			})
 		}
@@ -139,11 +139,11 @@ func TestWorkflowWithManyTimers(t *testing.T) {
 				Iterations:    3,
 				MaxConcurrent: 3,
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("workflow_with_many_timers", map[string]string{
 				manyTimersConcurrentTimersFlag: "5",
 				manyTimersTimerDurationFlag:    "10ms",
 				manyTimersIterationsFlag:       "2",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 	})

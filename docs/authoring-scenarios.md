@@ -183,15 +183,25 @@ helper from yours — for example `loadgen.DeclareFuzzExecutorOptions(o)`.
 ### Read them
 
 ```go
-children := info.ScenarioOptionInt("children-per-workflow", 30)
-sleep := info.ScenarioOptionDuration("sleep-duration", 5*time.Second)
+children := info.OptionInt("children-per-workflow")
+sleep := info.OptionDuration("sleep-time")
 ```
 
-Accessors exist for int, float, bool, duration, and string. Note that **declared defaults are used for
-validation and display, not injected into the run** — a scenario reads its own default through the
-accessor. That is deliberate: some scenarios treat an option's *absence* as meaningful, and injecting
-defaults would silently change what they do. Keep the accessor's inline default and the declared default
-the same, since the declared one is what `list-scenarios` advertises.
+Accessors exist for int, float64, bool, duration, and string. They take **no default** — the declaration
+is the only place a default lives, so an option the user didn't supply reads back as whatever you
+declared. Values are already validated, so these can't fail on user input; reading an option you didn't
+declare is a bug in the scenario and reads as the zero value.
+
+If an option's real default can't be written as a constant — say it derives from the run's `--duration` —
+declare a sentinel, say so in the usage string, and resolve it in code:
+
+```go
+o.Duration(IterTimeoutFlag, 0, "Timeout for internal iterations. 0 means auto: the run duration plus a minute.")
+...
+if config.InternalIterTimeout == 0 {
+    config.InternalIterTimeout = cmp.Or(info.Configuration.Duration+time.Minute, time.Minute)
+}
+```
 
 ### Declaring a default run configuration
 
@@ -204,14 +214,13 @@ DefaultConfiguration: &loadgen.RunConfiguration{Iterations: 100, MaxConcurrent: 
 
 ### Conventions for options
 
-- **Declare every option.** A scenario that declares none keeps the legacy behavior — any option name is
-  accepted and nothing is validated — so an undeclared option is both unvalidated and undiscoverable.
+- **Declare every option you read.** A scenario accepts exactly what it declares, and the accessors read
+  from the declarations — so an undeclared option can't be passed and can't be read.
 - **Give each option a usage string.** It's what a user sees in `list-scenarios`.
 - **Use `MarkRequired` instead of hand-rolling a check** in `PrepareTestInput` or `Configure`; the
   framework fails the run before any load starts.
 - **Don't restate options in the `Description`.** `list-scenarios` renders the declarations, so listing
   names and defaults in prose only creates something to drift.
-- **Prefer the typed accessors** over reading the raw map, so values parse consistently.
 
 ## Testing your scenario
 
@@ -231,6 +240,6 @@ against a real cluster they generally have to be pre-registered.
 1. snake_case filenames — the filename _is_ the scenario name.
 2. Prefer `KitchenSinkExecutor`; go custom only when you must, and reuse `GenericExecutor` and
    `*loadgen.Run` when you do.
-3. Declare every option, with a type, a default or `Required`, and a description.
+3. Declare every option you read, with a type, a default or `MarkRequired`, and a usage string.
 4. Declare a `DefaultConfiguration` if the scenario assumes a particular scale.
 5. Put helpers other scenario authors would want in the `loadgen` package, not in your scenario file.

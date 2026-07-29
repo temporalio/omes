@@ -78,9 +78,9 @@ type outOfOrderSignalsConfig struct {
 
 func parseOutOfOrderSignalsConfig(info *loadgen.ScenarioInfo) (*outOfOrderSignalsConfig, error) {
 	cfg := &outOfOrderSignalsConfig{
-		signalsPerWorkflow: info.ScenarioOptionInt(oooSignalsCountFlag, 10),
-		shufflePercentage:  info.ScenarioOptionInt(oooSignalsShufflePercentageFlag, 100),
-		processingTime:     info.ScenarioOptionDuration(oooSignalsProcessingTimeFlag, 0),
+		signalsPerWorkflow: info.OptionInt(oooSignalsCountFlag),
+		shufflePercentage:  info.OptionInt(oooSignalsShufflePercentageFlag),
+		processingTime:     info.OptionDuration(oooSignalsProcessingTimeFlag),
 	}
 	if cfg.signalsPerWorkflow <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %d", oooSignalsCountFlag, cfg.signalsPerWorkflow)

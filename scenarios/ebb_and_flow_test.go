@@ -53,14 +53,14 @@ func TestEbbAndFlow(t *testing.T) {
 		Configuration: loadgen.RunConfiguration{
 			Duration: 10 * time.Second,
 		},
-		ScenarioOptions: map[string]string{
+		Options: loadgen.MustResolveScenarioOptions("ebb_and_flow", map[string]string{
 			MinBacklogFlag:                    "0",
 			MaxBacklogFlag:                    "1",
 			PeriodFlag:                        "5s",
 			BacklogLogIntervalFlag:            "5s",
 			VisibilityVerificationTimeoutFlag: "5s",
 			SleepActivityJsonFlag:             sleepActivityJson,
-		},
+		}),
 	}
 
 	var state ebbAndFlowState

@@ -69,10 +69,10 @@ type manyTimersConfig struct {
 
 func parseManyTimersConfig(info *loadgen.ScenarioInfo) (*manyTimersConfig, error) {
 	cfg := &manyTimersConfig{
-		concurrentTimers: info.ScenarioOptionInt(manyTimersConcurrentTimersFlag, 30),
-		timerDuration:    info.ScenarioOptionDuration(manyTimersTimerDurationFlag, 10*time.Second),
-		timerJitter:      info.ScenarioOptionDuration(manyTimersTimerJitterFlag, 0),
-		iterations:       info.ScenarioOptionInt(manyTimersIterationsFlag, 1),
+		concurrentTimers: info.OptionInt(manyTimersConcurrentTimersFlag),
+		timerDuration:    info.OptionDuration(manyTimersTimerDurationFlag),
+		timerJitter:      info.OptionDuration(manyTimersTimerJitterFlag),
+		iterations:       info.OptionInt(manyTimersIterationsFlag),
 	}
 	if cfg.concurrentTimers <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %d", manyTimersConcurrentTimersFlag, cfg.concurrentTimers)

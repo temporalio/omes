@@ -162,10 +162,10 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
-		InternalIterTimeout:  info.ScenarioOptionDuration(IterTimeoutFlag, cmp.Or(info.Configuration.Duration+1*time.Minute, 1*time.Minute)),
-		NexusEnabled:         info.ScenarioOptionBool(NexusEnabledFlag, false),
-		NexusEndpoint:        info.ScenarioOptions[NexusEndpointFlag],
-		MinThroughputPerHour: info.ScenarioOptionFloat(MinThroughputPerHourFlag, 0),
+		InternalIterTimeout:  info.OptionDuration(IterTimeoutFlag),
+		NexusEnabled:         info.OptionBool(NexusEnabledFlag),
+		NexusEndpoint:        info.OptionString(NexusEndpointFlag),
+		MinThroughputPerHour: info.OptionFloat64(MinThroughputPerHourFlag),
 		ScenarioRunID:        info.RunID,
 		ExecutionID:          info.ExecutionID,
 	}
@@ -175,50 +175,51 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	h.Write([]byte(info.RunID))
 	config.RngSeed = int64(h.Sum64())
 
-	config.SleepTime = info.ScenarioOptionDuration(SleepTimeFlag, 1*time.Second)
+	config.SleepTime = info.OptionDuration(SleepTimeFlag)
 	if config.SleepTime <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", SleepTimeFlag, config.SleepTime)
 	}
 
-	config.InternalIterations = info.ScenarioOptionInt(IterFlag, 10)
+	config.InternalIterations = info.OptionInt(IterFlag)
 	if config.InternalIterations <= 0 {
 		return fmt.Errorf("internal-iterations must be positive, got %d", config.InternalIterations)
 	}
 
-	config.ContinueAsNewAfterIter = info.ScenarioOptionInt(ContinueAsNewAfterIterFlag, 3)
+	config.ContinueAsNewAfterIter = info.OptionInt(ContinueAsNewAfterIterFlag)
 	if config.ContinueAsNewAfterIter < 0 {
 		return fmt.Errorf("continue-as-new-after-iterations must be non-negative, got %d", config.ContinueAsNewAfterIter)
 	}
 
-	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
-		var err error
+	// The declared default is 0, meaning derive the timeout from the run.
+	if config.InternalIterTimeout == 0 {
+		config.InternalIterTimeout = cmp.Or(info.Configuration.Duration+time.Minute, time.Minute)
+	}
+
+	var err error
+	if sleepActivitiesStr := info.OptionString(SleepActivityJsonFlag); sleepActivitiesStr != "" {
 		config.SleepActivities, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, true, true)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", SleepActivityJsonFlag, err)
 		}
 	}
 
-	var err error
-	config.VisibilityVerificationTimeout, err = time.ParseDuration(cmp.Or(info.ScenarioOptions[VisibilityVerificationTimeoutFlag], "3m"))
-	if err != nil {
-		return fmt.Errorf("invalid %s: %w", VisibilityVerificationTimeoutFlag, err)
-	}
+	config.VisibilityVerificationTimeout = info.OptionDuration(VisibilityVerificationTimeoutFlag)
 	if config.VisibilityVerificationTimeout <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", VisibilityVerificationTimeoutFlag, config.VisibilityVerificationTimeout)
 	}
 
-	config.IncludeRetryScenarios = info.ScenarioOptionBool(IncludeRetryScenariosFlag, false)
-	config.IncludeDescribe = info.ScenarioOptionBool(IncludeDescribeFlag, false)
-	config.IncludeStandaloneNexus = info.ScenarioOptionBool(IncludeStandaloneNexusFlag, false)
+	config.IncludeRetryScenarios = info.OptionBool(IncludeRetryScenariosFlag)
+	config.IncludeDescribe = info.OptionBool(IncludeDescribeFlag)
+	config.IncludeStandaloneNexus = info.OptionBool(IncludeStandaloneNexusFlag)
 	if config.IncludeStandaloneNexus && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeStandaloneNexusFlag, NexusEnabledFlag)
 	}
 	if config.NexusEndpoint != "" && !config.NexusEnabled {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
 	}
-	config.IncludeStandaloneActivity = info.ScenarioOptionBool(IncludeStandaloneActivityFlag, false)
+	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
 
-	if payloadStr, ok := info.ScenarioOptions[PayloadDistributionJsonFlag]; ok {
+	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", PayloadDistributionJsonFlag, err)

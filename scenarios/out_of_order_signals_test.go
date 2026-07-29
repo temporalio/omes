@@ -145,7 +145,7 @@ func TestOutOfOrderSignals(t *testing.T) {
 				Iterations:    3,
 				MaxConcurrent: 3,
 			},
-			ScenarioOptions: opts,
+			Options: loadgen.MustResolveScenarioOptions("out_of_order_signals", opts),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 	}
@@ -170,7 +170,7 @@ func TestOutOfOrderSignals_ParseConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("defaults", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{}}
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("out_of_order_signals", nil)}
 		cfg, err := parseOutOfOrderSignalsConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, 10, cfg.signalsPerWorkflow)
@@ -179,11 +179,11 @@ func TestOutOfOrderSignals_ParseConfig(t *testing.T) {
 	})
 
 	t.Run("overrides", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("out_of_order_signals", map[string]string{
 			oooSignalsCountFlag:             "5",
 			oooSignalsShufflePercentageFlag: "50",
 			oooSignalsProcessingTimeFlag:    "250ms",
-		}}
+		})}
 		cfg, err := parseOutOfOrderSignalsConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, 5, cfg.signalsPerWorkflow)
@@ -200,7 +200,7 @@ func TestOutOfOrderSignals_ParseConfig(t *testing.T) {
 		}
 		for name, opts := range cases {
 			t.Run(name, func(t *testing.T) {
-				_, err := parseOutOfOrderSignalsConfig(&loadgen.ScenarioInfo{ScenarioOptions: opts})
+				_, err := parseOutOfOrderSignalsConfig(&loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("out_of_order_signals", opts)})
 				require.Error(t, err)
 			})
 		}

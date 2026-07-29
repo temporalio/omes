@@ -70,11 +70,11 @@ type longIdleConfig struct {
 
 func parseLongIdleConfig(info *loadgen.ScenarioInfo) (*longIdleConfig, error) {
 	cfg := &longIdleConfig{
-		idleDuration:            info.ScenarioOptionDuration(longIdleIdleDurationFlag, time.Minute),
-		cyclesPerRun:            info.ScenarioOptionInt(longIdleCyclesPerRunFlag, 1),
-		activitiesPerCycle:      info.ScenarioOptionInt(longIdleActivitiesPerCycleFlag, 0),
-		activityDuration:        info.ScenarioOptionDuration(longIdleActivityDurationFlag, time.Second),
-		continueAsNewIterations: info.ScenarioOptionInt(longIdleContinueAsNewIterationsFlag, 0),
+		idleDuration:            info.OptionDuration(longIdleIdleDurationFlag),
+		cyclesPerRun:            info.OptionInt(longIdleCyclesPerRunFlag),
+		activitiesPerCycle:      info.OptionInt(longIdleActivitiesPerCycleFlag),
+		activityDuration:        info.OptionDuration(longIdleActivityDurationFlag),
+		continueAsNewIterations: info.OptionInt(longIdleContinueAsNewIterationsFlag),
 	}
 	if cfg.idleDuration <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %v", longIdleIdleDurationFlag, cfg.idleDuration)

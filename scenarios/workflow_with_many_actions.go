@@ -35,8 +35,8 @@ func init() {
 						append(params.WorkflowInput.InitialActions, actionSet)
 
 					// Get options
-					children := opts.ScenarioOptionInt("children-per-workflow", 30)
-					activities := opts.ScenarioOptionInt("activities-per-workflow", 30)
+					children := opts.OptionInt("children-per-workflow")
+					activities := opts.OptionInt("activities-per-workflow")
 					opts.Logger.Infof("Preparing to run with %v child workflow(s) and %v activity execution(s)", children, activities)
 
 					childInput, err := converter.GetDefaultDataConverter().ToPayload(

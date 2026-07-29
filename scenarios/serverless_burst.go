@@ -59,9 +59,9 @@ func init() {
 					},
 				},
 				PrepareTestInput: func(_ context.Context, info loadgen.ScenarioInfo, params *TestInput) error {
-					fastCount := info.ScenarioOptionInt(sbFastActivityCountFlag, 5)
-					slowCount := info.ScenarioOptionInt(sbSlowActivityCountFlag, 2)
-					slowDuration := info.ScenarioOptionDuration(sbSlowActivityDuration, 2*time.Second)
+					fastCount := info.OptionInt(sbFastActivityCountFlag)
+					slowCount := info.OptionInt(sbSlowActivityCountFlag)
+					slowDuration := info.OptionDuration(sbSlowActivityDuration)
 
 					// StartToCloseTimeout must exceed the activity's own sleep duration.
 					slowTimeout := max(60*time.Second, slowDuration*2)

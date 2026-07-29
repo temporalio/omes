@@ -43,7 +43,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	}
 
 	// Use a user-provided nexus endpoint, or auto-create one for this run
-	endpointName := info.ScenarioOptions["nexus-endpoint"]
+	endpointName := info.OptionString("nexus-endpoint")
 	if endpointName == "" {
 		var err error
 		endpointName, err = ensureNexusEndpoint(ctx, info.Client, info.Namespace, info.RunID)
@@ -68,8 +68,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		var cmd *exec.Cmd
 		// The value of the 'kitchen-sink-gen' option is the name of or absolute
 		// path to the executable.
-		executable, ok := info.ScenarioOptions["kitchen-sink-gen"]
-		if ok && executable != "" {
+		if executable := info.OptionString("kitchen-sink-gen"); executable != "" {
 			cmd = exec.CommandContext(ctx, executable, fileOrArgs.Args...)
 		} else {
 			projDir := filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen", "Cargo.toml")

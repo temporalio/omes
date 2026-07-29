@@ -139,7 +139,6 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	if resolveErr != nil {
 		return &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
 	}
-	scenarioOptions = resolvedOptions
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
@@ -189,9 +188,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
-		ScenarioOptions: scenarioOptions,
-		Namespace:       r.clientOptions.Namespace,
-		RootPath:        repoDir,
+		Options:   resolvedOptions,
+		Namespace: r.clientOptions.Namespace,
+		RootPath:  repoDir,
 		ExportOptions: loadgen.ExportOptions{
 			ExportHistoriesDir:    r.exportHistoriesDir,
 			ExportHistoriesFilter: r.exportHistoriesFilter,

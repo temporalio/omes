@@ -15,7 +15,7 @@ func TestLongIdleWorkflow_ParseConfig(t *testing.T) {
 	t.Parallel()
 
 	t.Run("defaults", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{}}
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("long_idle_workflow", nil)}
 		cfg, err := parseLongIdleConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, time.Minute, cfg.idleDuration)
@@ -26,13 +26,13 @@ func TestLongIdleWorkflow_ParseConfig(t *testing.T) {
 	})
 
 	t.Run("overrides", func(t *testing.T) {
-		info := &loadgen.ScenarioInfo{ScenarioOptions: map[string]string{
+		info := &loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("long_idle_workflow", map[string]string{
 			longIdleIdleDurationFlag:            "5ms",
 			longIdleCyclesPerRunFlag:            "3",
 			longIdleActivitiesPerCycleFlag:      "2",
 			longIdleActivityDurationFlag:        "250ms",
 			longIdleContinueAsNewIterationsFlag: "4",
-		}}
+		})}
 		cfg, err := parseLongIdleConfig(info)
 		require.NoError(t, err)
 		require.Equal(t, 5*time.Millisecond, cfg.idleDuration)
@@ -52,7 +52,7 @@ func TestLongIdleWorkflow_ParseConfig(t *testing.T) {
 		}
 		for name, opts := range cases {
 			t.Run(name, func(t *testing.T) {
-				_, err := parseLongIdleConfig(&loadgen.ScenarioInfo{ScenarioOptions: opts})
+				_, err := parseLongIdleConfig(&loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("long_idle_workflow", opts)})
 				require.Error(t, err)
 			})
 		}
@@ -117,12 +117,12 @@ func TestLongIdleWorkflow(t *testing.T) {
 				Iterations:    3,
 				MaxConcurrent: 3,
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("long_idle_workflow", map[string]string{
 				longIdleIdleDurationFlag:       "1ms",
 				longIdleCyclesPerRunFlag:       "2",
 				longIdleActivitiesPerCycleFlag: "1",
 				longIdleActivityDurationFlag:   "1ms",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 	})
@@ -136,10 +136,10 @@ func TestLongIdleWorkflow(t *testing.T) {
 				Iterations:    2,
 				MaxConcurrent: 2,
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("long_idle_workflow", map[string]string{
 				longIdleIdleDurationFlag:            "1ms",
 				longIdleContinueAsNewIterationsFlag: "2",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 	})
