@@ -7,6 +7,8 @@ benchmark features and situations. Backwards compatibility may not be maintained
 
 - **[Running & configuring omes](./docs/running.md)** — run commands, load configuration, worker
   profiles, and running against a specific SDK version.
+- **[Authoring scenarios](./docs/authoring-scenarios.md)** — writing a new scenario, choosing an
+  executor, exposing options, and authoring conventions.
 
 ## Why the weird name?
 
@@ -85,43 +87,13 @@ When using the Prometheus instance (`--prom-instance-addr`), sidecar metrics can
 
 ### Define a scenario
 
-Scenarios are defined using plain Go code. They are located in the [scenarios](./scenarios/) folder. There are already
-multiple defined that can be used.
+Scenarios are plain Go files in the [scenarios](./scenarios/) folder that register themselves from
+`init()`. The file name becomes the scenario name, and most scenarios use the `KitchenSinkExecutor`, which
+runs the Kitchen Sink workflow — implemented in every worker language — from a declarative action tree.
 
-A scenario must select an `Executor`. The most common is the `KitchenSinkExecutor` which is a wrapper on the
-`GenericExecutor` specific for executing the Kitchen Sink workflow. The Kitchen Sink workflow accepts
-[actions](./workers/go/workerlib/kitchensink/kitchen_sink.go) and is implemented in every worker language.
-
-For example, here is [scenarios/workflow_with_single_noop_activity.go](scenarios/workflow_with_single_noop_activity.go):
-
-```go
-func init() {
-	loadgen.MustRegisterScenario(loadgen.Scenario{
-        Description: "Each iteration executes a single workflow with a noop activity.",
-        ExecutorFn: func() loadgen.Executor {
-            return loadgen.KitchenSinkExecutor{
-                TestInput: &kitchensink.TestInput{
-                    WorkflowInput: &kitchensink.WorkflowInput{
-                        InitialActions: []*kitchensink.ActionSet{
-                            kitchensink.NoOpSingleActivityActionSet(),
-                        },
-                    },
-                },
-            }
-        },
-    })
-}
-```
-
-> NOTE: The file name where the `Register` function is called, will be used as the name of the scenario.
-
-#### Scenario Authoring Guidelines
-
-1. Use snake case for scenario file names.
-1. Use `KitchenSinkExecutor` for most basic scenarios, adding common/generic actions as need, but for unique
-   scenarios use `GenericExecutor`.
-1. When using `GenericExecutor`, use methods of `*loadgen.Run` in your `Execute` as much as possible.
-1. Liberally add helpers to the `loadgen` package that will be useful to other scenario authors.
+See **[docs/authoring-scenarios.md](./docs/authoring-scenarios.md)** for writing one: registration and the
+filename rule, choosing between `KitchenSinkExecutor` and a custom `Executor`, exposing `--option`
+values, and the authoring conventions.
 
 ### Running and configuring omes
 
