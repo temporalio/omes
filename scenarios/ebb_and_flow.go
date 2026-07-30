@@ -76,11 +76,19 @@ var _ loadgen.Resumable = (*ebbAndFlowExecutor)(nil)
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Oscillates backlog between min and max.\n" +
-			"Options:\n" +
-			"  min-backlog, max-backlog, period, sleep-duration, max-rate,\n" +
-			"  control-interval, max-consecutive-errors, backlog-log-interval.\n" +
-			"Duration must be set.",
+		Description: "Oscillates backlog between min and max. Duration must be set.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(MinBacklogFlag, 0, "Minimum total backlog to target.")
+			o.Int(MaxBacklogFlag, 30, "Maximum total backlog to target.")
+			o.Duration(PeriodFlag, 60*time.Second, "Period of backlog-size oscillation.")
+			o.Duration(SleepDurationFlag, time.Millisecond, "How long each activity sleeps.")
+			o.Int(MaxRateFlag, 1000, "Maximum workflows spawned per control interval.")
+			o.Duration(ControlIntervalFlag, 100*time.Millisecond, "How often the backlog is controlled.")
+			o.Int(MaxConsecutiveErrorsFlag, 10, "Consecutive errors tolerated before stopping.")
+			o.Duration(BacklogLogIntervalFlag, 30*time.Second, "How often backlog stats are logged.")
+			o.Duration(VisibilityVerificationTimeoutFlag, 30*time.Second, "Timeout for the visibility count check.")
+			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
+		},
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
 	})
 }
@@ -91,32 +99,30 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
-		SleepDuration:                 info.ScenarioOptionDuration(SleepDurationFlag, 1*time.Millisecond),
-		MaxRate:                       int64(info.ScenarioOptionInt(MaxRateFlag, 1000)),
-		ControlInterval:               info.ScenarioOptionDuration(ControlIntervalFlag, 100*time.Millisecond),
-		MaxConsecutiveErrors:          info.ScenarioOptionInt(MaxConsecutiveErrorsFlag, 10),
-		BacklogLogInterval:            info.ScenarioOptionDuration(BacklogLogIntervalFlag, 30*time.Second),
-		VisibilityVerificationTimeout: info.ScenarioOptionDuration(VisibilityVerificationTimeoutFlag, 30*time.Second),
+		SleepDuration:                 info.OptionDuration(SleepDurationFlag),
+		MaxRate:                       int64(info.OptionInt(MaxRateFlag)),
+		ControlInterval:               info.OptionDuration(ControlIntervalFlag),
+		MaxConsecutiveErrors:          info.OptionInt(MaxConsecutiveErrorsFlag),
+		BacklogLogInterval:            info.OptionDuration(BacklogLogIntervalFlag),
+		VisibilityVerificationTimeout: info.OptionDuration(VisibilityVerificationTimeoutFlag),
 	}
 
-	config.MinBacklog = int64(info.ScenarioOptionInt(MinBacklogFlag, 0))
+	config.MinBacklog = int64(info.OptionInt(MinBacklogFlag))
 	if config.MinBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative, got %d", config.MinBacklog)
 	}
 
-	config.MaxBacklog = int64(info.ScenarioOptionInt(MaxBacklogFlag, 30))
+	config.MaxBacklog = int64(info.OptionInt(MaxBacklogFlag))
 	if config.MaxBacklog <= config.MinBacklog {
 		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
 	}
 
-	// TODO: backwards-compatibility, remove later
-	pt := info.ScenarioOptionDuration("phase-time", 60*time.Second)
-	config.Period = info.ScenarioOptionDuration(PeriodFlag, pt)
+	config.Period = info.OptionDuration(PeriodFlag)
 	if config.Period <= 0 {
 		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
 	}
 
-	if sleepActivitiesStr, ok := info.ScenarioOptions[SleepActivityJsonFlag]; ok {
+	if sleepActivitiesStr := info.OptionString(SleepActivityJsonFlag); sleepActivitiesStr != "" {
 		var err error
 		// This scenario overrides "count" and "sleepDuration" so do not require them.
 		config.SleepActivityConfig, err = loadgen.ParseAndValidateSleepActivityConfig(sleepActivitiesStr, false, false)

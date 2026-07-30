@@ -21,21 +21,21 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf("Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently. "+
-			"Available parameters: '%s' (default: %d), '%s' (default: %d), '%s' (default: %d), '%s' (default: %v), '%s' (default: %d), '%s' (default: %v), '%s' (default: %v), "+
-			"'%s' (default: '%s'), '%s' (default: '%s', options: skip,buffer_one,buffer_all,cancel_other,terminate_other,all), "+
-			"'%s' (default: '%s', options: %s,%s), '%s' (default: %v)",
-			ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration,
-			ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation,
-			ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation,
-			SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration,
-			PayloadSizeFlag, DefaultPayloadSize,
-			WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup,
-			OperationIntervalFlag, DefaultOperationInterval,
-			CronExpressionFlag, DefaultCronExpression,
-			OverlapPolicyFlag, DefaultOverlapPolicy,
-			ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType, NoopScheduledWorkflowType, SleepScheduleWorkflowType,
-			EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+		Description: "Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration, "Schedules created per iteration.")
+			o.Int(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation, "Schedule reads per created schedule.")
+			o.Int(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation, "Schedule updates per created schedule.")
+			o.Duration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration, "How long each iteration exercises its schedules.")
+			o.Int(PayloadSizeFlag, DefaultPayloadSize, "Payload size in bytes for scheduled workflows.")
+			o.Duration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup, "Wait before deleting schedules.")
+			o.Duration(OperationIntervalFlag, DefaultOperationInterval, "Interval between schedule operations.")
+			o.String(CronExpressionFlag, DefaultCronExpression, "Cron expression for created schedules.")
+			o.String(OverlapPolicyFlag, DefaultOverlapPolicy, "Overlap policy: skip, buffer_one, buffer_all, cancel_other, terminate_other, all.")
+			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
+				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
+			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
 				Execute: func(ctx context.Context, run *loadgen.Run) error {
@@ -113,17 +113,17 @@ var (
 // Configure implements the loadgen.Configurable interface
 func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
-		ScheduleCreationPerIteration:  info.ScenarioOptionInt(ScheduleCreationPerIterationFlag, DefaultScheduleCreationPerIteration),
-		ScheduleReadsPerCreation:      info.ScenarioOptionInt(ScheduleReadsPerCreationFlag, DefaultScheduleReadsPerCreation),
-		ScheduleUpdatesPerCreation:    info.ScenarioOptionInt(ScheduleUpdatesPerCreationFlag, DefaultScheduleUpdatesPerCreation),
-		SchedulerDurationPerIteration: info.ScenarioOptionDuration(SchedulerDurationPerIterationFlag, DefaultSchedulerDurationPerIteration),
-		PayloadSize:                   info.ScenarioOptionInt(PayloadSizeFlag, DefaultPayloadSize),
-		WaitTimeBeforeCleanup:         info.ScenarioOptionDuration(WaitTimeBeforeCleanupFlag, DefaultWaitTimeBeforeCleanup),
-		OperationInterval:             info.ScenarioOptionDuration(OperationIntervalFlag, DefaultOperationInterval),
-		CronExpression:                info.ScenarioOptionString(CronExpressionFlag, DefaultCronExpression),
-		OverlapPolicy:                 parseOverlapPolicy(info.ScenarioOptionString(OverlapPolicyFlag, DefaultOverlapPolicy)),
-		ScheduledWorkflowType:         info.ScenarioOptionString(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType),
-		EnableChasmScheduler:          info.ScenarioOptionBool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler),
+		ScheduleCreationPerIteration:  info.OptionInt(ScheduleCreationPerIterationFlag),
+		ScheduleReadsPerCreation:      info.OptionInt(ScheduleReadsPerCreationFlag),
+		ScheduleUpdatesPerCreation:    info.OptionInt(ScheduleUpdatesPerCreationFlag),
+		SchedulerDurationPerIteration: info.OptionDuration(SchedulerDurationPerIterationFlag),
+		PayloadSize:                   info.OptionInt(PayloadSizeFlag),
+		WaitTimeBeforeCleanup:         info.OptionDuration(WaitTimeBeforeCleanupFlag),
+		OperationInterval:             info.OptionDuration(OperationIntervalFlag),
+		CronExpression:                info.OptionString(CronExpressionFlag),
+		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
+		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
+		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {

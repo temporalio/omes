@@ -32,15 +32,14 @@ const (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Run long-lived, mostly idle workflows that alternate idle periods with optional activity bursts. "+
-				"Options: '%s' (default 1m), '%s' (default 1), '%s' (default 0), '%s' (default 1s), '%s' (default 0).",
-			longIdleIdleDurationFlag,
-			longIdleCyclesPerRunFlag,
-			longIdleActivitiesPerCycleFlag,
-			longIdleActivityDurationFlag,
-			longIdleContinueAsNewIterationsFlag,
-		),
+		Description: "Run long-lived, mostly idle workflows that alternate idle periods with optional activity bursts.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Duration(longIdleIdleDurationFlag, time.Minute, "How long each idle period lasts.")
+			o.Int(longIdleCyclesPerRunFlag, 1, "Idle/activity cycles per workflow.")
+			o.Int(longIdleActivitiesPerCycleFlag, 0, "Activities run at the end of each idle period.")
+			o.Duration(longIdleActivityDurationFlag, time.Second, "How long each activity runs.")
+			o.Int(longIdleContinueAsNewIterationsFlag, 0, "Continue-as-new iterations per workflow (0 disables).")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
@@ -71,11 +70,11 @@ type longIdleConfig struct {
 
 func parseLongIdleConfig(info *loadgen.ScenarioInfo) (*longIdleConfig, error) {
 	cfg := &longIdleConfig{
-		idleDuration:            info.ScenarioOptionDuration(longIdleIdleDurationFlag, time.Minute),
-		cyclesPerRun:            info.ScenarioOptionInt(longIdleCyclesPerRunFlag, 1),
-		activitiesPerCycle:      info.ScenarioOptionInt(longIdleActivitiesPerCycleFlag, 0),
-		activityDuration:        info.ScenarioOptionDuration(longIdleActivityDurationFlag, time.Second),
-		continueAsNewIterations: info.ScenarioOptionInt(longIdleContinueAsNewIterationsFlag, 0),
+		idleDuration:            info.OptionDuration(longIdleIdleDurationFlag),
+		cyclesPerRun:            info.OptionInt(longIdleCyclesPerRunFlag),
+		activitiesPerCycle:      info.OptionInt(longIdleActivitiesPerCycleFlag),
+		activityDuration:        info.OptionDuration(longIdleActivityDurationFlag),
+		continueAsNewIterations: info.OptionInt(longIdleContinueAsNewIterationsFlag),
 	}
 	if cfg.idleDuration <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %v", longIdleIdleDurationFlag, cfg.idleDuration)

@@ -29,13 +29,21 @@ type FuzzExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
+// DeclareFuzzExecutorOptions declares the options [FuzzExecutor] itself reads.
+// Scenarios using it should call this from their own Options declaration so the
+// options validate and appear in `list-scenarios`.
+func DeclareFuzzExecutorOptions(o *OptionSet) {
+	o.String("nexus-endpoint", "", "Nexus endpoint to use. Empty creates one for this run.")
+	o.String("kitchen-sink-gen", "", "Name of, or absolute path to, the kitchen-sink-gen executable.")
+}
+
 func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.InitInputs == nil {
 		return fmt.Errorf("InitInputs must be specified")
 	}
 
 	// Use a user-provided nexus endpoint, or auto-create one for this run
-	endpointName := info.ScenarioOptions["nexus-endpoint"]
+	endpointName := info.OptionString("nexus-endpoint")
 	if endpointName == "" {
 		var err error
 		endpointName, err = ensureNexusEndpoint(ctx, info.Client, info.Namespace, info.RunID)
@@ -60,8 +68,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		var cmd *exec.Cmd
 		// The value of the 'kitchen-sink-gen' option is the name of or absolute
 		// path to the executable.
-		executable, ok := info.ScenarioOptions["kitchen-sink-gen"]
-		if ok && executable != "" {
+		if executable := info.OptionString("kitchen-sink-gen"); executable != "" {
 			cmd = exec.CommandContext(ctx, executable, fileOrArgs.Args...)
 		} else {
 			projDir := filepath.Join(info.RootPath, "loadgen", "kitchen-sink-gen", "Cargo.toml")

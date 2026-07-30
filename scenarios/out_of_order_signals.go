@@ -42,13 +42,12 @@ const oooSignalReadyValue = "ready"
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Send N signals per workflow in a deterministically shuffled order; the workflow processes them in event sequence. "+
-				"Options: '%s' (default 10), '%s' (default 100), '%s' (default 0).",
-			oooSignalsCountFlag,
-			oooSignalsShufflePercentageFlag,
-			oooSignalsProcessingTimeFlag,
-		),
+		Description: "Send N signals per workflow in a deterministically shuffled order; the workflow processes them in event sequence.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(oooSignalsCountFlag, 10, "Signals sent per workflow.")
+			o.Int(oooSignalsShufflePercentageFlag, 100, "Percentage of signals sent out of order.")
+			o.Duration(oooSignalsProcessingTimeFlag, 0, "Simulated processing time per signal.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
@@ -79,9 +78,9 @@ type outOfOrderSignalsConfig struct {
 
 func parseOutOfOrderSignalsConfig(info *loadgen.ScenarioInfo) (*outOfOrderSignalsConfig, error) {
 	cfg := &outOfOrderSignalsConfig{
-		signalsPerWorkflow: info.ScenarioOptionInt(oooSignalsCountFlag, 10),
-		shufflePercentage:  info.ScenarioOptionInt(oooSignalsShufflePercentageFlag, 100),
-		processingTime:     info.ScenarioOptionDuration(oooSignalsProcessingTimeFlag, 0),
+		signalsPerWorkflow: info.OptionInt(oooSignalsCountFlag),
+		shufflePercentage:  info.OptionInt(oooSignalsShufflePercentageFlag),
+		processingTime:     info.OptionDuration(oooSignalsProcessingTimeFlag),
 	}
 	if cfg.signalsPerWorkflow <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %d", oooSignalsCountFlag, cfg.signalsPerWorkflow)

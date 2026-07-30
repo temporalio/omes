@@ -34,11 +34,11 @@ func TestServerlessBurst(t *testing.T) {
 					completed.Add(1)
 				},
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("serverless_burst", map[string]string{
 				sbFastActivityCountFlag: "5",
 				sbSlowActivityCountFlag: "2",
 				sbSlowActivityDuration:  "2s",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 		require.EqualValues(t, 3, completed.Load())
@@ -57,11 +57,11 @@ func TestServerlessBurst(t *testing.T) {
 					completed.Add(1)
 				},
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("serverless_burst", map[string]string{
 				sbFastActivityCountFlag: "3",
 				sbSlowActivityCountFlag: "1",
 				sbSlowActivityDuration:  "100ms",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 		require.EqualValues(t, 3, completed.Load())
@@ -80,10 +80,10 @@ func TestServerlessBurst(t *testing.T) {
 					completed.Add(1)
 				},
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("serverless_burst", map[string]string{
 				sbFastActivityCountFlag: "5",
 				sbSlowActivityCountFlag: "0",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 		require.EqualValues(t, 3, completed.Load())
@@ -102,11 +102,11 @@ func TestServerlessBurst(t *testing.T) {
 					completed.Add(1)
 				},
 			},
-			ScenarioOptions: map[string]string{
+			Options: loadgen.MustResolveScenarioOptions("serverless_burst", map[string]string{
 				sbFastActivityCountFlag: "0",
 				sbSlowActivityCountFlag: "2",
 				sbSlowActivityDuration:  "200ms",
-			},
+			}),
 		}, clioptions.LangGo)
 		require.NoError(t, err)
 		require.EqualValues(t, 2, completed.Load())

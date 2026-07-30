@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -27,6 +28,13 @@ func runScenarioCmd() *cobra.Command {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
 			if err := r.run(ctx); err != nil {
+				// A rejected --option is a usage error. Print it plainly instead
+				// of as a fatal-level stack trace, which reads as a crash.
+				var invalidOptions *loadgen.InvalidOptionsError
+				if errors.As(err, &invalidOptions) {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
 				r.logger.Fatal(err)
 			}
 		},
@@ -125,6 +133,13 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioOptions[key] = value
 	}
 
+	// Validate before dialing, so a bad option fails immediately rather than
+	// after a connection attempt.
+	resolvedOptions, resolveErr := scenario.ResolveOptions(scenarioOptions)
+	if resolveErr != nil {
+		return &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
+	}
+
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
 	start := time.Now()
@@ -173,9 +188,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 		},
-		ScenarioOptions: scenarioOptions,
-		Namespace:       r.clientOptions.Namespace,
-		RootPath:        repoDir,
+		Options:   resolvedOptions,
+		Namespace: r.clientOptions.Namespace,
+		RootPath:  repoDir,
 		ExportOptions: loadgen.ExportOptions{
 			ExportHistoriesDir:    r.exportHistoriesDir,
 			ExportHistoriesFilter: r.exportHistoriesFilter,

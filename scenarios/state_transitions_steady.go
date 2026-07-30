@@ -13,10 +13,13 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Run a certain number of state transitions per second. This requires duration option to be set " +
-			"and the state-transitions-per-second scenario option to be set. Any iteration configuration is ignored. For " +
-			"example, can be run with: run-scenario-with-worker --scenario state_transitions_steady --language go " +
-			"--embedded-server --duration 5m --option state-transitions-per-second=3",
+		Description: "Run a certain number of state transitions per second. Requires --duration; any iteration " +
+			"configuration is ignored. For example: run-scenario-with-worker --scenario state_transitions_steady " +
+			"--language go --embedded-server --duration 5m --option state-transitions-per-second=3",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int("state-transitions-per-second", 0, "State transitions to sustain per second.")
+			o.MarkRequired("state-transitions-per-second")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.ExecutorFunc(func(ctx context.Context, runOptions loadgen.ScenarioInfo) error {
 				return (&stateTransitionsSteady{runOptions}).run(ctx)
@@ -39,7 +42,7 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	if s.Configuration.Duration == 0 {
 		return fmt.Errorf("duration required for this scenario")
 	}
-	stateTransitionsPerSecond := s.ScenarioOptionInt("state-transitions-per-second", 0)
+	stateTransitionsPerSecond := s.OptionInt("state-transitions-per-second")
 	if stateTransitionsPerSecond == 0 {
 		return fmt.Errorf("state-transitions-per-second scenario option required")
 	}

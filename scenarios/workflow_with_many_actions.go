@@ -13,8 +13,11 @@ import (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities. " +
-			"Additional options: children-per-workflow (default 30), activities-per-workflow (default 30).",
+		Description: "Each iteration executes a single workflow with a number of child workflows and/or activities.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int("children-per-workflow", 30, "Number of child workflows started per iteration.")
+			o.Int("activities-per-workflow", 30, "Number of activities executed per iteration.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
@@ -32,8 +35,8 @@ func init() {
 						append(params.WorkflowInput.InitialActions, actionSet)
 
 					// Get options
-					children := opts.ScenarioOptionInt("children-per-workflow", 30)
-					activities := opts.ScenarioOptionInt("activities-per-workflow", 30)
+					children := opts.OptionInt("children-per-workflow")
+					activities := opts.OptionInt("activities-per-workflow")
 					opts.Logger.Infof("Preparing to run with %v child workflow(s) and %v activity execution(s)", children, activities)
 
 					childInput, err := converter.GetDefaultDataConverter().ToPayload(

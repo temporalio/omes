@@ -33,14 +33,13 @@ const (
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: fmt.Sprintf(
-			"Run workflows that hold many concurrent active timers. "+
-				"Options: '%s' (default 30), '%s' (default 10s), '%s' (default 0), '%s' (default 1).",
-			manyTimersConcurrentTimersFlag,
-			manyTimersTimerDurationFlag,
-			manyTimersTimerJitterFlag,
-			manyTimersIterationsFlag,
-		),
+		Description: "Run workflows that hold many concurrent active timers.",
+		Options: func(o *loadgen.OptionSet) {
+			o.Int(manyTimersConcurrentTimersFlag, 30, "Concurrent active timers per workflow.")
+			o.Duration(manyTimersTimerDurationFlag, 10*time.Second, "Base duration of each timer.")
+			o.Duration(manyTimersTimerJitterFlag, 0, "Random jitter added to each timer duration.")
+			o.Int(manyTimersIterationsFlag, 1, "Timer rounds per workflow.")
+		},
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.KitchenSinkExecutor{
 				TestInput: &kitchensink.TestInput{
@@ -70,10 +69,10 @@ type manyTimersConfig struct {
 
 func parseManyTimersConfig(info *loadgen.ScenarioInfo) (*manyTimersConfig, error) {
 	cfg := &manyTimersConfig{
-		concurrentTimers: info.ScenarioOptionInt(manyTimersConcurrentTimersFlag, 30),
-		timerDuration:    info.ScenarioOptionDuration(manyTimersTimerDurationFlag, 10*time.Second),
-		timerJitter:      info.ScenarioOptionDuration(manyTimersTimerJitterFlag, 0),
-		iterations:       info.ScenarioOptionInt(manyTimersIterationsFlag, 1),
+		concurrentTimers: info.OptionInt(manyTimersConcurrentTimersFlag),
+		timerDuration:    info.OptionDuration(manyTimersTimerDurationFlag),
+		timerJitter:      info.OptionDuration(manyTimersTimerJitterFlag),
+		iterations:       info.OptionInt(manyTimersIterationsFlag),
 	}
 	if cfg.concurrentTimers <= 0 {
 		return nil, fmt.Errorf("%s must be > 0, got %d", manyTimersConcurrentTimersFlag, cfg.concurrentTimers)
