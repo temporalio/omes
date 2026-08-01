@@ -269,8 +269,11 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			toStart := int64(math.Round(deficit))
 			toStart = min(toStart, config.MaxRate)
 			for batch := range batches(toStart, config.BatchSize) {
+				// iter is bound per batch: the closure must not observe the
+				// increment below, which races with the spawned goroutine.
+				iteration := iter
 				startWG.Go(func() {
-					errCh <- e.spawnWorkflowWithActivities(ctx, iter, batch, config.SleepActivityConfig)
+					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, batch, config.SleepActivityConfig)
 				})
 				iter++
 			}
