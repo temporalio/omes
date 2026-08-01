@@ -125,6 +125,9 @@ func newEbbAndFlowExecutor() *ebbAndFlowExecutor {
 
 func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &ebbAndFlowConfig{
+		MinBacklog:                    int64(info.OptionInt(MinBacklogFlag)),
+		MaxBacklog:                    int64(info.OptionInt(MaxBacklogFlag)),
+		Period:                        info.OptionDuration(PeriodFlag),
 		SleepDuration:                 info.OptionDuration(SleepDurationFlag),
 		MaxRate:                       int64(info.OptionInt(MaxRateFlag)),
 		ControlInterval:               info.OptionDuration(ControlIntervalFlag),
@@ -134,26 +137,23 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		MinAddRate:                    info.OptionFloat64(MinAddRateFlag),
 		MaxAddRate:                    info.OptionFloat64(MaxAddRateFlag),
 		RatePeriod:                    info.OptionDuration(RatePeriodFlag),
+		BacklogPeriod:                 info.OptionDuration(BacklogPeriodFlag),
 		BatchSize:                     int64(info.OptionInt(BatchSizeFlag)),
 	}
 
-	config.MinBacklog = int64(info.OptionInt(MinBacklogFlag))
 	if config.MinBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative, got %d", config.MinBacklog)
 	}
 
-	config.MaxBacklog = int64(info.OptionInt(MaxBacklogFlag))
 	if config.MaxBacklog <= config.MinBacklog {
 		return fmt.Errorf("max-backlog must be greater than min-backlog, got max=%d min=%d", config.MaxBacklog, config.MinBacklog)
 	}
 
-	config.Period = info.OptionDuration(PeriodFlag)
 	if config.Period <= 0 {
 		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
 	}
 
 	// Backlog oscillation falls back to the shared period when not set explicitly.
-	config.BacklogPeriod = info.OptionDuration(BacklogPeriodFlag)
 	if config.BacklogPeriod <= 0 {
 		config.BacklogPeriod = config.Period
 	}
