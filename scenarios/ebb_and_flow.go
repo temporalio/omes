@@ -388,13 +388,8 @@ func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
 	e.stateLock.Unlock()
 }
 
-func calculateBacklogTarget(
-	elapsed, period time.Duration,
-	minBacklog, maxBacklog int64,
-) int64 {
-	return int64(math.Round(calculateSineTarget(elapsed, period, float64(minBacklog), float64(maxBacklog))))
-}
-
+// calculateSineTarget oscillates between minVal and maxVal over the given
+// period, starting at minVal.
 func calculateSineTarget(elapsed, period time.Duration, minVal, maxVal float64) float64 {
 	periods := elapsed.Seconds() / period.Seconds()
 	osc := (math.Sin(2*math.Pi*(periods-0.25)) + 1.0) / 2
