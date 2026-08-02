@@ -112,7 +112,7 @@ func init() {
 			o.Float64(MinAddRateFlag, 0, "Minimum activities added per second; enables rate mode with max-add-rate.")
 			o.Float64(MaxAddRateFlag, 0, "Maximum activities added per second; enables rate mode with min-add-rate.")
 			o.Duration(RatePeriodFlag, 10*time.Minute, "Period of add-rate oscillation.")
-			o.Duration(BacklogPeriodFlag, 0, "Period of backlog-size oscillation in rate mode; defaults to period.")
+			o.Duration(BacklogPeriodFlag, 0, "Period of backlog-size oscillation; defaults to period.")
 			o.Int(BatchSizeFlag, 0, "Maximum activities per spawned workflow; 0 means unlimited.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
