@@ -122,8 +122,8 @@ go run ./cmd/omes run-scenario-with-worker \
 - **Language names and aliases.** `--language` accepts `go`, `python` (`py`), `java`, `typescript`
   (`ts`), `dotnet` (`cs`), `ruby` (`rb`). If you pass an unknown value the error message lists the
   accepted set.
-- **Option validation depends on the scenario declaring its options.** When a scenario declares them
-  (most do), an unknown name or a malformed value is rejected before the run starts, and
-  `list-scenarios` shows you what it accepts. A scenario that declares none accepts any option name and
-  parses values on first read, so a typo there is silently ignored and the default is used.
+- **A scenario accepts exactly the options it declares.** An unknown name or a value of the wrong type
+  is rejected before the run starts — before omes even connects — and every problem is reported at once.
+  `list-scenarios` shows what each scenario accepts, including defaults. A scenario that declares no
+  options accepts none.
 - **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected at run time.
