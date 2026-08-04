@@ -67,9 +67,9 @@ If you set neither `--iterations` nor `--duration`, the scenario's own default a
 
 ### 2. Per-scenario options (`--option key=value`)
 
-Scenario-specific knobs are passed as repeated `--option key=value` pairs. The valid keys are defined by
-each scenario (read the scenario source or its `list-scenarios` description). A value may be loaded from
-a file with `@`: `--option sleep-activity-json=@sleep.json`.
+Scenario-specific knobs are passed as repeated `--option key=value` pairs. Each scenario declares the
+options it accepts; `list-scenarios` prints them with their types and defaults. A value may be loaded
+from a file with `@`: `--option sleep-activity-json=@sleep.json`.
 
 Some options are feature options: they turn on by default when the namespace under test reports
 support for the underlying capability, off when it does not. Pass `=false` to force one off
@@ -129,10 +129,16 @@ go run ./cmd/omes run-scenario-with-worker \
   (`ts`), `dotnet` (`cs`), `ruby` (`rb`). If you pass an unknown value the error message lists the
   accepted set.
 - **A scenario accepts exactly the options it declares.** An unknown name or a value of the wrong type
-  is rejected before the run starts — before omes even connects — and every problem is reported at once.
+  is rejected before the run starts — before omes even connects, and before
+  `run-scenario-with-worker` builds a worker — and every problem is reported at once.
   `list-scenarios` shows what each scenario accepts, including defaults. A scenario that declares no
   options accepts none.
 - **Feature options are on by default against a capable namespace.** They resolve after omes connects,
   by probing the namespace's reported capabilities, so pass `=false` explicitly to force one off.
   Explicitly passing `=true` against a namespace that doesn't report the capability fails the run.
-- **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected at run time.
+- **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected before the run
+  starts.
+- **Bad input prints as a message, not a stack trace.** An unknown scenario or option, a malformed
+  `--option`, a feature the namespace doesn't support, or conflicting run flags print one line and exit
+  non-zero. A stack trace means something failed *during* the run — so if you see one, read it as a real
+  failure rather than a typo.

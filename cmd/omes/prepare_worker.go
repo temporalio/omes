@@ -20,11 +20,11 @@ func prepareWorkerCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			repoDir, err := getRepoDir()
 			if err != nil {
-				b.Logger.Fatal(fmt.Errorf("failed to get root directory: %w", err))
+				exitOnError(b.Logger, fmt.Errorf("failed to get root directory: %w", err))
 			}
 			baseDir := workerctl.BaseDir(repoDir, b.SdkOptions.Language)
 			if _, err := b.Build(cmd.Context(), baseDir); err != nil {
-				b.Logger.Fatal(err)
+				exitOnError(b.Logger, err)
 			}
 		},
 	}

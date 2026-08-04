@@ -31,9 +31,7 @@ func runWorkerCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
-			if err := r.run(ctx); err != nil {
-				r.Logger.Fatal(err)
-			}
+			exitOnError(r.Logger, r.run(ctx))
 		},
 	}
 	r.addCLIFlags(cmd.Flags())

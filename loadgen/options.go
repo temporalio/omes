@@ -189,6 +189,8 @@ func (e *InvalidOptionsError) Error() string {
 
 func (e *InvalidOptionsError) Unwrap() error { return e.Err }
 
+func (e *InvalidOptionsError) isUsageError() {}
+
 // ResolveOptions validates user-supplied options against the scenario's
 // declarations and returns the set the run should read from.
 //

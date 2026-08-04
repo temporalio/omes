@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -22,8 +21,9 @@ func main() {
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
+	// Execute has already reported the error; printing it again here put a second
+	// copy below the usage text, where it read as a second, separate failure.
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

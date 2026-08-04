@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -27,16 +26,7 @@ func runScenarioCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
-			if err := r.run(ctx); err != nil {
-				// A rejected --option is a usage error. Print it plainly instead
-				// of as a fatal-level stack trace, which reads as a crash.
-				var invalidOptions *loadgen.InvalidOptionsError
-				if errors.As(err, &invalidOptions) {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
-				}
-				r.logger.Fatal(err)
-			}
+			exitOnError(r.logger, r.run(ctx))
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
@@ -102,14 +92,22 @@ func (r *scenarioRunner) preRun() {
 	r.logger = r.loggingOptions.MustCreateLogger()
 }
 
-func (r *scenarioRunner) run(ctx context.Context) error {
+// validateInput checks everything that can be judged from the command line alone
+// and resolves the scenario's options.
+//
+// It touches nothing external — no server, no worker, no files beyond the @-file
+// option values — so callers can run it before doing expensive setup and report a
+// typo immediately rather than after a build or a connection attempt.
+func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet, error) {
 	scenario := loadgen.GetScenario(r.scenario.Scenario)
 	if scenario == nil {
-		return fmt.Errorf("scenario not found")
+		return nil, nil, loadgen.NewScenarioNotFoundError(r.scenario.Scenario)
 	} else if r.scenario.RunID == "" {
-		return fmt.Errorf("run ID not found")
+		return nil, nil, loadgen.NewUsageError("--run-id must not be empty")
 	} else if r.iterations > 0 && r.duration > 0 {
-		return fmt.Errorf("cannot provide both iterations and duration")
+		return nil, nil, loadgen.NewUsageError("--iterations and --duration cannot be combined; " +
+			"use --iterations to run a fixed number of times, or --duration to keep starting " +
+			"iterations for a period")
 	}
 
 	// Parse options
@@ -117,7 +115,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	for _, v := range r.scenarioOptions {
 		pieces := strings.SplitN(v, "=", 2)
 		if len(pieces) != 2 {
-			return fmt.Errorf("option does not have '='")
+			return nil, nil, loadgen.NewUsageError("--option %q is not in key=value format", v)
 		}
 		key, value := pieces[0], pieces[1]
 
@@ -126,25 +124,31 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			filePath := after
 			data, err := os.ReadFile(filePath)
 			if err != nil {
-				return fmt.Errorf("failed to read file %s: %w", filePath, err)
+				return nil, nil, loadgen.NewUsageError("--option %s reads from file %q, which could not be read: %v",
+					key, filePath, err)
 			}
 			value = string(data)
 		}
 		scenarioOptions[key] = value
 	}
 
-	// Validate before dialing, so a bad option fails immediately rather than
-	// after a connection attempt.
 	resolvedOptions, resolveErr := scenario.ResolveOptions(scenarioOptions)
 	if resolveErr != nil {
-		return &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
+		return nil, nil, &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
+	}
+	return scenario, resolvedOptions, nil
+}
+
+func (r *scenarioRunner) run(ctx context.Context) error {
+	scenario, resolvedOptions, err := r.validateInput()
+	if err != nil {
+		return err
 	}
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
 	start := time.Now()
 	var client client.Client
-	var err error
 	for {
 		client, err = r.clientOptions.Dial(metrics, r.logger)
 		if err == nil {
