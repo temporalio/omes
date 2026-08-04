@@ -148,6 +148,15 @@ Scenario configuration arrives through **two separate channels**, and knowing wh
    [running.md](./running.md#configuring-the-load) for the list.
 2. **Your own options** — `--option key=value` pairs that you **declare** on the scenario.
 
+The dividing line is that run flags shape the load while options decide what the load does. Two
+consequences when you add a knob:
+
+- **Don't declare an option for something a run flag already controls.** If you want fewer iterations or
+  less concurrency, that is the user's `--iterations` or `--max-concurrent`, not an option of yours.
+- **Don't borrow a run flag's vocabulary for a different meaning.** `throughput_stress` has
+  `internal-iterations`, which is not `--iterations`; a user who confuses them gets a valid run at the
+  wrong load rather than an error. Name the thing your option actually controls.
+
 ### Declare them
 
 Declare options with the same typed registrars used for omes's own CLI flags — an `OptionSet` embeds a

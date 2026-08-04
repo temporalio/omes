@@ -48,7 +48,16 @@ Run any command with `--help` for the full, authoritative flag list.
 
 ## Configuring the load
 
-Run configuration comes in **two separate channels**:
+Run configuration comes in **two separate channels**, split along one line:
+
+> **Run flags shape the load. Scenario options decide what the load does.**
+>
+> How many iterations, how fast, how long, how many at once — that is the same question for every
+> scenario, so it is a built-in flag. What each iteration actually executes is particular to one
+> scenario, so it is an `--option`.
+
+`list-scenarios` shows both for a given scenario: the run configuration it will use, with the flag that
+overrides each value, and the options it accepts.
 
 ### 1. Built-in run flags (typed)
 
@@ -63,7 +72,9 @@ These apply to every scenario and override its defaults:
 | `--max-iteration-attempts` | Attempts per iteration (default 1). |
 | `--timeout` | Hard stop; cancels in-flight iterations and exits non-zero. |
 
-If you set neither `--iterations` nor `--duration`, the scenario's own default applies.
+If you set neither `--iterations` nor `--duration`, the scenario's own default applies — and most
+scenarios declare none, in which case omes's default does. `list-scenarios` states which is the case for
+each scenario.
 
 ### 2. Per-scenario options (`--option key=value`)
 
@@ -142,3 +153,7 @@ go run ./cmd/omes run-scenario-with-worker \
   `--option`, a feature the namespace doesn't support, or conflicting run flags print one line and exit
   non-zero. A stack trace means something failed *during* the run — so if you see one, read it as a real
   failure rather than a typo.
+- **Some option names read like run flags but are not.** `throughput_stress` accepts
+  `--option internal-iterations`, which sets how much work happens *inside* one iteration; `--iterations`
+  sets how many iterations run. Setting the wrong one produces a valid run at the wrong load rather than
+  an error, so check `list-scenarios` when a name looks familiar.

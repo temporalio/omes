@@ -78,7 +78,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
-	fs.StringArrayVar(&r.scenarioOptions, "option", nil, "Additional options for the scenario, in key=value format")
+	fs.StringArrayVar(&r.scenarioOptions, "option", nil, "Option specific to the chosen scenario, in key=value format."+
+		" Repeatable. Run 'omes list-scenarios' to see which options a scenario accepts, with their types and defaults")
 	fs.BoolVar(&r.doNotRegisterSearchAttributes, "do-not-register-search-attributes", false,
 		"Do not register the default search attributes used by scenarios. "+
 			"If the search attributes are not registed by the scenario they must be registered through some other method")
@@ -164,10 +165,10 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	defer client.Close()
 
 	// Finalize any capability-gated feature options against the namespace under
-	// test. This needs a dialed client, so it can't happen alongside
-	// ResolveOptions above. Wrapped as an InvalidOptionsError so an
-	// explicitly-enabled-but-unsupported feature prints as the usage error it
-	// is, rather than a fatal stack trace.
+	// test. This needs a dialed client, so it cannot happen in validateInput with
+	// the rest of the option resolution. Wrapped as an InvalidOptionsError so an
+	// explicitly-enabled-but-unsupported feature prints as the usage error it is,
+	// rather than a fatal stack trace.
 	if err := loadgen.ResolveFeatureOptions(ctx, client, r.clientOptions.Namespace, resolvedOptions, r.logger); err != nil {
 		return &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: err}
 	}

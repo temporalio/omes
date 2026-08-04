@@ -21,8 +21,8 @@ func main() {
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
-	// Execute has already reported the error; printing it again here put a second
-	// copy below the usage text, where it read as a second, separate failure.
+	// Execute prints the error itself. Printing it again here would land a second
+	// copy below the usage text, reading as a second, separate failure.
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
