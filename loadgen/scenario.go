@@ -226,6 +226,14 @@ func (s *ScenarioInfo) OptionString(name string) string {
 	return v
 }
 
+// OptionUserSpecified reports whether name was explicitly supplied via
+// `--option name=value`, as opposed to reading its declared (or feature-resolved)
+// default. Use it when the presence of a value matters, not just its content, as
+// with the standalone-nexus/nexus-enabled interaction in throughput_stress.
+func (s *ScenarioInfo) OptionUserSpecified(name string) bool {
+	return s.options().UserSpecified(name)
+}
+
 // options returns the resolved set, or an empty one so a ScenarioInfo built
 // without options (in tests, say) reads zero values rather than panicking.
 func (s *ScenarioInfo) options() *OptionSet {

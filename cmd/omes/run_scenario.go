@@ -159,6 +159,15 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	}
 	defer client.Close()
 
+	// Finalize any capability-gated feature options against the namespace under
+	// test. This needs a dialed client, so it can't happen alongside
+	// ResolveOptions above. Wrapped as an InvalidOptionsError so an
+	// explicitly-enabled-but-unsupported feature prints as the usage error it
+	// is, rather than a fatal stack trace.
+	if err := loadgen.ResolveFeatureOptions(ctx, client, r.clientOptions.Namespace, resolvedOptions, r.logger); err != nil {
+		return &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: err}
+	}
+
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return fmt.Errorf("failed to get root directory: %w", err)

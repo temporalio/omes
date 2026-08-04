@@ -163,6 +163,10 @@ loadgen.MustRegisterScenario(loadgen.Scenario{
 
 		o.Int("task-queue-count", 0, "Number of task queues to spread iterations across.")
 		o.MarkRequired("task-queue-count")
+
+		// Gated on a namespace capability; see "Feature options" below.
+		o.Feature("include-standalone-activity", "Include standalone activities.",
+			func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneActivities() })
 	},
 	ExecutorFn: /* ... */,
 })
@@ -211,6 +215,33 @@ too:
 ```go
 DefaultConfiguration: &loadgen.RunConfiguration{Iterations: 100, MaxConcurrent: 5},
 ```
+
+### Feature options
+
+An option can also be gated on namespace capability, rather than fixed at declaration time,
+with `o.Feature`:
+
+```go
+o.Feature("include-standalone-nexus", "Include standalone Nexus operations.",
+	func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneNexusOperation() })
+```
+
+| Config | Namespace reports capability | Result |
+| --- | --- | --- |
+| unset | yes | enabled |
+| unset | no | disabled |
+| `=false` | either | disabled |
+| `=true` | yes | enabled |
+| `=true` | no | run fails with a usage error |
+| unset | probe failed after retries | run fails |
+
+Resolution needs a dialed client, so it happens in `loadgen.ResolveFeatureOptions` after the run
+connects, not at declaration or `ResolveOptions` time. A test that calls `Configure` directly
+without also calling `ResolveFeatureOptions` sees the feature at its pflag default (`false`), not
+its capability-resolved value.
+
+Reach for `o.Feature` only when a matching field exists on `NamespaceInfo_Capabilities` (from
+`DescribeNamespace`); an ordinary knob that every server supports stays a plain `o.Bool`.
 
 ### Conventions for options
 

@@ -223,6 +223,12 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Client = env.temporalClient
 	scenarioInfo.Namespace = testNamespace
 
+	// Resolve any capability-gated feature options against the dev server, so
+	// integration tests exercise the same code path as the CLI.
+	if err := loadgen.ResolveFeatureOptions(testCtx, env.temporalClient, testNamespace, scenarioInfo.Options, logger); err != nil {
+		return TestResult{ObservedLogs: observedLogs}, err
+	}
+
 	taskQueueName := loadgen.TaskQueueForRun(scenarioInfo.RunID)
 	workerShutdownCh := env.workerPool.startWorker(testCtx, logger, sdk, taskQueueName, scenarioInfo, cfg.errOnUnimplemented)
 

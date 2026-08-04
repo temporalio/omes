@@ -16,6 +16,7 @@ import (
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -50,13 +51,13 @@ const (
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
 	// IncludeStandaloneNexusFlag enables standalone Nexus operations in throughput_stress.
-	// Requires nexus-endpoint to also be set.
-	// Default is false.
+	// On by default when the namespace under test reports support; pass
+	// include-standalone-nexus=false to force off.
 	IncludeStandaloneNexusFlag = "include-standalone-nexus"
 	// IncludeStandaloneActivityFlag enables standalone activities (activities started outside
 	// any workflow context via StartActivityExecution) in throughput_stress.
-	// Requires server support for standalone activities (dynamic config `activity.enableStandalone`).
-	// Default is false.
+	// On by default when the namespace under test reports support (dynamic config
+	// activity.enableStandalone); pass include-standalone-activity=false to force off.
 	IncludeStandaloneActivityFlag = "include-standalone-activity"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
@@ -123,8 +124,10 @@ func init() {
 			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
 			o.Bool(IncludeRetryScenariosFlag, false, "Include activities that exercise retries.")
 			o.Bool(IncludeDescribeFlag, false, "Include DescribeWorkflowExecution calls.")
-			o.Bool(IncludeStandaloneNexusFlag, false, "Include standalone Nexus operations.")
-			o.Bool(IncludeStandaloneActivityFlag, false, "Include standalone activities; requires server support.")
+			o.Feature(IncludeStandaloneNexusFlag, "Include standalone Nexus operations.",
+				func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneNexusOperation() })
+			o.Feature(IncludeStandaloneActivityFlag, "Include standalone activities.",
+				func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneActivities() })
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -212,7 +215,19 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeDescribe = info.OptionBool(IncludeDescribeFlag)
 	config.IncludeStandaloneNexus = info.OptionBool(IncludeStandaloneNexusFlag)
 	if config.IncludeStandaloneNexus && !config.NexusEnabled {
-		return fmt.Errorf("%s requires %s", IncludeStandaloneNexusFlag, NexusEnabledFlag)
+		// Standalone Nexus can auto-enable via a capability probe without the user
+		// ever touching nexus-enabled; in that case turn Nexus on too, rather than
+		// fail on an option nobody set. An explicit nexus-enabled=false still wins.
+		if info.OptionUserSpecified(NexusEnabledFlag) {
+			return fmt.Errorf("%s requires %s, which was explicitly disabled",
+				IncludeStandaloneNexusFlag, NexusEnabledFlag)
+		}
+		// Configure is also called directly by tests, which may not set a Logger.
+		if info.Logger != nil {
+			info.Logger.Infof("enabling %s because %s is enabled",
+				NexusEnabledFlag, IncludeStandaloneNexusFlag)
+		}
+		config.NexusEnabled = true
 	}
 	if config.NexusEndpoint != "" && !config.NexusEnabled {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
