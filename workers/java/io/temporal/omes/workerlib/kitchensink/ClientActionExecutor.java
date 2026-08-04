@@ -195,7 +195,11 @@ public class ClientActionExecutor {
             ActivityClientOptions.newBuilder()
                 .setNamespace(client.getOptions().getNamespace())
                 .build());
-    activityClient.execute(dispatch.type, options.build(), dispatch.args.toArray());
+    // Ask for byte[]: the payload activity returns raw bytes, and the raw converter
+    // only deserializes into a byte array. The result-less execute overload asks for
+    // java.lang.Void and fails on any activity that returns something. Activities
+    // that return nothing send a null payload, which converts to null for any type.
+    activityClient.execute(dispatch.type, byte[].class, options.build(), dispatch.args.toArray());
   }
 
   private void executeQueryAction(KitchenSink.DoQuery query) {
