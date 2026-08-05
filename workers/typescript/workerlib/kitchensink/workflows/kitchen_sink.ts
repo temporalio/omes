@@ -23,7 +23,6 @@ import {
 import {
   ActivityOptions,
   decodePriority,
-  decompileRetryPolicy,
   LocalActivityOptions,
   SearchAttributes,
 } from '@temporalio/common';
@@ -33,6 +32,7 @@ import {
   durationConvert,
   durationConvertMaybeUndefined,
   numify,
+  retryPolicyFromProto,
 } from '../proto_help';
 import WorkflowInput = temporal.omes.kitchen_sink.WorkflowInput;
 import WorkflowState = temporal.omes.kitchen_sink.WorkflowState;
@@ -278,7 +278,7 @@ function launchActivity(execActivity: IExecuteActivityAction): Promise<unknown> 
     scheduleToCloseTimeout: durationConvertMaybeUndefined(execActivity.scheduleToCloseTimeout),
     startToCloseTimeout: durationConvertMaybeUndefined(execActivity.startToCloseTimeout),
     scheduleToStartTimeout: durationConvertMaybeUndefined(execActivity.scheduleToStartTimeout),
-    retry: decompileRetryPolicy(execActivity.retryPolicy),
+    retry: retryPolicyFromProto(execActivity.retryPolicy),
     priority: decodePriority(execActivity.priority),
   };
 

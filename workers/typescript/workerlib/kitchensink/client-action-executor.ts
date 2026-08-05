@@ -1,7 +1,11 @@
 import { Client, WithStartWorkflowOperation } from '@temporalio/client';
-import { ApplicationFailure, decompileRetryPolicy } from '@temporalio/common';
+import { ApplicationFailure } from '@temporalio/common';
 import { WorkflowIdConflictPolicy } from '@temporalio/client';
-import { activityNameAndArgs, durationConvertMaybeUndefined } from './proto_help';
+import {
+  activityNameAndArgs,
+  durationConvertMaybeUndefined,
+  retryPolicyFromProto,
+} from './proto_help';
 import { temporal } from './protos/root';
 import IClientSequence = temporal.omes.kitchen_sink.IClientSequence;
 import IClientActionSet = temporal.omes.kitchen_sink.IClientActionSet;
@@ -165,7 +169,7 @@ export class ClientActionExecutor {
       startToCloseTimeout: durationConvertMaybeUndefined(act.startToCloseTimeout),
       scheduleToStartTimeout: durationConvertMaybeUndefined(act.scheduleToStartTimeout),
       heartbeatTimeout: durationConvertMaybeUndefined(act.heartbeatTimeout),
-      retry: decompileRetryPolicy(act.retryPolicy),
+      retry: retryPolicyFromProto(act.retryPolicy),
     });
   }
 

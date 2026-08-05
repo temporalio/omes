@@ -1,9 +1,25 @@
 // Convert a protobuf duration to milliseconds
+import { decompileRetryPolicy, RetryPolicy } from '@temporalio/common';
 import { google, temporal } from './protos/root';
 import Long from 'long';
 
 import IDuration = google.protobuf.IDuration;
 import IExecuteActivityAction = temporal.omes.kitchen_sink.IExecuteActivityAction;
+import IRetryPolicy = temporal.api.common.v1.IRetryPolicy;
+
+// Convert a protobuf retry policy to the SDK's, treating an unset maximumAttempts as unlimited.
+// decompileRetryPolicy passes proto's 0 (unlimited) straight through, but compileRetryPolicy then
+// rejects 0 as not a positive integer. That throws a ValueError, which the client masks as
+// "Unexpected error while making gRPC request" with no cause.
+export function retryPolicyFromProto(
+  retryPolicy: IRetryPolicy | null | undefined
+): RetryPolicy | undefined {
+  const policy = decompileRetryPolicy(retryPolicy);
+  if (policy?.maximumAttempts === 0) {
+    return { ...policy, maximumAttempts: undefined };
+  }
+  return policy;
+}
 
 // Map an ExecuteActivityAction to its registered activity name and args.
 // Shared by the workflow-scheduled path and the standalone-activity path.
