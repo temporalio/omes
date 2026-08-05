@@ -21,15 +21,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
-        with:
-          go-version-file: "go.mod"
-          cache: false
-      - name: Install mise
+      - name: Install Go and go-junit-report
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
-          install: false
+          install_args: "go go-junit-report"
       - name: Read Temporal server version
         id: temporal-server-version
         run: |
@@ -41,7 +37,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ steps.temporal-server-version.outputs.server-version }}
+          key: omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}-${{ steps.temporal-server-version.outputs.server-version }}
           restore-keys: |
             omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-
       # Scope to just Python for project build tests
@@ -51,7 +47,7 @@ jobs:
       - name: Run tests
         run: |
           go test -v -race ./... 2>&1 | \
-            go run github.com/jstemmer/go-junit-report/v2@latest \
+            go-junit-report \
             -set-exit-code -iocopy -out junit-omes.xml
       - name: Save Temporal server Go dependencies
         if: always() && steps.temporal-server-go-cache.outputs.cache-hit != 'true'
@@ -102,7 +98,16 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
-          install: false
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
@@ -130,6 +135,20 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: true
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Build ${{ matrix.sdk }} worker image
         run: |
           go run ./cmd/dev build-worker-image \
@@ -207,6 +226,20 @@ jobs:
           repository: temporalio/${{ matrix.sdk_repo }}
           submodules: recursive
           path: checked-out-sdk
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Build ${{ matrix.sdk }} worker image from local SDK path
         run: |
           args=(
@@ -379,14 +412,23 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
-          install: false
+          install_args: "go go-junit-report"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
-            go run github.com/jstemmer/go-junit-report/v2@latest \
+            go-junit-report \
             -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
       - name: Publish Kitchensink Test Results
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
@@ -410,7 +452,16 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
-          install: false
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Tools
         run: |
           go run ./cmd/dev install rust go protoc node buf
@@ -440,9 +491,20 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: true
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
-          go-version-file: "go.mod"
+          version: ${{ env.MISE_VERSION }}
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
       - name: Build CLI image

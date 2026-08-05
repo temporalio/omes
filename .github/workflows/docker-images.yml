@@ -3,6 +3,10 @@ name: Build docker images
 permissions:
   contents: read
 
+env:
+  MISE_VERSION: v2025.12.1
+  MISE_NODE_VERIFY: no
+
 on:
   workflow_call:
     inputs:
@@ -69,9 +73,20 @@ jobs:
           ref: ${{ inputs.sdk-repo-ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
-          go-version-file: "go.mod"
+          version: ${{ env.MISE_VERSION }}
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
