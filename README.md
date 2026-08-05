@@ -281,9 +281,11 @@ The throughput_stress scenario can generate Nexus load if the scenario is starte
 #### Standalone activities
 
 The throughput_stress scenario can generate standalone-activity load (activities started outside
-any workflow context via `StartActivityExecution`) with `--option include-standalone-activity=true`.
-This requires server support for standalone activities (dynamic config `activity.enableStandalone`).
-Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
+any workflow context via `StartActivityExecution`). This turns on automatically when the namespace
+under test reports support for standalone activities (dynamic config `activity.enableStandalone`);
+pass `--option include-standalone-activity=false` to force it off. Passing
+`--option include-standalone-activity=true` against a namespace that doesn't report support fails
+the run. Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
 ### Fuzzer
 

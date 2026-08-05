@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
 )
@@ -78,6 +79,66 @@ func TestThroughputStress(t *testing.T) {
 	})
 }
 
+// TestThroughputStressFeatureAutoEnable exercises capability-gated feature options
+// end to end. The dev server runs with the standalone-activity and standalone-Nexus
+// gates on, and the scenario passes neither feature option, so both have to resolve
+// from what the namespace reports.
+func TestThroughputStressFeatureAutoEnable(t *testing.T) {
+	t.Parallel()
+
+	runID := fmt.Sprintf("tps-feature-%d", time.Now().Unix())
+
+	// No WithNexusEndpoint here: if standalone Nexus auto-enables, the scenario
+	// enables Nexus itself and creates its own endpoint, which is the path under
+	// test. Pre-creating one would collide on the same NexusEndpointForRun name.
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute),
+		workertest.WithDynamicConfig(map[string]any{
+			// Gates the capabilities the two feature options read.
+			"activity.enableStandalone":       true,
+			"nexusoperation.enableStandalone": true,
+			// Standalone Nexus system callbacks require CHASM callbacks.
+			"history.enableCHASMCallbacks": true,
+		}))
+
+	// Without the namespace advertising standalone activities there is nothing for
+	// the feature option to resolve from, and the rest of this test proves nothing.
+	desc, err := env.TemporalClient().WorkflowService().DescribeNamespace(t.Context(),
+		&workflowservice.DescribeNamespaceRequest{Namespace: "default"})
+	require.NoError(t, err)
+	caps := desc.GetNamespaceInfo().GetCapabilities()
+	require.True(t, caps.GetStandaloneActivities(),
+		"namespace should report standalone activities with activity.enableStandalone on")
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID: runID,
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 1,
+		},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                          "1",
+			ContinueAsNewAfterIterFlag:        "1",
+			SleepTimeFlag:                     "1ms",
+			VisibilityVerificationTimeoutFlag: "10s",
+		}),
+	}
+
+	executor := newThroughputStressExecutor()
+	_, err = env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "Executor should complete successfully")
+
+	require.True(t, executor.config.IncludeStandaloneActivity,
+		"standalone activities should auto-enable from the namespace capability")
+	// Standalone Nexus follows whatever this server version reports. When it is on,
+	// the scenario turns nexus-enabled on by itself.
+	require.Equal(t, caps.GetStandaloneNexusOperation(), executor.config.IncludeStandaloneNexus)
+	if caps.GetStandaloneNexusOperation() {
+		require.True(t, executor.config.NexusEnabled,
+			"auto-enabled standalone Nexus should also enable Nexus")
+	}
+	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
+}
+
 func TestThroughputStressConfigurePayload(t *testing.T) {
 	t.Parallel()
 
@@ -106,6 +167,77 @@ func TestThroughputStressConfigureNoPayload(t *testing.T) {
 	}))
 	require.Nil(t, executor.config.Payload)
 	require.Equal(t, 256, executor.samplePayloadSize(rand.New(rand.NewSource(1))))
+}
+
+// TestThroughputStressConfigureFeatureAutoEnablesNexus covers the interaction
+// added for capability-gated feature options: when include-standalone-nexus
+// resolves to true (as it would after ResolveFeatureOptions probes a capable
+// namespace) and nexus-enabled was never touched by the user, Configure turns
+// Nexus on rather than failing on an option the user never set.
+//
+// ResolveFeatureOptions itself needs a dialed client, so this simulates its
+// outcome directly on the resolved option set with Set, exactly as
+// resolveFeatures would for an unset feature option.
+func TestThroughputStressConfigureFeatureAutoEnablesNexus(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:  "tps-feature-auto",
+		Logger: zap.NewNop().Sugar(),
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			SleepActivityJsonFlag: "", // keep defaults minimal
+		}),
+	}
+	require.NoError(t, info.Options.Set(IncludeStandaloneNexusFlag, "true"))
+
+	require.NoError(t, executor.Configure(info))
+	require.True(t, executor.config.NexusEnabled)
+	require.True(t, executor.config.IncludeStandaloneNexus)
+}
+
+// TestThroughputStressConfigureFeatureRespectsExplicitNexusDisabled covers the
+// other half: an explicit nexus-enabled=false must not be silently overridden
+// even when the feature auto-enables standalone Nexus.
+func TestThroughputStressConfigureFeatureRespectsExplicitNexusDisabled(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:  "tps-feature-explicit-off",
+		Logger: zap.NewNop().Sugar(),
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			NexusEnabledFlag: "false",
+		}),
+	}
+	require.NoError(t, info.Options.Set(IncludeStandaloneNexusFlag, "true"))
+
+	err := executor.Configure(info)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), IncludeStandaloneNexusFlag)
+	require.Contains(t, err.Error(), NexusEnabledFlag)
+}
+
+// TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled
+// preserves the pre-existing behavior: a user who explicitly asks for standalone
+// Nexus while explicitly disabling Nexus gets an error either way.
+func TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:  "tps-explicit-both",
+		Logger: zap.NewNop().Sugar(),
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IncludeStandaloneNexusFlag: "true",
+			NexusEnabledFlag:           "false",
+		}),
+	}
+
+	err := executor.Configure(info)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), IncludeStandaloneNexusFlag)
+	require.Contains(t, err.Error(), NexusEnabledFlag)
 }
 
 func TestThroughputStressConfigureInvalidPayload(t *testing.T) {

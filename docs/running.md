@@ -71,6 +71,12 @@ Scenario-specific knobs are passed as repeated `--option key=value` pairs. The v
 each scenario (read the scenario source or its `list-scenarios` description). A value may be loaded from
 a file with `@`: `--option sleep-activity-json=@sleep.json`.
 
+Some options are feature options: they turn on by default when the namespace under test reports
+support for the underlying capability, off when it does not. Pass `=false` to force one off
+regardless of what the namespace supports; explicitly passing `=true` against a namespace that
+doesn't report support fails the run. `list-scenarios` marks these with a dynamic default instead
+of a fixed one.
+
 ```sh
 go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go \
   --option nexus-endpoint=my-endpoint --run-id my-run
@@ -126,4 +132,7 @@ go run ./cmd/omes run-scenario-with-worker \
   is rejected before the run starts — before omes even connects — and every problem is reported at once.
   `list-scenarios` shows what each scenario accepts, including defaults. A scenario that declares no
   options accepts none.
+- **Feature options are on by default against a capable namespace.** They resolve after omes connects,
+  by probing the namespace's reported capabilities, so pass `=false` explicitly to force one off.
+  Explicitly passing `=true` against a namespace that doesn't report the capability fails the run.
 - **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected at run time.
