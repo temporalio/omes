@@ -8,6 +8,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/temporalio/omes/clioptions"
 )
@@ -15,6 +17,12 @@ import (
 // featureProbeBackoff is the wait after each failed capability probe, so the
 // probe makes up to len(featureProbeBackoff)+1 attempts before giving up.
 var featureProbeBackoff = []time.Duration{300 * time.Millisecond, 600 * time.Millisecond, 1200 * time.Millisecond}
+
+// featureProbeTimeout bounds a single attempt. Without it a server that answers
+// slowly rather than not at all would hang the start of the run indefinitely: the
+// context here carries no deadline, and retries never begin because the attempt
+// never ends.
+const featureProbeTimeout = 10 * time.Second
 
 // ResolveFeatureOptions finalizes capability-gated options declared with
 // [OptionSet.Feature] against the namespace under test. It is a no-op for a
@@ -27,23 +35,13 @@ func ResolveFeatureOptions(
 		return nil
 	}
 
-	var resp *workflowservice.DescribeNamespaceResponse
-	var err error
-	for attempt := 0; ; attempt++ {
-		resp, err = cl.WorkflowService().DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{
-			Namespace: namespace,
+	resp, err := probe(ctx, "namespace capabilities",
+		func(ctx context.Context) (*workflowservice.DescribeNamespaceResponse, error) {
+			return cl.WorkflowService().DescribeNamespace(ctx,
+				&workflowservice.DescribeNamespaceRequest{Namespace: namespace})
 		})
-		if err == nil {
-			break
-		}
-		if attempt >= len(featureProbeBackoff) {
-			return fmt.Errorf("failed to probe namespace capabilities: %w", err)
-		}
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("failed to probe namespace capabilities: %w", ctx.Err())
-		case <-time.After(featureProbeBackoff[attempt]):
-		}
+	if err != nil {
+		return err
 	}
 
 	if err := opts.resolveFeatures(resp.GetNamespaceInfo().GetCapabilities()); err != nil {
@@ -62,4 +60,46 @@ func ResolveFeatureOptions(
 		}
 	}
 	return nil
+}
+
+// probe calls get until it succeeds, giving each attempt featureProbeTimeout and
+// waiting out featureProbeBackoff in between. Resolution is all-or-nothing:
+// guessing at a capability would silently change the load, so a probe that never
+// answers fails the run.
+func probe[T any](ctx context.Context, what string, get func(context.Context) (T, error)) (T, error) {
+	var resp T
+	var err error
+	for attempt := 0; ; attempt++ {
+		attemptCtx, cancel := context.WithTimeout(ctx, featureProbeTimeout)
+		resp, err = get(attemptCtx)
+		cancel()
+		if err == nil {
+			return resp, nil
+		}
+		// Retrying a refusal only delays the report: the answer will not change.
+		if !retryableProbeError(err) || attempt >= len(featureProbeBackoff) {
+			return resp, fmt.Errorf("failed to probe %s: %w", what, err)
+		}
+		select {
+		case <-ctx.Done():
+			return resp, fmt.Errorf("failed to probe %s: %w", what, ctx.Err())
+		case <-time.After(featureProbeBackoff[attempt]):
+		}
+	}
+}
+
+// retryableProbeError reports whether another attempt could plausibly answer.
+// Rejections that describe the caller rather than the server's condition —
+// missing permission, an unimplemented call — are settled on the first attempt.
+func retryableProbeError(err error) bool {
+	switch status.Code(err) {
+	case codes.PermissionDenied,
+		codes.Unauthenticated,
+		codes.Unimplemented,
+		codes.InvalidArgument,
+		codes.NotFound,
+		codes.FailedPrecondition:
+		return false
+	}
+	return true
 }
