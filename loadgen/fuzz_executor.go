@@ -46,7 +46,7 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	endpointName := info.OptionString("nexus-endpoint")
 	if endpointName == "" {
 		var err error
-		endpointName, err = ensureNexusEndpoint(ctx, info.Client, info.Namespace, info.RunID)
+		endpointName, err = info.EnsureNexusEndpoint(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to create nexus endpoint: %w", err)
 		}

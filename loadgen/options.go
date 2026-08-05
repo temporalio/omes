@@ -27,6 +27,23 @@ type OptionSet struct {
 	// features holds the capability predicate for each option declared with
 	// Feature, keyed by name.
 	features map[string]func(*namespacev1.NamespaceInfo_Capabilities) bool
+	// featuresResolved records that the set has been reconciled against reported
+	// capabilities. Until it is, an unset feature option reads false whether or not
+	// it is supported, which is the wrong answer rather than a missing one — so
+	// reads before then are reported.
+	featuresResolved bool
+}
+
+// Set records the value as deliberately chosen, on top of pflag's own
+// bookkeeping. Values that arrive this way are authoritative and are left alone
+// by capability resolution, so a caller that sets an option directly gets the
+// same treatment as a user passing `--option`.
+func (o *OptionSet) Set(name, value string) error {
+	if err := o.FlagSet.Set(name, value); err != nil {
+		return err
+	}
+	o.explicit[name] = struct{}{}
+	return nil
 }
 
 // MarkRequired fails any run that does not explicitly supply the named options.
@@ -95,7 +112,22 @@ func (o *OptionSet) resolveFeatures(caps *namespacev1.NamespaceInfo_Capabilities
 				name))
 		}
 	}
-	return errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return err
+	}
+	o.featuresResolved = true
+	return nil
+}
+
+// unresolvedFeature reports whether reading name would return a value that has
+// not been reconciled against reported capabilities. An explicitly supplied
+// value is authoritative on its own, so only an untouched option qualifies.
+func (o *OptionSet) unresolvedFeature(name string) bool {
+	if o.featuresResolved || o.UserSpecified(name) {
+		return false
+	}
+	_, isFeature := o.features[name]
+	return isFeature
 }
 
 func newOptionSet(name string) *OptionSet {
@@ -225,13 +257,19 @@ func (s *Scenario) ResolveOptions(provided map[string]string) (*OptionSet, error
 				name, flag.Value.Type(), provided[name]))
 			continue
 		}
-		set.explicit[name] = struct{}{}
 	}
 
 	for _, name := range sortedRequired(set.required) {
 		flag := set.Lookup(name)
 		if flag == nil {
 			errs = append(errs, fmt.Errorf("option %q is marked required but not declared", name))
+			continue
+		}
+		if _, isFeature := set.features[name]; isFeature {
+			// Required means the user must supply it; a feature supplies itself from
+			// the namespace. Declaring both is a scenario bug, not user error.
+			errs = append(errs, fmt.Errorf(
+				"option %q is declared as both required and capability-gated, which contradict", name))
 			continue
 		}
 		if !flag.Changed {

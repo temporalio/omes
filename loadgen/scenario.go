@@ -206,6 +206,8 @@ func (s *ScenarioInfo) OptionBool(name string) bool {
 	v, err := s.options().GetBool(name)
 	if err != nil {
 		s.undeclaredOption(name, err)
+	} else if s.options().unresolvedFeature(name) {
+		s.unresolvedFeatureOption(name)
 	}
 	return v
 }
@@ -241,6 +243,34 @@ func (s *ScenarioInfo) options() *OptionSet {
 		s.Options = newOptionSet("")
 	}
 	return s.Options
+}
+
+// logf logs at info level, tolerating a ScenarioInfo built without a logger —
+// library callers assemble one by hand and need not set every field.
+func (s *ScenarioInfo) logf(format string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Infof(format, args...)
+	} else {
+		clioptions.BackupLogger.Printf(format, args...)
+	}
+}
+
+// unresolvedFeatureOption reports a feature option read before any namespace
+// probe ran, which leaves it false and quietly drops the feature from the load.
+// It is an error rather than a warning because a run generating less load than
+// intended otherwise looks exactly like one that worked. Callers driving a
+// scenario as a library, rather than through the omes CLI, must call
+// [ResolveFeatureOptions] once the client is dialed.
+func (s *ScenarioInfo) unresolvedFeatureOption(name string) {
+	msg := fmt.Sprintf("scenario %q read feature option %q before resolving capabilities for "+
+		"namespace %q, so it reads false whether or not the option is supported; "+
+		"call loadgen.ResolveFeatureOptions after dialing to fix this",
+		s.ScenarioName, name, s.Namespace)
+	if s.Logger != nil {
+		s.Logger.Error(msg)
+	} else {
+		clioptions.BackupLogger.Println(msg)
+	}
 }
 
 func (s *ScenarioInfo) undeclaredOption(name string, err error) {
@@ -401,8 +431,20 @@ func TaskQueueForRun(runID string) string {
 
 // EnsureNexusEndpoint returns the Nexus endpoint for this run, creating it if it
 // does not already exist. Call this when Nexus is enabled without a named endpoint.
+//
+// Creating an endpoint changes the namespace, and a capability probe can enable
+// Nexus without the user asking for it, so a created endpoint is logged
+// distinctly from a reused one: on a shared or production namespace, that line is
+// how an operator sees that this run added something.
 func (s *ScenarioInfo) EnsureNexusEndpoint(ctx context.Context) (string, error) {
-	return ensureNexusEndpoint(ctx, s.Client, s.Namespace, s.RunID)
+	endpoint, created, err := ensureNexusEndpoint(ctx, s.Client, s.Namespace, s.RunID)
+	if err != nil {
+		return "", err
+	}
+	if created {
+		s.logf("Created Nexus endpoint %q in namespace %q for this run", endpoint, s.Namespace)
+	}
+	return endpoint, nil
 }
 
 // NexusEndpointForRun returns a sanitized Nexus endpoint name for the given run ID.
@@ -412,7 +454,9 @@ func NexusEndpointForRun(runID string) string {
 }
 
 // ensureNexusEndpoint creates a Nexus endpoint for the given run, or returns nil if it already exists.
-func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID string) (string, error) {
+// ensureNexusEndpoint returns the run's endpoint name and whether this call was
+// the one that created it.
+func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID string) (string, bool, error) {
 	endpointName := NexusEndpointForRun(runID)
 	taskQueue := TaskQueueForRun(runID)
 	_, err := cl.OperatorService().CreateNexusEndpoint(ctx,
@@ -431,11 +475,11 @@ func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID
 		})
 	if err != nil {
 		if status.Code(err) == codes.AlreadyExists {
-			return endpointName, nil
+			return endpointName, false, nil
 		}
-		return "", err
+		return "", false, err
 	}
-	return endpointName, nil
+	return endpointName, true, nil
 }
 
 func (r *Run) TaskQueue() string {
