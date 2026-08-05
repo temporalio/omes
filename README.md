@@ -18,17 +18,10 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 ## Prerequisites
 
-- [Go](https://golang.org/) 1.25+
-  - `protoc` + `protoc-gen-go` or [mise](https://mise.jdx.dev/) for [Kitchen Sink Workflow](#kitchen-sink-workflow)
-- [Java](https://openjdk.org/) 8+
-- TypeScript: [Node](https://nodejs.org) 16+
-- Python: [uv](https://docs.astral.sh/uv/)
-- [.NET](https://dotnet.microsoft.com/en-us/download)
+- [mise](https://mise.jdx.dev/), which installs the pinned development tools from `mise.toml`
+- A bootstrap Go installation to run `go run ./cmd/dev` before mise is activated
 
-And if you're running the fuzzer (see below)
-- [Rust](https://rustup.rs/)
-
-SDK and tool versions are defined in `versions.env`.
+Run `mise install` to install every pinned development tool. SDK and Temporal server references are also in `mise.toml`.
 
 ## Architecture
 
@@ -112,7 +105,7 @@ go run ./cmd/dev build-worker-image --language go --version v1.24.0
 ```
 
 This will produce an image tagged like `<current git commit hash>-go-v1.24.0`.
-If version is not specified, the SDK version specified in `versions.env` will be used.
+If version is not specified, the SDK version specified in `mise.toml` will be used.
 
 Publishing images is done via CI, using the `build-push-worker-image` command.
 See the GHA workflows for more information.
@@ -212,6 +205,9 @@ docker build \
   -f dockerfiles/<lang>.Dockerfile \
   --build-arg SDK_VERSION=<sdk-version> \
   -t omes-<lang> .
+
+# For TypeScript images, also add:
+# --build-arg PNPM_VERSION="$(mise config get tools.pnpm)"
 
 docker network create omes-project-net
 
@@ -320,7 +316,8 @@ workflow that waits for a signal for a configurable amount of time.
 Use the dev command for development tasks:
 
 ```sh
-go run ./cmd/dev install          # Install tools (default: all)
+mise install                       # Install all configured tools
+go run ./cmd/dev install python    # Install selected tools and Python dependencies
 go run ./cmd/dev lint-and-format  # Lint and format workers (default: all)
 go run ./cmd/dev test             # Test workers (default: all)
 go run ./cmd/dev build            # Build worker images (default: all)
@@ -330,7 +327,7 @@ go run ./cmd/dev build-proto      # Build kitchen-sink proto
 
 Or target specific languages: `go run ./cmd/dev build go java python`
 
-All versions are defined in `versions.env`.
+All development tool, SDK, and server versions are defined in `mise.toml`.
 
 ## Fuzzer trophy case
 

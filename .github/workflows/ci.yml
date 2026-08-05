@@ -25,11 +25,15 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: false
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install: false
       - name: Read Temporal server version
         id: temporal-server-version
         run: |
-          set -a && source versions.env && set +a
-          echo "server-version=${SERVER_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "server-version=$(mise config get _.server.ref)" >> "$GITHUB_OUTPUT"
       - name: Restore Temporal server Go dependencies
         id: temporal-server-go-cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -40,10 +44,6 @@ jobs:
           key: omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ steps.temporal-server-version.outputs.server-version }}
           restore-keys: |
             omes-temporal-server-go-${{ runner.os }}-${{ runner.arch }}-
-      - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
-        with:
-          version: ${{ env.MISE_VERSION }}
       # Scope to just Python for project build tests
       - name: Install Tools
         run: |
@@ -102,13 +102,10 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Ensure rustfmt
-        if: matrix.target == 'kitchensink-gen'
-        run: |
-          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
@@ -266,48 +263,48 @@ jobs:
           - sdk: go
             project: helloworld
             dockerfile: dockerfiles/go.Dockerfile
-            sdk_version_env: GO_SDK_VERSION
           - sdk: java
             project: helloworld
             dockerfile: dockerfiles/java.Dockerfile
-            sdk_version_env: JAVA_SDK_VERSION
           - sdk: python
             project: helloworld
             dockerfile: dockerfiles/python.Dockerfile
-            sdk_version_env: PYTHON_SDK_VERSION
           - sdk: ruby
             project: helloworld
             dockerfile: dockerfiles/ruby.Dockerfile
-            sdk_version_env: RUBY_SDK_VERSION
           - sdk: typescript
             project: helloworld
             dockerfile: dockerfiles/typescript.Dockerfile
-            sdk_version_env: TYPESCRIPT_SDK_VERSION
           - sdk: dotnet
             project: helloworld
             dockerfile: dockerfiles/dotnet.Dockerfile
-            sdk_version_env: DOTNET_SDK_VERSION
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: true
-      - name: Load versions
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install: false
+      - name: Load SDK version
         run: |
-          set -a && source versions.env && set +a
-          printenv >> $GITHUB_ENV
+          echo "PROJECT_IMAGE_SDK_VERSION=v$(mise config get _.sdk.${{ matrix.sdk }})" >> "$GITHUB_ENV"
       - name: Set ${{ matrix.sdk }} project image metadata
         run: |
-          sdk_version_var="${{ matrix.sdk_version_env }}"
-          echo "PROJECT_IMAGE_SDK_VERSION=v${!sdk_version_var}" >> "$GITHUB_ENV"
           echo "PROJECT_IMAGE_TAG=omes-project-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
           echo "PROJECT_WORKER_CONTAINER=omes-project-${{ matrix.sdk }}-${{ matrix.project }}-worker" >> "$GITHUB_ENV"
           echo "PROJECT_RUN_ID=project-${{ github.run_id }}-${{ matrix.sdk }}-${{ matrix.project }}" >> "$GITHUB_ENV"
       - name: Build ${{ matrix.sdk }} ${{ matrix.project }} project image
         run: |
+          build_args=(--build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION})
+          if [ "${{ matrix.sdk }}" = "typescript" ]; then
+            build_args+=(--build-arg "PNPM_VERSION=$(mise config get tools.pnpm)")
+          fi
           docker build \
             -f ${{ matrix.dockerfile }} \
-            --build-arg SDK_VERSION=${PROJECT_IMAGE_SDK_VERSION} \
+            "${build_args[@]}" \
             -t ${PROJECT_IMAGE_TAG} .
       - name: Create Docker network
         run: |
@@ -382,13 +379,10 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
-      - name: Ensure rustfmt
-        if: matrix.target == 'kitchensink-gen'
-        run: |
-          rustup component add rustfmt || echo "rustup not available, skipping rustfmt component add"
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
@@ -416,6 +410,7 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
         with:
           version: ${{ env.MISE_VERSION }}
+          install: false
       - name: Install Tools
         run: |
           go run ./cmd/dev install rust go protoc node buf
@@ -474,10 +469,19 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Load versions
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install: false
+      - name: Load SDK versions
         run: |
-          set -a && source versions.env && set +a
-          printenv >> $GITHUB_ENV
+          echo "GO_SDK_VERSION=$(mise config get _.sdk.go)" >> "$GITHUB_ENV"
+          echo "TYPESCRIPT_SDK_VERSION=$(mise config get _.sdk.typescript)" >> "$GITHUB_ENV"
+          echo "JAVA_SDK_VERSION=$(mise config get _.sdk.java)" >> "$GITHUB_ENV"
+          echo "PYTHON_SDK_VERSION=$(mise config get _.sdk.python)" >> "$GITHUB_ENV"
+          echo "DOTNET_SDK_VERSION=$(mise config get _.sdk.dotnet)" >> "$GITHUB_ENV"
+          echo "RUBY_SDK_VERSION=$(mise config get _.sdk.ruby)" >> "$GITHUB_ENV"
       - name: Set output variables to pass to docker YML
         id: set-output
         run: |

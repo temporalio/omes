@@ -7,22 +7,34 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 var (
 	once   sync.Once
-	loaded map[string]string
+	loaded miseConfig
 	loadEr error
 )
 
-// Get returns the value for `key` (case-insensitive). Returns "" if the key
-// is absent and an error only when versions.env cannot be located or parsed.
+// Get returns the value for the legacy version key convention. Versions now
+// come from mise.toml, whose tool and metadata entries are the source of truth.
 func Get(key string) (string, error) {
 	once.Do(load)
 	if loadEr != nil {
 		return "", loadEr
 	}
-	return loaded[strings.ToLower(key)], nil
+	return loaded.get(key), nil
+}
+
+type miseConfig struct {
+	Tools map[string]any `toml:"tools"`
+	Meta  struct {
+		SDK    map[string]string `toml:"sdk"`
+		Server struct {
+			Ref string `toml:"ref"`
+		} `toml:"server"`
+	} `toml:"_"`
 }
 
 func load() {
@@ -31,28 +43,49 @@ func load() {
 		loadEr = fmt.Errorf("versions: cannot locate package source")
 		return
 	}
-	repoDir := filepath.Dir(filepath.Dir(filepath.Dir(here))) // internal/versions/ -> repo root
-	path := filepath.Join(repoDir, "versions.env")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		loadEr = fmt.Errorf("versions: read %s: %w", path, err)
-		return
-	}
-	loaded = parse(string(data))
+	repoDir := filepath.Dir(filepath.Dir(filepath.Dir(here)))
+	loaded, loadEr = loadConfig(filepath.Join(repoDir, "mise.toml"))
 }
 
-func parse(content string) map[string]string {
-	out := map[string]string{}
-	for line := range strings.SplitSeq(content, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		k, v, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-		out[strings.ToLower(strings.TrimSpace(k))] = strings.TrimSpace(v)
+func loadConfig(path string) (miseConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return miseConfig{}, fmt.Errorf("versions: read %s: %w", path, err)
 	}
-	return out
+
+	var config miseConfig
+	if err := toml.Unmarshal(data, &config); err != nil {
+		return miseConfig{}, fmt.Errorf("versions: parse %s: %w", path, err)
+	}
+	return config, nil
+}
+
+func (c miseConfig) get(key string) string {
+	key = strings.ToLower(key)
+	switch {
+	case key == "server_version":
+		return c.Meta.Server.Ref
+	case strings.HasSuffix(key, "_sdk_version"):
+		return c.Meta.SDK[strings.TrimSuffix(key, "_sdk_version")]
+	case strings.HasSuffix(key, "_version"):
+		tool := strings.ReplaceAll(strings.TrimSuffix(key, "_version"), "_", "-")
+		if tool == "cargo" {
+			tool = "rust"
+		}
+		return toolVersion(c.Tools[tool])
+	default:
+		return ""
+	}
+}
+
+func toolVersion(value any) string {
+	switch value := value.(type) {
+	case string:
+		return value
+	case map[string]any:
+		version, _ := value["version"].(string)
+		return version
+	default:
+		return ""
+	}
 }

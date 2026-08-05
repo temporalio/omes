@@ -3,7 +3,6 @@
 .mypy_cache
 go.work
 go.work.sum
-mise.toml
 .idea/
 # Ignore Gradle project-specific cache directory
 .gradle

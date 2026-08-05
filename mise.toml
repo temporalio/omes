@@ -1,0 +1,25 @@
+[tools]
+buf = "1.72.0"
+dotnet = "8.0.100"
+go = "1.26.5"
+java = "temurin-11"
+node = "24"
+pnpm = "10.32.1"
+protoc = "25.1"
+protoc-gen-go = "v1.31.0"
+python = "3.10"
+"pipx:poethepoet" = "0.48.0"
+ruby = "3.3"
+rust = { version = "1.74.0", profile = "default" }
+uv = "0.7.19"
+
+[_.sdk]
+dotnet = "1.17.0"
+go = "1.47.0"
+java = "1.35.0"
+python = "1.31.0"
+ruby = "1.5.0"
+typescript = "1.18.1"
+
+[_.server]
+ref = "a4afe583eff6edd6a0d6aa9dc96d5dfec7996c77"
