@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
+	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
@@ -88,9 +89,9 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 
 	runID := fmt.Sprintf("tps-feature-%d", time.Now().Unix())
 
-	// No WithNexusEndpoint here: if standalone Nexus auto-enables, the scenario
-	// enables Nexus itself and creates its own endpoint, which is the path under
-	// test. Pre-creating one would collide on the same NexusEndpointForRun name.
+	// No WithNexusEndpoint here: the scenario creates its own endpoint for the run,
+	// which is part of the path under test. Pre-creating one would collide on the
+	// same NexusEndpointForRun name.
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
 		workertest.WithDynamicConfig(map[string]any{
@@ -120,6 +121,9 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 			ContinueAsNewAfterIterFlag:        "1",
 			SleepTimeFlag:                     "1ms",
 			VisibilityVerificationTimeoutFlag: "10s",
+			// Requesting Nexus load is the user's call; the probe then decides
+			// whether standalone operations are part of it.
+			NexusEnabledFlag: "true",
 		}),
 	}
 
@@ -129,13 +133,10 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 
 	require.True(t, executor.config.IncludeStandaloneActivity,
 		"standalone activities should auto-enable from the namespace capability")
-	// Standalone Nexus follows whatever this server version reports. When it is on,
-	// the scenario turns nexus-enabled on by itself.
+	// Nexus load was requested, so standalone Nexus follows whatever this server
+	// version reports.
+	require.True(t, executor.config.NexusEnabled)
 	require.Equal(t, caps.GetStandaloneNexusOperation(), executor.config.IncludeStandaloneNexus)
-	if caps.GetStandaloneNexusOperation() {
-		require.True(t, executor.config.NexusEnabled,
-			"auto-enabled standalone Nexus should also enable Nexus")
-	}
 	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
 }
 
@@ -169,58 +170,69 @@ func TestThroughputStressConfigureNoPayload(t *testing.T) {
 	require.Equal(t, 256, executor.samplePayloadSize(rand.New(rand.NewSource(1))))
 }
 
-// TestThroughputStressConfigureFeatureAutoEnablesNexus covers the interaction
-// added for capability-gated feature options: when include-standalone-nexus
-// resolves to true (as it would after ResolveFeatureOptions probes a capable
-// namespace) and nexus-enabled was never touched by the user, Configure turns
-// Nexus on rather than failing on an option the user never set.
-//
-// ResolveFeatureOptions itself needs a dialed client, so this simulates its
-// outcome directly on the resolved option set with Set, exactly as
-// resolveFeatures would for an unset feature option.
-func TestThroughputStressConfigureFeatureAutoEnablesNexus(t *testing.T) {
+// capableOfStandaloneNexus resolves a throughput_stress option set as if the
+// namespace reported standalone Nexus support, so the auto-enabled path can be
+// tested without a server. Setting the option directly would instead mark it
+// user-specified, which is a different case.
+func capableOfStandaloneNexus(t *testing.T, provided map[string]string) *loadgen.OptionSet {
+	t.Helper()
+	set := loadgen.MustResolveScenarioOptions("throughput_stress", provided)
+	require.NoError(t, set.ResolveFeaturesFromCapabilities(loadgen.Capabilities{
+		Namespace: &namespacev1.NamespaceInfo_Capabilities{StandaloneNexusOperation: true},
+		System:    &workflowservice.GetSystemInfoResponse_Capabilities{Nexus: true},
+	}))
+	return set
+}
+
+// Nexus load is on by default, so the capability probe's answer is what decides
+// whether standalone operations are part of it.
+func TestThroughputStressConfigureStandaloneNexusAutoEnablesUnderNexus(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name  string
+		nexus map[string]string
+	}{
+		{name: "nexus left at its default", nexus: map[string]string{}},
+		{name: "nexus explicitly on", nexus: map[string]string{NexusEnabledFlag: "true"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			executor := newThroughputStressExecutor()
+			info := loadgen.ScenarioInfo{
+				RunID:   "tps-feature-auto",
+				Logger:  zap.NewNop().Sugar(),
+				Options: capableOfStandaloneNexus(t, tc.nexus),
+			}
+
+			require.NoError(t, executor.Configure(info))
+			require.True(t, executor.config.NexusEnabled)
+			require.True(t, executor.config.IncludeStandaloneNexus,
+				"a supported standalone Nexus should be included once Nexus load is on")
+		})
+	}
+}
+
+// Turning Nexus off takes its sub-features with it, rather than failing on a
+// sub-feature the user never asked for.
+func TestThroughputStressConfigureStandaloneNexusDroppedWithoutNexus(t *testing.T) {
 	t.Parallel()
 
 	executor := newThroughputStressExecutor()
 	info := loadgen.ScenarioInfo{
-		RunID:  "tps-feature-auto",
-		Logger: zap.NewNop().Sugar(),
-		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-			SleepActivityJsonFlag: "", // keep defaults minimal
-		}),
+		RunID:   "tps-feature-suppressed",
+		Logger:  zap.NewNop().Sugar(),
+		Options: capableOfStandaloneNexus(t, map[string]string{NexusEnabledFlag: "false"}),
 	}
-	require.NoError(t, info.Options.Set(IncludeStandaloneNexusFlag, "true"))
 
-	require.NoError(t, executor.Configure(info))
-	require.True(t, executor.config.NexusEnabled)
-	require.True(t, executor.config.IncludeStandaloneNexus)
+	require.NoError(t, executor.Configure(info),
+		"an auto-enabled sub-feature should not fail a run that asked for no Nexus")
+	require.False(t, executor.config.NexusEnabled)
+	require.False(t, executor.config.IncludeStandaloneNexus,
+		"standalone Nexus should be dropped when there is no Nexus load to add it to")
 }
 
-// TestThroughputStressConfigureFeatureRespectsExplicitNexusDisabled covers the
-// other half: an explicit nexus-enabled=false must not be silently overridden
-// even when the feature auto-enables standalone Nexus.
-func TestThroughputStressConfigureFeatureRespectsExplicitNexusDisabled(t *testing.T) {
-	t.Parallel()
-
-	executor := newThroughputStressExecutor()
-	info := loadgen.ScenarioInfo{
-		RunID:  "tps-feature-explicit-off",
-		Logger: zap.NewNop().Sugar(),
-		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-			NexusEnabledFlag: "false",
-		}),
-	}
-	require.NoError(t, info.Options.Set(IncludeStandaloneNexusFlag, "true"))
-
-	err := executor.Configure(info)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), IncludeStandaloneNexusFlag)
-	require.Contains(t, err.Error(), NexusEnabledFlag)
-}
-
-// TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled
-// preserves the pre-existing behavior: a user who explicitly asks for standalone
-// Nexus while explicitly disabling Nexus gets an error either way.
 func TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled(t *testing.T) {
 	t.Parallel()
 
