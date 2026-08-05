@@ -248,6 +248,15 @@ Resolution needs a dialed client, so it happens in `loadgen.ResolveFeatureOption
 connects, not at declaration or `ResolveOptions` time. A test that calls `Configure` directly
 without also calling `ResolveFeatureOptions` sees the feature at its pflag default (`false`), not
 its capability-resolved value.
+**If you drive a scenario as a library rather than through the omes CLI, you must call
+`loadgen.ResolveFeatureOptions` yourself** once the client is dialed. The CLI does it for you; code
+that builds a `ScenarioInfo` and calls `executor.Run` directly does not get it for free. Skipping it
+does not fail the run — every feature option reads `false`, so the load quietly omits the feature —
+so reading an unresolved feature logs an error naming the option and this function. Treat that line
+as a bug in the calling code.
+
+A feature option cannot also be `MarkRequired`: required means the user must supply a value, gated
+means the namespace supplies it. Declaring both is rejected when options resolve.
 
 Reach for `o.Feature` only when a matching field exists on `NamespaceInfo_Capabilities` (from
 `DescribeNamespace`); an ordinary knob that every server supports stays a plain `o.Bool`.

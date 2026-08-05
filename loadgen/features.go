@@ -8,6 +8,8 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/clioptions"
 )
 
 // featureProbeBackoff is the wait after each failed capability probe, so the
@@ -50,7 +52,14 @@ func ResolveFeatureOptions(
 
 	for _, name := range opts.sortedFeatureNames() {
 		enabled, _ := opts.GetBool(name)
-		logger.Infof("feature %s enabled for namespace %q? %v", name, namespace, enabled)
+		msg := fmt.Sprintf("feature %s enabled for namespace %q? %v", name, namespace, enabled)
+		// Library callers reach this without a zap logger; a nil one would panic
+		// here and take down a run that had otherwise resolved correctly.
+		if logger != nil {
+			logger.Info(msg)
+		} else {
+			clioptions.BackupLogger.Println(msg)
+		}
 	}
 	return nil
 }
