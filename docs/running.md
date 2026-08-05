@@ -71,11 +71,11 @@ Scenario-specific knobs are passed as repeated `--option key=value` pairs. The v
 each scenario (read the scenario source or its `list-scenarios` description). A value may be loaded from
 a file with `@`: `--option sleep-activity-json=@sleep.json`.
 
-Some options are feature options: they turn on by default when the namespace under test reports
-support for the underlying capability, off when it does not. Pass `=false` to force one off
-regardless of what the namespace supports; explicitly passing `=true` against a namespace that
-doesn't report support fails the run. `list-scenarios` marks these with a dynamic default instead
-of a fixed one.
+Some options are feature options: they turn on by default when the server reports support for the
+underlying capability — some capabilities are reported per namespace, others by the server as a whole
+— and off when it does not. Pass `=false` to force one off regardless; explicitly passing `=true`
+where support is not reported fails the run. `list-scenarios` marks these with a dynamic default
+instead of a fixed one.
 
 ```sh
 go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go \

@@ -27,8 +27,14 @@ available.
 
 ## Nexus
 
-`nexus-enabled` decides whether the run generates Nexus load. Nexus needs an endpoint targeting the
-run's task queue, and the scenario creates one for the run when `nexus-endpoint` is empty.
+`nexus-enabled` decides whether the run generates Nexus load. It is a feature option gated on the
+server supporting Nexus, and **on by default wherever it does** — omes is a testing tool, so the
+useful default is to exercise what the server can do. Against a server without Nexus it turns itself
+off, so the default is safe anywhere; asking for Nexus explicitly there fails instead, since the run
+cannot do what was asked.
+
+Nexus needs an endpoint targeting the run's task queue. The scenario creates one for the run when
+`nexus-endpoint` is empty, and logs that it did.
 
 To use an endpoint you manage instead, create it against the run's task queue — which is
 `omes-<run-id>` — and name it with `--option nexus-endpoint`:
@@ -40,11 +46,11 @@ temporal operator nexus endpoint create \
   --target-task-queue omes-my-run
 
 go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go \
-  --option nexus-enabled=true --option nexus-endpoint=my-nexus-endpoint --run-id my-run
+  --option nexus-endpoint=my-nexus-endpoint --run-id my-run
 ```
 
-Naming an endpoint while Nexus is off is rejected, rather than accepting an endpoint the run would
-never use.
+To generate no Nexus load at all, pass `--option nexus-enabled=false`. Naming an endpoint while Nexus
+is off is rejected, rather than accepting an endpoint the run would never use.
 
 ## Standalone activities
 
@@ -59,6 +65,15 @@ Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
 ## Standalone Nexus operations
 
-`include-standalone-nexus` is a feature option in the same way, but standalone operations are Nexus
-operations, so they also need `nexus-enabled`. Asking for standalone Nexus while Nexus is off fails
-the run.
+`include-standalone-nexus` is a feature option in the same way, but it only adds to a run that is
+already generating Nexus load. `nexus-enabled` governs that, and a capability probe never turns it
+on: the probe decides whether standalone operations are *part of* the Nexus load, not whether there
+is any.
+
+| `nexus-enabled` | Standalone Nexus reported | Result |
+| --- | --- | --- |
+| on (default) | yes | Nexus load including standalone operations |
+| on (default) | no | Nexus load without standalone operations |
+| `=false` | either | no Nexus load; standalone Nexus not included |
+
+Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction, and fails the run.

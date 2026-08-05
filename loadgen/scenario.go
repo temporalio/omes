@@ -245,16 +245,6 @@ func (s *ScenarioInfo) options() *OptionSet {
 	return s.Options
 }
 
-// logf logs at info level, tolerating a ScenarioInfo built without a logger —
-// library callers assemble one by hand and need not set every field.
-func (s *ScenarioInfo) logf(format string, args ...any) {
-	if s.Logger != nil {
-		s.Logger.Infof(format, args...)
-	} else {
-		clioptions.BackupLogger.Printf(format, args...)
-	}
-}
-
 // unresolvedFeatureOption reports a feature option read before any namespace
 // probe ran, which leaves it false and quietly drops the feature from the load.
 // It is an error rather than a warning because a run generating less load than
@@ -270,6 +260,16 @@ func (s *ScenarioInfo) unresolvedFeatureOption(name string) {
 		s.Logger.Error(msg)
 	} else {
 		clioptions.BackupLogger.Println(msg)
+	}
+}
+
+// logf logs at info level, tolerating a ScenarioInfo built without a logger —
+// library callers assemble one by hand and need not set every field.
+func (s *ScenarioInfo) logf(format string, args ...any) {
+	if s.Logger != nil {
+		s.Logger.Infof(format, args...)
+	} else {
+		clioptions.BackupLogger.Printf(format, args...)
 	}
 }
 

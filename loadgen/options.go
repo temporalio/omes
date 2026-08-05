@@ -10,7 +10,20 @@ import (
 
 	"github.com/spf13/pflag"
 	namespacev1 "go.temporal.io/api/namespace/v1"
+	"go.temporal.io/api/workflowservice/v1"
 )
+
+// Capabilities is what a server reports about what it can do, as read by a
+// [OptionSet.Feature] predicate. Both fields may be nil for a server that
+// reports nothing, so read them through the generated getters.
+type Capabilities struct {
+	// Namespace holds the capabilities of the namespace under test, from
+	// DescribeNamespace. Use it for anything gated per namespace, such as a
+	// dynamic config flag.
+	Namespace *namespacev1.NamespaceInfo_Capabilities
+	// System holds the capabilities of the server as a whole, from GetSystemInfo.
+	System *workflowservice.GetSystemInfoResponse_Capabilities
+}
 
 // OptionSet declares the options a scenario accepts via `--option <name>=<value>`.
 // It embeds a [pflag.FlagSet], so options are declared with the same typed
@@ -26,7 +39,7 @@ type OptionSet struct {
 	explicit map[string]struct{}
 	// features holds the capability predicate for each option declared with
 	// Feature, keyed by name.
-	features map[string]func(*namespacev1.NamespaceInfo_Capabilities) bool
+	features map[string]func(Capabilities) bool
 	// featuresResolved records that the set has been reconciled against reported
 	// capabilities. Until it is, an unset feature option reads false whether or not
 	// it is supported, which is the wrong answer rather than a missing one — so
@@ -53,16 +66,18 @@ func (o *OptionSet) MarkRequired(names ...string) {
 	}
 }
 
-// Feature declares a boolean option gated on a namespace capability. It is enabled
-// by default when the namespace under test reports support, disabled when it does
-// not, and always follows an explicit `--option name=<bool>` instead. Explicitly
-// enabling a feature the namespace does not report fails the run.
+// Feature declares a boolean option gated on a reported capability. It is enabled
+// by default when the server reports support, disabled when it does not, and
+// always follows an explicit `--option name=<bool>` instead. Explicitly enabling a
+// feature that is not reported fails the run.
+//
+// The predicate reads [Capabilities], so it can gate on what the namespace
+// reports, what the server as a whole reports, or both.
 //
 // Resolution happens after the client dials, via [ResolveFeatureOptions]; until
-// then the option reads as its pflag default (false). The predicate is passed the
-// namespace's reported capabilities, which may be nil for a server that reports
-// none, so read them through the generated getters rather than dereferencing.
-func (o *OptionSet) Feature(name, usage string, supported func(*namespacev1.NamespaceInfo_Capabilities) bool) {
+// then the option reads as its pflag default (false), and reading it is reported
+// as a bug in the caller.
+func (o *OptionSet) Feature(name, usage string, supported func(Capabilities) bool) {
 	o.Bool(name, false, usage)
 	o.features[name] = supported
 }
@@ -91,11 +106,18 @@ func (o *OptionSet) sortedFeatureNames() []string {
 	return names
 }
 
-// resolveFeatures finalizes every Feature option against the namespace's
-// reported capabilities: an unset option takes the capability's value, and an
-// explicit true against an unsupported capability is collected as an error.
-// Every unsupported feature is reported at once.
-func (o *OptionSet) resolveFeatures(caps *namespacev1.NamespaceInfo_Capabilities) error {
+// ResolveFeaturesFromCapabilities finalizes feature options against capabilities
+// the caller already holds, so a caller that has already queried the server does
+// not pay for it twice. Prefer [ResolveFeatureOptions], which fetches them.
+func (o *OptionSet) ResolveFeaturesFromCapabilities(caps Capabilities) error {
+	return o.resolveFeatures(caps)
+}
+
+// resolveFeatures finalizes every Feature option against the reported
+// capabilities: an unset option takes the capability's value, and an explicit
+// true against an unsupported capability is collected as an error. Every
+// unsupported feature is reported at once.
+func (o *OptionSet) resolveFeatures(caps Capabilities) error {
 	var errs []error
 	for _, name := range o.sortedFeatureNames() {
 		supported := o.features[name](caps)
@@ -108,7 +130,7 @@ func (o *OptionSet) resolveFeatures(caps *namespacev1.NamespaceInfo_Capabilities
 		}
 		if flag.Value.String() == "true" && !supported {
 			errs = append(errs, fmt.Errorf(
-				"option %q was explicitly enabled, but the namespace does not report support for it",
+				"option %q was explicitly enabled, but the server does not report support for it",
 				name))
 		}
 	}
@@ -140,7 +162,7 @@ func newOptionSet(name string) *OptionSet {
 		FlagSet:  fs,
 		required: make(map[string]struct{}),
 		explicit: make(map[string]struct{}),
-		features: make(map[string]func(*namespacev1.NamespaceInfo_Capabilities) bool),
+		features: make(map[string]func(Capabilities) bool),
 	}
 }
 
@@ -152,8 +174,8 @@ func (o *OptionSet) names() []string {
 }
 
 // featureDefaultDisplay is the [DeclaredOption.Default] shown for a Feature
-// option: its real default depends on the namespace under test, not a constant.
-const featureDefaultDisplay = "auto (enabled when the namespace supports it)"
+// option: its real default depends on what the server reports, not a constant.
+const featureDefaultDisplay = "auto (enabled where supported)"
 
 // DeclaredOption describes one declared option for display.
 type DeclaredOption struct {
@@ -163,8 +185,7 @@ type DeclaredOption struct {
 	Usage    string
 	Required bool
 	// IsFeature is true for an option declared with Feature: its default is
-	// resolved from the namespace's capabilities rather than fixed at
-	// declaration time.
+	// resolved from reported capabilities rather than fixed at declaration time.
 	IsFeature bool
 }
 

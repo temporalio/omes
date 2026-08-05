@@ -14,8 +14,8 @@ import (
 	"github.com/temporalio/omes/clioptions"
 )
 
-// featureProbeBackoff is the wait after each failed capability probe, so the
-// probe makes up to len(featureProbeBackoff)+1 attempts before giving up.
+// featureProbeBackoff is the wait after each failed capability probe, so a probe
+// makes up to len(featureProbeBackoff)+1 attempts before giving up.
 var featureProbeBackoff = []time.Duration{300 * time.Millisecond, 600 * time.Millisecond, 1200 * time.Millisecond}
 
 // featureProbeTimeout bounds a single attempt. Without it a server that answers
@@ -25,9 +25,9 @@ var featureProbeBackoff = []time.Duration{300 * time.Millisecond, 600 * time.Mil
 const featureProbeTimeout = 10 * time.Second
 
 // ResolveFeatureOptions finalizes capability-gated options declared with
-// [OptionSet.Feature] against the namespace under test. It is a no-op for a
-// scenario that declares none, so such a scenario never pays for a
-// DescribeNamespace call and can't be broken by one failing.
+// [OptionSet.Feature] against what the server reports. It is a no-op for a
+// scenario that declares none, so such a scenario never pays for the calls and
+// cannot be broken by one failing.
 func ResolveFeatureOptions(
 	ctx context.Context, cl client.Client, namespace string, opts *OptionSet, logger *zap.SugaredLogger,
 ) error {
@@ -35,16 +35,11 @@ func ResolveFeatureOptions(
 		return nil
 	}
 
-	resp, err := probe(ctx, "namespace capabilities",
-		func(ctx context.Context) (*workflowservice.DescribeNamespaceResponse, error) {
-			return cl.WorkflowService().DescribeNamespace(ctx,
-				&workflowservice.DescribeNamespaceRequest{Namespace: namespace})
-		})
+	caps, err := fetchCapabilities(ctx, cl, namespace)
 	if err != nil {
 		return err
 	}
-
-	if err := opts.resolveFeatures(resp.GetNamespaceInfo().GetCapabilities()); err != nil {
+	if err := opts.ResolveFeaturesFromCapabilities(caps); err != nil {
 		return err
 	}
 
@@ -60,6 +55,33 @@ func ResolveFeatureOptions(
 		}
 	}
 	return nil
+}
+
+// fetchCapabilities reads both what the namespace reports and what the server as
+// a whole reports, since a feature may be gated on either.
+func fetchCapabilities(ctx context.Context, cl client.Client, namespace string) (Capabilities, error) {
+	var caps Capabilities
+
+	ns, err := probe(ctx, "namespace capabilities",
+		func(ctx context.Context) (*workflowservice.DescribeNamespaceResponse, error) {
+			return cl.WorkflowService().DescribeNamespace(ctx,
+				&workflowservice.DescribeNamespaceRequest{Namespace: namespace})
+		})
+	if err != nil {
+		return Capabilities{}, err
+	}
+	caps.Namespace = ns.GetNamespaceInfo().GetCapabilities()
+
+	sys, err := probe(ctx, "server capabilities",
+		func(ctx context.Context) (*workflowservice.GetSystemInfoResponse, error) {
+			return cl.WorkflowService().GetSystemInfo(ctx, &workflowservice.GetSystemInfoRequest{})
+		})
+	if err != nil {
+		return Capabilities{}, err
+	}
+	caps.System = sys.GetCapabilities()
+
+	return caps, nil
 }
 
 // probe calls get until it succeeds, giving each attempt featureProbeTimeout and
