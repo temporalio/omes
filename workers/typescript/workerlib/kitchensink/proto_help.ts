@@ -12,7 +12,7 @@ import IRetryPolicy = temporal.api.common.v1.IRetryPolicy;
 // rejects 0 as not a positive integer. That throws a ValueError, which the client masks as
 // "Unexpected error while making gRPC request" with no cause.
 export function retryPolicyFromProto(
-  retryPolicy: IRetryPolicy | null | undefined
+  retryPolicy: IRetryPolicy | null | undefined,
 ): RetryPolicy | undefined {
   const policy = decompileRetryPolicy(retryPolicy);
   if (policy?.maximumAttempts === 0) {
