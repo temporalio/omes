@@ -9,6 +9,8 @@ benchmark features and situations. Backwards compatibility may not be maintained
   profiles, and running against a specific SDK version.
 - **[Authoring scenarios](./docs/authoring-scenarios.md)** — writing a new scenario, choosing an
   executor, exposing options, and authoring conventions.
+- **[The throughput_stress scenario](./docs/throughput-stress.md)** — sleep activities, Nexus,
+  standalone activities, and standalone Nexus operations.
 
 ## Why the weird name?
 
@@ -244,48 +246,12 @@ with `--app` for workers and `--option project-name=...` for project scenarios.
 
 ### ThroughputStress
 
-#### Sleep Activity
+The general-purpose load scenario, used for release validation and standing load. It drives
+workflows with child workflows, activities, signals, queries, updates, continue-as-new, and
+optionally Nexus operations.
 
-The throughput_stress scenario can be configured to run "sleep" activities with different configurations.
-
-The configuration is done via a JSON file, which is passed to the scenario with the
-`--option sleep-activity-per-priority-json=@<file>` flag. Example:
-
-```
-echo '{"count":{"type":"fixed","value":5},"groups":{"high":{"weight":2,"sleepDuration":{"type":"uniform","min":"2s","max":"4s"}},"low":{"weight":3,"sleepDuration":{"type":"discrete","weights":{"5s":3,"10s":1}}}}}' > sleep.json
-go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option sleep-activity-json=@sleep.json --run-id default-run-id
-```
-
-This runs 5 sleep activities per iteration, where "high" has a weight of 2 and sleeps for a random duration between 2-4s,
-and "low" has a weight of 3 and sleeps for either 5s or 10s.
-
-Look at `DistributionField` to learn more about different kinds of distrbutions.
-
-#### Nexus 
-
-The throughput_stress scenario can generate Nexus load if the scenario is started with `--option nexus-endpoint=my-nexus-endpoint`:
-
-   ```
-   temporal operator nexus endpoint create \
-   --name my-nexus-endpoint \
-   --target-namespace default \ # Change if needed
-   --target-task-queue throughput_stress:default-run-id
-   ```
-
-1. Start the scenario with the given run-id:
-
-  ```
-  go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --language go --option nexus-endpoint=my-nexus-endpoint --run-id default-run-id
-  ```
-
-#### Standalone activities
-
-The throughput_stress scenario can generate standalone-activity load (activities started outside
-any workflow context via `StartActivityExecution`). This turns on automatically when the namespace
-under test reports support for standalone activities (dynamic config `activity.enableStandalone`);
-pass `--option include-standalone-activity=false` to force it off. Passing
-`--option include-standalone-activity=true` against a namespace that doesn't report support fails
-the run. Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
+Its options — sleep activities, Nexus, standalone activities and standalone Nexus operations — are
+documented in **[The throughput_stress scenario](./docs/throughput-stress.md)**.
 
 ### Fuzzer
 
