@@ -28,7 +28,5 @@ func TestResolveFeatureOptionsNoopWithNilOptions(t *testing.T) {
 	}
 }
 
-// Probe retry/failure paths need a WorkflowService stub. There is no existing
-// fake in loadgen or internal for this, so those cases are left untested here
-// rather than introduce a new mocking dependency; see the plan doc for the
-// intended behavior (3 attempts, 300ms/600ms/1.2s backoff).
+// Retrying, giving up, and bounding an attempt are covered in probe_test.go,
+// which drives probe directly rather than through a WorkflowService stub.
