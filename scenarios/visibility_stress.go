@@ -18,6 +18,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -247,7 +248,23 @@ type vsConfig struct {
 	Retention        time.Duration
 	Cleanup          bool
 	DeleteNamespaces bool
+	// WriterConcurrency is the number of goroutines starting workflows in parallel.
+	// See runWriter for why this must exceed 1 to reach the higher presets' WfRPS.
+	WriterConcurrency int
 }
+
+const (
+	// vsRPSPerWriter is the workflow-start throughput we assume a single writer
+	// goroutine can sustain, used to derive the default WriterConcurrency. Each start
+	// is a blocking RPC, so this is really 1/latency: ~60 rps at a 17ms round trip to
+	// Temporal Cloud. We budget conservatively so the target rate stays reachable when
+	// latency degrades under load.
+	vsRPSPerWriter = 25
+	// vsMaxWriterConcurrency caps the derived default so an extreme wfRPS override
+	// can't spawn an unbounded number of goroutines. Can be exceeded explicitly via
+	// the writerConcurrency option.
+	vsMaxWriterConcurrency = 256
+)
 
 // ---------------------------------------------------------------------------
 // Executor
@@ -266,6 +283,7 @@ type visibilityStressExecutor struct {
 	totalQueries atomic.Int64
 	totalErrors  atomic.Int64
 	wfCounter    atomic.Uint64
+	nsCounter    atomic.Uint64
 }
 
 var _ loadgen.Configurable = (*visibilityStressExecutor)(nil)
@@ -273,7 +291,8 @@ var _ loadgen.Configurable = (*visibilityStressExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Visibility store stress test.\n" +
-			"Options: loadPreset, queryPreset, csaPreset, namespaceCount, createNamespaces, retention, cleanup.\n" +
+			"Options: loadPreset, queryPreset, csaPreset, namespaceCount, createNamespaces, retention, cleanup,\n" +
+			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25).\n" +
 			"Duration must be set. At least one of loadPreset or queryPreset required.",
 		ExecutorFn: func() loadgen.Executor { return &visibilityStressExecutor{} },
 	})
@@ -345,6 +364,19 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 			return fmt.Errorf("wfRPS must be positive")
 		}
 		cfg.Load = &preset
+
+		// Derive writer concurrency from the target rate unless overridden.
+		defaultConcurrency := int(math.Ceil(preset.WfRPS / vsRPSPerWriter))
+		if defaultConcurrency < 1 {
+			defaultConcurrency = 1
+		}
+		if defaultConcurrency > vsMaxWriterConcurrency {
+			defaultConcurrency = vsMaxWriterConcurrency
+		}
+		cfg.WriterConcurrency = info.ScenarioOptionInt("writerConcurrency", defaultConcurrency)
+		if cfg.WriterConcurrency < 1 {
+			return fmt.Errorf("writerConcurrency must be >= 1, got %d", cfg.WriterConcurrency)
+		}
 	}
 
 	// Query preset.
@@ -585,6 +617,8 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
 			l.WfRPS, l.UpdatesPerWF, l.WfRPS*l.UpdatesPerWF, l.DeleteRPS)
+		info.Logger.Infof("       writerConcurrency=%d (max achievable rps ≈ concurrency/start_latency)",
+			e.config.WriterConcurrency)
 		info.Logger.Infof("       failPercent=%.2f, timeoutPercent=%.2f, updateDelay=%v",
 			l.FailPercent, l.TimeoutPercent, l.UpdateDelay)
 	}
@@ -638,21 +672,48 @@ func (e *visibilityStressExecutor) runSteadyState(ctx context.Context, info load
 // runWriter starts workflows at the configured wfRPS rate. Each workflow is fire-and-forget:
 // we don't wait for completion. The workflow input encodes all CSA update instructions,
 // failure/timeout behavior, and delay between updates.
+// runWriter fans out WriterConcurrency goroutines that share a single rate limiter,
+// so wfRPS is an achievable target rather than an upper bound. Each start is a blocking
+// StartWorkflowExecution RPC, so one goroutine can only reach 1/latency — roughly 60 rps
+// against Temporal Cloud, which left the higher presets an order of magnitude short of
+// their nominal wfRPS. The limiter is shared, so adding goroutines raises the ceiling
+// without raising the rate beyond what was configured.
 func (e *visibilityStressExecutor) runWriter(ctx context.Context, info loadgen.ScenarioInfo) {
 	limiter := rate.NewLimiter(rate.Limit(e.config.Load.WfRPS), 1)
-	var nsIndex int
 	startTime := time.Now()
-	var tickCount int64
+
+	var wg sync.WaitGroup
+	for w := 0; w < e.config.WriterConcurrency; w++ {
+		wg.Add(1)
+		go func(w int) {
+			defer wg.Done()
+			e.runWriterLoop(ctx, info, limiter, startTime, w)
+		}(w)
+	}
+	wg.Wait()
+}
+
+// runWriterLoop is a single writer goroutine. All shared state it touches is atomic:
+// the rate limiter, the workflow/namespace counters, and the totals.
+func (e *visibilityStressExecutor) runWriterLoop(
+	ctx context.Context, info loadgen.ScenarioInfo,
+	limiter *rate.Limiter, startTime time.Time, workerIdx int,
+) {
+	// Each goroutine needs its own rand.Rand: math/rand.Rand is not safe for concurrent
+	// use, and e.rng is owned by the querier goroutine. Offset the seed by workerIdx so
+	// the writers don't all generate the same CSA update sequence.
+	rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(workerIdx)))
+
+	logEvery := int64(math.Max(1, e.config.Load.WfRPS))
 
 	for {
 		if err := limiter.Wait(ctx); err != nil {
 			return
 		}
 
-		nsIdx := nsIndex % len(e.namespaces)
-		nsIndex++
+		nsIdx := int((e.nsCounter.Add(1) - 1) % uint64(len(e.namespaces)))
 
-		input := e.buildWorkflowInput()
+		input := e.buildWorkflowInput(rng)
 		wfID := fmt.Sprintf("vs-%s-%s-%d", info.RunID, e.executionID, e.wfCounter.Add(1))
 
 		opts := client.StartWorkflowOptions{
@@ -670,15 +731,13 @@ func (e *visibilityStressExecutor) runWriter(ctx context.Context, info loadgen.S
 			continue
 		}
 
-		e.totalCreated.Add(1)
-		tickCount++
-
-		logEvery := int64(math.Max(1, e.config.Load.WfRPS))
-		if tickCount%logEvery == 0 {
+		// Log off the shared total so the cadence stays ~1/sec regardless of how many
+		// writers are running; whichever goroutine lands on the boundary emits the line.
+		if created := e.totalCreated.Add(1); created%logEvery == 0 {
 			elapsed := time.Since(startTime)
 			info.Logger.Infof("[writer] t=%v created=%d errors=%d actual_rps=%.1f",
-				elapsed.Round(time.Second), e.totalCreated.Load(),
-				e.totalErrors.Load(), float64(e.totalCreated.Load())/elapsed.Seconds())
+				elapsed.Round(time.Second), created,
+				e.totalErrors.Load(), float64(created)/elapsed.Seconds())
 		}
 	}
 }
@@ -962,31 +1021,34 @@ func (e *visibilityStressExecutor) csasByType(t csaType) []csaDef {
 // buildWorkflowInput constructs a VisibilityWorkerInput for one workflow.
 // It resolves fractional updatesPerWF probabilistically, rolls the failure/timeout
 // dice, and builds randomized CSA update groups from the csaPreset.
-func (e *visibilityStressExecutor) buildWorkflowInput() *vstypes.VisibilityWorkerInput {
+//
+// rng is supplied by the caller rather than taken from e.rng: this runs on every writer
+// goroutine, and math/rand.Rand is not safe for concurrent use.
+func (e *visibilityStressExecutor) buildWorkflowInput(rng *rand.Rand) *vstypes.VisibilityWorkerInput {
 	cfg := e.config.Load
 
 	wholeUpdates := int(cfg.UpdatesPerWF)
 	fraction := cfg.UpdatesPerWF - float64(wholeUpdates)
 	numUpdates := wholeUpdates
-	if e.rng.Float64() < fraction {
+	if rng.Float64() < fraction {
 		numUpdates++
 	}
 
-	roll := e.rng.Float64()
+	roll := rng.Float64()
 	shouldFail := roll < cfg.FailPercent
 	shouldTimeout := !shouldFail && roll < cfg.FailPercent+cfg.TimeoutPercent
 
 	groups := make([]vstypes.CSAUpdateGroup, 0, numUpdates)
 	shuffled := make([]csaDef, len(e.config.CSADefs))
 	copy(shuffled, e.config.CSADefs)
-	e.rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+	rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
 	for i := 0; i < numUpdates; i++ {
-		groupSize := 1 + e.rng.Intn(3)
+		groupSize := 1 + rng.Intn(3)
 		attrs := make(map[string]any, groupSize)
 		for j := 0; j < groupSize; j++ {
 			csa := shuffled[(i*3+j)%len(shuffled)]
-			attrs[csa.Name] = randomCSAValue(csa, e.rng)
+			attrs[csa.Name] = randomCSAValue(csa, rng)
 		}
 		groups = append(groups, vstypes.CSAUpdateGroup{Attributes: attrs})
 	}
