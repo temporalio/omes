@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	namespacev1 "go.temporal.io/api/namespace/v1"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
@@ -15,7 +13,7 @@ import (
 // namespace is taken to support or not per supported.
 func featureScenario(supported bool) *Scenario {
 	return &Scenario{Options: func(o *OptionSet) {
-		o.Feature("gated", "", func(*namespacev1.NamespaceInfo_Capabilities) bool { return supported })
+		o.Feature("gated", "", func(Capabilities) bool { return supported })
 	}}
 }
 
@@ -67,7 +65,7 @@ func TestResolvedFeatureReadIsQuiet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if err := set.resolveFeatures(&namespacev1.NamespaceInfo_Capabilities{}); err != nil {
+	if err := set.resolveFeatures(Capabilities{}); err != nil {
 		t.Fatalf("resolveFeatures: %v", err)
 	}
 	info, logs := observedInfo(t, set)
@@ -112,7 +110,7 @@ func TestSetMarksOptionAsUserSpecified(t *testing.T) {
 	}
 
 	// Resolution must reject it rather than silently flip it to false.
-	err = set.resolveFeatures(&namespacev1.NamespaceInfo_Capabilities{})
+	err = set.resolveFeatures(Capabilities{})
 	if err == nil {
 		t.Fatal("enabling a feature the namespace lacks should fail, however it was supplied")
 	}
@@ -138,7 +136,7 @@ func TestFailedResolutionLeavesFeaturesUnresolved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if err := set.resolveFeatures(&namespacev1.NamespaceInfo_Capabilities{}); err == nil {
+	if err := set.resolveFeatures(Capabilities{}); err == nil {
 		t.Fatal("expected resolution to reject an unsupported explicit enable")
 	}
 	if set.featuresResolved {
@@ -148,7 +146,7 @@ func TestFailedResolutionLeavesFeaturesUnresolved(t *testing.T) {
 
 func TestRequiredFeatureIsRejected(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("gated", "", func(*namespacev1.NamespaceInfo_Capabilities) bool { return true })
+		o.Feature("gated", "", func(Capabilities) bool { return true })
 		o.MarkRequired("gated")
 	}}
 	_, err := s.ResolveOptions(map[string]string{"gated": "true"})

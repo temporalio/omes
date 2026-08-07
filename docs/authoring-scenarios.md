@@ -175,7 +175,7 @@ loadgen.MustRegisterScenario(loadgen.Scenario{
 
 		// Gated on a namespace capability; see "Feature options" below.
 		o.Feature("include-standalone-activity", "Include standalone activities.",
-			func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneActivities() })
+			func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneActivities() })
 	},
 	ExecutorFn: /* ... */,
 })
@@ -192,6 +192,14 @@ Declaring buys you three things:
 
 If your scenario uses a shared executor that reads options of its own, call that executor's declaration
 helper from yours — for example `loadgen.DeclareFuzzExecutorOptions(o)`.
+
+Options shared by several scenarios are declared the same way, so their names, defaults, and meaning
+are defined once. If your scenario can generate Nexus load, declare it with
+`loadgen.DeclareNexusOptions(o)` and settle it at run time with
+`info.ResolveNexusConfig(ctx)`, which decides whether the server supports Nexus and creates an
+endpoint if the run needs one. For an option that adds to Nexus load rather than producing it — a
+standalone-operations switch, say — gate it with `loadgen.IncludeNexusSubFeature`, so Nexus being off
+takes its sub-features with it instead of failing the run.
 
 ### Read them
 
@@ -232,10 +240,10 @@ with `o.Feature`:
 
 ```go
 o.Feature("include-standalone-nexus", "Include standalone Nexus operations.",
-	func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneNexusOperation() })
+	func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneNexusOperation() })
 ```
 
-| Config | Namespace reports capability | Result |
+| Config | Capability reported | Result |
 | --- | --- | --- |
 | unset | yes | enabled |
 | unset | no | disabled |
@@ -248,6 +256,7 @@ Resolution needs a dialed client, so it happens in `loadgen.ResolveFeatureOption
 connects, not at declaration or `ResolveOptions` time. A test that calls `Configure` directly
 without also calling `ResolveFeatureOptions` sees the feature at its pflag default (`false`), not
 its capability-resolved value.
+
 **If you drive a scenario as a library rather than through the omes CLI, you must call
 `loadgen.ResolveFeatureOptions` yourself** once the client is dialed. The CLI does it for you; code
 that builds a `ScenarioInfo` and calls `executor.Run` directly does not get it for free. Skipping it
@@ -258,8 +267,10 @@ as a bug in the calling code.
 A feature option cannot also be `MarkRequired`: required means the user must supply a value, gated
 means the namespace supplies it. Declaring both is rejected when options resolve.
 
-Reach for `o.Feature` only when a matching field exists on `NamespaceInfo_Capabilities` (from
-`DescribeNamespace`); an ordinary knob that every server supports stays a plain `o.Bool`.
+The predicate is handed a `loadgen.Capabilities`, carrying both what the namespace reports
+(`DescribeNamespace`) and what the server as a whole reports (`GetSystemInfo`) — gate on whichever
+answers your question. Reach for `o.Feature` only when one of them has a matching field; an ordinary
+knob that every server supports stays a plain `o.Bool`.
 
 ### Conventions for options
 

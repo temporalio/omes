@@ -221,14 +221,16 @@ func TestGetDefaultConfigurationPrefersScenarioDeclaration(t *testing.T) {
 	}
 }
 
-func nexusOperationCapability(supported bool) *namespacev1.NamespaceInfo_Capabilities {
-	return &namespacev1.NamespaceInfo_Capabilities{StandaloneNexusOperation: supported}
+func nexusOperationCapability(supported bool) Capabilities {
+	return Capabilities{
+		Namespace: &namespacev1.NamespaceInfo_Capabilities{StandaloneNexusOperation: supported},
+	}
 }
 
 func TestFeatureUnsetEnabledWhenCapabilitySupported(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	set := s.MustResolveOptions(nil)
@@ -243,8 +245,8 @@ func TestFeatureUnsetEnabledWhenCapabilitySupported(t *testing.T) {
 
 func TestFeatureUnsetDisabledWhenCapabilityUnsupported(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	set := s.MustResolveOptions(nil)
@@ -253,14 +255,14 @@ func TestFeatureUnsetDisabledWhenCapabilityUnsupported(t *testing.T) {
 	}
 	info := &ScenarioInfo{Options: set}
 	if info.OptionBool("nexus") {
-		t.Error("want feature disabled when the namespace does not report support")
+		t.Error("want feature disabled when the server does not report support")
 	}
 }
 
 func TestFeatureExplicitFalseStaysFalseUnderSupportingCaps(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	set := s.MustResolveOptions(map[string]string{"nexus": "false"})
@@ -275,8 +277,8 @@ func TestFeatureExplicitFalseStaysFalseUnderSupportingCaps(t *testing.T) {
 
 func TestFeatureExplicitTrueUnderSupportingCapsSucceeds(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	set := s.MustResolveOptions(map[string]string{"nexus": "true"})
@@ -291,8 +293,8 @@ func TestFeatureExplicitTrueUnderSupportingCapsSucceeds(t *testing.T) {
 
 func TestFeatureExplicitTrueUnderNonSupportingCapsErrors(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	set := s.MustResolveOptions(map[string]string{"nexus": "true"})
@@ -307,15 +309,15 @@ func TestFeatureExplicitTrueUnderNonSupportingCapsErrors(t *testing.T) {
 
 func TestFeatureTwoUnsupportedExplicitErrorsJoined(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
-		o.Feature("activity", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneActivities()
+		o.Feature("activity", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneActivities()
 		})
 	}}
 	set := s.MustResolveOptions(map[string]string{"nexus": "true", "activity": "true"})
-	err := set.resolveFeatures(&namespacev1.NamespaceInfo_Capabilities{})
+	err := set.resolveFeatures(Capabilities{})
 	if err == nil {
 		t.Fatal("expected an error naming both unsupported features")
 	}
@@ -341,8 +343,8 @@ func TestUserSpecifiedReflectsExplicitSupply(t *testing.T) {
 
 func TestDeclaredOptionsReportsFeatureDefault(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "Include standalone Nexus operations.", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "Include standalone Nexus operations.", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	opts := s.DeclaredOptions()
@@ -352,15 +354,15 @@ func TestDeclaredOptionsReportsFeatureDefault(t *testing.T) {
 	if !opts[0].IsFeature {
 		t.Error("want IsFeature true for a Feature declaration")
 	}
-	if opts[0].Default != "auto (enabled when the namespace supports it)" {
+	if opts[0].Default != featureDefaultDisplay {
 		t.Errorf("want the dynamic default string, got %q", opts[0].Default)
 	}
 }
 
 func TestResolveOptionsRejectsMalformedFeatureValue(t *testing.T) {
 	s := &Scenario{Options: func(o *OptionSet) {
-		o.Feature("nexus", "", func(c *namespacev1.NamespaceInfo_Capabilities) bool {
-			return c.GetStandaloneNexusOperation()
+		o.Feature("nexus", "", func(c Capabilities) bool {
+			return c.Namespace.GetStandaloneNexusOperation()
 		})
 	}}
 	_, err := s.ResolveOptions(map[string]string{"nexus": "notabool"})

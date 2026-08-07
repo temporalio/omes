@@ -38,11 +38,7 @@ func init() {
 					if config := info.OptionString("config"); config != "" {
 						args = append(args, "--generator-config-override", config)
 					}
-					nexusEndpoint := info.OptionString("nexus-endpoint")
-					if nexusEndpoint == "" {
-						nexusEndpoint = loadgen.NexusEndpointForRun(info.RunID)
-					}
-					args = append(args, "--nexus-endpoint", nexusEndpoint)
+					args = append(args, "--nexus-endpoint", info.NexusEndpointName())
 					if outputFile := info.OptionString("output-file"); outputFile != "" {
 						args = append(args, "--output-path", outputFile)
 					}

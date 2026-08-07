@@ -16,7 +16,6 @@ import (
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
-	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -30,11 +29,12 @@ const (
 	// SleepTimeFlag controls the duration used for internal timer-based sleep actions (e.g. signal/update timers).
 	// Default is 1s.
 	SleepTimeFlag = "sleep-time"
-	// NexusEnabledFlag turns Nexus operations on.
-	NexusEnabledFlag = "nexus-enabled"
+	// NexusEnabledFlag governs whether the run generates Nexus load. On by default;
+	// see loadgen.DeclareNexusOptions.
+	NexusEnabledFlag = loadgen.NexusEnabledOption
 	// NexusEndpointFlag names the Nexus endpoint to use. Empty means one is created
 	// for this run. Only consulted when NexusEnabledFlag is set.
-	NexusEndpointFlag = "nexus-endpoint"
+	NexusEndpointFlag = loadgen.NexusEndpointOption
 	// VisibilityVerificationTimeoutFlag is the timeout for verifying the total visibility count at the end of the scenario.
 	// It needs to account for a backlog of tasks and, if used, ElasticSearch's eventual consistency.
 	VisibilityVerificationTimeoutFlag = "visibility-count-timeout"
@@ -51,7 +51,7 @@ const (
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
 	// IncludeStandaloneNexusFlag enables standalone Nexus operations in throughput_stress.
-	// On by default when the namespace under test reports support; pass
+	// On when the namespace reports support and the run generates Nexus load; pass
 	// include-standalone-nexus=false to force off.
 	IncludeStandaloneNexusFlag = "include-standalone-nexus"
 	// IncludeStandaloneActivityFlag enables standalone activities (activities started outside
@@ -117,17 +117,16 @@ func init() {
 			o.Duration(IterTimeoutFlag, 0, "Timeout for internal iterations. 0 means auto: the run duration plus a minute.")
 			o.Int(ContinueAsNewAfterIterFlag, 3, "Internal iterations before continue-as-new.")
 			o.Duration(SleepTimeFlag, time.Second, "How long each sleep activity sleeps.")
-			o.Bool(NexusEnabledFlag, false, "Include Nexus operations.")
-			o.String(NexusEndpointFlag, "", "Nexus endpoint to use when Nexus is enabled. Empty creates one for this run.")
+			loadgen.DeclareNexusOptions(o)
 			o.Duration(VisibilityVerificationTimeoutFlag, 3*time.Minute, "Timeout for the post-run visibility count check.")
 			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
 			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
 			o.Bool(IncludeRetryScenariosFlag, false, "Include activities that exercise retries.")
 			o.Bool(IncludeDescribeFlag, false, "Include DescribeWorkflowExecution calls.")
 			o.Feature(IncludeStandaloneNexusFlag, "Include standalone Nexus operations.",
-				func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneNexusOperation() })
+				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneNexusOperation() })
 			o.Feature(IncludeStandaloneActivityFlag, "Include standalone activities.",
-				func(c *namespacev1.NamespaceInfo_Capabilities) bool { return c.GetStandaloneActivities() })
+				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneActivities() })
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -213,21 +212,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.IncludeRetryScenarios = info.OptionBool(IncludeRetryScenariosFlag)
 	config.IncludeDescribe = info.OptionBool(IncludeDescribeFlag)
-	config.IncludeStandaloneNexus = info.OptionBool(IncludeStandaloneNexusFlag)
-	if config.IncludeStandaloneNexus && !config.NexusEnabled {
-		// Standalone Nexus can auto-enable via a capability probe without the user
-		// ever touching nexus-enabled; in that case turn Nexus on too, rather than
-		// fail on an option nobody set. An explicit nexus-enabled=false still wins.
-		if info.OptionUserSpecified(NexusEnabledFlag) {
-			return fmt.Errorf("%s requires %s, which was explicitly disabled",
-				IncludeStandaloneNexusFlag, NexusEnabledFlag)
-		}
-		// Configure is also called directly by tests, which may not set a Logger.
-		if info.Logger != nil {
-			info.Logger.Infof("enabling %s because %s is enabled",
-				NexusEnabledFlag, IncludeStandaloneNexusFlag)
-		}
-		config.NexusEnabled = true
+	config.IncludeStandaloneNexus, err = loadgen.IncludeNexusSubFeature(
+		&info, IncludeStandaloneNexusFlag, config.NexusEnabled)
+	if err != nil {
+		return err
 	}
 	if config.NexusEndpoint != "" && !config.NexusEnabled {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
@@ -259,15 +247,20 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	}
 	t.runID = info.RunID
 
-	// Creating the endpoint needs a context, so it happens here rather than in
-	// Configure.
-	if t.config.NexusEnabled && t.config.NexusEndpoint == "" {
-		endpoint, err := info.EnsureNexusEndpoint(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to create nexus endpoint: %w", err)
-		}
-		t.config.NexusEndpoint = endpoint
-		info.Logger.Infof("Using nexus endpoint %q", endpoint)
+	// Settling Nexus needs a dialed client, so it happens here rather than in
+	// Configure: whether the server supports Nexus at all decides the default, and
+	// an endpoint may have to be created.
+	nexus, err := info.ResolveNexusConfig(ctx)
+	if err != nil {
+		return err
+	}
+	t.config.NexusEnabled = nexus.Enabled
+	t.config.NexusEndpoint = nexus.Endpoint
+	if !nexus.Enabled {
+		// Standalone operations are part of Nexus load, so they go with it.
+		t.config.IncludeStandaloneNexus = false
+	} else {
+		info.Logger.Infof("Using nexus endpoint %q", nexus.Endpoint)
 	}
 
 	// Track start time of current run

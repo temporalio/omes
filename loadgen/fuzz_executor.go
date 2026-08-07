@@ -33,7 +33,7 @@ type FuzzExecutor struct {
 // Scenarios using it should call this from their own Options declaration so the
 // options validate and appear in `list-scenarios`.
 func DeclareFuzzExecutorOptions(o *OptionSet) {
-	o.String("nexus-endpoint", "", "Nexus endpoint to use. Empty creates one for this run.")
+	declareNexusEndpointOption(o)
 	o.String("kitchen-sink-gen", "", "Name of, or absolute path to, the kitchen-sink-gen executable.")
 }
 
@@ -42,16 +42,15 @@ func (k FuzzExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 		return fmt.Errorf("InitInputs must be specified")
 	}
 
-	// Use a user-provided nexus endpoint, or auto-create one for this run
-	endpointName := info.OptionString("nexus-endpoint")
-	if endpointName == "" {
-		var err error
-		endpointName, err = info.EnsureNexusEndpoint(ctx)
-		if err != nil {
+	// The generated actions drive Nexus operations against this endpoint, so it has
+	// to exist before they run, and InitInputs below names the same one. An endpoint
+	// the user named is theirs to have created.
+	if info.OptionString(NexusEndpointOption) == "" {
+		if _, err := info.EnsureNexusEndpoint(ctx); err != nil {
 			return fmt.Errorf("failed to create nexus endpoint: %w", err)
 		}
 	}
-	info.Logger.Infof("Using nexus endpoint %q", endpointName)
+	info.Logger.Infof("Using nexus endpoint %q", info.NexusEndpointName())
 
 	var testInputs []*kitchensink.TestInput
 	// Load or generate inputs
