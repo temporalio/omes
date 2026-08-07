@@ -23,12 +23,13 @@ func cleanupScenarioCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cleanup-scenario",
 		Short: "Cleanup scenario",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			c.logger = c.loggingOptions.MustCreateLogger()
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
-			if err := c.run(ctx); err != nil {
-				c.logger.Fatal(err)
-			}
+			exitOnError(c.logger, c.run(ctx))
 		},
 	}
 	c.addCLIFlags(cmd.Flags())
@@ -55,12 +56,10 @@ func (c *scenarioCleaner) addCLIFlags(fs *pflag.FlagSet) {
 }
 
 func (c *scenarioCleaner) run(ctx context.Context) error {
-	c.logger = c.loggingOptions.MustCreateLogger()
-	scenario := loadgen.GetScenario(c.scenario.Scenario)
-	if scenario == nil {
-		return fmt.Errorf("scenario not found")
+	if scenario := loadgen.GetScenario(c.scenario.Scenario); scenario == nil {
+		return loadgen.NewScenarioNotFoundError(c.scenario.Scenario)
 	} else if c.scenario.RunID == "" {
-		return fmt.Errorf("run ID not found")
+		return loadgen.NewUsageError("--run-id must not be empty")
 	}
 	metrics := c.metricsOptions.MustCreateMetrics(ctx, c.logger)
 	defer metrics.Shutdown(ctx, c.logger, c.scenario.Scenario, c.scenario.RunID, c.scenario.RunFamily)

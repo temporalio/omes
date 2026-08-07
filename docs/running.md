@@ -48,7 +48,16 @@ Run any command with `--help` for the full, authoritative flag list.
 
 ## Configuring the load
 
-Run configuration comes in **two separate channels**:
+Run configuration comes in **two separate channels**, split along one line:
+
+> **Run flags shape the load. Scenario options decide what the load does.**
+>
+> How many iterations, how fast, how long, how many at once — that is the same question for every
+> scenario, so it is a built-in flag. What each iteration actually executes is particular to one
+> scenario, so it is an `--option`.
+
+`list-scenarios` shows both for a given scenario: the run configuration it will use, with the flag that
+overrides each value, and the options it accepts.
 
 ### 1. Built-in run flags (typed)
 
@@ -63,13 +72,15 @@ These apply to every scenario and override its defaults:
 | `--max-iteration-attempts` | Attempts per iteration (default 1). |
 | `--timeout` | Hard stop; cancels in-flight iterations and exits non-zero. |
 
-If you set neither `--iterations` nor `--duration`, the scenario's own default applies.
+If you set neither `--iterations` nor `--duration`, the scenario's own default applies — and most
+scenarios declare none, in which case omes's default does. `list-scenarios` states which is the case for
+each scenario.
 
 ### 2. Per-scenario options (`--option key=value`)
 
-Scenario-specific knobs are passed as repeated `--option key=value` pairs. The valid keys are defined by
-each scenario (read the scenario source or its `list-scenarios` description). A value may be loaded from
-a file with `@`: `--option sleep-activity-json=@sleep.json`.
+Scenario-specific knobs are passed as repeated `--option key=value` pairs. Each scenario declares the
+options it accepts; `list-scenarios` prints them with their types and defaults. A value may be loaded
+from a file with `@`: `--option sleep-activity-json=@sleep.json`.
 
 Some options are feature options: they turn on by default when the namespace under test reports
 support for the underlying capability, off when it does not. Pass `=false` to force one off
@@ -129,10 +140,20 @@ go run ./cmd/omes run-scenario-with-worker \
   (`ts`), `dotnet` (`cs`), `ruby` (`rb`). If you pass an unknown value the error message lists the
   accepted set.
 - **A scenario accepts exactly the options it declares.** An unknown name or a value of the wrong type
-  is rejected before the run starts — before omes even connects — and every problem is reported at once.
+  is rejected before the run starts — before omes even connects, and before
+  `run-scenario-with-worker` builds a worker — and every problem is reported at once.
   `list-scenarios` shows what each scenario accepts, including defaults. A scenario that declares no
   options accepts none.
 - **Feature options are on by default against a capable namespace.** They resolve after omes connects,
   by probing the namespace's reported capabilities, so pass `=false` explicitly to force one off.
   Explicitly passing `=true` against a namespace that doesn't report the capability fails the run.
-- **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected at run time.
+- **`--iterations` and `--duration` are mutually exclusive.** Setting both is rejected before the run
+  starts.
+- **Bad input prints as a message, not a stack trace.** An unknown scenario or option, a malformed
+  `--option`, a feature the namespace doesn't support, or conflicting run flags print one line and exit
+  non-zero. A stack trace means something failed *during* the run — so if you see one, read it as a real
+  failure rather than a typo.
+- **Some option names read like run flags but are not.** `throughput_stress` accepts
+  `--option internal-iterations`, which sets how much work happens *inside* one iteration; `--iterations`
+  sets how many iterations run. Setting the wrong one produces a valid run at the wrong load rather than
+  an error, so check `list-scenarios` when a name looks familiar.

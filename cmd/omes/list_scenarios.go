@@ -30,38 +30,50 @@ func describeScenario(name string, scen *loadgen.Scenario) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Scenario: %v\n    Description: %v\n", name, scen.Description)
 
-	if config, ok := scen.GetDefaultConfiguration(); ok {
-		config.ApplyDefaults()
-		b.WriteString("    Default configuration:\n")
-		if config.Iterations != 0 {
-			fmt.Fprintf(&b, "        Iterations: %v\n", config.Iterations)
-		}
-		if config.Duration != 0 {
-			fmt.Fprintf(&b, "        Duration: %v\n", config.Duration)
-		}
-		if config.MaxConcurrent != 0 {
-			fmt.Fprintf(&b, "        Max concurrent: %v\n", config.MaxConcurrent)
-		}
-		if config.Timeout != 0 {
-			fmt.Fprintf(&b, "        Timeout: %v\n", config.Timeout)
+	// Naming the flag that sets each value is what tells a reader this knob is a
+	// run flag rather than an --option. Attribute the values too: most scenarios
+	// set none of their own, and omes's defaults shown unattributed read as a
+	// scenario's intent.
+	config, declared := scen.GetDefaultConfiguration()
+	config.ApplyDefaults()
+	source := "omes defaults, as this scenario sets none"
+	if declared {
+		source = "this scenario's defaults"
+	}
+	fmt.Fprintf(&b, "    Run configuration (%s) — applies to every scenario, override with these flags:\n", source)
+	// A zero here carries no information — an unset timeout just means unlimited —
+	// so only settings with a value are worth printing.
+	flag := func(name string, value any, isSet bool) {
+		if isSet {
+			fmt.Fprintf(&b, "        %s %v\n", name, value)
 		}
 	}
+	flag("--iterations", config.Iterations, config.Iterations != 0)
+	flag("--duration", config.Duration, config.Duration != 0)
+	flag("--max-concurrent", config.MaxConcurrent, config.MaxConcurrent != 0)
+	flag("--max-iteration-attempts", config.MaxIterationAttempts, config.MaxIterationAttempts != 0)
+	flag("--max-iterations-per-second", config.MaxIterationsPerSecond, config.MaxIterationsPerSecond != 0)
+	flag("--timeout", config.Timeout, config.Timeout != 0)
+	b.WriteString("        (run 'omes run-scenario --help' for the full set)\n")
 
-	if opts := scen.DeclaredOptions(); len(opts) > 0 {
-		b.WriteString("    Options (set with --option <name>=<value>):\n")
-		for _, o := range opts {
-			fmt.Fprintf(&b, "        %s (%s)", o.Name, o.Type)
-			switch {
-			case o.Required:
-				b.WriteString(" [required]")
-			case o.Default != "":
-				fmt.Fprintf(&b, " [default: %s]", o.Default)
-			}
-			if o.Usage != "" {
-				fmt.Fprintf(&b, "\n            %s", o.Usage)
-			}
-			b.WriteString("\n")
+	opts := scen.DeclaredOptions()
+	if len(opts) == 0 {
+		fmt.Fprintf(&b, "    Scenario options: none — %s accepts no --option values.\n", name)
+		return b.String()
+	}
+	fmt.Fprintf(&b, "    Scenario options — specific to %s, set with --option <name>=<value>:\n", name)
+	for _, o := range opts {
+		fmt.Fprintf(&b, "        %s (%s)", o.Name, o.Type)
+		switch {
+		case o.Required:
+			b.WriteString(" [required]")
+		case o.Default != "":
+			fmt.Fprintf(&b, " [default: %s]", o.Default)
 		}
+		if o.Usage != "" {
+			fmt.Fprintf(&b, "\n            %s", o.Usage)
+		}
+		b.WriteString("\n")
 	}
 
 	return b.String()

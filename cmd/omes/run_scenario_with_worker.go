@@ -21,9 +21,7 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := withCancelOnInterrupt(cmd.Context())
 			defer cancel()
-			if err := r.run(ctx); err != nil {
-				r.Logger.Fatal(err)
-			}
+			exitOnError(r.Logger, r.run(ctx))
 		},
 	}
 	r.addCLIFlags(cmd.Flags())
@@ -51,6 +49,17 @@ func (r *workerWithScenarioRunner) preRun() {
 func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	// Reject bad input before building and starting a worker, which for some
+	// languages takes minutes. Judging that needs only the scenario name and run
+	// config, so this throwaway runner deliberately carries no client options.
+	if _, _, err := (&scenarioRunner{
+		scenario:          r.ScenarioID,
+		scenarioRunConfig: r.scenarioRunConfig,
+	}).validateInput(); err != nil {
+		return err
+	}
+
 	// Start worker and wait on error or started
 	workerErrCh := make(chan error, 1)
 	workerStartCh := make(chan struct{})
@@ -69,7 +78,8 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	case <-workerStartCh:
 	}
 
-	// Run scenario
+	// Run scenario. The client options are read only now that the worker has
+	// started, since starting an embedded server rewrites the server address.
 	scenarioRunner := scenarioRunner{
 		logger:            r.Logger,
 		scenario:          r.ScenarioID,
