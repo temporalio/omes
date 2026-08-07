@@ -180,7 +180,7 @@ func TestBuildWorkflowInput(t *testing.T) {
 		rng: rand.New(rand.NewSource(42)),
 	}
 
-	input := executor.buildWorkflowInput(executor.rng)
+	input := executor.buildWorkflowInput()
 
 	// With updatesPerWF=3 (no fractional part), we should get exactly 3 groups.
 	assert.Equal(t, 3, len(input.CSAUpdates))
@@ -217,7 +217,7 @@ func TestBuildWorkflowInputFractional(t *testing.T) {
 	// Generate many inputs and check the distribution.
 	var withUpdates, withoutUpdates int
 	for i := 0; i < 1000; i++ {
-		input := executor.buildWorkflowInput(executor.rng)
+		input := executor.buildWorkflowInput()
 		if len(input.CSAUpdates) > 0 {
 			withUpdates++
 		} else {
