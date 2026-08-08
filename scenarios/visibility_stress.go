@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -54,8 +55,9 @@ type vsLoadPreset struct {
 	// TODO: MemoSizeBytes    int
 }
 
-// vsQueryPreset controls read-side traffic: query rate and the weighted distribution
-// of query complexity (no-filter, open, closed, simple CSA, compound CSA).
+// vsQueryPreset controls read-side traffic: query rate, the weighted distribution
+// of query complexity (no-filter, open, closed, simple CSA, compound CSA,
+// disjunction), and the selectivity distribution used to build CSA predicates.
 type vsQueryPreset struct {
 	CountRPS              float64 // CountWorkflowExecutions calls per second.
 	ListRPS               float64 // ListWorkflowExecutions calls per second.
@@ -63,7 +65,20 @@ type vsQueryPreset struct {
 	ListOpenWeight        int     // Weight for ExecutionStatus = 'Running' queries.
 	ListClosedWeight      int     // Weight for closed + time range queries.
 	ListSimpleCSAWeight   int     // Weight for single CSA filter queries.
-	ListCompoundCSAWeight int     // Weight for multi-CSA compound filter queries.
+	ListCompoundCSAWeight int     // Weight for multi-CSA ANDed filter queries.
+	ListDisjunctionWeight int     // Weight for multi-CSA ORed filter queries.
+
+	// SelMu and SelSigma parameterize the log-normal selectivity distribution:
+	// log10(selectivity) ~ Normal(SelMu, SelSigma). SelMu=-2 puts the median
+	// clause at 1% of the corpus. See vsRand.sampleSelectivity.
+	SelMu    float64
+	SelSigma float64
+
+	// PageContinueProb is the chance of fetching one more page after each page of
+	// a List result, giving a geometric page-count distribution. MaxPages
+	// truncates it. See visibilityStressExecutor.shouldFetchNextPage.
+	PageContinueProb float64
+	MaxPages         int
 }
 
 var vsLoadPresets = map[string]vsLoadPreset{
@@ -93,17 +108,23 @@ var vsQueryPresets = map[string]vsQueryPreset{
 	"light": {
 		CountRPS: 1, ListRPS: 2,
 		ListNoFilterWeight: 3, ListOpenWeight: 2, ListClosedWeight: 2,
-		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1,
+		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1, ListDisjunctionWeight: 1,
+		SelMu: vsDefaultSelMu, SelSigma: vsDefaultSelSigma,
+		PageContinueProb: vsDefaultPageContinueProb, MaxPages: vsDefaultMaxQueryPages,
 	},
 	"moderate": {
 		CountRPS: 5, ListRPS: 10,
 		ListNoFilterWeight: 3, ListOpenWeight: 2, ListClosedWeight: 2,
-		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1,
+		ListSimpleCSAWeight: 2, ListCompoundCSAWeight: 1, ListDisjunctionWeight: 1,
+		SelMu: vsDefaultSelMu, SelSigma: vsDefaultSelSigma,
+		PageContinueProb: vsDefaultPageContinueProb, MaxPages: vsDefaultMaxQueryPages,
 	},
 	"heavy": {
 		CountRPS: 10, ListRPS: 25,
 		ListNoFilterWeight: 1, ListOpenWeight: 2, ListClosedWeight: 2,
-		ListSimpleCSAWeight: 3, ListCompoundCSAWeight: 2,
+		ListSimpleCSAWeight: 3, ListCompoundCSAWeight: 2, ListDisjunctionWeight: 2,
+		SelMu: vsDefaultSelMu, SelSigma: vsDefaultSelSigma,
+		PageContinueProb: vsDefaultPageContinueProb, MaxPages: vsDefaultMaxQueryPages,
 	},
 }
 
@@ -130,6 +151,52 @@ var vsCSAPresets = map[string][]string{
 	},
 }
 
+const (
+	// vsDefaultVocabZipfSkew is the exponent of the Zipf distribution used to draw
+	// vocabulary words on the write side. Values must be > 1; larger means more
+	// skewed. 1.2 gives a long but not degenerate tail: the most popular word lands
+	// on roughly a fifth of documents while the rarest lands on well under 1%.
+	vsDefaultVocabZipfSkew = 1.2
+
+	// vsDefaultSelMu and vsDefaultSelSigma parameterize log10(selectivity) for
+	// generated CSA predicates. vsDefaultSelMu is only the read-only-mode fallback:
+	// when a loadPreset is set, selMu is derived from the corpus that preset builds.
+	// See deriveSelMu.
+	vsDefaultSelMu    = -2.0
+	vsDefaultSelSigma = 1.0
+
+	// vsTargetMedianHits is the result-set size, in documents, that the median
+	// generated query aims for when selMu is derived rather than supplied. Roughly
+	// one page: deep enough to exercise the sort, short of a full scan.
+	vsTargetMedianHits = 1000.0
+
+	// vsMinDerivedSelMu floors the derived selMu so a huge corpus can't produce a
+	// predicate so narrow that every query matches nothing.
+	vsMinDerivedSelMu = -6.0
+
+	// vsDefaultPageContinueProb is the chance a List query fetches one more page.
+	// 0.4 means ~60% of queries read a single page and the mean is ~1.7, which is
+	// roughly how clients behave: most read the first page of a UI or CLI listing
+	// and only some scroll on.
+	vsDefaultPageContinueProb = 0.4
+
+	// vsDefaultMaxQueryPages truncates the geometric page count. At the default
+	// continuation probability the odds of reaching it are ~0.03%, so it bounds
+	// the worst case without meaningfully clipping the tail. A fixed low cap
+	// would truncate exactly the deep-pagination tail worth measuring.
+	vsDefaultMaxQueryPages = 10
+
+	// vsMinSelectivity floors the sampled selectivity so an extreme draw can't
+	// produce a predicate that is unsatisfiable by construction.
+	vsMinSelectivity = 1e-6
+
+	// vsTextWordsMin and vsTextWordsMax bound the number of vocabulary words packed
+	// into a generated Text CSA value. Text fields are analyzed, so a value built
+	// from vocabulary words is matchable by the same words the querier filters on.
+	vsTextWordsMin = 3
+	vsTextWordsMax = 8
+)
+
 var keywordVocabulary = []string{
 	"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel",
 	"india", "juliet", "kilo", "lima", "mike", "november", "oscar", "papa",
@@ -144,6 +211,56 @@ var keywordVocabulary = []string{
 	"oak", "pine", "elm", "ash", "birch", "cedar", "maple", "willow",
 	"hawk", "wolf", "bear", "deer", "fox", "owl", "eagle", "lion",
 	"ruby", "jade", "opal", "onyx",
+}
+
+// ---------------------------------------------------------------------------
+// Randomness
+//
+// math/rand.Rand is not safe for concurrent use, so every goroutine that
+// generates values or filters owns a vsRand. The Zipf generator is bound to its
+// parent Rand, which is why it lives here rather than as a package-level var.
+// ---------------------------------------------------------------------------
+
+type vsRand struct {
+	*rand.Rand
+	vocabZipf *rand.Zipf
+}
+
+func newVSRand(seed int64, vocabZipfSkew float64) *vsRand {
+	r := rand.New(rand.NewSource(seed))
+	return &vsRand{
+		Rand:      r,
+		vocabZipf: rand.NewZipf(r, vocabZipfSkew, 1.0, uint64(len(keywordVocabulary)-1)),
+	}
+}
+
+// vocabWord returns a vocabulary word with Zipf-distributed popularity, for use
+// on the write side.
+//
+// Key popularity in real workloads is power-law distributed, and that skew is
+// what makes visibility query cost heavy-tailed: most keyword filters hit a rare
+// value and match almost nothing, while the occasional one hits a hot value and
+// scans a large slice of the corpus. Drawing write values uniformly instead
+// pins every keyword filter at exactly 1/len(keywordVocabulary) selectivity,
+// which collapses that spread to a single point.
+//
+// The read side deliberately keeps drawing uniformly (see csaFilterClause), so
+// the skew shows up as variance across queries rather than as a constant shift.
+func (r *vsRand) vocabWord() string {
+	return keywordVocabulary[r.vocabZipf.Uint64()]
+}
+
+// sampleSelectivity draws the fraction of the corpus that a generated predicate
+// should match, with log10(selectivity) ~ Normal(mu, sigma).
+//
+// Sampling selectivity and inverting to a threshold — rather than sampling a
+// threshold and accepting whatever selectivity results — makes the query cost
+// distribution a stated input of the scenario instead of an artifact of the
+// write-side value ranges. Uniform thresholds over uniform values yield uniform
+// selectivity, which is neither realistic nor tunable.
+func (r *vsRand) sampleSelectivity(mu, sigma float64) float64 {
+	s := math.Pow(10, mu+sigma*r.NormFloat64())
+	return math.Min(1, math.Max(vsMinSelectivity, s))
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +307,19 @@ func parseCSAName(name string) (csaDef, error) {
 	}
 }
 
+// usesSelectivityThreshold reports whether a filter clause over this CSA can be
+// aimed at a target selectivity by picking a threshold. Keyword and Text
+// selectivity is set by the Zipf popularity of the drawn word, and Bool is fixed
+// at roughly one half; none of the three respond to selMu.
+func (c csaDef) usesSelectivityThreshold() bool {
+	switch c.Type {
+	case csaTypeInt, csaTypeDouble, csaTypeDatetime:
+		return true
+	default:
+		return false
+	}
+}
+
 func (c csaDef) indexedValueType() enums.IndexedValueType {
 	switch c.Type {
 	case csaTypeInt:
@@ -209,24 +339,27 @@ func (c csaDef) indexedValueType() enums.IndexedValueType {
 	}
 }
 
-func randomCSAValue(c csaDef, rng *rand.Rand) any {
+func randomCSAValue(c csaDef, rng *vsRand) any {
 	switch c.Type {
 	case csaTypeInt:
 		return float64(rng.Intn(1001))
 	case csaTypeKeyword:
-		return keywordVocabulary[rng.Intn(len(keywordVocabulary))]
+		return rng.vocabWord()
 	case csaTypeBool:
 		return rng.Intn(2) == 1
 	case csaTypeDouble:
 		return rng.Float64() * 1000.0
 	case csaTypeText:
-		length := 10 + rng.Intn(41)
-		b := make([]byte, length)
-		const chars = "abcdefghijklmnopqrstuvwxyz0123456789 "
-		for i := range b {
-			b[i] = chars[rng.Intn(len(chars))]
+		// Build the value out of vocabulary words rather than random characters.
+		// Text CSAs are analyzed, so the querier's `VS_Text_01 = 'alpha'` becomes a
+		// match on the token "alpha"; random character junk tokenizes into terms no
+		// filter will ever name, making every Text query a guaranteed zero-hit and
+		// removing the class from the measured cost distribution entirely.
+		words := make([]string, vsTextWordsMin+rng.Intn(vsTextWordsMax-vsTextWordsMin+1))
+		for i := range words {
+			words[i] = rng.vocabWord()
 		}
-		return string(b)
+		return strings.Join(words, " ")
 	case csaTypeDatetime:
 		offset := time.Duration(rng.Int63n(int64(30 * 24 * time.Hour)))
 		return time.Now().Add(-offset).UTC().Format(time.RFC3339)
@@ -251,6 +384,10 @@ type vsConfig struct {
 	// WriterConcurrency is the number of goroutines starting workflows in parallel.
 	// See runWriter for why this must exceed 1 to reach the higher presets' WfRPS.
 	WriterConcurrency int
+	// VocabZipfSkew is the Zipf exponent for write-side vocabulary draws. Lives on
+	// the config rather than the load preset because the querier's vsRand needs a
+	// valid value even in read-only mode, where Load is nil.
+	VocabZipfSkew float64
 }
 
 const (
@@ -266,6 +403,50 @@ const (
 	vsMaxWriterConcurrency = 256
 )
 
+// estimateCorpusSize approximates how many documents the visibility index holds
+// midway through a run of the given duration.
+//
+// Two populations: workflows currently running (a steady-state count set by the
+// start rate and the workflow lifetime), and closed workflows the deleter hasn't
+// caught up with (accumulating at wfRPS-deleteRPS for the whole run). The corpus
+// grows roughly linearly from empty, so the midpoint is what a typical query
+// during the run actually sees.
+func (p vsLoadPreset) estimateCorpusSize(duration time.Duration) float64 {
+	lifetime := p.UpdatesPerWF * p.UpdateDelay.Seconds()
+	running := p.WfRPS * lifetime
+	netCloseRate := math.Max(0, p.WfRPS-p.DeleteRPS)
+	return running + netCloseRate*duration.Seconds()/2
+}
+
+// vsMeanPages is the expected page count of a truncated geometric distribution
+// with continuation probability p and at most maxPages pages: sum of p^k for
+// k in [0, maxPages). Assumes every query has enough results to keep paginating,
+// so it is an upper bound on what a run actually issues.
+func vsMeanPages(p float64, maxPages int) float64 {
+	mean, term := 0.0, 1.0
+	for k := 0; k < maxPages; k++ {
+		mean += term
+		term *= p
+	}
+	return mean
+}
+
+// deriveSelMu picks a median selectivity that makes the median query match about
+// vsTargetMedianHits documents.
+//
+// A fixed selMu is the wrong default because selectivity is a fraction while cost
+// is fraction times corpus, and the load presets differ by two orders of magnitude
+// in corpus size. Deriving it also tracks wfRPS/deleteRPS/duration overrides, which
+// a hardcoded per-preset table cannot.
+func deriveSelMu(load vsLoadPreset, duration time.Duration) float64 {
+	corpus := load.estimateCorpusSize(duration)
+	if corpus <= vsTargetMedianHits {
+		// Corpus is smaller than the target result set; nothing to narrow.
+		return 0
+	}
+	return math.Max(vsMinDerivedSelMu, math.Log10(vsTargetMedianHits/corpus))
+}
+
 // ---------------------------------------------------------------------------
 // Executor
 // ---------------------------------------------------------------------------
@@ -276,7 +457,7 @@ type visibilityStressExecutor struct {
 	namespaces  []string
 	taskQueue   string
 	executionID string
-	rng         *rand.Rand
+	rng         *vsRand
 
 	totalCreated atomic.Int64
 	totalDeleted atomic.Int64
@@ -292,7 +473,10 @@ func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Visibility store stress test.\n" +
 			"Options: loadPreset, queryPreset, csaPreset, namespaceCount, createNamespaces, retention, cleanup,\n" +
-			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25).\n" +
+			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
+			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
+			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
+			"pageContinueProb/maxQueryPages (geometric List pagination depth).\n" +
 			"Duration must be set. At least one of loadPreset or queryPreset required.",
 		ExecutorFn: func() loadgen.Executor { return &visibilityStressExecutor{} },
 	})
@@ -306,6 +490,11 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		CreateNamespaces: info.ScenarioOptionBool("createNamespaces", false),
 		Cleanup:          info.ScenarioOptionBool("cleanup", false),
 		DeleteNamespaces: info.ScenarioOptionBool("deleteNamespaces", false),
+	}
+
+	cfg.VocabZipfSkew = info.ScenarioOptionFloat("vocabZipfSkew", vsDefaultVocabZipfSkew)
+	if cfg.VocabZipfSkew <= 1.0 {
+		return fmt.Errorf("vocabZipfSkew must be > 1.0, got %.2f", cfg.VocabZipfSkew)
 	}
 
 	retentionStr := info.ScenarioOptionString("retention", "168h")
@@ -391,6 +580,36 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		if v := info.ScenarioOptions["listRPS"]; v != "" {
 			preset.ListRPS = info.ScenarioOptionFloat("listRPS", preset.ListRPS)
 		}
+		if v := info.ScenarioOptions["selMu"]; v != "" {
+			preset.SelMu = info.ScenarioOptionFloat("selMu", preset.SelMu)
+		} else if cfg.Load != nil {
+			// Scale the default to the corpus this run will actually build. In
+			// read-only mode there is no load preset to derive from, so the caller
+			// gets vsDefaultSelMu and should set selMu explicitly to match whatever
+			// the prior write run left behind.
+			preset.SelMu = deriveSelMu(*cfg.Load, info.Configuration.Duration)
+		}
+		if v := info.ScenarioOptions["selSigma"]; v != "" {
+			preset.SelSigma = info.ScenarioOptionFloat("selSigma", preset.SelSigma)
+		}
+		if preset.SelMu > 0 {
+			return fmt.Errorf("selMu must be <= 0 (log10 of a fraction), got %.2f", preset.SelMu)
+		}
+		if preset.SelSigma <= 0 {
+			return fmt.Errorf("selSigma must be positive, got %.2f", preset.SelSigma)
+		}
+		if v := info.ScenarioOptions["pageContinueProb"]; v != "" {
+			preset.PageContinueProb = info.ScenarioOptionFloat("pageContinueProb", preset.PageContinueProb)
+		}
+		if v := info.ScenarioOptions["maxQueryPages"]; v != "" {
+			preset.MaxPages = info.ScenarioOptionInt("maxQueryPages", preset.MaxPages)
+		}
+		if preset.PageContinueProb < 0 || preset.PageContinueProb > 1 {
+			return fmt.Errorf("pageContinueProb must be in [0,1], got %.2f", preset.PageContinueProb)
+		}
+		if preset.MaxPages < 1 {
+			return fmt.Errorf("maxQueryPages must be >= 1, got %d", preset.MaxPages)
+		}
 		cfg.Query = &preset
 	}
 
@@ -432,7 +651,7 @@ func (e *visibilityStressExecutor) Run(ctx context.Context, info loadgen.Scenari
 
 	e.taskQueue = loadgen.TaskQueueForRun(info.RunID)
 	e.executionID = info.ExecutionID
-	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	e.rng = newVSRand(time.Now().UnixNano(), e.config.VocabZipfSkew)
 
 	// Resolve namespaces.
 	if e.config.NamespaceCount == 1 {
@@ -624,7 +843,21 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	}
 	if q := e.config.Query; q != nil {
 		info.Logger.Infof("Read: countRPS=%.1f, listRPS=%.1f", q.CountRPS, q.ListRPS)
+		info.Logger.Infof("      filter weights: noFilter=%d open=%d closed=%d simpleCSA=%d compoundCSA=%d disjunction=%d",
+			q.ListNoFilterWeight, q.ListOpenWeight, q.ListClosedWeight,
+			q.ListSimpleCSAWeight, q.ListCompoundCSAWeight, q.ListDisjunctionWeight)
+		info.Logger.Infof("      selectivity: log10(s)~Normal(mu=%.2f, sigma=%.2f), median≈%.4f%% of corpus",
+			q.SelMu, q.SelSigma, 100*math.Pow(10, q.SelMu))
+		if l := e.config.Load; l != nil {
+			corpus := l.estimateCorpusSize(info.Configuration.Duration)
+			info.Logger.Infof("      est. corpus at run midpoint≈%.0f docs, median query≈%.0f hits",
+				corpus, corpus*math.Pow(10, q.SelMu))
+		}
+		info.Logger.Infof("      pagination: continueProb=%.2f, maxPages=%d, mean pages≈%.2f",
+			q.PageContinueProb, q.MaxPages, vsMeanPages(q.PageContinueProb, q.MaxPages))
 	}
+	info.Logger.Infof("Vocabulary: %d words, write-side Zipf skew=%.2f (reads draw uniformly)",
+		len(keywordVocabulary), e.config.VocabZipfSkew)
 }
 
 // ---------------------------------------------------------------------------
@@ -699,10 +932,10 @@ func (e *visibilityStressExecutor) runWriterLoop(
 	ctx context.Context, info loadgen.ScenarioInfo,
 	limiter *rate.Limiter, startTime time.Time, workerIdx int,
 ) {
-	// Each goroutine needs its own rand.Rand: math/rand.Rand is not safe for concurrent
+	// Each goroutine needs its own vsRand: math/rand.Rand is not safe for concurrent
 	// use, and e.rng is owned by the querier goroutine. Offset the seed by workerIdx so
 	// the writers don't all generate the same CSA update sequence.
-	rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(workerIdx)))
+	rng := newVSRand(time.Now().UnixNano()+int64(workerIdx), e.config.VocabZipfSkew)
 
 	logEvery := int64(math.Max(1, e.config.Load.WfRPS))
 
@@ -782,11 +1015,16 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		case <-ticker.C:
 		}
 
+		// The deleter's own List is a visibility read on the same search path as the
+		// querier's, so it is metered too. Left unmeasured it is invisible background
+		// load that scales with deleteRPS and skews the querier's latencies.
+		start := time.Now()
 		resp, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: ns,
 			Query:     query,
 			PageSize:  batchSize,
 		})
+		e.recordQuery(info, "list", vsClassDeleterList, 1, time.Since(start), err)
 		if err != nil {
 			// TODO: better error handling
 			info.Logger.Warnf("[deleter/%s] List failed: %v", ns, err)
@@ -818,9 +1056,58 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 	}
 }
 
+const (
+	vsQueryLatencyMetric = "omes_visibility_query_latency"
+	vsQueryErrorMetric   = "omes_visibility_query_errors"
+)
+
+// shouldFetchNextPage decides whether to read one more page of a List result,
+// having just read page n.
+//
+// Real clients stop scrolling at an unpredictable point, so the page count is a
+// random variable rather than a constant. Each additional page is taken with
+// probability PageContinueProb, making the count geometric and truncated at
+// MaxPages. A fixed cap instead puts a hard edge on the cost distribution right
+// where the deep-pagination tail would be.
+func (e *visibilityStressExecutor) shouldFetchNextPage(page int) bool {
+	q := e.config.Query
+	if page >= q.MaxPages {
+		return false
+	}
+	return e.rng.Float64() < q.PageContinueProb
+}
+
+// recordQuery emits latency and error metrics for a single visibility read.
+//
+// Tagging by class matters: aggregate percentiles over the whole query mix are
+// dominated by whichever class carries the most weight, so they shift when the
+// queryPreset weights change and runs stop being comparable. Per-class series
+// plus the known weights let any aggregate be reconstructed afterwards.
+func (e *visibilityStressExecutor) recordQuery(
+	info loadgen.ScenarioInfo,
+	operation, class string,
+	page int,
+	elapsed time.Duration,
+	err error,
+) {
+	if info.MetricsHandler == nil {
+		return
+	}
+	handler := info.MetricsHandler.WithTags(map[string]string{
+		"operation":   operation,
+		"query_class": class,
+		"page":        strconv.Itoa(page),
+	})
+	handler.Timer(vsQueryLatencyMetric).Record(elapsed)
+	if err != nil {
+		handler.Counter(vsQueryErrorMetric).Inc(1)
+	}
+}
+
 // runQuerier issues List and Count workflow queries at the configured RPS.
 // Query type is chosen by weighted random from the queryPreset distribution.
-// List queries fetch up to 3 pages (page 1, 2, 3) to exercise pagination.
+// List queries fetch a geometrically distributed number of pages to exercise
+// search_after pagination; see shouldFetchNextPage.
 func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.ScenarioInfo) {
 	q := e.config.Query
 	totalRPS := q.CountRPS + q.ListRPS
@@ -834,7 +1121,7 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 	var queryErrors atomic.Int64
 
 	totalWeight := q.ListNoFilterWeight + q.ListOpenWeight + q.ListClosedWeight +
-		q.ListSimpleCSAWeight + q.ListCompoundCSAWeight
+		q.ListSimpleCSAWeight + q.ListCompoundCSAWeight + q.ListDisjunctionWeight
 
 	// Log every ~1 second worth of queries, with a minimum of every 1s.
 	logInterval := int64(math.Max(1, totalRPS))
@@ -850,15 +1137,17 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 		ns := e.namespaces[nsIdx]
 
 		isCount := e.rng.Float64() < q.CountRPS/totalRPS
-		filter := e.generateFilter(isCount, totalWeight)
+		filter, class := e.generateFilter(isCount, totalWeight)
 
 		var queryType string
 		if isCount {
 			queryType = "count"
+			start := time.Now()
 			_, err := e.clients[nsIdx].CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 				Namespace: ns,
 				Query:     filter,
 			})
+			e.recordQuery(info, queryType, class, 1, time.Since(start), err)
 			if err != nil {
 				// TODO: better error handling
 				queryErrors.Add(1)
@@ -866,39 +1155,38 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 			}
 		} else {
 			queryType = "list"
-			resp, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
-				Namespace: ns,
-				Query:     filter,
-			})
-			if err != nil {
-				// TODO: better error handling
-				queryErrors.Add(1)
-				info.Logger.Warnf("[querier] List failed (filter=%s): %v", filter, err)
-			} else if len(resp.NextPageToken) > 0 {
-				resp2, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
+			// Each page is timed separately: page 1 and a deep page are different
+			// cost points, and averaging them hides that.
+			var pageToken []byte
+			for page := 1; ; page++ {
+				start := time.Now()
+				resp, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
 					Namespace:     ns,
 					Query:         filter,
-					NextPageToken: resp.NextPageToken,
+					NextPageToken: pageToken,
 				})
-				if err == nil && len(resp2.NextPageToken) > 0 {
-					_, _ = e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
-						Namespace:     ns,
-						Query:         filter,
-						NextPageToken: resp2.NextPageToken,
-					})
+				e.recordQuery(info, queryType, class, page, time.Since(start), err)
+				if err != nil {
+					// TODO: better error handling
+					queryErrors.Add(1)
+					info.Logger.Warnf("[querier] List failed (filter=%s): %v", filter, err)
+					break
 				}
+				if len(resp.NextPageToken) == 0 || !e.shouldFetchNextPage(page) {
+					break
+				}
+				pageToken = resp.NextPageToken
 			}
 		}
-		_ = queryType // used in debug logging below
 
 		total := e.totalQueries.Add(1)
 
 		// Periodic logging.
 		if total%logInterval == 0 || time.Since(lastLogTime) >= 5*time.Second {
 			elapsed := time.Since(startTime)
-			info.Logger.Infof("[querier] t=%v queries=%d errors=%d actual_rps=%.1f last=%s filter=%s",
+			info.Logger.Infof("[querier] t=%v queries=%d errors=%d actual_rps=%.1f last=%s class=%s filter=%s",
 				elapsed.Round(time.Second), total, queryErrors.Load(),
-				float64(total)/elapsed.Seconds(), queryType, filter)
+				float64(total)/elapsed.Seconds(), queryType, class, filter)
 			lastLogTime = time.Now()
 		}
 	}
@@ -908,21 +1196,35 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 // Query Generation
 // ---------------------------------------------------------------------------
 
-func (e *visibilityStressExecutor) generateFilter(isCount bool, totalWeight int) string {
+// Query classes, used both to pick a filter shape and to tag the latency metrics
+// so each class's cost distribution can be fitted separately.
+const (
+	vsClassNoFilter    = "no_filter"
+	vsClassOpen        = "open"
+	vsClassClosed      = "closed_time_range"
+	vsClassSimpleCSA   = "simple_csa"
+	vsClassCompoundCSA = "compound_csa"
+	vsClassDisjunction = "disjunction_csa"
+	vsClassKeyword     = "keyword"
+	vsClassDeleterList = "deleter_list"
+)
+
+// generateFilter returns a visibility query and the class it belongs to.
+func (e *visibilityStressExecutor) generateFilter(isCount bool, totalWeight int) (string, string) {
 	if isCount {
 		switch e.rng.Intn(3) {
 		case 0:
-			return "WorkflowType = 'visibilityStressWorker'"
+			return "WorkflowType = 'visibilityStressWorker'", vsClassNoFilter
 		case 1:
-			return "ExecutionStatus = 'Running'"
+			return "ExecutionStatus = 'Running'", vsClassOpen
 		default:
 			kwCSAs := e.csasByType(csaTypeKeyword)
 			if len(kwCSAs) > 0 {
 				csa := kwCSAs[e.rng.Intn(len(kwCSAs))]
 				val := keywordVocabulary[e.rng.Intn(len(keywordVocabulary))]
-				return fmt.Sprintf("%s = '%s'", csa.Name, val)
+				return fmt.Sprintf("%s = '%s'", csa.Name, val), vsClassKeyword
 			}
-			return "WorkflowType = 'visibilityStressWorker'"
+			return "WorkflowType = 'visibilityStressWorker'", vsClassNoFilter
 		}
 	}
 
@@ -932,73 +1234,157 @@ func (e *visibilityStressExecutor) generateFilter(isCount bool, totalWeight int)
 
 	cumulative += q.ListNoFilterWeight
 	if roll < cumulative {
-		return "WorkflowType = 'visibilityStressWorker'"
+		return "WorkflowType = 'visibilityStressWorker'", vsClassNoFilter
 	}
 
 	cumulative += q.ListOpenWeight
 	if roll < cumulative {
-		return "WorkflowType = 'visibilityStressWorker' AND ExecutionStatus = 'Running'"
+		return "WorkflowType = 'visibilityStressWorker' AND ExecutionStatus = 'Running'", vsClassOpen
 	}
 
 	cumulative += q.ListClosedWeight
 	if roll < cumulative {
 		since := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
-		return fmt.Sprintf("ExecutionStatus != 'Running' AND CloseTime > '%s'", since)
+		return fmt.Sprintf("ExecutionStatus != 'Running' AND CloseTime > '%s'", since), vsClassClosed
 	}
 
 	cumulative += q.ListSimpleCSAWeight
 	if roll < cumulative {
-		return e.generateSimpleCSAFilter()
+		return e.generateSimpleCSAFilter(), vsClassSimpleCSA
 	}
 
-	return e.generateCompoundCSAFilter()
+	cumulative += q.ListCompoundCSAWeight
+	if roll < cumulative {
+		return e.generateCompoundCSAFilter(), vsClassCompoundCSA
+	}
+
+	return e.generateDisjunctionFilter(), vsClassDisjunction
+}
+
+// vsClauseMuFn maps the query-level selectivity target onto a per-clause target,
+// given how many of the clauses can actually be tuned by a threshold.
+//
+// Without this the target applies to every clause independently, and a multi-clause
+// filter overshoots badly: three ANDed clauses at 10^-2.5 each combine to 10^-7.5,
+// which matches nothing on any corpus this scenario builds. That would make the
+// compound class degenerate in the same way the Text class used to be.
+type vsClauseMuFn func(queryMu float64, tunableClauses int) float64
+
+// vsConjunctionMu spreads the target across ANDed clauses: selectivities multiply,
+// so their log10s add and each clause takes an equal share.
+func vsConjunctionMu(queryMu float64, tunableClauses int) float64 {
+	return queryMu / float64(tunableClauses)
+}
+
+// vsDisjunctionMu tightens each ORed clause: selectivities roughly sum, so n
+// clauses at s together match about n*s.
+func vsDisjunctionMu(queryMu float64, tunableClauses int) float64 {
+	return queryMu - math.Log10(float64(tunableClauses))
 }
 
 func (e *visibilityStressExecutor) generateSimpleCSAFilter() string {
 	csa := e.config.CSADefs[e.rng.Intn(len(e.config.CSADefs))]
-	return e.csaFilterClause(csa)
+	return e.csaFilterClause(csa, e.config.Query.SelMu)
 }
 
 func (e *visibilityStressExecutor) generateCompoundCSAFilter() string {
-	n := 2 + e.rng.Intn(2)
+	return strings.Join(e.distinctCSAClauses(2, 3, vsConjunctionMu), " AND ")
+}
+
+// generateDisjunctionFilter ORs several CSA clauses together.
+//
+// This is the expensive shape, and the one the AND-based compound class does not
+// cover. A conjunction costs roughly its rarest clause, because the engine leads
+// with the smallest posting list and skips — so adding terms to an AND generally
+// makes a query cheaper. A disjunction has to evaluate and union every clause,
+// so cost grows with the sum of the clauses' selectivities rather than the min.
+func (e *visibilityStressExecutor) generateDisjunctionFilter() string {
+	clauses := e.distinctCSAClauses(2, 3, vsDisjunctionMu)
+	if len(clauses) < 2 {
+		// A one-clause "disjunction" is just a simple filter; don't wrap it.
+		return strings.Join(clauses, "")
+	}
+	return "(" + strings.Join(clauses, " OR ") + ")"
+}
+
+// distinctCSAClauses builds between minClauses and maxClauses filter clauses over
+// distinct CSAs, so a compound filter never contradicts itself by constraining
+// the same attribute twice. muFn redistributes the query-level selectivity target
+// across the clauses according to how they will be combined.
+func (e *visibilityStressExecutor) distinctCSAClauses(
+	minClauses, maxClauses int, muFn vsClauseMuFn,
+) []string {
+	n := minClauses + e.rng.Intn(maxClauses-minClauses+1)
 	if n > len(e.config.CSADefs) {
 		n = len(e.config.CSADefs)
 	}
 	perm := e.rng.Perm(len(e.config.CSADefs))
-	clauses := make([]string, n)
-	for i := 0; i < n; i++ {
-		clauses[i] = e.csaFilterClause(e.config.CSADefs[perm[i]])
+	chosen := make([]csaDef, n)
+	for i := range chosen {
+		chosen[i] = e.config.CSADefs[perm[i]]
 	}
-	return strings.Join(clauses, " AND ")
+
+	// Only threshold clauses honor selMu, so the target is split across those
+	// rather than across every clause. Dividing by n when two of three clauses are
+	// Keyword or Bool would make the one tunable clause far narrower than intended.
+	tunable := 0
+	for _, csa := range chosen {
+		if csa.usesSelectivityThreshold() {
+			tunable++
+		}
+	}
+	if tunable == 0 {
+		tunable = 1
+	}
+	clauseMu := muFn(e.config.Query.SelMu, tunable)
+
+	clauses := make([]string, n)
+	for i, csa := range chosen {
+		clauses[i] = e.csaFilterClause(csa, clauseMu)
+	}
+	return clauses
 }
 
-func (e *visibilityStressExecutor) csaFilterClause(csa csaDef) string {
+// csaFilterClause builds a predicate over one CSA targeting a log-normally
+// distributed selectivity. Because the write-side value distributions are known
+// and uniform (see randomCSAValue), the target fraction inverts directly into a
+// threshold.
+//
+// Keyword and Text clauses are the exception: their selectivity is set by the
+// Zipf popularity of the drawn word, not by a threshold. The read side draws
+// uniformly on purpose, so which word it lands on is what varies the cost.
+func (e *visibilityStressExecutor) csaFilterClause(csa csaDef, selMu float64) string {
+	s := e.rng.sampleSelectivity(selMu, e.config.Query.SelSigma)
+
 	switch csa.Type {
 	case csaTypeInt:
-		v := e.rng.Intn(1001)
+		// Values are uniform over [0,1000], so P(X > t) = (1000-t)/1000.
 		if e.rng.Intn(2) == 0 {
-			return fmt.Sprintf("%s > %d", csa.Name, v)
+			return fmt.Sprintf("%s > %d", csa.Name, int(math.Round(1000*(1-s))))
 		}
-		lo, hi := e.rng.Intn(500), 500+e.rng.Intn(501)
-		return fmt.Sprintf("%s > %d AND %s < %d", csa.Name, lo, csa.Name, hi)
+		width := math.Max(1, 1000*s)
+		lo := e.rng.Float64() * (1000 - width)
+		return fmt.Sprintf("%s > %d AND %s < %d",
+			csa.Name, int(lo), csa.Name, int(math.Ceil(lo+width)))
 	case csaTypeKeyword:
 		val := keywordVocabulary[e.rng.Intn(len(keywordVocabulary))]
 		return fmt.Sprintf("%s = '%s'", csa.Name, val)
 	case csaTypeBool:
+		// Booleans have exactly two values; selectivity is fixed at ~0.5.
 		if e.rng.Intn(2) == 0 {
 			return fmt.Sprintf("%s = true", csa.Name)
 		}
 		return fmt.Sprintf("%s = false", csa.Name)
 	case csaTypeDouble:
-		v := e.rng.Float64() * 1000.0
-		return fmt.Sprintf("%s > %f", csa.Name, v)
+		return fmt.Sprintf("%s > %f", csa.Name, 1000*(1-s))
 	case csaTypeText:
 		val := keywordVocabulary[e.rng.Intn(len(keywordVocabulary))]
 		return fmt.Sprintf("%s = '%s'", csa.Name, val)
 	case csaTypeDatetime:
-		offset := time.Duration(e.rng.Int63n(int64(30 * 24 * time.Hour)))
-		t := time.Now().Add(-offset).UTC().Format(time.RFC3339)
-		return fmt.Sprintf("%s > '%s'", csa.Name, t)
+		// Values are now minus a uniform offset over the last 30 days, so a lower
+		// bound s of the way back matches a fraction s of them.
+		t := time.Now().Add(-time.Duration(s * float64(30*24*time.Hour)))
+		return fmt.Sprintf("%s > '%s'", csa.Name, t.UTC().Format(time.RFC3339))
 	default:
 		return "WorkflowType = 'visibilityStressWorker'"
 	}
@@ -1024,7 +1410,7 @@ func (e *visibilityStressExecutor) csasByType(t csaType) []csaDef {
 //
 // rng is supplied by the caller rather than taken from e.rng: this runs on every writer
 // goroutine, and math/rand.Rand is not safe for concurrent use.
-func (e *visibilityStressExecutor) buildWorkflowInput(rng *rand.Rand) *vstypes.VisibilityWorkerInput {
+func (e *visibilityStressExecutor) buildWorkflowInput(rng *vsRand) *vstypes.VisibilityWorkerInput {
 	cfg := e.config.Load
 
 	wholeUpdates := int(cfg.UpdatesPerWF)

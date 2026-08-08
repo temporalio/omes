@@ -78,8 +78,125 @@ Query types (weighted distribution):
 - **Closed + time range**: `ExecutionStatus != 'Running' AND CloseTime > ...`
 - **Simple CSA**: Single CSA filter (e.g., `VS_Int_01 > 500`)
 - **Compound CSA**: Multiple CSAs ANDed (e.g., `VS_Int_01 > 200 AND VS_Keyword_01 = 'alpha'`)
+- **Disjunction CSA**: Multiple CSAs ORed (e.g., `(VS_Int_01 > 900 OR VS_Keyword_01 = 'alpha')`)
 
-List queries fetch up to 3 pages to exercise pagination.
+List queries fetch a randomized number of pages to exercise `search_after`
+pagination; see [Pagination Depth](#pagination-depth).
+
+Disjunctions exist as a separate class because they are the expensive shape and ANDs
+do not cover them. A conjunction costs roughly its *rarest* clause — the engine leads
+with the smallest posting list and skips — so adding terms to an AND usually makes a
+query cheaper. A disjunction must evaluate and union every clause, so its cost tracks
+the *sum* of the clauses' selectivities.
+
+### Query Complexity Distribution
+
+The cost of a CSA filter is driven by its selectivity: how much of the corpus it
+matches. Two mechanisms control that, and both are tunable.
+
+**Threshold predicates** (Int, Double, Datetime) sample a target selectivity and
+invert it into a threshold, rather than sampling a threshold and accepting whatever
+selectivity results. `log10(selectivity) ~ Normal(selMu, selSigma)`, so query cost is
+log-normal by construction instead of an artifact of the write-side value ranges.
+
+| Option     | Default   | Description                                          |
+|------------|-----------|-------------------------------------------------------|
+| `selMu`    | *derived* | log10 of the median selectivity (`-2` = 1% of corpus) |
+| `selSigma` | `1.0`     | Spread in log10 space; larger means a heavier tail    |
+
+#### Why `selMu` is derived, not fixed
+
+Selectivity is a *fraction*, but cost is `fraction x corpus`, and the load presets
+differ by two orders of magnitude in corpus size. A single fixed `selMu` would mean
+wildly different absolute costs across presets.
+
+So when a `loadPreset` is set, `selMu` defaults to whatever makes the median query
+match about **1000 documents** (roughly one page: deep enough to exercise the sort,
+short of a full scan). The corpus estimate combines running workflows
+(`wfRPS x updatesPerWF x updateDelay`) with closed-but-undeleted ones
+(`(wfRPS - deleteRPS) x duration / 2`, the midpoint of linear growth).
+
+For a 1-hour run:
+
+| Preset     | Est. corpus | Derived `selMu` | Median hits |
+|------------|-------------|-----------------|-------------|
+| `light`    | ~14k        | -1.16           | ~1000       |
+| `moderate` | ~145k       | -2.16           | ~1000       |
+| `heavy`    | ~1.45M      | -3.16           | ~1000       |
+
+Each 10x step in load shifts `selMu` by -1. Deriving rather than hardcoding also
+tracks `wfRPS` / `deleteRPS` / `--duration` overrides, which a static table cannot.
+The actual values are logged at startup. In **read-only mode** there is no load
+preset to derive from, so `selMu` falls back to `-2.0` — set it explicitly to match
+whatever the prior write run left behind.
+
+#### Choosing `selSigma`
+
+`selSigma` sets how many decades of cost the run sweeps (`+/-2 sigma` spans `4 x sigma`
+decades):
+
+| `selSigma` | Span    | Use for                                    |
+|------------|---------|--------------------------------------------|
+| `0.5`      | 2 decades | Low-variance A/B comparison between builds |
+| `1.0`      | 4 decades | **Default** — realistic spread             |
+| `1.5`      | 6 decades | Deliberately tail-heavy stress             |
+
+Selectivity is clamped at 1.0, so a fraction `P(Z > -selMu/selSigma)` of draws
+saturate into full scans: 0.6% at `selMu=-2.5, selSigma=1`, but 16% at
+`selSigma=1.5`. Past that point it stops being a distribution and becomes "one query
+in six is a full scan."
+
+#### Multi-clause corrections
+
+Compound and disjunction filters sample per clause, so the target is redistributed
+to keep the *query* on target:
+
+- **AND**: selectivities multiply, so log10s add — each tunable clause takes
+  `selMu / n`. Without this, three clauses at `10^-2.5` combine to `10^-7.5` and
+  match nothing on any corpus the scenario builds, making the compound class
+  degenerate.
+- **OR**: selectivities roughly sum, so each clause is tightened by `log10(n)`.
+
+The split covers only threshold clauses. Keyword, Text, and Bool clauses ignore
+`selMu` entirely, so dividing by the full clause count when two of three are Keyword
+would over-narrow the one tunable clause.
+
+### Pagination Depth
+
+After each page of a List result, the querier fetches one more with probability
+`pageContinueProb`, so the page count is geometric, truncated at `maxQueryPages`.
+
+| Option             | Default | Description                                     |
+|--------------------|---------|--------------------------------------------------|
+| `pageContinueProb` | `0.4`   | Chance of reading one more page (must be in `[0,1]`) |
+| `maxQueryPages`    | `10`    | Hard cap on pages per List query (must be `>= 1`) |
+
+At the defaults, ~60% of queries read a single page, ~24% read two, and the mean is
+~1.66 pages. That roughly matches client behavior: most callers read the first page
+of a UI or CLI listing and only some scroll on.
+
+A fixed cap puts a hard edge on the cost distribution exactly where the
+deep-pagination tail would be, which is why the count is randomized and the cap is
+set high enough to rarely bind (~0.03% of queries reach 10 pages at the defaults).
+Set `pageContinueProb=0` for single-page queries only, or `pageContinueProb=1` with
+a low `maxQueryPages` to force a fixed depth.
+
+Note that `search_after` is O(page size) regardless of depth — unlike `from`/`size`
+offset paging, page 10 costs about what page 1 costs. Pagination depth therefore
+adds request volume rather than a per-request cost tail; the dominant cost term stays
+the initial match and sort.
+
+**Vocabulary predicates** (Keyword, Text) get their selectivity from word popularity.
+Write-side values are drawn Zipf, read-side filters draw uniformly, so most queries hit
+a rare word and match almost nothing while the occasional one hits a hot word and scans
+a large slice of the corpus. Drawing writes uniformly instead would pin every keyword
+filter at exactly 1/100 selectivity and collapse that spread to a point.
+
+| Option          | Default | Description                                        |
+|-----------------|---------|-----------------------------------------------------|
+| `vocabZipfSkew` | `1.2`   | Zipf exponent for write-side word draws (must be >1) |
+
+Bool predicates are always ~50% selective and are not tunable.
 
 ### CSA Presets (`--option csaPreset=...`)
 
@@ -242,10 +359,14 @@ Cleanup terminates all running workflows and deletes all workflows with
 
 ### Query Overrides (apply on top of `queryPreset`)
 
-| Option     | Type  | Description                        |
-|------------|-------|------------------------------------|
-| `countRPS` | float | CountWorkflowExecutions per second |
-| `listRPS`  | float | ListWorkflowExecutions per second  |
+| Option     | Type  | Description                                                |
+|------------|-------|-------------------------------------------------------------|
+| `countRPS` | float | CountWorkflowExecutions per second                         |
+| `listRPS`  | float | ListWorkflowExecutions per second                          |
+| `selMu`    | float | log10 of median filter selectivity (must be `<= 0`); derived from the load preset if unset |
+| `selSigma` | float | Spread of log10(selectivity); must be positive             |
+| `pageContinueProb` | float | Chance of fetching one more List page; must be in `[0,1]` |
+| `maxQueryPages`    | int   | Hard cap on pages per List query; must be `>= 1`        |
 
 ### Namespace & Environment
 
@@ -254,6 +375,7 @@ Cleanup terminates all running workflows and deletes all workflows with
 | `namespaceCount`   | int      | `1`     | Number of namespaces to spread load across               |
 | `createNamespaces` | bool     | `false` | Auto-create namespaces (ignored when `namespaceCount=1`) |
 | `retention`        | duration | `168h`  | Namespace retention period (minimum `24h`)               |
+| `vocabZipfSkew`    | float    | `1.2`   | Zipf exponent for write-side vocabulary draws (must be >1) |
 
 ### Modes
 
@@ -286,6 +408,33 @@ Cleanup terminates all running workflows and deletes all workflows with
 5. **Querier goroutine**: Rate-limited loop issues List/Count queries with varying filter
    complexity, fetching up to 3 pages per query.
 6. **Teardown**: Log final stats (total created, deleted, queried, errors).
+
+### Metrics
+
+Every visibility read is timed and tagged, so each query class's latency distribution
+can be fitted separately:
+
+| Metric                          | Type    | Tags                              |
+|---------------------------------|---------|-----------------------------------|
+| `omes_visibility_query_latency` | Timer   | `operation`, `query_class`, `page` |
+| `omes_visibility_query_errors`  | Counter | `operation`, `query_class`, `page` |
+
+- `operation` — `list` or `count`
+- `query_class` — `no_filter`, `open`, `closed_time_range`, `simple_csa`,
+  `compound_csa`, `disjunction_csa`, `keyword`, `deleter_list`
+- `page` — which page of a paginated List; page 1 and a deep page are different
+  cost points and averaging them hides that. The counts per `page` tag also give
+  you the realized pagination-depth distribution.
+
+Always break out by `query_class`. An aggregate percentile over the whole mix is
+dominated by whichever class carries the most weight, so it shifts whenever the
+`queryPreset` weights change and runs stop being comparable. Per-class series plus
+the known weights let any aggregate be reconstructed afterwards.
+
+`deleter_list` covers the deleter's own List call. It is a real visibility read on
+the same search path as the querier's, it scales with `deleteRPS`, and it will skew
+querier latencies if you forget it is running. Set `deleteRPS=0` when fitting a
+clean querier distribution.
 
 ### Derived Rates (Logged at Startup)
 
