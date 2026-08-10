@@ -116,7 +116,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 
 	serverRef, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
-	require.NotEmpty(t, serverRef, "SERVER_VERSION must be set in versions.env")
+	require.NotEmpty(t, serverRef, "SERVER_VERSION must be set in mise.toml")
 
 	testLogger := zaptest.NewLogger(t)
 	serverLogger := testLogger.Named("devserver").Sugar()

@@ -42,14 +42,14 @@ var (
 	}
 )
 
-// getVersion returns the version for a given tool from versions.env.
-// Tool names map to versions.env keys by lowercasing, replacing "-" with "_",
-// and appending "_version" (e.g. "java-sdk" -> "java_sdk_version").
+// getVersion returns the version for a given tool from mise.toml.
+// Tool names map to the previous version key convention (for example,
+// "java-sdk" maps to "java_sdk_version") so existing callers stay stable.
 func getVersion(tool string) (string, error) {
 	key := strings.ToLower(strings.ReplaceAll(tool, "-", "_")) + "_version"
 	v, err := versions.Get(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to load versions.env: %w", err)
+		return "", fmt.Errorf("failed to load mise.toml: %w", err)
 	}
 	if v == "" {
 		return "", fmt.Errorf("version not found for %s (var: %s)", tool, key)
@@ -80,6 +80,32 @@ func runCommandInDir(ctx context.Context, dir, name string, args ...string) erro
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func runMise(ctx context.Context, args ...string) error {
+	return runCommand(ctx, "mise", args...)
+}
+
+func runMiseExecInDir(ctx context.Context, dir string, command string, args ...string) error {
+	miseArgs := []string{"exec", "--", command}
+	miseArgs = append(miseArgs, args...)
+	cmd := exec.CommandContext(ctx, "mise", miseArgs...)
+	cmd.Dir = dir
+	cmd.Env = environmentWithMiseAutoInstallDisabled()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func environmentWithMiseAutoInstallDisabled() []string {
+	env := os.Environ()
+	for i, value := range env {
+		if strings.HasPrefix(value, "MISE_AUTO_INSTALL=") {
+			env[i] = "MISE_AUTO_INSTALL=false"
+			return env
+		}
+	}
+	return append(env, "MISE_AUTO_INSTALL=false")
 }
 
 // runCommandOutput executes a command and returns combined stdout and stderr as a string
@@ -117,7 +143,6 @@ func getTargetDir(target string) (string, error) {
 	}
 	return filepath.Join(repoDir, "workers", target), nil
 }
-
 
 // checkMise verifies that mise is installed
 func checkMise() error {

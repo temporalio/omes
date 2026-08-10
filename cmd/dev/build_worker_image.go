@@ -60,12 +60,12 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	lang := b.sdkOptions.Language.String()
 	sdkVersion := b.sdkOptions.Version
 
-	// If no version provided, load from versions.env
+	// If no version is provided, load it from mise.toml.
 	if sdkVersion == "" {
 		if loadedVersion, err := getVersion(lang + "_sdk"); err == nil {
 			sdkVersion = loadedVersion
 		} else {
-			return fmt.Errorf("no version specified and failed to load from versions.env for %s: %w", lang, err)
+			return fmt.Errorf("no version specified and failed to load from mise.toml for %s: %w", lang, err)
 		}
 	}
 
@@ -115,6 +115,13 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 			b.tags = append(b.tags, langTagComponent)
 			b.tags = append(b.tags, lang+"-latest")
 		}
+	}
+	if lang == "typescript" {
+		pnpmVersion, err := getVersion("pnpm")
+		if err != nil {
+			return fmt.Errorf("load pnpm version: %w", err)
+		}
+		buildArgs = append(buildArgs, "PNPM_VERSION="+pnpmVersion)
 	}
 	imageTagsForPublish := b.generateImageTags()
 

@@ -220,7 +220,7 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		Version:        version,
 		TSConfigPaths:  map[string][]string{"@temporalio/omes": {filepath.ToSlash(filepath.Join("..", "apps", "registry.ts"))}},
 		DirName:        b.DirName,
-		ApplyToCommand: nil,
+		ApplyToCommand: usePnpmInsteadOfCorepack,
 		Includes: []string{
 			"../apps/**/*.ts",
 			"../harness/*.ts",
@@ -240,6 +240,30 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
 	return prog, nil
+}
+
+func usePnpmInsteadOfCorepack(_ context.Context, cmd *exec.Cmd) error {
+	if !isCorepackExecutable(cmd.Path) || len(cmd.Args) < 2 || cmd.Args[0] != "corepack" ||
+		cmd.Args[1] != "pnpm" {
+		return nil
+	}
+
+	pnpmPath, err := exec.LookPath("pnpm")
+	if err != nil {
+		return fmt.Errorf("find pnpm executable on PATH: %w", err)
+	}
+	cmd.Path = pnpmPath
+	cmd.Args = append([]string{pnpmPath}, cmd.Args[2:]...)
+	return nil
+}
+
+func isCorepackExecutable(path string) bool {
+	switch strings.ToLower(filepath.Base(path)) {
+	case "corepack", "corepack.bat", "corepack.cmd", "corepack.exe":
+		return true
+	default:
+		return false
+	}
 }
 
 func (b *Builder) buildDotNet(ctx context.Context, baseDir string) (sdkbuild.Program, error) {

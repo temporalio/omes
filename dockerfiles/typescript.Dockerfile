@@ -51,12 +51,11 @@ ENV BUILD_CORE_RELEASE=${BUILD_CORE_RELEASE}
 # Copy the worker files
 COPY workers/proto ./workers/proto
 COPY workers/typescript ./workers/typescript
-COPY versions.env ./
 
 # Pin pnpm through Corepack because sdkbuild invokes `corepack pnpm` and
 # TypeScript SDK repo scripts invoke bare `pnpm`.
-RUN . ./versions.env \
- && test -n "${PNPM_VERSION}" \
+ARG PNPM_VERSION
+RUN test -n "${PNPM_VERSION}" \
  && corepack enable \
  && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
  && corepack pnpm --version \
