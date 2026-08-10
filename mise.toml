@@ -5,6 +5,7 @@ go = "1.26.5"
 go-junit-report = "2.1.0"
 java = "temurin-11"
 node = "24"
+npm = "11.17.0"
 pnpm = "10.32.1"
 protoc = "25.1"
 protoc-gen-go = "v1.31.0"
@@ -17,10 +18,130 @@ uv = "0.7.19"
 [_.sdk]
 dotnet = "1.17.0"
 go = "1.47.0"
-java = "1.35.0"
+java = "1.37.0"
 python = "1.31.0"
-ruby = "1.5.0"
-typescript = "1.18.1"
+ruby = "1.6.0"
+typescript = "1.22.0"
 
 [_.server]
 ref = "a4afe583eff6edd6a0d6aa9dc96d5dfec7996c77"
+
+[tasks."sync-sdk:go"]
+description = "Sync Go SDK dependencies to the version in mise.toml"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.go)"
+go get "go.temporal.io/sdk@v${TEMPORAL_SDK_VERSION}"
+go -C workers/go get "go.temporal.io/sdk@v${TEMPORAL_SDK_VERSION}"
+go -C workers/go mod tidy
+'''
+
+[tasks."sync-sdk:typescript"]
+description = "Sync TypeScript SDK dependencies to the version in mise.toml"
+dir = "workers/typescript"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.typescript)"
+STAGING_DIR="$(mktemp -d)"
+trap 'rm -rf "$STAGING_DIR"' EXIT
+
+cp package.json package-lock.json "$STAGING_DIR/"
+cp package.json "$STAGING_DIR/package.original.json"
+cd "$STAGING_DIR"
+npm install --package-lock-only --save-exact --ignore-scripts --no-audit --no-fund \
+  "@temporalio/activity@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/client@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/common@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/worker@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/workflow@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/testing@${TEMPORAL_SDK_VERSION}"
+cp package.original.json package.json
+npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+node - "$TEMPORAL_SDK_VERSION" <<'NODE'
+const fs = require('node:fs');
+const expected = process.argv[2];
+const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+const packages = ['activity', 'client', 'common', 'testing', 'worker', 'workflow'];
+for (const name of packages) {
+  const actual = lock.packages?.[`node_modules/@temporalio/${name}`]?.version;
+  if (actual !== expected) {
+    throw new Error(`@temporalio/${name}: expected ${expected}, found ${actual ?? 'missing'}`);
+  }
+}
+NODE
+
+cp package-lock.json "$MISE_CONFIG_ROOT/workers/typescript/package-lock.json"
+'''
+
+[tasks."sync-sdk:java"]
+description = "Sync Java SDK dependencies to the version in mise.toml"
+dir = "workers/java"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.java)"
+python3 - "$TEMPORAL_SDK_VERSION" <<'PYTHON'
+from pathlib import Path
+import re
+import sys
+
+path = Path("build.gradle")
+contents = path.read_text()
+version = sys.argv[1]
+for artifact in ("temporal-sdk", "temporal-testing"):
+    pattern = rf"(io\.temporal:{artifact}:)[^'\"]+"
+    contents, count = re.subn(pattern, rf"\g<1>{version}", contents)
+    if count != 1:
+        raise SystemExit(f"expected one {artifact} dependency, found {count}")
+path.write_text(contents)
+PYTHON
+'''
+
+[tasks."sync-sdk:python"]
+description = "Sync Python SDK dependencies to the version in mise.toml"
+dir = "workers/python"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.python)"
+uv lock --upgrade-package "temporalio==${TEMPORAL_SDK_VERSION}"
+'''
+
+[tasks."sync-sdk:dotnet"]
+description = "Sync .NET SDK dependencies to the version in mise.toml"
+dir = "workers/dotnet"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.dotnet)"
+dotnet add Temporalio.Omes.csproj package Temporalio \
+  --version "$TEMPORAL_SDK_VERSION" \
+  --no-restore
+'''
+
+[tasks."sync-sdk:ruby"]
+description = "Sync Ruby SDK dependencies to the version in mise.toml"
+dir = "workers/ruby"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.ruby)"
+python3 - "$TEMPORAL_SDK_VERSION" <<'PYTHON'
+from pathlib import Path
+import re
+import sys
+
+path = Path("Gemfile")
+contents = path.read_text()
+dependency = f"gem 'temporalio', '= {sys.argv[1]}'"
+contents, count = re.subn(r"^gem ['\"]temporalio['\"].*$", dependency, contents, flags=re.MULTILINE)
+if count == 0:
+    contents = contents.rstrip() + "\n\n" + dependency + "\n"
+elif count != 1:
+    raise SystemExit(f"expected at most one temporalio dependency, found {count}")
+path.write_text(contents)
+PYTHON
+bundle lock --update temporalio --conservative
+'''
+
+[tasks.sync-sdk]
+description = "Sync all SDK dependencies to the versions in mise.toml"
+depends = [
+  "sync-sdk:dotnet",
+  "sync-sdk:go",
+  "sync-sdk:java",
+  "sync-sdk:python",
+  "sync-sdk:ruby",
+  "sync-sdk:typescript",
+]
