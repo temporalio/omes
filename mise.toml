@@ -12,6 +12,7 @@ protoc-gen-go = "v1.31.0"
 python = "3.10"
 "pipx:poethepoet" = "0.48.0"
 ruby = "3.3"
+"gem:bundler" = "4.0.10"
 rust = { version = "1.74.0", profile = "default" }
 uv = "0.7.19"
 
