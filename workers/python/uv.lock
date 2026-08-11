@@ -91,7 +91,7 @@ requires-dist = [
     { name = "grpcio", specifier = ">=1.60.0,<2" },
     { name = "prometheus-client", specifier = ">=0.16.0,<0.17" },
     { name = "python-json-logger", specifier = ">=2.0.7,<3" },
-    { name = "temporalio", specifier = ">=1.23.0,<2" },
+    { name = "temporalio", specifier = ">=1.31.0,<2" },
 ]
 
 [package.metadata.requires-dev]
@@ -199,7 +199,7 @@ requires-dist = [
     { name = "harness", editable = "harness" },
     { name = "prometheus-client", specifier = ">=0.16.0,<0.17" },
     { name = "python-json-logger", specifier = ">=2.0.7,<3" },
-    { name = "temporalio", specifier = ">=1.23.0,<2" },
+    { name = "temporalio", specifier = ">=1.31.0,<2" },
 ]
 
 [package.metadata.requires-dev]

@@ -336,9 +336,9 @@ mise run sync-sdk:typescript # Sync one SDK
 mise run sync-sdk            # Sync every SDK
 ```
 
-The sync tasks preserve declared compatibility ranges while updating exact dependency declarations and
-lockfiles to the versions in `mise.toml`. Review and commit the generated changes; CI reruns the aggregate
-task and fails if the committed dependency files have drifted.
+The sync tasks use each ecosystem's package manager to update declared SDK requirements and lockfiles to
+the versions in `mise.toml`. Review and commit the generated changes; CI reruns the aggregate task and
+fails if the committed dependency files have drifted.
 
 ## Fuzzer trophy case
 
