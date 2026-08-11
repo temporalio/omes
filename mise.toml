@@ -84,7 +84,7 @@ dir = "workers/ruby"
 run = '''
 TEMPORAL_SDK_VERSION="$(mise config get _.sdk.ruby)"
 python3 "$MISE_CONFIG_ROOT/scripts/sdk-sync/update_ruby.py" "$TEMPORAL_SDK_VERSION"
-bundle lock --update temporalio --conservative
+mise exec gem:bundler -- bundle lock --update temporalio --conservative
 '''
 
 [tasks.sync-sdk]
