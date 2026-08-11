@@ -71,7 +71,9 @@ jobs:
   check-sdk-dependencies:
     runs-on: ubuntu-latest
     env:
-      MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 60s
+      # Avoid mise's precompiled Python metadata endpoint, which has repeatedly timed out in CI,
+      # while still installing the repository's configured Python version through mise.
+      MISE_PYTHON_COMPILE: "1"
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
