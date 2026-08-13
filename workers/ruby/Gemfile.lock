@@ -168,25 +168,25 @@ GEM
       terminal-table (>= 2, < 5)
       uri (>= 0.12.0)
     strscan (3.1.8)
-    temporalio (1.5.0)
+    temporalio (1.6.0)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-aarch64-linux)
+    temporalio (1.6.0-aarch64-linux)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-aarch64-linux-musl)
+    temporalio (1.6.0-aarch64-linux-musl)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-arm64-darwin)
+    temporalio (1.6.0-arm64-darwin)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-x86_64-darwin)
+    temporalio (1.6.0-x86_64-darwin)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-x86_64-linux)
+    temporalio (1.6.0-x86_64-linux)
       google-protobuf (>= 3.25.0)
       logger
-    temporalio (1.5.0-x86_64-linux-musl)
+    temporalio (1.6.0-x86_64-linux-musl)
       google-protobuf (>= 3.25.0)
       logger
     terminal-table (4.0.0)
@@ -220,6 +220,7 @@ DEPENDENCIES
   rbs (~> 3.10)
   rubocop (~> 1.0)
   steep (~> 1.10)
+  temporalio (= 1.6.0)
 
 CHECKSUMS
   activesupport (8.1.3) sha256=21a5e0dfbd4c3ddd9e1317ec6a4d782fa226e7867dc70b0743acda81a1dca20e
@@ -289,13 +290,13 @@ CHECKSUMS
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
   steep (1.10.0) sha256=1b295b55f9aaff1b8d3ee42453ee55bc2a1078fda0268f288edb2dc014f4d7d1
   strscan (3.1.8) sha256=aae2db611a225559f21ffbb71765c9a4e60fd262534a9ea84f4f11c7f32f679e
-  temporalio (1.5.0) sha256=e736ac74ccecf1ab9c9a581b3c1505a718f355e8c9fecd5cc22ece0386b57750
-  temporalio (1.5.0-aarch64-linux) sha256=460d3b872226a7ccc5b2f9564a7226ef81f7366f1414efb70f7840aaed425a3a
-  temporalio (1.5.0-aarch64-linux-musl) sha256=a0b4f8c8ae1e25f72e26c0469b0a29e839e1a8dcd0ebfd9383f7d2bf15082581
-  temporalio (1.5.0-arm64-darwin) sha256=ccd90b063d4703ee00c8698f8c68879f04646d2425618bfa39598b6f237445a9
-  temporalio (1.5.0-x86_64-darwin) sha256=257fbf661204ed922f6b84120219f9416b9ab56e30923f111e58623ed0be99eb
-  temporalio (1.5.0-x86_64-linux) sha256=6c9ee36beef7f1aa9e949dfee4e7ba62eb8370daf6ad60246e90dce281e56e3e
-  temporalio (1.5.0-x86_64-linux-musl) sha256=a6f64a9e77d03bd466db73e5fad266cc50d9b00ed1b87e9fad6bca768f0b2632
+  temporalio (1.6.0) sha256=16f3230865fb821d1a36f94f0c0c60f08f3de176527db6f466db8d7b7c19f06f
+  temporalio (1.6.0-aarch64-linux) sha256=33a2d73efe00a1e9d8e288331cfb4b4f6440952444152025b80a28118d840772
+  temporalio (1.6.0-aarch64-linux-musl) sha256=a831b2f7ebb23214b991b5cf6c5bd22ba044216b4e06d4a8db8aba24bafa8ba4
+  temporalio (1.6.0-arm64-darwin) sha256=768c8ede4b384fffd142be5046161c261d6cedf75d9eb30a72080f6e338900ca
+  temporalio (1.6.0-x86_64-darwin) sha256=e76ccd3ee46b3e1cb4da66d84ae741f34504e531dd12c069a20208facee8878b
+  temporalio (1.6.0-x86_64-linux) sha256=e09582bda5ec49c9fe05ed3621cc2b289c371679b48b3e7aeff6635853253d2a
+  temporalio (1.6.0-x86_64-linux-musl) sha256=b40ae04006a05826878c5fdf244314d0cc97b72b2e698161dc0175d5590785f2
   terminal-table (4.0.0) sha256=f504793203f8251b2ea7c7068333053f0beeea26093ec9962e62ea79f94301d2
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b

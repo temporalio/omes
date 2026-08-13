@@ -10,3 +10,5 @@ group :development do
   gem 'rubocop', '~> 1.0'
   gem 'steep', '~> 1.10'
 end
+
+gem 'temporalio', '= 1.6.0'

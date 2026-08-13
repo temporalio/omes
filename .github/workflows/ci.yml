@@ -68,6 +68,44 @@ jobs:
           annotate_only: true
           skip_annotations: true
 
+  check-sdk-dependencies:
+    runs-on: ubuntu-latest
+    env:
+      # Avoid mise's precompiled Python metadata endpoint, which has repeatedly timed out in CI,
+      # while still installing the repository's configured Python version through mise.
+      MISE_PYTHON_COMPILE: "1"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install SDK dependency tools
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: "dotnet gem:bundler go java node npm python ruby uv"
+      - name: Restore package manager caches
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.bundle/cache
+            ~/.cache/go-build
+            ~/.cache/uv
+            ~/.npm
+            ~/go/pkg/mod
+          key: sdk-sync-${{ runner.os }}-${{ hashFiles('mise.toml', '**/go.sum', '**/package-lock.json', '**/uv.lock', '**/Gemfile.lock') }}
+          restore-keys: |
+            sdk-sync-${{ runner.os }}-
+      - name: Sync SDK dependencies
+        run: mise run sync-sdk
+      - name: Check SDK dependency drift
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git diff
+            git status --short
+            echo "SDK dependencies do not match the versions in mise.toml."
+            echo "Run 'mise run sync-sdk' and commit the resulting changes."
+            exit 1
+          fi
+
   check-worker:
     runs-on: ubuntu-latest
     strategy:

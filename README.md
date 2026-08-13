@@ -329,6 +329,17 @@ Or target specific languages: `go run ./cmd/dev build go java python`
 
 All development tool, SDK, and server versions are defined in `mise.toml`.
 
+After changing an SDK version in `[_.sdk]`, synchronize the corresponding worker dependency files:
+
+```sh
+mise run sync-sdk:typescript # Sync one SDK
+mise run sync-sdk            # Sync every SDK
+```
+
+The sync tasks use each ecosystem's package manager to update declared SDK requirements and lockfiles to
+the versions in `mise.toml`. Review and commit the generated changes; CI reruns the aggregate task and
+fails if the committed dependency files have drifted.
+
 ## Fuzzer trophy case
 
 * Python upsert SA with no initial attributes: [PR](https://github.com/temporalio/sdk-python/pull/440)
