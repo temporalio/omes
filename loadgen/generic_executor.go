@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -144,15 +145,26 @@ func (g *genericRun) Run(ctx context.Context) error {
 					err = nil
 				}
 
+				// An iteration cut short because the run is stopping is left out of
+				// both tallies.
+				//
+				// Both conditions are needed: the run's context is also done once a
+				// run simply finishes, and an iteration can fail with its own
+				// cancellation while the run is healthy.
+				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
+
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					if iterErr == nil {
+					switch {
+					case stopping:
+						g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)
+					case iterErr == nil:
 						g.completed.Add(1)
 						if g.config.OnCompletion != nil {
 							g.config.OnCompletion(ctx, run)
 						}
-					} else {
+					default:
 						g.failed.Add(1)
 						if g.config.OnIterationFailure != nil {
 							g.config.OnIterationFailure(ctx, run, iterErr)
