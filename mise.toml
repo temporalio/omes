@@ -5,22 +5,95 @@ go = "1.26.5"
 go-junit-report = "2.1.0"
 java = "temurin-11"
 node = "24"
+npm = "11.17.0"
 pnpm = "10.32.1"
 protoc = "25.1"
 protoc-gen-go = "v1.31.0"
 python = "3.10"
 "pipx:poethepoet" = "0.48.0"
 ruby = "3.3"
+"gem:bundler" = "4.0.10"
 rust = { version = "1.74.0", profile = "default" }
 uv = "0.7.19"
 
 [_.sdk]
 dotnet = "1.17.0"
 go = "1.47.0"
-java = "1.35.0"
+java = "1.37.0"
 python = "1.31.0"
-ruby = "1.5.0"
-typescript = "1.18.1"
+ruby = "1.6.0"
+typescript = "1.22.0"
 
 [_.server]
 ref = "a4afe583eff6edd6a0d6aa9dc96d5dfec7996c77"
+
+[tasks."sync-sdk:go"]
+description = "Sync Go SDK dependencies to the version in mise.toml"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.go)"
+go get "go.temporal.io/sdk@v${TEMPORAL_SDK_VERSION}"
+go -C workers/go get "go.temporal.io/sdk@v${TEMPORAL_SDK_VERSION}"
+go -C workers/go mod tidy
+'''
+
+[tasks."sync-sdk:typescript"]
+description = "Sync TypeScript SDK dependencies to the version in mise.toml"
+dir = "workers/typescript"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.typescript)"
+npm install --package-lock-only --save-prod --save-prefix='^' --ignore-scripts --no-audit --no-fund \
+  "@temporalio/activity@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/client@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/common@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/worker@${TEMPORAL_SDK_VERSION}" \
+  "@temporalio/workflow@${TEMPORAL_SDK_VERSION}"
+npm install --package-lock-only --save-dev --save-prefix='^' --ignore-scripts --no-audit --no-fund \
+  "@temporalio/testing@${TEMPORAL_SDK_VERSION}"
+'''
+
+[tasks."sync-sdk:java"]
+description = "Sync Java SDK dependencies to the version in mise.toml"
+dir = "workers/java"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.java)"
+python3 "$MISE_CONFIG_ROOT/scripts/sdk-sync/update_java.py" "$TEMPORAL_SDK_VERSION"
+'''
+
+[tasks."sync-sdk:python"]
+description = "Sync Python SDK dependencies to the version in mise.toml"
+dir = "workers/python"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.python)"
+uv add --no-sync "temporalio>=${TEMPORAL_SDK_VERSION},<2"
+uv add --no-sync --package harness "temporalio>=${TEMPORAL_SDK_VERSION},<2"
+'''
+
+[tasks."sync-sdk:dotnet"]
+description = "Sync .NET SDK dependencies to the version in mise.toml"
+dir = "workers/dotnet"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.dotnet)"
+dotnet add Temporalio.Omes.csproj package Temporalio \
+  --version "$TEMPORAL_SDK_VERSION" \
+  --no-restore
+'''
+
+[tasks."sync-sdk:ruby"]
+description = "Sync Ruby SDK dependencies to the version in mise.toml"
+dir = "workers/ruby"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.ruby)"
+python3 "$MISE_CONFIG_ROOT/scripts/sdk-sync/update_ruby.py" "$TEMPORAL_SDK_VERSION"
+mise exec gem:bundler -- bundle lock --update temporalio --conservative
+'''
+
+[tasks.sync-sdk]
+description = "Sync all SDK dependencies to the versions in mise.toml"
+depends = [
+  "sync-sdk:dotnet",
+  "sync-sdk:go",
+  "sync-sdk:java",
+  "sync-sdk:python",
+  "sync-sdk:ruby",
+  "sync-sdk:typescript",
+]
