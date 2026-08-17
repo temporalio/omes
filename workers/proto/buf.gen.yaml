@@ -5,10 +5,10 @@ inputs:
       - harness/api/api.proto
 plugins:
   # Go
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: ../go
     opt: paths=source_relative
-  - remote: buf.build/grpc/go
+  - remote: buf.build/grpc/go:v1.6.2
     out: ../go
     opt:
       - paths=source_relative
