@@ -278,6 +278,71 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 	})
 }
 
+// TestRunStoppedIterationsAreNotCountedAsFailures pins that iterations abandoned
+// by a caller stopping the run are left out of the tallies, so a clean stop is
+// not reported as a burst of failures.
+func TestRunStoppedIterationsAreNotCountedAsFailures(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var mu sync.Mutex
+		var failed, completed []int
+
+		const concurrent = 5
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var inFlight int
+		executor := &GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				mu.Lock()
+				inFlight++
+				full := inFlight == concurrent
+				mu.Unlock()
+
+				// Stop the run once every slot is occupied, so every in-flight
+				// iteration ends on the stop rather than on its own outcome.
+				if full {
+					cancel()
+				}
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		}
+
+		logger := zap.Must(zap.NewDevelopment())
+		defer logger.Sync()
+		err := executor.Run(ctx, ScenarioInfo{
+			MetricsHandler: client.MetricsNopHandler,
+			Logger:         logger.Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 100,
+				MaxConcurrent:              concurrent,
+				ContinueOnIterationFailure: true,
+				OnCompletion: func(ctx context.Context, run *Run) {
+					mu.Lock()
+					defer mu.Unlock()
+					completed = append(completed, run.Iteration)
+				},
+				OnIterationFailure: func(ctx context.Context, run *Run, err error) {
+					mu.Lock()
+					defer mu.Unlock()
+					failed = append(failed, run.Iteration)
+				},
+			},
+		})
+
+		// Stopping a run is still an error for the caller to interpret; what must
+		// not happen is the stop being reported as failed iterations.
+		require.Error(t, err)
+		require.NotContains(t, err.Error(), "iterations failed",
+			"a stopped run must not report the end-of-run failure verdict")
+
+		mu.Lock()
+		defer mu.Unlock()
+		require.Empty(t, failed, "iterations abandoned by the stop must not be counted as failures")
+		require.Empty(t, completed, "nor as successes — they did not finish")
+	})
+}
+
 func TestExecutorRetriesLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		totalTracker := newIterationTracker()
