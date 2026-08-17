@@ -164,6 +164,18 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		ctx = metadata.AppendToOutgoingContext(ctx, "temporal-experiment", "chasm-scheduler")
 	}
 
+	// How many failed iterations a run tolerates is the caller's policy, via
+	// RunConfiguration.ContinueOnIterationFailure.
+	var (
+		mu   sync.Mutex
+		errs []error
+	)
+	record := func(err error) {
+		mu.Lock()
+		defer mu.Unlock()
+		errs = append(errs, err)
+	}
+
 	var wg sync.WaitGroup
 	for i := range s.config.ScheduleCreationPerIteration {
 		wg.Go(func() {
@@ -171,23 +183,25 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			defer ticker.Stop()
 			start := time.Now()
 
-			sch_id := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
-			sc, err := s.createSchedule(ctx, client, sch_id, run.TaskQueue(), logger)
+			scheduleID := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
+			sc, err := s.createSchedule(ctx, client, scheduleID, run.TaskQueue(), logger)
 			if err != nil {
-				logger.Error("Failed to create schedule", "scheduleID", sc.ScheduleID, "error", err)
+				record(fmt.Errorf("creating schedule %s: %w", scheduleID, err))
 				return
 			}
 			<-ticker.C
+			// Read and update failures fall through to the delete below; an
+			// abandoned schedule would outlive the iteration until its EndAt.
 			for range s.config.ScheduleReadsPerCreation {
 				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
-					logger.Error("Failed to describe schedule", "scheduleID", sc.ScheduleID, "error", err)
+					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
 				}
 				<-ticker.C // Wait between read operations
 			}
 
 			for range s.config.ScheduleUpdatesPerCreation {
 				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
-					logger.Error("Failed to update schedule", "scheduleID", sc.ScheduleID, "error", err)
+					record(fmt.Errorf("updating schedule %s: %w", sc.ScheduleID, err))
 				}
 				<-ticker.C // Wait between update operations
 			}
@@ -195,15 +209,22 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			select {
 			case <-time.After(dur):
 				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
-					logger.Error("Failed to delete schedule", "scheduleID", sc.ScheduleID, "error", err)
+					record(fmt.Errorf("deleting schedule %s: %w", sc.ScheduleID, err))
 				}
 			case <-ctx.Done():
-				logger.Info("Context canceled")
+				// Left undeleted; EndAt bounds how long it survives.
 			}
 		})
 	}
 	wg.Wait()
-	return nil
+
+	// GenericExecutor checks errors.Is(err, context.Canceled) to tell a stopped
+	// iteration from a failed one. The operation errors above are gRPC status
+	// errors that do not unwrap to that sentinel, whatever their message says.
+	if err := ctx.Err(); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 type ScheduleState struct {
