@@ -58,6 +58,13 @@ class ClientActionExecutor
       end
     when :do_standalone_activity
       execute_standalone_activity(action.do_standalone_activity)
+    when :do_standalone_activity_operator_commands
+      if @err_on_unimplemented
+        raise Temporalio::Error::ApplicationError.new(
+          'DoStandaloneActivityOperatorCommands is not supported',
+          non_retryable: true
+        )
+      end
     else
       raise 'Client action must have a recognized variant'
     end

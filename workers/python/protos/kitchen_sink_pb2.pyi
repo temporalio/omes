@@ -88,7 +88,7 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_standalone_nexus_operation", "do_standalone_activity")
+    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_standalone_nexus_operation", "do_standalone_activity", "do_standalone_activity_operator_commands")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
@@ -96,6 +96,7 @@ class ClientAction(_message.Message):
     DO_DESCRIBE_FIELD_NUMBER: _ClassVar[int]
     DO_STANDALONE_NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
     DO_STANDALONE_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
@@ -103,7 +104,8 @@ class ClientAction(_message.Message):
     do_describe: DoDescribe
     do_standalone_nexus_operation: DoStandaloneNexusOperation
     do_standalone_activity: DoStandaloneActivity
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_standalone_nexus_operation: _Optional[_Union[DoStandaloneNexusOperation, _Mapping]] = ..., do_standalone_activity: _Optional[_Union[DoStandaloneActivity, _Mapping]] = ...) -> None: ...
+    do_standalone_activity_operator_commands: DoStandaloneActivityOperatorCommands
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_standalone_nexus_operation: _Optional[_Union[DoStandaloneNexusOperation, _Mapping]] = ..., do_standalone_activity: _Optional[_Union[DoStandaloneActivity, _Mapping]] = ..., do_standalone_activity_operator_commands: _Optional[_Union[DoStandaloneActivityOperatorCommands, _Mapping]] = ...) -> None: ...
 
 class DoStandaloneNexusOperation(_message.Message):
     __slots__ = ("endpoint", "service", "operation")
@@ -120,6 +122,24 @@ class DoStandaloneActivity(_message.Message):
     ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     activity: ExecuteActivityAction
     def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ...) -> None: ...
+
+class DoStandaloneActivityOperatorCommands(_message.Message):
+    __slots__ = ("activity", "command_type")
+    class CommandType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        COMMAND_TYPE_UNSPECIFIED: _ClassVar[DoStandaloneActivityOperatorCommands.CommandType]
+        COMMAND_TYPE_PAUSE: _ClassVar[DoStandaloneActivityOperatorCommands.CommandType]
+        COMMAND_TYPE_RESET: _ClassVar[DoStandaloneActivityOperatorCommands.CommandType]
+        COMMAND_TYPE_UPDATE: _ClassVar[DoStandaloneActivityOperatorCommands.CommandType]
+    COMMAND_TYPE_UNSPECIFIED: DoStandaloneActivityOperatorCommands.CommandType
+    COMMAND_TYPE_PAUSE: DoStandaloneActivityOperatorCommands.CommandType
+    COMMAND_TYPE_RESET: DoStandaloneActivityOperatorCommands.CommandType
+    COMMAND_TYPE_UPDATE: DoStandaloneActivityOperatorCommands.CommandType
+    ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    COMMAND_TYPE_FIELD_NUMBER: _ClassVar[int]
+    activity: ExecuteActivityAction
+    command_type: DoStandaloneActivityOperatorCommands.CommandType
+    def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., command_type: _Optional[_Union[DoStandaloneActivityOperatorCommands.CommandType, str]] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")
@@ -322,14 +342,16 @@ class ExecuteActivityAction(_message.Message):
         failure_duration: _duration_pb2.Duration
         def __init__(self, fail_attempts: _Optional[int] = ..., success_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., failure_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
     class HeartbeatTimeoutActivity(_message.Message):
-        __slots__ = ("fail_attempts", "success_duration", "failure_duration")
+        __slots__ = ("fail_attempts", "success_duration", "failure_duration", "heartbeat_interval")
         FAIL_ATTEMPTS_FIELD_NUMBER: _ClassVar[int]
         SUCCESS_DURATION_FIELD_NUMBER: _ClassVar[int]
         FAILURE_DURATION_FIELD_NUMBER: _ClassVar[int]
+        HEARTBEAT_INTERVAL_FIELD_NUMBER: _ClassVar[int]
         fail_attempts: int
         success_duration: _duration_pb2.Duration
         failure_duration: _duration_pb2.Duration
-        def __init__(self, fail_attempts: _Optional[int] = ..., success_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., failure_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+        heartbeat_interval: _duration_pb2.Duration
+        def __init__(self, fail_attempts: _Optional[int] = ..., success_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., failure_duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., heartbeat_interval: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]

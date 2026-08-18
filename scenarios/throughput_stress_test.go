@@ -81,9 +81,9 @@ func TestThroughputStress(t *testing.T) {
 }
 
 // TestThroughputStressFeatureAutoEnable exercises capability-gated feature options
-// end to end. The dev server runs with the standalone-activity and standalone-Nexus
-// gates on, and the scenario passes neither feature option, so both have to resolve
-// from what the namespace reports.
+// end to end. The dev server runs with the standalone-activity, operator-command,
+// and standalone-Nexus gates on, and the scenario leaves those feature options
+// unset, so they have to resolve from what the namespace reports.
 func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	t.Parallel()
 
@@ -95,9 +95,10 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
 		workertest.WithDynamicConfig(map[string]any{
-			// Gates the capabilities the two feature options read.
-			"activity.enableStandalone":       true,
-			"nexusoperation.enableStandalone": true,
+			// Gates the capabilities the feature options read.
+			"activity.enableStandalone":                        true,
+			"history.enableStandaloneActivityOperatorCommands": true,
+			"nexusoperation.enableStandalone":                  true,
 			// Standalone Nexus system callbacks require CHASM callbacks.
 			"history.enableCHASMCallbacks": true,
 		}))
@@ -110,6 +111,8 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	caps := desc.GetNamespaceInfo().GetCapabilities()
 	require.True(t, caps.GetStandaloneActivities(),
 		"namespace should report standalone activities with activity.enableStandalone on")
+	require.True(t, caps.GetStandaloneActivityOperatorCommands(),
+		"namespace should report standalone activity operator commands with their gate on")
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,
@@ -133,6 +136,8 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 
 	require.True(t, executor.config.IncludeStandaloneActivity,
 		"standalone activities should auto-enable from the namespace capability")
+	require.True(t, executor.config.IncludeStandaloneActivityOperatorCommands,
+		"standalone activity operator commands should auto-enable from the namespace capability")
 	// Nexus load was requested, so standalone Nexus follows whatever this server
 	// version reports.
 	require.True(t, executor.config.NexusEnabled)
@@ -297,6 +302,107 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 
 	require.NotEqual(t, chunk1Sizes, chunk2Sizes,
 		"payload-size sequence must advance across continue-as-new, not restart identically")
+}
+
+// TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueAsNew
+// guards against losing operator load at a Continue-As-New boundary or restarting
+// its command rotation in each new workflow run.
+func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueAsNew(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:       "tps-operator-can",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IncludeStandaloneActivityOperatorCommandsFlag: "true",
+			NexusEnabledFlag: "false",
+		}),
+	}
+	require.NoError(t, executor.Configure(info))
+
+	sets := executor.createActions(info.NewRun(1))
+	require.Len(t, sets, 1)
+
+	var commandTypes []ks.DoStandaloneActivityOperatorCommands_CommandType
+	var commandsPerChunk []int
+	chunk := sets[0].GetActions()
+	for {
+		terminalIndex := -1
+		for actionIndex, action := range chunk {
+			if action.GetContinueAsNew() != nil || action.GetReturnResult() != nil {
+				terminalIndex = actionIndex
+				break
+			}
+		}
+		require.NotEqual(t, -1, terminalIndex)
+
+		commands := standaloneActivityOperatorCommandsInConcurrentGroups(chunk[:terminalIndex])
+		commandsPerChunk = append(commandsPerChunk, len(commands))
+		for _, command := range commands {
+			commandTypes = append(commandTypes, command.GetCommandType())
+		}
+
+		if chunk[terminalIndex].GetContinueAsNew() == nil {
+			break
+		}
+		chunk = decodeContinueAsNewChunk(t, chunk)
+	}
+
+	require.Equal(t, []int{3, 3, 3, 1}, commandsPerChunk)
+	require.Equal(t, []ks.DoStandaloneActivityOperatorCommands_CommandType{
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+	}, commandTypes)
+}
+
+func standaloneActivityOperatorCommandsInConcurrentGroups(actions []*ks.Action) (
+	commands []*ks.DoStandaloneActivityOperatorCommands,
+) {
+	for _, action := range actions {
+		if set := action.GetNestedActionSet(); set != nil && set.GetConcurrent() {
+			commands = append(commands, standaloneActivityOperatorCommands(set.GetActions())...)
+		}
+	}
+	return commands
+}
+
+func standaloneActivityOperatorCommands(actions []*ks.Action) (
+	commands []*ks.DoStandaloneActivityOperatorCommands,
+) {
+	for _, action := range actions {
+		if command := standaloneActivityOperatorCommand(action); command != nil {
+			commands = append(commands, command)
+		}
+		if set := action.GetNestedActionSet(); set != nil {
+			commands = append(commands, standaloneActivityOperatorCommands(set.GetActions())...)
+		}
+	}
+	return commands
+}
+
+func standaloneActivityOperatorCommand(action *ks.Action) *ks.DoStandaloneActivityOperatorCommands {
+	activity := action.GetExecActivity()
+	if activity == nil || activity.GetClient() == nil {
+		return nil
+	}
+	for _, set := range activity.GetClient().GetClientSequence().GetActionSets() {
+		for _, clientAction := range set.GetActions() {
+			if command := clientAction.GetDoStandaloneActivityOperatorCommands(); command != nil {
+				return command
+			}
+		}
+	}
+	return nil
 }
 
 // directPayloadSizes collects the receive/return byte sizes of payload activities directly

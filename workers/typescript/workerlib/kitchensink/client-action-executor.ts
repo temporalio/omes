@@ -76,6 +76,15 @@ export class ClientActionExecutor {
       console.log('Skipping standalone nexus operation (not implemented)');
     } else if (action.doStandaloneActivity) {
       await this.executeStandaloneActivity(action.doStandaloneActivity);
+    } else if (action.doStandaloneActivityOperatorCommands) {
+      if (this.errOnUnimplemented) {
+        throw ApplicationFailure.create({
+          message: 'DoStandaloneActivityOperatorCommands is not supported',
+          type: 'UnsupportedOperation',
+          nonRetryable: true,
+        });
+      }
+      console.log('Skipping standalone activity operator commands (not implemented)');
     } else {
       throw new Error('Client action must have a recognized variant');
     }

@@ -88,6 +88,15 @@ public class ClientActionsExecutor
         {
             await ExecuteStandaloneActivity(action.DoStandaloneActivity);
         }
+        else if (action.DoStandaloneActivityOperatorCommands != null)
+        {
+            if (_errOnUnimplemented)
+            {
+                throw new ApplicationFailureException(
+                    "DoStandaloneActivityOperatorCommands is not supported", "UnsupportedOperation", nonRetryable: true);
+            }
+            Console.WriteLine("Skipping standalone activity operator commands (not implemented)");
+        }
         else
         {
             throw new ArgumentException("Client action must have a recognized variant");

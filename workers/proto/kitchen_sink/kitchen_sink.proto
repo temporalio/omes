@@ -54,6 +54,7 @@ message ClientAction {
     DoDescribe do_describe = 5;
     DoStandaloneNexusOperation do_standalone_nexus_operation = 6;
     DoStandaloneActivity do_standalone_activity = 7;
+    DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;
   }
 }
 
@@ -72,6 +73,21 @@ message DoStandaloneNexusOperation {
 // workflow-independent activities.
 message DoStandaloneActivity {
   ExecuteActivityAction activity = 1;
+}
+
+// DoStandaloneActivityOperatorCommands starts a standalone activity and exercises
+// pause/unpause, reset, or update-options through WorkflowService RPCs. The client
+// verifies command outcomes with DescribeActivityExecution or the command response.
+message DoStandaloneActivityOperatorCommands {
+  enum CommandType {
+    COMMAND_TYPE_UNSPECIFIED = 0;
+    COMMAND_TYPE_PAUSE = 1;
+    COMMAND_TYPE_RESET = 2;
+    COMMAND_TYPE_UPDATE = 3;
+  }
+
+  ExecuteActivityAction activity = 1;
+  CommandType command_type = 2;
 }
 
 message DoSignal {
@@ -275,6 +291,8 @@ message ExecuteActivityAction {
     google.protobuf.Duration success_duration = 2;
     // Duration to run on failure, must be more than HeartbeatTimeout timeout
     google.protobuf.Duration failure_duration = 3;
+    // When set, heartbeat repeatedly at this interval while running.
+    google.protobuf.Duration heartbeat_interval = 4;
   }
   oneof activity_type {
     GenericActivity generic = 1;
@@ -548,4 +566,3 @@ message NexusHandlerInput {
 // AwaitableChoice.wait_started and not yet awaited.
 message AwaitPendingActions {
 }
-

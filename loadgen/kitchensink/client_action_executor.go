@@ -133,6 +133,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		return e.executeStandaloneNexusOperation(ctx, sano)
 	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
 		return e.executeStandaloneActivity(ctx, sa)
+	} else if sa := action.GetDoStandaloneActivityOperatorCommands(); sa != nil {
+		return e.executeStandaloneActivityOperatorCommands(ctx, sa)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}
