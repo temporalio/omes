@@ -128,6 +128,8 @@ go.opentelemetry.io/otel/trace v1.43.0 h1:BkNrHpup+4k4w+ZZ86CZoHHEkohws8AY+WTX09
 go.opentelemetry.io/otel/trace v1.43.0/go.mod h1:/QJhyVBUUswCphDVxq+8mld+AvhXZLhe+8WVFxiFff0=
 go.temporal.io/api v1.63.4 h1:p4dVIAP3dJop0MfcyH9QSzjU7+V/ttLDhxFhSRUar58=
 go.temporal.io/api v1.63.4/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
+go.temporal.io/sdk v1.47.0 h1:lZ39w1+uWSjHTL0F3mSc0t4XUnKX8CCcWxqSiLbaHnc=
+go.temporal.io/sdk v1.47.0/go.mod h1:ilKs0twgP4JpP8pfhIgZumnOEyBiYn6ZO/ta//NnKMU=
 go.temporal.io/sdk v1.48.0 h1:WDctKDVuh0Z8Nf7euAyqs/EwcPg1JTIIq1Fut8Tq118=
 go.temporal.io/sdk v1.48.0/go.mod h1:SHv3+fLzD0GGZAwf0xNSvu8UmO1nFgG9WBSYoowApIk=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
