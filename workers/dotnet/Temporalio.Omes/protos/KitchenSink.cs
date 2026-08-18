@@ -10217,8 +10217,7 @@ namespace Temporal.Omes.KitchenSink {
         public const int HeartbeatIntervalFieldNumber = 4;
         private global::Google.Protobuf.WellKnownTypes.Duration heartbeatInterval_;
         /// <summary>
-        /// When set, heartbeat repeatedly at this interval while running. This is
-        /// used by operator command workloads that need a worker to observe cancellation.
+        /// When set, heartbeat repeatedly at this interval while running.
         /// </summary>
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

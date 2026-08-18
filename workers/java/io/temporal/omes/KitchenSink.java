@@ -6901,7 +6901,7 @@ public final class KitchenSink {
        * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder>
+          io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder> 
           getDoStandaloneActivityOperatorCommandsFieldBuilder() {
         if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
           if (!(variantCase_ == 8)) {
@@ -8392,7 +8392,7 @@ public final class KitchenSink {
        * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
-          io.temporal.omes.KitchenSink.ExecuteActivityAction, io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder, io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder>
+          io.temporal.omes.KitchenSink.ExecuteActivityAction, io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder, io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder> 
           getActivityFieldBuilder() {
         if (activityBuilder_ == null) {
           activityBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -28522,7 +28522,7 @@ io.temporal.api.common.v1.Payload defaultValue);
          * <code>.google.protobuf.Duration run_for = 1;</code>
          */
         private com.google.protobuf.SingleFieldBuilderV3<
-            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
             getRunForFieldBuilder() {
           if (runForBuilder_ == null) {
             runForBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -31161,7 +31161,7 @@ io.temporal.api.common.v1.Payload defaultValue);
          * <code>.google.protobuf.Duration success_duration = 2;</code>
          */
         private com.google.protobuf.SingleFieldBuilderV3<
-            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
             getSuccessDurationFieldBuilder() {
           if (successDurationBuilder_ == null) {
             successDurationBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -31464,8 +31464,7 @@ io.temporal.api.common.v1.Payload defaultValue);
 
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -31474,8 +31473,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       boolean hasHeartbeatInterval();
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -31484,8 +31482,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       com.google.protobuf.Duration getHeartbeatInterval();
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -31628,8 +31625,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       private com.google.protobuf.Duration heartbeatInterval_;
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -31641,8 +31637,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       }
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -31654,8 +31649,7 @@ io.temporal.api.common.v1.Payload defaultValue);
       }
       /**
        * <pre>
-       * When set, heartbeat repeatedly at this interval while running. This is
-       * used by operator command workloads that need a worker to observe cancellation.
+       * When set, heartbeat repeatedly at this interval while running.
        * </pre>
        *
        * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32479,8 +32473,7 @@ io.temporal.api.common.v1.Payload defaultValue);
             com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> heartbeatIntervalBuilder_;
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32491,8 +32484,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32507,8 +32499,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32528,8 +32519,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32547,8 +32537,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32573,8 +32562,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32591,8 +32579,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32604,8 +32591,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
@@ -32620,14 +32606,13 @@ io.temporal.api.common.v1.Payload defaultValue);
         }
         /**
          * <pre>
-         * When set, heartbeat repeatedly at this interval while running. This is
-         * used by operator command workloads that need a worker to observe cancellation.
+         * When set, heartbeat repeatedly at this interval while running.
          * </pre>
          *
          * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
          */
         private com.google.protobuf.SingleFieldBuilderV3<
-            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
             getHeartbeatIntervalFieldBuilder() {
           if (heartbeatIntervalBuilder_ == null) {
             heartbeatIntervalBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
@@ -58426,12 +58411,12 @@ java.lang.String defaultValue) {
 
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_TestInput_descriptor;
-  private static final
+  private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_TestInput_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_ClientSequence_descriptor;
-  private static final
+  private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_ClientSequence_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
@@ -58461,7 +58446,7 @@ java.lang.String defaultValue) {
       internal_static_temporal_omes_kitchen_sink_DoStandaloneActivity_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor;
-  private static final
+  private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
