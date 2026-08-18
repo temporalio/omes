@@ -3946,8 +3946,7 @@ type ExecuteActivityAction_HeartbeatTimeoutActivity struct {
 	SuccessDuration *durationpb.Duration `protobuf:"bytes,2,opt,name=success_duration,json=successDuration,proto3" json:"success_duration,omitempty"`
 	// Duration to run on failure, must be more than HeartbeatTimeout timeout
 	FailureDuration *durationpb.Duration `protobuf:"bytes,3,opt,name=failure_duration,json=failureDuration,proto3" json:"failure_duration,omitempty"`
-	// When set, heartbeat repeatedly at this interval while running. This is
-	// used by operator command workloads that need a worker to observe cancellation.
+	// When set, heartbeat repeatedly at this interval while running.
 	HeartbeatInterval *durationpb.Duration `protobuf:"bytes,4,opt,name=heartbeat_interval,json=heartbeatInterval,proto3" json:"heartbeat_interval,omitempty"`
 }
 
