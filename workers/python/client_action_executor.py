@@ -69,6 +69,13 @@ class ClientActionExecutor:
             print("Skipping standalone nexus operation (not implemented)")
         elif action.HasField("do_standalone_activity"):
             await self._execute_standalone_activity(action.do_standalone_activity)
+        elif action.HasField("do_standalone_activity_operator_commands"):
+            if self.err_on_unimplemented:
+                raise ApplicationError(
+                    "DoStandaloneActivityOperatorCommands is not supported",
+                    non_retryable=True,
+                )
+            print("Skipping standalone activity operator commands (not implemented)")
         else:
             raise ValueError("Client action must have a recognized variant")
 

@@ -21,7 +21,7 @@ require (
 	// local replace below, so a placeholder breaks their `go list -m all`/module graph.
 	// Bump this whenever workers/go/harness/api changes.
 	github.com/temporalio/omes/workers/go/harness/api v0.0.0-20260601200529-2419bd37e739
-	go.temporal.io/api v1.63.4
+	go.temporal.io/api v1.63.5
 	go.temporal.io/sdk v1.47.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.35.0

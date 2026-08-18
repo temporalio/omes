@@ -568,10 +568,41 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 		<-ctx.Done()
 		return ctx.Err()
 	}
-	// Otherwise, run it for the configured success duration and heartbeat.
-	<-time.After(config.SuccessDuration.AsDuration())
-	activity.RecordHeartbeat(ctx)
-	return nil
+	interval := config.GetHeartbeatInterval().AsDuration()
+	if interval <= 0 {
+		// Preserve the original timeout-test behavior when no interval is configured.
+		<-time.After(config.SuccessDuration.AsDuration())
+		activity.RecordHeartbeat(ctx)
+		return nil
+	}
+	return runWithHeartbeats(ctx, config.SuccessDuration.AsDuration(), interval,
+		func() { activity.RecordHeartbeat(ctx) })
+}
+
+// runWithHeartbeats records immediately and periodically until duration elapses.
+// It preserves the context's cancellation cause so callers retain the original reason.
+func runWithHeartbeats(
+	ctx context.Context,
+	duration time.Duration,
+	interval time.Duration,
+	record func(),
+) error {
+	deadline := time.NewTimer(duration)
+	defer deadline.Stop()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	record()
+	for {
+		select {
+		case <-deadline.C:
+			return nil
+		case <-ticker.C:
+			record()
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		}
+	}
 }
 
 type ReturnOrErr struct {

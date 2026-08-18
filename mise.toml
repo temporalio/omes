@@ -25,7 +25,7 @@ ruby = "1.6.0"
 typescript = "1.22.0"
 
 [_.server]
-ref = "a4afe583eff6edd6a0d6aa9dc96d5dfec7996c77"
+ref = "abcb94873061dd55e80745cbcc84037abdf22d53"
 
 [tasks."sync-sdk:go"]
 description = "Sync Go SDK dependencies to the version in mise.toml"

@@ -83,6 +83,12 @@ public class ClientActionExecutor {
       System.out.println("Skipping standalone nexus operation (not implemented)");
     } else if (action.hasDoStandaloneActivity()) {
       executeStandaloneActivity(action.getDoStandaloneActivity());
+    } else if (action.hasDoStandaloneActivityOperatorCommands()) {
+      if (errOnUnimplemented) {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "DoStandaloneActivityOperatorCommands is not supported", "UnsupportedOperation");
+      }
+      System.out.println("Skipping standalone activity operator commands (not implemented)");
     } else {
       throw new IllegalArgumentException("Client action must have a recognized variant");
     }

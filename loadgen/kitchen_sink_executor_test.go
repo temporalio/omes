@@ -51,6 +51,14 @@ var (
 		clioptions.LangTypeScript: "dostandalonenexusoperation is not supported",
 		clioptions.LangDotNet:     "dostandalonenexusoperation is not supported",
 	}
+
+	standaloneActivityOperatorCommandsUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangJava:       "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangPython:     "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangRuby:       "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangTypeScript: "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangDotNet:     "dostandaloneactivityoperatorcommands is not supported",
+	}
 )
 
 type testCase struct {
@@ -73,7 +81,8 @@ func TestKitchenSink(t *testing.T) {
 		// Standalone Nexus system callbacks require CHASM callbacks.
 		"history.enableCHASMCallbacks": true,
 		// Enable StartActivityExecution for the standalone-activity subtest.
-		"activity.enableStandalone": true,
+		"activity.enableStandalone":                        true,
+		"history.enableStandaloneActivityOperatorCommands": true,
 	}))
 
 	// Default workflow execution timeout for tests
@@ -1064,6 +1073,41 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskCompleted`),
 		},
 		{
+			name: "ExecActivity/Client/StandaloneActivityOperatorCommands",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						ClientActivity(
+							ClientActions(&ClientAction{
+								Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
+									DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
+										CommandType: DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
+										Activity: &ExecuteActivityAction{
+											ActivityType: &ExecuteActivityAction_Heartbeat{
+												Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+													SuccessDuration:   durationpb.New(time.Second),
+													HeartbeatInterval: durationpb.New(100 * time.Millisecond),
+												},
+											},
+											ScheduleToCloseTimeout: durationpb.New(10 * time.Second),
+											StartToCloseTimeout:    durationpb.New(5 * time.Second),
+											HeartbeatTimeout:       durationpb.New(2 * time.Second),
+										},
+									},
+								},
+							}),
+							DefaultRemoteActivity,
+						),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"client"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+			expectedUnsupportedErrs: standaloneActivityOperatorCommandsUnsupportedSDKs,
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1150,6 +1194,9 @@ func testForSDK(
 									}
 									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
 										sa.GetActivity().TaskQueue = runTaskQueue
+									}
+									if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
+										op.GetActivity().TaskQueue = runTaskQueue
 									}
 								}
 							}
