@@ -89,6 +89,12 @@ public class ClientActionExecutor {
             "DoStandaloneActivityOperatorCommands is not supported", "UnsupportedOperation");
       }
       System.out.println("Skipping standalone activity operator commands (not implemented)");
+    } else if (action.hasDoStandaloneActivityBatchOperations()) {
+      if (errOnUnimplemented) {
+        throw ApplicationFailure.newNonRetryableFailure(
+            "DoStandaloneActivityBatchOperations is not supported", "UnsupportedOperation");
+      }
+      System.out.println("Skipping standalone activity batch operations (not implemented)");
     } else {
       throw new IllegalArgumentException("Client action must have a recognized variant");
     }

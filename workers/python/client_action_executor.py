@@ -76,6 +76,13 @@ class ClientActionExecutor:
                     non_retryable=True,
                 )
             print("Skipping standalone activity operator commands (not implemented)")
+        elif action.HasField("do_standalone_activity_batch_operations"):
+            if self.err_on_unimplemented:
+                raise ApplicationError(
+                    "DoStandaloneActivityBatchOperations is not supported",
+                    non_retryable=True,
+                )
+            print("Skipping standalone activity batch operations (not implemented)")
         else:
             raise ValueError("Client action must have a recognized variant")
 

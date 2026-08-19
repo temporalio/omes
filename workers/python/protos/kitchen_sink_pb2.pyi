@@ -88,7 +88,7 @@ class WithStartClientAction(_message.Message):
     def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
 
 class ClientAction(_message.Message):
-    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_standalone_nexus_operation", "do_standalone_activity", "do_standalone_activity_operator_commands")
+    __slots__ = ("do_signal", "do_query", "do_update", "nested_actions", "do_describe", "do_standalone_nexus_operation", "do_standalone_activity", "do_standalone_activity_operator_commands", "do_standalone_activity_batch_operations")
     DO_SIGNAL_FIELD_NUMBER: _ClassVar[int]
     DO_QUERY_FIELD_NUMBER: _ClassVar[int]
     DO_UPDATE_FIELD_NUMBER: _ClassVar[int]
@@ -97,6 +97,7 @@ class ClientAction(_message.Message):
     DO_STANDALONE_NEXUS_OPERATION_FIELD_NUMBER: _ClassVar[int]
     DO_STANDALONE_ACTIVITY_FIELD_NUMBER: _ClassVar[int]
     DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS_FIELD_NUMBER: _ClassVar[int]
+    DO_STANDALONE_ACTIVITY_BATCH_OPERATIONS_FIELD_NUMBER: _ClassVar[int]
     do_signal: DoSignal
     do_query: DoQuery
     do_update: DoUpdate
@@ -105,7 +106,8 @@ class ClientAction(_message.Message):
     do_standalone_nexus_operation: DoStandaloneNexusOperation
     do_standalone_activity: DoStandaloneActivity
     do_standalone_activity_operator_commands: DoStandaloneActivityOperatorCommands
-    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_standalone_nexus_operation: _Optional[_Union[DoStandaloneNexusOperation, _Mapping]] = ..., do_standalone_activity: _Optional[_Union[DoStandaloneActivity, _Mapping]] = ..., do_standalone_activity_operator_commands: _Optional[_Union[DoStandaloneActivityOperatorCommands, _Mapping]] = ...) -> None: ...
+    do_standalone_activity_batch_operations: DoStandaloneActivityBatchOperations
+    def __init__(self, do_signal: _Optional[_Union[DoSignal, _Mapping]] = ..., do_query: _Optional[_Union[DoQuery, _Mapping]] = ..., do_update: _Optional[_Union[DoUpdate, _Mapping]] = ..., nested_actions: _Optional[_Union[ClientActionSet, _Mapping]] = ..., do_describe: _Optional[_Union[DoDescribe, _Mapping]] = ..., do_standalone_nexus_operation: _Optional[_Union[DoStandaloneNexusOperation, _Mapping]] = ..., do_standalone_activity: _Optional[_Union[DoStandaloneActivity, _Mapping]] = ..., do_standalone_activity_operator_commands: _Optional[_Union[DoStandaloneActivityOperatorCommands, _Mapping]] = ..., do_standalone_activity_batch_operations: _Optional[_Union[DoStandaloneActivityBatchOperations, _Mapping]] = ...) -> None: ...
 
 class DoStandaloneNexusOperation(_message.Message):
     __slots__ = ("endpoint", "service", "operation")
@@ -140,6 +142,26 @@ class DoStandaloneActivityOperatorCommands(_message.Message):
     activity: ExecuteActivityAction
     command_type: DoStandaloneActivityOperatorCommands.CommandType
     def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., command_type: _Optional[_Union[DoStandaloneActivityOperatorCommands.CommandType, str]] = ...) -> None: ...
+
+class DoStandaloneActivityBatchOperations(_message.Message):
+    __slots__ = ("activity", "operation_type", "batch_size")
+    class OperationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+        __slots__ = ()
+        OPERATION_TYPE_UNSPECIFIED: _ClassVar[DoStandaloneActivityBatchOperations.OperationType]
+        OPERATION_TYPE_CANCEL: _ClassVar[DoStandaloneActivityBatchOperations.OperationType]
+        OPERATION_TYPE_TERMINATE: _ClassVar[DoStandaloneActivityBatchOperations.OperationType]
+        OPERATION_TYPE_DELETE: _ClassVar[DoStandaloneActivityBatchOperations.OperationType]
+    OPERATION_TYPE_UNSPECIFIED: DoStandaloneActivityBatchOperations.OperationType
+    OPERATION_TYPE_CANCEL: DoStandaloneActivityBatchOperations.OperationType
+    OPERATION_TYPE_TERMINATE: DoStandaloneActivityBatchOperations.OperationType
+    OPERATION_TYPE_DELETE: DoStandaloneActivityBatchOperations.OperationType
+    ACTIVITY_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_TYPE_FIELD_NUMBER: _ClassVar[int]
+    BATCH_SIZE_FIELD_NUMBER: _ClassVar[int]
+    activity: ExecuteActivityAction
+    operation_type: DoStandaloneActivityBatchOperations.OperationType
+    batch_size: int
+    def __init__(self, activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ..., operation_type: _Optional[_Union[DoStandaloneActivityBatchOperations.OperationType, str]] = ..., batch_size: _Optional[int] = ...) -> None: ...
 
 class DoSignal(_message.Message):
     __slots__ = ("do_signal_actions", "custom", "with_start")

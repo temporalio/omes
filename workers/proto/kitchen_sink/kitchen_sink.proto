@@ -55,6 +55,7 @@ message ClientAction {
     DoStandaloneNexusOperation do_standalone_nexus_operation = 6;
     DoStandaloneActivity do_standalone_activity = 7;
     DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;
+    DoStandaloneActivityBatchOperations do_standalone_activity_batch_operations = 9;
   }
 }
 
@@ -88,6 +89,21 @@ message DoStandaloneActivityOperatorCommands {
 
   ExecuteActivityAction activity = 1;
   CommandType command_type = 2;
+}
+
+// DoStandaloneActivityBatchOperations starts several standalone activities and
+// applies one server-side batch operation to all of them.
+message DoStandaloneActivityBatchOperations {
+  enum OperationType {
+    OPERATION_TYPE_UNSPECIFIED = 0;
+    OPERATION_TYPE_CANCEL = 1;
+    OPERATION_TYPE_TERMINATE = 2;
+    OPERATION_TYPE_DELETE = 3;
+  }
+
+  ExecuteActivityAction activity = 1;
+  OperationType operation_type = 2;
+  int32 batch_size = 3;
 }
 
 message DoSignal {

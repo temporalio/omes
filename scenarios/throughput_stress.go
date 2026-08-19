@@ -63,6 +63,13 @@ const (
 	// standalone activities in throughput_stress. It is independent of plain
 	// standalone activity load and follows the namespace capability by default.
 	IncludeStandaloneActivityOperatorCommandsFlag = "include-standalone-activity-operator-commands"
+	// IncludeStandaloneActivityBatchOperationsFlag enables batch cancel, terminate,
+	// and delete operations for standalone activities. It follows the namespace
+	// capability by default.
+	IncludeStandaloneActivityBatchOperationsFlag = "include-standalone-activity-batch-operations"
+	// StandaloneActivityBatchSizeFlag controls the number of standalone activities
+	// targeted by each batch operation.
+	StandaloneActivityBatchSizeFlag = "standalone-activity-batch-size"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
@@ -99,6 +106,8 @@ type tpsConfig struct {
 	IncludeStandaloneNexus                    bool
 	IncludeStandaloneActivity                 bool
 	IncludeStandaloneActivityOperatorCommands bool
+	IncludeStandaloneActivityBatchOperations  bool
+	StandaloneActivityBatchSize               int
 	Payload                                   *loadgen.PayloadConfig
 }
 
@@ -137,6 +146,13 @@ func init() {
 				func(c loadgen.Capabilities) bool {
 					return c.Namespace.GetStandaloneActivityOperatorCommands()
 				})
+			o.Feature(IncludeStandaloneActivityBatchOperationsFlag,
+				"Include standalone activity batch operations (Go worker only).",
+				func(c loadgen.Capabilities) bool {
+					return c.Namespace.GetStandaloneActivityBatchOperations()
+				})
+			o.Int(StandaloneActivityBatchSizeFlag, 5,
+				"Standalone activities targeted by each batch operation.")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -233,6 +249,13 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
 	config.IncludeStandaloneActivityOperatorCommands = info.OptionBool(
 		IncludeStandaloneActivityOperatorCommandsFlag)
+	config.IncludeStandaloneActivityBatchOperations = info.OptionBool(
+		IncludeStandaloneActivityBatchOperationsFlag)
+	config.StandaloneActivityBatchSize = info.OptionInt(StandaloneActivityBatchSizeFlag)
+	if config.StandaloneActivityBatchSize <= 0 {
+		return fmt.Errorf("%s must be positive, got %d",
+			StandaloneActivityBatchSizeFlag, config.StandaloneActivityBatchSize)
+	}
 
 	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
@@ -577,6 +600,17 @@ func (t *tpsExecutor) createActionsChunk(
 				),
 			)
 		}
+		if t.config.IncludeStandaloneActivityBatchOperations {
+			// Keep operation rotation continuous across outer iterations and Continue-As-New.
+			internalIteration := t.config.InternalIterations - remainingInternalIters + i
+			operationOrdinal := (run.Iteration-1)*t.config.InternalIterations + internalIteration
+			asyncActions = append(asyncActions,
+				t.createStandaloneActivityBatchOperationsAction(
+					loadgen.TaskQueueForRun(run.RunID),
+					operationOrdinal,
+				),
+			)
+		}
 
 		chunkActions = append(chunkActions, syncActions...)
 		chunkActions = append(chunkActions, &Action{
@@ -915,6 +949,38 @@ func (t *tpsExecutor) createStandaloneActivityOperatorCommandsAction(
 					StartToCloseTimeout:    durationpb.New(15 * time.Second),
 					HeartbeatTimeout:       durationpb.New(3 * time.Second),
 					RetryPolicy:            &common.RetryPolicy{MaximumAttempts: 2},
+				},
+			},
+		},
+	}
+	return ClientActivity(ClientActions(clientAction), DefaultRemoteActivity)
+}
+
+func (t *tpsExecutor) createStandaloneActivityBatchOperationsAction(
+	taskQueue string,
+	operationOrdinal int,
+) *Action {
+	operationTypes := []DoStandaloneActivityBatchOperations_OperationType{
+		DoStandaloneActivityBatchOperations_OPERATION_TYPE_CANCEL,
+		DoStandaloneActivityBatchOperations_OPERATION_TYPE_TERMINATE,
+		DoStandaloneActivityBatchOperations_OPERATION_TYPE_DELETE,
+	}
+	clientAction := &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivityBatchOperations{
+			DoStandaloneActivityBatchOperations: &DoStandaloneActivityBatchOperations{
+				OperationType: operationTypes[operationOrdinal%len(operationTypes)],
+				BatchSize:     int32(t.config.StandaloneActivityBatchSize),
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Heartbeat{
+						Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+							SuccessDuration:   durationpb.New(2 * time.Minute),
+							HeartbeatInterval: durationpb.New(time.Second),
+						},
+					},
+					TaskQueue:              taskQueue,
+					ScheduleToCloseTimeout: durationpb.New(3 * time.Minute),
+					StartToCloseTimeout:    durationpb.New(2 * time.Minute),
+					HeartbeatTimeout:       durationpb.New(3 * time.Second),
 				},
 			},
 		},

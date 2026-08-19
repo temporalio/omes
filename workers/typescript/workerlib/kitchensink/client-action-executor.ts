@@ -85,6 +85,15 @@ export class ClientActionExecutor {
         });
       }
       console.log('Skipping standalone activity operator commands (not implemented)');
+    } else if (action.doStandaloneActivityBatchOperations) {
+      if (this.errOnUnimplemented) {
+        throw ApplicationFailure.create({
+          message: 'DoStandaloneActivityBatchOperations is not supported',
+          type: 'UnsupportedOperation',
+          nonRetryable: true,
+        });
+      }
+      console.log('Skipping standalone activity batch operations (not implemented)');
     } else {
       throw new Error('Client action must have a recognized variant');
     }

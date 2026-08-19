@@ -135,6 +135,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		return e.executeStandaloneActivity(ctx, sa)
 	} else if sa := action.GetDoStandaloneActivityOperatorCommands(); sa != nil {
 		return e.executeStandaloneActivityOperatorCommands(ctx, sa)
+	} else if batch := action.GetDoStandaloneActivityBatchOperations(); batch != nil {
+		return e.executeStandaloneActivityBatchOperations(ctx, batch)
 	} else {
 		return fmt.Errorf("client action must be set")
 	}

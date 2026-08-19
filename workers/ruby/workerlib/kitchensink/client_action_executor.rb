@@ -65,6 +65,13 @@ class ClientActionExecutor
           non_retryable: true
         )
       end
+    when :do_standalone_activity_batch_operations
+      if @err_on_unimplemented
+        raise Temporalio::Error::ApplicationError.new(
+          'DoStandaloneActivityBatchOperations is not supported',
+          non_retryable: true
+        )
+      end
     else
       raise 'Client action must have a recognized variant'
     end

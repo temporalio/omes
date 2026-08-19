@@ -82,7 +82,7 @@ func TestThroughputStress(t *testing.T) {
 
 // TestThroughputStressFeatureAutoEnable exercises capability-gated feature options
 // end to end. The dev server runs with the standalone-activity, operator-command,
-// and standalone-Nexus gates on, and the scenario leaves those feature options
+// batch-operation, and standalone-Nexus gates on, and the scenario leaves those feature options
 // unset, so they have to resolve from what the namespace reports.
 func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	t.Parallel()
@@ -96,9 +96,10 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 		workertest.WithExecutorTimeout(1*time.Minute),
 		workertest.WithDynamicConfig(map[string]any{
 			// Gates the capabilities the feature options read.
-			"activity.enableStandalone":                        true,
-			"history.enableStandaloneActivityOperatorCommands": true,
-			"nexusoperation.enableStandalone":                  true,
+			"activity.enableStandalone":                             true,
+			"history.enableStandaloneActivityOperatorCommands":      true,
+			"frontend.enableBatchOperationsForStandaloneActivities": true,
+			"nexusoperation.enableStandalone":                       true,
 			// Standalone Nexus system callbacks require CHASM callbacks.
 			"history.enableCHASMCallbacks": true,
 		}))
@@ -113,6 +114,8 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 		"namespace should report standalone activities with activity.enableStandalone on")
 	require.True(t, caps.GetStandaloneActivityOperatorCommands(),
 		"namespace should report standalone activity operator commands with their gate on")
+	require.True(t, caps.GetStandaloneActivityBatchOperations(),
+		"namespace should report standalone activity batch operations with their gate on")
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,
@@ -138,6 +141,9 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 		"standalone activities should auto-enable from the namespace capability")
 	require.True(t, executor.config.IncludeStandaloneActivityOperatorCommands,
 		"standalone activity operator commands should auto-enable from the namespace capability")
+	require.True(t, executor.config.IncludeStandaloneActivityBatchOperations,
+		"standalone activity batch operations should auto-enable from the namespace capability")
+	require.Equal(t, 5, executor.config.StandaloneActivityBatchSize)
 	// Nexus load was requested, so standalone Nexus follows whatever this server
 	// version reports.
 	require.True(t, executor.config.NexusEnabled)
@@ -363,6 +369,92 @@ func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueA
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
 	}, commandTypes)
+}
+
+// TestThroughputStressActivityBatchOperationsAcrossContinueAsNew
+// guards against losing batch load at a Continue-As-New boundary, restarting its
+// operation rotation, or ignoring the configured batch size.
+func TestThroughputStressActivityBatchOperationsAcrossContinueAsNew(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	info := loadgen.ScenarioInfo{
+		RunID:       "tps-activity-batch-can",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IncludeStandaloneActivityBatchOperationsFlag: "true",
+			StandaloneActivityBatchSizeFlag:              "5",
+			NexusEnabledFlag:                             "false",
+		}),
+	}
+	require.NoError(t, executor.Configure(info))
+
+	sets := executor.createActions(info.NewRun(1))
+	require.Len(t, sets, 1)
+
+	var operationTypes []ks.DoStandaloneActivityBatchOperations_OperationType
+	var operationsPerChunk []int
+	chunk := sets[0].GetActions()
+	for {
+		terminalIndex := -1
+		for actionIndex, action := range chunk {
+			if action.GetContinueAsNew() != nil || action.GetReturnResult() != nil {
+				terminalIndex = actionIndex
+				break
+			}
+		}
+		require.NotEqual(t, -1, terminalIndex)
+
+		operations := standaloneActivityBatchOperationsInConcurrentGroups(chunk[:terminalIndex])
+		operationsPerChunk = append(operationsPerChunk, len(operations))
+		for _, operation := range operations {
+			operationTypes = append(operationTypes, operation.GetOperationType())
+			require.Equal(t, int32(5), operation.GetBatchSize())
+		}
+
+		if chunk[terminalIndex].GetContinueAsNew() == nil {
+			break
+		}
+		chunk = decodeContinueAsNewChunk(t, chunk)
+	}
+
+	require.Equal(t, []int{3, 3, 3, 1}, operationsPerChunk)
+	require.Equal(t, []ks.DoStandaloneActivityBatchOperations_OperationType{
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_CANCEL,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_TERMINATE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_DELETE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_CANCEL,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_TERMINATE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_DELETE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_CANCEL,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_TERMINATE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_DELETE,
+		ks.DoStandaloneActivityBatchOperations_OPERATION_TYPE_CANCEL,
+	}, operationTypes)
+}
+
+func standaloneActivityBatchOperationsInConcurrentGroups(actions []*ks.Action) (
+	operations []*ks.DoStandaloneActivityBatchOperations,
+) {
+	for _, action := range actions {
+		if set := action.GetNestedActionSet(); set != nil && set.GetConcurrent() {
+			for _, nestedAction := range set.GetActions() {
+				activity := nestedAction.GetExecActivity()
+				if activity == nil || activity.GetClient() == nil {
+					continue
+				}
+				for _, clientSet := range activity.GetClient().GetClientSequence().GetActionSets() {
+					for _, clientAction := range clientSet.GetActions() {
+						if operation := clientAction.GetDoStandaloneActivityBatchOperations(); operation != nil {
+							operations = append(operations, operation)
+						}
+					}
+				}
+			}
+		}
+	}
+	return operations
 }
 
 func standaloneActivityOperatorCommandsInConcurrentGroups(actions []*ks.Action) (

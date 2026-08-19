@@ -97,6 +97,15 @@ public class ClientActionsExecutor
             }
             Console.WriteLine("Skipping standalone activity operator commands (not implemented)");
         }
+        else if (action.DoStandaloneActivityBatchOperations != null)
+        {
+            if (_errOnUnimplemented)
+            {
+                throw new ApplicationFailureException(
+                    "DoStandaloneActivityBatchOperations is not supported", "UnsupportedOperation", nonRetryable: true);
+            }
+            Console.WriteLine("Skipping standalone activity batch operations (not implemented)");
+        }
         else
         {
             throw new ArgumentException("Client action must have a recognized variant");

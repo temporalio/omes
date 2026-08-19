@@ -75,6 +75,21 @@ The workload currently sends the commands through WorkflowService RPCs in the Go
 SDK command APIs are being added. Other language workers skip the action in the default non-strict
 mode and report it as unsupported with `--worker-err-on-unimplemented`.
 
+## Standalone activity batch operations
+
+`include-standalone-activity-batch-operations` adds standalone-activity batch load, rotating through
+cancel, terminate, and delete across Continue-As-New. It is independently selectable and turns on
+by itself when the namespace reports the `StandaloneActivityBatchOperations` capability. Passing
+`--option include-standalone-activity-batch-operations=false` forces it off.
+
+Each batch targets five newly started, running standalone activities by default. Use
+`--option standalone-activity-batch-size=<count>` to change the target count. Omes waits for the
+batch job to complete, validates its aggregate counts, and verifies one target's resulting state.
+
+Batch operations are an operator server API rather than an SDK feature. The Go worker sends
+the WorkflowService RPCs directly; other language workers skip the action in the default non-strict
+mode and report it as unsupported with `--worker-err-on-unimplemented`.
+
 ## Standalone Nexus operations
 
 `include-standalone-nexus` is a feature option in the same way, but it only adds to a run that is
