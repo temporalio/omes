@@ -165,6 +165,36 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
+			name: "ExecActivity/HeartbeatIntervalAfterTimeout",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: &ExecuteActivityAction_Heartbeat{
+										Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+											FailAttempts:      1,
+											SuccessDuration:   durationpb.New(5 * time.Second),
+											FailureDuration:   durationpb.New(5 * time.Second),
+											HeartbeatInterval: durationpb.New(100 * time.Millisecond),
+										},
+									},
+									ScheduleToCloseTimeout: durationpb.New(20 * time.Second),
+									StartToCloseTimeout:    durationpb.New(10 * time.Second),
+									HeartbeatTimeout:       durationpb.New(2 * time.Second),
+								},
+							},
+						},
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"heartbeat"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
+		},
+		{
 			name: "ExecActivity/ExecChildWorkflow",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{

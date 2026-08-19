@@ -54,9 +54,39 @@ class HeartbeatActivity < Temporalio::Activity::Definition
   def execute(config)
     info = Temporalio::Activity::Context.current.info
     should_send_heartbeats = info.attempt > config.fail_attempts
-    duration = should_send_heartbeats ? config.success_duration : config.failure_duration
-    DelayActivity.new.execute(duration)
-    Temporalio::Activity::Context.current.heartbeat if should_send_heartbeats
+    unless should_send_heartbeats
+      DelayActivity.new.execute(config.failure_duration)
+      return
+    end
+
+    duration = duration_seconds(config.success_duration)
+    interval = duration_seconds(config.heartbeat_interval)
+    if interval <= 0
+      sleep(duration)
+      Temporalio::Activity::Context.current.heartbeat
+      return
+    end
+
+    run_with_heartbeats(duration, interval)
+  end
+
+  private
+
+  def run_with_heartbeats(duration, interval)
+    Temporalio::Activity::Context.current.heartbeat
+    remaining = duration
+    while remaining.positive?
+      sleep_for = [interval, remaining].min
+      sleep(sleep_for)
+      remaining -= sleep_for
+      Temporalio::Activity::Context.current.heartbeat if remaining.positive?
+    end
+  end
+
+  def duration_seconds(duration)
+    return 0 if duration.nil?
+
+    duration.seconds + (duration.nanos / 1_000_000_000.0)
   end
 end
 

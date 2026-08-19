@@ -19,6 +19,7 @@ public static class WorkerApp
         workerOptions.AddActivity(KitchenSinkWorkflow.Noop);
         workerOptions.AddActivity(KitchenSinkWorkflow.Delay);
         workerOptions.AddActivity(KitchenSinkWorkflow.Payload);
+        workerOptions.AddActivity(KitchenSinkWorkflow.Heartbeat);
 
         var clientActivities = new ClientActivitiesImpl(client, context.ErrOnUnimplemented);
         workerOptions.AddActivity(clientActivities.Client);

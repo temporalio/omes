@@ -575,8 +575,7 @@ func Heartbeat(ctx context.Context, config *kitchensink.ExecuteActivityAction_He
 		activity.RecordHeartbeat(ctx)
 		return nil
 	}
-	return runWithHeartbeats(ctx, config.SuccessDuration.AsDuration(), interval,
-		func() { activity.RecordHeartbeat(ctx) })
+	return runWithHeartbeats(ctx, config.SuccessDuration.AsDuration(), interval)
 }
 
 // runWithHeartbeats records immediately and periodically until duration elapses.
@@ -585,20 +584,19 @@ func runWithHeartbeats(
 	ctx context.Context,
 	duration time.Duration,
 	interval time.Duration,
-	record func(),
 ) error {
 	deadline := time.NewTimer(duration)
 	defer deadline.Stop()
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	record()
+	activity.RecordHeartbeat(ctx)
 	for {
 		select {
 		case <-deadline.C:
 			return nil
 		case <-ticker.C:
-			record()
+			activity.RecordHeartbeat(ctx)
 		case <-ctx.Done():
 			return context.Cause(ctx)
 		}

@@ -444,17 +444,41 @@ public class KitchenSinkWorkflow
     {
         var info = ActivityExecutionContext.Current.Info;
         var shouldSendHeartbeats = info.Attempt > config.FailAttempts;
-        var duration = config.SuccessDuration;
-        // Failure case: run failure duration (exceeds heartbeat timeout)
         if (!shouldSendHeartbeats)
         {
-            duration = config.FailureDuration;
+            // Failure case: run failure duration (exceeds heartbeat timeout)
+            await Task.Delay(
+                config.FailureDuration.ToTimeSpan(),
+                ActivityExecutionContext.Current.CancellationToken);
+            return;
         }
-        // Sleep for failure/success timeout duration.
-        // In failure case, this will throw a TaskCancelledException.
-        await Task.Delay(duration.ToTimeSpan(), ActivityExecutionContext.Current.CancellationToken);
-        // If successful, heartbeat
+
+        var duration = config.SuccessDuration.ToTimeSpan();
+        var interval = config.HeartbeatInterval?.ToTimeSpan() ?? TimeSpan.Zero;
+        if (interval <= TimeSpan.Zero)
+        {
+            await Task.Delay(duration, ActivityExecutionContext.Current.CancellationToken);
+            ActivityExecutionContext.Current.Heartbeat();
+            return;
+        }
+
+        await RunWithHeartbeats(duration, interval);
+    }
+
+    private static async Task RunWithHeartbeats(TimeSpan duration, TimeSpan interval)
+    {
         ActivityExecutionContext.Current.Heartbeat();
+        var remaining = duration;
+        while (remaining > TimeSpan.Zero)
+        {
+            var delay = interval < remaining ? interval : remaining;
+            await Task.Delay(delay, ActivityExecutionContext.Current.CancellationToken);
+            remaining -= delay;
+            if (remaining > TimeSpan.Zero)
+            {
+                ActivityExecutionContext.Current.Heartbeat();
+            }
+        }
     }
 }
 
