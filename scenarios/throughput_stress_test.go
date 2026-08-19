@@ -304,10 +304,9 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 		"payload-size sequence must advance across continue-as-new, not restart identically")
 }
 
-// TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueAsNew
-// guards against losing operator load at a Continue-As-New boundary or restarting
-// its command rotation in each new workflow run.
-func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueAsNew(t *testing.T) {
+// TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew guards against
+// losing operator load or restarting its command rotation at either boundary.
+func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T) {
 	t.Parallel()
 
 	executor := newThroughputStressExecutor()
@@ -322,7 +321,7 @@ func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueA
 	}
 	require.NoError(t, executor.Configure(info))
 
-	sets := executor.createActions(info.NewRun(1))
+	sets := executor.createActions(info.NewRun(2))
 	require.Len(t, sets, 1)
 
 	var commandTypes []ks.DoStandaloneActivityOperatorCommands_CommandType
@@ -352,7 +351,6 @@ func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueA
 
 	require.Equal(t, []int{3, 3, 3, 1}, commandsPerChunk)
 	require.Equal(t, []ks.DoStandaloneActivityOperatorCommands_CommandType{
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
@@ -362,6 +360,7 @@ func TestThroughputStressOperatorCommandsRunEachInternalIterationAcrossContinueA
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
 	}, commandTypes)
 }
 

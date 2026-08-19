@@ -472,6 +472,18 @@ func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 	}
 }
 
+// internalIterationIndex returns the zero-based internal iteration across
+// outer runs and Continue-As-New chunks.
+func (t *tpsExecutor) internalIterationIndex(
+	run *loadgen.Run,
+	remainingInternalIters int,
+	chunkIteration int,
+) int {
+	internalIterationsBeforeRun := (run.Iteration - 1) * t.config.InternalIterations
+	internalIterationsBeforeChunk := t.config.InternalIterations - remainingInternalIters
+	return internalIterationsBeforeRun + internalIterationsBeforeChunk + chunkIteration
+}
+
 func (t *tpsExecutor) createActionsChunk(
 	run *loadgen.Run,
 	rng *rand.Rand,
@@ -567,9 +579,7 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
 		}
 		if t.config.IncludeStandaloneActivityOperatorCommands {
-			// Keep command rotation continuous across outer iterations and Continue-As-New.
-			internalIteration := t.config.InternalIterations - remainingInternalIters + i
-			commandOrdinal := (run.Iteration-1)*t.config.InternalIterations + internalIteration
+			commandOrdinal := t.internalIterationIndex(run, remainingInternalIters, i)
 			asyncActions = append(asyncActions,
 				t.createStandaloneActivityOperatorCommandsAction(
 					loadgen.TaskQueueForRun(run.RunID),

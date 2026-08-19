@@ -1072,41 +1072,12 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
 		},
-		{
-			name: "ExecActivity/Client/StandaloneActivityOperatorCommands",
-			testInput: &TestInput{
-				WorkflowInput: &WorkflowInput{
-					InitialActions: ListActionSet(
-						ClientActivity(
-							ClientActions(&ClientAction{
-								Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
-									DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
-										CommandType: DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-										Activity: &ExecuteActivityAction{
-											ActivityType: &ExecuteActivityAction_Heartbeat{
-												Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
-													SuccessDuration:   durationpb.New(time.Second),
-													HeartbeatInterval: durationpb.New(100 * time.Millisecond),
-												},
-											},
-											ScheduleToCloseTimeout: durationpb.New(10 * time.Second),
-											StartToCloseTimeout:    durationpb.New(5 * time.Second),
-											HeartbeatTimeout:       durationpb.New(2 * time.Second),
-										},
-									},
-								},
-							}),
-							DefaultRemoteActivity,
-						),
-					),
-				},
-			},
-			historyMatcher: PartialHistoryMatcher(`
-				ActivityTaskScheduled {"activityType":{"name":"client"}}
-				ActivityTaskStarted
-				ActivityTaskCompleted`),
-			expectedUnsupportedErrs: standaloneActivityOperatorCommandsUnsupportedSDKs,
-		},
+		standaloneActivityOperatorCommandsTestCase("Pause",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE),
+		standaloneActivityOperatorCommandsTestCase("Reset",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET),
+		standaloneActivityOperatorCommandsTestCase("Update",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE),
 		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
@@ -1145,6 +1116,48 @@ func TestKitchenSink(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func standaloneActivityOperatorCommandsTestCase(
+	name string,
+	commandType DoStandaloneActivityOperatorCommands_CommandType,
+) testCase {
+	return testCase{
+		name: "ExecActivity/Client/StandaloneActivityOperatorCommands/" + name,
+		testInput: &TestInput{
+			WorkflowInput: &WorkflowInput{
+				InitialActions: ListActionSet(
+					ClientActivity(
+						ClientActions(&ClientAction{
+							Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
+								DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
+									CommandType: commandType,
+									Activity: &ExecuteActivityAction{
+										ActivityType: &ExecuteActivityAction_Heartbeat{
+											Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+												SuccessDuration:   durationpb.New(5 * time.Second),
+												HeartbeatInterval: durationpb.New(100 * time.Millisecond),
+											},
+										},
+										ScheduleToCloseTimeout: durationpb.New(20 * time.Second),
+										StartToCloseTimeout:    durationpb.New(10 * time.Second),
+										HeartbeatTimeout:       durationpb.New(2 * time.Second),
+										RetryPolicy:            &common.RetryPolicy{MaximumAttempts: 2},
+									},
+								},
+							},
+						}),
+						DefaultRemoteActivity,
+					),
+				),
+			},
+		},
+		historyMatcher: PartialHistoryMatcher(`
+			ActivityTaskScheduled {"activityType":{"name":"client"}}
+			ActivityTaskStarted
+			ActivityTaskCompleted`),
+		expectedUnsupportedErrs: standaloneActivityOperatorCommandsUnsupportedSDKs,
 	}
 }
 
