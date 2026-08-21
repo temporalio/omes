@@ -59,6 +59,10 @@ const (
 	// On by default when the namespace under test reports support (dynamic config
 	// activity.enableStandalone); pass include-standalone-activity=false to force off.
 	IncludeStandaloneActivityFlag = "include-standalone-activity"
+	// IncludeStandaloneActivityOperatorCommandsFlag enables operator commands for
+	// standalone activities in throughput_stress. It is independent of plain
+	// standalone activity load and follows the namespace capability by default.
+	IncludeStandaloneActivityOperatorCommandsFlag = "include-standalone-activity-operator-commands"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
@@ -78,23 +82,24 @@ type tpsState struct {
 }
 
 type tpsConfig struct {
-	InternalIterations            int
-	InternalIterTimeout           time.Duration
-	ContinueAsNewAfterIter        int
-	NexusEnabled                  bool
-	NexusEndpoint                 string
-	SleepTime                     time.Duration
-	SleepActivities               *loadgen.SleepActivityConfig
-	VisibilityVerificationTimeout time.Duration
-	MinThroughputPerHour          float64
-	ScenarioRunID                 string
-	ExecutionID                   string
-	RngSeed                       int64
-	IncludeRetryScenarios         bool
-	IncludeDescribe               bool
-	IncludeStandaloneNexus        bool
-	IncludeStandaloneActivity     bool
-	Payload                       *loadgen.PayloadConfig
+	InternalIterations                        int
+	InternalIterTimeout                       time.Duration
+	ContinueAsNewAfterIter                    int
+	NexusEnabled                              bool
+	NexusEndpoint                             string
+	SleepTime                                 time.Duration
+	SleepActivities                           *loadgen.SleepActivityConfig
+	VisibilityVerificationTimeout             time.Duration
+	MinThroughputPerHour                      float64
+	ScenarioRunID                             string
+	ExecutionID                               string
+	RngSeed                                   int64
+	IncludeRetryScenarios                     bool
+	IncludeDescribe                           bool
+	IncludeStandaloneNexus                    bool
+	IncludeStandaloneActivity                 bool
+	IncludeStandaloneActivityOperatorCommands bool
+	Payload                                   *loadgen.PayloadConfig
 }
 
 type tpsExecutor struct {
@@ -127,6 +132,11 @@ func init() {
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneNexusOperation() })
 			o.Feature(IncludeStandaloneActivityFlag, "Include standalone activities.",
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneActivities() })
+			o.Feature(IncludeStandaloneActivityOperatorCommandsFlag,
+				"Include standalone activity operator commands (Go worker only).",
+				func(c loadgen.Capabilities) bool {
+					return c.Namespace.GetStandaloneActivityOperatorCommands()
+				})
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -221,6 +231,8 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
 	}
 	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
+	config.IncludeStandaloneActivityOperatorCommands = info.OptionBool(
+		IncludeStandaloneActivityOperatorCommandsFlag)
 
 	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
@@ -460,6 +472,18 @@ func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
 	}
 }
 
+// internalIterationIndex returns the zero-based internal iteration across
+// outer runs and Continue-As-New chunks.
+func (t *tpsExecutor) internalIterationIndex(
+	run *loadgen.Run,
+	remainingInternalIters int,
+	chunkIteration int,
+) int {
+	internalIterationsBeforeRun := (run.Iteration - 1) * t.config.InternalIterations
+	internalIterationsBeforeChunk := t.config.InternalIterations - remainingInternalIters
+	return internalIterationsBeforeRun + internalIterationsBeforeChunk + chunkIteration
+}
+
 func (t *tpsExecutor) createActionsChunk(
 	run *loadgen.Run,
 	rng *rand.Rand,
@@ -553,6 +577,15 @@ func (t *tpsExecutor) createActionsChunk(
 		// Add standalone activities, if configured.
 		if t.config.IncludeStandaloneActivity {
 			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
+		}
+		if t.config.IncludeStandaloneActivityOperatorCommands {
+			commandOrdinal := t.internalIterationIndex(run, remainingInternalIters, i)
+			asyncActions = append(asyncActions,
+				t.createStandaloneActivityOperatorCommandsAction(
+					loadgen.TaskQueueForRun(run.RunID),
+					commandOrdinal,
+				),
+			)
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -860,6 +893,43 @@ func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand
 			},
 		},
 	}), DefaultRemoteActivity)
+}
+
+// createStandaloneActivityOperatorCommandsAction creates operator load as a client activity.
+//
+// TODO: Use each SDK's operator-command APIs once they are supported. For now,
+// the Go worker uses direct RPCs and other SDK workers treat this as unsupported.
+func (t *tpsExecutor) createStandaloneActivityOperatorCommandsAction(
+	taskQueue string,
+	commandOrdinal int,
+) *Action {
+	commandTypes := []DoStandaloneActivityOperatorCommands_CommandType{
+		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
+		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
+		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
+	}
+	commandType := commandTypes[commandOrdinal%len(commandTypes)]
+	clientAction := &ClientAction{
+		Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
+			DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
+				CommandType: commandType,
+				Activity: &ExecuteActivityAction{
+					ActivityType: &ExecuteActivityAction_Heartbeat{
+						Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+							SuccessDuration:   durationpb.New(5 * time.Second),
+							HeartbeatInterval: durationpb.New(time.Second),
+						},
+					},
+					TaskQueue:              taskQueue,
+					ScheduleToCloseTimeout: durationpb.New(2 * time.Minute),
+					StartToCloseTimeout:    durationpb.New(15 * time.Second),
+					HeartbeatTimeout:       durationpb.New(3 * time.Second),
+					RetryPolicy:            &common.RetryPolicy{MaximumAttempts: 2},
+				},
+			},
+		},
+	}
+	return ClientActivity(ClientActions(clientAction), DefaultRemoteActivity)
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {

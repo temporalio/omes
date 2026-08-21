@@ -74,15 +74,38 @@ public class ActivitiesImpl implements Activities {
       throws InterruptedException {
     var activityInfo = Activity.getExecutionContext().getInfo();
     boolean shouldSendHeartbeats = activityInfo.getAttempt() > config.getFailAttempts();
-    var duration = config.getSuccessDuration();
     if (!shouldSendHeartbeats) {
       // Failure case: run failure duration (exceeds heartbeat timeout)
-      duration = config.getFailureDuration();
+      delay(config.getFailureDuration());
+      return;
     }
-    // Sleep for failure/success timeout duration.
-    // In failure case, this will throw an InterruptedException.
-    delay(duration);
-    // On success, heartbeat
+
+    long durationMillis = durationMillis(config.getSuccessDuration());
+    long intervalMillis = durationMillis(config.getHeartbeatInterval());
+    if (!config.hasHeartbeatInterval() || intervalMillis <= 0) {
+      delay(config.getSuccessDuration());
+      Activity.getExecutionContext().heartbeat(null);
+      return;
+    }
+
+    runWithHeartbeats(durationMillis, intervalMillis);
+  }
+
+  private static void runWithHeartbeats(long durationMillis, long intervalMillis)
+      throws InterruptedException {
     Activity.getExecutionContext().heartbeat(null);
+    long remainingMillis = durationMillis;
+    while (remainingMillis > 0) {
+      long sleepMillis = Math.min(intervalMillis, remainingMillis);
+      Thread.sleep(sleepMillis);
+      remainingMillis -= sleepMillis;
+      if (remainingMillis > 0) {
+        Activity.getExecutionContext().heartbeat(null);
+      }
+    }
+  }
+
+  private static long durationMillis(com.google.protobuf.Duration duration) {
+    return 1000 * duration.getSeconds() + duration.getNanos() / 1_000_000;
   }
 }

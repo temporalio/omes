@@ -51,6 +51,14 @@ var (
 		clioptions.LangTypeScript: "dostandalonenexusoperation is not supported",
 		clioptions.LangDotNet:     "dostandalonenexusoperation is not supported",
 	}
+
+	standaloneActivityOperatorCommandsUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangJava:       "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangPython:     "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangRuby:       "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangTypeScript: "dostandaloneactivityoperatorcommands is not supported",
+		clioptions.LangDotNet:     "dostandaloneactivityoperatorcommands is not supported",
+	}
 )
 
 type testCase struct {
@@ -73,7 +81,8 @@ func TestKitchenSink(t *testing.T) {
 		// Standalone Nexus system callbacks require CHASM callbacks.
 		"history.enableCHASMCallbacks": true,
 		// Enable StartActivityExecution for the standalone-activity subtest.
-		"activity.enableStandalone": true,
+		"activity.enableStandalone":                        true,
+		"history.enableStandaloneActivityOperatorCommands": true,
 	}))
 
 	// Default workflow execution timeout for tests
@@ -154,6 +163,36 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				MarkerRecorded  			# fields across SDKs vary here
 				WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ExecActivity/HeartbeatIntervalAfterTimeout",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecActivity{
+								ExecActivity: &ExecuteActivityAction{
+									ActivityType: &ExecuteActivityAction_Heartbeat{
+										Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+											FailAttempts:      1,
+											SuccessDuration:   durationpb.New(5 * time.Second),
+											FailureDuration:   durationpb.New(5 * time.Second),
+											HeartbeatInterval: durationpb.New(100 * time.Millisecond),
+										},
+									},
+									ScheduleToCloseTimeout: durationpb.New(20 * time.Second),
+									StartToCloseTimeout:    durationpb.New(10 * time.Second),
+									HeartbeatTimeout:       durationpb.New(2 * time.Second),
+								},
+							},
+						},
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				ActivityTaskScheduled {"activityType":{"name":"heartbeat"}}
+				ActivityTaskStarted
+				ActivityTaskCompleted`),
 		},
 		{
 			name: "ExecActivity/ExecChildWorkflow",
@@ -1063,6 +1102,12 @@ func TestKitchenSink(t *testing.T) {
 				ActivityTaskStarted
 				ActivityTaskCompleted`),
 		},
+		standaloneActivityOperatorCommandsTestCase("Pause",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE),
+		standaloneActivityOperatorCommandsTestCase("Reset",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET),
+		standaloneActivityOperatorCommandsTestCase("Update",
+			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE),
 		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
@@ -1101,6 +1146,48 @@ func TestKitchenSink(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func standaloneActivityOperatorCommandsTestCase(
+	name string,
+	commandType DoStandaloneActivityOperatorCommands_CommandType,
+) testCase {
+	return testCase{
+		name: "ExecActivity/Client/StandaloneActivityOperatorCommands/" + name,
+		testInput: &TestInput{
+			WorkflowInput: &WorkflowInput{
+				InitialActions: ListActionSet(
+					ClientActivity(
+						ClientActions(&ClientAction{
+							Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
+								DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
+									CommandType: commandType,
+									Activity: &ExecuteActivityAction{
+										ActivityType: &ExecuteActivityAction_Heartbeat{
+											Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+												SuccessDuration:   durationpb.New(5 * time.Second),
+												HeartbeatInterval: durationpb.New(100 * time.Millisecond),
+											},
+										},
+										ScheduleToCloseTimeout: durationpb.New(20 * time.Second),
+										StartToCloseTimeout:    durationpb.New(10 * time.Second),
+										HeartbeatTimeout:       durationpb.New(2 * time.Second),
+										RetryPolicy:            &common.RetryPolicy{MaximumAttempts: 2},
+									},
+								},
+							},
+						}),
+						DefaultRemoteActivity,
+					),
+				),
+			},
+		},
+		historyMatcher: PartialHistoryMatcher(`
+			ActivityTaskScheduled {"activityType":{"name":"client"}}
+			ActivityTaskStarted
+			ActivityTaskCompleted`),
+		expectedUnsupportedErrs: standaloneActivityOperatorCommandsUnsupportedSDKs,
 	}
 }
 
@@ -1150,6 +1237,9 @@ func testForSDK(
 									}
 									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
 										sa.GetActivity().TaskQueue = runTaskQueue
+									}
+									if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
+										op.GetActivity().TaskQueue = runTaskQueue
 									}
 								}
 							}

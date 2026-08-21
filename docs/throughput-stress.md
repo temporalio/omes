@@ -63,6 +63,18 @@ does not report support fails the run.
 
 Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
+## Standalone activity operator commands
+
+`include-standalone-activity-operator-commands` adds standalone-activity operator-command load,
+rotating through pause, reset, and update-options across Continue-As-New. It is independently
+selectable from plain standalone-activity load and turns on by itself when the namespace reports the
+`StandaloneActivityOperatorCommands` capability. Passing
+`--option include-standalone-activity-operator-commands=false` forces it off.
+
+The workload currently sends the commands through WorkflowService RPCs in the Go worker while the
+SDK command APIs are being added. Other language workers skip the action in the default non-strict
+mode and report it as unsupported with `--worker-err-on-unimplemented`.
+
 ## Standalone Nexus operations
 
 `include-standalone-nexus` is a feature option in the same way, but it only adds to a run that is

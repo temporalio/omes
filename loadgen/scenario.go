@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/nexus/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -474,7 +476,8 @@ func ensureNexusEndpoint(ctx context.Context, cl client.Client, namespace, runID
 			},
 		})
 	if err != nil {
-		if status.Code(err) == codes.AlreadyExists {
+		var alreadyExists *serviceerror.AlreadyExists
+		if errors.As(err, &alreadyExists) || status.Code(err) == codes.AlreadyExists {
 			return endpointName, false, nil
 		}
 		return "", false, err

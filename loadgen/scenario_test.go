@@ -1,11 +1,33 @@
 package loadgen
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/operatorservicemock/v1"
+	"go.temporal.io/api/serviceerror"
+	sdkmocks "go.temporal.io/sdk/mocks"
 )
+
+func TestEnsureNexusEndpointReusesExistingEndpoint(t *testing.T) {
+	operatorClient := operatorservicemock.NewMockOperatorServiceClient(gomock.NewController(t))
+	operatorClient.EXPECT().
+		CreateNexusEndpoint(gomock.Any(), gomock.Any()).
+		Return(nil, serviceerror.NewAlreadyExists("endpoint already registered"))
+
+	temporalClient := &sdkmocks.Client{}
+	temporalClient.On("OperatorService").Return(operatorClient)
+
+	endpoint, created, err := ensureNexusEndpoint(
+		context.Background(), temporalClient, "test-namespace", "test-run")
+
+	require.NoError(t, err)
+	require.Equal(t, "test-nexus-endpoint-test-run", endpoint)
+	require.False(t, created)
+}
 
 func TestScenarioConfigValidation(t *testing.T) {
 	tests := []struct {

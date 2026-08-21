@@ -4826,6 +4826,21 @@ public final class KitchenSink {
      */
     io.temporal.omes.KitchenSink.DoStandaloneActivityOrBuilder getDoStandaloneActivityOrBuilder();
 
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     * @return Whether the doStandaloneActivityOperatorCommands field is set.
+     */
+    boolean hasDoStandaloneActivityOperatorCommands();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     * @return The doStandaloneActivityOperatorCommands.
+     */
+    io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDoStandaloneActivityOperatorCommands();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     */
+    io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder getDoStandaloneActivityOperatorCommandsOrBuilder();
+
     io.temporal.omes.KitchenSink.ClientAction.VariantCase getVariantCase();
   }
   /**
@@ -4876,6 +4891,7 @@ public final class KitchenSink {
       DO_DESCRIBE(5),
       DO_STANDALONE_NEXUS_OPERATION(6),
       DO_STANDALONE_ACTIVITY(7),
+      DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS(8),
       VARIANT_NOT_SET(0);
       private final int value;
       private VariantCase(int value) {
@@ -4900,6 +4916,7 @@ public final class KitchenSink {
           case 5: return DO_DESCRIBE;
           case 6: return DO_STANDALONE_NEXUS_OPERATION;
           case 7: return DO_STANDALONE_ACTIVITY;
+          case 8: return DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS;
           case 0: return VARIANT_NOT_SET;
           default: return null;
         }
@@ -5132,6 +5149,37 @@ public final class KitchenSink {
       return io.temporal.omes.KitchenSink.DoStandaloneActivity.getDefaultInstance();
     }
 
+    public static final int DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS_FIELD_NUMBER = 8;
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     * @return Whether the doStandaloneActivityOperatorCommands field is set.
+     */
+    @java.lang.Override
+    public boolean hasDoStandaloneActivityOperatorCommands() {
+      return variantCase_ == 8;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     * @return The doStandaloneActivityOperatorCommands.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDoStandaloneActivityOperatorCommands() {
+      if (variantCase_ == 8) {
+         return (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_;
+      }
+      return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder getDoStandaloneActivityOperatorCommandsOrBuilder() {
+      if (variantCase_ == 8) {
+         return (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_;
+      }
+      return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5166,6 +5214,9 @@ public final class KitchenSink {
       }
       if (variantCase_ == 7) {
         output.writeMessage(7, (io.temporal.omes.KitchenSink.DoStandaloneActivity) variant_);
+      }
+      if (variantCase_ == 8) {
+        output.writeMessage(8, (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -5203,6 +5254,10 @@ public final class KitchenSink {
       if (variantCase_ == 7) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, (io.temporal.omes.KitchenSink.DoStandaloneActivity) variant_);
+      }
+      if (variantCase_ == 8) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -5249,6 +5304,10 @@ public final class KitchenSink {
           if (!getDoStandaloneActivity()
               .equals(other.getDoStandaloneActivity())) return false;
           break;
+        case 8:
+          if (!getDoStandaloneActivityOperatorCommands()
+              .equals(other.getDoStandaloneActivityOperatorCommands())) return false;
+          break;
         case 0:
         default:
       }
@@ -5291,6 +5350,10 @@ public final class KitchenSink {
         case 7:
           hash = (37 * hash) + DO_STANDALONE_ACTIVITY_FIELD_NUMBER;
           hash = (53 * hash) + getDoStandaloneActivity().hashCode();
+          break;
+        case 8:
+          hash = (37 * hash) + DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS_FIELD_NUMBER;
+          hash = (53 * hash) + getDoStandaloneActivityOperatorCommands().hashCode();
           break;
         case 0:
         default:
@@ -5447,6 +5510,9 @@ public final class KitchenSink {
         if (doStandaloneActivityBuilder_ != null) {
           doStandaloneActivityBuilder_.clear();
         }
+        if (doStandaloneActivityOperatorCommandsBuilder_ != null) {
+          doStandaloneActivityOperatorCommandsBuilder_.clear();
+        }
         variantCase_ = 0;
         variant_ = null;
         return this;
@@ -5515,6 +5581,10 @@ public final class KitchenSink {
         if (variantCase_ == 7 &&
             doStandaloneActivityBuilder_ != null) {
           result.variant_ = doStandaloneActivityBuilder_.build();
+        }
+        if (variantCase_ == 8 &&
+            doStandaloneActivityOperatorCommandsBuilder_ != null) {
+          result.variant_ = doStandaloneActivityOperatorCommandsBuilder_.build();
         }
       }
 
@@ -5589,6 +5659,10 @@ public final class KitchenSink {
           }
           case DO_STANDALONE_ACTIVITY: {
             mergeDoStandaloneActivity(other.getDoStandaloneActivity());
+            break;
+          }
+          case DO_STANDALONE_ACTIVITY_OPERATOR_COMMANDS: {
+            mergeDoStandaloneActivityOperatorCommands(other.getDoStandaloneActivityOperatorCommands());
             break;
           }
           case VARIANT_NOT_SET: {
@@ -5670,6 +5744,13 @@ public final class KitchenSink {
                 variantCase_ = 7;
                 break;
               } // case 58
+              case 66: {
+                input.readMessage(
+                    getDoStandaloneActivityOperatorCommandsFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                variantCase_ = 8;
+                break;
+              } // case 66
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -6694,6 +6775,148 @@ public final class KitchenSink {
         variantCase_ = 7;
         onChanged();
         return doStandaloneActivityBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder> doStandaloneActivityOperatorCommandsBuilder_;
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       * @return Whether the doStandaloneActivityOperatorCommands field is set.
+       */
+      @java.lang.Override
+      public boolean hasDoStandaloneActivityOperatorCommands() {
+        return variantCase_ == 8;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       * @return The doStandaloneActivityOperatorCommands.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDoStandaloneActivityOperatorCommands() {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          if (variantCase_ == 8) {
+            return (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_;
+          }
+          return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+        } else {
+          if (variantCase_ == 8) {
+            return doStandaloneActivityOperatorCommandsBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      public Builder setDoStandaloneActivityOperatorCommands(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands value) {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          variant_ = value;
+          onChanged();
+        } else {
+          doStandaloneActivityOperatorCommandsBuilder_.setMessage(value);
+        }
+        variantCase_ = 8;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      public Builder setDoStandaloneActivityOperatorCommands(
+          io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder builderForValue) {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          variant_ = builderForValue.build();
+          onChanged();
+        } else {
+          doStandaloneActivityOperatorCommandsBuilder_.setMessage(builderForValue.build());
+        }
+        variantCase_ = 8;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      public Builder mergeDoStandaloneActivityOperatorCommands(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands value) {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          if (variantCase_ == 8 &&
+              variant_ != io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance()) {
+            variant_ = io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.newBuilder((io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            variant_ = value;
+          }
+          onChanged();
+        } else {
+          if (variantCase_ == 8) {
+            doStandaloneActivityOperatorCommandsBuilder_.mergeFrom(value);
+          } else {
+            doStandaloneActivityOperatorCommandsBuilder_.setMessage(value);
+          }
+        }
+        variantCase_ = 8;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      public Builder clearDoStandaloneActivityOperatorCommands() {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          if (variantCase_ == 8) {
+            variantCase_ = 0;
+            variant_ = null;
+            onChanged();
+          }
+        } else {
+          if (variantCase_ == 8) {
+            variantCase_ = 0;
+            variant_ = null;
+          }
+          doStandaloneActivityOperatorCommandsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder getDoStandaloneActivityOperatorCommandsBuilder() {
+        return getDoStandaloneActivityOperatorCommandsFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder getDoStandaloneActivityOperatorCommandsOrBuilder() {
+        if ((variantCase_ == 8) && (doStandaloneActivityOperatorCommandsBuilder_ != null)) {
+          return doStandaloneActivityOperatorCommandsBuilder_.getMessageOrBuilder();
+        } else {
+          if (variantCase_ == 8) {
+            return (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_;
+          }
+          return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands do_standalone_activity_operator_commands = 8;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder> 
+          getDoStandaloneActivityOperatorCommandsFieldBuilder() {
+        if (doStandaloneActivityOperatorCommandsBuilder_ == null) {
+          if (!(variantCase_ == 8)) {
+            variant_ = io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+          }
+          doStandaloneActivityOperatorCommandsBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder>(
+                  (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) variant_,
+                  getParentForChildren(),
+                  isClean());
+          variant_ = null;
+        }
+        variantCase_ = 8;
+        onChanged();
+        return doStandaloneActivityOperatorCommandsBuilder_;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -8240,6 +8463,861 @@ public final class KitchenSink {
 
     @java.lang.Override
     public io.temporal.omes.KitchenSink.DoStandaloneActivity getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface DoStandaloneActivityOperatorCommandsOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     * @return Whether the activity field is set.
+     */
+    boolean hasActivity();
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     * @return The activity.
+     */
+    io.temporal.omes.KitchenSink.ExecuteActivityAction getActivity();
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     */
+    io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder getActivityOrBuilder();
+
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+     * @return The enum numeric value on the wire for commandType.
+     */
+    int getCommandTypeValue();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+     * @return The commandType.
+     */
+    io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType getCommandType();
+  }
+  /**
+   * <pre>
+   * DoStandaloneActivityOperatorCommands starts a standalone activity and exercises
+   * pause/unpause, reset, or update-options through WorkflowService RPCs. The client
+   * verifies command outcomes with DescribeActivityExecution or the command response.
+   * </pre>
+   *
+   * Protobuf type {@code temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands}
+   */
+  public static final class DoStandaloneActivityOperatorCommands extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands)
+      DoStandaloneActivityOperatorCommandsOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use DoStandaloneActivityOperatorCommands.newBuilder() to construct.
+    private DoStandaloneActivityOperatorCommands(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private DoStandaloneActivityOperatorCommands() {
+      commandType_ = 0;
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new DoStandaloneActivityOperatorCommands();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.class, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder.class);
+    }
+
+    /**
+     * Protobuf enum {@code temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType}
+     */
+    public enum CommandType
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>COMMAND_TYPE_UNSPECIFIED = 0;</code>
+       */
+      COMMAND_TYPE_UNSPECIFIED(0),
+      /**
+       * <code>COMMAND_TYPE_PAUSE = 1;</code>
+       */
+      COMMAND_TYPE_PAUSE(1),
+      /**
+       * <code>COMMAND_TYPE_RESET = 2;</code>
+       */
+      COMMAND_TYPE_RESET(2),
+      /**
+       * <code>COMMAND_TYPE_UPDATE = 3;</code>
+       */
+      COMMAND_TYPE_UPDATE(3),
+      UNRECOGNIZED(-1),
+      ;
+
+      /**
+       * <code>COMMAND_TYPE_UNSPECIFIED = 0;</code>
+       */
+      public static final int COMMAND_TYPE_UNSPECIFIED_VALUE = 0;
+      /**
+       * <code>COMMAND_TYPE_PAUSE = 1;</code>
+       */
+      public static final int COMMAND_TYPE_PAUSE_VALUE = 1;
+      /**
+       * <code>COMMAND_TYPE_RESET = 2;</code>
+       */
+      public static final int COMMAND_TYPE_RESET_VALUE = 2;
+      /**
+       * <code>COMMAND_TYPE_UPDATE = 3;</code>
+       */
+      public static final int COMMAND_TYPE_UPDATE_VALUE = 3;
+
+
+      public final int getNumber() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalArgumentException(
+              "Can't get the number of an unknown enum value.");
+        }
+        return value;
+      }
+
+      /**
+       * @param value The numeric wire value of the corresponding enum entry.
+       * @return The enum associated with the given numeric wire value.
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static CommandType valueOf(int value) {
+        return forNumber(value);
+      }
+
+      /**
+       * @param value The numeric wire value of the corresponding enum entry.
+       * @return The enum associated with the given numeric wire value.
+       */
+      public static CommandType forNumber(int value) {
+        switch (value) {
+          case 0: return COMMAND_TYPE_UNSPECIFIED;
+          case 1: return COMMAND_TYPE_PAUSE;
+          case 2: return COMMAND_TYPE_RESET;
+          case 3: return COMMAND_TYPE_UPDATE;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<CommandType>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final com.google.protobuf.Internal.EnumLiteMap<
+          CommandType> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<CommandType>() {
+              public CommandType findValueByNumber(int number) {
+                return CommandType.forNumber(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalStateException(
+              "Can't get the descriptor of an unrecognized enum value.");
+        }
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final CommandType[] VALUES = values();
+
+      public static CommandType valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        if (desc.getIndex() == -1) {
+          return UNRECOGNIZED;
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private CommandType(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType)
+    }
+
+    private int bitField0_;
+    public static final int ACTIVITY_FIELD_NUMBER = 1;
+    private io.temporal.omes.KitchenSink.ExecuteActivityAction activity_;
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     * @return Whether the activity field is set.
+     */
+    @java.lang.Override
+    public boolean hasActivity() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     * @return The activity.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.ExecuteActivityAction getActivity() {
+      return activity_ == null ? io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance() : activity_;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder getActivityOrBuilder() {
+      return activity_ == null ? io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance() : activity_;
+    }
+
+    public static final int COMMAND_TYPE_FIELD_NUMBER = 2;
+    private int commandType_ = 0;
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+     * @return The enum numeric value on the wire for commandType.
+     */
+    @java.lang.Override public int getCommandTypeValue() {
+      return commandType_;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+     * @return The commandType.
+     */
+    @java.lang.Override public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType getCommandType() {
+      io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType result = io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.forNumber(commandType_);
+      return result == null ? io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.UNRECOGNIZED : result;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) != 0)) {
+        output.writeMessage(1, getActivity());
+      }
+      if (commandType_ != io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.COMMAND_TYPE_UNSPECIFIED.getNumber()) {
+        output.writeEnum(2, commandType_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) != 0)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getActivity());
+      }
+      if (commandType_ != io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.COMMAND_TYPE_UNSPECIFIED.getNumber()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, commandType_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands)) {
+        return super.equals(obj);
+      }
+      io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands other = (io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) obj;
+
+      if (hasActivity() != other.hasActivity()) return false;
+      if (hasActivity()) {
+        if (!getActivity()
+            .equals(other.getActivity())) return false;
+      }
+      if (commandType_ != other.commandType_) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasActivity()) {
+        hash = (37 * hash) + ACTIVITY_FIELD_NUMBER;
+        hash = (53 * hash) + getActivity().hashCode();
+      }
+      hash = (37 * hash) + COMMAND_TYPE_FIELD_NUMBER;
+      hash = (53 * hash) + commandType_;
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * DoStandaloneActivityOperatorCommands starts a standalone activity and exercises
+     * pause/unpause, reset, or update-options through WorkflowService RPCs. The client
+     * verifies command outcomes with DescribeActivityExecution or the command response.
+     * </pre>
+     *
+     * Protobuf type {@code temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands)
+        io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommandsOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.class, io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.Builder.class);
+      }
+
+      // Construct using io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getActivityFieldBuilder();
+        }
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        activity_ = null;
+        if (activityBuilder_ != null) {
+          activityBuilder_.dispose();
+          activityBuilder_ = null;
+        }
+        commandType_ = 0;
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor;
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDefaultInstanceForType() {
+        return io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands build() {
+        io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands buildPartial() {
+        io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands result = new io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands result) {
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.activity_ = activityBuilder_ == null
+              ? activity_
+              : activityBuilder_.build();
+          to_bitField0_ |= 0x00000001;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.commandType_ = commandType_;
+        }
+        result.bitField0_ |= to_bitField0_;
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands) {
+          return mergeFrom((io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands other) {
+        if (other == io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.getDefaultInstance()) return this;
+        if (other.hasActivity()) {
+          mergeActivity(other.getActivity());
+        }
+        if (other.commandType_ != 0) {
+          setCommandTypeValue(other.getCommandTypeValue());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                input.readMessage(
+                    getActivityFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              case 16: {
+                commandType_ = input.readEnum();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 16
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private io.temporal.omes.KitchenSink.ExecuteActivityAction activity_;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.ExecuteActivityAction, io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder, io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder> activityBuilder_;
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       * @return Whether the activity field is set.
+       */
+      public boolean hasActivity() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       * @return The activity.
+       */
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction getActivity() {
+        if (activityBuilder_ == null) {
+          return activity_ == null ? io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance() : activity_;
+        } else {
+          return activityBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public Builder setActivity(io.temporal.omes.KitchenSink.ExecuteActivityAction value) {
+        if (activityBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          activity_ = value;
+        } else {
+          activityBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public Builder setActivity(
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder builderForValue) {
+        if (activityBuilder_ == null) {
+          activity_ = builderForValue.build();
+        } else {
+          activityBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public Builder mergeActivity(io.temporal.omes.KitchenSink.ExecuteActivityAction value) {
+        if (activityBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) != 0) &&
+            activity_ != null &&
+            activity_ != io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance()) {
+            getActivityBuilder().mergeFrom(value);
+          } else {
+            activity_ = value;
+          }
+        } else {
+          activityBuilder_.mergeFrom(value);
+        }
+        if (activity_ != null) {
+          bitField0_ |= 0x00000001;
+          onChanged();
+        }
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public Builder clearActivity() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        activity_ = null;
+        if (activityBuilder_ != null) {
+          activityBuilder_.dispose();
+          activityBuilder_ = null;
+        }
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder getActivityBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getActivityFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      public io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder getActivityOrBuilder() {
+        if (activityBuilder_ != null) {
+          return activityBuilder_.getMessageOrBuilder();
+        } else {
+          return activity_ == null ?
+              io.temporal.omes.KitchenSink.ExecuteActivityAction.getDefaultInstance() : activity_;
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction activity = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.ExecuteActivityAction, io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder, io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder> 
+          getActivityFieldBuilder() {
+        if (activityBuilder_ == null) {
+          activityBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.ExecuteActivityAction, io.temporal.omes.KitchenSink.ExecuteActivityAction.Builder, io.temporal.omes.KitchenSink.ExecuteActivityActionOrBuilder>(
+                  getActivity(),
+                  getParentForChildren(),
+                  isClean());
+          activity_ = null;
+        }
+        return activityBuilder_;
+      }
+
+      private int commandType_ = 0;
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+       * @return The enum numeric value on the wire for commandType.
+       */
+      @java.lang.Override public int getCommandTypeValue() {
+        return commandType_;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+       * @param value The enum numeric value on the wire for commandType to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCommandTypeValue(int value) {
+        commandType_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+       * @return The commandType.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType getCommandType() {
+        io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType result = io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.forNumber(commandType_);
+        return result == null ? io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType.UNRECOGNIZED : result;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+       * @param value The commandType to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCommandType(io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands.CommandType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
+        commandType_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands.CommandType command_type = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCommandType() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        commandType_ = 0;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands)
+    }
+
+    // @@protoc_insertion_point(class_scope:temporal.omes.kitchen_sink.DoStandaloneActivityOperatorCommands)
+    private static final io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands();
+    }
+
+    public static io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<DoStandaloneActivityOperatorCommands>
+        PARSER = new com.google.protobuf.AbstractParser<DoStandaloneActivityOperatorCommands>() {
+      @java.lang.Override
+      public DoStandaloneActivityOperatorCommands parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<DoStandaloneActivityOperatorCommands> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<DoStandaloneActivityOperatorCommands> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoStandaloneActivityOperatorCommands getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -30383,6 +31461,33 @@ io.temporal.api.common.v1.Payload defaultValue);
        * <code>.google.protobuf.Duration failure_duration = 3;</code>
        */
       com.google.protobuf.DurationOrBuilder getFailureDurationOrBuilder();
+
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       * @return Whether the heartbeatInterval field is set.
+       */
+      boolean hasHeartbeatInterval();
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       * @return The heartbeatInterval.
+       */
+      com.google.protobuf.Duration getHeartbeatInterval();
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       */
+      com.google.protobuf.DurationOrBuilder getHeartbeatIntervalOrBuilder();
     }
     /**
      * <pre>
@@ -30516,6 +31621,44 @@ io.temporal.api.common.v1.Payload defaultValue);
         return failureDuration_ == null ? com.google.protobuf.Duration.getDefaultInstance() : failureDuration_;
       }
 
+      public static final int HEARTBEAT_INTERVAL_FIELD_NUMBER = 4;
+      private com.google.protobuf.Duration heartbeatInterval_;
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       * @return Whether the heartbeatInterval field is set.
+       */
+      @java.lang.Override
+      public boolean hasHeartbeatInterval() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       * @return The heartbeatInterval.
+       */
+      @java.lang.Override
+      public com.google.protobuf.Duration getHeartbeatInterval() {
+        return heartbeatInterval_ == null ? com.google.protobuf.Duration.getDefaultInstance() : heartbeatInterval_;
+      }
+      /**
+       * <pre>
+       * When set, heartbeat repeatedly at this interval while running.
+       * </pre>
+       *
+       * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+       */
+      @java.lang.Override
+      public com.google.protobuf.DurationOrBuilder getHeartbeatIntervalOrBuilder() {
+        return heartbeatInterval_ == null ? com.google.protobuf.Duration.getDefaultInstance() : heartbeatInterval_;
+      }
+
       private byte memoizedIsInitialized = -1;
       @java.lang.Override
       public final boolean isInitialized() {
@@ -30539,6 +31682,9 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (((bitField0_ & 0x00000002) != 0)) {
           output.writeMessage(3, getFailureDuration());
         }
+        if (((bitField0_ & 0x00000004) != 0)) {
+          output.writeMessage(4, getHeartbeatInterval());
+        }
         getUnknownFields().writeTo(output);
       }
 
@@ -30559,6 +31705,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (((bitField0_ & 0x00000002) != 0)) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(3, getFailureDuration());
+        }
+        if (((bitField0_ & 0x00000004) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(4, getHeartbeatInterval());
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSize = size;
@@ -30587,6 +31737,11 @@ io.temporal.api.common.v1.Payload defaultValue);
           if (!getFailureDuration()
               .equals(other.getFailureDuration())) return false;
         }
+        if (hasHeartbeatInterval() != other.hasHeartbeatInterval()) return false;
+        if (hasHeartbeatInterval()) {
+          if (!getHeartbeatInterval()
+              .equals(other.getHeartbeatInterval())) return false;
+        }
         if (!getUnknownFields().equals(other.getUnknownFields())) return false;
         return true;
       }
@@ -30607,6 +31762,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (hasFailureDuration()) {
           hash = (37 * hash) + FAILURE_DURATION_FIELD_NUMBER;
           hash = (53 * hash) + getFailureDuration().hashCode();
+        }
+        if (hasHeartbeatInterval()) {
+          hash = (37 * hash) + HEARTBEAT_INTERVAL_FIELD_NUMBER;
+          hash = (53 * hash) + getHeartbeatInterval().hashCode();
         }
         hash = (29 * hash) + getUnknownFields().hashCode();
         memoizedHashCode = hash;
@@ -30745,6 +31904,7 @@ io.temporal.api.common.v1.Payload defaultValue);
                   .alwaysUseFieldBuilders) {
             getSuccessDurationFieldBuilder();
             getFailureDurationFieldBuilder();
+            getHeartbeatIntervalFieldBuilder();
           }
         }
         @java.lang.Override
@@ -30761,6 +31921,11 @@ io.temporal.api.common.v1.Payload defaultValue);
           if (failureDurationBuilder_ != null) {
             failureDurationBuilder_.dispose();
             failureDurationBuilder_ = null;
+          }
+          heartbeatInterval_ = null;
+          if (heartbeatIntervalBuilder_ != null) {
+            heartbeatIntervalBuilder_.dispose();
+            heartbeatIntervalBuilder_ = null;
           }
           return this;
         }
@@ -30810,6 +31975,12 @@ io.temporal.api.common.v1.Payload defaultValue);
                 ? failureDuration_
                 : failureDurationBuilder_.build();
             to_bitField0_ |= 0x00000002;
+          }
+          if (((from_bitField0_ & 0x00000008) != 0)) {
+            result.heartbeatInterval_ = heartbeatIntervalBuilder_ == null
+                ? heartbeatInterval_
+                : heartbeatIntervalBuilder_.build();
+            to_bitField0_ |= 0x00000004;
           }
           result.bitField0_ |= to_bitField0_;
         }
@@ -30867,6 +32038,9 @@ io.temporal.api.common.v1.Payload defaultValue);
           if (other.hasFailureDuration()) {
             mergeFailureDuration(other.getFailureDuration());
           }
+          if (other.hasHeartbeatInterval()) {
+            mergeHeartbeatInterval(other.getHeartbeatInterval());
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           onChanged();
           return this;
@@ -30912,6 +32086,13 @@ io.temporal.api.common.v1.Payload defaultValue);
                   bitField0_ |= 0x00000004;
                   break;
                 } // case 26
+                case 34: {
+                  input.readMessage(
+                      getHeartbeatIntervalFieldBuilder().getBuilder(),
+                      extensionRegistry);
+                  bitField0_ |= 0x00000008;
+                  break;
+                } // case 34
                 default: {
                   if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                     done = true; // was an endgroup tag
@@ -31285,6 +32466,163 @@ io.temporal.api.common.v1.Payload defaultValue);
             failureDuration_ = null;
           }
           return failureDurationBuilder_;
+        }
+
+        private com.google.protobuf.Duration heartbeatInterval_;
+        private com.google.protobuf.SingleFieldBuilderV3<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> heartbeatIntervalBuilder_;
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         * @return Whether the heartbeatInterval field is set.
+         */
+        public boolean hasHeartbeatInterval() {
+          return ((bitField0_ & 0x00000008) != 0);
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         * @return The heartbeatInterval.
+         */
+        public com.google.protobuf.Duration getHeartbeatInterval() {
+          if (heartbeatIntervalBuilder_ == null) {
+            return heartbeatInterval_ == null ? com.google.protobuf.Duration.getDefaultInstance() : heartbeatInterval_;
+          } else {
+            return heartbeatIntervalBuilder_.getMessage();
+          }
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public Builder setHeartbeatInterval(com.google.protobuf.Duration value) {
+          if (heartbeatIntervalBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            heartbeatInterval_ = value;
+          } else {
+            heartbeatIntervalBuilder_.setMessage(value);
+          }
+          bitField0_ |= 0x00000008;
+          onChanged();
+          return this;
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public Builder setHeartbeatInterval(
+            com.google.protobuf.Duration.Builder builderForValue) {
+          if (heartbeatIntervalBuilder_ == null) {
+            heartbeatInterval_ = builderForValue.build();
+          } else {
+            heartbeatIntervalBuilder_.setMessage(builderForValue.build());
+          }
+          bitField0_ |= 0x00000008;
+          onChanged();
+          return this;
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public Builder mergeHeartbeatInterval(com.google.protobuf.Duration value) {
+          if (heartbeatIntervalBuilder_ == null) {
+            if (((bitField0_ & 0x00000008) != 0) &&
+              heartbeatInterval_ != null &&
+              heartbeatInterval_ != com.google.protobuf.Duration.getDefaultInstance()) {
+              getHeartbeatIntervalBuilder().mergeFrom(value);
+            } else {
+              heartbeatInterval_ = value;
+            }
+          } else {
+            heartbeatIntervalBuilder_.mergeFrom(value);
+          }
+          if (heartbeatInterval_ != null) {
+            bitField0_ |= 0x00000008;
+            onChanged();
+          }
+          return this;
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public Builder clearHeartbeatInterval() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          heartbeatInterval_ = null;
+          if (heartbeatIntervalBuilder_ != null) {
+            heartbeatIntervalBuilder_.dispose();
+            heartbeatIntervalBuilder_ = null;
+          }
+          onChanged();
+          return this;
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public com.google.protobuf.Duration.Builder getHeartbeatIntervalBuilder() {
+          bitField0_ |= 0x00000008;
+          onChanged();
+          return getHeartbeatIntervalFieldBuilder().getBuilder();
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        public com.google.protobuf.DurationOrBuilder getHeartbeatIntervalOrBuilder() {
+          if (heartbeatIntervalBuilder_ != null) {
+            return heartbeatIntervalBuilder_.getMessageOrBuilder();
+          } else {
+            return heartbeatInterval_ == null ?
+                com.google.protobuf.Duration.getDefaultInstance() : heartbeatInterval_;
+          }
+        }
+        /**
+         * <pre>
+         * When set, heartbeat repeatedly at this interval while running.
+         * </pre>
+         *
+         * <code>.google.protobuf.Duration heartbeat_interval = 4;</code>
+         */
+        private com.google.protobuf.SingleFieldBuilderV3<
+            com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder> 
+            getHeartbeatIntervalFieldBuilder() {
+          if (heartbeatIntervalBuilder_ == null) {
+            heartbeatIntervalBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+                com.google.protobuf.Duration, com.google.protobuf.Duration.Builder, com.google.protobuf.DurationOrBuilder>(
+                    getHeartbeatInterval(),
+                    getParentForChildren(),
+                    isClean());
+            heartbeatInterval_ = null;
+          }
+          return heartbeatIntervalBuilder_;
         }
         @java.lang.Override
         public final Builder setUnknownFields(
@@ -57107,6 +58445,11 @@ java.lang.String defaultValue) {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_DoStandaloneActivity_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_DoSignal_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -57367,7 +58710,7 @@ java.lang.String defaultValue) {
       "do_signal\030\001 \001(\0132$.temporal.omes.kitchen_" +
       "sink.DoSignalH\000\0229\n\tdo_update\030\002 \001(\0132$.tem" +
       "poral.omes.kitchen_sink.DoUpdateH\000B\t\n\007va" +
-      "riant\"\203\004\n\014ClientAction\0229\n\tdo_signal\030\001 \001(" +
+      "riant\"\371\004\n\014ClientAction\0229\n\tdo_signal\030\001 \001(" +
       "\0132$.temporal.omes.kitchen_sink.DoSignalH" +
       "\000\0227\n\010do_query\030\002 \001(\0132#.temporal.omes.kitc" +
       "hen_sink.DoQueryH\000\0229\n\tdo_update\030\003 \001(\0132$." +
@@ -57379,265 +58722,277 @@ java.lang.String defaultValue) {
       "tion\030\006 \001(\01326.temporal.omes.kitchen_sink." +
       "DoStandaloneNexusOperationH\000\022R\n\026do_stand" +
       "alone_activity\030\007 \001(\01320.temporal.omes.kit" +
-      "chen_sink.DoStandaloneActivityH\000B\t\n\007vari" +
-      "ant\"R\n\032DoStandaloneNexusOperation\022\020\n\010end" +
-      "point\030\001 \001(\t\022\017\n\007service\030\002 \001(\t\022\021\n\toperatio" +
-      "n\030\003 \001(\t\"[\n\024DoStandaloneActivity\022C\n\010activ" +
-      "ity\030\001 \001(\01321.temporal.omes.kitchen_sink.E" +
-      "xecuteActivityAction\"\361\002\n\010DoSignal\022Q\n\021do_" +
-      "signal_actions\030\001 \001(\01324.temporal.omes.kit" +
-      "chen_sink.DoSignal.DoSignalActionsH\000\022?\n\006" +
-      "custom\030\002 \001(\0132-.temporal.omes.kitchen_sin" +
-      "k.HandlerInvocationH\000\022\022\n\nwith_start\030\003 \001(" +
-      "\010\032\261\001\n\017DoSignalActions\022;\n\ndo_actions\030\001 \001(" +
-      "\0132%.temporal.omes.kitchen_sink.ActionSet" +
-      "H\000\022C\n\022do_actions_in_main\030\002 \001(\0132%.tempora" +
-      "l.omes.kitchen_sink.ActionSetH\000\022\021\n\tsigna" +
-      "l_id\030\003 \001(\005B\t\n\007variantB\t\n\007variant\"\014\n\nDoDe" +
-      "scribe\"\251\001\n\007DoQuery\0228\n\014report_state\030\001 \001(\013" +
-      "2 .temporal.api.common.v1.PayloadsH\000\022?\n\006" +
-      "custom\030\002 \001(\0132-.temporal.omes.kitchen_sin" +
-      "k.HandlerInvocationH\000\022\030\n\020failure_expecte" +
-      "d\030\n \001(\010B\t\n\007variant\"\307\001\n\010DoUpdate\022A\n\ndo_ac" +
-      "tions\030\001 \001(\0132+.temporal.omes.kitchen_sink" +
-      ".DoActionsUpdateH\000\022?\n\006custom\030\002 \001(\0132-.tem" +
-      "poral.omes.kitchen_sink.HandlerInvocatio" +
-      "nH\000\022\022\n\nwith_start\030\003 \001(\010\022\030\n\020failure_expec" +
-      "ted\030\n \001(\010B\t\n\007variant\"\206\001\n\017DoActionsUpdate" +
-      "\022;\n\ndo_actions\030\001 \001(\0132%.temporal.omes.kit" +
-      "chen_sink.ActionSetH\000\022+\n\treject_me\030\002 \001(\013" +
-      "2\026.google.protobuf.EmptyH\000B\t\n\007variant\"P\n" +
-      "\021HandlerInvocation\022\014\n\004name\030\001 \001(\t\022-\n\004args" +
-      "\030\002 \003(\0132\037.temporal.api.common.v1.Payload\"" +
-      "|\n\rWorkflowState\022?\n\003kvs\030\001 \003(\01322.temporal" +
-      ".omes.kitchen_sink.WorkflowState.KvsEntr" +
-      "y\032*\n\010KvsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(" +
-      "\t:\0028\001\"\250\001\n\rWorkflowInput\022>\n\017initial_actio" +
-      "ns\030\001 \003(\0132%.temporal.omes.kitchen_sink.Ac" +
-      "tionSet\022\035\n\025expected_signal_count\030\002 \001(\005\022\033" +
-      "\n\023expected_signal_ids\030\003 \003(\005\022\033\n\023received_" +
-      "signal_ids\030\004 \003(\005\"T\n\tActionSet\0223\n\007actions" +
-      "\030\001 \003(\0132\".temporal.omes.kitchen_sink.Acti" +
-      "on\022\022\n\nconcurrent\030\002 \001(\010\"\314\t\n\006Action\0228\n\005tim" +
-      "er\030\001 \001(\0132\'.temporal.omes.kitchen_sink.Ti" +
-      "merActionH\000\022J\n\rexec_activity\030\002 \001(\01321.tem" +
-      "poral.omes.kitchen_sink.ExecuteActivityA" +
-      "ctionH\000\022U\n\023exec_child_workflow\030\003 \001(\01326.t" +
-      "emporal.omes.kitchen_sink.ExecuteChildWo" +
-      "rkflowActionH\000\022N\n\024await_workflow_state\030\004" +
-      " \001(\0132..temporal.omes.kitchen_sink.AwaitW" +
-      "orkflowStateH\000\022C\n\013send_signal\030\005 \001(\0132,.te" +
-      "mporal.omes.kitchen_sink.SendSignalActio" +
-      "nH\000\022K\n\017cancel_workflow\030\006 \001(\01320.temporal." +
-      "omes.kitchen_sink.CancelWorkflowActionH\000" +
-      "\022L\n\020set_patch_marker\030\007 \001(\01320.temporal.om" +
-      "es.kitchen_sink.SetPatchMarkerActionH\000\022\\" +
-      "\n\030upsert_search_attributes\030\010 \001(\01328.tempo" +
-      "ral.omes.kitchen_sink.UpsertSearchAttrib" +
-      "utesActionH\000\022C\n\013upsert_memo\030\t \001(\0132,.temp" +
-      "oral.omes.kitchen_sink.UpsertMemoActionH" +
-      "\000\022G\n\022set_workflow_state\030\n \001(\0132).temporal" +
-      ".omes.kitchen_sink.WorkflowStateH\000\022G\n\rre" +
-      "turn_result\030\013 \001(\0132..temporal.omes.kitche" +
-      "n_sink.ReturnResultActionH\000\022E\n\014return_er" +
-      "ror\030\014 \001(\0132-.temporal.omes.kitchen_sink.R" +
-      "eturnErrorActionH\000\022J\n\017continue_as_new\030\r " +
-      "\001(\0132/.temporal.omes.kitchen_sink.Continu" +
-      "eAsNewActionH\000\022B\n\021nested_action_set\030\016 \001(" +
-      "\0132%.temporal.omes.kitchen_sink.ActionSet" +
-      "H\000\022L\n\017nexus_operation\030\017 \001(\01321.temporal.o" +
-      "mes.kitchen_sink.ExecuteNexusOperationH\000" +
-      "\022P\n\025await_pending_actions\030\021 \001(\0132/.tempor" +
-      "al.omes.kitchen_sink.AwaitPendingActions" +
-      "H\000B\t\n\007variant\"\323\002\n\017AwaitableChoice\022-\n\013wai" +
-      "t_finish\030\001 \001(\0132\026.google.protobuf.EmptyH\000" +
-      "\022)\n\007abandon\030\002 \001(\0132\026.google.protobuf.Empt" +
-      "yH\000\0227\n\025cancel_before_started\030\003 \001(\0132\026.goo" +
-      "gle.protobuf.EmptyH\000\0226\n\024cancel_after_sta" +
-      "rted\030\004 \001(\0132\026.google.protobuf.EmptyH\000\0228\n\026" +
-      "cancel_after_completed\030\005 \001(\0132\026.google.pr" +
-      "otobuf.EmptyH\000\022.\n\014wait_started\030\006 \001(\0132\026.g" +
-      "oogle.protobuf.EmptyH\000B\013\n\tcondition\"j\n\013T" +
-      "imerAction\022\024\n\014milliseconds\030\001 \001(\004\022E\n\020awai" +
-      "table_choice\030\002 \001(\0132+.temporal.omes.kitch" +
-      "en_sink.AwaitableChoice\"\352\021\n\025ExecuteActiv" +
-      "ityAction\022T\n\007generic\030\001 \001(\0132A.temporal.om" +
-      "es.kitchen_sink.ExecuteActivityAction.Ge" +
-      "nericActivityH\000\022*\n\005delay\030\002 \001(\0132\031.google." +
-      "protobuf.DurationH\000\022&\n\004noop\030\003 \001(\0132\026.goog" +
-      "le.protobuf.EmptyH\000\022X\n\tresources\030\016 \001(\0132C" +
-      ".temporal.omes.kitchen_sink.ExecuteActiv" +
-      "ityAction.ResourcesActivityH\000\022T\n\007payload" +
-      "\030\022 \001(\0132A.temporal.omes.kitchen_sink.Exec" +
-      "uteActivityAction.PayloadActivityH\000\022R\n\006c" +
-      "lient\030\023 \001(\0132@.temporal.omes.kitchen_sink" +
-      ".ExecuteActivityAction.ClientActivityH\000\022" +
-      "c\n\017retryable_error\030\024 \001(\0132H.temporal.omes" +
-      ".kitchen_sink.ExecuteActivityAction.Retr" +
-      "yableErrorActivityH\000\022T\n\007timeout\030\025 \001(\0132A." +
+      "chen_sink.DoStandaloneActivityH\000\022t\n(do_s" +
+      "tandalone_activity_operator_commands\030\010 \001" +
+      "(\0132@.temporal.omes.kitchen_sink.DoStanda" +
+      "loneActivityOperatorCommandsH\000B\t\n\007varian" +
+      "t\"R\n\032DoStandaloneNexusOperation\022\020\n\010endpo" +
+      "int\030\001 \001(\t\022\017\n\007service\030\002 \001(\t\022\021\n\toperation\030" +
+      "\003 \001(\t\"[\n\024DoStandaloneActivity\022C\n\010activit" +
+      "y\030\001 \001(\01321.temporal.omes.kitchen_sink.Exe" +
+      "cuteActivityAction\"\305\002\n$DoStandaloneActiv" +
+      "ityOperatorCommands\022C\n\010activity\030\001 \001(\01321." +
       "temporal.omes.kitchen_sink.ExecuteActivi" +
-      "tyAction.TimeoutActivityH\000\022_\n\theartbeat\030" +
-      "\026 \001(\0132J.temporal.omes.kitchen_sink.Execu" +
-      "teActivityAction.HeartbeatTimeoutActivit" +
-      "yH\000\022\022\n\ntask_queue\030\004 \001(\t\022O\n\007headers\030\005 \003(\013" +
-      "2>.temporal.omes.kitchen_sink.ExecuteAct" +
-      "ivityAction.HeadersEntry\022<\n\031schedule_to_" +
-      "close_timeout\030\006 \001(\0132\031.google.protobuf.Du" +
-      "ration\022<\n\031schedule_to_start_timeout\030\007 \001(" +
-      "\0132\031.google.protobuf.Duration\0229\n\026start_to" +
-      "_close_timeout\030\010 \001(\0132\031.google.protobuf.D" +
-      "uration\0224\n\021heartbeat_timeout\030\t \001(\0132\031.goo" +
-      "gle.protobuf.Duration\0229\n\014retry_policy\030\n " +
-      "\001(\0132#.temporal.api.common.v1.RetryPolicy" +
-      "\022*\n\010is_local\030\013 \001(\0132\026.google.protobuf.Emp" +
-      "tyH\001\022C\n\006remote\030\014 \001(\01321.temporal.omes.kit" +
-      "chen_sink.RemoteActivityOptionsH\001\022E\n\020awa" +
-      "itable_choice\030\r \001(\0132+.temporal.omes.kitc" +
-      "hen_sink.AwaitableChoice\0222\n\010priority\030\017 \001" +
-      "(\0132 .temporal.api.common.v1.Priority\022\024\n\014" +
-      "fairness_key\030\020 \001(\t\022\027\n\017fairness_weight\030\021 " +
-      "\001(\002\032S\n\017GenericActivity\022\014\n\004type\030\001 \001(\t\0222\n\t" +
-      "arguments\030\002 \003(\0132\037.temporal.api.common.v1" +
-      ".Payload\032\232\001\n\021ResourcesActivity\022*\n\007run_fo" +
-      "r\030\001 \001(\0132\031.google.protobuf.Duration\022\031\n\021by" +
-      "tes_to_allocate\030\002 \001(\004\022$\n\034cpu_yield_every" +
-      "_n_iterations\030\003 \001(\r\022\030\n\020cpu_yield_for_ms\030" +
-      "\004 \001(\r\032D\n\017PayloadActivity\022\030\n\020bytes_to_rec" +
-      "eive\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032U\n\016C" +
-      "lientActivity\022C\n\017client_sequence\030\001 \001(\0132*" +
-      ".temporal.omes.kitchen_sink.ClientSequen" +
-      "ce\032/\n\026RetryableErrorActivity\022\025\n\rfail_att" +
-      "empts\030\001 \001(\005\032\222\001\n\017TimeoutActivity\022\025\n\rfail_" +
-      "attempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\013" +
-      "2\031.google.protobuf.Duration\0223\n\020failure_d" +
-      "uration\030\003 \001(\0132\031.google.protobuf.Duration" +
-      "\032\233\001\n\030HeartbeatTimeoutActivity\022\025\n\rfail_at" +
-      "tempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\0132\031" +
-      ".google.protobuf.Duration\0223\n\020failure_dur" +
-      "ation\030\003 \001(\0132\031.google.protobuf.Duration\032O" +
-      "\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001" +
-      "(\0132\037.temporal.api.common.v1.Payload:\0028\001B" +
-      "\017\n\ractivity_typeB\n\n\010locality\"\255\n\n\032Execute" +
-      "ChildWorkflowAction\022\021\n\tnamespace\030\002 \001(\t\022\023" +
-      "\n\013workflow_id\030\003 \001(\t\022\025\n\rworkflow_type\030\004 \001" +
-      "(\t\022\022\n\ntask_queue\030\005 \001(\t\022.\n\005input\030\006 \003(\0132\037." +
-      "temporal.api.common.v1.Payload\022=\n\032workfl" +
-      "ow_execution_timeout\030\007 \001(\0132\031.google.prot" +
-      "obuf.Duration\0227\n\024workflow_run_timeout\030\010 " +
-      "\001(\0132\031.google.protobuf.Duration\0228\n\025workfl" +
-      "ow_task_timeout\030\t \001(\0132\031.google.protobuf." +
-      "Duration\022J\n\023parent_close_policy\030\n \001(\0162-." +
-      "temporal.omes.kitchen_sink.ParentClosePo" +
-      "licy\022N\n\030workflow_id_reuse_policy\030\014 \001(\0162," +
-      ".temporal.api.enums.v1.WorkflowIdReusePo" +
-      "licy\0229\n\014retry_policy\030\r \001(\0132#.temporal.ap" +
-      "i.common.v1.RetryPolicy\022\025\n\rcron_schedule" +
-      "\030\016 \001(\t\022T\n\007headers\030\017 \003(\0132C.temporal.omes." +
-      "kitchen_sink.ExecuteChildWorkflowAction." +
-      "HeadersEntry\022N\n\004memo\030\020 \003(\0132@.temporal.om" +
-      "es.kitchen_sink.ExecuteChildWorkflowActi" +
-      "on.MemoEntry\022g\n\021search_attributes\030\021 \003(\0132" +
-      "L.temporal.omes.kitchen_sink.ExecuteChil" +
-      "dWorkflowAction.SearchAttributesEntry\022T\n" +
-      "\021cancellation_type\030\022 \001(\01629.temporal.omes" +
-      ".kitchen_sink.ChildWorkflowCancellationT" +
-      "ype\022G\n\021versioning_intent\030\023 \001(\0162,.tempora" +
-      "l.omes.kitchen_sink.VersioningIntent\022E\n\020" +
-      "awaitable_choice\030\024 \001(\0132+.temporal.omes.k" +
-      "itchen_sink.AwaitableChoice\032O\n\014HeadersEn" +
-      "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
-      "al.api.common.v1.Payload:\0028\001\032L\n\tMemoEntr" +
-      "y\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal" +
-      ".api.common.v1.Payload:\0028\001\032X\n\025SearchAttr" +
-      "ibutesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132" +
-      "\037.temporal.api.common.v1.Payload:\0028\001\"0\n\022" +
-      "AwaitWorkflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005value" +
-      "\030\002 \001(\t\"\337\002\n\020SendSignalAction\022\023\n\013workflow_" +
-      "id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_name\030" +
-      "\003 \001(\t\022-\n\004args\030\004 \003(\0132\037.temporal.api.commo" +
-      "n.v1.Payload\022J\n\007headers\030\005 \003(\01329.temporal" +
-      ".omes.kitchen_sink.SendSignalAction.Head" +
-      "ersEntry\022E\n\020awaitable_choice\030\006 \001(\0132+.tem" +
-      "poral.omes.kitchen_sink.AwaitableChoice\032" +
-      "O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 " +
-      "\001(\0132\037.temporal.api.common.v1.Payload:\0028\001" +
-      "\";\n\024CancelWorkflowAction\022\023\n\013workflow_id\030" +
-      "\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerA" +
-      "ction\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 " +
-      "\001(\010\0228\n\014inner_action\030\003 \001(\0132\".temporal.ome" +
-      "s.kitchen_sink.Action\"\343\001\n\034UpsertSearchAt" +
-      "tributesAction\022i\n\021search_attributes\030\001 \003(" +
-      "\0132N.temporal.omes.kitchen_sink.UpsertSea" +
-      "rchAttributesAction.SearchAttributesEntr" +
-      "y\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022" +
-      ".\n\005value\030\002 \001(\0132\037.temporal.api.common.v1." +
-      "Payload:\0028\001\"G\n\020UpsertMemoAction\0223\n\rupser" +
-      "ted_memo\030\001 \001(\0132\034.temporal.api.common.v1." +
-      "Memo\"J\n\022ReturnResultAction\0224\n\013return_thi" +
-      "s\030\001 \001(\0132\037.temporal.api.common.v1.Payload" +
-      "\"F\n\021ReturnErrorAction\0221\n\007failure\030\001 \001(\0132 " +
-      ".temporal.api.failure.v1.Failure\"\336\006\n\023Con" +
-      "tinueAsNewAction\022\025\n\rworkflow_type\030\001 \001(\t\022" +
-      "\022\n\ntask_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037" +
-      ".temporal.api.common.v1.Payload\0227\n\024workf" +
-      "low_run_timeout\030\004 \001(\0132\031.google.protobuf." +
-      "Duration\0228\n\025workflow_task_timeout\030\005 \001(\0132" +
-      "\031.google.protobuf.Duration\022G\n\004memo\030\006 \003(\013" +
-      "29.temporal.omes.kitchen_sink.ContinueAs" +
-      "NewAction.MemoEntry\022M\n\007headers\030\007 \003(\0132<.t" +
-      "emporal.omes.kitchen_sink.ContinueAsNewA" +
-      "ction.HeadersEntry\022`\n\021search_attributes\030" +
-      "\010 \003(\0132E.temporal.omes.kitchen_sink.Conti" +
-      "nueAsNewAction.SearchAttributesEntry\0229\n\014" +
-      "retry_policy\030\t \001(\0132#.temporal.api.common" +
-      ".v1.RetryPolicy\022G\n\021versioning_intent\030\n \001" +
-      "(\0162,.temporal.omes.kitchen_sink.Versioni" +
-      "ngIntent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005va" +
-      "lue\030\002 \001(\0132\037.temporal.api.common.v1.Paylo" +
-      "ad:\0028\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005v" +
+      "tyAction\022b\n\014command_type\030\002 \001(\0162L.tempora" +
+      "l.omes.kitchen_sink.DoStandaloneActivity" +
+      "OperatorCommands.CommandType\"t\n\013CommandT" +
+      "ype\022\034\n\030COMMAND_TYPE_UNSPECIFIED\020\000\022\026\n\022COM" +
+      "MAND_TYPE_PAUSE\020\001\022\026\n\022COMMAND_TYPE_RESET\020" +
+      "\002\022\027\n\023COMMAND_TYPE_UPDATE\020\003\"\361\002\n\010DoSignal\022" +
+      "Q\n\021do_signal_actions\030\001 \001(\01324.temporal.om" +
+      "es.kitchen_sink.DoSignal.DoSignalActions" +
+      "H\000\022?\n\006custom\030\002 \001(\0132-.temporal.omes.kitch" +
+      "en_sink.HandlerInvocationH\000\022\022\n\nwith_star" +
+      "t\030\003 \001(\010\032\261\001\n\017DoSignalActions\022;\n\ndo_action" +
+      "s\030\001 \001(\0132%.temporal.omes.kitchen_sink.Act" +
+      "ionSetH\000\022C\n\022do_actions_in_main\030\002 \001(\0132%.t" +
+      "emporal.omes.kitchen_sink.ActionSetH\000\022\021\n" +
+      "\tsignal_id\030\003 \001(\005B\t\n\007variantB\t\n\007variant\"\014" +
+      "\n\nDoDescribe\"\251\001\n\007DoQuery\0228\n\014report_state" +
+      "\030\001 \001(\0132 .temporal.api.common.v1.Payloads" +
+      "H\000\022?\n\006custom\030\002 \001(\0132-.temporal.omes.kitch" +
+      "en_sink.HandlerInvocationH\000\022\030\n\020failure_e" +
+      "xpected\030\n \001(\010B\t\n\007variant\"\307\001\n\010DoUpdate\022A\n" +
+      "\ndo_actions\030\001 \001(\0132+.temporal.omes.kitche" +
+      "n_sink.DoActionsUpdateH\000\022?\n\006custom\030\002 \001(\013" +
+      "2-.temporal.omes.kitchen_sink.HandlerInv" +
+      "ocationH\000\022\022\n\nwith_start\030\003 \001(\010\022\030\n\020failure" +
+      "_expected\030\n \001(\010B\t\n\007variant\"\206\001\n\017DoActions" +
+      "Update\022;\n\ndo_actions\030\001 \001(\0132%.temporal.om" +
+      "es.kitchen_sink.ActionSetH\000\022+\n\treject_me" +
+      "\030\002 \001(\0132\026.google.protobuf.EmptyH\000B\t\n\007vari" +
+      "ant\"P\n\021HandlerInvocation\022\014\n\004name\030\001 \001(\t\022-" +
+      "\n\004args\030\002 \003(\0132\037.temporal.api.common.v1.Pa" +
+      "yload\"|\n\rWorkflowState\022?\n\003kvs\030\001 \003(\01322.te" +
+      "mporal.omes.kitchen_sink.WorkflowState.K" +
+      "vsEntry\032*\n\010KvsEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005valu" +
+      "e\030\002 \001(\t:\0028\001\"\250\001\n\rWorkflowInput\022>\n\017initial" +
+      "_actions\030\001 \003(\0132%.temporal.omes.kitchen_s" +
+      "ink.ActionSet\022\035\n\025expected_signal_count\030\002" +
+      " \001(\005\022\033\n\023expected_signal_ids\030\003 \003(\005\022\033\n\023rec" +
+      "eived_signal_ids\030\004 \003(\005\"T\n\tActionSet\0223\n\007a" +
+      "ctions\030\001 \003(\0132\".temporal.omes.kitchen_sin" +
+      "k.Action\022\022\n\nconcurrent\030\002 \001(\010\"\314\t\n\006Action\022" +
+      "8\n\005timer\030\001 \001(\0132\'.temporal.omes.kitchen_s" +
+      "ink.TimerActionH\000\022J\n\rexec_activity\030\002 \001(\013" +
+      "21.temporal.omes.kitchen_sink.ExecuteAct" +
+      "ivityActionH\000\022U\n\023exec_child_workflow\030\003 \001" +
+      "(\01326.temporal.omes.kitchen_sink.ExecuteC" +
+      "hildWorkflowActionH\000\022N\n\024await_workflow_s" +
+      "tate\030\004 \001(\0132..temporal.omes.kitchen_sink." +
+      "AwaitWorkflowStateH\000\022C\n\013send_signal\030\005 \001(" +
+      "\0132,.temporal.omes.kitchen_sink.SendSigna" +
+      "lActionH\000\022K\n\017cancel_workflow\030\006 \001(\01320.tem" +
+      "poral.omes.kitchen_sink.CancelWorkflowAc" +
+      "tionH\000\022L\n\020set_patch_marker\030\007 \001(\01320.tempo" +
+      "ral.omes.kitchen_sink.SetPatchMarkerActi" +
+      "onH\000\022\\\n\030upsert_search_attributes\030\010 \001(\01328" +
+      ".temporal.omes.kitchen_sink.UpsertSearch" +
+      "AttributesActionH\000\022C\n\013upsert_memo\030\t \001(\0132" +
+      ",.temporal.omes.kitchen_sink.UpsertMemoA" +
+      "ctionH\000\022G\n\022set_workflow_state\030\n \001(\0132).te" +
+      "mporal.omes.kitchen_sink.WorkflowStateH\000" +
+      "\022G\n\rreturn_result\030\013 \001(\0132..temporal.omes." +
+      "kitchen_sink.ReturnResultActionH\000\022E\n\014ret" +
+      "urn_error\030\014 \001(\0132-.temporal.omes.kitchen_" +
+      "sink.ReturnErrorActionH\000\022J\n\017continue_as_" +
+      "new\030\r \001(\0132/.temporal.omes.kitchen_sink.C" +
+      "ontinueAsNewActionH\000\022B\n\021nested_action_se" +
+      "t\030\016 \001(\0132%.temporal.omes.kitchen_sink.Act" +
+      "ionSetH\000\022L\n\017nexus_operation\030\017 \001(\01321.temp" +
+      "oral.omes.kitchen_sink.ExecuteNexusOpera" +
+      "tionH\000\022P\n\025await_pending_actions\030\021 \001(\0132/." +
+      "temporal.omes.kitchen_sink.AwaitPendingA" +
+      "ctionsH\000B\t\n\007variant\"\323\002\n\017AwaitableChoice\022" +
+      "-\n\013wait_finish\030\001 \001(\0132\026.google.protobuf.E" +
+      "mptyH\000\022)\n\007abandon\030\002 \001(\0132\026.google.protobu" +
+      "f.EmptyH\000\0227\n\025cancel_before_started\030\003 \001(\013" +
+      "2\026.google.protobuf.EmptyH\000\0226\n\024cancel_aft" +
+      "er_started\030\004 \001(\0132\026.google.protobuf.Empty" +
+      "H\000\0228\n\026cancel_after_completed\030\005 \001(\0132\026.goo" +
+      "gle.protobuf.EmptyH\000\022.\n\014wait_started\030\006 \001" +
+      "(\0132\026.google.protobuf.EmptyH\000B\013\n\tconditio" +
+      "n\"j\n\013TimerAction\022\024\n\014milliseconds\030\001 \001(\004\022E" +
+      "\n\020awaitable_choice\030\002 \001(\0132+.temporal.omes" +
+      ".kitchen_sink.AwaitableChoice\"\241\022\n\025Execut" +
+      "eActivityAction\022T\n\007generic\030\001 \001(\0132A.tempo" +
+      "ral.omes.kitchen_sink.ExecuteActivityAct" +
+      "ion.GenericActivityH\000\022*\n\005delay\030\002 \001(\0132\031.g" +
+      "oogle.protobuf.DurationH\000\022&\n\004noop\030\003 \001(\0132" +
+      "\026.google.protobuf.EmptyH\000\022X\n\tresources\030\016" +
+      " \001(\0132C.temporal.omes.kitchen_sink.Execut" +
+      "eActivityAction.ResourcesActivityH\000\022T\n\007p" +
+      "ayload\030\022 \001(\0132A.temporal.omes.kitchen_sin" +
+      "k.ExecuteActivityAction.PayloadActivityH" +
+      "\000\022R\n\006client\030\023 \001(\0132@.temporal.omes.kitche" +
+      "n_sink.ExecuteActivityAction.ClientActiv" +
+      "ityH\000\022c\n\017retryable_error\030\024 \001(\0132H.tempora" +
+      "l.omes.kitchen_sink.ExecuteActivityActio" +
+      "n.RetryableErrorActivityH\000\022T\n\007timeout\030\025 " +
+      "\001(\0132A.temporal.omes.kitchen_sink.Execute" +
+      "ActivityAction.TimeoutActivityH\000\022_\n\thear" +
+      "tbeat\030\026 \001(\0132J.temporal.omes.kitchen_sink" +
+      ".ExecuteActivityAction.HeartbeatTimeoutA" +
+      "ctivityH\000\022\022\n\ntask_queue\030\004 \001(\t\022O\n\007headers" +
+      "\030\005 \003(\0132>.temporal.omes.kitchen_sink.Exec" +
+      "uteActivityAction.HeadersEntry\022<\n\031schedu" +
+      "le_to_close_timeout\030\006 \001(\0132\031.google.proto" +
+      "buf.Duration\022<\n\031schedule_to_start_timeou" +
+      "t\030\007 \001(\0132\031.google.protobuf.Duration\0229\n\026st" +
+      "art_to_close_timeout\030\010 \001(\0132\031.google.prot" +
+      "obuf.Duration\0224\n\021heartbeat_timeout\030\t \001(\013" +
+      "2\031.google.protobuf.Duration\0229\n\014retry_pol" +
+      "icy\030\n \001(\0132#.temporal.api.common.v1.Retry" +
+      "Policy\022*\n\010is_local\030\013 \001(\0132\026.google.protob" +
+      "uf.EmptyH\001\022C\n\006remote\030\014 \001(\01321.temporal.om" +
+      "es.kitchen_sink.RemoteActivityOptionsH\001\022" +
+      "E\n\020awaitable_choice\030\r \001(\0132+.temporal.ome" +
+      "s.kitchen_sink.AwaitableChoice\0222\n\010priori" +
+      "ty\030\017 \001(\0132 .temporal.api.common.v1.Priori" +
+      "ty\022\024\n\014fairness_key\030\020 \001(\t\022\027\n\017fairness_wei" +
+      "ght\030\021 \001(\002\032S\n\017GenericActivity\022\014\n\004type\030\001 \001" +
+      "(\t\0222\n\targuments\030\002 \003(\0132\037.temporal.api.com" +
+      "mon.v1.Payload\032\232\001\n\021ResourcesActivity\022*\n\007" +
+      "run_for\030\001 \001(\0132\031.google.protobuf.Duration" +
+      "\022\031\n\021bytes_to_allocate\030\002 \001(\004\022$\n\034cpu_yield" +
+      "_every_n_iterations\030\003 \001(\r\022\030\n\020cpu_yield_f" +
+      "or_ms\030\004 \001(\r\032D\n\017PayloadActivity\022\030\n\020bytes_" +
+      "to_receive\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(" +
+      "\005\032U\n\016ClientActivity\022C\n\017client_sequence\030\001" +
+      " \001(\0132*.temporal.omes.kitchen_sink.Client" +
+      "Sequence\032/\n\026RetryableErrorActivity\022\025\n\rfa" +
+      "il_attempts\030\001 \001(\005\032\222\001\n\017TimeoutActivity\022\025\n" +
+      "\rfail_attempts\030\001 \001(\005\0223\n\020success_duration" +
+      "\030\002 \001(\0132\031.google.protobuf.Duration\0223\n\020fai" +
+      "lure_duration\030\003 \001(\0132\031.google.protobuf.Du" +
+      "ration\032\322\001\n\030HeartbeatTimeoutActivity\022\025\n\rf" +
+      "ail_attempts\030\001 \001(\005\0223\n\020success_duration\030\002" +
+      " \001(\0132\031.google.protobuf.Duration\0223\n\020failu" +
+      "re_duration\030\003 \001(\0132\031.google.protobuf.Dura" +
+      "tion\0225\n\022heartbeat_interval\030\004 \001(\0132\031.googl" +
+      "e.protobuf.Duration\032O\n\014HeadersEntry\022\013\n\003k" +
+      "ey\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.c" +
+      "ommon.v1.Payload:\0028\001B\017\n\ractivity_typeB\n\n" +
+      "\010locality\"\255\n\n\032ExecuteChildWorkflowAction" +
+      "\022\021\n\tnamespace\030\002 \001(\t\022\023\n\013workflow_id\030\003 \001(\t" +
+      "\022\025\n\rworkflow_type\030\004 \001(\t\022\022\n\ntask_queue\030\005 " +
+      "\001(\t\022.\n\005input\030\006 \003(\0132\037.temporal.api.common" +
+      ".v1.Payload\022=\n\032workflow_execution_timeou" +
+      "t\030\007 \001(\0132\031.google.protobuf.Duration\0227\n\024wo" +
+      "rkflow_run_timeout\030\010 \001(\0132\031.google.protob" +
+      "uf.Duration\0228\n\025workflow_task_timeout\030\t \001" +
+      "(\0132\031.google.protobuf.Duration\022J\n\023parent_" +
+      "close_policy\030\n \001(\0162-.temporal.omes.kitch" +
+      "en_sink.ParentClosePolicy\022N\n\030workflow_id" +
+      "_reuse_policy\030\014 \001(\0162,.temporal.api.enums" +
+      ".v1.WorkflowIdReusePolicy\0229\n\014retry_polic" +
+      "y\030\r \001(\0132#.temporal.api.common.v1.RetryPo" +
+      "licy\022\025\n\rcron_schedule\030\016 \001(\t\022T\n\007headers\030\017" +
+      " \003(\0132C.temporal.omes.kitchen_sink.Execut" +
+      "eChildWorkflowAction.HeadersEntry\022N\n\004mem" +
+      "o\030\020 \003(\0132@.temporal.omes.kitchen_sink.Exe" +
+      "cuteChildWorkflowAction.MemoEntry\022g\n\021sea" +
+      "rch_attributes\030\021 \003(\0132L.temporal.omes.kit" +
+      "chen_sink.ExecuteChildWorkflowAction.Sea" +
+      "rchAttributesEntry\022T\n\021cancellation_type\030" +
+      "\022 \001(\01629.temporal.omes.kitchen_sink.Child" +
+      "WorkflowCancellationType\022G\n\021versioning_i" +
+      "ntent\030\023 \001(\0162,.temporal.omes.kitchen_sink" +
+      ".VersioningIntent\022E\n\020awaitable_choice\030\024 " +
+      "\001(\0132+.temporal.omes.kitchen_sink.Awaitab" +
+      "leChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n" +
+      "\005value\030\002 \001(\0132\037.temporal.api.common.v1.Pa" +
+      "yload:\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005v" +
       "alue\030\002 \001(\0132\037.temporal.api.common.v1.Payl" +
       "oad:\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030" +
       "\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.comm" +
-      "on.v1.Payload:\0028\001\"\321\001\n\025RemoteActivityOpti" +
-      "ons\022O\n\021cancellation_type\030\001 \001(\01624.tempora" +
-      "l.omes.kitchen_sink.ActivityCancellation" +
-      "Type\022\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021" +
-      "versioning_intent\030\003 \001(\0162,.temporal.omes." +
-      "kitchen_sink.VersioningIntent\"\377\003\n\025Execut" +
-      "eNexusOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\tope" +
-      "ration\030\002 \001(\t\022\r\n\005input\030\003 \001(\t\022O\n\007headers\030\004" +
-      " \003(\0132>.temporal.omes.kitchen_sink.Execut" +
-      "eNexusOperation.HeadersEntry\022E\n\020awaitabl" +
-      "e_choice\030\005 \001(\0132+.temporal.omes.kitchen_s" +
-      "ink.AwaitableChoice\022\027\n\017expected_output\030\006" +
-      " \001(\t\022=\n\016before_actions\030\007 \003(\0132%.temporal." +
-      "omes.kitchen_sink.ActionSet\022\033\n\023handler_w" +
-      "orkflow_id\030\010 \001(\t\022\\\n#handler_workflow_id_" +
-      "conflict_policy\030\t \001(\0162/.temporal.api.enu" +
-      "ms.v1.WorkflowIdConflictPolicy\022\027\n\017wait_f" +
-      "or_signal\030\n \001(\010\032.\n\014HeadersEntry\022\013\n\003key\030\001" +
-      " \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"\365\001\n\021NexusHandler" +
-      "Input\022\r\n\005input\030\001 \001(\t\022=\n\016before_actions\030\002" +
-      " \003(\0132%.temporal.omes.kitchen_sink.Action" +
-      "Set\022\033\n\023handler_workflow_id\030\003 \001(\t\022\\\n#hand" +
-      "ler_workflow_id_conflict_policy\030\004 \001(\0162/." +
-      "temporal.api.enums.v1.WorkflowIdConflict" +
-      "Policy\022\027\n\017wait_for_signal\030\005 \001(\010\"\025\n\023Await" +
-      "PendingActions*\244\001\n\021ParentClosePolicy\022#\n\037" +
-      "PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PAR" +
-      "ENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_C" +
-      "LOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_PO" +
-      "LICY_REQUEST_CANCEL\020\003*@\n\020VersioningInten" +
-      "t\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DE" +
-      "FAULT\020\002*\242\001\n\035ChildWorkflowCancellationTyp" +
-      "e\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_" +
-      "CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_C" +
-      "OMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION" +
-      "_REQUESTED\020\003*X\n\030ActivityCancellationType" +
-      "\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_CO" +
-      "MPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.om" +
-      "esZ.github.com/temporalio/omes/loadgen/k" +
-      "itchensinkb\006proto3"
+      "on.v1.Payload:\0028\001\"0\n\022AwaitWorkflowState\022" +
+      "\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\337\002\n\020SendSign" +
+      "alAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030" +
+      "\002 \001(\t\022\023\n\013signal_name\030\003 \001(\t\022-\n\004args\030\004 \003(\013" +
+      "2\037.temporal.api.common.v1.Payload\022J\n\007hea" +
+      "ders\030\005 \003(\01329.temporal.omes.kitchen_sink." +
+      "SendSignalAction.HeadersEntry\022E\n\020awaitab" +
+      "le_choice\030\006 \001(\0132+.temporal.omes.kitchen_" +
+      "sink.AwaitableChoice\032O\n\014HeadersEntry\022\013\n\003" +
+      "key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api." +
+      "common.v1.Payload:\0028\001\";\n\024CancelWorkflowA" +
+      "ction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001" +
+      "(\t\"v\n\024SetPatchMarkerAction\022\020\n\010patch_id\030\001" +
+      " \001(\t\022\022\n\ndeprecated\030\002 \001(\010\0228\n\014inner_action" +
+      "\030\003 \001(\0132\".temporal.omes.kitchen_sink.Acti" +
+      "on\"\343\001\n\034UpsertSearchAttributesAction\022i\n\021s" +
+      "earch_attributes\030\001 \003(\0132N.temporal.omes.k" +
+      "itchen_sink.UpsertSearchAttributesAction" +
+      ".SearchAttributesEntry\032X\n\025SearchAttribut" +
+      "esEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.te" +
+      "mporal.api.common.v1.Payload:\0028\001\"G\n\020Upse" +
+      "rtMemoAction\0223\n\rupserted_memo\030\001 \001(\0132\034.te" +
+      "mporal.api.common.v1.Memo\"J\n\022ReturnResul" +
+      "tAction\0224\n\013return_this\030\001 \001(\0132\037.temporal." +
+      "api.common.v1.Payload\"F\n\021ReturnErrorActi" +
+      "on\0221\n\007failure\030\001 \001(\0132 .temporal.api.failu" +
+      "re.v1.Failure\"\336\006\n\023ContinueAsNewAction\022\025\n" +
+      "\rworkflow_type\030\001 \001(\t\022\022\n\ntask_queue\030\002 \001(\t" +
+      "\0222\n\targuments\030\003 \003(\0132\037.temporal.api.commo" +
+      "n.v1.Payload\0227\n\024workflow_run_timeout\030\004 \001" +
+      "(\0132\031.google.protobuf.Duration\0228\n\025workflo" +
+      "w_task_timeout\030\005 \001(\0132\031.google.protobuf.D" +
+      "uration\022G\n\004memo\030\006 \003(\01329.temporal.omes.ki" +
+      "tchen_sink.ContinueAsNewAction.MemoEntry" +
+      "\022M\n\007headers\030\007 \003(\0132<.temporal.omes.kitche" +
+      "n_sink.ContinueAsNewAction.HeadersEntry\022" +
+      "`\n\021search_attributes\030\010 \003(\0132E.temporal.om" +
+      "es.kitchen_sink.ContinueAsNewAction.Sear" +
+      "chAttributesEntry\0229\n\014retry_policy\030\t \001(\0132" +
+      "#.temporal.api.common.v1.RetryPolicy\022G\n\021" +
+      "versioning_intent\030\n \001(\0162,.temporal.omes." +
+      "kitchen_sink.VersioningIntent\032L\n\tMemoEnt" +
+      "ry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempora" +
+      "l.api.common.v1.Payload:\0028\001\032O\n\014HeadersEn" +
+      "try\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.tempor" +
+      "al.api.common.v1.Payload:\0028\001\032X\n\025SearchAt" +
+      "tributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(" +
+      "\0132\037.temporal.api.common.v1.Payload:\0028\001\"\321" +
+      "\001\n\025RemoteActivityOptions\022O\n\021cancellation" +
+      "_type\030\001 \001(\01624.temporal.omes.kitchen_sink" +
+      ".ActivityCancellationType\022\036\n\026do_not_eage" +
+      "rly_execute\030\002 \001(\010\022G\n\021versioning_intent\030\003" +
+      " \001(\0162,.temporal.omes.kitchen_sink.Versio" +
+      "ningIntent\"\377\003\n\025ExecuteNexusOperation\022\020\n\010" +
+      "endpoint\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t\022\r\n\005inp" +
+      "ut\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132>.temporal.ome" +
+      "s.kitchen_sink.ExecuteNexusOperation.Hea" +
+      "dersEntry\022E\n\020awaitable_choice\030\005 \001(\0132+.te" +
+      "mporal.omes.kitchen_sink.AwaitableChoice" +
+      "\022\027\n\017expected_output\030\006 \001(\t\022=\n\016before_acti" +
+      "ons\030\007 \003(\0132%.temporal.omes.kitchen_sink.A" +
+      "ctionSet\022\033\n\023handler_workflow_id\030\010 \001(\t\022\\\n" +
+      "#handler_workflow_id_conflict_policy\030\t \001" +
+      "(\0162/.temporal.api.enums.v1.WorkflowIdCon" +
+      "flictPolicy\022\027\n\017wait_for_signal\030\n \001(\010\032.\n\014" +
+      "HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t" +
+      ":\0028\001\"\365\001\n\021NexusHandlerInput\022\r\n\005input\030\001 \001(" +
+      "\t\022=\n\016before_actions\030\002 \003(\0132%.temporal.ome" +
+      "s.kitchen_sink.ActionSet\022\033\n\023handler_work" +
+      "flow_id\030\003 \001(\t\022\\\n#handler_workflow_id_con" +
+      "flict_policy\030\004 \001(\0162/.temporal.api.enums." +
+      "v1.WorkflowIdConflictPolicy\022\027\n\017wait_for_" +
+      "signal\030\005 \001(\010\"\025\n\023AwaitPendingActions*\244\001\n\021" +
+      "ParentClosePolicy\022#\n\037PARENT_CLOSE_POLICY" +
+      "_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLICY_TE" +
+      "RMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_ABANDON" +
+      "\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_CANCEL" +
+      "\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFIED\020\000\022" +
+      "\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035ChildWo" +
+      "rkflowCancellationType\022\024\n\020CHILD_WF_ABAND" +
+      "ON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CHILD_W" +
+      "F_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$CHILD" +
+      "_WF_WAIT_CANCELLATION_REQUESTED\020\003*X\n\030Act" +
+      "ivityCancellationType\022\016\n\nTRY_CANCEL\020\000\022\037\n" +
+      "\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007ABANDO" +
+      "N\020\002BB\n\020io.temporal.omesZ.github.com/temp" +
+      "oralio/omes/loadgen/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -57677,7 +59032,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ClientAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ClientAction_descriptor,
-        new java.lang.String[] { "DoSignal", "DoQuery", "DoUpdate", "NestedActions", "DoDescribe", "DoStandaloneNexusOperation", "DoStandaloneActivity", "Variant", });
+        new java.lang.String[] { "DoSignal", "DoQuery", "DoUpdate", "NestedActions", "DoDescribe", "DoStandaloneNexusOperation", "DoStandaloneActivity", "DoStandaloneActivityOperatorCommands", "Variant", });
     internal_static_temporal_omes_kitchen_sink_DoStandaloneNexusOperation_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_temporal_omes_kitchen_sink_DoStandaloneNexusOperation_fieldAccessorTable = new
@@ -57690,8 +59045,14 @@ java.lang.String defaultValue) {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoStandaloneActivity_descriptor,
         new java.lang.String[] { "Activity", });
-    internal_static_temporal_omes_kitchen_sink_DoSignal_descriptor =
+    internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor =
       getDescriptor().getMessageTypes().get(7);
+    internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_temporal_omes_kitchen_sink_DoStandaloneActivityOperatorCommands_descriptor,
+        new java.lang.String[] { "Activity", "CommandType", });
+    internal_static_temporal_omes_kitchen_sink_DoSignal_descriptor =
+      getDescriptor().getMessageTypes().get(8);
     internal_static_temporal_omes_kitchen_sink_DoSignal_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoSignal_descriptor,
@@ -57703,37 +59064,37 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_DoSignal_DoSignalActions_descriptor,
         new java.lang.String[] { "DoActions", "DoActionsInMain", "SignalId", "Variant", });
     internal_static_temporal_omes_kitchen_sink_DoDescribe_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_temporal_omes_kitchen_sink_DoDescribe_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoDescribe_descriptor,
         new java.lang.String[] { });
     internal_static_temporal_omes_kitchen_sink_DoQuery_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_temporal_omes_kitchen_sink_DoQuery_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoQuery_descriptor,
         new java.lang.String[] { "ReportState", "Custom", "FailureExpected", "Variant", });
     internal_static_temporal_omes_kitchen_sink_DoUpdate_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_temporal_omes_kitchen_sink_DoUpdate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoUpdate_descriptor,
         new java.lang.String[] { "DoActions", "Custom", "WithStart", "FailureExpected", "Variant", });
     internal_static_temporal_omes_kitchen_sink_DoActionsUpdate_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_temporal_omes_kitchen_sink_DoActionsUpdate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_DoActionsUpdate_descriptor,
         new java.lang.String[] { "DoActions", "RejectMe", "Variant", });
     internal_static_temporal_omes_kitchen_sink_HandlerInvocation_descriptor =
-      getDescriptor().getMessageTypes().get(12);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_temporal_omes_kitchen_sink_HandlerInvocation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_HandlerInvocation_descriptor,
         new java.lang.String[] { "Name", "Args", });
     internal_static_temporal_omes_kitchen_sink_WorkflowState_descriptor =
-      getDescriptor().getMessageTypes().get(13);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_temporal_omes_kitchen_sink_WorkflowState_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_WorkflowState_descriptor,
@@ -57745,37 +59106,37 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_WorkflowState_KvsEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_WorkflowInput_descriptor =
-      getDescriptor().getMessageTypes().get(14);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_temporal_omes_kitchen_sink_WorkflowInput_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_WorkflowInput_descriptor,
         new java.lang.String[] { "InitialActions", "ExpectedSignalCount", "ExpectedSignalIds", "ReceivedSignalIds", });
     internal_static_temporal_omes_kitchen_sink_ActionSet_descriptor =
-      getDescriptor().getMessageTypes().get(15);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_temporal_omes_kitchen_sink_ActionSet_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ActionSet_descriptor,
         new java.lang.String[] { "Actions", "Concurrent", });
     internal_static_temporal_omes_kitchen_sink_Action_descriptor =
-      getDescriptor().getMessageTypes().get(16);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_temporal_omes_kitchen_sink_Action_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_Action_descriptor,
         new java.lang.String[] { "Timer", "ExecActivity", "ExecChildWorkflow", "AwaitWorkflowState", "SendSignal", "CancelWorkflow", "SetPatchMarker", "UpsertSearchAttributes", "UpsertMemo", "SetWorkflowState", "ReturnResult", "ReturnError", "ContinueAsNew", "NestedActionSet", "NexusOperation", "AwaitPendingActions", "Variant", });
     internal_static_temporal_omes_kitchen_sink_AwaitableChoice_descriptor =
-      getDescriptor().getMessageTypes().get(17);
+      getDescriptor().getMessageTypes().get(18);
     internal_static_temporal_omes_kitchen_sink_AwaitableChoice_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_AwaitableChoice_descriptor,
         new java.lang.String[] { "WaitFinish", "Abandon", "CancelBeforeStarted", "CancelAfterStarted", "CancelAfterCompleted", "WaitStarted", "Condition", });
     internal_static_temporal_omes_kitchen_sink_TimerAction_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(19);
     internal_static_temporal_omes_kitchen_sink_TimerAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_TimerAction_descriptor,
         new java.lang.String[] { "Milliseconds", "AwaitableChoice", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor,
@@ -57821,7 +59182,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeartbeatTimeoutActivity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeartbeatTimeoutActivity_descriptor,
-        new java.lang.String[] { "FailAttempts", "SuccessDuration", "FailureDuration", });
+        new java.lang.String[] { "FailAttempts", "SuccessDuration", "FailureDuration", "HeartbeatInterval", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(7);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_fieldAccessorTable = new
@@ -57829,7 +59190,7 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_HeadersEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_ExecuteChildWorkflowAction_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_temporal_omes_kitchen_sink_ExecuteChildWorkflowAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteChildWorkflowAction_descriptor,
@@ -57853,13 +59214,13 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_ExecuteChildWorkflowAction_SearchAttributesEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_AwaitWorkflowState_descriptor =
-      getDescriptor().getMessageTypes().get(21);
+      getDescriptor().getMessageTypes().get(22);
     internal_static_temporal_omes_kitchen_sink_AwaitWorkflowState_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_AwaitWorkflowState_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_SendSignalAction_descriptor =
-      getDescriptor().getMessageTypes().get(22);
+      getDescriptor().getMessageTypes().get(23);
     internal_static_temporal_omes_kitchen_sink_SendSignalAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_SendSignalAction_descriptor,
@@ -57871,19 +59232,19 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_SendSignalAction_HeadersEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_CancelWorkflowAction_descriptor =
-      getDescriptor().getMessageTypes().get(23);
+      getDescriptor().getMessageTypes().get(24);
     internal_static_temporal_omes_kitchen_sink_CancelWorkflowAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_CancelWorkflowAction_descriptor,
         new java.lang.String[] { "WorkflowId", "RunId", });
     internal_static_temporal_omes_kitchen_sink_SetPatchMarkerAction_descriptor =
-      getDescriptor().getMessageTypes().get(24);
+      getDescriptor().getMessageTypes().get(25);
     internal_static_temporal_omes_kitchen_sink_SetPatchMarkerAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_SetPatchMarkerAction_descriptor,
         new java.lang.String[] { "PatchId", "Deprecated", "InnerAction", });
     internal_static_temporal_omes_kitchen_sink_UpsertSearchAttributesAction_descriptor =
-      getDescriptor().getMessageTypes().get(25);
+      getDescriptor().getMessageTypes().get(26);
     internal_static_temporal_omes_kitchen_sink_UpsertSearchAttributesAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_UpsertSearchAttributesAction_descriptor,
@@ -57895,25 +59256,25 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_UpsertSearchAttributesAction_SearchAttributesEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_UpsertMemoAction_descriptor =
-      getDescriptor().getMessageTypes().get(26);
+      getDescriptor().getMessageTypes().get(27);
     internal_static_temporal_omes_kitchen_sink_UpsertMemoAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_UpsertMemoAction_descriptor,
         new java.lang.String[] { "UpsertedMemo", });
     internal_static_temporal_omes_kitchen_sink_ReturnResultAction_descriptor =
-      getDescriptor().getMessageTypes().get(27);
+      getDescriptor().getMessageTypes().get(28);
     internal_static_temporal_omes_kitchen_sink_ReturnResultAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ReturnResultAction_descriptor,
         new java.lang.String[] { "ReturnThis", });
     internal_static_temporal_omes_kitchen_sink_ReturnErrorAction_descriptor =
-      getDescriptor().getMessageTypes().get(28);
+      getDescriptor().getMessageTypes().get(29);
     internal_static_temporal_omes_kitchen_sink_ReturnErrorAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ReturnErrorAction_descriptor,
         new java.lang.String[] { "Failure", });
     internal_static_temporal_omes_kitchen_sink_ContinueAsNewAction_descriptor =
-      getDescriptor().getMessageTypes().get(29);
+      getDescriptor().getMessageTypes().get(30);
     internal_static_temporal_omes_kitchen_sink_ContinueAsNewAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ContinueAsNewAction_descriptor,
@@ -57937,13 +59298,13 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_ContinueAsNewAction_SearchAttributesEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_RemoteActivityOptions_descriptor =
-      getDescriptor().getMessageTypes().get(30);
+      getDescriptor().getMessageTypes().get(31);
     internal_static_temporal_omes_kitchen_sink_RemoteActivityOptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_RemoteActivityOptions_descriptor,
         new java.lang.String[] { "CancellationType", "DoNotEagerlyExecute", "VersioningIntent", });
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor =
-      getDescriptor().getMessageTypes().get(31);
+      getDescriptor().getMessageTypes().get(32);
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor,
@@ -57955,13 +59316,13 @@ java.lang.String defaultValue) {
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor =
-      getDescriptor().getMessageTypes().get(32);
+      getDescriptor().getMessageTypes().get(33);
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor,
         new java.lang.String[] { "Input", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal", });
     internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor =
-      getDescriptor().getMessageTypes().get(33);
+      getDescriptor().getMessageTypes().get(34);
     internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_AwaitPendingActions_descriptor,

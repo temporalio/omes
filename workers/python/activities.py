@@ -51,16 +51,35 @@ async def heartbeat_activity(config):
     """Activity that skips heartbeats for N attempts (causing heartbeat timeout), then sends them."""
     info = activity.info()
     should_send_heartbeats = info.attempt > config.fail_attempts
-    duration = config.success_duration
     if not should_send_heartbeats:
         # Failure case: run failure duration (exceeds heartbeat timeout)
-        duration = config.failure_duration
+        await delay_activity(config.failure_duration)
+        return
 
-    # Sleep for failure/success timeout duration.
-    # In failure case, this will throw a cancellation error.
-    await delay_activity(duration)
-    # On success, heartbeat
+    duration = (
+        config.success_duration.seconds + config.success_duration.nanos / 1_000_000_000
+    )
+    interval = (
+        config.heartbeat_interval.seconds
+        + config.heartbeat_interval.nanos / 1_000_000_000
+    )
+    if interval <= 0:
+        await asyncio.sleep(duration)
+        activity.heartbeat()
+        return
+
+    await run_with_heartbeats(duration, interval)
+
+
+async def run_with_heartbeats(duration, interval):
     activity.heartbeat()
+    remaining = duration
+    while remaining > 0:
+        sleep_for = min(interval, remaining)
+        await asyncio.sleep(sleep_for)
+        remaining -= sleep_for
+        if remaining > 0:
+            activity.heartbeat()
 
 
 def create_client_activity(client: Client, err_on_unimplemented: bool):

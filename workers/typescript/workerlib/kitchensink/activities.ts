@@ -65,16 +65,34 @@ export async function timeout(config: ITimeoutActivity): Promise<void> {
 export async function heartbeatActivity(config: IHeartbeatTimeoutActivity): Promise<void> {
   const info = activityInfo();
   const shouldSendHeartbeats = info.attempt > (config.failAttempts || 0);
-  let duration = config.successDuration;
   if (!shouldSendHeartbeats) {
     // Failure case: run failure duration (exceeds heartbeat timeout)
-    duration = config.failureDuration;
+    await sleep(durationConvert(config.failureDuration));
+    return;
   }
-  // Sleep for failure/success timeout duration.
-  // In failure case, this will throw a cancellation error.
-  await sleep(durationConvert(duration));
-  // On success, heartbeat
+
+  const duration = durationConvert(config.successDuration);
+  const interval = durationConvert(config.heartbeatInterval);
+  if (interval <= 0) {
+    await sleep(duration);
+    heartbeat();
+    return;
+  }
+
+  await runWithHeartbeats(duration, interval);
+}
+
+async function runWithHeartbeats(duration: number, interval: number): Promise<void> {
   heartbeat();
+  let remaining = duration;
+  while (remaining > 0) {
+    const sleepFor = Math.min(interval, remaining);
+    await sleep(sleepFor);
+    remaining -= sleepFor;
+    if (remaining > 0) {
+      heartbeat();
+    }
+  }
 }
 
 export const createActivities = (client: Client, errOnUnimplemented = false) => ({
