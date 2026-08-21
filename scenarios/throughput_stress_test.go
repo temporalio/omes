@@ -145,6 +145,99 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
 }
 
+func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
+	t.Parallel()
+
+	runID := fmt.Sprintf("tps-nsa-%d", time.Now().Unix())
+
+	// Enable the activity-backed operation and standalone-Nexus completion path.
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(1*time.Minute),
+		workertest.WithDynamicConfig(map[string]any{
+			"activity.enableStandalone":       true,
+			"activity.enableCallbacks":        true,
+			"nexusoperation.enableStandalone": true,
+			"history.enableCHASMCallbacks":    true,
+		}))
+
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID: runID,
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 1,
+		},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                           "1",
+			ContinueAsNewAfterIterFlag:         "1",
+			SleepTimeFlag:                      "1ms",
+			VisibilityVerificationTimeoutFlag:  "10s",
+			NexusEnabledFlag:                   "true",
+			IncludeNexusStandaloneActivityFlag: "true",
+		}),
+	}
+
+	executor := newThroughputStressExecutor()
+	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, "Executor should complete successfully with nexus standalone activity enabled")
+
+	require.True(t, executor.config.IncludeNexusStandaloneActivity,
+		"nexus standalone activity should be enabled")
+	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
+}
+
+func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
+	t.Parallel()
+
+	exec := newThroughputStressExecutor()
+	exec.config = &tpsConfig{
+		InternalIterations:             1,
+		ContinueAsNewAfterIter:         0,
+		NexusEnabled:                   true,
+		NexusEndpoint:                  "test-endpoint",
+		IncludeStandaloneNexus:         true,
+		IncludeNexusStandaloneActivity: true,
+		SleepTime:                      time.Millisecond,
+		RngSeed:                        1,
+	}
+	exec.rng = rand.New(rand.NewSource(1))
+
+	run := (&loadgen.ScenarioInfo{
+		RunID:       "tps-nsa-actions",
+		ExecutionID: "exec",
+		Logger:      zap.NewNop().Sugar(),
+	}).NewRun(0)
+
+	var inWorkflow, standalone bool
+	var walk func(actions []*ks.Action)
+	walk = func(actions []*ks.Action) {
+		for _, a := range actions {
+			if op := a.GetNexusOperation(); op.GetOperation() == "standalone-activity" {
+				inWorkflow = true
+			}
+			// Find the nested standalone-Nexus client action.
+			if seq := a.GetExecActivity().GetClient().GetClientSequence(); seq != nil {
+				for _, set := range seq.GetActionSets() {
+					for _, ca := range set.GetActions() {
+						if sn := ca.GetDoStandaloneNexusOperation(); sn.GetOperation() == "standalone-activity" {
+							standalone = true
+						}
+					}
+				}
+			}
+			if nested := a.GetNestedActionSet(); nested != nil {
+				walk(nested.GetActions())
+			}
+		}
+	}
+	for _, set := range exec.createActions(run) {
+		walk(set.GetActions())
+	}
+
+	require.True(t, inWorkflow,
+		`expected an in-workflow Nexus operation action with Operation "standalone-activity"`)
+	require.True(t, standalone,
+		`expected a DoStandaloneNexusOperation client action with Operation "standalone-activity"`)
+}
+
 func TestThroughputStressConfigurePayload(t *testing.T) {
 	t.Parallel()
 

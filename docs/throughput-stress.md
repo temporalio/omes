@@ -89,3 +89,16 @@ is any.
 | `=false` | either | no Nexus load; standalone Nexus not included |
 
 Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction, and fails the run.
+
+## Nexus operation with a standalone activity
+
+`include-nexus-standalone-activity` adds a standalone activity backed Nexus operation.
+It is driven two ways each iteration: As an in-workflow Nexus operation, and — when standalone Nexus is part of the run —
+as a standalone Nexus operation.
+
+This is **opt-in and off by default**; pass `--option include-nexus-standalone-activity=true`.
+It requires `nexus-enabled` and also needs server support for standalone activities and activity
+completion callbacks (dynamic config `activity.enableStandalone` and `activity.enableCallbacks`) and a
+Nexus callback URL; if those are off the operation fails clearly rather than being skipped.
+
+Currently only supported and run by Go workers.

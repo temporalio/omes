@@ -11,6 +11,8 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -644,3 +646,49 @@ var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", Nex
 		ID: opts.RequestID,
 	}, nil
 })
+
+// StandaloneActivityNexusOperationName is the registered name of StandaloneActivityNexusOperation.
+const StandaloneActivityNexusOperationName = "standalone-activity"
+
+// StandaloneActivityNexusOperation starts a standalone "noop" activity.
+var StandaloneActivityNexusOperation = temporalnexus.MustNewTemporalOperation(
+	temporalnexus.TemporalOperationOptions[*kitchensink.NexusHandlerInput, string]{
+		Name:  StandaloneActivityNexusOperationName,
+		Start: startStandaloneActivityNexusOperation,
+	},
+)
+
+// startStandaloneActivityNexusOperation starts the registered "noop" activity.
+func startStandaloneActivityNexusOperation(
+	ctx context.Context,
+	nc temporalnexus.NexusClient,
+	_ *kitchensink.NexusHandlerInput,
+	opts temporalnexus.StartTemporalOperationOptions,
+) (temporalnexus.TemporalOperationResult[string], error) {
+	activityOpts := client.StartActivityOptions{
+		// Reuse the Nexus request ID so retries attach to the original activity.
+		ID:                       "nexus-standalone-activity-" + opts.RequestID,
+		StartToCloseTimeout:      30 * time.Second,
+		ActivityIDConflictPolicy: enumspb.ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING,
+	}
+
+	res, err := temporalnexus.StartUntypedActivity[string](ctx, nc, activityOpts, "noop")
+	if err != nil {
+		// Treat namespace handover as retryable.
+		var notActive *serviceerror.NamespaceNotActive
+		if errors.As(err, &notActive) {
+			return res, nexus.HandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
+		}
+		// Fail fast and prevent retries when the server can't run this: standalone activities
+		// disabled (Unimplemented) or activity completion callbacks disabled (InvalidArgument).
+		var unimplemented *serviceerror.Unimplemented
+		var invalidArg *serviceerror.InvalidArgument
+		if errors.As(err, &unimplemented) || errors.As(err, &invalidArg) {
+			return res, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest,
+				"cannot start standalone activity; standalone activities (activity.enableStandalone) and "+
+					"activity completion callbacks (activity.enableCallbacks) must be enabled: %s", err.Error())
+		}
+		return res, fmt.Errorf("StartActivity failed: %w", err)
+	}
+	return res, nil
+}
