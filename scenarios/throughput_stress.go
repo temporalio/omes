@@ -63,6 +63,10 @@ const (
 	// standalone activities in throughput_stress. It is independent of plain
 	// standalone activity load and follows the namespace capability by default.
 	IncludeStandaloneActivityOperatorCommandsFlag = "include-standalone-activity-operator-commands"
+	// IncludeNexusStandaloneActivityFlag enables Nexus operations backed by a standalone activity.
+	// Opt-in and off by default (only the Go worker implements the operation); requires Nexus load
+	// (nexus-enabled) and server support for standalone activities + activity completion callbacks.
+	IncludeNexusStandaloneActivityFlag = "include-nexus-standalone-activity"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
@@ -99,6 +103,7 @@ type tpsConfig struct {
 	IncludeStandaloneNexus                    bool
 	IncludeStandaloneActivity                 bool
 	IncludeStandaloneActivityOperatorCommands bool
+	IncludeNexusStandaloneActivity            bool
 	Payload                                   *loadgen.PayloadConfig
 }
 
@@ -137,6 +142,7 @@ func init() {
 				func(c loadgen.Capabilities) bool {
 					return c.Namespace.GetStandaloneActivityOperatorCommands()
 				})
+			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -233,6 +239,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
 	config.IncludeStandaloneActivityOperatorCommands = info.OptionBool(
 		IncludeStandaloneActivityOperatorCommandsFlag)
+	config.IncludeNexusStandaloneActivity = info.OptionBool(IncludeNexusStandaloneActivityFlag)
+	if config.IncludeNexusStandaloneActivity && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeNexusStandaloneActivityFlag, NexusEnabledFlag)
+	}
 
 	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
@@ -271,6 +281,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if !nexus.Enabled {
 		// Standalone operations are part of Nexus load, so they go with it.
 		t.config.IncludeStandaloneNexus = false
+		t.config.IncludeNexusStandaloneActivity = false
 	} else {
 		info.Logger.Infof("Using nexus endpoint %q", nexus.Endpoint)
 	}
@@ -572,6 +583,14 @@ func (t *tpsExecutor) createActionsChunk(
 					t.createStandaloneNexusOperationAction("echo-sync"),
 				)
 			}
+			if t.config.IncludeNexusStandaloneActivity {
+				asyncActions = append(asyncActions, t.createNexusStandaloneActivityAction())
+				if t.config.IncludeStandaloneNexus {
+					asyncActions = append(asyncActions,
+						t.createStandaloneNexusOperationAction("standalone-activity"),
+					)
+				}
+			}
 		}
 
 		// Add standalone activities, if configured.
@@ -857,6 +876,18 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 			},
 		},
 	}}
+}
+
+// createNexusStandaloneActivityAction invokes a standalone activity backed Nexus operation from within the workflow.
+func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{
+			NexusOperation: &ExecuteNexusOperation{
+				Endpoint:  t.config.NexusEndpoint,
+				Operation: "standalone-activity",
+			},
+		},
+	}
 }
 
 func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Action {
