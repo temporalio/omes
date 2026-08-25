@@ -378,6 +378,10 @@ type Run struct {
 	Iteration int
 	Logger    *zap.SugaredLogger
 
+	// Duration is the wall-clock elapsed time of this iteration. It is set
+	// by the executor before OnCompletion fires, so callbacks can read it.
+	Duration time.Duration
+
 	// tracks how many attempts have been made for this iteration
 	attemptCount int
 }

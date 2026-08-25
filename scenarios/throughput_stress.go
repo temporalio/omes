@@ -83,6 +83,11 @@ type tpsState struct {
 	// AccumulatedDuration is the total execution time across all runs (original + resumes).
 	// This excludes any downtime between runs. Used for accurate throughput calculation.
 	AccumulatedDuration time.Duration `json:"accumulatedDuration"`
+	// MaxElapsedNanos is the wall-clock duration of the slowest completed iteration,
+	// in nanoseconds. Useful for detecting degraded recovery: even when throughput
+	// barely drops during a disruption, individual iteration latency can spike
+	// significantly. Zero means no iteration has completed yet.
+	MaxElapsedNanos int64 `json:"maxElapsedNanos"`
 }
 
 type tpsConfig struct {
@@ -301,8 +306,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	// Listen to iteration completion events to update the state.
 	info.Configuration.OnCompletion = func(ctx context.Context, run *loadgen.Run) {
-		t.updateStateOnIterationCompletion()
-		info.Logger.Debugf("Completed iteration %d", run.Iteration)
+		t.updateStateOnIterationCompletion(run.Duration)
+		info.Logger.Debugf("Completed iteration %d in %v", run.Iteration, run.Duration)
 	}
 
 	// Tally terminal iteration failures into the state so the failed count is
@@ -458,11 +463,14 @@ func (t *tpsExecutor) samplePayloadSize(rng *rand.Rand) int {
 	return int(t.config.Payload.SamplePayloadSize(rng, 256))
 }
 
-func (t *tpsExecutor) updateStateOnIterationCompletion() {
+func (t *tpsExecutor) updateStateOnIterationCompletion(d time.Duration) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	t.state.CompletedIterations += 1
 	t.state.LastCompletedIterationAt = time.Now()
+	if n := d.Nanoseconds(); n > t.state.MaxElapsedNanos {
+		t.state.MaxElapsedNanos = n
+	}
 }
 
 func (t *tpsExecutor) updateStateOnIterationFailure() {
