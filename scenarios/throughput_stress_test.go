@@ -49,6 +49,7 @@ func TestThroughputStress(t *testing.T) {
 
 		state := executor.Snapshot().(tpsState)
 		require.Equal(t, state.CompletedIterations, 2)
+		require.Greater(t, state.MaxElapsedNanos, int64(0))
 	})
 
 	t.Run("Run executor again, resuming from middle", func(t *testing.T) {
