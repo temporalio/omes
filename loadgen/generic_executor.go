@@ -134,7 +134,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 			iterStart := time.Now()
 
 			defer func() {
-				g.executeTimer.Record(time.Since(iterStart))
+				elapsed := time.Since(iterStart)
+				g.executeTimer.Record(elapsed)
 
 				// Swallow the error for the spawn loop only, so a tolerated failure
 				// doesn't stop new iterations from starting. It is not ignored: it is
@@ -160,6 +161,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 					case stopping:
 						g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)
 					case iterErr == nil:
+						run.Duration = elapsed
 						g.completed.Add(1)
 						if g.config.OnCompletion != nil {
 							g.config.OnCompletion(ctx, run)
