@@ -28,17 +28,17 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.3",
     "@grpc/proto-loader": "^0.8.0",
-    "@temporalio/activity": "^1.22.0",
-    "@temporalio/client": "^1.22.0",
-    "@temporalio/common": "^1.22.0",
-    "@temporalio/worker": "^1.22.0",
-    "@temporalio/workflow": "^1.22.0",
+    "@temporalio/activity": "^1.23.0",
+    "@temporalio/client": "^1.23.0",
+    "@temporalio/common": "^1.23.0",
+    "@temporalio/worker": "^1.23.0",
+    "@temporalio/workflow": "^1.23.0",
     "commander": "^11.1.0",
     "long": "^5.2.3",
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.22.0",
+    "@temporalio/testing": "^1.23.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",

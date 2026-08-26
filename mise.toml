@@ -22,7 +22,7 @@ go = "1.48.0"
 java = "1.37.0"
 python = "1.31.0"
 ruby = "1.6.0"
-typescript = "1.22.0"
+typescript = "1.23.0"
 
 [_.server]
 ref = "abcb94873061dd55e80745cbcc84037abdf22d53"
