@@ -103,10 +103,14 @@ type Server struct {
 	ports    Ports
 	logger   *zap.SugaredLogger
 	workDir  string
-	cancel   context.CancelFunc
-	done     chan error
-	stopOnce sync.Once
-	stopErr  error
+	launch   func(context.Context) (context.CancelFunc, chan error, error)
+	ready    func(context.Context) error
+
+	mu      sync.Mutex
+	cancel  context.CancelFunc
+	done    chan error
+	stopped bool
+	stopErr error
 }
 
 // Start clones+builds the requested ref and runs the server, returning once
@@ -130,13 +134,9 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 
 	// Roll back partially-acquired resources on any error before the Server
 	// struct takes ownership. After `success = true`, Stop() handles teardown.
-	var cancel context.CancelFunc
 	success := false
 	defer func() {
 		if !success {
-			if cancel != nil {
-				cancel()
-			}
 			_ = os.RemoveAll(workDir)
 		}
 	}()
@@ -150,7 +150,7 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	}
 	serverPorts := newPorts(host, ports)
 	frontendAddr := net.JoinHostPort(serverPorts.Host, strconv.Itoa(serverPorts.FrontendGRPC))
-	frontendHTTPAddr := net.JoinHostPort(host, strconv.Itoa(ports[portFrontendHTTP]))
+	frontendHTTPAddr := net.JoinHostPort(serverPorts.Host, strconv.Itoa(serverPorts.FrontendHTTP))
 	dynConfigPath, err := writeDynamicConfig(workDir, frontendHTTPAddr, opts.DynamicConfigValues)
 	if err != nil {
 		return nil, fmt.Errorf("devserver: write dynamic config: %w", err)
@@ -171,45 +171,42 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 		return nil, fmt.Errorf("devserver: build: %w", err)
 	}
 
-	// Launch the server subprocess. runCtx is derived from the caller's ctx
-	// so cancelling it (or letting it expire) tears the server down. Stop()
-	// also cancels runCtx.
-	var runCtx context.Context
-	runCtx, cancel = context.WithCancel(ctx)
-	cmd := exec.CommandContext(runCtx, binaryPath,
-		"--allow-no-auth",
-		"start",
-	)
-	cmd.Env = serverEnv
 	output := cmp.Or(opts.Output, io.Discard)
-	cmd.Stdout = output
-	cmd.Stderr = output
-	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
-	cmd.WaitDelay = 15 * time.Second
-
-	opts.Logger.Infof("Starting temporal server (ref %s, frontend %s)", opts.Ref, frontendAddr)
-	if err := cmd.Start(); err != nil {
-		cancel()
-		return nil, fmt.Errorf("devserver: start: %w", err)
-	}
-
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
 	s := &Server{
 		frontend: frontendAddr,
 		ports:    serverPorts,
 		logger:   opts.Logger,
 		workDir:  workDir,
-		cancel:   cancel,
-		done:     done,
+	}
+	s.launch = func(launchCtx context.Context) (context.CancelFunc, chan error, error) {
+		runCtx, runCancel := context.WithCancel(launchCtx)
+		cmd := exec.CommandContext(runCtx, binaryPath,
+			"--allow-no-auth",
+			"start",
+		)
+		cmd.Env = serverEnv
+		cmd.Stdout = output
+		cmd.Stderr = output
+		cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+		cmd.WaitDelay = 15 * time.Second
+
+		opts.Logger.Infof("Starting temporal server (ref %s, frontend %s)", opts.Ref, frontendAddr)
+		if err := cmd.Start(); err != nil {
+			runCancel()
+			return nil, nil, err
+		}
+
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
+		return runCancel, done, nil
+	}
+	s.ready = func(readyCtx context.Context) error {
+		return s.registerNamespace(readyCtx, opts.Namespace)
+	}
+	if err := s.startProcessLocked(ctx); err != nil {
+		return nil, err
 	}
 	success = true
-
-	if err := s.registerNamespace(ctx, opts.Namespace); err != nil {
-		_ = s.Stop()
-		return nil, fmt.Errorf("devserver: register namespace %q: %w", opts.Namespace, err)
-	}
 	return s, nil
 }
 
@@ -224,17 +221,70 @@ func (s *Server) Ports() Ports {
 	return s.ports
 }
 
-// Stop signals the server to terminate and waits for it to exit. The
-// per-run work directory is removed. Safe to call more than once; subsequent
-// calls return the same error as the first.
+// Restart gracefully terminates the server process and starts it again with
+// the same binary, configuration, ports, output, and work directory.
+func (s *Server) Restart(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.stopped {
+		return errors.New("devserver: cannot restart a stopped server")
+	}
+	if err := s.stopProcessLocked(); err != nil {
+		return fmt.Errorf("devserver: stop for restart: %w", err)
+	}
+	if err := s.startProcessLocked(ctx); err != nil {
+		return fmt.Errorf("devserver: restart: %w", err)
+	}
+	return nil
+}
+
+// Stop signals the server to terminate and waits for it to exit. The per-run
+// work directory is removed. Stop is final and safe to call more than once;
+// subsequent calls return the same error as the first.
 func (s *Server) Stop() error {
-	s.stopOnce.Do(func() {
-		s.cancel()
-		err := <-s.done
-		_ = os.RemoveAll(s.workDir)
-		s.stopErr = classifyExitErr(err)
-	})
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.stopped {
+		return s.stopErr
+	}
+	s.stopped = true
+	s.stopErr = s.stopProcessLocked()
+	_ = os.RemoveAll(s.workDir)
 	return s.stopErr
+}
+
+func (s *Server) startProcessLocked(ctx context.Context) error {
+	cancel, done, err := s.launch(ctx)
+	if err != nil {
+		return fmt.Errorf("start: %w", err)
+	}
+	s.cancel = cancel
+	s.done = done
+	if err := s.ready(ctx); err != nil {
+		_ = s.stopProcessLocked()
+		return fmt.Errorf("wait for frontend: %w", err)
+	}
+	return nil
+}
+
+func (s *Server) stopProcessLocked() error {
+	if s.cancel == nil {
+		return nil
+	}
+	s.cancel()
+	err := <-s.done
+	s.cancel = nil
+	s.done = nil
+	return classifyStopErr(err)
+}
+
+func classifyStopErr(err error) error {
+	if errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return classifyExitErr(err)
 }
 
 // classifyExitErr treats a clean exit or termination by our own SIGTERM
@@ -258,11 +308,12 @@ func classifyExitErr(err error) error {
 func (s *Server) registerNamespace(ctx context.Context, namespace string) error {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
+	done := s.done
 
 	go func() {
 		select {
-		case procErr := <-s.done:
-			s.done <- procErr
+		case procErr := <-done:
+			done <- procErr
 			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
 		case <-ctx.Done():
 		}
