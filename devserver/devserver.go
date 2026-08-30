@@ -50,6 +50,9 @@ type Options struct {
 	// server's own frontend. Set this to another server's frontend to join a
 	// multi-process cluster (e.g. for mixed-version testing).
 	ClusterEndpoint ClusterEndpoint
+	// Ports, when set, supplies the complete port allocation for this server.
+	// All ports must be set. When nil, Start allocates a fresh set of ports.
+	Ports *Ports
 }
 
 // ClusterEndpoint identifies an active-cluster pointer for the server's
@@ -143,19 +146,17 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 
 	// Allocate service ports and create configs before the clone+build
 	// so misconfiguration surfaces immediately.
-	const host = "127.0.0.1"
-	ports, err := allocatePorts(host)
+	serverPorts, err := resolvePorts(opts.Ports)
 	if err != nil {
-		return nil, fmt.Errorf("devserver: allocate ports: %w", err)
+		return nil, fmt.Errorf("devserver: resolve ports: %w", err)
 	}
-	serverPorts := newPorts(host, ports)
 	frontendAddr := net.JoinHostPort(serverPorts.Host, strconv.Itoa(serverPorts.FrontendGRPC))
-	frontendHTTPAddr := net.JoinHostPort(host, strconv.Itoa(ports[portFrontendHTTP]))
+	frontendHTTPAddr := net.JoinHostPort(serverPorts.Host, strconv.Itoa(serverPorts.FrontendHTTP))
 	dynConfigPath, err := writeDynamicConfig(workDir, frontendHTTPAddr, opts.DynamicConfigValues)
 	if err != nil {
 		return nil, fmt.Errorf("devserver: write dynamic config: %w", err)
 	}
-	serverEnv, err := buildServerEnv(opts.Persistence, opts.ClusterEndpoint, dynConfigPath, host, ports)
+	serverEnv, err := buildServerEnv(opts.Persistence, opts.ClusterEndpoint, dynConfigPath, serverPorts.Host, serverPorts.portArray())
 	if err != nil {
 		return nil, fmt.Errorf("devserver: build env: %w", err)
 	}
@@ -232,9 +233,16 @@ func (s *Server) Stop() error {
 		s.cancel()
 		err := <-s.done
 		_ = os.RemoveAll(s.workDir)
-		s.stopErr = classifyExitErr(err)
+		s.stopErr = classifyStopErr(err)
 	})
 	return s.stopErr
+}
+
+func classifyStopErr(err error) error {
+	if errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return classifyExitErr(err)
 }
 
 // classifyExitErr treats a clean exit or termination by our own SIGTERM

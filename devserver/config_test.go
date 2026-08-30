@@ -1,6 +1,7 @@
 package devserver
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -25,6 +26,33 @@ func TestAllocatePorts(t *testing.T) {
 	}
 }
 
+func TestResolvePortsAllocatesByDefault(t *testing.T) {
+	ports, err := resolvePorts(nil)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", ports.Host)
+	require.NoError(t, ports.validate())
+}
+
+func TestResolvePortsReusesSuppliedPorts(t *testing.T) {
+	want := newPorts("127.0.0.1", [portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240})
+	got, err := resolvePorts(&want)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestResolvePortsRejectsIncompleteOrInvalidSuppliedPorts(t *testing.T) {
+	valid := newPorts("127.0.0.1", [portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240})
+
+	for _, ports := range []Ports{
+		{},
+		{Host: "127.0.0.1"},
+		func() Ports { ports := valid; ports.WorkerMembership = ports.FrontendGRPC; return ports }(),
+	} {
+		_, err := resolvePorts(&ports)
+		require.Error(t, err)
+	}
+}
+
 func TestServerPorts(t *testing.T) {
 	ports := newPorts("127.0.0.1", [portCount]int{7233, 7234, 7243, 7235, 7236, 7237, 7238, 7239, 7240})
 	server := &Server{
@@ -34,6 +62,18 @@ func TestServerPorts(t *testing.T) {
 
 	require.Equal(t, "127.0.0.1:7233", server.FrontendHostPort())
 	require.Equal(t, ports, server.Ports())
+}
+
+func TestServerStopIgnoresCanceledCommandContext(t *testing.T) {
+	workDir := t.TempDir()
+	server := &Server{
+		cancel:  func() {},
+		done:    make(chan error, 1),
+		workDir: workDir,
+	}
+	server.done <- context.Canceled
+
+	require.NoError(t, server.Stop())
 }
 
 func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
