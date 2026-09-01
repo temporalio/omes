@@ -2,6 +2,7 @@ package kitchensink
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -9,10 +10,14 @@ import (
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
+	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/query/v1"
 	"go.temporal.io/api/serviceerror"
+	apitemporalnexus "go.temporal.io/api/temporalnexus"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -20,7 +25,10 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-const KitchenSinkServiceName = "kitchen-sink"
+const (
+	KitchenSinkServiceName = "kitchen-sink"
+	nexusQueryName         = "report_state"
+)
 
 type ClientActivities struct {
 	Client client.Client
@@ -614,6 +622,15 @@ func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerI
 	state := KSWorkflowState{
 		workflowState: &kitchensink.WorkflowState{},
 	}
+
+	if err := workflow.SetQueryHandler(
+		ctx,
+		nexusQueryName,
+		func(input any) (*kitchensink.WorkflowState, error) {
+			return state.workflowState, nil
+		}); err != nil {
+		return "", err
+	}
 	for _, actionSet := range input.BeforeActions {
 		if _, err := state.handleActionSet(ctx, actionSet); err != nil {
 			return "", err
@@ -631,6 +648,60 @@ var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Con
 		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
 	}
 	return input.Input, nil
+})
+
+// QueryWorkflowOperationName is the registered name of QueryWorkflowOperation.
+const QueryWorkflowOperationName = "query-workflow"
+
+// QueryWorkflowOperation answers with a workflow's "query-result" state, obtained by querying the
+// workflow named in the input, and links the caller to the workflow that answered the query.
+var QueryWorkflowOperation = nexus.NewSyncOperation(QueryWorkflowOperationName, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
+	var target kitchensink.QueryWorkflowTarget
+	if err := json.Unmarshal([]byte(input.GetInput()), &target); err != nil {
+		return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeBadRequest, "invalid query target: %v", err)
+	}
+	if target.WorkflowID == "" {
+		return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeBadRequest, "query target must include a workflow ID")
+	}
+	if target.Namespace == "" {
+		target.Namespace = temporalnexus.GetOperationInfo(ctx).Namespace
+	}
+	if target.QueryType == "" {
+		target.QueryType = nexusQueryName
+	}
+
+	resp, err := temporalnexus.GetClient(ctx).WorkflowService().QueryWorkflow(ctx, &workflowservice.QueryWorkflowRequest{
+		Namespace: target.Namespace,
+		Execution: &common.WorkflowExecution{
+			WorkflowId: target.WorkflowID,
+			RunId:      target.RunID,
+		},
+		Query: &query.WorkflowQuery{QueryType: target.QueryType},
+	})
+	if err != nil {
+		// Treat namespace handover as retryable.
+		if _, ok := errors.AsType[*serviceerror.NamespaceNotActive](err); ok {
+			return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
+		}
+		return "", err
+	}
+	// query links are to workflow as theres no history event
+	workflowLink := resp.GetLink().GetWorkflow()
+	if workflowLink == nil {
+		return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeBadRequest,
+			"query response did not contain a workflow link; the server must support query-backed Nexus operations")
+	}
+	var state kitchensink.WorkflowState
+	if err := clioptions.OmesDataConverter().FromPayloads(resp.GetQueryResult(), &state); err != nil {
+		return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeBadRequest, "failed to decode query result: %v", err)
+	}
+	result, ok := state.GetKvs()["query-result"]
+	if !ok {
+		return "", nexus.NewHandlerErrorf(nexus.HandlerErrorTypeBadRequest, "query result did not contain query-result state")
+	}
+	// add handler links manually until a supported SDK release is available
+	nexus.AddHandlerLinks(ctx, apitemporalnexus.ConvertLinkWorkflowToNexusLink(workflowLink))
+	return result, nil
 })
 
 // EchoAsyncOperation starts a NexusHandlerWorkflow that runs before_actions and returns the input.

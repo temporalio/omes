@@ -19,11 +19,16 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const namespace = "default"
+const (
+	namespace = "default"
+
+	queryTargetWorkflowID = "nexus-query-target"
+)
 
 var (
 	sdks = []clioptions.Language{
@@ -58,6 +63,14 @@ var (
 		clioptions.LangRuby:       "dostandaloneactivityoperatorcommands is not supported",
 		clioptions.LangTypeScript: "dostandaloneactivityoperatorcommands is not supported",
 		clioptions.LangDotNet:     "dostandaloneactivityoperatorcommands is not supported",
+	}
+
+	nexusQueryUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangPython:     "query-workflow",
+		clioptions.LangJava:       "executenexusoperation is not supported",
+		clioptions.LangRuby:       "executenexusoperation is not supported",
+		clioptions.LangTypeScript: "executenexusoperation is not supported",
+		clioptions.LangDotNet:     "executenexusoperation is not supported",
 	}
 )
 
@@ -940,6 +953,54 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
+			name: "NexusOperation/QueryWorkflow",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						// start nexus op and wait for signal as a scaffold to
+						// query a running workflow
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation:                       "echo-async",
+									HandlerWorkflowId:               queryTargetWorkflowID,
+									HandlerWorkflowIdConflictPolicy: enums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+									BeforeActions: ListActionSet(
+										NewSetWorkflowStateAction("query-result", "query successful"),
+									),
+									WaitForSignal: true,
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitStarted{
+											WaitStarted: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						},
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation: "query-workflow",
+									Input: QueryWorkflowNexusInput(QueryWorkflowTarget{
+										WorkflowID: queryTargetWorkflowID,
+									}),
+									ExpectedOutput: "query successful",
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitFinish{
+											WaitFinish: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"query-workflow"}
+				NexusOperationCompleted {"links":[{"workflow":{"workflowId":"nexus-query-target","reason":"Query processed"}}]}`),
+			expectedUnsupportedErrs: nexusQueryUnsupportedSDKs,
+		},
+		{
 			name: "NexusOperation/Async",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1220,8 +1281,13 @@ func testForSDK(
 	// worker picks them up.
 	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
 
+	// PrepareTestInput fills the per-run endpoint and task queue into the input in
+	// place, and the case's input is shared by every SDK subtest, so work on a copy.
+	testInput, ok := proto.Clone(tc.testInput).(*TestInput)
+	require.True(t, ok, "failed to clone test input")
+
 	executor := &KitchenSinkExecutor{
-		TestInput: tc.testInput,
+		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
 			if input.WorkflowInput != nil {
 				for _, actionSet := range input.WorkflowInput.InitialActions {
