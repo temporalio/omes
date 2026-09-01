@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/workers/go/apps/encryption"
 	"github.com/temporalio/omes/workers/go/apps/helloworld"
 	"github.com/temporalio/omes/workers/go/apps/lambda"
 	"github.com/temporalio/omes/workers/go/apps/worker"
@@ -14,6 +15,7 @@ import (
 const defaultAppName = "worker"
 
 var registry = map[string]harness.App{
+	"encryption": encryption.App,
 	"helloworld": helloworld.App,
 	"lambda":     lambda.App,
 	"worker":     worker.App,
