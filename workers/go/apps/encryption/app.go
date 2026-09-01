@@ -1,8 +1,10 @@
 // Package encryption is an omes project that installs an encrypting data
 // converter and drives a workflow which touches every payload-bearing path the
-// Go SDK exposes, so the resulting histories can be inspected path by path.
+// Go SDK exposes, so the resulting histories can be inspected path by path and
+// the load can be turned up to many payloads per request.
 //
-// See README.md for which paths end up encrypted and which do not.
+// See README.md for which paths end up encrypted, which do not, and how the
+// fan-out knobs turn one readable iteration into a load generator.
 package encryption
 
 import (
@@ -10,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/nexus-rpc/sdk-go/nexus"
@@ -42,9 +45,12 @@ var App = harness.App{
 	},
 }
 
-// state carries the Nexus endpoint from Init to Execute.
+// state carries the parsed configuration from Init to Execute.
 var state struct {
-	nexusEndpoint string
+	config projectConfig
+	// filler is derived from config.PayloadBytes once, since every payload in
+	// every iteration carries the same padding.
+	filler string
 }
 
 // projectConfig is the JSON handed to the app through
@@ -59,6 +65,67 @@ type projectConfig struct {
 	// task queue, omes-<run-id>. That target is fixed when the endpoint is created,
 	// so pin --run-id and the same endpoint keeps working across runs.
 	NexusEndpoint string `json:"nexusEndpoint"`
+
+	// ConcurrentUpdates is how many updates the driver sends to the target
+	// workflow at once, beyond the one carried by update-with-start.
+	ConcurrentUpdates int `json:"concurrentUpdates"`
+
+	// MemoEntries is how many fields each memo carries — the start memo and the
+	// target's memo here, and the upserted and child memos in the workflow.
+	MemoEntries int `json:"memoEntries"`
+	// ActivityCount fans out the echo activity and the failing activity.
+	ActivityCount int `json:"activityCount"`
+	// MarkerCount fans out side effects and failing local activities.
+	MarkerCount int `json:"markerCount"`
+	// ChildCount fans out the echo child workflow.
+	ChildCount int `json:"childCount"`
+	// SignalCount is how many signals reach the target workflow, which waits for
+	// exactly this many before completing.
+	SignalCount int `json:"signalCount"`
+	// NexusCount fans out the Nexus operation, when an endpoint is configured.
+	NexusCount int `json:"nexusCount"`
+	// FailureDepth is how many levels deep a failure's cause chain goes. Each
+	// level is its own Failure proto with its own details and, because the
+	// failure converter sets EncodeCommonAttributes, its own encoded_attributes.
+	// Depth therefore adds proto nodes rather than only enlarging one payload.
+	FailureDepth int `json:"failureDepth"`
+	// PayloadBytes pads every payload body.
+	PayloadBytes int `json:"payloadBytes"`
+}
+
+// withDefaults clamps the counts so that an unconfigured run is the one-of-each
+// iteration and a zero never silently turns a path off.
+func (c projectConfig) withDefaults() projectConfig {
+	for _, count := range []*int{
+		&c.ConcurrentUpdates, &c.MemoEntries, &c.ActivityCount, &c.MarkerCount,
+		&c.ChildCount, &c.SignalCount, &c.NexusCount, &c.FailureDepth,
+	} {
+		if *count < 1 {
+			*count = 1
+		}
+	}
+	if c.PayloadBytes < 0 {
+		c.PayloadBytes = 0
+	}
+	return c
+}
+
+// coverageInput builds the coverage workflow's input.
+func coverageInput(config projectConfig, filler, message, targetID string, iteration int64) CoverageInput {
+	return CoverageInput{
+		Message:          message,
+		Iteration:        iteration,
+		TargetWorkflowID: targetID,
+		NexusEndpoint:    config.NexusEndpoint,
+		Filler:           filler,
+		MemoEntries:      config.MemoEntries,
+		ActivityCount:    config.ActivityCount,
+		MarkerCount:      config.MarkerCount,
+		ChildCount:       config.ChildCount,
+		SignalCount:      config.SignalCount,
+		NexusCount:       config.NexusCount,
+		FailureDepth:     config.FailureDepth,
+	}
 }
 
 func buildWorker(client sdkclient.Client, workerContext harness.WorkerContext) sdkworker.Worker {
@@ -128,29 +195,43 @@ func initProject(_ sdkclient.Client, initContext harness.ProjectInitContext) err
 			"sets nexusEndpoint to an endpoint targeting this run's namespace and task queue %q",
 		initContext.TaskQueue)
 
+	var config projectConfig
 	if len(initContext.ConfigJSON) == 0 {
 		initContext.Logger.Warnf("No project config, so this run generates no Nexus load: %s", nexusHint)
-		return nil
-	}
-	var config projectConfig
-	if err := json.Unmarshal(initContext.ConfigJSON, &config); err != nil {
+	} else if err := json.Unmarshal(initContext.ConfigJSON, &config); err != nil {
 		return fmt.Errorf("failed to parse project config: %w", err)
 	}
+
 	if config.NexusEndpoint == "" {
-		initContext.Logger.Warnf("Project config names no endpoint, so this run generates no Nexus load: %s", nexusHint)
-		return nil
+		if len(initContext.ConfigJSON) > 0 {
+			initContext.Logger.Warnf("Project config names no endpoint, so this run generates no Nexus load: %s", nexusHint)
+		}
+	} else {
+		initContext.Logger.Infof("Using Nexus endpoint %q", config.NexusEndpoint)
 	}
 
-	state.nexusEndpoint = config.NexusEndpoint
-	initContext.Logger.Infof("Using Nexus endpoint %q", state.nexusEndpoint)
+	state.config = config.withDefaults()
+	state.filler = makeFiller(state.config.PayloadBytes)
+
+	// A payload census, so a latency measurement taken against this run can be
+	// read as a per-payload cost rather than an opaque aggregate.
+	initContext.Logger.Infof(
+		"Per-iteration fan-out: memoEntries=%d activityCount=%d markerCount=%d childCount=%d "+
+			"signalCount=%d nexusCount=%d failureDepth=%d payloadBytes=%d concurrentUpdates=%d",
+		state.config.MemoEntries, state.config.ActivityCount, state.config.MarkerCount,
+		state.config.ChildCount, state.config.SignalCount, state.config.NexusCount,
+		state.config.FailureDepth, state.config.PayloadBytes, state.config.ConcurrentUpdates)
+
 	return nil
 }
 
-// executeIteration runs one full pass over the payload paths. It is deliberately
-// sequential rather than fast: the point is a history that is easy to read, not
-// throughput.
+// executeIteration runs one full pass over the payload paths. Every path is
+// covered at every setting; the shape only decides how much each request
+// carries.
 func executeIteration(client sdkclient.Client, executeContext harness.ProjectExecuteContext) (err error) {
 	base := fmt.Sprintf("%s-%d", executeContext.Run.ExecutionID, executeContext.Iteration)
+	config := state.config
+	filler := state.filler
 
 	// An iteration that returns early leaves behind whatever it had already started
 	// but never waited for. Those orphans outlive the run — omes stops the worker
@@ -175,8 +256,7 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		}
 	}()
 	// The payload body every workflow, activity, signal, and marker in this
-	// iteration carries. It is per-iteration only so that concurrent iterations are
-	// distinguishable in a history.
+	// iteration carries.
 	message := "encryption-coverage-" + base
 
 	// The header the propagator injects comes off the context.
@@ -184,10 +264,7 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 
 	// The target is started with update-with-start, which the client issues as a
 	// single ExecuteMultiOperation carrying a StartWorkflowExecutionRequest and an
-	// UpdateWorkflowExecutionRequest nested inside operation wrappers. That is the
-	// deepest payload-bearing request the client sends, and this one holds four
-	// payloads at three different depths: the workflow input is absent but the memo,
-	// the header, and the update argument are all in there.
+	// UpdateWorkflowExecutionRequest nested inside operation wrappers.
 	targetID := base + "-target"
 	started = append(started, targetID)
 	startTarget := client.NewWithStartWorkflowOperation(sdkclient.StartWorkflowOptions{
@@ -197,17 +274,17 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		// Required for update-with-start. USE_EXISTING rather than FAIL so that an
 		// iteration omes retries attaches to the target its first attempt started.
 		WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		Memo: map[string]any{
-			"encryptionTargetMemo": MarkerData{Step: "target", Message: message},
-		},
-	}, targetWorkflowName)
+		Memo:                     iterationMemo("encryptionTargetMemo", "target", config.MemoEntries, message, filler),
+	}, targetWorkflowName, TargetInput{ExpectedSignals: config.SignalCount})
 
 	accepted, err := client.UpdateWithStartWorkflow(ctx, sdkclient.UpdateWithStartWorkflowOptions{
 		StartWorkflowOperation: startTarget,
 		UpdateOptions: sdkclient.UpdateWorkflowOptions{
 			UpdateName:   coverageUpdateName,
 			WaitForStage: sdkclient.WorkflowUpdateStageCompleted,
-			Args:         []any{UpdateInput{Step: "update-with-start", Message: message}},
+			Args: []any{UpdateInput{
+				Step: "update-with-start", Message: message, Filler: filler,
+			}},
 		},
 	})
 	if err != nil {
@@ -222,50 +299,44 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		return fmt.Errorf("failed to start target workflow: %w", err)
 	}
 
-	// A plain update too, on the other RPC, and one the validator rejects, which
-	// produces a failure payload through the failure converter rather than a result.
-	// It goes before the coverage workflow because the signal from that workflow
-	// completes the target, and a completed workflow takes no updates. The rejection
-	// is the point, so the error is expected and dropped; it can surface either from
-	// the call or from Get depending on how far the update got.
-	rejected, err := client.UpdateWorkflow(ctx, sdkclient.UpdateWorkflowOptions{
-		WorkflowID:   targetID,
-		UpdateName:   coverageUpdateName,
-		WaitForStage: sdkclient.WorkflowUpdateStageCompleted,
-		Args:         []any{UpdateInput{Step: "update-rejected", Message: message, Reject: true}},
-	})
-	if err == nil {
-		_ = rejected.Get(ctx, nil)
+	var updateWG sync.WaitGroup
+	for i := 0; i < config.ConcurrentUpdates; i++ {
+		updateWG.Add(1)
+		go func(index int) {
+			defer updateWG.Done()
+			reject := index == 0
+			step := "update-accepted"
+			if reject {
+				step = "update-rejected"
+			}
+			handle, updateErr := client.UpdateWorkflow(ctx, sdkclient.UpdateWorkflowOptions{
+				WorkflowID:   targetID,
+				UpdateName:   coverageUpdateName,
+				WaitForStage: sdkclient.WorkflowUpdateStageCompleted,
+				Args: []any{UpdateInput{
+					Step:         step,
+					Message:      message,
+					Reject:       reject,
+					Filler:       filler,
+					FailureDepth: config.FailureDepth,
+				}},
+			})
+			if updateErr == nil {
+				_ = handle.Get(ctx, nil)
+			}
+		}(i)
 	}
-
-	// A top-level failing workflow, so the failure payloads are also decoded by the
-	// client rather than only by a parent workflow.
-	failing, err := client.ExecuteWorkflow(ctx, sdkclient.StartWorkflowOptions{
-		ID:                       base + "-failing",
-		TaskQueue:                executeContext.TaskQueue,
-		WorkflowExecutionTimeout: workflowExecutionTimeout,
-	}, failingWorkflowName, FailingInput{Message: message})
-	if err != nil {
-		return fmt.Errorf("failed to start failing workflow: %w", err)
-	}
-	started = append(started, base+"-failing")
+	updateWG.Wait()
 
 	coverage, err := client.ExecuteWorkflow(ctx, sdkclient.StartWorkflowOptions{
 		ID:                       base,
 		TaskQueue:                executeContext.TaskQueue,
 		WorkflowExecutionTimeout: workflowExecutionTimeout,
-		Memo: map[string]any{
-			"encryptionStartMemo": MarkerData{Step: "start", Message: message},
-		},
+		Memo:                     iterationMemo("encryptionStartMemo", "start", config.MemoEntries, message, filler),
 		TypedSearchAttributes: temporal.NewSearchAttributes(
 			keywordSearchAttribute.ValueSet(message),
 		),
-	}, coverageWorkflowName, CoverageInput{
-		Iteration:        executeContext.Iteration,
-		Message:          message,
-		TargetWorkflowID: targetID,
-		NexusEndpoint:    state.nexusEndpoint,
-	})
+	}, coverageWorkflowName, coverageInput(config, filler, message, targetID, executeContext.Iteration))
 	if err != nil {
 		return fmt.Errorf("failed to start coverage workflow: %w", err)
 	}
@@ -281,10 +352,6 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		return fmt.Errorf("target workflow failed: %w", err)
 	}
 
-	// This one is supposed to fail; waiting on it is what drives the client-side
-	// decode of the failure, so the error is expected and ignored.
-	_ = failing.Get(ctx, nil)
-
 	// A workflow whose first attempt fails, so the second attempt's started event
 	// carries the encoded failure as ContinuedFailure. Waiting on the run follows the
 	// retry chain to the attempt that succeeds.
@@ -292,8 +359,13 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		ID:                       base + "-retry",
 		TaskQueue:                executeContext.TaskQueue,
 		WorkflowExecutionTimeout: workflowExecutionTimeout,
-		RetryPolicy:              &temporal.RetryPolicy{MaximumAttempts: 2},
-	}, retryWorkflowName, RetryInput{Message: message})
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 2,
+			InitialInterval: retryInitialInterval,
+		},
+	}, retryWorkflowName, RetryInput{
+		Message: message, Filler: filler, FailureDepth: config.FailureDepth,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to start retry workflow: %w", err)
 	}
@@ -305,4 +377,15 @@ func executeIteration(client sdkclient.Client, executeContext harness.ProjectExe
 		return fmt.Errorf("retry workflow failed: %w", err)
 	}
 	return nil
+}
+
+// iterationMemo builds a memo with the configured number of fields.
+func iterationMemo(prefix, step string, entries int, message, filler string) map[string]any {
+	memo := make(map[string]any, entries)
+	for i := 0; i < entries; i++ {
+		memo[fmt.Sprintf("%s-%d", prefix, i)] = MarkerData{
+			Step: step, Message: message, Filler: filler,
+		}
+	}
+	return memo
 }

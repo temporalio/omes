@@ -14,7 +14,7 @@ encrypt/decrypt of every kind of payload Temporal carries rather than just workf
 The app targets **cloud namespaces**, so it makes no operator-service calls: it creates nothing in
 the namespace and expects two things to already exist there.
 
-**1. Two custom search attributes**, provisioned however your namespace does it (tcld, the Cloud UI):
+**1. Two custom search attributes**:
 
 | Name | Type |
 | --- | --- |
@@ -36,6 +36,8 @@ across runs.
 { "nexusEndpoint": "my-encryption-endpoint" }
 ```
 
+Everything else in that file is optional and covered under [Fan-out](#fan-out).
+
 ```sh
 go run ./cmd/omes run-scenario-with-worker --scenario project \
   --language go --app encryption --run-id enc-load --iterations 1 \
@@ -53,14 +55,18 @@ The task queue is not the app's to choose: omes derives it from the run ID in bo
 `cmd/omes/run_worker.go` and `scenarios/project/project.go`, which is how the worker and the driver
 agree on one without shared config. Pinning `--run-id` is what makes it static.
 
-Each iteration starts four workflows, sequentially: a message target (started by update-with-start,
-then sent a rejected update and later a signal), the coverage workflow (which continues-as-new
-once), a workflow that fails, and a two-attempt retry chain. An iteration is not a throughput benchmark — the load it generates is
-*varied*, not fast.
+Each iteration starts three workflows: a message target (started by update-with-start, then sent
+updates and later signals), the coverage workflow (which continues-as-new once, and which starts
+children of its own), and a two-attempt retry chain.
+
+Inside the coverage workflow the steps run *concurrently*. It issues every command it can before
+waiting on any of them, which is what makes one `RespondWorkflowTaskCompleted` carry the whole set
+rather than one command per workflow task. See [Fan-out](#fan-out) for why that matters and how to
+turn it up.
 
 ## What is configured
 
-[`client.go`](./client.go) sets three things on the client, and the Go harness routes both the worker
+[`app.go`](./app.go) sets three things on the client, and the Go harness routes both the worker
 process and the project-server process through it, so all three apply to both sides:
 
 - `DataConverter` — `converter.NewCodecDataConverter` over the SDK default converter, with an
@@ -72,6 +78,60 @@ process and the project-server process through it, so all three apply to both si
   the client — and the failure paths below would generate no codec load.
 - `ContextPropagators` — a propagator that writes its header field with the default converter. See
   the header note below.
+
+## Fan-out
+
+Every count below defaults to 1, and an unconfigured run is the one-of-each history the rest of this
+README describes. Raising a count does not add requests or change which paths run — it changes how
+much a single request carries. That is the difference between load that is *varied* and load that is
+*dense*: the same paths either way, but many payloads per request instead of one.
+
+```json
+{
+  "nexusEndpoint": "my-encryption-endpoint",
+  "memoEntries": 20,
+  "activityCount": 20,
+  "markerCount": 20,
+  "childCount": 1,
+  "signalCount": 5,
+  "nexusCount": 5,
+  "failureDepth": 4,
+  "payloadBytes": 1024,
+  "concurrentUpdates": 10
+}
+```
+
+| Option | Fans out | Notes |
+| --- | --- | --- |
+| `memoEntries` | Fields per upserted memo, and per start and child memo | `map<string, Payload>`, so each field is a payload of its own |
+| `activityCount` | The echo activity and the failing activity | One `Payloads` holding the lot |
+| `markerCount` | Side effects and failing local activities | Marker details; cheap, nothing gets scheduled |
+| `childCount` | Echo child workflows | Each is a real execution — the expensive knob |
+| `signalCount` | Signals to the target, which waits for exactly this many | |
+| `nexusCount` | Nexus operations, when an endpoint is configured | |
+| `failureDepth` | Levels in a failure's `cause` chain | Each level is its own `Failure` proto with its own details and `encoded_attributes` |
+| `payloadBytes` | Padding on every payload body | Moves payload size independently of payload count |
+| `concurrentUpdates` | Updates sent at once, beyond the one in update-with-start | The `Any` lever — see below |
+
+
+### Rate
+
+`--iterations` sets how many iterations run, not how fast. The rate lever is `--max-concurrent`
+(default 10), because omes runs iterations as a bounded pool:
+
+```
+requests/sec ≈ (max-concurrent / iteration duration) × requests per iteration
+```
+
+Fan-out multiplies the payloads inside those requests, so payload throughput is reachable by turning
+up either one. Preferring fan-out is what keeps the paths that take wall clock to reach — the
+heartbeat timeout, the cancellation, the retry chain — in the same run as the dense load.
+
+The sleeping activities are what bounds concurrency: a workflow waiting on a timer holds nothing,
+but a sleeping activity holds a worker slot for its whole duration. Raise
+`--max-concurrent-activities` alongside `--max-concurrent`.
+
+`Init` logs the configured fan-out, so a run's log says what one iteration was worth in payloads.
 
 ## Payload paths the load covers
 
@@ -97,62 +157,20 @@ process and the project-server process through it, so all three apply to both si
 | Continue-as-new — continued failure | `EncryptionRetryWorkflow` |
 | Marker — details | `workflow.SideEffect`; failing local activity |
 | Marker — failure | failing local activity (`LocalActivity` marker) |
+| Version marker — details | `workflow.GetVersion`, under two change IDs |
 | Complete workflow — result | return value of the run reached by continue-as-new |
-| Fail workflow — failure and nested details | `EncryptionFailingWorkflow`, run standalone and as a child |
+| Fail workflow — failure and nested details | `EncryptionFailingWorkflow`, as a child of the coverage workflow |
 | Fail workflow — message, stack trace | `EncodeCommonAttributes` moves them into `Failure.EncodedAttributes` |
 | Nexus operation — input | synchronous `echo` operation, when an endpoint is configured |
 
-Three of those paths do not go through the data converter, which is a property of the Go SDK rather
+Four of those paths do not go through the data converter, which is a property of the Go SDK rather
 than of this app. They are still driven, because the load is about the paths existing, but no codec
 work happens on them:
 
 - **Headers.** `HeaderWriter.Set` takes an already-built `*commonpb.Payload`, and headers are written
-  only by context propagators and interceptors — the client's data converter is not involved. Every
-  outbound call also starts from a *fresh, empty* header map, so headers do not exist at all unless
-  something writes them on each call. That is the only reason this app has a propagator.
-- **Search attributes.** The server indexes them, so no SDK routes them through a codec;
-  `NewPayloadCodecGRPCClientInterceptor` explicitly sets `SkipSearchAttributes`.
+  only by context propagators and interceptors — the client's data converter is not involved.
+- **Search attributes.** The server indexes them, so no SDK routes them through a codec.
 - **Marker headers.** `RecordMarkerCommandAttributes` has a `Header` field, but no Go SDK code path
   sets it, for any marker kind. There is no way to drive it.
-
-## Notes on the awkward paths
-
-**Heartbeat details.** Heartbeats live in mutable state, not history, so `RecordHeartbeat` produces
-no history event — but the payload does go over the wire through the converter, which is the load
-that matters here. `EncryptionHeartbeatTimeoutActivity` is the one path that also lands it in
-history, as `TimeoutFailureInfo.LastHeartbeatDetails`.
-
-**Search attributes.** These carry no codec load at all, since the server indexes them. They are
-here so the start-child and continue-as-new commands have the field shape a real workflow would, and
-they are the one part of the app with a namespace prerequisite. If that prerequisite is more trouble
-than the paths are worth, deleting them is a contained change: two constants, two vars, one upsert
-call, and the `TypedSearchAttributes` on the child and the start.
-
-**Update-with-start.** The target workflow is started with `UpdateWithStartWorkflow` rather than
-`ExecuteWorkflow`, so the client issues one `ExecuteMultiOperation` holding a
-`StartWorkflowExecutionRequest` and an `UpdateWorkflowExecutionRequest` inside operation wrappers.
-That is the deepest payload-bearing request the client sends, and this one carries the start memo,
-the propagated header, and the update argument at three different nesting levels. The rejected
-update is sent separately as a plain `UpdateWorkflow`, so both RPCs are covered.
-
-Nothing in the SDK truncates at that depth — the `proxy` payload walker behind
-`NewPayloadCodecGRPCClientInterceptor` has no production depth cap, and the last argument to the
-SDK's own `visitProtoPayloads` is a concurrency limit rather than a depth. The value here is that
-anything walking a request tree to find payloads has to descend the whole way, and no other request
-this app sends is shaped like that.
-
-**Continued failure.** The Go continue-as-new command sets no last-run fields, so a plain
-continue-as-new produces no continued failure. The server does populate one across a retry chain, so
-`EncryptionRetryWorkflow` is started with `MaximumAttempts: 2` and fails its first attempt with a
-*retryable* error — a non-retryable one gets no second attempt. The server puts that failure on the
-second attempt's started event as `ContinuedFailure`, where the SDK decodes it through the failure
-converter. It is the one place in the app where a previously encoded failure comes back in as a new
-run's input.
-
-The sibling field `LastCompletionResult` is not covered: only cron and schedule chains produce it,
-and driving one costs a poll loop and a chain to terminate for a payload that is an ordinary
-data-converter value much like a workflow result.
-
-**Steps that fail on purpose.** Several paths only produce a payload by failing, so the workflow
-swallows their errors and keeps going. That those steps really do fail is covered by
-[`workflow_test.go`](./workflow_test.go) rather than checked at run time.
+- **Version markers.** `GetVersion` records the version the SDK needs for replay, not a user value,
+  and the client's codec is not involved. 

@@ -13,12 +13,14 @@ require (
 	github.com/nexus-rpc/sdk-go v0.7.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.11.1
 	go.temporal.io/api v1.63.5
 	go.temporal.io/sdk v1.48.0
 	go.temporal.io/sdk/contrib/aws/lambdaworker v0.1.1
 	go.temporal.io/sdk/contrib/sysinfo v0.1.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.82.1
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -72,7 +74,6 @@ require (
 	github.com/shirou/gopsutil/v4 v4.25.10 // indirect
 	github.com/sirupsen/logrus v1.9.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -86,7 +87,6 @@ require (
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 

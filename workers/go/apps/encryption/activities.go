@@ -29,7 +29,7 @@ const (
 // heartbeatFlushDelay gives the SDK time to actually ship a heartbeat to the
 // server before the activity returns; heartbeats are sent asynchronously, so an
 // activity that heartbeats and immediately completes may never send one.
-const heartbeatFlushDelay = 300 * time.Millisecond
+const heartbeatFlushDelay = 100 * time.Millisecond
 
 // EchoActivity heartbeats and returns a result: the activity input, header,
 // heartbeat details, and completion result paths in one activity.
@@ -38,25 +38,20 @@ func EchoActivity(ctx context.Context, input ActivityInput) (ActivityResult, err
 	if err := sleepOrCancel(ctx, heartbeatFlushDelay); err != nil {
 		return ActivityResult{}, err
 	}
-	return ActivityResult{Step: input.Step, Echoed: input.Message}, nil
+	return ActivityResult{Step: input.Step, Echoed: input.Message, Filler: input.Filler}, nil
 }
 
-// FailActivity heartbeats and then fails with details, and with a cause that
-// carries details of its own so the failure nests.
+// FailActivity heartbeats and then fails with details, and with a cause chain
+// that carries details of its own so the failure nests.
 func FailActivity(ctx context.Context, input ActivityInput) (ActivityResult, error) {
 	activity.RecordHeartbeat(ctx, newHeartbeatDetails(input, 1))
 	if err := sleepOrCancel(ctx, heartbeatFlushDelay); err != nil {
 		return ActivityResult{}, err
 	}
-	cause := temporal.NewApplicationError(
-		"nested cause of the activity failure",
-		nestedFailureErrorType,
-		newNestedFailureDetails(input),
-	)
 	return ActivityResult{}, temporal.NewNonRetryableApplicationError(
 		"activity failed on purpose",
 		activityFailureErrorType,
-		cause,
+		newFailureChain(input.Step, input.Message, input.Filler, input.FailureDepth),
 		newFailureDetails(input),
 	)
 }
@@ -83,7 +78,7 @@ func HeartbeatTimeoutActivity(ctx context.Context, input ActivityInput) (Activit
 	if err := sleepOrCancel(ctx, heartbeatTimeoutActivitySleep); err != nil {
 		return ActivityResult{}, err
 	}
-	return ActivityResult{Step: input.Step, Echoed: input.Message}, nil
+	return ActivityResult{Step: input.Step, Echoed: input.Message, Filler: input.Filler}, nil
 }
 
 // FailingLocalActivity fails so the LocalActivity marker it records carries both
@@ -107,17 +102,19 @@ func sleepOrCancel(ctx context.Context, duration time.Duration) error {
 }
 
 func newHeartbeatDetails(input ActivityInput, attempt int32) HeartbeatDetails {
-	return HeartbeatDetails{Step: input.Step, Attempt: attempt, Message: input.Message}
+	return HeartbeatDetails{
+		Step:    input.Step,
+		Attempt: attempt,
+		Message: input.Message,
+		Filler:  input.Filler,
+	}
 }
 
 func newFailureDetails(input ActivityInput) FailureDetails {
 	return FailureDetails{
 		Step:    input.Step,
 		Message: input.Message,
+		Filler:  input.Filler,
 		Nested:  NestedFailureDetails{Reason: "nested detail", Message: input.Message},
 	}
-}
-
-func newNestedFailureDetails(input ActivityInput) NestedFailureDetails {
-	return NestedFailureDetails{Reason: "cause detail", Message: input.Message}
 }
