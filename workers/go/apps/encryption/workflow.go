@@ -21,10 +21,6 @@ const (
 	coverageUpdateName = "encryption-coverage-update"
 )
 
-// Change IDs for the version markers. These are the one marker kind generated
-// by the SDK for replay rather than by user code, so they never go through the
-// data converter and are the only markers a payload check is expected to skip.
-// The app emits them so that rule has something to act on.
 const (
 	versionMarkerChangeID      = "encryption-version-marker"
 	otherVersionMarkerChangeID = "encryption-version-marker-2"
@@ -80,19 +76,8 @@ func makeFiller(n int) string {
 	return strings.Repeat("x", n)
 }
 
-// CoverageInput is the workflow input, and is also the continue-as-new argument.
-//
-// The counts on it are the per-iteration fan-out. Raising one fattens a single
-// RespondWorkflowTaskCompleted rather than adding requests: the workflow issues
-// every command it can before blocking on any of them, so the SDK batches them
-// into one workflow task completion. They are separate counts rather than one
-// multiplier because the paths are not interchangeable — memo fields are
-// map<string, Payload>, one payload per field, while activity input is a single
-// Payloads holding many.
-//
-// The driver fills these in from its config and normalizes them first, so they
-// arrive already defaulted; withDefaults is a guard for a replayed or
-// hand-written input, not the primary path.
+// CoverageInput is the workflow input.
+// The counts on it are the per-iteration fan-out.
 type CoverageInput struct {
 	// Message is the payload body carried through every step of the iteration.
 	Message          string `json:"message"`
@@ -100,10 +85,8 @@ type CoverageInput struct {
 	TargetWorkflowID string `json:"targetWorkflowId"`
 	NexusEndpoint    string `json:"nexusEndpoint"`
 	// Filler is the padding every payload body carries, already materialized by
-	// the driver. The byte count that produced it is config the workflow has no
-	// use for, so only the string travels.
+	// the driver.
 	Filler string `json:"filler,omitempty"`
-
 	// MemoEntries is how many fields each upserted memo carries.
 	MemoEntries int `json:"memoEntries"`
 	// ActivityCount fans out the echo activity and the failing activity.
@@ -160,7 +143,7 @@ type FailingInput struct {
 // TargetInput is the input to the workflow the iteration messages from outside.
 type TargetInput struct {
 	// ExpectedSignals is how many signals the workflow waits for before
-	// completing. The coverage workflow sends exactly this many.
+	// completing.
 	ExpectedSignals int `json:"expectedSignals"`
 }
 
@@ -279,14 +262,6 @@ func newFailureChain(step, message, filler string, depth int) error {
 // CoverageWorkflow walks every payload path this project covers, then
 // continues-as-new into a run that does nothing but complete, so that both the
 // continue-as-new and the complete-workflow payloads appear.
-//
-// It runs in three phases. Phase A issues the commands that never block, phase B
-// starts everything that does without waiting on it, and phase C waits. The
-// split is what produces a fat RespondWorkflowTaskCompleted: every command from
-// A and B lands in the first workflow task completion, because the workflow does
-// not yield until C. It also runs the steps concurrently rather than in
-// sequence, which is most of why an iteration is quicker than the sum of its
-// waits.
 func CoverageWorkflow(ctx workflow.Context, input CoverageInput) (CoverageOutput, error) {
 	// Check if coming from continue-as-new. Complete the workflow if so.
 	if workflow.GetInfo(ctx).ContinuedExecutionRunID != "" {
@@ -566,9 +541,6 @@ func FailingWorkflow(_ workflow.Context, input FailingInput) (CoverageOutput, er
 // then signals from the coverage workflow. It handles both because both are
 // external message paths, and one waiting workflow can serve both.
 func TargetWorkflow(ctx workflow.Context, input TargetInput) (SignalInput, error) {
-	// An update carries three payloads of its own: the argument, the result, and —
-	// when the validator rejects it — a failure, which goes through the failure
-	// converter rather than the data converter.
 	if err := workflow.SetUpdateHandlerWithOptions(ctx, coverageUpdateName,
 		func(_ workflow.Context, input UpdateInput) (UpdateResult, error) {
 			return UpdateResult{Step: input.Step, Echoed: input.Message, Filler: input.Filler}, nil
@@ -606,13 +578,11 @@ func TargetWorkflow(ctx workflow.Context, input TargetInput) (SignalInput, error
 	return received, nil
 }
 
-// RetryWorkflow reaches ContinuedFailure, which nothing else here produces.
+// RetryWorkflow reaches ContinuedFailure.
 // The Go continue-as-new command sets no last-run fields, but the server does
 // populate them across a retry chain: this workflow's first attempt fails, and the
 // server puts that failure on the second attempt's started event, where the SDK
 // decodes it through the failure converter and hands it back as GetLastError.
-//
-// The error must be retryable for there to be a second attempt.
 func RetryWorkflow(ctx workflow.Context, input RetryInput) (RetryResult, error) {
 	lastError := workflow.GetLastError(ctx)
 	if lastError == nil {

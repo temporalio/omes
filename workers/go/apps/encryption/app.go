@@ -1,7 +1,5 @@
 // Package encryption is an omes project that installs an encrypting data
-// converter and drives a workflow which touches every payload-bearing path the
-// Go SDK exposes, so the resulting histories can be inspected path by path and
-// the load can be turned up to many payloads per request.
+// converter and drives a workflow.
 //
 // See README.md for which paths end up encrypted, which do not, and how the
 // fan-out knobs turn one readable iteration into a load generator.
@@ -48,8 +46,6 @@ var App = harness.App{
 // state carries the parsed configuration from Init to Execute.
 var state struct {
 	config projectConfig
-	// filler is derived from config.PayloadBytes once, since every payload in
-	// every iteration carries the same padding.
 	filler string
 }
 
