@@ -22,13 +22,6 @@ type headerContextKey struct{}
 
 // plaintextPropagator carries one string through the run, encoded with the
 // *default* data converter, so header fields land in history in the clear.
-//
-// This is deliberate, and it reflects how the Go SDK works rather than an
-// oversight: headers never pass through the client's data converter.
-// HeaderWriter.Set takes an already-built *commonpb.Payload, and the only things
-// that write headers are context propagators and interceptors — so whatever a
-// propagator produces is byte-for-byte what the server stores. Encrypting headers
-// would mean calling the encrypting converter here instead.
 type plaintextPropagator struct{}
 
 var _ workflow.ContextPropagator = plaintextPropagator{}
