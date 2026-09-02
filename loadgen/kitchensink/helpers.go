@@ -1,6 +1,7 @@
 package kitchensink
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
@@ -12,6 +13,21 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// QueryWorkflowTarget identifies the workflow that the "query-workflow" Nexus operation queries.
+// Only WorkflowID is required
+type QueryWorkflowTarget struct {
+	WorkflowID string `json:"workflow_id"`
+}
+
+// QueryWorkflowNexusInput encodes a target as the input of a "query-workflow" Nexus operation.
+func QueryWorkflowNexusInput(target QueryWorkflowTarget) string {
+	encoded, err := json.Marshal(target)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
 
 // Using human-readable JSON encoding for payloads to aid with debugging.
 var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()

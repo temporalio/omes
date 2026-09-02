@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
 	. "github.com/temporalio/omes/internal/workertest"
@@ -18,12 +19,10 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-const namespace = "default"
 
 var (
 	sdks = []clioptions.Language{
@@ -59,6 +58,14 @@ var (
 		clioptions.LangTypeScript: "dostandaloneactivityoperatorcommands is not supported",
 		clioptions.LangDotNet:     "dostandaloneactivityoperatorcommands is not supported",
 	}
+
+	nexusQueryUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangPython:     "query-workflow",
+		clioptions.LangJava:       "executenexusoperation is not supported",
+		clioptions.LangRuby:       "executenexusoperation is not supported",
+		clioptions.LangTypeScript: "executenexusoperation is not supported",
+		clioptions.LangDotNet:     "executenexusoperation is not supported",
+	}
 )
 
 type testCase struct {
@@ -67,6 +74,17 @@ type testCase struct {
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
+	populateFn              func(t *testing.T) testCase
+}
+
+// populate creates per-run test data for cases that require it.
+func (tc testCase) populate(t *testing.T) testCase {
+	t.Helper() // Keeps error lines pointing to the actual test table
+
+	if tc.populateFn == nil {
+		return tc
+	}
+	return tc.populateFn(t)
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -940,6 +958,10 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
+			name:       "NexusOperation/QueryWorkflow",
+			populateFn: populateQueryWorkflowTestCase,
+		},
+		{
 			name: "NexusOperation/Async",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1129,13 +1151,6 @@ func TestKitchenSink(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Ensure the workflow completes by appending a return action at the end.
-			input := tc.testInput
-			if input.WorkflowInput == nil {
-				input.WorkflowInput = &WorkflowInput{}
-			}
-			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
-
 			for _, sdk := range sdks {
 				if onlySDK != "" && string(sdk) != onlySDK {
 					continue // not using t.Skip as it's too noisy
@@ -1146,6 +1161,62 @@ func TestKitchenSink(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func populateQueryWorkflowTestCase(t *testing.T) testCase {
+	t.Helper()
+
+	handlerWorkflowID := fmt.Sprintf("nexus-query-target-%s", uuid.NewString())
+	return testCase{
+		name: "NexusOperation/QueryWorkflow",
+		testInput: &TestInput{
+			WorkflowInput: &WorkflowInput{
+				InitialActions: ListActionSet(
+					// Start a Nexus operation and wait for its signal as a scaffold to
+					// query a running workflow.
+					&Action{
+						Variant: &Action_NexusOperation{
+							NexusOperation: &ExecuteNexusOperation{
+								Operation:                       "echo-async",
+								HandlerWorkflowId:               handlerWorkflowID,
+								HandlerWorkflowIdConflictPolicy: enums.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+								BeforeActions: ListActionSet(
+									NewSetWorkflowStateAction("query-result", "query successful"),
+								),
+								WaitForSignal: true,
+								AwaitableChoice: &AwaitableChoice{
+									Condition: &AwaitableChoice_WaitStarted{
+										WaitStarted: &emptypb.Empty{},
+									},
+								},
+							},
+						},
+					},
+					&Action{
+						Variant: &Action_NexusOperation{
+							NexusOperation: &ExecuteNexusOperation{
+								Operation: "query-workflow",
+								Input: QueryWorkflowNexusInput(QueryWorkflowTarget{
+									WorkflowID: handlerWorkflowID,
+								}),
+								ExpectedOutput: "query successful",
+								AwaitableChoice: &AwaitableChoice{
+									Condition: &AwaitableChoice_WaitFinish{
+										WaitFinish: &emptypb.Empty{},
+									},
+								},
+							},
+						},
+					},
+				),
+			},
+		},
+		historyMatcher: PartialHistoryMatcher(fmt.Sprintf(`
+			NexusOperationScheduled {"operation":"query-workflow"}
+			NexusOperationCompleted {"links":[{"workflow":{"workflowId":%q,"reason":"Query processed"}}]}`,
+			handlerWorkflowID)),
+		expectedUnsupportedErrs: nexusQueryUnsupportedSDKs,
 	}
 }
 
@@ -1198,6 +1269,8 @@ func testForSDK(
 	env *TestEnvironment,
 	workflowTimeout time.Duration,
 ) {
+	tc = tc.populate(t)
+
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
 		javaMutex.Lock()
@@ -1220,8 +1293,18 @@ func testForSDK(
 	// worker picks them up.
 	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
 
+	// PrepareTestInput fills the per-run endpoint and task queue into the input in
+	// place, so work on a copy before making further per-run changes.
+	testInput := proto.Clone(tc.testInput).(*TestInput)
+
+	// Ensure the workflow completes by appending a return action at the end.
+	if testInput.WorkflowInput == nil {
+		testInput.WorkflowInput = &WorkflowInput{}
+	}
+	testInput.WorkflowInput.InitialActions = append(testInput.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+
 	executor := &KitchenSinkExecutor{
-		TestInput: tc.testInput,
+		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
 			if input.WorkflowInput != nil {
 				for _, actionSet := range input.WorkflowInput.InitialActions {
@@ -1298,7 +1381,7 @@ func testSupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
-	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
+	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1340,10 +1423,11 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(t *testing.T, taskQueueName string, env *TestEnvironment) ([]*history.HistoryEvent, error) {
+	temporalClient := env.TemporalClient()
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
-			Namespace: namespace,
+			Namespace: env.Namespace(),
 			Query:     fmt.Sprintf("TaskQueue = '%s' AND WorkflowType = 'kitchenSink'", taskQueueName),
 		})
 	if err != nil {
