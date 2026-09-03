@@ -294,8 +294,9 @@ const MaxIterationRetryBackoff = 60 * time.Second
 // IterationFailuresError reports a run that reached its configured end while
 // tolerating one or more terminal iteration failures.
 //
-// Library callers receive a non-nil error so they can apply their own failure
-// policy.
+// Library callers still receive a non-nil error so they can apply their own
+// failure policy. The omes CLI treats this error as a degraded completion when
+// its iteration-failure policy is "continue".
 type IterationFailuresError struct {
 	Attempted int64
 	Succeeded int64
