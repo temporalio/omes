@@ -128,7 +128,13 @@ func (env *TestEnvironment) Namespace() string {
 }
 
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
-	cfg := newTestEnvConfig(opts)
+	cfg := testEnvConfig{
+		executorTimeout: defaultTestRunTimeout,
+		namespace:       defaultTestNamespace,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 
 	serverRef, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
@@ -138,25 +144,27 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	serverLogger := testLogger.Named("devserver").Sugar()
 	serverOpts := devserver.Options{
 		Ref:                 serverRef,
-		Namespace:           defaultTestNamespace,
+		Namespace:           cfg.namespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
 	}
 
 	var server *devserver.Server
-	var cleanupServer func()
 	if cfg.devServerGroup == "" {
 		server, err = devserver.Start(t.Context(), serverOpts)
-		cleanupServer = func() { _ = server.Stop() }
+		if err == nil {
+			t.Cleanup(func() { _ = server.Stop() })
+		}
 	} else {
-		server, cleanupServer, err = groupedTestDevServers.acquire(t, cfg, serverOpts)
+		server, err = groupedTestDevServers.acquire(
+			t,
+			cfg.devServerGroup,
+			cfg.namespace,
+			serverOpts,
+		)
 	}
 	require.NoError(t, err, "Failed to start dev server")
-	t.Cleanup(cleanupServer)
-	if cfg.namespace != defaultTestNamespace {
-		require.NoError(t, server.RegisterNamespace(t.Context(), cfg.namespace), "Failed to register namespace")
-	}
 
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  server.FrontendHostPort(),
@@ -186,17 +194,6 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	})
 
 	return env
-}
-
-func newTestEnvConfig(opts []TestEnvOption) testEnvConfig {
-	cfg := testEnvConfig{
-		executorTimeout: defaultTestRunTimeout,
-		namespace:       defaultTestNamespace,
-	}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-	return cfg
 }
 
 func (env *TestEnvironment) cleanup() {

@@ -14,79 +14,67 @@ type pooledTestDevServer struct {
 	server        *devserver.Server
 	dynamicConfig map[string]any
 	namespaces    map[string]struct{}
-	test          *testing.T
-	refs          int
+}
+
+type testDevServerGroupKey struct {
+	test  *testing.T
+	group string
 }
 
 type testDevServerPool struct {
 	sync.Mutex
-	servers map[string]*pooledTestDevServer
+	servers map[testDevServerGroupKey]*pooledTestDevServer
 }
 
 var groupedTestDevServers = testDevServerPool{
-	servers: make(map[string]*pooledTestDevServer),
+	servers: make(map[testDevServerGroupKey]*pooledTestDevServer),
 }
 
 func (p *testDevServerPool) acquire(
 	t *testing.T,
-	cfg testEnvConfig,
+	group string,
+	namespace string,
 	opts devserver.Options,
-) (*devserver.Server, func(), error) {
+) (*devserver.Server, error) {
 	p.Lock()
 	defer p.Unlock()
 
-	if pooled := p.servers[cfg.devServerGroup]; pooled != nil {
-		if pooled.test != t {
-			return nil, nil, fmt.Errorf(
-				"dev server group %q already belongs to another test",
-				cfg.devServerGroup,
-			)
-		}
-		if !reflect.DeepEqual(pooled.dynamicConfig, cfg.dynamicConfig) {
-			return nil, nil, fmt.Errorf(
+	key := testDevServerGroupKey{test: t, group: group}
+	if pooled := p.servers[key]; pooled != nil {
+		if !maps.EqualFunc(pooled.dynamicConfig, opts.DynamicConfigValues, reflect.DeepEqual) {
+			return nil, fmt.Errorf(
 				"dev server group %q already uses different dynamic config",
-				cfg.devServerGroup,
+				group,
 			)
 		}
-		if _, exists := pooled.namespaces[cfg.namespace]; exists {
-			return nil, nil, fmt.Errorf(
+		if _, exists := pooled.namespaces[namespace]; exists {
+			return nil, fmt.Errorf(
 				"dev server group %q already uses namespace %q",
-				cfg.devServerGroup,
-				cfg.namespace,
+				group,
+				namespace,
 			)
 		}
-		pooled.namespaces[cfg.namespace] = struct{}{}
-		pooled.refs++
-		return pooled.server, func() { p.release(cfg.devServerGroup, pooled.server) }, nil
+		if err := pooled.server.RegisterNamespace(t.Context(), namespace); err != nil {
+			return nil, err
+		}
+		pooled.namespaces[namespace] = struct{}{}
+		return pooled.server, nil
 	}
 
 	server, err := devserver.Start(t.Context(), opts)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	p.servers[cfg.devServerGroup] = &pooledTestDevServer{
+	p.servers[key] = &pooledTestDevServer{
 		server:        server,
-		dynamicConfig: maps.Clone(cfg.dynamicConfig),
-		namespaces:    map[string]struct{}{cfg.namespace: {}},
-		test:          t,
-		refs:          1,
+		dynamicConfig: maps.Clone(opts.DynamicConfigValues),
+		namespaces:    map[string]struct{}{namespace: {}},
 	}
-	return server, func() { p.release(cfg.devServerGroup, server) }, nil
-}
-
-func (p *testDevServerPool) release(id string, server *devserver.Server) {
-	p.Lock()
-	pooled := p.servers[id]
-	if pooled == nil || pooled.server != server {
+	t.Cleanup(func() {
+		p.Lock()
+		delete(p.servers, key)
 		p.Unlock()
-		return
-	}
-	pooled.refs--
-	if pooled.refs > 0 {
-		p.Unlock()
-		return
-	}
-	delete(p.servers, id)
-	p.Unlock()
-	_ = server.Stop()
+		_ = server.Stop()
+	})
+	return server, nil
 }
