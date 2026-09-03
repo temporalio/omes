@@ -291,6 +291,22 @@ const DefaultMaxIterationAttempts = 1
 const BaseIterationRetryBackoff = 1 * time.Second
 const MaxIterationRetryBackoff = 60 * time.Second
 
+// IterationFailuresError reports a run that reached its configured end while
+// tolerating one or more terminal iteration failures.
+//
+// Library callers receive a non-nil error so they can apply their own failure
+// policy.
+type IterationFailuresError struct {
+	Attempted int64
+	Succeeded int64
+	Failed    int64
+	Elapsed   time.Duration
+}
+
+func (e *IterationFailuresError) Error() string {
+	return fmt.Sprintf("run completed with %d of %d iterations failed", e.Failed, e.Attempted)
+}
+
 type RunConfiguration struct {
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
