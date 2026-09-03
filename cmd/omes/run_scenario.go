@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,11 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+)
+
+const (
+	iterationFailurePolicyContinue = "continue"
+	iterationFailurePolicyFailFast = "fail-fast"
 )
 
 func runScenarioCmd() *cobra.Command {
@@ -51,6 +57,7 @@ type scenarioRunConfig struct {
 	maxConcurrent                 int
 	maxIterationsPerSecond        float64
 	maxIterationAttempts          int
+	iterationFailurePolicy        string
 	scenarioOptions               []string
 	timeout                       time.Duration
 	doNotRegisterSearchAttributes bool
@@ -75,6 +82,8 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.Float64Var(&r.maxIterationsPerSecond, "max-iterations-per-second", 0, "Override iterations per second rate limit for the scenario."+
 		" This is the maximum rate at which we will start new iterations of the scenario.")
 	fs.IntVar(&r.maxIterationAttempts, "max-iteration-attempts", 1, "Maximum attempts per iteration")
+	fs.StringVar(&r.iterationFailurePolicy, "iteration-failure-policy", iterationFailurePolicyContinue,
+		"How to handle terminal iteration failures: continue or fail-fast")
 	fs.DurationVar(&r.timeout, "timeout", 0, "If set, the scenario will stop after this amount of"+
 		" time has elapsed. Any still-running iterations will be cancelled, and omes will exit nonzero.")
 	fs.IntVar(&r.maxConcurrent, "max-concurrent", 0, "Override max-concurrent for the scenario")
@@ -109,6 +118,13 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, loadgen.NewUsageError("--iterations and --duration cannot be combined; " +
 			"use --iterations to run a fixed number of times, or --duration to keep starting " +
 			"iterations for a period")
+	} else if policy := r.resolvedIterationFailurePolicy(); policy != iterationFailurePolicyContinue && policy != iterationFailurePolicyFailFast {
+		return nil, nil, loadgen.NewUsageError(
+			"--iteration-failure-policy must be %q or %q, got %q",
+			iterationFailurePolicyContinue,
+			iterationFailurePolicyFailFast,
+			r.iterationFailurePolicy,
+		)
 	}
 
 	// Parse options
@@ -138,6 +154,43 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
 	}
 	return scenario, resolvedOptions, nil
+}
+
+func (r scenarioRunConfig) resolvedIterationFailurePolicy() string {
+	if r.iterationFailurePolicy == "" {
+		return iterationFailurePolicyContinue
+	}
+	return r.iterationFailurePolicy
+}
+
+func (r scenarioRunConfig) loadgenConfiguration() loadgen.RunConfiguration {
+	return loadgen.RunConfiguration{
+		Iterations:                    r.iterations,
+		Duration:                      r.duration,
+		MaxConcurrent:                 r.maxConcurrent,
+		MaxIterationsPerSecond:        r.maxIterationsPerSecond,
+		MaxIterationAttempts:          r.maxIterationAttempts,
+		Timeout:                       r.timeout,
+		DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
+		IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
+		ContinueOnIterationFailure:    r.resolvedIterationFailurePolicy() == iterationFailurePolicyContinue,
+	}
+}
+
+// iterationFailuresOnly recognizes an IterationFailuresError through ordinary
+// single-cause wrapping. It deliberately rejects multi-errors so a degraded
+// completion cannot hide another run-level failure joined to it.
+func iterationFailuresOnly(err error) (*loadgen.IterationFailuresError, bool) {
+	for err != nil {
+		if failures, ok := err.(*loadgen.IterationFailuresError); ok {
+			return failures, true
+		}
+		if _, ok := err.(interface{ Unwrap() []error }); ok {
+			return nil, false
+		}
+		err = errors.Unwrap(err)
+	}
+	return nil, false
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
@@ -192,19 +245,10 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
 		ClientOptions:  r.clientOptions,
-		Configuration: loadgen.RunConfiguration{
-			Iterations:                    r.iterations,
-			Duration:                      r.duration,
-			MaxConcurrent:                 r.maxConcurrent,
-			MaxIterationsPerSecond:        r.maxIterationsPerSecond,
-			MaxIterationAttempts:          r.maxIterationAttempts,
-			Timeout:                       r.timeout,
-			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
-		},
-		Options:   resolvedOptions,
-		Namespace: r.clientOptions.Namespace,
-		RootPath:  repoDir,
+		Configuration:  r.loadgenConfiguration(),
+		Options:        resolvedOptions,
+		Namespace:      r.clientOptions.Namespace,
+		RootPath:       repoDir,
 		ExportOptions: loadgen.ExportOptions{
 			ExportHistoriesDir:    r.exportHistoriesDir,
 			ExportHistoriesFilter: r.exportHistoriesFilter,
@@ -213,7 +257,14 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	executor := scenario.ExecutorFn()
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
-		return fmt.Errorf("failed scenario: %w", err)
+		if r.resolvedIterationFailurePolicy() == iterationFailurePolicyContinue {
+			if _, ok := iterationFailuresOnly(err); ok {
+				err = nil
+			}
+		}
+		if err != nil {
+			return fmt.Errorf("failed scenario: %w", err)
+		}
 	}
 	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
 	if err != nil {

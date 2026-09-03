@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -76,10 +77,15 @@ func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler 
 	}
 	maps.Copy(mergedTags, tags)
 
-	var labels, values []string
-	for l, v := range mergedTags {
-		labels = append(labels, l)
-		values = append(values, v)
+	labels := make([]string, 0, len(mergedTags))
+	for label := range mergedTags {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+
+	values := make([]string, 0, len(labels))
+	for _, label := range labels {
+		values = append(values, mergedTags[label])
 	}
 
 	return &metricsHandler{

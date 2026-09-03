@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,6 +47,11 @@ func TestValidateInputClassifiesBadInputAsUsageErrors(t *testing.T) {
 			wantMsg: "cannot be combined",
 		},
 		{
+			name:    "invalid iteration failure policy",
+			mutate:  func(r *scenarioRunner) { r.iterationFailurePolicy = "sometimes" },
+			wantMsg: "--iteration-failure-policy must be",
+		},
+		{
 			name:    "option without equals",
 			mutate:  func(r *scenarioRunner) { r.scenarioOptions = []string{"novalue"} },
 			wantMsg: `--option "novalue" is not in key=value format`,
@@ -82,6 +88,43 @@ func TestValidateInputClassifiesBadInputAsUsageErrors(t *testing.T) {
 				t.Errorf("error should mention %q, got: %v", tc.wantMsg, err)
 			}
 		})
+	}
+}
+
+func TestIterationFailurePolicyConfiguration(t *testing.T) {
+	tests := []struct {
+		name   string
+		policy string
+		want   bool
+	}{
+		{name: "zero value defaults to continue", want: true},
+		{name: "continue", policy: iterationFailurePolicyContinue, want: true},
+		{name: "fail fast", policy: iterationFailurePolicyFailFast, want: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config := scenarioRunConfig{iterationFailurePolicy: test.policy}.loadgenConfiguration()
+			if config.ContinueOnIterationFailure != test.want {
+				t.Fatalf("ContinueOnIterationFailure = %v, want %v", config.ContinueOnIterationFailure, test.want)
+			}
+		})
+	}
+}
+
+func TestIterationFailuresOnly(t *testing.T) {
+	degraded := &loadgen.IterationFailuresError{Attempted: 2, Succeeded: 1, Failed: 1}
+
+	found, ok := iterationFailuresOnly(fmt.Errorf("scenario wrapper: %w", degraded))
+	if !ok || found != degraded {
+		t.Fatalf("expected wrapped degraded completion to be recognized, got %v, %v", found, ok)
+	}
+
+	if _, ok := iterationFailuresOnly(errors.Join(degraded, errors.New("cleanup failed"))); ok {
+		t.Fatal("must not treat a joined run-level error as only iteration failures")
+	}
+	if _, ok := iterationFailuresOnly(errors.New("run failed")); ok {
+		t.Fatal("must not treat an ordinary run error as degraded completion")
 	}
 }
 

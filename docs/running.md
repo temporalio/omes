@@ -70,11 +70,19 @@ These apply to every scenario and override its defaults:
 | `--max-concurrent` | Max iterations running at once. |
 | `--max-iterations-per-second` | Rate limit on starting iterations (0 = unlimited). |
 | `--max-iteration-attempts` | Attempts per iteration (default 1). |
+| `--iteration-failure-policy` | `continue` (default) records terminal failures and keeps generating load; `fail-fast` stops on the first terminal failure. |
 | `--timeout` | Hard stop; cancels in-flight iterations and exits non-zero. |
 
 If you set neither `--iterations` nor `--duration`, the scenario's own default applies — and most
 scenarios declare none, in which case omes's default does. `list-scenarios` states which is the case for
 each scenario.
+
+Iteration retries and the terminal-failure policy are independent. `--max-iteration-attempts` controls
+how many times one logical iteration may execute; after those attempts are exhausted, the default
+`continue` policy records the iteration as failed and starts more load. A completed run logs attempted,
+succeeded, and failed totals plus success/failure rates and successful iterations per second. When the
+load-driver Prometheus endpoint is enabled with `--prom-listen-address`, the same terminal outcomes are
+exported as `omes_iterations_total`, labeled by scenario, outcome, and status code.
 
 ### 2. Per-scenario options (`--option key=value`)
 

@@ -3,14 +3,20 @@ package loadgen
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	omesmetrics "github.com/temporalio/omes/metrics"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type iterationTracker struct {
@@ -37,8 +43,7 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 }
 
 func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
-	logger := zap.Must(zap.NewDevelopment())
-	defer logger.Sync()
+	logger := zap.NewNop()
 	info := ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),
@@ -267,14 +272,176 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 			},
 		)
 
-		// Every iteration runs (tolerated failures don't abort), but the verdict is
-		// unchanged: the run still fails because iterations failed.
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "3 of 6 iterations failed")
+		// Every iteration runs (tolerated failures don't abort), while library
+		// callers still receive a structured degraded-run verdict.
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		require.Equal(t, int64(6), failures.Attempted)
+		require.Equal(t, int64(3), failures.Succeeded)
+		require.Equal(t, int64(3), failures.Failed)
 		mu.Lock()
 		defer mu.Unlock()
 		require.ElementsMatch(t, []int{1, 3, 5}, completed)
 		require.ElementsMatch(t, []int{2, 4, 6}, failed)
+	})
+}
+
+func TestRunContinueOnIterationFailureDuration(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var attempts atomic.Int64
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				time.Sleep(10 * time.Millisecond)
+				attempts.Add(1)
+				if run.Iteration%2 == 0 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			}},
+			RunConfiguration{
+				Duration:                   50 * time.Millisecond,
+				MaxConcurrent:              1,
+				ContinueOnIterationFailure: true,
+			},
+		)
+
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		require.Equal(t, attempts.Load(), failures.Attempted)
+		require.Positive(t, failures.Succeeded)
+		require.Positive(t, failures.Failed)
+	})
+}
+
+func TestRunCommitsFailureOutcomeBeforeReturning(t *testing.T) {
+	for _, continueOnFailure := range []bool{false, true} {
+		name := "fail-fast"
+		if continueOnFailure {
+			name = "continue"
+		}
+		t.Run(name, func(t *testing.T) {
+			callbackStarted := make(chan struct{})
+			releaseCallback := make(chan struct{})
+			var releaseOnce sync.Once
+			t.Cleanup(func() { releaseOnce.Do(func() { close(releaseCallback) }) })
+
+			runDone := make(chan error, 1)
+			go func() {
+				runDone <- (&GenericExecutor{
+					Execute: func(context.Context, *Run) error {
+						return errors.New("terminal failure")
+					},
+				}).Run(context.Background(), ScenarioInfo{
+					MetricsHandler: client.MetricsNopHandler,
+					Logger:         zap.NewNop().Sugar(),
+					Configuration: RunConfiguration{
+						Iterations:                 1,
+						MaxConcurrent:              1,
+						ContinueOnIterationFailure: continueOnFailure,
+						OnIterationFailure: func(context.Context, *Run, error) {
+							close(callbackStarted)
+							<-releaseCallback
+						},
+					},
+				})
+			}()
+
+			select {
+			case <-callbackStarted:
+			case <-time.After(time.Second):
+				t.Fatal("iteration failure callback did not start")
+			}
+
+			select {
+			case err := <-runDone:
+				t.Fatalf("run returned before failure bookkeeping completed: %v", err)
+			case <-time.After(20 * time.Millisecond):
+			}
+
+			releaseOnce.Do(func() { close(releaseCallback) })
+			select {
+			case err := <-runDone:
+				if continueOnFailure {
+					var failures *IterationFailuresError
+					require.ErrorAs(t, err, &failures)
+					require.Equal(t, int64(1), failures.Failed)
+				} else {
+					require.ErrorContains(t, err, "run finished with error")
+				}
+			case <-time.After(time.Second):
+				t.Fatal("run did not return after failure bookkeeping completed")
+			}
+		})
+	}
+}
+
+func TestIterationStatusCode(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want codes.Code
+	}{
+		{name: "wrapped canceled context", err: fmt.Errorf("start failed: %w", context.Canceled), want: codes.Canceled},
+		{name: "wrapped deadline context", err: fmt.Errorf("start failed: %w", context.DeadlineExceeded), want: codes.DeadlineExceeded},
+		{name: "wrapped grpc status", err: fmt.Errorf("start failed: %w", status.Error(codes.ResourceExhausted, "busy")), want: codes.ResourceExhausted},
+		{name: "plain error", err: errors.New("plain"), want: codes.Unknown},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.want, iterationStatusCode(test.err))
+		})
+	}
+}
+
+func TestRunRecordsTerminalIterationOutcomes(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		metrics := &omesmetrics.Metrics{
+			Registry: registry,
+			Cache:    make(map[string]any),
+		}
+		logger := zap.NewNop()
+		err := (&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				if run.Iteration%2 == 0 {
+					return fmt.Errorf("workflow start failed: %w", status.Error(codes.Unavailable, "down"))
+				}
+				return nil
+			},
+		}).Run(context.Background(), ScenarioInfo{
+			ScenarioName:   "metric-test",
+			MetricsHandler: metrics.NewHandler(),
+			Logger:         logger.Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 4,
+				MaxConcurrent:              1,
+				ContinueOnIterationFailure: true,
+			},
+		})
+
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		families, gatherErr := registry.Gather()
+		require.NoError(t, gatherErr)
+
+		outcomes := make(map[string]float64)
+		for _, family := range families {
+			if family.GetName() != iterationsMetricName {
+				continue
+			}
+			for _, metric := range family.Metric {
+				labels := make(map[string]string)
+				for _, label := range metric.Label {
+					labels[label.GetName()] = label.GetValue()
+				}
+				require.Equal(t, "metric-test", labels["scenario"])
+				outcomes[labels["outcome"]+"/"+labels["status_code"]] = metric.Counter.GetValue()
+			}
+		}
+
+		require.Equal(t, float64(2), outcomes["succeeded/OK"])
+		require.Equal(t, float64(2), outcomes["failed/Unavailable"])
 	})
 }
 

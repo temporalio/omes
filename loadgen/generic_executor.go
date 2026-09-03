@@ -9,6 +9,14 @@ import (
 
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+const (
+	iterationOutcomeSucceeded = "succeeded"
+	iterationOutcomeFailed    = "failed"
+	iterationsMetricName      = "omes_iterations_total"
 )
 
 type GenericExecutor struct {
@@ -21,10 +29,12 @@ type genericRun struct {
 	info     ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
+	// Metrics tagged with the scenario name for this run.
+	metricsHandler client.MetricsHandler
 	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
 	// Iteration outcome tallies, used for the end-of-run summary. failed counts
-	// only terminal failures tolerated via ContinueOnIterationFailure.
+	// terminal failures that reached the executor's outcome channel.
 	completed atomic.Int64
 	failed    atomic.Int64
 }
@@ -42,14 +52,59 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
+	metricsHandler := info.MetricsHandler.WithTags(map[string]string{"scenario": info.ScenarioName})
 	return &genericRun{
-		executor: g,
-		info:     info,
-		config:   info.Configuration,
-		logger:   info.Logger,
-		executeTimer: info.MetricsHandler.WithTags(
-			map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram"),
+		executor:       g,
+		info:           info,
+		config:         info.Configuration,
+		logger:         info.Logger,
+		metricsHandler: metricsHandler,
+		executeTimer:   metricsHandler.Timer("omes_execute_histogram"),
 	}, nil
+}
+
+func iterationStatusCode(err error) codes.Code {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return status.FromContextError(err).Code()
+	}
+	return status.Code(err)
+}
+
+func (g *genericRun) recordIterationOutcome(outcome string, code codes.Code) {
+	g.metricsHandler.WithTags(map[string]string{
+		"outcome":     outcome,
+		"status_code": code.String(),
+	}).Counter(iterationsMetricName).Inc(1)
+}
+
+func (g *genericRun) logRunSummary(elapsed time.Duration) {
+	succeeded := g.completed.Load()
+	failed := g.failed.Load()
+	attempted := succeeded + failed
+
+	var successRate, failureRate, successfulThroughput float64
+	if attempted > 0 {
+		successRate = float64(succeeded) / float64(attempted)
+		failureRate = float64(failed) / float64(attempted)
+	}
+	if elapsed > 0 {
+		successfulThroughput = float64(succeeded) / elapsed.Seconds()
+	}
+
+	fields := []any{
+		"elapsed", elapsed,
+		"attempted", attempted,
+		"succeeded", succeeded,
+		"failed", failed,
+		"success_rate", successRate,
+		"failure_rate", failureRate,
+		"successful_iterations_per_second", successfulThroughput,
+	}
+	if failed > 0 {
+		g.logger.Warnw("Run completed with iteration failures", fields...)
+	} else {
+		g.logger.Infow("Run completed", fields...)
+	}
 }
 
 // Run a scenario.
@@ -154,24 +209,37 @@ func (g *genericRun) Run(ctx context.Context) error {
 				// cancellation while the run is healthy.
 				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
 
+				switch {
+				case stopping:
+					g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)
+				case iterErr == nil:
+					run.Duration = elapsed
+					g.completed.Add(1)
+					g.recordIterationOutcome(iterationOutcomeSucceeded, codes.OK)
+					if g.config.OnCompletion != nil {
+						g.config.OnCompletion(ctx, run)
+					}
+				default:
+					code := iterationStatusCode(iterErr)
+					g.failed.Add(1)
+					g.recordIterationOutcome(iterationOutcomeFailed, code)
+					g.logger.Errorw("Iteration failed",
+						"scenario", g.info.ScenarioName,
+						"iteration", run.Iteration,
+						"status_code", code.String(),
+						"error", iterErr,
+					)
+					if g.config.OnIterationFailure != nil {
+						g.config.OnIterationFailure(ctx, run, iterErr)
+					}
+				}
+
+				// Publish completion only after all outcome state and callbacks are
+				// committed, so the coordinator cannot return a stale verdict or
+				// shut down metrics while this iteration is still being recorded.
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
-					switch {
-					case stopping:
-						g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)
-					case iterErr == nil:
-						run.Duration = elapsed
-						g.completed.Add(1)
-						if g.config.OnCompletion != nil {
-							g.config.OnCompletion(ctx, run)
-						}
-					default:
-						g.failed.Add(1)
-						if g.config.OnIterationFailure != nil {
-							g.config.OnIterationFailure(ctx, run, iterErr)
-						}
-					}
 				}
 			}()
 
@@ -191,7 +259,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 					g.logger.Error(err)
 				} else {
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-					g.logger.Error(err)
 					break retryLoop
 				}
 
@@ -216,8 +283,9 @@ func (g *genericRun) Run(ctx context.Context) error {
 			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 		}
 	}
+	elapsed := time.Since(startTime)
 	if runErr != nil {
-		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
+		return fmt.Errorf("run finished with error after %v: %w", elapsed, runErr)
 	}
 	// ContinueOnIterationFailure changed only when the run stops (it ran to
 	// completion instead of aborting on the first failure); the verdict is
@@ -225,11 +293,15 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// outcomes were tallied into the snapshot, so the caller can read the
 	// success/failure counts and apply its own policy on top.
 	if failed := g.failed.Load(); failed > 0 {
-		completed := g.completed.Load()
-		g.logger.Infof("Run completed in %v: %d iterations succeeded, %d failed",
-			time.Since(startTime), completed, failed)
-		return fmt.Errorf("run completed with %d of %d iterations failed", failed, completed+failed)
+		succeeded := g.completed.Load()
+		g.logRunSummary(elapsed)
+		return &IterationFailuresError{
+			Attempted: succeeded + failed,
+			Succeeded: succeeded,
+			Failed:    failed,
+			Elapsed:   elapsed,
+		}
 	}
-	g.logger.Infof("Run completed in %v", time.Since(startTime))
+	g.logRunSummary(elapsed)
 	return nil
 }
