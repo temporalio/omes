@@ -221,6 +221,18 @@ func (s *Server) FrontendHostPort() string {
 
 // RegisterNamespace registers a namespace if it does not already exist.
 func (s *Server) RegisterNamespace(ctx context.Context, namespace string) error {
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	go func() {
+		select {
+		case procErr := <-s.done:
+			s.done <- procErr
+			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
+		case <-ctx.Done():
+		}
+	}()
+
 	return registerNamespace(ctx, s.frontend, namespace)
 }
 
