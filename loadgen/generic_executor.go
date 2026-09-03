@@ -9,6 +9,14 @@ import (
 
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+const (
+	iterationOutcomeSucceeded = "succeeded"
+	iterationOutcomeFailed    = "failed"
+	iterationsMetricName      = "omes_iterations_total"
 )
 
 type GenericExecutor struct {
@@ -21,6 +29,8 @@ type genericRun struct {
 	info     ScenarioInfo
 	config   RunConfiguration
 	logger   *zap.SugaredLogger
+	// Metrics tagged with the scenario name for this run.
+	metricsHandler client.MetricsHandler
 	// Timer capturing E2E execution of each scenario run iteration.
 	executeTimer client.MetricsTimer
 	// Iteration outcome tallies, used for the end-of-run summary. failed counts
@@ -42,14 +52,29 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
+	metricsHandler := info.MetricsHandler.WithTags(map[string]string{"scenario": info.ScenarioName})
 	return &genericRun{
-		executor: g,
-		info:     info,
-		config:   info.Configuration,
-		logger:   info.Logger,
-		executeTimer: info.MetricsHandler.WithTags(
-			map[string]string{"scenario": info.ScenarioName}).Timer("omes_execute_histogram"),
+		executor:       g,
+		info:           info,
+		config:         info.Configuration,
+		logger:         info.Logger,
+		metricsHandler: metricsHandler,
+		executeTimer:   metricsHandler.Timer("omes_execute_histogram"),
 	}, nil
+}
+
+func iterationStatusCode(err error) codes.Code {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return status.FromContextError(err).Code()
+	}
+	return status.Code(err)
+}
+
+func (g *genericRun) recordIterationOutcome(outcome string, code codes.Code) {
+	g.metricsHandler.WithTags(map[string]string{
+		"outcome":     outcome,
+		"status_code": code.String(),
+	}).Counter(iterationsMetricName).Inc(1)
 }
 
 func (g *genericRun) logRunSummary(elapsed time.Duration) {
@@ -190,11 +215,20 @@ func (g *genericRun) Run(ctx context.Context) error {
 				case iterErr == nil:
 					run.Duration = elapsed
 					g.completed.Add(1)
+					g.recordIterationOutcome(iterationOutcomeSucceeded, codes.OK)
 					if g.config.OnCompletion != nil {
 						g.config.OnCompletion(ctx, run)
 					}
 				default:
+					code := iterationStatusCode(iterErr)
 					g.failed.Add(1)
+					g.recordIterationOutcome(iterationOutcomeFailed, code)
+					g.logger.Errorw("Iteration failed",
+						"scenario", g.info.ScenarioName,
+						"iteration", run.Iteration,
+						"status_code", code.String(),
+						"error", iterErr,
+					)
 					if g.config.OnIterationFailure != nil {
 						g.config.OnIterationFailure(ctx, run, iterErr)
 					}
@@ -225,7 +259,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 					g.logger.Error(err)
 				} else {
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-					g.logger.Error(err)
 					break retryLoop
 				}
 
