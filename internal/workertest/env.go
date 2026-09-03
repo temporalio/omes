@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	testNamespace         = "default"
+	defaultTestNamespace  = "default"
 	defaultTestRunTimeout = 30 * time.Second
 	workerBuildTimeout    = 1 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
@@ -138,7 +138,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	serverLogger := testLogger.Named("devserver").Sugar()
 	serverOpts := devserver.Options{
 		Ref:                 serverRef,
-		Namespace:           testNamespace,
+		Namespace:           defaultTestNamespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
@@ -154,7 +154,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	}
 	require.NoError(t, err, "Failed to start dev server")
 	t.Cleanup(cleanupServer)
-	if cfg.namespace != testNamespace {
+	if cfg.namespace != defaultTestNamespace {
 		require.NoError(t, server.RegisterNamespace(t.Context(), cfg.namespace), "Failed to register namespace")
 	}
 
@@ -191,7 +191,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 func newTestEnvConfig(opts []TestEnvOption) testEnvConfig {
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
-		namespace:       testNamespace,
+		namespace:       defaultTestNamespace,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
