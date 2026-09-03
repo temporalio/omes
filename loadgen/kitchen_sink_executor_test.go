@@ -87,10 +87,10 @@ func TestKitchenSink(t *testing.T) {
 	testEnvironments := make(map[clioptions.Language]*TestEnvironment)
 	for _, sdk := range sdks {
 		if onlySDK != "" && string(sdk) != onlySDK {
-			continue
+			continue // not using t.Skip as it's too noisy
 		}
 		testEnvironments[sdk] = SetupTestEnvironment(t,
-			WithDevServerGroup(t.Name()),
+			WithDevServerGroup("kitchen-sink"),
 			WithNamespace(fmt.Sprintf("default.%s", sdk)),
 			WithDynamicConfig(dynamicConfig),
 		)
@@ -1147,13 +1147,10 @@ func TestKitchenSink(t *testing.T) {
 			}
 			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
-			for _, sdk := range sdks {
-				if onlySDK != "" && string(sdk) != onlySDK {
-					continue // not using t.Skip as it's too noisy
-				}
+			for sdk, env := range testEnvironments {
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
-					testForSDK(t, tc, sdk, testEnvironments[sdk], defaultWorkflowTimeout)
+					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
 				})
 			}
 		})
