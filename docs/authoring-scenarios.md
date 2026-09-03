@@ -143,7 +143,8 @@ scenario's `DefaultConfiguration` field over the older `HasDefaultConfiguration`
 
 Scenario configuration arrives through **two separate channels**, and knowing which is which matters:
 
-1. **Built-in run flags** — iterations, duration, concurrency, rate, attempts, timeout. These are
+1. **Built-in run flags** — iterations, duration, concurrency, rate, attempts, iteration-failure policy,
+   timeout. These are
    framework-level and apply to every scenario, so you neither declare nor read them; see
    [running.md](./running.md#configuring-the-load) for the list.
 2. **Your own options** — `--option key=value` pairs that you **declare** on the scenario.
