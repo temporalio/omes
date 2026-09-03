@@ -37,6 +37,8 @@ type testEnvConfig struct {
 	executorTimeout time.Duration
 	runID           string
 	dynamicConfig   map[string]any
+	namespace       string
+	devServerGroup  string
 }
 
 type TestEnvOption func(*testEnvConfig)
@@ -61,6 +63,21 @@ func WithNexusEndpoint(runID string) TestEnvOption {
 func WithDynamicConfig(values map[string]any) TestEnvOption {
 	return func(c *testEnvConfig) {
 		c.dynamicConfig = values
+	}
+}
+
+// WithNamespace configures the namespace used by the test environment.
+func WithNamespace(namespace string) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.namespace = namespace
+	}
+}
+
+// WithDevServerGroup configures the test environment to share a dev server
+// with other environments created by the same test using the same group.
+func WithDevServerGroup(group string) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.devServerGroup = group
 	}
 }
 
@@ -106,13 +123,12 @@ func (env *TestEnvironment) NexusEndpointName() string {
 	return env.nexusEndpointName
 }
 
+func (env *TestEnvironment) Namespace() string {
+	return env.namespace
+}
+
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
-	cfg := testEnvConfig{
-		executorTimeout: defaultTestRunTimeout,
-	}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
+	cfg := newTestEnvConfig(opts)
 
 	serverRef, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
@@ -120,18 +136,31 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 
 	testLogger := zaptest.NewLogger(t)
 	serverLogger := testLogger.Named("devserver").Sugar()
-	server, err := devserver.Start(t.Context(), devserver.Options{
+	serverOpts := devserver.Options{
 		Ref:                 serverRef,
 		Namespace:           testNamespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
-	})
+	}
+
+	var server *devserver.Server
+	var cleanupServer func()
+	if cfg.devServerGroup == "" {
+		server, err = devserver.Start(t.Context(), serverOpts)
+		cleanupServer = func() { _ = server.Stop() }
+	} else {
+		server, cleanupServer, err = groupedTestDevServers.acquire(t, cfg, serverOpts)
+	}
 	require.NoError(t, err, "Failed to start dev server")
+	t.Cleanup(cleanupServer)
+	if cfg.namespace != testNamespace {
+		require.NoError(t, server.RegisterNamespace(t.Context(), cfg.namespace), "Failed to register namespace")
+	}
 
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  server.FrontendHostPort(),
-		Namespace: testNamespace,
+		Namespace: cfg.namespace,
 	})
 	require.NoError(t, err, "Failed to create Temporal client")
 
@@ -159,12 +188,20 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	return env
 }
 
+func newTestEnvConfig(opts []TestEnvOption) testEnvConfig {
+	cfg := testEnvConfig{
+		executorTimeout: defaultTestRunTimeout,
+		namespace:       testNamespace,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
+}
+
 func (env *TestEnvironment) cleanup() {
 	if env.temporalClient != nil {
 		env.temporalClient.Close()
-	}
-	if env.devServer != nil {
-		env.devServer.Stop()
 	}
 	env.workerPool.cleanup()
 }
@@ -179,7 +216,7 @@ func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, runID strin
 				Target: &nexus.EndpointTarget{
 					Variant: &nexus.EndpointTarget_Worker_{
 						Worker: &nexus.EndpointTarget_Worker{
-							Namespace: testNamespace,
+							Namespace: env.namespace,
 							TaskQueue: taskQueueName,
 						},
 					},
@@ -221,11 +258,11 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Logger = logger.Named("executor")
 	scenarioInfo.MetricsHandler = client.MetricsNopHandler
 	scenarioInfo.Client = env.temporalClient
-	scenarioInfo.Namespace = testNamespace
+	scenarioInfo.Namespace = env.namespace
 
 	// Resolve any capability-gated feature options against the dev server, so
 	// integration tests exercise the same code path as the CLI.
-	if err := loadgen.ResolveFeatureOptions(testCtx, env.temporalClient, testNamespace, scenarioInfo.Options, logger); err != nil {
+	if err := loadgen.ResolveFeatureOptions(testCtx, env.temporalClient, env.namespace, scenarioInfo.Options, logger); err != nil {
 		return TestResult{ObservedLogs: observedLogs}, err
 	}
 
