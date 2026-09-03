@@ -3,17 +3,22 @@ package loadgen
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	omesmetrics "github.com/temporalio/omes/metrics"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type iterationTracker struct {
@@ -412,6 +417,111 @@ func TestRunContinueOnIterationFailureLogsWarning(t *testing.T) {
 		require.Equal(t, int64(2), fields["attempted"])
 		require.Equal(t, int64(1), fields["succeeded"])
 		require.Equal(t, int64(1), fields["failed"])
+	})
+}
+
+func TestIterationStatusCode(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want codes.Code
+	}{
+		{name: "wrapped canceled context", err: fmt.Errorf("start failed: %w", context.Canceled), want: codes.Canceled},
+		{name: "wrapped deadline context", err: fmt.Errorf("start failed: %w", context.DeadlineExceeded), want: codes.DeadlineExceeded},
+		{name: "wrapped grpc status", err: fmt.Errorf("start failed: %w", status.Error(codes.ResourceExhausted, "busy")), want: codes.ResourceExhausted},
+		{name: "plain error", err: errors.New("plain"), want: codes.Unknown},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.want, iterationStatusCode(test.err))
+		})
+	}
+}
+
+func TestRunRecordsTerminalIterationOutcomes(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		metrics := &omesmetrics.Metrics{
+			Registry: registry,
+			Cache:    make(map[string]any),
+		}
+		logger := zap.NewNop()
+		attempts := make(map[int]int)
+		err := (&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				attempts[run.Iteration]++
+				if run.Iteration == 1 && attempts[run.Iteration] == 2 {
+					return nil
+				}
+				return fmt.Errorf("workflow start failed: %w", status.Error(codes.Unavailable, "down"))
+			},
+		}).Run(context.Background(), ScenarioInfo{
+			ScenarioName:   "metric-test",
+			MetricsHandler: metrics.NewHandler(),
+			Logger:         logger.Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 2,
+				MaxConcurrent:              1,
+				MaxIterationAttempts:       2,
+				ContinueOnIterationFailure: true,
+			},
+		})
+
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		families, gatherErr := registry.Gather()
+		require.NoError(t, gatherErr)
+
+		outcomes := make(map[string]float64)
+		for _, family := range families {
+			if family.GetName() != iterationsMetricName {
+				continue
+			}
+			for _, metric := range family.Metric {
+				labels := make(map[string]string)
+				for _, label := range metric.Label {
+					labels[label.GetName()] = label.GetValue()
+				}
+				require.Equal(t, "metric-test", labels["scenario"])
+				outcomes[labels["outcome"]+"/"+labels["status_code"]] = metric.Counter.GetValue()
+			}
+		}
+
+		require.Equal(t, float64(1), outcomes["succeeded/OK"])
+		require.Equal(t, float64(1), outcomes["failed/Unavailable"])
+	})
+}
+
+func TestRunDoesNotRecordCanceledIterationOutcome(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		metrics := &omesmetrics.Metrics{
+			Registry: registry,
+			Cache:    make(map[string]any),
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		err := (&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				cancel()
+				return ctx.Err()
+			},
+		}).Run(ctx, ScenarioInfo{
+			ScenarioName:   "metric-test",
+			MetricsHandler: metrics.NewHandler(),
+			Logger:         zap.NewNop().Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 1,
+				ContinueOnIterationFailure: true,
+			},
+		})
+		require.Error(t, err)
+
+		families, gatherErr := registry.Gather()
+		require.NoError(t, gatherErr)
+		for _, family := range families {
+			require.NotEqual(t, iterationsMetricName, family.GetName())
+		}
 	})
 }
 
