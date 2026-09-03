@@ -206,7 +206,7 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 	}
 	success = true
 
-	if err := s.registerNamespace(ctx, opts.Namespace); err != nil {
+	if err := s.RegisterNamespace(ctx, opts.Namespace); err != nil {
 		_ = s.Stop()
 		return nil, fmt.Errorf("devserver: register namespace %q: %w", opts.Namespace, err)
 	}
@@ -217,6 +217,11 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 // gRPC service.
 func (s *Server) FrontendHostPort() string {
 	return s.frontend
+}
+
+// RegisterNamespace registers a namespace if it does not already exist.
+func (s *Server) RegisterNamespace(ctx context.Context, namespace string) error {
+	return registerNamespace(ctx, s.frontend, namespace)
 }
 
 // Ports returns the service ports allocated for the running server.
@@ -253,20 +258,4 @@ func classifyExitErr(err error) error {
 		return nil
 	}
 	return err
-}
-
-func (s *Server) registerNamespace(ctx context.Context, namespace string) error {
-	ctx, cancel := context.WithCancelCause(ctx)
-	defer cancel(nil)
-
-	go func() {
-		select {
-		case procErr := <-s.done:
-			s.done <- procErr
-			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
-		case <-ctx.Done():
-		}
-	}()
-
-	return registerNamespace(ctx, s.frontend, namespace)
 }

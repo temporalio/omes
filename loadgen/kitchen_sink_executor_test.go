@@ -75,7 +75,7 @@ func TestKitchenSink(t *testing.T) {
 	if os.Getenv("CI") != "" && onlySDK == "" {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
-	env := SetupTestEnvironment(t, WithDynamicConfig(map[string]any{
+	dynamicConfig := map[string]any{
 		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
 		"nexusoperation.enableStandalone": true,
 		// Standalone Nexus system callbacks require CHASM callbacks.
@@ -83,7 +83,18 @@ func TestKitchenSink(t *testing.T) {
 		// Enable StartActivityExecution for the standalone-activity subtest.
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
-	}))
+	}
+	testEnvironments := make(map[clioptions.Language]*TestEnvironment)
+	for _, sdk := range sdks {
+		if onlySDK != "" && string(sdk) != onlySDK {
+			continue
+		}
+		testEnvironments[sdk] = SetupTestEnvironment(t,
+			WithDevServerGroup(t.Name()),
+			WithNamespace(fmt.Sprintf("default.%s", sdk)),
+			WithDynamicConfig(dynamicConfig),
+		)
+	}
 
 	// Default workflow execution timeout for tests
 	defaultWorkflowTimeout := 30 * time.Second
@@ -1142,7 +1153,7 @@ func TestKitchenSink(t *testing.T) {
 				}
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
-					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
+					testForSDK(t, tc, sdk, testEnvironments[sdk], defaultWorkflowTimeout)
 				})
 			}
 		})
