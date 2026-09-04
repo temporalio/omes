@@ -229,7 +229,11 @@ func (s *Server) RegisterNamespace(ctx context.Context, namespace string) error 
 	go func() {
 		select {
 		case <-s.exited:
-			cancel(fmt.Errorf("process exited before namespace registration completed: %w", s.exitErr))
+			err := errors.New("process exited before namespace registration completed")
+			if s.exitErr != nil {
+				err = fmt.Errorf("%w: %w", err, s.exitErr)
+			}
+			cancel(err)
 		case <-ctx.Done():
 		}
 	}()
@@ -260,7 +264,7 @@ func (s *Server) Stop() error {
 // non-zero exit codes that didn't come from a signal, and SIGKILL that
 // fires when the server fails to exit within WaitDelay.
 func classifyExitErr(err error) error {
-	if err == nil {
+	if err == nil || errors.Is(err, context.Canceled) {
 		return nil
 	}
 	var exitErr *exec.ExitError
