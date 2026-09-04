@@ -1308,7 +1308,7 @@ func testSupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
-	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient(), env.Namespace())
+	historyEvents, historyErr := getWorkflowHistory(t, env.TemporalClient(), env.Namespace(), taskQueueName)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1350,7 +1350,7 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client, namespace string) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(t *testing.T, temporalClient client.Client, namespace, taskQueueName string) ([]*history.HistoryEvent, error) {
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
