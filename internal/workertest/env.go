@@ -38,7 +38,7 @@ type testEnvConfig struct {
 	runID           string
 	dynamicConfig   map[string]any
 	namespace       string
-	devServerGroup  string
+	sharedDevServer *devserver.Server
 }
 
 type TestEnvOption func(*testEnvConfig)
@@ -73,11 +73,10 @@ func WithNamespace(namespace string) TestEnvOption {
 	}
 }
 
-// WithDevServerGroup configures the test environment to share a dev server
-// with other environments created by the same test using the same group.
-func WithDevServerGroup(group string) TestEnvOption {
+// WithDevServer configures the test environment to use an existing dev server.
+func WithDevServer(server *devserver.Server) TestEnvOption {
 	return func(c *testEnvConfig) {
-		c.devServerGroup = group
+		c.sharedDevServer = server
 	}
 }
 
@@ -127,7 +126,7 @@ func (env *TestEnvironment) Namespace() string {
 	return env.namespace
 }
 
-func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+func newTestEnvConfig(opts ...TestEnvOption) testEnvConfig {
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
 		namespace:       defaultTestNamespace,
@@ -135,6 +134,12 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	for _, opt := range opts {
 		opt(&cfg)
 	}
+	return cfg
+}
+
+// StartDevServer starts a dev server and stops it during test cleanup.
+func StartDevServer(t *testing.T, opts ...TestEnvOption) *devserver.Server {
+	cfg := newTestEnvConfig(opts...)
 
 	serverRef, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
@@ -142,29 +147,27 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 
 	testLogger := zaptest.NewLogger(t)
 	serverLogger := testLogger.Named("devserver").Sugar()
-	serverOpts := devserver.Options{
+	server, err := devserver.Start(t.Context(), devserver.Options{
 		Ref:                 serverRef,
 		Namespace:           cfg.namespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
-	}
+	})
+	require.NoError(t, err, "Failed to start dev server")
+	t.Cleanup(func() { _ = server.Stop() })
+	return server
+}
 
-	var server *devserver.Server
-	if cfg.devServerGroup == "" {
-		server, err = devserver.Start(t.Context(), serverOpts)
-		if err == nil {
-			t.Cleanup(func() { _ = server.Stop() })
-		}
+func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+	cfg := newTestEnvConfig(opts...)
+	server := cfg.sharedDevServer
+	if server == nil {
+		server = StartDevServer(t, opts...)
 	} else {
-		server, err = groupedTestDevServers.acquire(
-			t,
-			cfg.devServerGroup,
-			cfg.namespace,
-			serverOpts,
-		)
+		err := server.RegisterNamespace(t.Context(), cfg.namespace)
+		require.NoError(t, err, "Failed to register namespace")
 	}
-	require.NoError(t, err, "Failed to acquire dev server")
 
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  server.FrontendHostPort(),
