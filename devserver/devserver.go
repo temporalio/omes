@@ -104,7 +104,8 @@ type Server struct {
 	logger   *zap.SugaredLogger
 	workDir  string
 	cancel   context.CancelFunc
-	done     chan error
+	exited   chan struct{}
+	exitErr  error
 	stopOnce sync.Once
 	stopErr  error
 }
@@ -193,20 +194,21 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 		return nil, fmt.Errorf("devserver: start: %w", err)
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
 	s := &Server{
 		frontend: frontendAddr,
 		ports:    serverPorts,
 		logger:   opts.Logger,
 		workDir:  workDir,
 		cancel:   cancel,
-		done:     done,
+		exited:   make(chan struct{}),
 	}
+	go func() {
+		s.exitErr = cmd.Wait()
+		close(s.exited)
+	}()
 	success = true
 
-	if err := s.registerNamespace(ctx, opts.Namespace); err != nil {
+	if err := s.RegisterNamespace(ctx, opts.Namespace); err != nil {
 		_ = s.Stop()
 		return nil, fmt.Errorf("devserver: register namespace %q: %w", opts.Namespace, err)
 	}
@@ -217,6 +219,26 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 // gRPC service.
 func (s *Server) FrontendHostPort() string {
 	return s.frontend
+}
+
+// RegisterNamespace registers a namespace if it does not already exist.
+func (s *Server) RegisterNamespace(ctx context.Context, namespace string) error {
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	go func() {
+		select {
+		case <-s.exited:
+			err := errors.New("process exited before namespace registration completed")
+			if s.exitErr != nil {
+				err = fmt.Errorf("%w: %w", err, s.exitErr)
+			}
+			cancel(err)
+		case <-ctx.Done():
+		}
+	}()
+
+	return registerNamespace(ctx, s.frontend, namespace)
 }
 
 // Ports returns the service ports allocated for the running server.
@@ -230,9 +252,9 @@ func (s *Server) Ports() Ports {
 func (s *Server) Stop() error {
 	s.stopOnce.Do(func() {
 		s.cancel()
-		err := <-s.done
+		<-s.exited
 		_ = os.RemoveAll(s.workDir)
-		s.stopErr = classifyExitErr(err)
+		s.stopErr = classifyExitErr(s.exitErr)
 	})
 	return s.stopErr
 }
@@ -242,7 +264,7 @@ func (s *Server) Stop() error {
 // non-zero exit codes that didn't come from a signal, and SIGKILL that
 // fires when the server fails to exit within WaitDelay.
 func classifyExitErr(err error) error {
-	if err == nil {
+	if err == nil || errors.Is(err, context.Canceled) {
 		return nil
 	}
 	var exitErr *exec.ExitError
@@ -253,20 +275,4 @@ func classifyExitErr(err error) error {
 		return nil
 	}
 	return err
-}
-
-func (s *Server) registerNamespace(ctx context.Context, namespace string) error {
-	ctx, cancel := context.WithCancelCause(ctx)
-	defer cancel(nil)
-
-	go func() {
-		select {
-		case procErr := <-s.done:
-			s.done <- procErr
-			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
-		case <-ctx.Done():
-		}
-	}()
-
-	return registerNamespace(ctx, s.frontend, namespace)
 }
