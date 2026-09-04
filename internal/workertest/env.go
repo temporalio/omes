@@ -164,7 +164,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 			serverOpts,
 		)
 	}
-	require.NoError(t, err, "Failed to start dev server")
+	require.NoError(t, err, "Failed to acquire dev server")
 
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  server.FrontendHostPort(),
