@@ -23,8 +23,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const namespace = "default"
-
 var (
 	sdks = []clioptions.Language{
 		clioptions.LangGo,
@@ -1147,7 +1145,11 @@ func TestKitchenSink(t *testing.T) {
 			}
 			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
-			for sdk, env := range testEnvironments {
+			for _, sdk := range sdks {
+				env, ok := testEnvironments[sdk]
+				if !ok {
+					continue
+				}
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
 					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
@@ -1306,7 +1308,7 @@ func testSupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
-	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
+	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient(), env.Namespace())
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1348,7 +1350,7 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client, namespace string) ([]*history.HistoryEvent, error) {
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
