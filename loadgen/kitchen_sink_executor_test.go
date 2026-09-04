@@ -73,15 +73,7 @@ func TestKitchenSink(t *testing.T) {
 	if os.Getenv("CI") != "" && onlySDK == "" {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
-	dynamicConfig := map[string]any{
-		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
-		"nexusoperation.enableStandalone": true,
-		// Standalone Nexus system callbacks require CHASM callbacks.
-		"history.enableCHASMCallbacks": true,
-		// Enable StartActivityExecution for the standalone-activity subtest.
-		"activity.enableStandalone":                        true,
-		"history.enableStandaloneActivityOperatorCommands": true,
-	}
+
 	var enabledSDKs []clioptions.Language
 	for _, sdk := range sdks {
 		if onlySDK != "" && string(sdk) != onlySDK {
@@ -91,7 +83,16 @@ func TestKitchenSink(t *testing.T) {
 	}
 	require.NotEmpty(t, enabledSDKs, "SDK=%q matches no known SDK", onlySDK)
 
-	server := StartDevServer(t, WithDynamicConfig(dynamicConfig))
+	server := StartDevServer(t, WithDynamicConfig(map[string]any{
+		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
+		"nexusoperation.enableStandalone": true,
+		// Standalone Nexus system callbacks require CHASM callbacks.
+		"history.enableCHASMCallbacks": true,
+		// Enable StartActivityExecution for the standalone-activity subtest.
+		"activity.enableStandalone":                        true,
+		"history.enableStandaloneActivityOperatorCommands": true,
+	}))
+
 	testEnvironments := make(map[clioptions.Language]*TestEnvironment, len(enabledSDKs))
 	for _, sdk := range enabledSDKs {
 		testEnvironments[sdk] = SetupTestEnvironment(t,
