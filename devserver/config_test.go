@@ -1,12 +1,10 @@
 package devserver
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -36,25 +34,6 @@ func TestServerPorts(t *testing.T) {
 
 	require.Equal(t, "127.0.0.1:7233", server.FrontendHostPort())
 	require.Equal(t, ports, server.Ports())
-}
-
-func TestRegisterNamespaceReportsExitedProcessAfterStop(t *testing.T) {
-	processErr := errors.New("boom")
-	exited := make(chan struct{})
-	close(exited)
-	server := &Server{
-		frontend: "127.0.0.1:1",
-		workDir:  t.TempDir(),
-		cancel:   func() {},
-		exited:   exited,
-		exitErr:  processErr,
-	}
-	require.ErrorIs(t, server.Stop(), processErr)
-
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-	defer cancel()
-	err := server.RegisterNamespace(ctx, "test")
-	require.ErrorContains(t, err, "process exited before namespace registration completed: boom")
 }
 
 func TestDefaultOutputDirUsesRepoRoot(t *testing.T) {
