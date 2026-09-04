@@ -19,6 +19,7 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -74,9 +75,14 @@ func TestKitchenSink(t *testing.T) {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
 
+	var only clioptions.Language
+	if onlySDK != "" {
+		require.NoError(t, only.Set(onlySDK), "invalid SDK env var")
+	}
+
 	var enabledSDKs []clioptions.Language
 	for _, sdk := range sdks {
-		if onlySDK != "" && string(sdk) != onlySDK {
+		if only != "" && sdk != only {
 			continue // not using t.Skip as it's too noisy
 		}
 		enabledSDKs = append(enabledSDKs, sdk)
@@ -1234,8 +1240,12 @@ func testForSDK(
 	// worker picks them up.
 	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
 
+	// PrepareTestInput fills the per-run endpoint and task queue into the input in
+	// place, so work on a copy before making further per-run changes.
+	testInput := proto.Clone(tc.testInput).(*TestInput)
+
 	executor := &KitchenSinkExecutor{
-		TestInput: tc.testInput,
+		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
 			if input.WorkflowInput != nil {
 				for _, actionSet := range input.WorkflowInput.InitialActions {

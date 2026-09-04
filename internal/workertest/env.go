@@ -168,7 +168,9 @@ func startDevServer(t *testing.T, namespace string, opts ...DevServerOption) *de
 		Logger:              serverLogger,
 	})
 	require.NoError(t, err, "Failed to start dev server")
-	t.Cleanup(func() { _ = server.Stop() })
+	t.Cleanup(func() {
+		require.NoError(t, server.Stop(), "Dev server exited abnormally")
+	})
 	return server
 }
 
@@ -179,7 +181,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 		server = startDevServer(t, cfg.namespace)
 	} else {
 		err := server.RegisterNamespace(t.Context(), cfg.namespace)
-		require.NoError(t, err, "Failed to register namespace")
+		require.NoErrorf(t, err, "Failed to register namespace %q", cfg.namespace)
 	}
 
 	temporalClient, err := client.Dial(client.Options{
