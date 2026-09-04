@@ -239,6 +239,14 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 		`expected a DoStandaloneNexusOperation client action with Operation "standalone-activity"`)
 }
 
+func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
+	actions := (&tpsExecutor{config: &tpsConfig{NexusEndpoint: "test-endpoint"}}).
+		createNexusAttachCallbacksAction().GetNestedActionSet().GetActions()
+
+	require.NotNil(t, actions[1].GetSendSignal().GetAwaitableChoice().GetAbandon())
+	require.NotNil(t, actions[2].GetAwaitPendingActions())
+}
+
 func TestThroughputStressConfigurePayload(t *testing.T) {
 	t.Parallel()
 
