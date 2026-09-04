@@ -33,10 +33,16 @@ const (
 )
 
 // Functional options configuration
+type devServerConfig struct {
+	dynamicConfig map[string]any
+}
+
+// DevServerOption configures a test dev server.
+type DevServerOption func(*devServerConfig)
+
 type testEnvConfig struct {
 	executorTimeout time.Duration
 	runID           string
-	dynamicConfig   map[string]any
 	namespace       string
 	sharedDevServer *devserver.Server
 }
@@ -60,8 +66,8 @@ func WithNexusEndpoint(runID string) TestEnvOption {
 // WithDynamicConfig passes dynamic-config overrides to the dev server, on top
 // of the test-friendly defaults that devserver applies. Use this for opt-in
 // feature gates that a specific test needs.
-func WithDynamicConfig(values map[string]any) TestEnvOption {
-	return func(c *testEnvConfig) {
+func WithDynamicConfig(values map[string]any) DevServerOption {
+	return func(c *devServerConfig) {
 		c.dynamicConfig = values
 	}
 }
@@ -138,8 +144,15 @@ func newTestEnvConfig(opts ...TestEnvOption) testEnvConfig {
 }
 
 // StartDevServer starts a dev server and stops it during test cleanup.
-func StartDevServer(t *testing.T, opts ...TestEnvOption) *devserver.Server {
-	cfg := newTestEnvConfig(opts...)
+func StartDevServer(t *testing.T, opts ...DevServerOption) *devserver.Server {
+	return startDevServer(t, defaultTestNamespace, opts...)
+}
+
+func startDevServer(t *testing.T, namespace string, opts ...DevServerOption) *devserver.Server {
+	var cfg devServerConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 
 	serverRef, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
@@ -149,7 +162,7 @@ func StartDevServer(t *testing.T, opts ...TestEnvOption) *devserver.Server {
 	serverLogger := testLogger.Named("devserver").Sugar()
 	server, err := devserver.Start(t.Context(), devserver.Options{
 		Ref:                 serverRef,
-		Namespace:           cfg.namespace,
+		Namespace:           namespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
@@ -163,7 +176,7 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	cfg := newTestEnvConfig(opts...)
 	server := cfg.sharedDevServer
 	if server == nil {
-		server = StartDevServer(t, opts...)
+		server = startDevServer(t, cfg.namespace)
 	} else {
 		err := server.RegisterNamespace(t.Context(), cfg.namespace)
 		require.NoError(t, err, "Failed to register namespace")
