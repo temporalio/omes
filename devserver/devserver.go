@@ -104,7 +104,8 @@ type Server struct {
 	logger   *zap.SugaredLogger
 	workDir  string
 	cancel   context.CancelFunc
-	done     chan error
+	exited   chan struct{}
+	exitErr  error
 	stopOnce sync.Once
 	stopErr  error
 }
@@ -193,17 +194,18 @@ func Start(ctx context.Context, opts Options) (*Server, error) {
 		return nil, fmt.Errorf("devserver: start: %w", err)
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-
 	s := &Server{
 		frontend: frontendAddr,
 		ports:    serverPorts,
 		logger:   opts.Logger,
 		workDir:  workDir,
 		cancel:   cancel,
-		done:     done,
+		exited:   make(chan struct{}),
 	}
+	go func() {
+		s.exitErr = cmd.Wait()
+		close(s.exited)
+	}()
 	success = true
 
 	if err := s.RegisterNamespace(ctx, opts.Namespace); err != nil {
@@ -226,9 +228,8 @@ func (s *Server) RegisterNamespace(ctx context.Context, namespace string) error 
 
 	go func() {
 		select {
-		case procErr := <-s.done:
-			s.done <- procErr
-			cancel(fmt.Errorf("process exited before namespace registration completed: %w", procErr))
+		case <-s.exited:
+			cancel(fmt.Errorf("process exited before namespace registration completed: %w", s.exitErr))
 		case <-ctx.Done():
 		}
 	}()
@@ -247,9 +248,9 @@ func (s *Server) Ports() Ports {
 func (s *Server) Stop() error {
 	s.stopOnce.Do(func() {
 		s.cancel()
-		err := <-s.done
+		<-s.exited
 		_ = os.RemoveAll(s.workDir)
-		s.stopErr = classifyExitErr(err)
+		s.stopErr = classifyExitErr(s.exitErr)
 	})
 	return s.stopErr
 }

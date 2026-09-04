@@ -82,15 +82,21 @@ func TestKitchenSink(t *testing.T) {
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
 	}
-	testEnvironments := make(map[clioptions.Language]*TestEnvironment)
+	var enabledSDKs []clioptions.Language
 	for _, sdk := range sdks {
 		if onlySDK != "" && string(sdk) != onlySDK {
 			continue // not using t.Skip as it's too noisy
 		}
+		enabledSDKs = append(enabledSDKs, sdk)
+	}
+	require.NotEmpty(t, enabledSDKs, "SDK=%q matches no known SDK", onlySDK)
+
+	server := StartDevServer(t, WithDynamicConfig(dynamicConfig))
+	testEnvironments := make(map[clioptions.Language]*TestEnvironment, len(enabledSDKs))
+	for _, sdk := range enabledSDKs {
 		testEnvironments[sdk] = SetupTestEnvironment(t,
-			WithDevServerGroup("kitchen-sink"),
-			WithNamespace(fmt.Sprintf("default.%s", sdk)),
-			WithDynamicConfig(dynamicConfig),
+			WithDevServer(server),
+			WithNamespace(fmt.Sprintf("kitchensink-%s", sdk)),
 		)
 	}
 
@@ -1145,11 +1151,8 @@ func TestKitchenSink(t *testing.T) {
 			}
 			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
-			for _, sdk := range sdks {
-				env, ok := testEnvironments[sdk]
-				if !ok {
-					continue
-				}
+			for _, sdk := range enabledSDKs {
+				env := testEnvironments[sdk]
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
 					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
