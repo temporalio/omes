@@ -176,6 +176,10 @@ func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, value
 	if err != nil {
 		return fmt.Errorf("unable to decode raw payload: %w", err)
 	}
+	if output, ok := valuePtr.(*common.Payload); ok {
+		*output = *innerPayload
+		return nil
+	}
 	return converter.GetDefaultDataConverter().FromPayload(innerPayload, valuePtr)
 }
 

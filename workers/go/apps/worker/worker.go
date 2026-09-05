@@ -31,14 +31,8 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{Client: client}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	for _, op := range []nexus.RegisterableOperation{
-		kitchensink.EchoSyncOperation,
-		kitchensink.EchoAsyncOperation,
-		kitchensink.StandaloneActivityNexusOperation,
-	} {
-		if err := service.Register(op); err != nil {
-			panic(err)
-		}
+	if err := service.Register(kitchensink.ExecuteNexusOperation); err != nil {
+		panic(err)
 	}
 	w := sdkworker.New(client, context.TaskQueue, context.WorkerOptions)
 	w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
@@ -49,7 +43,6 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
 	w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 	w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
-	w.RegisterWorkflow(kitchensink.NexusHandlerWorkflow)
 	w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 	w.RegisterActivity(&ebbFlowActivities)
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
