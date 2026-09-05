@@ -944,7 +944,8 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: KitchenSinkNexusOperationName,
+									Operation:      KitchenSinkNexusOperationName,
+									ExpectedOutput: ConvertToPayload("hello"),
 									Input: &NexusOperationRequest{
 										Action: &NexusOperationRequest_Echo{Echo: "hello"},
 									},

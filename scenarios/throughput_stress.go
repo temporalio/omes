@@ -926,8 +926,8 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 						WorkflowId: workflowID,
 						SignalName: "do_actions_signal",
 						Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
-							Variant: &DoSignal_DoSignalActions_DoActions{
-								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+							Variant: &DoSignal_DoSignalActions_DoActionsInMain{
+								DoActionsInMain: SingleActionSet(NewEmptyReturnResultAction()),
 							},
 						})},
 						AwaitableChoice: &AwaitableChoice{

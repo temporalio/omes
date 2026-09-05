@@ -211,6 +211,12 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 	if nexusOp == nil {
 		return fmt.Errorf("DoStandaloneNexusOperation.operation is required")
 	}
+	if awaitableChoice := nexusOp.GetAwaitableChoice(); awaitableChoice != nil && awaitableChoice.GetWaitFinish() == nil {
+		return fmt.Errorf("DoStandaloneNexusOperation only supports the wait_finish awaitable choice")
+	}
+	if len(nexusOp.GetHeaders()) > 0 {
+		return fmt.Errorf("DoStandaloneNexusOperation does not support headers")
+	}
 	service := nexusOp.GetService()
 	if service == "" {
 		service = KitchenSinkNexusServiceName
