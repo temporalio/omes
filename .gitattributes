@@ -10,3 +10,6 @@
 workers/python/protos/*pb2.py* linguist-generated=true
 loadgen/kitchensink/kitchen_sink.pb.go linguist-generated=true
 loadgen/kitchensink/temporal/** linguist-generated=true
+workers/dotnet/Temporalio.Omes/protos/** linguist-generated=true
+workers/java/io/temporal/omes/KitchenSink.java linguist-generated=true
+workers/ruby/protos/** linguist-generated=true
