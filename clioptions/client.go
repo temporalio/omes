@@ -176,12 +176,15 @@ func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, value
 	if err != nil {
 		return fmt.Errorf("unable to decode raw payload: %w", err)
 	}
-	if output, ok := valuePtr.(*common.Payload); ok {
-		proto.Reset(output)
-		proto.Merge(output, innerPayload)
+	switch target := valuePtr.(type) {
+	case *common.Payload:
+		// The caller wants the encoded Payload itself, not its decoded value.
+		proto.Reset(target)
+		proto.Merge(target, innerPayload)
 		return nil
+	default:
+		return converter.GetDefaultDataConverter().FromPayload(innerPayload, target)
 	}
-	return converter.GetDefaultDataConverter().FromPayload(innerPayload, valuePtr)
 }
 
 func (p *PassThroughPayloadConverter) ToString(payload *common.Payload) string {

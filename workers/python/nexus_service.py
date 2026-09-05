@@ -38,8 +38,13 @@ class KitchenSinkNexusServiceHandler:
                     data=json.dumps(input.echo).encode(),
                 )
             )
-        if action == "workflow_action" and input.workflow_action.HasField("start"):
+        if action == "workflow_action":
             workflow_action = input.workflow_action
+            if not workflow_action.HasField("start"):
+                raise nexusrpc.HandlerError(
+                    "Nexus workflow action has no supported action set",
+                    type=nexusrpc.HandlerErrorType.BAD_REQUEST,
+                )
             start = workflow_action.start_options
             workflow_input = (
                 start.workflow_input
