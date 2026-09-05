@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/metrics"
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 const AUTH_HEADER_ENV_VAR = "TEMPORAL_OMES_AUTH_HEADER"
@@ -177,7 +177,8 @@ func (p *PassThroughPayloadConverter) FromPayload(payload *common.Payload, value
 		return fmt.Errorf("unable to decode raw payload: %w", err)
 	}
 	if output, ok := valuePtr.(*common.Payload); ok {
-		*output = *innerPayload
+		proto.Reset(output)
+		proto.Merge(output, innerPayload)
 		return nil
 	}
 	return converter.GetDefaultDataConverter().FromPayload(innerPayload, valuePtr)

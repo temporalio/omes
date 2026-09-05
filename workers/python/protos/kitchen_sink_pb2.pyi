@@ -471,7 +471,7 @@ class AwaitWorkflowState(_message.Message):
     def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class SendSignalAction(_message.Message):
-    __slots__ = ("workflow_id", "run_id", "signal_name", "args", "headers", "awaitable_choice", "do_actions")
+    __slots__ = ("workflow_id", "run_id", "signal_name", "args", "headers", "awaitable_choice")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -485,15 +485,13 @@ class SendSignalAction(_message.Message):
     ARGS_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
-    DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     workflow_id: str
     run_id: str
     signal_name: str
     args: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
     headers: _containers.MessageMap[str, _message_pb2.Payload]
     awaitable_choice: AwaitableChoice
-    do_actions: DoSignal.DoSignalActions
-    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., signal_name: _Optional[str] = ..., args: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., do_actions: _Optional[_Union[DoSignal.DoSignalActions, _Mapping]] = ...) -> None: ...
+    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., signal_name: _Optional[str] = ..., args: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class CancelWorkflowAction(_message.Message):
     __slots__ = ("workflow_id", "run_id")
@@ -600,7 +598,7 @@ class RemoteActivityOptions(_message.Message):
     def __init__(self, cancellation_type: _Optional[_Union[ActivityCancellationType, str]] = ..., do_not_eagerly_execute: bool = ..., versioning_intent: _Optional[_Union[VersioningIntent, str]] = ...) -> None: ...
 
 class ExecuteNexusOperation(_message.Message):
-    __slots__ = ("endpoint", "operation", "expected_output", "headers", "awaitable_choice", "input", "service")
+    __slots__ = ("endpoint", "operation", "input", "headers", "awaitable_choice", "expected_output", "service")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -610,19 +608,19 @@ class ExecuteNexusOperation(_message.Message):
         def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     OPERATION_FIELD_NUMBER: _ClassVar[int]
-    EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    INPUT_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
-    INPUT_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
     SERVICE_FIELD_NUMBER: _ClassVar[int]
     endpoint: str
     operation: str
-    expected_output: _message_pb2.Payload
+    input: NexusOperationRequest
     headers: _containers.ScalarMap[str, str]
     awaitable_choice: AwaitableChoice
-    input: NexusOperationRequest
+    expected_output: _message_pb2.Payload
     service: str
-    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., expected_output: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., input: _Optional[_Union[NexusOperationRequest, _Mapping]] = ..., service: _Optional[str] = ...) -> None: ...
+    def __init__(self, endpoint: _Optional[str] = ..., operation: _Optional[str] = ..., input: _Optional[_Union[NexusOperationRequest, _Mapping]] = ..., headers: _Optional[_Mapping[str, str]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ..., expected_output: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ..., service: _Optional[str] = ...) -> None: ...
 
 class NexusOperationRequest(_message.Message):
     __slots__ = ("echo", "workflow_action", "start_activity")

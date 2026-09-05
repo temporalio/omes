@@ -130,8 +130,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
-	} else if standalone := action.GetDoStandaloneNexusOperation(); standalone != nil {
-		return e.executeStandaloneNexusOperation(ctx, standalone)
+	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
+		return e.executeStandaloneNexusOperation(ctx, sano)
 	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
 		return e.executeStandaloneActivity(ctx, sa)
 	} else if sa := action.GetDoStandaloneActivityOperatorCommands(); sa != nil {
@@ -206,14 +206,14 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	return run, err
 }
 
-func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, standalone *DoStandaloneNexusOperation) error {
-	nexusOp := standalone.GetOperation()
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sano *DoStandaloneNexusOperation) error {
+	nexusOp := sano.GetOperation()
 	if nexusOp == nil {
 		return fmt.Errorf("DoStandaloneNexusOperation.operation is required")
 	}
 	service := nexusOp.GetService()
 	if service == "" {
-		service = "kitchen-sink"
+		service = KitchenSinkNexusServiceName
 	}
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
 	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
@@ -221,7 +221,7 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		Service:  service,
 	})
 	if err != nil {
-		return fmt.Errorf("NewNexusClient: %w", err)
+		return fmt.Errorf("New standalone Nexus client: %w", err)
 	}
 
 	handle, err := nexusClient.ExecuteOperation(ctx, nexusOp.GetOperation(), nexusOp.GetInput(), client.StartNexusOperationOptions{
@@ -229,23 +229,23 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		ScheduleToCloseTimeout: 90 * time.Second,
 	})
 	if err != nil {
-		return fmt.Errorf("ExecuteOperation: %w", err)
+		return fmt.Errorf("Execute standalone Nexus operation: %w", err)
 	}
 
 	if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
 		var result commonpb.Payload
 		if err := handle.Get(ctx, &result); err != nil {
-			return fmt.Errorf("Get Nexus operation: %w", err)
+			return fmt.Errorf("Get standalone Nexus operation: %w", err)
 		}
 		if !expectedOutput.Equal(&result) {
-			return fmt.Errorf("expected output %v, got %v", expectedOutput, &result)
+			return fmt.Errorf("expected standalone Nexus operation output %v, got %v", expectedOutput, &result)
 		}
 		return nil
 	}
 
 	err = handle.Get(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("Get Nexus operation: %w", err)
+		return fmt.Errorf("Get standalone Nexus operation: %w", err)
 	}
 	return nil
 }

@@ -487,13 +487,11 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 
 func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
 	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
-		signalName := action.SignalName
 		var arg any
-		if doActions := action.GetDoActions(); doActions != nil {
-			signalName = "do_actions_signal"
-			arg = doActions
+		if len(action.Args) > 0 {
+			arg = action.Args[0]
 		}
-		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, signalName, arg)
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, arg)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)
@@ -674,7 +672,7 @@ func startStandaloneActivityNexusOperation(
 		TaskQueue:                input.GetTaskQueue(),
 		ScheduleToCloseTimeout:   input.GetScheduleToCloseTimeout().AsDuration(),
 		ScheduleToStartTimeout:   input.GetScheduleToStartTimeout().AsDuration(),
-		StartToCloseTimeout:      input.GetStartToCloseTimeout().AsDuration(),
+		StartToCloseTimeout:      cmp.Or(input.GetStartToCloseTimeout().AsDuration(), 30*time.Second),
 		HeartbeatTimeout:         input.GetHeartbeatTimeout().AsDuration(),
 		RetryPolicy:              kitchensink.ConvertFromPBRetryPolicy(input.GetRetryPolicy()),
 		ActivityIDConflictPolicy: enumspb.ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING,

@@ -38,35 +38,35 @@ class KitchenSinkNexusServiceHandler:
                     data=json.dumps(input.echo).encode(),
                 )
             )
-        if action != "workflow_action" or not input.workflow_action.HasField("start"):
-            raise nexusrpc.HandlerError(
-                "Nexus operation request has no supported action set",
-                type=nexusrpc.HandlerErrorType.BAD_REQUEST,
+        if action == "workflow_action" and input.workflow_action.HasField("start"):
+            workflow_action = input.workflow_action
+            start = workflow_action.start_options
+            workflow_input = (
+                start.workflow_input
+                if start.HasField("workflow_input")
+                else WorkflowInput()
             )
-
-        workflow_action = input.workflow_action
-        start = workflow_action.start_options
-        workflow_input = (
-            start.workflow_input
-            if start.HasField("workflow_input")
-            else WorkflowInput()
-        )
-        if workflow_action.workflow_id:
-            policy = temporalio.common.WorkflowIDConflictPolicy(
-                cast(int, start.workflow_id_conflict_policy)
-            )
+            if workflow_action.workflow_id:
+                policy = temporalio.common.WorkflowIDConflictPolicy(
+                    cast(int, start.workflow_id_conflict_policy)
+                )
+                return await client.start_workflow(
+                    KitchenSinkWorkflow.run,
+                    workflow_input,
+                    id=workflow_action.workflow_id,
+                    task_queue=start.task_queue or None,
+                    id_conflict_policy=policy,
+                    execution_timeout=timedelta(minutes=60),
+                )
             return await client.start_workflow(
                 KitchenSinkWorkflow.run,
                 workflow_input,
-                id=workflow_action.workflow_id,
+                id=ctx.request_id,
                 task_queue=start.task_queue or None,
-                id_conflict_policy=policy,
                 execution_timeout=timedelta(minutes=60),
             )
-        return await client.start_workflow(
-            KitchenSinkWorkflow.run,
-            workflow_input,
-            id=ctx.request_id,
-            task_queue=start.task_queue or None,
-            execution_timeout=timedelta(minutes=60),
+
+        raise nexusrpc.HandlerError(
+            "Nexus operation request has no supported action set",
+            type=nexusrpc.HandlerErrorType.BAD_REQUEST,
         )
