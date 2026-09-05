@@ -43,6 +43,14 @@ var (
 		clioptions.LangDotNet:     "executenexusoperation is not supported",
 	}
 
+	nexusWorkflowActionUnsupportedSDKs = map[clioptions.Language]string{
+		clioptions.LangPython:     "no supported action set",
+		clioptions.LangJava:       "executenexusoperation is not supported",
+		clioptions.LangRuby:       "executenexusoperation is not supported",
+		clioptions.LangTypeScript: "executenexusoperation is not supported",
+		clioptions.LangDotNet:     "executenexusoperation is not supported",
+	}
+
 	standaloneNexusUnsupportedSDKs = map[clioptions.Language]string{
 		clioptions.LangJava:       "dostandalonenexusoperation is not supported",
 		clioptions.LangPython:     "dostandalonenexusoperation is not supported",
@@ -94,6 +102,8 @@ func TestKitchenSink(t *testing.T) {
 		"nexusoperation.enableStandalone": true,
 		// Standalone Nexus system callbacks require CHASM callbacks.
 		"history.enableCHASMCallbacks": true,
+		// Nexus Signals rely on CHASM signal backlinks.
+		"history.enableCHASMSignalBacklinks": true,
 		// Enable StartActivityExecution for the standalone-activity subtest.
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
@@ -937,7 +947,7 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
-			name: "NexusOperation/Sync",
+			name: "NexusOperation/Sync/Echo",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -964,7 +974,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Async",
+			name: "NexusOperation/Async/Start",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1184,6 +1194,58 @@ func TestKitchenSink(t *testing.T) {
 		standaloneActivityOperatorCommandsTestCase("Update",
 			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE),
 		{
+			name: "NexusOperation/Sync/Signal",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NewNexusWorkflowTargetSequence("", "nexus-signal-target", nil,
+					NewNexusOperationAction("",
+						NexusSignalWorkflowRequest("nexus-signal-target", "", &DoSignal{}, nil),
+						ConvertToPayload("nexus-signal-target"),
+						WaitFinishChoice(),
+					),
+				),
+			)}},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-signal-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/Sync/SignalWithStart",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NewNexusWorkflowTargetSequence("", "nexus-sws-target",
+					NewNexusOperationAction("",
+						NexusSignalWorkflowRequest("nexus-sws-target", "", &DoSignal{WithStart: true},
+							&NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}}),
+						ConvertToPayload("nexus-sws-target"),
+						WaitFinishChoice(),
+					),
+				),
+			)}},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sws-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/Async/Update",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NewNexusWorkflowTargetSequence("", "nexus-update-target", nil,
+					NewNexusOperationAction("",
+						NexusUpdateWorkflowRequest("nexus-update-target", "", &DoUpdate{
+							Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+								Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+									NewNexusUpdateResultAction("nexus-update-target"),
+								)},
+							}},
+						}),
+						ConvertToPayload("nexus-update-target"),
+						WaitFinishChoice(),
+					),
+				),
+			)}},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
+		{
 			name: "UnsupportedAction",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -1300,28 +1362,35 @@ func testForSDK(
 	executor := &KitchenSinkExecutor{
 		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
-			if input.WorkflowInput != nil {
-				for _, actionSet := range input.WorkflowInput.InitialActions {
-					for _, action := range actionSet.Actions {
-						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
-							nexusOp.Endpoint = nexusEndpoint
-						}
-						if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
-							for _, cas := range clientSeq.ActionSets {
-								for _, ca := range cas.Actions {
-									if sno := ca.GetDoStandaloneNexusOperation().GetOperation(); sno != nil && sno.Endpoint == "" {
-										sno.Endpoint = nexusEndpoint
-									}
-									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
-										sa.GetActivity().TaskQueue = runTaskQueue
-									}
-									if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
-										op.GetActivity().TaskQueue = runTaskQueue
-									}
+			var prepareActions func([]*Action)
+			prepareActions = func(actions []*Action) {
+				for _, action := range actions {
+					if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
+						nexusOp.Endpoint = nexusEndpoint
+					}
+					if nested := action.GetNestedActionSet(); nested != nil {
+						prepareActions(nested.GetActions())
+					}
+					if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
+						for _, cas := range clientSeq.ActionSets {
+							for _, ca := range cas.Actions {
+								if sno := ca.GetDoStandaloneNexusOperation().GetOperation(); sno != nil && sno.Endpoint == "" {
+									sno.Endpoint = nexusEndpoint
+								}
+								if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
+									sa.GetActivity().TaskQueue = runTaskQueue
+								}
+								if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
+									op.GetActivity().TaskQueue = runTaskQueue
 								}
 							}
 						}
 					}
+				}
+			}
+			if input.WorkflowInput != nil {
+				for _, actionSet := range input.WorkflowInput.InitialActions {
+					prepareActions(actionSet.Actions)
 				}
 			}
 			return nil
@@ -1375,7 +1444,8 @@ func testSupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
-	historyEvents, historyErr := getWorkflowHistory(t, env.TemporalClient(), env.Namespace(), taskQueueName)
+	historyEvents, historyErr := getWorkflowHistory(
+		t, env.TemporalClient(), env.Namespace(), taskQueueName, scenarioInfo.ExecutionID)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1417,11 +1487,19 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, temporalClient client.Client, namespace, taskQueueName string) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(
+	t *testing.T,
+	temporalClient client.Client,
+	namespace string,
+	taskQueueName string,
+	executionID string,
+) ([]*history.HistoryEvent, error) {
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
-			Query:     fmt.Sprintf("TaskQueue = '%s' AND WorkflowType = 'kitchenSink'", taskQueueName),
+			Query: fmt.Sprintf(
+				"TaskQueue = '%s' AND WorkflowType = 'kitchenSink' AND %s = '%s'",
+				taskQueueName, OmesExecutionIDSearchAttribute, executionID),
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workflow executions: %w", err)

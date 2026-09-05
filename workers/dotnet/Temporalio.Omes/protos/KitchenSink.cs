@@ -280,29 +280,31 @@ namespace Temporal.Omes.KitchenSink {
             "ABJKCg93b3JrZmxvd19hY3Rpb24YAiABKAsyLy50ZW1wb3JhbC5vbWVzLmtp",
             "dGNoZW5fc2luay5OZXh1c1dvcmtmbG93QWN0aW9uSAASSwoOc3RhcnRfYWN0",
             "aXZpdHkYAyABKAsyMS50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5FeGVj",
-            "dXRlQWN0aXZpdHlBY3Rpb25IAEIICgZhY3Rpb24iuwEKE05leHVzV29ya2Zs",
+            "dXRlQWN0aXZpdHlBY3Rpb25IAEIICgZhY3Rpb24iqwIKE05leHVzV29ya2Zs",
             "b3dBY3Rpb24SEwoLd29ya2Zsb3dfaWQYASABKAkSDgoGcnVuX2lkGAIgASgJ",
             "EkwKDXN0YXJ0X29wdGlvbnMYAyABKAsyNS50ZW1wb3JhbC5vbWVzLmtpdGNo",
             "ZW5fc2luay5OZXh1c1dvcmtmbG93U3RhcnRPcHRpb25zEicKBXN0YXJ0GAQg",
-            "ASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SABCCAoGYWN0aW9uIsgBChlO",
-            "ZXh1c1dvcmtmbG93U3RhcnRPcHRpb25zEhIKCnRhc2tfcXVldWUYASABKAkS",
-            "VAobd29ya2Zsb3dfaWRfY29uZmxpY3RfcG9saWN5GAIgASgOMi8udGVtcG9y",
-            "YWwuYXBpLmVudW1zLnYxLldvcmtmbG93SWRDb25mbGljdFBvbGljeRJBCg53",
-            "b3JrZmxvd19pbnB1dBgDIAEoCzIpLnRlbXBvcmFsLm9tZXMua2l0Y2hlbl9z",
-            "aW5rLldvcmtmbG93SW5wdXQiFQoTQXdhaXRQZW5kaW5nQWN0aW9ucyqkAQoR",
-            "UGFyZW50Q2xvc2VQb2xpY3kSIwofUEFSRU5UX0NMT1NFX1BPTElDWV9VTlNQ",
-            "RUNJRklFRBAAEiEKHVBBUkVOVF9DTE9TRV9QT0xJQ1lfVEVSTUlOQVRFEAES",
-            "HwobUEFSRU5UX0NMT1NFX1BPTElDWV9BQkFORE9OEAISJgoiUEFSRU5UX0NM",
-            "T1NFX1BPTElDWV9SRVFVRVNUX0NBTkNFTBADKkAKEFZlcnNpb25pbmdJbnRl",
-            "bnQSDwoLVU5TUEVDSUZJRUQQABIOCgpDT01QQVRJQkxFEAESCwoHREVGQVVM",
-            "VBACKqIBCh1DaGlsZFdvcmtmbG93Q2FuY2VsbGF0aW9uVHlwZRIUChBDSElM",
-            "RF9XRl9BQkFORE9OEAASFwoTQ0hJTERfV0ZfVFJZX0NBTkNFTBABEigKJENI",
-            "SUxEX1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBACEigKJENISUxE",
-            "X1dGX1dBSVRfQ0FOQ0VMTEFUSU9OX1JFUVVFU1RFRBADKlgKGEFjdGl2aXR5",
-            "Q2FuY2VsbGF0aW9uVHlwZRIOCgpUUllfQ0FOQ0VMEAASHwobV0FJVF9DQU5D",
-            "RUxMQVRJT05fQ09NUExFVEVEEAESCwoHQUJBTkRPThACQkIKEGlvLnRlbXBv",
-            "cmFsLm9tZXNaLmdpdGh1Yi5jb20vdGVtcG9yYWxpby9vbWVzL2xvYWRnZW4v",
-            "a2l0Y2hlbnNpbmtiBnByb3RvMw=="));
+            "ASgLMhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5SAASNgoGc2lnbmFsGAUgASgL",
+            "MiQudGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuRG9TaWduYWxIABI2CgZ1",
+            "cGRhdGUYBiABKAsyJC50ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Eb1Vw",
+            "ZGF0ZUgAQggKBmFjdGlvbiLIAQoZTmV4dXNXb3JrZmxvd1N0YXJ0T3B0aW9u",
+            "cxISCgp0YXNrX3F1ZXVlGAEgASgJElQKG3dvcmtmbG93X2lkX2NvbmZsaWN0",
+            "X3BvbGljeRgCIAEoDjIvLnRlbXBvcmFsLmFwaS5lbnVtcy52MS5Xb3JrZmxv",
+            "d0lkQ29uZmxpY3RQb2xpY3kSQQoOd29ya2Zsb3dfaW5wdXQYAyABKAsyKS50",
+            "ZW1wb3JhbC5vbWVzLmtpdGNoZW5fc2luay5Xb3JrZmxvd0lucHV0IhUKE0F3",
+            "YWl0UGVuZGluZ0FjdGlvbnMqpAEKEVBhcmVudENsb3NlUG9saWN5EiMKH1BB",
+            "UkVOVF9DTE9TRV9QT0xJQ1lfVU5TUEVDSUZJRUQQABIhCh1QQVJFTlRfQ0xP",
+            "U0VfUE9MSUNZX1RFUk1JTkFURRABEh8KG1BBUkVOVF9DTE9TRV9QT0xJQ1lf",
+            "QUJBTkRPThACEiYKIlBBUkVOVF9DTE9TRV9QT0xJQ1lfUkVRVUVTVF9DQU5D",
+            "RUwQAypAChBWZXJzaW9uaW5nSW50ZW50Eg8KC1VOU1BFQ0lGSUVEEAASDgoK",
+            "Q09NUEFUSUJMRRABEgsKB0RFRkFVTFQQAiqiAQodQ2hpbGRXb3JrZmxvd0Nh",
+            "bmNlbGxhdGlvblR5cGUSFAoQQ0hJTERfV0ZfQUJBTkRPThAAEhcKE0NISUxE",
+            "X1dGX1RSWV9DQU5DRUwQARIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElP",
+            "Tl9DT01QTEVURUQQAhIoCiRDSElMRF9XRl9XQUlUX0NBTkNFTExBVElPTl9S",
+            "RVFVRVNURUQQAypYChhBY3Rpdml0eUNhbmNlbGxhdGlvblR5cGUSDgoKVFJZ",
+            "X0NBTkNFTBAAEh8KG1dBSVRfQ0FOQ0VMTEFUSU9OX0NPTVBMRVRFRBABEgsK",
+            "B0FCQU5ET04QAkJCChBpby50ZW1wb3JhbC5vbWVzWi5naXRodWIuY29tL3Rl",
+            "bXBvcmFsaW8vb21lcy9sb2FkZ2VuL2tpdGNoZW5zaW5rYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.EmptyReflection.Descriptor, global::Temporalio.Api.Common.V1.MessageReflection.Descriptor, global::Temporalio.Api.Failure.V1.MessageReflection.Descriptor, global::Temporalio.Api.Enums.V1.WorkflowReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Temporal.Omes.KitchenSink.ParentClosePolicy), typeof(global::Temporal.Omes.KitchenSink.VersioningIntent), typeof(global::Temporal.Omes.KitchenSink.ChildWorkflowCancellationType), typeof(global::Temporal.Omes.KitchenSink.ActivityCancellationType), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -347,7 +349,7 @@ namespace Temporal.Omes.KitchenSink {
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.RemoteActivityOptions), global::Temporal.Omes.KitchenSink.RemoteActivityOptions.Parser, new[]{ "CancellationType", "DoNotEagerlyExecute", "VersioningIntent" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.ExecuteNexusOperation), global::Temporal.Omes.KitchenSink.ExecuteNexusOperation.Parser, new[]{ "Endpoint", "Operation", "ExpectedOutput", "Headers", "AwaitableChoice", "Input", "Service" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusOperationRequest), global::Temporal.Omes.KitchenSink.NexusOperationRequest.Parser, new[]{ "Echo", "WorkflowAction", "StartActivity" }, new[]{ "Action" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusWorkflowAction), global::Temporal.Omes.KitchenSink.NexusWorkflowAction.Parser, new[]{ "WorkflowId", "RunId", "StartOptions", "Start" }, new[]{ "Action" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusWorkflowAction), global::Temporal.Omes.KitchenSink.NexusWorkflowAction.Parser, new[]{ "WorkflowId", "RunId", "StartOptions", "Start", "Signal", "Update" }, new[]{ "Action" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.NexusWorkflowStartOptions), global::Temporal.Omes.KitchenSink.NexusWorkflowStartOptions.Parser, new[]{ "TaskQueue", "WorkflowIdConflictPolicy", "WorkflowInput" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Temporal.Omes.KitchenSink.AwaitPendingActions), global::Temporal.Omes.KitchenSink.AwaitPendingActions.Parser, null, null, null, null, null)
           }));
@@ -14872,6 +14874,12 @@ namespace Temporal.Omes.KitchenSink {
         case ActionOneofCase.Start:
           Start = other.Start.Clone();
           break;
+        case ActionOneofCase.Signal:
+          Signal = other.Signal.Clone();
+          break;
+        case ActionOneofCase.Update:
+          Update = other.Update.Clone();
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -14934,11 +14942,37 @@ namespace Temporal.Omes.KitchenSink {
       }
     }
 
+    /// <summary>Field number for the "signal" field.</summary>
+    public const int SignalFieldNumber = 5;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.DoSignal Signal {
+      get { return actionCase_ == ActionOneofCase.Signal ? (global::Temporal.Omes.KitchenSink.DoSignal) action_ : null; }
+      set {
+        action_ = value;
+        actionCase_ = value == null ? ActionOneofCase.None : ActionOneofCase.Signal;
+      }
+    }
+
+    /// <summary>Field number for the "update" field.</summary>
+    public const int UpdateFieldNumber = 6;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Temporal.Omes.KitchenSink.DoUpdate Update {
+      get { return actionCase_ == ActionOneofCase.Update ? (global::Temporal.Omes.KitchenSink.DoUpdate) action_ : null; }
+      set {
+        action_ = value;
+        actionCase_ = value == null ? ActionOneofCase.None : ActionOneofCase.Update;
+      }
+    }
+
     private object action_;
     /// <summary>Enum of possible cases for the "action" oneof.</summary>
     public enum ActionOneofCase {
       None = 0,
       Start = 4,
+      Signal = 5,
+      Update = 6,
     }
     private ActionOneofCase actionCase_ = ActionOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -14973,6 +15007,8 @@ namespace Temporal.Omes.KitchenSink {
       if (RunId != other.RunId) return false;
       if (!object.Equals(StartOptions, other.StartOptions)) return false;
       if (!object.Equals(Start, other.Start)) return false;
+      if (!object.Equals(Signal, other.Signal)) return false;
+      if (!object.Equals(Update, other.Update)) return false;
       if (ActionCase != other.ActionCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -14985,6 +15021,8 @@ namespace Temporal.Omes.KitchenSink {
       if (RunId.Length != 0) hash ^= RunId.GetHashCode();
       if (startOptions_ != null) hash ^= StartOptions.GetHashCode();
       if (actionCase_ == ActionOneofCase.Start) hash ^= Start.GetHashCode();
+      if (actionCase_ == ActionOneofCase.Signal) hash ^= Signal.GetHashCode();
+      if (actionCase_ == ActionOneofCase.Update) hash ^= Update.GetHashCode();
       hash ^= (int) actionCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -15020,6 +15058,14 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(34);
         output.WriteMessage(Start);
       }
+      if (actionCase_ == ActionOneofCase.Signal) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Signal);
+      }
+      if (actionCase_ == ActionOneofCase.Update) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Update);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -15046,6 +15092,14 @@ namespace Temporal.Omes.KitchenSink {
         output.WriteRawTag(34);
         output.WriteMessage(Start);
       }
+      if (actionCase_ == ActionOneofCase.Signal) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Signal);
+      }
+      if (actionCase_ == ActionOneofCase.Update) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Update);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -15067,6 +15121,12 @@ namespace Temporal.Omes.KitchenSink {
       }
       if (actionCase_ == ActionOneofCase.Start) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Start);
+      }
+      if (actionCase_ == ActionOneofCase.Signal) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Signal);
+      }
+      if (actionCase_ == ActionOneofCase.Update) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Update);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -15098,6 +15158,18 @@ namespace Temporal.Omes.KitchenSink {
             Start = new global::Google.Protobuf.WellKnownTypes.Empty();
           }
           Start.MergeFrom(other.Start);
+          break;
+        case ActionOneofCase.Signal:
+          if (Signal == null) {
+            Signal = new global::Temporal.Omes.KitchenSink.DoSignal();
+          }
+          Signal.MergeFrom(other.Signal);
+          break;
+        case ActionOneofCase.Update:
+          if (Update == null) {
+            Update = new global::Temporal.Omes.KitchenSink.DoUpdate();
+          }
+          Update.MergeFrom(other.Update);
           break;
       }
 
@@ -15140,6 +15212,24 @@ namespace Temporal.Omes.KitchenSink {
             Start = subBuilder;
             break;
           }
+          case 42: {
+            global::Temporal.Omes.KitchenSink.DoSignal subBuilder = new global::Temporal.Omes.KitchenSink.DoSignal();
+            if (actionCase_ == ActionOneofCase.Signal) {
+              subBuilder.MergeFrom(Signal);
+            }
+            input.ReadMessage(subBuilder);
+            Signal = subBuilder;
+            break;
+          }
+          case 50: {
+            global::Temporal.Omes.KitchenSink.DoUpdate subBuilder = new global::Temporal.Omes.KitchenSink.DoUpdate();
+            if (actionCase_ == ActionOneofCase.Update) {
+              subBuilder.MergeFrom(Update);
+            }
+            input.ReadMessage(subBuilder);
+            Update = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -15177,6 +15267,24 @@ namespace Temporal.Omes.KitchenSink {
             }
             input.ReadMessage(subBuilder);
             Start = subBuilder;
+            break;
+          }
+          case 42: {
+            global::Temporal.Omes.KitchenSink.DoSignal subBuilder = new global::Temporal.Omes.KitchenSink.DoSignal();
+            if (actionCase_ == ActionOneofCase.Signal) {
+              subBuilder.MergeFrom(Signal);
+            }
+            input.ReadMessage(subBuilder);
+            Signal = subBuilder;
+            break;
+          }
+          case 50: {
+            global::Temporal.Omes.KitchenSink.DoUpdate subBuilder = new global::Temporal.Omes.KitchenSink.DoUpdate();
+            if (actionCase_ == ActionOneofCase.Update) {
+              subBuilder.MergeFrom(Update);
+            }
+            input.ReadMessage(subBuilder);
+            Update = subBuilder;
             break;
           }
         }
