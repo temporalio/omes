@@ -3,6 +3,7 @@ package scenarios
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -239,6 +240,115 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 		`expected an in-workflow Nexus start-activity action`)
 	require.True(t, standalone,
 		`expected a standalone Nexus start-activity client action`)
+}
+
+func TestThroughputStressNexusWorkflowTargetSequence(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
+		RunID: "nexus-target-sequence",
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			NexusEnabledFlag:                "true",
+			NexusEndpointFlag:               "test-endpoint",
+			IncludeNexusSignalFlag:          "true",
+			IncludeNexusSignalWithStartFlag: "true",
+			IncludeNexusUpdateFlag:          "true",
+		}),
+	}))
+
+	const workflowID = "nexus-target"
+	seenSignalWithStartCreator := map[bool]bool{}
+	for seed := int64(0); seed < 100; seed++ {
+		actions := executor.createNexusWorkflowTargetSequence(
+			workflowID, rand.New(rand.NewSource(seed))).GetNestedActionSet().GetActions()
+
+		startedWithSignalWithStart := actions[0].GetNexusOperation().GetInput().
+			GetWorkflowAction().GetSignal().GetWithStart()
+		seenSignalWithStartCreator[startedWithSignalWithStart] = true
+
+		var starts, signals, signalWithStarts, updates int
+		for _, action := range actions {
+			operation := action.GetNexusOperation()
+			if operation == nil {
+				continue
+			}
+			require.Equal(t, "test-endpoint", operation.GetEndpoint())
+			require.Equal(t, ks.KitchenSinkNexusOperationName, operation.GetOperation())
+			workflowAction := operation.GetInput().GetWorkflowAction()
+			require.Equal(t, workflowID, workflowAction.GetWorkflowId())
+			switch {
+			case workflowAction.GetStart() != nil:
+				starts++
+			case workflowAction.GetSignal() != nil:
+				signals++
+				if workflowAction.GetSignal().GetWithStart() {
+					signalWithStarts++
+				}
+			case workflowAction.GetUpdate() != nil:
+				updates++
+			}
+		}
+
+		require.Equal(t, 2, signals)
+		require.Equal(t, 1, signalWithStarts)
+		require.Equal(t, 1, updates)
+		if startedWithSignalWithStart {
+			require.Zero(t, starts)
+		} else {
+			require.Equal(t, 1, starts)
+		}
+	}
+	require.Equal(t, map[bool]bool{false: true, true: true}, seenSignalWithStartCreator)
+}
+
+func TestThroughputStressNexusWorkflowTargetsAreDistinctAcrossChunks(t *testing.T) {
+	t.Parallel()
+
+	executor := newThroughputStressExecutor()
+	require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
+		RunID: "nexus-target-ids",
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                        "3",
+			ContinueAsNewAfterIterFlag:      "2",
+			NexusEnabledFlag:                "true",
+			NexusEndpointFlag:               "test-endpoint",
+			IncludeNexusSignalFlag:          "true",
+			IncludeNexusSignalWithStartFlag: "true",
+			IncludeNexusUpdateFlag:          "true",
+		}),
+	}))
+	run := (&loadgen.ScenarioInfo{
+		RunID:  "nexus-target-ids",
+		Logger: zap.NewNop().Sugar(),
+	}).NewRun(1)
+
+	workflowIDPrefix := run.DefaultStartWorkflowOptions().ID + "-nexus-target-"
+	workflowIDs := map[string]bool{}
+	collectWorkflowIDs := func(actions []*ks.Action) {
+		var walk func([]*ks.Action)
+		walk = func(actions []*ks.Action) {
+			for _, action := range actions {
+				operation := action.GetNexusOperation()
+				if workflowAction := operation.GetInput().GetWorkflowAction(); operation.GetOperation() == ks.KitchenSinkNexusOperationName &&
+					strings.HasPrefix(workflowAction.GetWorkflowId(), workflowIDPrefix) {
+					workflowIDs[workflowAction.GetWorkflowId()] = true
+				}
+				if nested := action.GetNestedActionSet(); nested != nil {
+					walk(nested.GetActions())
+				}
+			}
+		}
+		walk(actions)
+	}
+	collectWorkflowIDs(executor.createActionsChunk(run, rand.New(rand.NewSource(1)), 0, 0, 3))
+	collectWorkflowIDs(executor.createActionsChunk(run, rand.New(rand.NewSource(2)), 0, 1, 1))
+
+	require.Equal(t, map[string]bool{
+		workflowIDPrefix + "0": true,
+		workflowIDPrefix + "1": true,
+		workflowIDPrefix + "2": true,
+	}, workflowIDs)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
