@@ -614,8 +614,7 @@ func (t *tpsExecutor) createActionsChunk(
 					asyncActions = append(asyncActions,
 						t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 							Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
-								ActivityType:        &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
-								StartToCloseTimeout: durationpb.New(30 * time.Second),
+								ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
 							}},
 						}),
 					)
@@ -953,8 +952,7 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 				Operation: KitchenSinkNexusOperationName,
 				Input: &NexusOperationRequest{
 					Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
-						ActivityType:        &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
-						StartToCloseTimeout: durationpb.New(30 * time.Second),
+						ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
 					}},
 				},
 			},
