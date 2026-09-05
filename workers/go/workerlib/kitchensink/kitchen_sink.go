@@ -651,9 +651,7 @@ func nexusWorkflowOptions(input *kitchensink.NexusWorkflowAction, requestID stri
 		ID:                       cmp.Or(input.GetWorkflowId(), requestID),
 		TaskQueue:                startOptions.GetTaskQueue(),
 		WorkflowExecutionTimeout: 60 * time.Minute,
-	}
-	if input.GetWorkflowId() != "" {
-		workflowOptions.WorkflowIDConflictPolicy = startOptions.GetWorkflowIdConflictPolicy()
+		WorkflowIDConflictPolicy: startOptions.GetWorkflowIdConflictPolicy(),
 	}
 	return workflowOptions
 }

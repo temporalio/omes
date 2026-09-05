@@ -46,23 +46,15 @@ class KitchenSinkNexusServiceHandler:
                 if start.HasField("workflow_input")
                 else WorkflowInput()
             )
-            if workflow_action.workflow_id:
-                policy = temporalio.common.WorkflowIDConflictPolicy(
-                    cast(int, start.workflow_id_conflict_policy)
-                )
-                return await client.start_workflow(
-                    KitchenSinkWorkflow.run,
-                    workflow_input,
-                    id=workflow_action.workflow_id,
-                    task_queue=start.task_queue or None,
-                    id_conflict_policy=policy,
-                    execution_timeout=timedelta(minutes=60),
-                )
+            policy = temporalio.common.WorkflowIDConflictPolicy(
+                cast(int, start.workflow_id_conflict_policy)
+            )
             return await client.start_workflow(
                 KitchenSinkWorkflow.run,
                 workflow_input,
-                id=ctx.request_id,
+                id=workflow_action.workflow_id or ctx.request_id,
                 task_queue=start.task_queue or None,
+                id_conflict_policy=policy,
                 execution_timeout=timedelta(minutes=60),
             )
 
