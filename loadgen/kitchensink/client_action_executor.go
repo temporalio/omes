@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -129,8 +130,8 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
 		return err
-	} else if sano := action.GetDoStandaloneNexusOperation(); sano != nil {
-		return e.executeStandaloneNexusOperation(ctx, sano)
+	} else if standalone := action.GetDoStandaloneNexusOperation(); standalone != nil {
+		return e.executeStandaloneNexusOperation(ctx, standalone)
 	} else if sa := action.GetDoStandaloneActivity(); sa != nil {
 		return e.executeStandaloneActivity(ctx, sa)
 	} else if sa := action.GetDoStandaloneActivityOperatorCommands(); sa != nil {
@@ -205,17 +206,25 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	return run, err
 }
 
-func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, standalone *DoStandaloneNexusOperation) error {
+	nexusOp := standalone.GetOperation()
+	if nexusOp == nil {
+		return fmt.Errorf("DoStandaloneNexusOperation.operation is required")
+	}
+	service := nexusOp.GetService()
+	if service == "" {
+		service = "kitchen-sink"
+	}
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
 	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
-		Endpoint: sno.Endpoint,
-		Service:  sno.Service,
+		Endpoint: nexusOp.GetEndpoint(),
+		Service:  service,
 	})
 	if err != nil {
 		return fmt.Errorf("NewNexusClient: %w", err)
 	}
 
-	handle, err := nexusClient.ExecuteOperation(ctx, sno.Operation, &NexusHandlerInput{}, client.StartNexusOperationOptions{
+	handle, err := nexusClient.ExecuteOperation(ctx, nexusOp.GetOperation(), nexusOp.GetInput(), client.StartNexusOperationOptions{
 		ID:                     operationID,
 		ScheduleToCloseTimeout: 90 * time.Second,
 	})
@@ -223,9 +232,20 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		return fmt.Errorf("ExecuteOperation: %w", err)
 	}
 
+	if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
+		var result commonpb.Payload
+		if err := handle.Get(ctx, &result); err != nil {
+			return fmt.Errorf("Get Nexus operation: %w", err)
+		}
+		if !expectedOutput.Equal(&result) {
+			return fmt.Errorf("expected output %v, got %v", expectedOutput, &result)
+		}
+		return nil
+	}
+
 	err = handle.Get(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("Get standalone nexus operation: %w", err)
+		return fmt.Errorf("Get Nexus operation: %w", err)
 	}
 	return nil
 }

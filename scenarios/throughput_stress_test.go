@@ -213,14 +213,14 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	var walk func(actions []*ks.Action)
 	walk = func(actions []*ks.Action) {
 		for _, a := range actions {
-			if op := a.GetNexusOperation(); op.GetOperation() == "standalone-activity" {
+			if op := a.GetNexusOperation(); op.GetInput().GetStartActivity() != nil {
 				inWorkflow = true
 			}
 			// Find the nested standalone-Nexus client action.
 			if seq := a.GetExecActivity().GetClient().GetClientSequence(); seq != nil {
 				for _, set := range seq.GetActionSets() {
 					for _, ca := range set.GetActions() {
-						if sn := ca.GetDoStandaloneNexusOperation(); sn.GetOperation() == "standalone-activity" {
+						if sn := ca.GetDoStandaloneNexusOperation().GetOperation(); sn.GetInput().GetStartActivity() != nil {
 							standalone = true
 						}
 					}
@@ -236,9 +236,9 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	}
 
 	require.True(t, inWorkflow,
-		`expected an in-workflow Nexus operation action with Operation "standalone-activity"`)
+		`expected an in-workflow Nexus start-activity action`)
 	require.True(t, standalone,
-		`expected a DoStandaloneNexusOperation client action with Operation "standalone-activity"`)
+		`expected a standalone Nexus start-activity client action`)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {

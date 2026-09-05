@@ -14,7 +14,10 @@ import (
 )
 
 // Using human-readable JSON encoding for payloads to aid with debugging.
-var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
+var jsonPayloadConverter = converter.GetDefaultDataConverter()
+
+// KitchenSinkNexusOperationName is the operation exposed by the kitchen sink Nexus service.
+const KitchenSinkNexusOperationName = "execute"
 
 // ActivityNameAndArgs maps an ExecuteActivityAction's activity variant to the
 // registered activity name and its args. Shared by the workflow-scheduled path
@@ -85,6 +88,16 @@ func ClientActions(clientActions ...*ClientAction) *ClientSequence {
 				Actions: clientActions,
 			},
 		},
+	}
+}
+
+func NexusStartWorkflowRequest(workflowID string, options *NexusWorkflowStartOptions) *NexusOperationRequest {
+	return &NexusOperationRequest{
+		Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+			WorkflowId:   workflowID,
+			StartOptions: options,
+			Action:       &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+		}},
 	}
 }
 
