@@ -944,8 +944,11 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-sync",
-									Input:     "hello",
+									Operation:      KitchenSinkNexusOperationName,
+									ExpectedOutput: ConvertToPayload("hello"),
+									Input: &NexusOperationRequest{
+										Action: &NexusOperationRequest_Echo{Echo: "hello"},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
 											WaitFinish: &emptypb.Empty{},
@@ -957,9 +960,38 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationScheduled {"operation":"echo-sync"}
+				NexusOperationScheduled {"operation":"execute"}
 				NexusOperationCompleted`),
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+		},
+		{
+			name: "NexusOperation/Sync/ExpectedOutputMismatch",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_NexusOperation{
+								NexusOperation: &ExecuteNexusOperation{
+									Operation:      KitchenSinkNexusOperationName,
+									ExpectedOutput: ConvertToPayload("goodbye"),
+									Input: &NexusOperationRequest{
+										Action: &NexusOperationRequest_Echo{Echo: "hello"},
+									},
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_WaitFinish{
+											WaitFinish: &emptypb.Empty{},
+										},
+									},
+								},
+							},
+						}),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationScheduled {"operation":"execute"}
+				NexusOperationCompleted`),
+			expectedUnsupportedErrs: nexusUnsupportedSDKs,
+			expectedWorkflowError:   `goodbye`,
 		},
 		{
 			name: "NexusOperation/Async",
@@ -969,11 +1001,22 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-async",
-									Input:     "world",
-									BeforeActions: ListActionSet(
-										NewTimerAction(1),
-									),
+									Operation: KitchenSinkNexusOperationName,
+									Input: &NexusOperationRequest{
+										Action: &NexusOperationRequest_WorkflowAction{
+											WorkflowAction: &NexusWorkflowAction{
+												StartOptions: &NexusWorkflowStartOptions{
+													WorkflowInput: &WorkflowInput{
+														InitialActions: ListActionSet(
+															NewTimerAction(1),
+															NewEmptyReturnResultAction(),
+														),
+													},
+												},
+												Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+											},
+										},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
 											WaitFinish: &emptypb.Empty{},
@@ -985,7 +1028,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationScheduled {"operation":"echo-async"}
+				NexusOperationScheduled {"operation":"execute"}
 				NexusOperationStarted
 				NexusOperationCompleted`),
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
@@ -998,10 +1041,21 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-async",
-									BeforeActions: ListActionSet(
-										NewAwaitWorkflowStateAction("never", "resolves"),
-									),
+									Operation: KitchenSinkNexusOperationName,
+									Input: &NexusOperationRequest{
+										Action: &NexusOperationRequest_WorkflowAction{
+											WorkflowAction: &NexusWorkflowAction{
+												StartOptions: &NexusWorkflowStartOptions{
+													WorkflowInput: &WorkflowInput{
+														InitialActions: ListActionSet(
+															NewAwaitWorkflowStateAction("never", "resolves"),
+														),
+													},
+												},
+												Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+											},
+										},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_CancelAfterStarted{
 											CancelAfterStarted: &emptypb.Empty{},
@@ -1013,7 +1067,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationScheduled {"operation":"echo-async"}
+				NexusOperationScheduled {"operation":"execute"}
 				NexusOperationStarted
 				NexusOperationCancelRequested
 				NexusOperationCanceled`),
@@ -1027,8 +1081,10 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation: "echo-sync",
-									Input:     "abandoned",
+									Operation: KitchenSinkNexusOperationName,
+									Input: &NexusOperationRequest{
+										Action: &NexusOperationRequest_Echo{Echo: "abandoned"},
+									},
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_Abandon{
 											Abandon: &emptypb.Empty{},
@@ -1040,7 +1096,7 @@ func TestKitchenSink(t *testing.T) {
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationScheduled {"operation":"echo-sync"}
+				NexusOperationScheduled {"operation":"execute"}
 				...
 				WorkflowExecutionCompleted`),
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
@@ -1054,9 +1110,23 @@ func TestKitchenSink(t *testing.T) {
 							ClientActions(&ClientAction{
 								Variant: &ClientAction_DoStandaloneNexusOperation{
 									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
-										// Endpoint filled by PrepareTestInput
-										Service:   "kitchen-sink",
-										Operation: "echo-async",
+										Operation: &ExecuteNexusOperation{
+											// Endpoint filled by PrepareTestInput
+											Service:   KitchenSinkNexusServiceName,
+											Operation: KitchenSinkNexusOperationName,
+											Input: &NexusOperationRequest{
+												Action: &NexusOperationRequest_WorkflowAction{
+													WorkflowAction: &NexusWorkflowAction{
+														StartOptions: &NexusWorkflowStartOptions{
+															WorkflowInput: &WorkflowInput{
+																InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+															},
+														},
+														Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+													},
+												},
+											},
+										},
 									},
 								},
 							}),
@@ -1080,9 +1150,14 @@ func TestKitchenSink(t *testing.T) {
 							ClientActions(&ClientAction{
 								Variant: &ClientAction_DoStandaloneNexusOperation{
 									DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
-										// Endpoint filled by PrepareTestInput
-										Service:   "kitchen-sink",
-										Operation: "echo-sync",
+										Operation: &ExecuteNexusOperation{
+											// Endpoint filled by PrepareTestInput
+											Service:   KitchenSinkNexusServiceName,
+											Operation: KitchenSinkNexusOperationName,
+											Input: &NexusOperationRequest{
+												Action: &NexusOperationRequest_Echo{Echo: "hello"},
+											},
+										},
 									},
 								},
 							}),
@@ -1256,7 +1331,7 @@ func testForSDK(
 						if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
 							for _, cas := range clientSeq.ActionSets {
 								for _, ca := range cas.Actions {
-									if sno := ca.GetDoStandaloneNexusOperation(); sno != nil && sno.Endpoint == "" {
+									if sno := ca.GetDoStandaloneNexusOperation().GetOperation(); sno != nil && sno.Endpoint == "" {
 										sno.Endpoint = nexusEndpoint
 									}
 									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
