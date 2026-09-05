@@ -564,6 +564,8 @@ message NexusWorkflowAction {
   NexusWorkflowStartOptions start_options = 3;
   oneof action {
     google.protobuf.Empty start = 4;
+    DoSignal signal = 5;
+    DoUpdate update = 6;
   }
 }
 

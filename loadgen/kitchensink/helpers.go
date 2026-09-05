@@ -101,6 +101,95 @@ func NexusStartWorkflowRequest(workflowID string, options *NexusWorkflowStartOpt
 	}
 }
 
+func NexusSignalWorkflowRequest(
+	workflowID string,
+	runID string,
+	signal *DoSignal,
+	options *NexusWorkflowStartOptions,
+) *NexusOperationRequest {
+	return &NexusOperationRequest{
+		Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+			WorkflowId:   workflowID,
+			RunId:        runID,
+			StartOptions: options,
+			Action:       &NexusWorkflowAction_Signal{Signal: signal},
+		}},
+	}
+}
+
+func NexusUpdateWorkflowRequest(workflowID string, runID string, update *DoUpdate) *NexusOperationRequest {
+	return &NexusOperationRequest{
+		Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+			WorkflowId: workflowID,
+			RunId:      runID,
+			Action:     &NexusWorkflowAction_Update{Update: update},
+		}},
+	}
+}
+
+// NewNexusUpdateResultAction encodes a Payload as the workflow update result.
+// The server forwards that result directly to the Nexus completion callback.
+func NewNexusUpdateResultAction(value any) *Action {
+	return NewReturnResultAction(ConvertToPayload(ConvertToPayload(value)))
+}
+
+func NewNexusOperationAction(
+	endpoint string,
+	input *NexusOperationRequest,
+	expectedOutput *common.Payload,
+	awaitableChoice *AwaitableChoice,
+) *Action {
+	return &Action{
+		Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+			Endpoint:        endpoint,
+			Operation:       KitchenSinkNexusOperationName,
+			ExpectedOutput:  expectedOutput,
+			AwaitableChoice: awaitableChoice,
+			Input:           input,
+		}},
+	}
+}
+
+// NewNexusWorkflowTargetSequence starts one kitchenSink workflow, applies the
+// provided actions to it, then completes the target and awaits pending actions.
+func NewNexusWorkflowTargetSequence(endpoint string, workflowID string, startAction *Action, actions ...*Action) *Action {
+	if startAction == nil {
+		startAction = NewNexusOperationAction(endpoint,
+			NexusStartWorkflowRequest(workflowID, &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}}),
+			nil,
+			&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+		)
+	}
+	sequence := make([]*Action, 0, len(actions)+3)
+	sequence = append(sequence, startAction)
+	sequence = append(sequence, actions...)
+	sequence = append(sequence,
+		&Action{Variant: &Action_SendSignal{SendSignal: &SendSignalAction{
+			WorkflowId:      workflowID,
+			DoActions:       NewReturnResultSignal(),
+			AwaitableChoice: WaitFinishChoice(),
+		}}},
+		&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
+	)
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: sequence}}}
+}
+
+// WaitFinishChoice awaits an operation through to completion.
+func WaitFinishChoice() *AwaitableChoice {
+	return &AwaitableChoice{
+		Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+	}
+}
+
+// NewReturnResultSignal completes a kitchenSink workflow through do_actions_signal.
+func NewReturnResultSignal() *DoSignal_DoSignalActions {
+	return &DoSignal_DoSignalActions{
+		Variant: &DoSignal_DoSignalActions_DoActions{
+			DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+		},
+	}
+}
+
 func ClientActivity(clientSeq *ClientSequence, factory ActionFactory[ExecuteActivityAction]) *Action {
 	activity := &ExecuteActivityAction{
 		ActivityType: &ExecuteActivityAction_Client{
@@ -157,10 +246,14 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 }
 
 func NewEmptyReturnResultAction() *Action {
+	return NewReturnResultAction(&common.Payload{})
+}
+
+func NewReturnResultAction(payload *common.Payload) *Action {
 	return &Action{
 		Variant: &Action_ReturnResult{
 			ReturnResult: &ReturnResultAction{
-				ReturnThis: &common.Payload{},
+				ReturnThis: payload,
 			},
 		},
 	}

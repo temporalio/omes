@@ -57472,6 +57472,36 @@ java.lang.String defaultValue) {
      */
     com.google.protobuf.EmptyOrBuilder getStartOrBuilder();
 
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     * @return Whether the signal field is set.
+     */
+    boolean hasSignal();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     * @return The signal.
+     */
+    io.temporal.omes.KitchenSink.DoSignal getSignal();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     */
+    io.temporal.omes.KitchenSink.DoSignalOrBuilder getSignalOrBuilder();
+
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     * @return Whether the update field is set.
+     */
+    boolean hasUpdate();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     * @return The update.
+     */
+    io.temporal.omes.KitchenSink.DoUpdate getUpdate();
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     */
+    io.temporal.omes.KitchenSink.DoUpdateOrBuilder getUpdateOrBuilder();
+
     io.temporal.omes.KitchenSink.NexusWorkflowAction.ActionCase getActionCase();
   }
   /**
@@ -57519,6 +57549,8 @@ java.lang.String defaultValue) {
         implements com.google.protobuf.Internal.EnumLite,
             com.google.protobuf.AbstractMessage.InternalOneOfEnum {
       START(4),
+      SIGNAL(5),
+      UPDATE(6),
       ACTION_NOT_SET(0);
       private final int value;
       private ActionCase(int value) {
@@ -57537,6 +57569,8 @@ java.lang.String defaultValue) {
       public static ActionCase forNumber(int value) {
         switch (value) {
           case 4: return START;
+          case 5: return SIGNAL;
+          case 6: return UPDATE;
           case 0: return ACTION_NOT_SET;
           default: return null;
         }
@@ -57699,6 +57733,68 @@ java.lang.String defaultValue) {
       return com.google.protobuf.Empty.getDefaultInstance();
     }
 
+    public static final int SIGNAL_FIELD_NUMBER = 5;
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     * @return Whether the signal field is set.
+     */
+    @java.lang.Override
+    public boolean hasSignal() {
+      return actionCase_ == 5;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     * @return The signal.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoSignal getSignal() {
+      if (actionCase_ == 5) {
+         return (io.temporal.omes.KitchenSink.DoSignal) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoSignalOrBuilder getSignalOrBuilder() {
+      if (actionCase_ == 5) {
+         return (io.temporal.omes.KitchenSink.DoSignal) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+    }
+
+    public static final int UPDATE_FIELD_NUMBER = 6;
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     * @return Whether the update field is set.
+     */
+    @java.lang.Override
+    public boolean hasUpdate() {
+      return actionCase_ == 6;
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     * @return The update.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoUpdate getUpdate() {
+      if (actionCase_ == 6) {
+         return (io.temporal.omes.KitchenSink.DoUpdate) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+    }
+    /**
+     * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoUpdateOrBuilder getUpdateOrBuilder() {
+      if (actionCase_ == 6) {
+         return (io.temporal.omes.KitchenSink.DoUpdate) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -57725,6 +57821,12 @@ java.lang.String defaultValue) {
       if (actionCase_ == 4) {
         output.writeMessage(4, (com.google.protobuf.Empty) action_);
       }
+      if (actionCase_ == 5) {
+        output.writeMessage(5, (io.temporal.omes.KitchenSink.DoSignal) action_);
+      }
+      if (actionCase_ == 6) {
+        output.writeMessage(6, (io.temporal.omes.KitchenSink.DoUpdate) action_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -57747,6 +57849,14 @@ java.lang.String defaultValue) {
       if (actionCase_ == 4) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, (com.google.protobuf.Empty) action_);
+      }
+      if (actionCase_ == 5) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, (io.temporal.omes.KitchenSink.DoSignal) action_);
+      }
+      if (actionCase_ == 6) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, (io.temporal.omes.KitchenSink.DoUpdate) action_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -57778,6 +57888,14 @@ java.lang.String defaultValue) {
           if (!getStart()
               .equals(other.getStart())) return false;
           break;
+        case 5:
+          if (!getSignal()
+              .equals(other.getSignal())) return false;
+          break;
+        case 6:
+          if (!getUpdate()
+              .equals(other.getUpdate())) return false;
+          break;
         case 0:
         default:
       }
@@ -57804,6 +57922,14 @@ java.lang.String defaultValue) {
         case 4:
           hash = (37 * hash) + START_FIELD_NUMBER;
           hash = (53 * hash) + getStart().hashCode();
+          break;
+        case 5:
+          hash = (37 * hash) + SIGNAL_FIELD_NUMBER;
+          hash = (53 * hash) + getSignal().hashCode();
+          break;
+        case 6:
+          hash = (37 * hash) + UPDATE_FIELD_NUMBER;
+          hash = (53 * hash) + getUpdate().hashCode();
           break;
         case 0:
         default:
@@ -57955,6 +58081,12 @@ java.lang.String defaultValue) {
         if (startBuilder_ != null) {
           startBuilder_.clear();
         }
+        if (signalBuilder_ != null) {
+          signalBuilder_.clear();
+        }
+        if (updateBuilder_ != null) {
+          updateBuilder_.clear();
+        }
         actionCase_ = 0;
         action_ = null;
         return this;
@@ -58013,6 +58145,14 @@ java.lang.String defaultValue) {
         if (actionCase_ == 4 &&
             startBuilder_ != null) {
           result.action_ = startBuilder_.build();
+        }
+        if (actionCase_ == 5 &&
+            signalBuilder_ != null) {
+          result.action_ = signalBuilder_.build();
+        }
+        if (actionCase_ == 6 &&
+            updateBuilder_ != null) {
+          result.action_ = updateBuilder_.build();
         }
       }
 
@@ -58078,6 +58218,14 @@ java.lang.String defaultValue) {
             mergeStart(other.getStart());
             break;
           }
+          case SIGNAL: {
+            mergeSignal(other.getSignal());
+            break;
+          }
+          case UPDATE: {
+            mergeUpdate(other.getUpdate());
+            break;
+          }
           case ACTION_NOT_SET: {
             break;
           }
@@ -58132,6 +58280,20 @@ java.lang.String defaultValue) {
                 actionCase_ = 4;
                 break;
               } // case 34
+              case 42: {
+                input.readMessage(
+                    getSignalFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                actionCase_ = 5;
+                break;
+              } // case 42
+              case 50: {
+                input.readMessage(
+                    getUpdateFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                actionCase_ = 6;
+                break;
+              } // case 50
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -58605,6 +58767,290 @@ java.lang.String defaultValue) {
         actionCase_ = 4;
         onChanged();
         return startBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoSignal, io.temporal.omes.KitchenSink.DoSignal.Builder, io.temporal.omes.KitchenSink.DoSignalOrBuilder> signalBuilder_;
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       * @return Whether the signal field is set.
+       */
+      @java.lang.Override
+      public boolean hasSignal() {
+        return actionCase_ == 5;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       * @return The signal.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoSignal getSignal() {
+        if (signalBuilder_ == null) {
+          if (actionCase_ == 5) {
+            return (io.temporal.omes.KitchenSink.DoSignal) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+        } else {
+          if (actionCase_ == 5) {
+            return signalBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      public Builder setSignal(io.temporal.omes.KitchenSink.DoSignal value) {
+        if (signalBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          action_ = value;
+          onChanged();
+        } else {
+          signalBuilder_.setMessage(value);
+        }
+        actionCase_ = 5;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      public Builder setSignal(
+          io.temporal.omes.KitchenSink.DoSignal.Builder builderForValue) {
+        if (signalBuilder_ == null) {
+          action_ = builderForValue.build();
+          onChanged();
+        } else {
+          signalBuilder_.setMessage(builderForValue.build());
+        }
+        actionCase_ = 5;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      public Builder mergeSignal(io.temporal.omes.KitchenSink.DoSignal value) {
+        if (signalBuilder_ == null) {
+          if (actionCase_ == 5 &&
+              action_ != io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance()) {
+            action_ = io.temporal.omes.KitchenSink.DoSignal.newBuilder((io.temporal.omes.KitchenSink.DoSignal) action_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            action_ = value;
+          }
+          onChanged();
+        } else {
+          if (actionCase_ == 5) {
+            signalBuilder_.mergeFrom(value);
+          } else {
+            signalBuilder_.setMessage(value);
+          }
+        }
+        actionCase_ = 5;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      public Builder clearSignal() {
+        if (signalBuilder_ == null) {
+          if (actionCase_ == 5) {
+            actionCase_ = 0;
+            action_ = null;
+            onChanged();
+          }
+        } else {
+          if (actionCase_ == 5) {
+            actionCase_ = 0;
+            action_ = null;
+          }
+          signalBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      public io.temporal.omes.KitchenSink.DoSignal.Builder getSignalBuilder() {
+        return getSignalFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoSignalOrBuilder getSignalOrBuilder() {
+        if ((actionCase_ == 5) && (signalBuilder_ != null)) {
+          return signalBuilder_.getMessageOrBuilder();
+        } else {
+          if (actionCase_ == 5) {
+            return (io.temporal.omes.KitchenSink.DoSignal) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoSignal signal = 5;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoSignal, io.temporal.omes.KitchenSink.DoSignal.Builder, io.temporal.omes.KitchenSink.DoSignalOrBuilder> 
+          getSignalFieldBuilder() {
+        if (signalBuilder_ == null) {
+          if (!(actionCase_ == 5)) {
+            action_ = io.temporal.omes.KitchenSink.DoSignal.getDefaultInstance();
+          }
+          signalBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.DoSignal, io.temporal.omes.KitchenSink.DoSignal.Builder, io.temporal.omes.KitchenSink.DoSignalOrBuilder>(
+                  (io.temporal.omes.KitchenSink.DoSignal) action_,
+                  getParentForChildren(),
+                  isClean());
+          action_ = null;
+        }
+        actionCase_ = 5;
+        onChanged();
+        return signalBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoUpdate, io.temporal.omes.KitchenSink.DoUpdate.Builder, io.temporal.omes.KitchenSink.DoUpdateOrBuilder> updateBuilder_;
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       * @return Whether the update field is set.
+       */
+      @java.lang.Override
+      public boolean hasUpdate() {
+        return actionCase_ == 6;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       * @return The update.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoUpdate getUpdate() {
+        if (updateBuilder_ == null) {
+          if (actionCase_ == 6) {
+            return (io.temporal.omes.KitchenSink.DoUpdate) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+        } else {
+          if (actionCase_ == 6) {
+            return updateBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      public Builder setUpdate(io.temporal.omes.KitchenSink.DoUpdate value) {
+        if (updateBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          action_ = value;
+          onChanged();
+        } else {
+          updateBuilder_.setMessage(value);
+        }
+        actionCase_ = 6;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      public Builder setUpdate(
+          io.temporal.omes.KitchenSink.DoUpdate.Builder builderForValue) {
+        if (updateBuilder_ == null) {
+          action_ = builderForValue.build();
+          onChanged();
+        } else {
+          updateBuilder_.setMessage(builderForValue.build());
+        }
+        actionCase_ = 6;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      public Builder mergeUpdate(io.temporal.omes.KitchenSink.DoUpdate value) {
+        if (updateBuilder_ == null) {
+          if (actionCase_ == 6 &&
+              action_ != io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance()) {
+            action_ = io.temporal.omes.KitchenSink.DoUpdate.newBuilder((io.temporal.omes.KitchenSink.DoUpdate) action_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            action_ = value;
+          }
+          onChanged();
+        } else {
+          if (actionCase_ == 6) {
+            updateBuilder_.mergeFrom(value);
+          } else {
+            updateBuilder_.setMessage(value);
+          }
+        }
+        actionCase_ = 6;
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      public Builder clearUpdate() {
+        if (updateBuilder_ == null) {
+          if (actionCase_ == 6) {
+            actionCase_ = 0;
+            action_ = null;
+            onChanged();
+          }
+        } else {
+          if (actionCase_ == 6) {
+            actionCase_ = 0;
+            action_ = null;
+          }
+          updateBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      public io.temporal.omes.KitchenSink.DoUpdate.Builder getUpdateBuilder() {
+        return getUpdateFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoUpdateOrBuilder getUpdateOrBuilder() {
+        if ((actionCase_ == 6) && (updateBuilder_ != null)) {
+          return updateBuilder_.getMessageOrBuilder();
+        } else {
+          if (actionCase_ == 6) {
+            return (io.temporal.omes.KitchenSink.DoUpdate) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoUpdate, io.temporal.omes.KitchenSink.DoUpdate.Builder, io.temporal.omes.KitchenSink.DoUpdateOrBuilder> 
+          getUpdateFieldBuilder() {
+        if (updateBuilder_ == null) {
+          if (!(actionCase_ == 6)) {
+            action_ = io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
+          }
+          updateBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.DoUpdate, io.temporal.omes.KitchenSink.DoUpdate.Builder, io.temporal.omes.KitchenSink.DoUpdateOrBuilder>(
+                  (io.temporal.omes.KitchenSink.DoUpdate) action_,
+                  getParentForChildren(),
+                  isClean());
+          action_ = null;
+        }
+        actionCase_ = 6;
+        onChanged();
+        return updateBuilder_;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -60659,32 +61105,35 @@ java.lang.String defaultValue) {
       "ction\030\002 \001(\0132/.temporal.omes.kitchen_sink" +
       ".NexusWorkflowActionH\000\022K\n\016start_activity" +
       "\030\003 \001(\01321.temporal.omes.kitchen_sink.Exec" +
-      "uteActivityActionH\000B\010\n\006action\"\273\001\n\023NexusW" +
+      "uteActivityActionH\000B\010\n\006action\"\253\002\n\023NexusW" +
       "orkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006ru" +
       "n_id\030\002 \001(\t\022L\n\rstart_options\030\003 \001(\01325.temp" +
       "oral.omes.kitchen_sink.NexusWorkflowStar" +
       "tOptions\022\'\n\005start\030\004 \001(\0132\026.google.protobu" +
-      "f.EmptyH\000B\010\n\006action\"\310\001\n\031NexusWorkflowSta" +
-      "rtOptions\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033workflo" +
-      "w_id_conflict_policy\030\002 \001(\0162/.temporal.ap" +
-      "i.enums.v1.WorkflowIdConflictPolicy\022A\n\016w" +
-      "orkflow_input\030\003 \001(\0132).temporal.omes.kitc" +
-      "hen_sink.WorkflowInput\"\025\n\023AwaitPendingAc" +
-      "tions*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_CL" +
-      "OSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE" +
-      "_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLI" +
-      "CY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_REQU" +
-      "EST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UNSP" +
-      "ECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242" +
-      "\001\n\035ChildWorkflowCancellationType\022\024\n\020CHIL" +
-      "D_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022" +
-      "(\n$CHILD_WF_WAIT_CANCELLATION_COMPLETED\020" +
-      "\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQUESTE" +
-      "D\020\003*X\n\030ActivityCancellationType\022\016\n\nTRY_C" +
-      "ANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED\020\001" +
-      "\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.githu" +
-      "b.com/temporalio/omes/loadgen/kitchensin" +
-      "kb\006proto3"
+      "f.EmptyH\000\0226\n\006signal\030\005 \001(\0132$.temporal.ome" +
+      "s.kitchen_sink.DoSignalH\000\0226\n\006update\030\006 \001(" +
+      "\0132$.temporal.omes.kitchen_sink.DoUpdateH" +
+      "\000B\010\n\006action\"\310\001\n\031NexusWorkflowStartOption" +
+      "s\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033workflow_id_con" +
+      "flict_policy\030\002 \001(\0162/.temporal.api.enums." +
+      "v1.WorkflowIdConflictPolicy\022A\n\016workflow_" +
+      "input\030\003 \001(\0132).temporal.omes.kitchen_sink" +
+      ".WorkflowInput\"\025\n\023AwaitPendingActions*\244\001" +
+      "\n\021ParentClosePolicy\022#\n\037PARENT_CLOSE_POLI" +
+      "CY_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLICY_" +
+      "TERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_ABAND" +
+      "ON\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_CANC" +
+      "EL\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFIED\020" +
+      "\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035Child" +
+      "WorkflowCancellationType\022\024\n\020CHILD_WF_ABA" +
+      "NDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CHILD" +
+      "_WF_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$CHI" +
+      "LD_WF_WAIT_CANCELLATION_REQUESTED\020\003*X\n\030A" +
+      "ctivityCancellationType\022\016\n\nTRY_CANCEL\020\000\022" +
+      "\037\n\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007ABAN" +
+      "DON\020\002BB\n\020io.temporal.omesZ.github.com/te" +
+      "mporalio/omes/loadgen/kitchensinkb\006proto" +
+      "3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -61018,7 +61467,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_NexusWorkflowAction_descriptor,
-        new java.lang.String[] { "WorkflowId", "RunId", "StartOptions", "Start", "Action", });
+        new java.lang.String[] { "WorkflowId", "RunId", "StartOptions", "Start", "Signal", "Update", "Action", });
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowStartOptions_descriptor =
       getDescriptor().getMessageTypes().get(35);
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowStartOptions_fieldAccessorTable = new
