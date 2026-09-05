@@ -589,6 +589,7 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 			if t.config.IncludeStandaloneNexus {
 				asyncActions = append(asyncActions,
+					// async
 					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{
 							WorkflowAction: &NexusWorkflowAction{
@@ -601,6 +602,7 @@ func (t *tpsExecutor) createActionsChunk(
 							},
 						},
 					}),
+					// sync
 					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 						Action: &NexusOperationRequest_Echo{Echo: "hello"},
 					}),
