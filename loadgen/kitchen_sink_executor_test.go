@@ -1218,7 +1218,13 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NewNexusWorkflowTargetSequence("", "nexus-signal-target", nil,
 					NewNexusOperationAction("",
-						NexusSignalWorkflowRequest("nexus-signal-target", "", &DoSignal{}, nil),
+						NexusSignalWorkflowRequest("nexus-signal-target", "", &DoSignal{
+							Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+								Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
+									NewSetWorkflowStateAction("status", "done"),
+								)},
+							}},
+						}, nil),
 						ConvertToPayload("nexus-signal-target"),
 						WaitFinishChoice(),
 					),
@@ -1233,8 +1239,14 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NewNexusWorkflowTargetSequence("", "nexus-sws-target",
 					NewNexusOperationAction("",
-						NexusSignalWorkflowRequest("nexus-sws-target", "", &DoSignal{WithStart: true},
-							&NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}}),
+						NexusSignalWorkflowRequest("nexus-sws-target", "", &DoSignal{
+							Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+								Variant: &DoSignal_DoSignalActions_DoActionsInMain{DoActionsInMain: SingleActionSet(
+									NewEmptyReturnResultAction(),
+								)},
+							}},
+							WithStart: true,
+						}, &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}}),
 						ConvertToPayload("nexus-sws-target"),
 						WaitFinishChoice(),
 					),
@@ -1252,6 +1264,7 @@ func TestKitchenSink(t *testing.T) {
 						NexusUpdateWorkflowRequest("nexus-update-target", "", &DoUpdate{
 							Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 								Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+									NewSetWorkflowStateAction("status", "done"),
 									NewNexusUpdateResultAction("nexus-update-target"),
 								)},
 							}},
