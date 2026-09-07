@@ -213,7 +213,9 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               () -> {
                 Promise promise =
                     Async.procedure(
-                        stub::signal, sendSignal.getSignalName(), sendSignal.getArgsList());
+                        stub::signal,
+                        sendSignal.getSignalName(),
+                        sendSignal.getArgsList().toArray());
                 handlePromise(promise, sendSignal.getAwaitableChoice());
               });
       scope.run();

@@ -335,7 +335,9 @@ async def handle_send_signal(
         ext_handle = workflow.get_external_workflow_handle(
             action.workflow_id, run_id=action.run_id or None
         )
-        await ext_handle.signal(action.signal_name)
+        await ext_handle.signal(
+            action.signal_name, args=[RawValue(arg) for arg in action.args]
+        )
 
     await handle_awaitable_choice(deliver(), action.awaitable_choice, pending=pending)
 
