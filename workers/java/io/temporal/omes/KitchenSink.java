@@ -54110,60 +54110,6 @@ io.temporal.api.common.v1.Payload defaultValue) {
 
     /**
      * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    int getHeadersCount();
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    boolean containsHeaders(
-        java.lang.String key);
-    /**
-     * Use {@link #getHeadersMap()} instead.
-     */
-    @java.lang.Deprecated
-    java.util.Map<java.lang.String, java.lang.String>
-    getHeaders();
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    java.util.Map<java.lang.String, java.lang.String>
-    getHeadersMap();
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    /* nullable */
-java.lang.String getHeadersOrDefault(
-        java.lang.String key,
-        /* nullable */
-java.lang.String defaultValue);
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    java.lang.String getHeadersOrThrow(
-        java.lang.String key);
-
-    /**
-     * <pre>
      * How to await on the operation
      * </pre>
      *
@@ -54340,18 +54286,6 @@ java.lang.String defaultValue);
       return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor;
     }
 
-    @SuppressWarnings({"rawtypes"})
-    @java.lang.Override
-    protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
-        int number) {
-      switch (number) {
-        case 4:
-          return internalGetHeaders();
-        default:
-          throw new RuntimeException(
-              "Invalid map field number: " + number);
-      }
-    }
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
         internalGetFieldAccessorTable() {
@@ -54492,101 +54426,6 @@ java.lang.String defaultValue);
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
-    }
-
-    public static final int HEADERS_FIELD_NUMBER = 4;
-    private static final class HeadersDefaultEntryHolder {
-      static final com.google.protobuf.MapEntry<
-          java.lang.String, java.lang.String> defaultEntry =
-              com.google.protobuf.MapEntry
-              .<java.lang.String, java.lang.String>newDefaultInstance(
-                  io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor, 
-                  com.google.protobuf.WireFormat.FieldType.STRING,
-                  "",
-                  com.google.protobuf.WireFormat.FieldType.STRING,
-                  "");
-    }
-    @SuppressWarnings("serial")
-    private com.google.protobuf.MapField<
-        java.lang.String, java.lang.String> headers_;
-    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-    internalGetHeaders() {
-      if (headers_ == null) {
-        return com.google.protobuf.MapField.emptyMapField(
-            HeadersDefaultEntryHolder.defaultEntry);
-      }
-      return headers_;
-    }
-    public int getHeadersCount() {
-      return internalGetHeaders().getMap().size();
-    }
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    @java.lang.Override
-    public boolean containsHeaders(
-        java.lang.String key) {
-      if (key == null) { throw new NullPointerException("map key"); }
-      return internalGetHeaders().getMap().containsKey(key);
-    }
-    /**
-     * Use {@link #getHeadersMap()} instead.
-     */
-    @java.lang.Override
-    @java.lang.Deprecated
-    public java.util.Map<java.lang.String, java.lang.String> getHeaders() {
-      return getHeadersMap();
-    }
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    @java.lang.Override
-    public java.util.Map<java.lang.String, java.lang.String> getHeadersMap() {
-      return internalGetHeaders().getMap();
-    }
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    @java.lang.Override
-    public /* nullable */
-java.lang.String getHeadersOrDefault(
-        java.lang.String key,
-        /* nullable */
-java.lang.String defaultValue) {
-      if (key == null) { throw new NullPointerException("map key"); }
-      java.util.Map<java.lang.String, java.lang.String> map =
-          internalGetHeaders().getMap();
-      return map.containsKey(key) ? map.get(key) : defaultValue;
-    }
-    /**
-     * <pre>
-     * Headers to send with the operation
-     * </pre>
-     *
-     * <code>map&lt;string, string&gt; headers = 4;</code>
-     */
-    @java.lang.Override
-    public java.lang.String getHeadersOrThrow(
-        java.lang.String key) {
-      if (key == null) { throw new NullPointerException("map key"); }
-      java.util.Map<java.lang.String, java.lang.String> map =
-          internalGetHeaders().getMap();
-      if (!map.containsKey(key)) {
-        throw new java.lang.IllegalArgumentException();
-      }
-      return map.get(key);
     }
 
     public static final int AWAITABLE_CHOICE_FIELD_NUMBER = 5;
@@ -54846,12 +54685,6 @@ java.lang.String defaultValue) {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(input_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, input_);
       }
-      com.google.protobuf.GeneratedMessageV3
-        .serializeStringMapTo(
-          output,
-          internalGetHeaders(),
-          HeadersDefaultEntryHolder.defaultEntry,
-          4);
       if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(5, getAwaitableChoice());
       }
@@ -54887,16 +54720,6 @@ java.lang.String defaultValue) {
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(input_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, input_);
-      }
-      for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
-           : internalGetHeaders().getMap().entrySet()) {
-        com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-        headers__ = HeadersDefaultEntryHolder.defaultEntry.newBuilderForType()
-            .setKey(entry.getKey())
-            .setValue(entry.getValue())
-            .build();
-        size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(4, headers__);
       }
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
@@ -54941,8 +54764,6 @@ java.lang.String defaultValue) {
           .equals(other.getOperation())) return false;
       if (!getInput()
           .equals(other.getInput())) return false;
-      if (!internalGetHeaders().equals(
-          other.internalGetHeaders())) return false;
       if (hasAwaitableChoice() != other.hasAwaitableChoice()) return false;
       if (hasAwaitableChoice()) {
         if (!getAwaitableChoice()
@@ -54974,10 +54795,6 @@ java.lang.String defaultValue) {
       hash = (53 * hash) + getOperation().hashCode();
       hash = (37 * hash) + INPUT_FIELD_NUMBER;
       hash = (53 * hash) + getInput().hashCode();
-      if (!internalGetHeaders().getMap().isEmpty()) {
-        hash = (37 * hash) + HEADERS_FIELD_NUMBER;
-        hash = (53 * hash) + internalGetHeaders().hashCode();
-      }
       if (hasAwaitableChoice()) {
         hash = (37 * hash) + AWAITABLE_CHOICE_FIELD_NUMBER;
         hash = (53 * hash) + getAwaitableChoice().hashCode();
@@ -55108,28 +54925,6 @@ java.lang.String defaultValue) {
         return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor;
       }
 
-      @SuppressWarnings({"rawtypes"})
-      protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
-          int number) {
-        switch (number) {
-          case 4:
-            return internalGetHeaders();
-          default:
-            throw new RuntimeException(
-                "Invalid map field number: " + number);
-        }
-      }
-      @SuppressWarnings({"rawtypes"})
-      protected com.google.protobuf.MapFieldReflectionAccessor internalGetMutableMapFieldReflection(
-          int number) {
-        switch (number) {
-          case 4:
-            return internalGetMutableHeaders();
-          default:
-            throw new RuntimeException(
-                "Invalid map field number: " + number);
-        }
-      }
       @java.lang.Override
       protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
           internalGetFieldAccessorTable() {
@@ -55162,7 +54957,6 @@ java.lang.String defaultValue) {
         endpoint_ = "";
         operation_ = "";
         input_ = "";
-        internalGetMutableHeaders().clear();
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
           awaitableChoiceBuilder_.dispose();
@@ -55175,7 +54969,7 @@ java.lang.String defaultValue) {
           beforeActions_ = null;
           beforeActionsBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000020);
         handlerWorkflowId_ = "";
         handlerWorkflowIdConflictPolicy_ = 0;
         waitForSignal_ = false;
@@ -55213,9 +55007,9 @@ java.lang.String defaultValue) {
 
       private void buildPartialRepeatedFields(io.temporal.omes.KitchenSink.ExecuteNexusOperation result) {
         if (beforeActionsBuilder_ == null) {
-          if (((bitField0_ & 0x00000040) != 0)) {
+          if (((bitField0_ & 0x00000020) != 0)) {
             beforeActions_ = java.util.Collections.unmodifiableList(beforeActions_);
-            bitField0_ = (bitField0_ & ~0x00000040);
+            bitField0_ = (bitField0_ & ~0x00000020);
           }
           result.beforeActions_ = beforeActions_;
         } else {
@@ -55234,27 +55028,23 @@ java.lang.String defaultValue) {
         if (((from_bitField0_ & 0x00000004) != 0)) {
           result.input_ = input_;
         }
-        if (((from_bitField0_ & 0x00000008) != 0)) {
-          result.headers_ = internalGetHeaders();
-          result.headers_.makeImmutable();
-        }
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000010) != 0)) {
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           result.awaitableChoice_ = awaitableChoiceBuilder_ == null
               ? awaitableChoice_
               : awaitableChoiceBuilder_.build();
           to_bitField0_ |= 0x00000001;
         }
-        if (((from_bitField0_ & 0x00000020) != 0)) {
+        if (((from_bitField0_ & 0x00000010) != 0)) {
           result.expectedOutput_ = expectedOutput_;
         }
-        if (((from_bitField0_ & 0x00000080) != 0)) {
+        if (((from_bitField0_ & 0x00000040) != 0)) {
           result.handlerWorkflowId_ = handlerWorkflowId_;
         }
-        if (((from_bitField0_ & 0x00000100) != 0)) {
+        if (((from_bitField0_ & 0x00000080) != 0)) {
           result.handlerWorkflowIdConflictPolicy_ = handlerWorkflowIdConflictPolicy_;
         }
-        if (((from_bitField0_ & 0x00000200) != 0)) {
+        if (((from_bitField0_ & 0x00000100) != 0)) {
           result.waitForSignal_ = waitForSignal_;
         }
         result.bitField0_ |= to_bitField0_;
@@ -55319,22 +55109,19 @@ java.lang.String defaultValue) {
           bitField0_ |= 0x00000004;
           onChanged();
         }
-        internalGetMutableHeaders().mergeFrom(
-            other.internalGetHeaders());
-        bitField0_ |= 0x00000008;
         if (other.hasAwaitableChoice()) {
           mergeAwaitableChoice(other.getAwaitableChoice());
         }
         if (!other.getExpectedOutput().isEmpty()) {
           expectedOutput_ = other.expectedOutput_;
-          bitField0_ |= 0x00000020;
+          bitField0_ |= 0x00000010;
           onChanged();
         }
         if (beforeActionsBuilder_ == null) {
           if (!other.beforeActions_.isEmpty()) {
             if (beforeActions_.isEmpty()) {
               beforeActions_ = other.beforeActions_;
-              bitField0_ = (bitField0_ & ~0x00000040);
+              bitField0_ = (bitField0_ & ~0x00000020);
             } else {
               ensureBeforeActionsIsMutable();
               beforeActions_.addAll(other.beforeActions_);
@@ -55347,7 +55134,7 @@ java.lang.String defaultValue) {
               beforeActionsBuilder_.dispose();
               beforeActionsBuilder_ = null;
               beforeActions_ = other.beforeActions_;
-              bitField0_ = (bitField0_ & ~0x00000040);
+              bitField0_ = (bitField0_ & ~0x00000020);
               beforeActionsBuilder_ = 
                 com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
                    getBeforeActionsFieldBuilder() : null;
@@ -55358,7 +55145,7 @@ java.lang.String defaultValue) {
         }
         if (!other.getHandlerWorkflowId().isEmpty()) {
           handlerWorkflowId_ = other.handlerWorkflowId_;
-          bitField0_ |= 0x00000080;
+          bitField0_ |= 0x00000040;
           onChanged();
         }
         if (other.handlerWorkflowIdConflictPolicy_ != 0) {
@@ -55408,25 +55195,16 @@ java.lang.String defaultValue) {
                 bitField0_ |= 0x00000004;
                 break;
               } // case 26
-              case 34: {
-                com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
-                headers__ = input.readMessage(
-                    HeadersDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
-                internalGetMutableHeaders().getMutableMap().put(
-                    headers__.getKey(), headers__.getValue());
-                bitField0_ |= 0x00000008;
-                break;
-              } // case 34
               case 42: {
                 input.readMessage(
                     getAwaitableChoiceFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000010;
+                bitField0_ |= 0x00000008;
                 break;
               } // case 42
               case 50: {
                 expectedOutput_ = input.readStringRequireUtf8();
-                bitField0_ |= 0x00000020;
+                bitField0_ |= 0x00000010;
                 break;
               } // case 50
               case 58: {
@@ -55444,17 +55222,17 @@ java.lang.String defaultValue) {
               } // case 58
               case 66: {
                 handlerWorkflowId_ = input.readStringRequireUtf8();
-                bitField0_ |= 0x00000080;
+                bitField0_ |= 0x00000040;
                 break;
               } // case 66
               case 72: {
                 handlerWorkflowIdConflictPolicy_ = input.readEnum();
-                bitField0_ |= 0x00000100;
+                bitField0_ |= 0x00000080;
                 break;
               } // case 72
               case 80: {
                 waitForSignal_ = input.readBool();
-                bitField0_ |= 0x00000200;
+                bitField0_ |= 0x00000100;
                 break;
               } // case 80
               default: {
@@ -55730,161 +55508,6 @@ java.lang.String defaultValue) {
         return this;
       }
 
-      private com.google.protobuf.MapField<
-          java.lang.String, java.lang.String> headers_;
-      private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-          internalGetHeaders() {
-        if (headers_ == null) {
-          return com.google.protobuf.MapField.emptyMapField(
-              HeadersDefaultEntryHolder.defaultEntry);
-        }
-        return headers_;
-      }
-      private com.google.protobuf.MapField<java.lang.String, java.lang.String>
-          internalGetMutableHeaders() {
-        if (headers_ == null) {
-          headers_ = com.google.protobuf.MapField.newMapField(
-              HeadersDefaultEntryHolder.defaultEntry);
-        }
-        if (!headers_.isMutable()) {
-          headers_ = headers_.copy();
-        }
-        bitField0_ |= 0x00000008;
-        onChanged();
-        return headers_;
-      }
-      public int getHeadersCount() {
-        return internalGetHeaders().getMap().size();
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      @java.lang.Override
-      public boolean containsHeaders(
-          java.lang.String key) {
-        if (key == null) { throw new NullPointerException("map key"); }
-        return internalGetHeaders().getMap().containsKey(key);
-      }
-      /**
-       * Use {@link #getHeadersMap()} instead.
-       */
-      @java.lang.Override
-      @java.lang.Deprecated
-      public java.util.Map<java.lang.String, java.lang.String> getHeaders() {
-        return getHeadersMap();
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      @java.lang.Override
-      public java.util.Map<java.lang.String, java.lang.String> getHeadersMap() {
-        return internalGetHeaders().getMap();
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      @java.lang.Override
-      public /* nullable */
-java.lang.String getHeadersOrDefault(
-          java.lang.String key,
-          /* nullable */
-java.lang.String defaultValue) {
-        if (key == null) { throw new NullPointerException("map key"); }
-        java.util.Map<java.lang.String, java.lang.String> map =
-            internalGetHeaders().getMap();
-        return map.containsKey(key) ? map.get(key) : defaultValue;
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      @java.lang.Override
-      public java.lang.String getHeadersOrThrow(
-          java.lang.String key) {
-        if (key == null) { throw new NullPointerException("map key"); }
-        java.util.Map<java.lang.String, java.lang.String> map =
-            internalGetHeaders().getMap();
-        if (!map.containsKey(key)) {
-          throw new java.lang.IllegalArgumentException();
-        }
-        return map.get(key);
-      }
-      public Builder clearHeaders() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        internalGetMutableHeaders().getMutableMap()
-            .clear();
-        return this;
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      public Builder removeHeaders(
-          java.lang.String key) {
-        if (key == null) { throw new NullPointerException("map key"); }
-        internalGetMutableHeaders().getMutableMap()
-            .remove(key);
-        return this;
-      }
-      /**
-       * Use alternate mutation accessors instead.
-       */
-      @java.lang.Deprecated
-      public java.util.Map<java.lang.String, java.lang.String>
-          getMutableHeaders() {
-        bitField0_ |= 0x00000008;
-        return internalGetMutableHeaders().getMutableMap();
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      public Builder putHeaders(
-          java.lang.String key,
-          java.lang.String value) {
-        if (key == null) { throw new NullPointerException("map key"); }
-        if (value == null) { throw new NullPointerException("map value"); }
-        internalGetMutableHeaders().getMutableMap()
-            .put(key, value);
-        bitField0_ |= 0x00000008;
-        return this;
-      }
-      /**
-       * <pre>
-       * Headers to send with the operation
-       * </pre>
-       *
-       * <code>map&lt;string, string&gt; headers = 4;</code>
-       */
-      public Builder putAllHeaders(
-          java.util.Map<java.lang.String, java.lang.String> values) {
-        internalGetMutableHeaders().getMutableMap()
-            .putAll(values);
-        bitField0_ |= 0x00000008;
-        return this;
-      }
-
       private io.temporal.omes.KitchenSink.AwaitableChoice awaitableChoice_;
       private com.google.protobuf.SingleFieldBuilderV3<
           io.temporal.omes.KitchenSink.AwaitableChoice, io.temporal.omes.KitchenSink.AwaitableChoice.Builder, io.temporal.omes.KitchenSink.AwaitableChoiceOrBuilder> awaitableChoiceBuilder_;
@@ -55897,7 +55520,7 @@ java.lang.String defaultValue) {
        * @return Whether the awaitableChoice field is set.
        */
       public boolean hasAwaitableChoice() {
-        return ((bitField0_ & 0x00000010) != 0);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <pre>
@@ -55930,7 +55553,7 @@ java.lang.String defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
@@ -55948,7 +55571,7 @@ java.lang.String defaultValue) {
         } else {
           awaitableChoiceBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
@@ -55961,7 +55584,7 @@ java.lang.String defaultValue) {
        */
       public Builder mergeAwaitableChoice(io.temporal.omes.KitchenSink.AwaitableChoice value) {
         if (awaitableChoiceBuilder_ == null) {
-          if (((bitField0_ & 0x00000010) != 0) &&
+          if (((bitField0_ & 0x00000008) != 0) &&
             awaitableChoice_ != null &&
             awaitableChoice_ != io.temporal.omes.KitchenSink.AwaitableChoice.getDefaultInstance()) {
             getAwaitableChoiceBuilder().mergeFrom(value);
@@ -55972,7 +55595,7 @@ java.lang.String defaultValue) {
           awaitableChoiceBuilder_.mergeFrom(value);
         }
         if (awaitableChoice_ != null) {
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000008;
           onChanged();
         }
         return this;
@@ -55985,7 +55608,7 @@ java.lang.String defaultValue) {
        * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public Builder clearAwaitableChoice() {
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000008);
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
           awaitableChoiceBuilder_.dispose();
@@ -56002,7 +55625,7 @@ java.lang.String defaultValue) {
        * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 5;</code>
        */
       public io.temporal.omes.KitchenSink.AwaitableChoice.Builder getAwaitableChoiceBuilder() {
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000008;
         onChanged();
         return getAwaitableChoiceFieldBuilder().getBuilder();
       }
@@ -56097,7 +55720,7 @@ java.lang.String defaultValue) {
           java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         expectedOutput_ = value;
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -56111,7 +55734,7 @@ java.lang.String defaultValue) {
        */
       public Builder clearExpectedOutput() {
         expectedOutput_ = getDefaultInstance().getExpectedOutput();
-        bitField0_ = (bitField0_ & ~0x00000020);
+        bitField0_ = (bitField0_ & ~0x00000010);
         onChanged();
         return this;
       }
@@ -56129,7 +55752,7 @@ java.lang.String defaultValue) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         expectedOutput_ = value;
-        bitField0_ |= 0x00000020;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -56137,9 +55760,9 @@ java.lang.String defaultValue) {
       private java.util.List<io.temporal.omes.KitchenSink.ActionSet> beforeActions_ =
         java.util.Collections.emptyList();
       private void ensureBeforeActionsIsMutable() {
-        if (!((bitField0_ & 0x00000040) != 0)) {
+        if (!((bitField0_ & 0x00000020) != 0)) {
           beforeActions_ = new java.util.ArrayList<io.temporal.omes.KitchenSink.ActionSet>(beforeActions_);
-          bitField0_ |= 0x00000040;
+          bitField0_ |= 0x00000020;
          }
       }
 
@@ -56333,7 +55956,7 @@ java.lang.String defaultValue) {
       public Builder clearBeforeActions() {
         if (beforeActionsBuilder_ == null) {
           beforeActions_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000040);
+          bitField0_ = (bitField0_ & ~0x00000020);
           onChanged();
         } else {
           beforeActionsBuilder_.clear();
@@ -56438,7 +56061,7 @@ java.lang.String defaultValue) {
           beforeActionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               io.temporal.omes.KitchenSink.ActionSet, io.temporal.omes.KitchenSink.ActionSet.Builder, io.temporal.omes.KitchenSink.ActionSetOrBuilder>(
                   beforeActions_,
-                  ((bitField0_ & 0x00000040) != 0),
+                  ((bitField0_ & 0x00000020) != 0),
                   getParentForChildren(),
                   isClean());
           beforeActions_ = null;
@@ -56501,7 +56124,7 @@ java.lang.String defaultValue) {
           java.lang.String value) {
         if (value == null) { throw new NullPointerException(); }
         handlerWorkflowId_ = value;
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000040;
         onChanged();
         return this;
       }
@@ -56515,7 +56138,7 @@ java.lang.String defaultValue) {
        */
       public Builder clearHandlerWorkflowId() {
         handlerWorkflowId_ = getDefaultInstance().getHandlerWorkflowId();
-        bitField0_ = (bitField0_ & ~0x00000080);
+        bitField0_ = (bitField0_ & ~0x00000040);
         onChanged();
         return this;
       }
@@ -56533,7 +56156,7 @@ java.lang.String defaultValue) {
         if (value == null) { throw new NullPointerException(); }
         checkByteStringIsUtf8(value);
         handlerWorkflowId_ = value;
-        bitField0_ |= 0x00000080;
+        bitField0_ |= 0x00000040;
         onChanged();
         return this;
       }
@@ -56561,7 +56184,7 @@ java.lang.String defaultValue) {
        */
       public Builder setHandlerWorkflowIdConflictPolicyValue(int value) {
         handlerWorkflowIdConflictPolicy_ = value;
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000080;
         onChanged();
         return this;
       }
@@ -56591,7 +56214,7 @@ java.lang.String defaultValue) {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000100;
+        bitField0_ |= 0x00000080;
         handlerWorkflowIdConflictPolicy_ = value.getNumber();
         onChanged();
         return this;
@@ -56605,7 +56228,7 @@ java.lang.String defaultValue) {
        * @return This builder for chaining.
        */
       public Builder clearHandlerWorkflowIdConflictPolicy() {
-        bitField0_ = (bitField0_ & ~0x00000100);
+        bitField0_ = (bitField0_ & ~0x00000080);
         handlerWorkflowIdConflictPolicy_ = 0;
         onChanged();
         return this;
@@ -56636,7 +56259,7 @@ java.lang.String defaultValue) {
       public Builder setWaitForSignal(boolean value) {
 
         waitForSignal_ = value;
-        bitField0_ |= 0x00000200;
+        bitField0_ |= 0x00000100;
         onChanged();
         return this;
       }
@@ -56649,7 +56272,7 @@ java.lang.String defaultValue) {
        * @return This builder for chaining.
        */
       public Builder clearWaitForSignal() {
-        bitField0_ = (bitField0_ & ~0x00000200);
+        bitField0_ = (bitField0_ & ~0x00000100);
         waitForSignal_ = false;
         onChanged();
         return this;
@@ -58665,11 +58288,6 @@ java.lang.String defaultValue) {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor;
-  private static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_fieldAccessorTable;
-  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -58959,40 +58577,37 @@ java.lang.String defaultValue) {
       ".ActivityCancellationType\022\036\n\026do_not_eage" +
       "rly_execute\030\002 \001(\010\022G\n\021versioning_intent\030\003" +
       " \001(\0162,.temporal.omes.kitchen_sink.Versio" +
-      "ningIntent\"\377\003\n\025ExecuteNexusOperation\022\020\n\010" +
+      "ningIntent\"\376\002\n\025ExecuteNexusOperation\022\020\n\010" +
       "endpoint\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t\022\r\n\005inp" +
-      "ut\030\003 \001(\t\022O\n\007headers\030\004 \003(\0132>.temporal.ome" +
-      "s.kitchen_sink.ExecuteNexusOperation.Hea" +
-      "dersEntry\022E\n\020awaitable_choice\030\005 \001(\0132+.te" +
-      "mporal.omes.kitchen_sink.AwaitableChoice" +
-      "\022\027\n\017expected_output\030\006 \001(\t\022=\n\016before_acti" +
-      "ons\030\007 \003(\0132%.temporal.omes.kitchen_sink.A" +
-      "ctionSet\022\033\n\023handler_workflow_id\030\010 \001(\t\022\\\n" +
-      "#handler_workflow_id_conflict_policy\030\t \001" +
-      "(\0162/.temporal.api.enums.v1.WorkflowIdCon" +
-      "flictPolicy\022\027\n\017wait_for_signal\030\n \001(\010\032.\n\014" +
-      "HeadersEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t" +
-      ":\0028\001\"\365\001\n\021NexusHandlerInput\022\r\n\005input\030\001 \001(" +
-      "\t\022=\n\016before_actions\030\002 \003(\0132%.temporal.ome" +
-      "s.kitchen_sink.ActionSet\022\033\n\023handler_work" +
-      "flow_id\030\003 \001(\t\022\\\n#handler_workflow_id_con" +
-      "flict_policy\030\004 \001(\0162/.temporal.api.enums." +
-      "v1.WorkflowIdConflictPolicy\022\027\n\017wait_for_" +
-      "signal\030\005 \001(\010\"\025\n\023AwaitPendingActions*\244\001\n\021" +
-      "ParentClosePolicy\022#\n\037PARENT_CLOSE_POLICY" +
-      "_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLICY_TE" +
-      "RMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_ABANDON" +
-      "\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_CANCEL" +
-      "\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFIED\020\000\022" +
-      "\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035ChildWo" +
-      "rkflowCancellationType\022\024\n\020CHILD_WF_ABAND" +
-      "ON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CHILD_W" +
-      "F_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$CHILD" +
-      "_WF_WAIT_CANCELLATION_REQUESTED\020\003*X\n\030Act" +
-      "ivityCancellationType\022\016\n\nTRY_CANCEL\020\000\022\037\n" +
-      "\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007ABANDO" +
-      "N\020\002BB\n\020io.temporal.omesZ.github.com/temp" +
-      "oralio/omes/loadgen/kitchensinkb\006proto3"
+      "ut\030\003 \001(\t\022E\n\020awaitable_choice\030\005 \001(\0132+.tem" +
+      "poral.omes.kitchen_sink.AwaitableChoice\022" +
+      "\027\n\017expected_output\030\006 \001(\t\022=\n\016before_actio" +
+      "ns\030\007 \003(\0132%.temporal.omes.kitchen_sink.Ac" +
+      "tionSet\022\033\n\023handler_workflow_id\030\010 \001(\t\022\\\n#" +
+      "handler_workflow_id_conflict_policy\030\t \001(" +
+      "\0162/.temporal.api.enums.v1.WorkflowIdConf" +
+      "lictPolicy\022\027\n\017wait_for_signal\030\n \001(\010\"\365\001\n\021" +
+      "NexusHandlerInput\022\r\n\005input\030\001 \001(\t\022=\n\016befo" +
+      "re_actions\030\002 \003(\0132%.temporal.omes.kitchen" +
+      "_sink.ActionSet\022\033\n\023handler_workflow_id\030\003" +
+      " \001(\t\022\\\n#handler_workflow_id_conflict_pol" +
+      "icy\030\004 \001(\0162/.temporal.api.enums.v1.Workfl" +
+      "owIdConflictPolicy\022\027\n\017wait_for_signal\030\005 " +
+      "\001(\010\"\025\n\023AwaitPendingActions*\244\001\n\021ParentClo" +
+      "sePolicy\022#\n\037PARENT_CLOSE_POLICY_UNSPECIF" +
+      "IED\020\000\022!\n\035PARENT_CLOSE_POLICY_TERMINATE\020\001" +
+      "\022\037\n\033PARENT_CLOSE_POLICY_ABANDON\020\002\022&\n\"PAR" +
+      "ENT_CLOSE_POLICY_REQUEST_CANCEL\020\003*@\n\020Ver" +
+      "sioningIntent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPAT" +
+      "IBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035ChildWorkflowCan" +
+      "cellationType\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023C" +
+      "HILD_WF_TRY_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CA" +
+      "NCELLATION_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_" +
+      "CANCELLATION_REQUESTED\020\003*X\n\030ActivityCanc" +
+      "ellationType\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CAN" +
+      "CELLATION_COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io" +
+      ".temporal.omesZ.github.com/temporalio/om" +
+      "es/loadgen/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -59308,13 +58923,7 @@ java.lang.String defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor,
-        new java.lang.String[] { "Endpoint", "Operation", "Input", "Headers", "AwaitableChoice", "ExpectedOutput", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal", });
-    internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor =
-      internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_descriptor.getNestedTypes().get(0);
-    internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_temporal_omes_kitchen_sink_ExecuteNexusOperation_HeadersEntry_descriptor,
-        new java.lang.String[] { "Key", "Value", });
+        new java.lang.String[] { "Endpoint", "Operation", "Input", "AwaitableChoice", "ExpectedOutput", "BeforeActions", "HandlerWorkflowId", "HandlerWorkflowIdConflictPolicy", "WaitForSignal", });
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_descriptor =
       getDescriptor().getMessageTypes().get(33);
     internal_static_temporal_omes_kitchen_sink_NexusHandlerInput_fieldAccessorTable = new

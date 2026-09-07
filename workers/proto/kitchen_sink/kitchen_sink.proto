@@ -536,8 +536,6 @@ message ExecuteNexusOperation {
   string operation = 2;
   // Input payload for the operation
   string input = 3;
-  // Headers to send with the operation
-  map<string, string> headers = 4;
   // How to await on the operation
   AwaitableChoice awaitable_choice = 5;
   // Expected output for verification
