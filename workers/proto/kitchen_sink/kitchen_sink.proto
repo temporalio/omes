@@ -558,6 +558,14 @@ message NexusWorkflowAction {
   NexusWorkflowStartOptions start_options = 3;
   oneof action {
     google.protobuf.Empty start = 4;
+    // Signal the target workflow. Honors DoSignal.with_start, in which case
+    // start_options supplies the workflow input and an existing workflow is reused.
+    // run_id selects the run for a signal without start. An unset DoSignal variant
+    // sends an empty do_actions_signal.
+    DoSignal signal = 5;
+    // Update the target workflow selected by workflow_id and run_id.
+    // DoUpdate.with_start is not supported.
+    DoUpdate update = 6;
   }
 }
 
