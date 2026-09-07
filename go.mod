@@ -42,7 +42,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/ebitengine/purego v0.9.0 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -58,7 +58,7 @@ require (
 	github.com/nexus-rpc/nexus-proto-annotations v0.1.0 // indirect
 	github.com/nexus-rpc/sdk-go v0.7.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
@@ -69,7 +69,7 @@ require (
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
 )
@@ -82,4 +82,9 @@ replace (
 	// Local dev of the nested harness/api module; downstream consumers ignore this and use
 	// the real pseudo-version required above instead.
 	github.com/temporalio/omes/workers/go/harness/api => ./workers/go/harness/api
+	// TEMPORARY: sdkbuild's generated package.json pins protobufjs to 7.5.1, which has no
+	// ext/protojson, so @temporalio/common >= 1.23.0 cannot load. Points at
+	// temporalio/features#sdkbuild-drop-protobufjs-override. Drop this replace and bump the
+	// require above once that lands on features main.
+	github.com/temporalio/features => github.com/temporalio/features v0.0.0-20260906235338-5ab9dbc1dc8c
 )

@@ -232,6 +232,13 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		MoreDependencies: map[string]string{
 			"@grpc/proto-loader": "^0.8.0",
 			"winston":            "^3.11.0",
+			// The kitchen sink payload converter hands protobufjs Type instances
+			// from our generated root to the SDK's converters, which check them
+			// with `instanceof`. Declaring protobufjs here makes the prepared
+			// package resolve the same physical copy the SDK does; without it,
+			// our generated code walks up to workers/typescript/node_modules and
+			// gets a second copy whose Type class is a different identity.
+			"protobufjs": "^8.8.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
