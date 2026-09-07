@@ -630,7 +630,12 @@ func startNexusOperation(
 		return temporalnexus.StartUntypedWorkflow[*common.Payload](
 			ctx,
 			nc,
-			nexusWorkflowOptions(workflowAction, opts.RequestID),
+			client.StartWorkflowOptions{
+				ID:                       cmp.Or(workflowAction.GetWorkflowId(), opts.RequestID),
+				TaskQueue:                startOptions.GetTaskQueue(),
+				WorkflowExecutionTimeout: 60 * time.Minute,
+				WorkflowIDConflictPolicy: startOptions.GetWorkflowIdConflictPolicy(),
+			},
 			KitchenSinkWorkflow,
 			cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}),
 		)
@@ -639,17 +644,6 @@ func startNexusOperation(
 	}
 	return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
 		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
-}
-
-func nexusWorkflowOptions(input *kitchensink.NexusWorkflowAction, requestID string) client.StartWorkflowOptions {
-	startOptions := cmp.Or(input.GetStartOptions(), &kitchensink.NexusWorkflowStartOptions{})
-	workflowOptions := client.StartWorkflowOptions{
-		ID:                       cmp.Or(input.GetWorkflowId(), requestID),
-		TaskQueue:                startOptions.GetTaskQueue(),
-		WorkflowExecutionTimeout: 60 * time.Minute,
-		WorkflowIDConflictPolicy: startOptions.GetWorkflowIdConflictPolicy(),
-	}
-	return workflowOptions
 }
 
 // startStandaloneActivityNexusOperation starts the registered "noop" activity.

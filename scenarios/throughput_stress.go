@@ -11,9 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
+	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -579,14 +581,12 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add Nexus operations, if configured.
 		if t.config.NexusEnabled {
-			// Invoke a synchronous Nexus operation.
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
-			// Invoke an asynchronous Nexus operation backed by a workflow.
 			asyncActions = append(asyncActions, t.createNexusStartWorkflowAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
+			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 			if t.config.IncludeStandaloneNexus {
 				asyncActions = append(asyncActions,
-					// async
 					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{
 							WorkflowAction: &NexusWorkflowAction{
@@ -599,7 +599,6 @@ func (t *tpsExecutor) createActionsChunk(
 							},
 						},
 					}),
-					// sync
 					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 						Action: &NexusOperationRequest_Echo{Echo: "hello"},
 					}),
@@ -611,7 +610,7 @@ func (t *tpsExecutor) createActionsChunk(
 					asyncActions = append(asyncActions,
 						t.createStandaloneNexusOperationAction(&NexusOperationRequest{
 							Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
-								ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
+								ActivityType: &ExecuteActivityAction_Noop{},
 							}},
 						}),
 					)
@@ -811,12 +810,12 @@ func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
 	return &Action{
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      KitchenSinkNexusOperationName,
-				ExpectedOutput: ConvertToPayload("hello"),
+				Endpoint:  t.config.NexusEndpoint,
+				Operation: KitchenSinkNexusOperationName,
 				Input: &NexusOperationRequest{
 					Action: &NexusOperationRequest_Echo{Echo: "hello"},
 				},
+				ExpectedOutput: ConvertToPayload("hello"),
 			},
 		},
 	}
@@ -950,7 +949,7 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 				Operation: KitchenSinkNexusOperationName,
 				Input: &NexusOperationRequest{
 					Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
-						ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
+						ActivityType: &ExecuteActivityAction_Noop{},
 					}},
 				},
 			},

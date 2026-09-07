@@ -971,11 +971,11 @@ func TestKitchenSink(t *testing.T) {
 						&Action{
 							Variant: &Action_NexusOperation{
 								NexusOperation: &ExecuteNexusOperation{
-									Operation:      KitchenSinkNexusOperationName,
-									ExpectedOutput: ConvertToPayload("goodbye"),
+									Operation: KitchenSinkNexusOperationName,
 									Input: &NexusOperationRequest{
 										Action: &NexusOperationRequest_Echo{Echo: "hello"},
 									},
+									ExpectedOutput: ConvertToPayload("goodbye"),
 									AwaitableChoice: &AwaitableChoice{
 										Condition: &AwaitableChoice_WaitFinish{
 											WaitFinish: &emptypb.Empty{},
