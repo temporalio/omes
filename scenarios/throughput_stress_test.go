@@ -308,9 +308,28 @@ func TestThroughputStressNexusWorkflowTargetSequence(t *testing.T) {
 		}
 	}
 	require.Equal(t, map[bool]bool{false: true, true: true}, seenSignalWithStartCreator)
+
+	run := (&loadgen.ScenarioInfo{
+		RunID:  "nexus-target-sequence",
+		Logger: zap.NewNop().Sugar(),
+	}).NewRun(1)
+	var concurrentPendingActions int
+	var countPendingActions func([]*ks.Action, bool)
+	countPendingActions = func(actions []*ks.Action, concurrent bool) {
+		for _, action := range actions {
+			if action.GetAwaitPendingActions() != nil && concurrent {
+				concurrentPendingActions++
+			}
+			if nested := action.GetNestedActionSet(); nested != nil {
+				countPendingActions(nested.GetActions(), concurrent || nested.GetConcurrent())
+			}
+		}
+	}
+	countPendingActions(executor.createActionsChunk(run, rand.New(rand.NewSource(1)), 0, 0, 1), false)
+	require.Equal(t, 1, concurrentPendingActions)
 }
 
-func TestThroughputStressNexusWorkflowTargetsAreDistinctAcrossChunks(t *testing.T) {
+func TestThroughputStressNexusWorkflowTargetsAreDistinctAcrossAttemptsAndChunks(t *testing.T) {
 	t.Parallel()
 
 	executor := newThroughputStressExecutor()
@@ -350,13 +369,10 @@ func TestThroughputStressNexusWorkflowTargetsAreDistinctAcrossChunks(t *testing.
 		walk(actions)
 	}
 	collectWorkflowIDs(executor.createActionsChunk(run, rand.New(rand.NewSource(1)), 0, 0, 3))
+	collectWorkflowIDs(executor.createActionsChunk(run, rand.New(rand.NewSource(1)), 0, 0, 3))
 	collectWorkflowIDs(executor.createActionsChunk(run, rand.New(rand.NewSource(2)), 0, 1, 1))
 
-	require.Equal(t, map[string]bool{
-		workflowIDPrefix + "0": true,
-		workflowIDPrefix + "1": true,
-		workflowIDPrefix + "2": true,
-	}, workflowIDs)
+	require.Len(t, workflowIDs, 5)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
@@ -469,6 +485,50 @@ func TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled(t 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), IncludeStandaloneNexusFlag)
 	require.Contains(t, err.Error(), NexusEnabledFlag)
+}
+
+func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name    string
+		flag    string
+		enabled [3]bool
+	}{
+		{name: "signal", flag: IncludeNexusSignalFlag, enabled: [3]bool{true, false, false}},
+		{name: "signal with start", flag: IncludeNexusSignalWithStartFlag, enabled: [3]bool{false, true, false}},
+		{name: "update", flag: IncludeNexusUpdateFlag, enabled: [3]bool{false, false, true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := newThroughputStressExecutor().Configure(loadgen.ScenarioInfo{
+				RunID: "tps-nexus-workflow-action",
+				Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+					tc.flag:          "true",
+					NexusEnabledFlag: "false",
+				}),
+			})
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tc.flag)
+			require.Contains(t, err.Error(), NexusEnabledFlag)
+
+			executor := newThroughputStressExecutor()
+			require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
+				RunID: "tps-nexus-workflow-action",
+				Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+					tc.flag:          "true",
+					NexusEnabledFlag: "true",
+				}),
+			}))
+			require.Equal(t, tc.enabled, [3]bool{
+				executor.config.IncludeNexusSignal,
+				executor.config.IncludeNexusSignalWithStart,
+				executor.config.IncludeNexusUpdate,
+			})
+		})
+	}
 }
 
 func TestThroughputStressConfigureInvalidPayload(t *testing.T) {

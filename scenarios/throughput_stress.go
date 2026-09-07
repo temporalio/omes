@@ -263,16 +263,18 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.IncludeNexusStandaloneActivity && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeNexusStandaloneActivityFlag, NexusEnabledFlag)
 	}
+	config.IncludeNexusSignal = info.OptionBool(IncludeNexusSignalFlag)
+	config.IncludeNexusSignalWithStart = info.OptionBool(IncludeNexusSignalWithStartFlag)
+	config.IncludeNexusUpdate = info.OptionBool(IncludeNexusUpdateFlag)
 	for _, nexusWorkflowAction := range []struct {
 		option  string
-		enabled *bool
+		enabled bool
 	}{
-		{IncludeNexusSignalFlag, &config.IncludeNexusSignal},
-		{IncludeNexusSignalWithStartFlag, &config.IncludeNexusSignalWithStart},
-		{IncludeNexusUpdateFlag, &config.IncludeNexusUpdate},
+		{IncludeNexusSignalFlag, config.IncludeNexusSignal},
+		{IncludeNexusSignalWithStartFlag, config.IncludeNexusSignalWithStart},
+		{IncludeNexusUpdateFlag, config.IncludeNexusUpdate},
 	} {
-		*nexusWorkflowAction.enabled = info.OptionBool(nexusWorkflowAction.option)
-		if *nexusWorkflowAction.enabled && !config.NexusEnabled {
+		if nexusWorkflowAction.enabled && !config.NexusEnabled {
 			return fmt.Errorf("%s requires %s", nexusWorkflowAction.option, NexusEnabledFlag)
 		}
 	}
@@ -552,9 +554,6 @@ func (t *tpsExecutor) createActionsChunk(
 
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
-		nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d",
-			run.DefaultStartWorkflowOptions().ID,
-			t.internalIterationIndex(run, remainingInternalIters, i))
 		syncActions := []*Action{
 			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
@@ -651,7 +650,11 @@ func (t *tpsExecutor) createActionsChunk(
 				}
 			}
 			if t.config.IncludeNexusSignal || t.config.IncludeNexusSignalWithStart || t.config.IncludeNexusUpdate {
-				asyncActions = append(asyncActions, t.createNexusWorkflowTargetSequence(nexusWorkflowID, rng))
+				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d-%s",
+					run.DefaultStartWorkflowOptions().ID,
+					t.internalIterationIndex(run, remainingInternalIters, i),
+					uuid.NewString())
+				syncActions = append(syncActions, t.createNexusWorkflowTargetSequence(nexusWorkflowID, rng))
 			}
 		}
 
