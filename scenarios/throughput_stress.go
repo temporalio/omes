@@ -11,11 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/common/v1"
-	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -581,21 +579,41 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add Nexus operations, if configured.
 		if t.config.NexusEnabled {
+			// Invoke a synchronous Nexus operation.
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
-			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			// Invoke an asynchronous Nexus operation backed by a workflow.
+			asyncActions = append(asyncActions, t.createNexusStartWorkflowAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
-			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 			if t.config.IncludeStandaloneNexus {
 				asyncActions = append(asyncActions,
-					t.createStandaloneNexusOperationAction("echo-async"),
-					t.createStandaloneNexusOperationAction("echo-sync"),
+					// async
+					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{
+							WorkflowAction: &NexusWorkflowAction{
+								StartOptions: &NexusWorkflowStartOptions{
+									WorkflowInput: &WorkflowInput{
+										InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+									},
+								},
+								Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+							},
+						},
+					}),
+					// sync
+					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+						Action: &NexusOperationRequest_Echo{Echo: "hello"},
+					}),
 				)
 			}
 			if t.config.IncludeNexusStandaloneActivity {
 				asyncActions = append(asyncActions, t.createNexusStandaloneActivityAction())
 				if t.config.IncludeStandaloneNexus {
 					asyncActions = append(asyncActions,
-						t.createStandaloneNexusOperationAction("standalone-activity"),
+						t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+							Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
+								ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
+							}},
+						}),
 					)
 				}
 			}
@@ -794,22 +812,34 @@ func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
 				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-sync",
-				Input:          "hello",
-				ExpectedOutput: "hello",
+				Operation:      KitchenSinkNexusOperationName,
+				ExpectedOutput: ConvertToPayload("hello"),
+				Input: &NexusOperationRequest{
+					Action: &NexusOperationRequest_Echo{Echo: "hello"},
+				},
 			},
 		},
 	}
 }
 
-func (t *tpsExecutor) createNexusEchoAsyncAction() *Action {
+func (t *tpsExecutor) createNexusStartWorkflowAction() *Action {
 	return &Action{
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-async",
-				Input:          "hello",
-				ExpectedOutput: "hello",
+				Endpoint:  t.config.NexusEndpoint,
+				Operation: KitchenSinkNexusOperationName,
+				Input: &NexusOperationRequest{
+					Action: &NexusOperationRequest_WorkflowAction{
+						WorkflowAction: &NexusWorkflowAction{
+							StartOptions: &NexusWorkflowStartOptions{
+								WorkflowInput: &WorkflowInput{
+									InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+								},
+							},
+							Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -820,10 +850,21 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
 				Endpoint:  t.config.NexusEndpoint,
-				Operation: "echo-async",
-				BeforeActions: ListActionSet(
-					NewAwaitWorkflowStateAction("never", "resolves"),
-				),
+				Operation: KitchenSinkNexusOperationName,
+				Input: &NexusOperationRequest{
+					Action: &NexusOperationRequest_WorkflowAction{
+						WorkflowAction: &NexusWorkflowAction{
+							StartOptions: &NexusWorkflowStartOptions{
+								WorkflowInput: &WorkflowInput{
+									InitialActions: ListActionSet(
+										NewAwaitWorkflowStateAction("never", "resolves"),
+									),
+								},
+							},
+							Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+						},
+					},
+				},
 				AwaitableChoice: &AwaitableChoice{
 					Condition: &AwaitableChoice_CancelAfterStarted{
 						CancelAfterStarted: &emptypb.Empty{},
@@ -844,12 +885,19 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 		return &Action{
 			Variant: &Action_NexusOperation{
 				NexusOperation: &ExecuteNexusOperation{
-					Endpoint:                        t.config.NexusEndpoint,
-					Operation:                       "echo-async",
-					Input:                           "hello",
-					HandlerWorkflowId:               handlerWfID,
-					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-					WaitForSignal:                   true,
+					Endpoint:  t.config.NexusEndpoint,
+					Operation: KitchenSinkNexusOperationName,
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{
+							WorkflowAction: &NexusWorkflowAction{
+								WorkflowId: handlerWfID,
+								StartOptions: &NexusWorkflowStartOptions{
+									WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+								},
+								Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+							},
+						},
+					},
 					AwaitableChoice: &AwaitableChoice{
 						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
 					},
@@ -872,7 +920,12 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 				{Variant: &Action_SendSignal{
 					SendSignal: &SendSignalAction{
 						WorkflowId: handlerWfID,
-						SignalName: "unblock",
+						SignalName: "do_actions_signal",
+						Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+							},
+						})},
 						AwaitableChoice: &AwaitableChoice{
 							// The operation futures below are the correctness gate. Do not fail if an
 							// active/passive transition replays this after the handler has completed.
@@ -894,19 +947,26 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 		Variant: &Action_NexusOperation{
 			NexusOperation: &ExecuteNexusOperation{
 				Endpoint:  t.config.NexusEndpoint,
-				Operation: "standalone-activity",
+				Operation: KitchenSinkNexusOperationName,
+				Input: &NexusOperationRequest{
+					Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
+						ActivityType: &ExecuteActivityAction_Noop{Noop: &emptypb.Empty{}},
+					}},
+				},
 			},
 		},
 	}
 }
 
-func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Action {
+func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperationRequest) *Action {
 	return ClientActivity(ClientActions(&ClientAction{
 		Variant: &ClientAction_DoStandaloneNexusOperation{
 			DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
-				Endpoint:  t.config.NexusEndpoint,
-				Service:   "kitchen-sink",
-				Operation: operation,
+				Operation: &ExecuteNexusOperation{
+					Endpoint:  t.config.NexusEndpoint,
+					Operation: KitchenSinkNexusOperationName,
+					Input:     input,
+				},
 			},
 		},
 	}), DefaultRemoteActivity)
