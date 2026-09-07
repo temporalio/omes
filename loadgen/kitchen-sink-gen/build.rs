@@ -43,11 +43,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("java", "../../workers/java"),
         ("go", "../../loadgen/kitchensink"),
         ("dotnet", "../../workers/dotnet/Temporalio.Omes/protos"),
+        ("ruby", "../../workers/ruby/protos"),
     ] {
         let mut cmd = Command::new(protoc.clone());
 
-        for include in include_paths {
-            cmd.arg("-I").arg(include);
+        if lang == "ruby" {
+            cmd.arg("-I").arg("../../workers/proto");
+            cmd.arg("-I").arg("../../workers/proto/api_upstream");
+        } else {
+            for include in include_paths {
+                cmd.arg("-I").arg(include);
+            }
         }
         for proto in ks_protos {
             cmd.arg(proto);
@@ -63,6 +69,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cmd.arg(format!("--go_out={out_dir}"));
         } else if lang == "dotnet" {
             cmd.arg(format!("--csharp_out={out_dir}"));
+        } else if lang == "ruby" {
+            cmd.arg(format!("--ruby_out={out_dir}"));
         }
 
         if !PathBuf::from(out_dir).exists() {
@@ -88,6 +96,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut dst = fs::File::create(&fpath)?;
                 dst.write_all(new_data.as_bytes())?;
             }
+        } else if lang == "ruby" {
+            let fpath = format!("{out_dir}/kitchen_sink/kitchen_sink_pb.rb");
+            let mut file = fs::File::open(&fpath)?;
+            let mut content = String::new();
+            file.read_to_string(&mut content)?;
+            drop(file);
+
+            let new_data = content
+                .replace(
+                    "require 'temporal/api/common/v1/message_pb'",
+                    "require 'temporalio/api/common/v1/message'",
+                )
+                .replace(
+                    "require 'temporal/api/failure/v1/message_pb'",
+                    "require 'temporalio/api/failure/v1/message'",
+                )
+                .replace(
+                    "require 'temporal/api/enums/v1/workflow_pb'",
+                    "require 'temporalio/api/enums/v1/workflow'",
+                );
+
+            let mut dst = fs::File::create(&fpath)?;
+            dst.write_all(new_data.as_bytes())?;
         }
     }
 
