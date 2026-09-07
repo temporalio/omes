@@ -2,10 +2,21 @@
 ARG TARGETARCH
 FROM --platform=linux/$TARGETARCH ruby:3.3-bullseye AS build
 
-# Install protobuf compiler
-RUN apt-get update \
+# Install protobuf compiler and clang.
+#
+# Sourced from snapshot.debian.org rather than deb.debian.org. clang pulls in
+# libc6-i386, which Depends on an exact glibc version, so installing it upgrades
+# the whole glibc set to whatever bullseye-security currently advertises. Some
+# deb.debian.org CDN edges serve an index advertising a glibc point release whose
+# .deb is no longer in their pool, which fails the build with a 404 that varies by
+# edge and cannot be retried (404 is not transient). Snapshot serves immutable
+# index/pool pairs, so they can never disagree.
+ARG DEBIAN_SNAPSHOT=20260901T000000Z
+RUN printf 'deb https://snapshot.debian.org/archive/debian/%s bullseye main\ndeb https://snapshot.debian.org/archive/debian-security/%s bullseye-security main\ndeb https://snapshot.debian.org/archive/debian/%s bullseye-updates main\n' \
+      "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" > /etc/apt/sources.list \
+    && apt-get update -o Acquire::Check-Valid-Until=false \
     && DEBIAN_FRONTEND=noninteractive \
-    apt-get install --no-install-recommends --assume-yes \
+    apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --assume-yes \
     clang=1:11.0-51+nmu5 \
     protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
