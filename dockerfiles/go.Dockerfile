@@ -39,7 +39,7 @@ COPY devserver ./devserver
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language go --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a distroless "run" container
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
+FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian13:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/go/prepared /app/workers/go/prepared
