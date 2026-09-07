@@ -47,13 +47,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ] {
         let mut cmd = Command::new(protoc.clone());
 
-        if lang == "ruby" {
-            cmd.arg("-I").arg("../../workers/proto");
-            cmd.arg("-I").arg("../../workers/proto/api_upstream");
-        } else {
-            for include in include_paths {
-                cmd.arg("-I").arg(include);
-            }
+        for include in include_paths {
+            cmd.arg("-I").arg(include);
         }
         for proto in ks_protos {
             cmd.arg(proto);
@@ -97,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dst.write_all(new_data.as_bytes())?;
             }
         } else if lang == "ruby" {
-            let fpath = format!("{out_dir}/kitchen_sink/kitchen_sink_pb.rb");
+            let fpath = format!("{out_dir}/kitchen_sink_pb.rb");
             let mut new_data = fs::read_to_string(&fpath)?;
             for import in [
                 "common/v1/message",
