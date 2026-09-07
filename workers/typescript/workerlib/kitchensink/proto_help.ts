@@ -61,13 +61,38 @@ export function durationConvert(d: IDuration | null | undefined): number {
 }
 
 // I just cannot get protobuf to use Long consistently. For whatever insane reason for child
-// workflows it reverts to using number.
-export function numify(n: number | Long | undefined | null): number {
+// workflows it reverts to using number. Under protobufjs 8 a 64-bit field decoded inside the
+// Workflow sandbox arrives as a plain {low, high, unsigned} object with no Long prototype,
+// because the sandbox does not have the long library wired up, so toNumber() is missing. The
+// bigint and string branches are defensive: protobufjs can represent 64-bit values either way
+// depending on how the root is configured.
+export function numify(
+  n:
+    | number
+    | bigint
+    | string
+    | Long
+    | { low: number; high: number; unsigned?: boolean }
+    | undefined
+    | null,
+): number {
   if (!n) {
     return 0;
   }
   if (typeof n === 'number') {
     return n;
   }
-  return n.toNumber();
+  if (typeof n === 'bigint') {
+    return Number(n);
+  }
+  if (typeof n === 'string') {
+    return Number(n);
+  }
+  if (typeof (n as Long).toNumber === 'function') {
+    return (n as Long).toNumber();
+  }
+  // Plain Long-shaped object: recombine the 32-bit halves.
+  const { low, high, unsigned } = n as { low: number; high: number; unsigned?: boolean };
+  const hi = unsigned ? high >>> 0 : high;
+  return hi * 0x100000000 + (low >>> 0);
 }
