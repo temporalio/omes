@@ -10,13 +10,19 @@ FROM --platform=linux/$TARGETARCH ruby:3.3-bullseye AS build
 # deb.debian.org CDN edges serve an index advertising a glibc point release whose
 # .deb is no longer in their pool, which fails the build with a 404 that varies by
 # edge and cannot be retried (404 is not transient). Snapshot serves immutable
-# index/pool pairs, so they can never disagree.
+# index/pool pairs, so they can never disagree. Snapshot is slower than the CDN
+# and can answer 503 under load, especially for the emulated arm64 leg of the
+# multi-arch build, so allow retries and a generous timeout - unlike a 404, a 503
+# is transient and worth retrying.
 ARG DEBIAN_SNAPSHOT=20260901T000000Z
 RUN printf 'deb https://snapshot.debian.org/archive/debian/%s bullseye main\ndeb https://snapshot.debian.org/archive/debian-security/%s bullseye-security main\ndeb https://snapshot.debian.org/archive/debian/%s bullseye-updates main\n' \
       "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" > /etc/apt/sources.list \
-    && apt-get update -o Acquire::Check-Valid-Until=false \
+    && apt-get update -o Acquire::Check-Valid-Until=false -o Acquire::Retries=8 \
+         -o Acquire::http::Timeout=120 -o Acquire::https::Timeout=120 \
     && DEBIAN_FRONTEND=noninteractive \
-    apt-get install -o Acquire::Check-Valid-Until=false --no-install-recommends --assume-yes \
+    apt-get install -o Acquire::Check-Valid-Until=false -o Acquire::Retries=8 \
+      -o Acquire::http::Timeout=120 -o Acquire::https::Timeout=120 \
+      --no-install-recommends --assume-yes \
     clang=1:11.0-51+nmu5 \
     protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
 
