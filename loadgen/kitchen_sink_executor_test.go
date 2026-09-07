@@ -75,7 +75,6 @@ type testCase struct {
 	name                    string
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
-	skipSDKs                map[clioptions.Language]string
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
 	expectedWorkflowOutput  *common.Payload
@@ -581,44 +580,40 @@ func TestKitchenSink(t *testing.T) {
 			name: "SendSignal/DoActions",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{{
-						Concurrent: true,
-						Actions: []*Action{
-							{
-								Variant: &Action_ExecChildWorkflow{
-									ExecChildWorkflow: &ExecuteChildWorkflowAction{
-										WorkflowId:   "send-signal-target",
-										WorkflowType: "kitchenSink",
-										Input: []*common.Payload{ConvertToPayload(&WorkflowInput{
-											InitialActions: ListActionSet(
-												NewAwaitWorkflowStateAction("status", "done"),
-												NewEmptyReturnResultAction(),
-											),
-										})},
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecChildWorkflow{
+								ExecChildWorkflow: &ExecuteChildWorkflowAction{
+									WorkflowId:   "send-signal-target",
+									WorkflowType: "kitchenSink",
+									Input: []*common.Payload{ConvertToPayload(&WorkflowInput{
+										InitialActions: ListActionSet(
+											NewAwaitWorkflowStateAction("status", "done"),
+											NewEmptyReturnResultAction(),
+										),
+									})},
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
 									},
 								},
 							},
-							{
-								Variant: &Action_NestedActionSet{
-									NestedActionSet: SingleActionSet(
-										NewTimerAction(time.Millisecond),
-										&Action{
-											Variant: &Action_SendSignal{
-												SendSignal: &SendSignalAction{
-													WorkflowId: "send-signal-target",
-													SignalName: "do_actions_signal",
-													Arg: ConvertToPayload(&DoSignal_DoSignalActions{
-														Variant: &DoSignal_DoSignalActions_DoActions{
-															DoActions: SingleActionSet(NewSetWorkflowStateAction("status", "done")),
-														},
-													}),
-												},
-											},
+						},
+						NewTimerAction(time.Millisecond),
+						&Action{
+							Variant: &Action_SendSignal{
+								SendSignal: &SendSignalAction{
+									WorkflowId: "send-signal-target",
+									SignalName: "do_actions_signal",
+									Arg: ConvertToPayload(&DoSignal_DoSignalActions{
+										Variant: &DoSignal_DoSignalActions_DoActions{
+											DoActions: SingleActionSet(NewSetWorkflowStateAction("status", "done")),
 										},
-									),
+									}),
 								},
 							},
-						}}},
+						},
+						NewTimerAction(100*time.Millisecond),
+					),
 				},
 			},
 			historyMatcher: PartialHistoryMatcher(`
@@ -628,10 +623,10 @@ func TestKitchenSink(t *testing.T) {
 				ExternalWorkflowExecutionSignaled
 				...
 				ChildWorkflowExecutionCompleted`),
-			skipSDKs: map[clioptions.Language]string{
-				clioptions.LangRuby:       "SendSignalAction is not supported",
-				clioptions.LangTypeScript: "SendSignalAction is not supported",
-				clioptions.LangDotNet:     "SendSignalAction is not supported",
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangRuby:       "unrecognized action",
+				clioptions.LangTypeScript: "unrecognized action",
+				clioptions.LangDotNet:     "unrecognized action",
 			},
 		},
 		{
@@ -1559,9 +1554,6 @@ func TestKitchenSink(t *testing.T) {
 				env := testEnvironments[sdk]
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
-					if reason, ok := tc.skipSDKs[sdk]; ok {
-						t.Skip(reason)
-					}
 					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
 				})
 			}
