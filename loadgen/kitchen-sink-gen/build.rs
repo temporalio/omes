@@ -93,17 +93,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         } else if lang == "ruby" {
             let fpath = format!("{out_dir}/kitchen_sink_pb.rb");
-            let mut new_data = fs::read_to_string(&fpath)?;
-            for import in [
-                "common/v1/message",
-                "failure/v1/message",
-                "enums/v1/workflow",
-            ] {
-                new_data = new_data.replace(
-                    &format!("require 'temporal/api/{import}_pb'"),
-                    &format!("require 'temporalio/api/{import}'"),
-                );
-            }
+            let new_data = fs::read_to_string(&fpath)?
+                .split_inclusive('\n')
+                .map(|line| {
+                    line.strip_prefix("require 'temporal/api/")
+                        .and_then(|path| path.strip_suffix("_pb'\n"))
+                        .map_or_else(
+                            || line.to_owned(),
+                            |path| format!("require 'temporalio/api/{path}'\n"),
+                        )
+                })
+                .collect::<String>();
             fs::write(&fpath, new_data)?;
         }
     }
