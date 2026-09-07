@@ -98,27 +98,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         } else if lang == "ruby" {
             let fpath = format!("{out_dir}/kitchen_sink/kitchen_sink_pb.rb");
-            let mut file = fs::File::open(&fpath)?;
-            let mut content = String::new();
-            file.read_to_string(&mut content)?;
-            drop(file);
-
-            let new_data = content
-                .replace(
-                    "require 'temporal/api/common/v1/message_pb'",
-                    "require 'temporalio/api/common/v1/message'",
-                )
-                .replace(
-                    "require 'temporal/api/failure/v1/message_pb'",
-                    "require 'temporalio/api/failure/v1/message'",
-                )
-                .replace(
-                    "require 'temporal/api/enums/v1/workflow_pb'",
-                    "require 'temporalio/api/enums/v1/workflow'",
+            let mut new_data = fs::read_to_string(&fpath)?;
+            for import in [
+                "common/v1/message",
+                "failure/v1/message",
+                "enums/v1/workflow",
+            ] {
+                new_data = new_data.replace(
+                    &format!("require 'temporal/api/{import}_pb'"),
+                    &format!("require 'temporalio/api/{import}'"),
                 );
-
-            let mut dst = fs::File::create(&fpath)?;
-            dst.write_all(new_data.as_bytes())?;
+            }
+            fs::write(&fpath, new_data)?;
         }
     }
 
