@@ -71,6 +71,7 @@ type testCase struct {
 	name                    string
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
+	skipSDKs                map[clioptions.Language]string
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
 }
@@ -254,6 +255,58 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowTaskCompleted
 				ChildWorkflowExecutionCompleted
 			`),
+		},
+		{
+			name: "SendSignal/Args",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: []*ActionSet{{
+						Concurrent: true,
+						Actions: []*Action{
+							{
+								Variant: &Action_ExecChildWorkflow{
+									ExecChildWorkflow: &ExecuteChildWorkflowAction{
+										WorkflowId:   "send-signal-args-target",
+										WorkflowType: "kitchenSink",
+										Input:        []*common.Payload{ConvertToPayload(&WorkflowInput{})},
+									},
+								},
+							},
+							{
+								Variant: &Action_NestedActionSet{
+									NestedActionSet: SingleActionSet(
+										NewTimerAction(time.Millisecond),
+										&Action{
+											Variant: &Action_SendSignal{
+												SendSignal: &SendSignalAction{
+													WorkflowId: "send-signal-args-target",
+													SignalName: "do_actions_signal",
+													Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
+														Variant: &DoSignal_DoSignalActions_DoActionsInMain{
+															DoActionsInMain: SingleActionSet(NewEmptyReturnResultAction()),
+														},
+													})},
+												},
+											},
+										},
+									),
+								},
+							},
+						}}},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				StartChildWorkflowExecutionInitiated {"workflowId":"send-signal-args-target"}
+				ChildWorkflowExecutionStarted
+				...
+				ExternalWorkflowExecutionSignaled
+				...
+				ChildWorkflowExecutionCompleted`),
+			skipSDKs: map[clioptions.Language]string{
+				clioptions.LangRuby:       "SendSignalAction is not supported",
+				clioptions.LangTypeScript: "SendSignalAction is not supported",
+				clioptions.LangDotNet:     "SendSignalAction is not supported",
+			},
 		},
 		{
 			name: "ExecActivity/Client/Signal/DoActions",
@@ -1339,6 +1392,9 @@ func TestKitchenSink(t *testing.T) {
 				env := testEnvironments[sdk]
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
+					if reason, ok := tc.skipSDKs[sdk]; ok {
+						t.Skip(reason)
+					}
 					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
 				})
 			}
