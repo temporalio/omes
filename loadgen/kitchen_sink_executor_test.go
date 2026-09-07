@@ -257,58 +257,6 @@ func TestKitchenSink(t *testing.T) {
 			`),
 		},
 		{
-			name: "SendSignal/Args",
-			testInput: &TestInput{
-				WorkflowInput: &WorkflowInput{
-					InitialActions: []*ActionSet{{
-						Concurrent: true,
-						Actions: []*Action{
-							{
-								Variant: &Action_ExecChildWorkflow{
-									ExecChildWorkflow: &ExecuteChildWorkflowAction{
-										WorkflowId:   "send-signal-args-target",
-										WorkflowType: "kitchenSink",
-										Input:        []*common.Payload{ConvertToPayload(&WorkflowInput{})},
-									},
-								},
-							},
-							{
-								Variant: &Action_NestedActionSet{
-									NestedActionSet: SingleActionSet(
-										NewTimerAction(time.Millisecond),
-										&Action{
-											Variant: &Action_SendSignal{
-												SendSignal: &SendSignalAction{
-													WorkflowId: "send-signal-args-target",
-													SignalName: "do_actions_signal",
-													Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
-														Variant: &DoSignal_DoSignalActions_DoActionsInMain{
-															DoActionsInMain: SingleActionSet(NewEmptyReturnResultAction()),
-														},
-													})},
-												},
-											},
-										},
-									),
-								},
-							},
-						}}},
-				},
-			},
-			historyMatcher: PartialHistoryMatcher(`
-				StartChildWorkflowExecutionInitiated {"workflowId":"send-signal-args-target"}
-				ChildWorkflowExecutionStarted
-				...
-				ExternalWorkflowExecutionSignaled
-				...
-				ChildWorkflowExecutionCompleted`),
-			skipSDKs: map[clioptions.Language]string{
-				clioptions.LangRuby:       "SendSignalAction is not supported",
-				clioptions.LangTypeScript: "SendSignalAction is not supported",
-				clioptions.LangDotNet:     "SendSignalAction is not supported",
-			},
-		},
-		{
 			name: "ExecActivity/Client/Signal/DoActions",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
@@ -606,6 +554,63 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionSignaled
 				...
 				WorkflowExecutionUpdateCompleted`),
+		},
+		{
+			name: "SendSignal/DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: []*ActionSet{{
+						Concurrent: true,
+						Actions: []*Action{
+							{
+								Variant: &Action_ExecChildWorkflow{
+									ExecChildWorkflow: &ExecuteChildWorkflowAction{
+										WorkflowId:   "send-signal-target",
+										WorkflowType: "kitchenSink",
+										Input: []*common.Payload{ConvertToPayload(&WorkflowInput{
+											InitialActions: ListActionSet(
+												NewAwaitWorkflowStateAction("status", "done"),
+												NewEmptyReturnResultAction(),
+											),
+										})},
+									},
+								},
+							},
+							{
+								Variant: &Action_NestedActionSet{
+									NestedActionSet: SingleActionSet(
+										NewTimerAction(time.Millisecond),
+										&Action{
+											Variant: &Action_SendSignal{
+												SendSignal: &SendSignalAction{
+													WorkflowId: "send-signal-target",
+													SignalName: "do_actions_signal",
+													Arg: ConvertToPayload(&DoSignal_DoSignalActions{
+														Variant: &DoSignal_DoSignalActions_DoActions{
+															DoActions: SingleActionSet(NewSetWorkflowStateAction("status", "done")),
+														},
+													}),
+												},
+											},
+										},
+									),
+								},
+							},
+						}}},
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				StartChildWorkflowExecutionInitiated {"workflowId":"send-signal-target"}
+				ChildWorkflowExecutionStarted
+				...
+				ExternalWorkflowExecutionSignaled
+				...
+				ChildWorkflowExecutionCompleted`),
+			skipSDKs: map[clioptions.Language]string{
+				clioptions.LangRuby:       "SendSignalAction is not supported",
+				clioptions.LangTypeScript: "SendSignalAction is not supported",
+				clioptions.LangDotNet:     "SendSignalAction is not supported",
+			},
 		},
 		{
 			name: "ClientSequence/Signal/DoActions",
