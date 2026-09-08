@@ -1,5 +1,6 @@
 import { NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { Client } from '@temporalio/client';
+import { dirname } from 'node:path';
 import { createActivities } from '../../workerlib/kitchensink/activities';
 import type { ClientConfig, App, WorkerContext } from '../../harness';
 
@@ -39,6 +40,15 @@ async function buildWorker(client: Client, context: WorkerContext): Promise<Work
     activities: createActivities(client, context.errOnUnimplemented),
     taskQueue: context.taskQueue,
     ...context.workerOptions,
+    bundlerOptions: {
+      webpackConfigHook(config) {
+        config.resolve!.alias = {
+          ...config.resolve!.alias,
+          protobufjs: dirname(require.resolve('protobufjs/package.json')),
+        };
+        return config;
+      },
+    },
     dataConverter: {
       ...context.workerOptions.dataConverter,
       payloadConverterPath: payloadConverterPath(),

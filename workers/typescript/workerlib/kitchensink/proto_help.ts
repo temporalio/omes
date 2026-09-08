@@ -66,8 +66,5 @@ export function numify(n: number | Long | undefined | null): number {
   if (!n) {
     return 0;
   }
-  if (typeof n === 'number') {
-    return n;
-  }
-  return n.toNumber();
+  return Long.fromValue(n).toNumber();
 }
