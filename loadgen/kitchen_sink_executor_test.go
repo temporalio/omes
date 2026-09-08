@@ -1216,8 +1216,8 @@ func TestKitchenSink(t *testing.T) {
 		{
 			name: "NexusOperation/Sync/Signal",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+				nestedActions(
+					nexusOperation(&ExecuteNexusOperation{
 						Operation: KitchenSinkNexusOperationName,
 						Input: &NexusOperationRequest{
 							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
@@ -1232,8 +1232,8 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						},
 						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-					}}},
-					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+					}),
+					nexusOperation(&ExecuteNexusOperation{
 						Operation:       KitchenSinkNexusOperationName,
 						ExpectedOutput:  ConvertToPayload("nexus-signal-target"),
 						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
@@ -1249,9 +1249,9 @@ func TestKitchenSink(t *testing.T) {
 								}},
 							}},
 						},
-					}}},
+					}),
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
-				}}}},
+				),
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
 				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-signal-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
@@ -1260,8 +1260,8 @@ func TestKitchenSink(t *testing.T) {
 		{
 			name: "NexusOperation/Sync/SignalWithStart",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+				nestedActions(
+					nexusOperation(&ExecuteNexusOperation{
 						Operation:       KitchenSinkNexusOperationName,
 						ExpectedOutput:  ConvertToPayload("nexus-sws-target"),
 						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
@@ -1282,9 +1282,9 @@ func TestKitchenSink(t *testing.T) {
 								}},
 							}},
 						},
-					}}},
+					}),
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
-				}}}},
+				),
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
 				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sws-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
@@ -1293,8 +1293,8 @@ func TestKitchenSink(t *testing.T) {
 		{
 			name: "NexusOperation/Async/Update",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+				nestedActions(
+					nexusOperation(&ExecuteNexusOperation{
 						Operation: KitchenSinkNexusOperationName,
 						Input: &NexusOperationRequest{
 							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
@@ -1309,8 +1309,8 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						},
 						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-					}}},
-					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+					}),
+					nexusOperation(&ExecuteNexusOperation{
 						Operation:       KitchenSinkNexusOperationName,
 						ExpectedOutput:  ConvertToPayload("nexus-update-target"),
 						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
@@ -1331,9 +1331,9 @@ func TestKitchenSink(t *testing.T) {
 								}},
 							}},
 						},
-					}}},
+					}),
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
-				}}}},
+				),
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
 				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
@@ -1579,6 +1579,14 @@ type kitchenSinkTestWrapper struct {
 
 func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) error {
 	return w.executor.Run(ctx, info)
+}
+
+func nexusOperation(operation *ExecuteNexusOperation) *Action {
+	return &Action{Variant: &Action_NexusOperation{NexusOperation: operation}}
+}
+
+func nestedActions(actions ...*Action) *Action {
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: SingleActionSet(actions...)}}
 }
 
 func getWorkflowHistory(
