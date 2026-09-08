@@ -231,7 +231,9 @@ func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild
 		},
 		MoreDependencies: map[string]string{
 			"@grpc/proto-loader": "^0.8.0",
-			"winston":            "^3.11.0",
+			// Keep generated types and SDK converters on the same protobufjs instance.
+			"protobufjs": "^8.8.0",
+			"winston":    "^3.11.0",
 		},
 		Stdout: b.stdout,
 		Stderr: b.stderr,
