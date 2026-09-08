@@ -154,9 +154,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 				// cancellation while the run is healthy.
 				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
 
-				// Finish outcome handling before notifying the waiter because callers may read
-				// callback-updated state as soon as Run returns. Check cancellation on both
-				// sides because a callback may outlive the run context.
+				// Do not start outcome handling after the run has been canceled.
 				select {
 				case <-ctx.Done():
 					return
@@ -179,6 +177,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 					}
 				}
 
+				// Notify the waiter only after callbacks finish because callers may read
+				// callback-updated state as soon as Run returns.
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
