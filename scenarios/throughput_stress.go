@@ -986,9 +986,8 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 		targetActions = append(targetActions, t.createNexusUpdateAction(workflowID))
 	}
 	if startAction == nil {
-		startAction = &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
-			Endpoint:  t.config.NexusEndpoint,
-			Operation: KitchenSinkNexusOperationName,
+		startAction = NexusOperation(&ExecuteNexusOperation{
+			Endpoint: t.config.NexusEndpoint,
 			Input: &NexusOperationRequest{
 				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 					WorkflowId: workflowID,
@@ -1002,7 +1001,7 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 				}},
 			},
 			AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-		}}}
+		})
 	}
 	actions := append([]*Action{startAction}, targetActions...)
 	actions = append(actions, &Action{
@@ -1012,26 +1011,21 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
-	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
-		Endpoint:        t.config.NexusEndpoint,
-		Operation:       KitchenSinkNexusOperationName,
-		ExpectedOutput:  ConvertToPayload(workflowID),
-		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
 		Input: &NexusOperationRequest{
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId: workflowID,
 				Action:     &NexusWorkflowAction_Signal{Signal: &DoSignal{}},
 			}},
 		},
-	}}}
+		ExpectedOutput: ConvertToPayload(workflowID),
+	})
 }
 
 func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string) *Action {
-	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
-		Endpoint:        t.config.NexusEndpoint,
-		Operation:       KitchenSinkNexusOperationName,
-		ExpectedOutput:  ConvertToPayload(workflowID),
-		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
 		Input: &NexusOperationRequest{
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId:   workflowID,
@@ -1039,15 +1033,13 @@ func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string) *Actio
 				Action:       &NexusWorkflowAction_Signal{Signal: &DoSignal{WithStart: true}},
 			}},
 		},
-	}}}
+		ExpectedOutput: ConvertToPayload(workflowID),
+	})
 }
 
 func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
-	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
-		Endpoint:        t.config.NexusEndpoint,
-		Operation:       KitchenSinkNexusOperationName,
-		ExpectedOutput:  ConvertToPayload(workflowID),
-		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
 		Input: &NexusOperationRequest{
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId: workflowID,
@@ -1064,7 +1056,8 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				}},
 			}},
 		},
-	}}}
+		ExpectedOutput: ConvertToPayload(workflowID),
+	})
 }
 
 func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperationRequest) *Action {
