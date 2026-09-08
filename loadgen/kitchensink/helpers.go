@@ -51,6 +51,24 @@ func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
 	return "noop", nil
 }
 
+func SignalNameAndArg(signal *DoSignal) (string, any, error) {
+	if actions := signal.GetDoSignalActions(); actions != nil {
+		return "do_actions_signal", actions, nil
+	} else if handler := signal.GetCustom(); handler != nil {
+		return handler.GetName(), handler.GetArgs(), nil
+	}
+	return "", nil, fmt.Errorf("do_signal must recognizable variant")
+}
+
+func UpdateNameAndArgs(update *DoUpdate) (string, []any, error) {
+	if actions := update.GetDoActions(); actions != nil {
+		return "do_actions_update", []any{actions}, nil
+	} else if handler := update.GetCustom(); handler != nil {
+		return handler.GetName(), []any{handler.GetArgs()}, nil
+	}
+	return "", nil, fmt.Errorf("do_update must recognizable variant")
+}
+
 // ConvertFromPBRetryPolicy converts a proto RetryPolicy into an SDK RetryPolicy.
 func ConvertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
 	if retryPolicy == nil {

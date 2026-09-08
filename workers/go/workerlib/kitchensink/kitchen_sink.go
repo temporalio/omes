@@ -650,19 +650,16 @@ func startNexusOperation(
 			}
 
 			signal := workflowAction.GetSignal()
-			signalName := "do_actions_signal"
-			// Default to an empty action set so an operation can exercise signal
-			// delivery without requiring the target workflow to run another action.
-			var signalArg any = &kitchensink.DoSignal_DoSignalActions{
-				Variant: &kitchensink.DoSignal_DoSignalActions_DoActions{
-					DoActions: kitchensink.SingleActionSet(),
-				},
-			}
-			if custom := signal.GetCustom(); custom != nil {
-				signalName = custom.GetName()
-				signalArg = custom.GetArgs()
-			} else if doActions := signal.GetDoSignalActions(); doActions != nil {
-				signalArg = doActions
+			signalName, signalArg, err := kitchensink.SignalNameAndArg(signal)
+			if err != nil {
+				// Default to an empty action set so an operation can exercise signal
+				// delivery without requiring the target workflow to run another action.
+				signalName = "do_actions_signal"
+				signalArg = &kitchensink.DoSignal_DoSignalActions{
+					Variant: &kitchensink.DoSignal_DoSignalActions_DoActions{
+						DoActions: kitchensink.SingleActionSet(),
+					},
+				}
 			}
 
 			if signal.GetWithStart() {
@@ -687,7 +684,7 @@ func startNexusOperation(
 				return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
 			}
 
-			err := temporalnexus.GetClient(ctx).SignalWorkflow(
+			err = temporalnexus.GetClient(ctx).SignalWorkflow(
 				ctx, workflowAction.GetWorkflowId(), workflowAction.GetRunId(), signalName, signalArg)
 			if err != nil {
 				return result, nexusOutboundError("SignalWorkflow", err)
@@ -706,21 +703,15 @@ func startNexusOperation(
 					"update-with-start is not supported by this Nexus operation")
 			}
 
-			updateName := "do_actions_update"
-			var args []any
-			if custom := workflowAction.GetUpdate().GetCustom(); custom != nil {
-				updateName = custom.GetName()
-				args = []any{custom.GetArgs()}
-			} else if update := workflowAction.GetUpdate().GetDoActions(); update != nil {
-				args = []any{update}
-			} else {
+			updateName, args, err := kitchensink.UpdateNameAndArgs(workflowAction.GetUpdate())
+			if err != nil {
 				break
 			}
 
 			// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the
 			// Nexus request ID, so a retried Nexus task attaches to the original update
 			// rather than starting a second one.
-			result, err := temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
+			result, err = temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
 				WorkflowID: workflowAction.GetWorkflowId(),
 				RunID:      workflowAction.GetRunId(),
 				UpdateName: updateName,
@@ -742,19 +733,22 @@ func startNexusOperation(
 		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
 }
 
-// nexusOutboundError maps a failure from an RPC the handler issued to the right
-// Nexus handler error. Namespace handover is worth retrying; a disabled server
-// feature or a bad target is not, because no number of retries fixes either.
+// nexusOutboundError maps a failure from an RPC the handler issued to the right Nexus handler error.
 func nexusOutboundError(rpc string, err error) error {
+	// Namespace handover is worth retrying.
 	if _, ok := errors.AsType[*serviceerror.NamespaceNotActive](err); ok {
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
 	}
+
+	// A disabled server feature or a bad target is not worth retrying, because no
+	// number of retries fixes either.
 	_, unimplemented := errors.AsType[*serviceerror.Unimplemented](err)
 	_, invalidArgument := errors.AsType[*serviceerror.InvalidArgument](err)
 	_, notFound := errors.AsType[*serviceerror.NotFound](err)
 	if unimplemented || invalidArgument || notFound {
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s failed: %s", rpc, err.Error())
 	}
+
 	return fmt.Errorf("%s failed: %w", rpc, err)
 }
 
