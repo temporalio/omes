@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -282,15 +283,7 @@ func looselyEqual(x, y any) bool {
 		// Compare element-wise so each expected element can be a partial map. The
 		// lengths must match, but not every field of each element.
 		yList, ok := y.([]any)
-		if !ok || len(yList) != len(x) {
-			return false
-		}
-		for i, yv := range yList {
-			if !looselyEqual(x[i], yv) {
-				return false
-			}
-		}
-		return true
+		return ok && slices.EqualFunc(x, yList, looselyEqual)
 	}
 	return reflect.DeepEqual(x, y)
 }

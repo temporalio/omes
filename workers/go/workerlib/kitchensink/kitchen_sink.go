@@ -643,120 +643,103 @@ func startNexusOperation(
 				cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}),
 			)
 		case *kitchensink.NexusWorkflowAction_Signal:
-			return signalWorkflowNexusOperation(ctx, workflowAction)
+			var result temporalnexus.TemporalOperationResult[*common.Payload]
+			if workflowAction.GetWorkflowId() == "" {
+				return result, nexus.HandlerErrorf(
+					nexus.HandlerErrorTypeBadRequest, "signal target must include a workflow ID")
+			}
+
+			signal := workflowAction.GetSignal()
+			signalName := "do_actions_signal"
+			// Default to an empty action set so an operation can exercise signal
+			// delivery without requiring the target workflow to run another action.
+			var signalArg any = &kitchensink.DoSignal_DoSignalActions{
+				Variant: &kitchensink.DoSignal_DoSignalActions_DoActions{
+					DoActions: kitchensink.SingleActionSet(),
+				},
+			}
+			if custom := signal.GetCustom(); custom != nil {
+				signalName = custom.GetName()
+				signalArg = custom.GetArgs()
+			} else if doActions := signal.GetDoSignalActions(); doActions != nil {
+				signalArg = doActions
+			}
+
+			if signal.GetWithStart() {
+				startOptions := client.StartWorkflowOptions{
+					ID:                       workflowAction.GetWorkflowId(),
+					TaskQueue:                workflowAction.GetStartOptions().GetTaskQueue(),
+					WorkflowExecutionTimeout: 60 * time.Minute,
+					WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+				}
+				if startOptions.TaskQueue == "" {
+					// Default to the task queue handling this Nexus request.
+					startOptions.TaskQueue = temporalnexus.GetOperationInfo(ctx).TaskQueue
+				}
+				workflowInput := cmp.Or(
+					workflowAction.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{})
+				run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
+					ctx, workflowAction.GetWorkflowId(), signalName, signalArg, startOptions,
+					KitchenSinkWorkflow, workflowInput)
+				if err != nil {
+					return result, nexusOutboundError("SignalWithStartWorkflow", err)
+				}
+				return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
+			}
+
+			err := temporalnexus.GetClient(ctx).SignalWorkflow(
+				ctx, workflowAction.GetWorkflowId(), workflowAction.GetRunId(), signalName, signalArg)
+			if err != nil {
+				return result, nexusOutboundError("SignalWorkflow", err)
+			}
+			return temporalnexus.NewSyncResult(
+				kitchensink.ConvertToPayload(workflowAction.GetWorkflowId())), nil
 		case *kitchensink.NexusWorkflowAction_Update:
-			return updateWorkflowNexusOperation(ctx, nc, workflowAction)
+			var result temporalnexus.TemporalOperationResult[*common.Payload]
+			if workflowAction.GetWorkflowId() == "" {
+				return result, nexus.HandlerErrorf(
+					nexus.HandlerErrorTypeBadRequest, "update target must include a workflow ID")
+			}
+			if workflowAction.GetUpdate().GetWithStart() {
+				return result, nexus.HandlerErrorf(
+					nexus.HandlerErrorTypeBadRequest,
+					"update-with-start is not supported by this Nexus operation")
+			}
+
+			updateName := "do_actions_update"
+			var args []any
+			if custom := workflowAction.GetUpdate().GetCustom(); custom != nil {
+				updateName = custom.GetName()
+				args = []any{custom.GetArgs()}
+			} else if update := workflowAction.GetUpdate().GetDoActions(); update != nil {
+				args = []any{update}
+			} else {
+				break
+			}
+
+			// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the
+			// Nexus request ID, so a retried Nexus task attaches to the original update
+			// rather than starting a second one.
+			result, err := temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
+				WorkflowID: workflowAction.GetWorkflowId(),
+				RunID:      workflowAction.GetRunId(),
+				UpdateName: updateName,
+				Args:       args,
+				// Accepted is the only stage a Nexus-backed update supports: the operation
+				// goes async once the update is accepted, and the update's result reaches
+				// the caller later through the operation's completion callback.
+				WaitForStage: client.WorkflowUpdateStageAccepted,
+			})
+			if err != nil {
+				return result, nexusOutboundError("UpdateWorkflow", err)
+			}
+			return result, nil
 		}
 	case *kitchensink.NexusOperationRequest_StartActivity:
 		return startStandaloneActivityNexusOperation(ctx, nc, action.StartActivity, opts)
 	}
 	return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
 		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
-}
-
-func signalWorkflowNexusOperation(
-	ctx context.Context,
-	input *kitchensink.NexusWorkflowAction,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
-	var result temporalnexus.TemporalOperationResult[*common.Payload]
-	if input.GetWorkflowId() == "" {
-		return result, nexus.HandlerErrorf(
-			nexus.HandlerErrorTypeBadRequest, "signal target must include a workflow ID")
-	}
-
-	signal := input.GetSignal()
-	signalName := "do_actions_signal"
-	// Default to an empty action set so an operation can exercise signal
-	// delivery without requiring the target workflow to run another action.
-	var signalArg any = &kitchensink.DoSignal_DoSignalActions{
-		Variant: &kitchensink.DoSignal_DoSignalActions_DoActions{
-			DoActions: kitchensink.SingleActionSet(),
-		},
-	}
-	if custom := signal.GetCustom(); custom != nil {
-		signalName = custom.GetName()
-		signalArg = custom.GetArgs()
-	} else if doActions := signal.GetDoSignalActions(); doActions != nil {
-		signalArg = doActions
-	}
-
-	if signal.GetWithStart() {
-		startOptions := client.StartWorkflowOptions{
-			ID:                       input.GetWorkflowId(),
-			TaskQueue:                input.GetStartOptions().GetTaskQueue(),
-			WorkflowExecutionTimeout: 60 * time.Minute,
-			WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-		}
-		if startOptions.TaskQueue == "" {
-			// Default to the task queue handling this Nexus request.
-			startOptions.TaskQueue = temporalnexus.GetOperationInfo(ctx).TaskQueue
-		}
-		workflowInput := cmp.Or(input.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{})
-		run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
-			ctx, input.GetWorkflowId(), signalName, signalArg, startOptions,
-			KitchenSinkWorkflow, workflowInput)
-		if err != nil {
-			return result, nexusOutboundError("SignalWithStartWorkflow", err)
-		}
-		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
-	}
-
-	err := temporalnexus.GetClient(ctx).SignalWorkflow(
-		ctx, input.GetWorkflowId(), input.GetRunId(), signalName, signalArg)
-	if err != nil {
-		return result, nexusOutboundError("SignalWorkflow", err)
-	}
-	return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(input.GetWorkflowId())), nil
-}
-
-func updateWorkflowNexusOperation(
-	ctx context.Context,
-	nc temporalnexus.NexusClient,
-	input *kitchensink.NexusWorkflowAction,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
-	var result temporalnexus.TemporalOperationResult[*common.Payload]
-	if input.GetWorkflowId() == "" {
-		return result, nexus.HandlerErrorf(
-			nexus.HandlerErrorTypeBadRequest, "update target must include a workflow ID")
-	}
-	if input.GetUpdate().GetWithStart() {
-		return result, nexus.HandlerErrorf(
-			nexus.HandlerErrorTypeBadRequest, "update-with-start is not supported by this Nexus operation")
-	}
-
-	updateName := "do_actions_update"
-	var args []any
-	if custom := input.GetUpdate().GetCustom(); custom != nil {
-		updateName = custom.GetName()
-		args = []any{custom.GetArgs()}
-	} else {
-		update := cmp.Or(input.GetUpdate().GetDoActions(), &kitchensink.DoActionsUpdate{
-			Variant: &kitchensink.DoActionsUpdate_DoActions{
-				DoActions: kitchensink.SingleActionSet(
-					kitchensink.NewNexusUpdateResultAction(input.GetWorkflowId()),
-				),
-			},
-		})
-		args = []any{update}
-	}
-
-	// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the
-	// Nexus request ID, so a retried Nexus task attaches to the original update
-	// rather than starting a second one.
-	result, err := temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
-		WorkflowID: input.GetWorkflowId(),
-		RunID:      input.GetRunId(),
-		UpdateName: updateName,
-		Args:       args,
-		// Accepted is the only stage a Nexus-backed update supports: the operation
-		// goes async once the update is accepted, and the update's result reaches
-		// the caller later through the operation's completion callback.
-		WaitForStage: client.WorkflowUpdateStageAccepted,
-	})
-	if err != nil {
-		return result, nexusOutboundError("UpdateWorkflow", err)
-	}
-	return result, nil
 }
 
 // nexusOutboundError maps a failure from an RPC the handler issued to the right

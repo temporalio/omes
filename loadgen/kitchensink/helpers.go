@@ -148,34 +148,6 @@ func NewNexusOperationAction(
 	}
 }
 
-// NewNexusWorkflowTargetSequence starts one kitchenSink workflow, applies the
-// provided actions to it, then awaits pending actions.
-func NewNexusWorkflowTargetSequence(endpoint string, workflowID string, startAction *Action, actions ...*Action) *Action {
-	if startAction == nil {
-		startAction = NewNexusOperationAction(endpoint,
-			&NexusOperationRequest{
-				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-					WorkflowId: workflowID,
-					StartOptions: &NexusWorkflowStartOptions{
-						WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-							NewAwaitWorkflowStateAction("status", "done"),
-							NewEmptyReturnResultAction(),
-						)},
-					},
-					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
-				}},
-			},
-			nil,
-			&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-		)
-	}
-	sequence := make([]*Action, 0, len(actions)+2)
-	sequence = append(sequence, startAction)
-	sequence = append(sequence, actions...)
-	sequence = append(sequence, &Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}})
-	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: sequence}}}
-}
-
 // WaitFinishChoice awaits an operation through to completion.
 func WaitFinishChoice() *AwaitableChoice {
 	return &AwaitableChoice{
