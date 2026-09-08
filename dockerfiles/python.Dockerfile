@@ -1,13 +1,13 @@
 # Build in a full featured container
 ARG TARGETARCH
 FROM --platform=linux/$TARGETARCH ghcr.io/astral-sh/uv:latest AS uv
-FROM --platform=linux/$TARGETARCH python:3.11-bullseye AS build
+FROM --platform=linux/$TARGETARCH python:3.11-trixie AS build
 
 # Install protobuf compiler
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    protobuf-compiler=3.21.12-* libprotobuf-dev=3.21.12-*
 
 # Get go compiler
 ARG TARGETARCH
@@ -54,7 +54,7 @@ COPY workers/python ./workers/python
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language python --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a run container
-FROM --platform=linux/$TARGETARCH python:3.11-slim-bullseye
+FROM --platform=linux/$TARGETARCH python:3.11-slim-trixie
 
 COPY --from=uv /uv /uvx /bin/
 COPY --from=build /app/temporal-omes /app/temporal-omes

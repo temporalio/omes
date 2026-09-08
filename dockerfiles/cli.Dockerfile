@@ -59,7 +59,7 @@ RUN cd loadgen/kitchen-sink-gen && \
   RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --target $RUST_TARGET
 
 # Copy the CLI to a distroless "run" container
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian11:nonroot
+FROM --platform=linux/$TARGETARCH gcr.io/distroless/static-debian13:nonroot
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/loadgen/kitchen-sink-gen/target/*/release/kitchen-sink-gen /app/kitchen-sink-gen
