@@ -1016,7 +1016,11 @@ func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
 		Input: &NexusOperationRequest{
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId: workflowID,
-				Action:     &NexusWorkflowAction_Signal{Signal: &DoSignal{}},
+				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet()},
+					}},
+				}},
 			}},
 		},
 		ExpectedOutput: ConvertToPayload(workflowID),
@@ -1030,7 +1034,12 @@ func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string) *Actio
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId:   workflowID,
 				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}},
-				Action:       &NexusWorkflowAction_Signal{Signal: &DoSignal{WithStart: true}},
+				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet()},
+					}},
+					WithStart: true,
+				}},
 			}},
 		},
 		ExpectedOutput: ConvertToPayload(workflowID),
