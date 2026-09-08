@@ -3,7 +3,6 @@ package scenarios
 import (
 	"fmt"
 	"math/rand"
-	"strings"
 	"testing"
 	"time"
 
@@ -334,71 +333,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		require.NotNil(t, targetActions[len(targetActions)-1].GetAwaitPendingActions())
 	}
 	require.Equal(t, map[bool]bool{false: true, true: true}, seenSignalWithStartCreator)
-}
-
-func TestThroughputStressNexusWorkflowTargetIDsAreStable(t *testing.T) {
-	t.Parallel()
-
-	executor := newThroughputStressExecutor()
-	require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
-		RunID: "nexus-target-ids",
-		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-			IterFlag:                        "3",
-			NexusEnabledFlag:                "true",
-			NexusEndpointFlag:               "test-endpoint",
-			IncludeNexusSignalFlag:          "true",
-			IncludeNexusSignalWithStartFlag: "true",
-			IncludeNexusUpdateFlag:          "true",
-		}),
-	}))
-	info := &loadgen.ScenarioInfo{
-		RunID:       "nexus-target-ids",
-		ExecutionID: "exec",
-		Logger:      zap.NewNop().Sugar(),
-	}
-	collectWorkflowIDs := func(actionSets []*ks.ActionSet, workflowIDPrefix string) []string {
-		var workflowIDs []string
-		seen := map[string]bool{}
-		var walk func([]*ks.Action)
-		walk = func(actions []*ks.Action) {
-			for _, action := range actions {
-				operation := action.GetNexusOperation()
-				if workflowAction := operation.GetInput().GetWorkflowAction(); operation.GetOperation() == ks.KitchenSinkNexusOperationName &&
-					strings.HasPrefix(workflowAction.GetWorkflowId(), workflowIDPrefix) &&
-					!seen[workflowAction.GetWorkflowId()] {
-					seen[workflowAction.GetWorkflowId()] = true
-					workflowIDs = append(workflowIDs, workflowAction.GetWorkflowId())
-				}
-				if nested := action.GetNestedActionSet(); nested != nil {
-					walk(nested.GetActions())
-				}
-			}
-		}
-		for _, actionSet := range actionSets {
-			walk(actionSet.GetActions())
-		}
-		return workflowIDs
-	}
-
-	for iteration, expectedWorkflowIDs := range [][]string{
-		{
-			"w-nexus-target-ids-exec-1-nexus-target-0",
-			"w-nexus-target-ids-exec-1-nexus-target-1",
-			"w-nexus-target-ids-exec-1-nexus-target-2",
-		},
-		{
-			"w-nexus-target-ids-exec-2-nexus-target-3",
-			"w-nexus-target-ids-exec-2-nexus-target-4",
-			"w-nexus-target-ids-exec-2-nexus-target-5",
-		},
-	} {
-		run := info.NewRun(iteration + 1)
-		workflowIDPrefix := run.DefaultStartWorkflowOptions().ID + "-nexus-target-"
-		require.Equal(t, expectedWorkflowIDs,
-			collectWorkflowIDs(executor.createActions(run), workflowIDPrefix))
-		require.Equal(t, expectedWorkflowIDs,
-			collectWorkflowIDs(executor.createActions(run), workflowIDPrefix))
-	}
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {

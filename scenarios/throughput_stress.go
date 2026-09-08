@@ -653,7 +653,7 @@ func (t *tpsExecutor) createActionsChunk(
 				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d",
 					run.DefaultStartWorkflowOptions().ID,
 					t.internalIterationIndex(run, remainingInternalIters, i))
-				syncActions = append(syncActions, t.createNexusWorkflowTargetSequence(nexusWorkflowID, rng))
+				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID, rng))
 			}
 		}
 
@@ -971,7 +971,8 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 	})
 }
 
-func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *rand.Rand) *Action {
+// createNexusWorkflowActionSequence starts a workflow, sends the configured actions, and waits for completion.
+func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *rand.Rand) *Action {
 	var startAction *Action
 	var targetActions []*Action
 	if t.config.IncludeNexusSignalWithStart && rng.Intn(2) == 0 {
