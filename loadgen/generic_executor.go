@@ -154,13 +154,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 				// cancellation while the run is healthy.
 				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
 
-				// Skip outcome handling if the run has been canceled.
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-
 				switch {
 				case stopping:
 					g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)

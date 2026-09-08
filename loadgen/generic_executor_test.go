@@ -316,6 +316,45 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 	})
 }
 
+func TestRunCanceledWithNonCancellationErrorIsReportedAsFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		failureReported := make(chan struct{}, 1)
+		executor := &GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				cancel()
+				return errors.New("deliberate fail from test")
+			},
+		}
+
+		logger := zap.Must(zap.NewDevelopment())
+		defer logger.Sync()
+		err := executor.Run(ctx, ScenarioInfo{
+			MetricsHandler: client.MetricsNopHandler,
+			Logger:         logger.Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 1,
+				ContinueOnIterationFailure: true,
+				OnIterationFailure: func(ctx context.Context, run *Run, err error) {
+					failureReported <- struct{}{}
+				},
+			},
+		})
+		require.Error(t, err)
+
+		synctest.Wait()
+		reported := false
+		select {
+		case <-failureReported:
+			reported = true
+		default:
+		}
+		require.True(t, reported, "non-cancellation error should be reported as a failure")
+	})
+}
+
 // TestRunStoppedIterationsAreNotCountedAsFailures pins that iterations abandoned
 // by a caller stopping the run are left out of the tallies, so a clean stop is
 // not reported as a burst of failures.
