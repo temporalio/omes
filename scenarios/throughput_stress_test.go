@@ -211,9 +211,8 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	}).NewRun(0)
 
 	var inWorkflow, standalone bool
-	var walk func(actions []*ks.Action)
-	walk = func(actions []*ks.Action) {
-		for _, a := range actions {
+	for _, set := range exec.createActions(run) {
+		walkActions(set.GetActions(), func(a *ks.Action) {
 			if op := a.GetNexusOperation(); op.GetInput().GetStartActivity() != nil {
 				inWorkflow = true
 			}
@@ -227,13 +226,7 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 					}
 				}
 			}
-			if nested := a.GetNestedActionSet(); nested != nil {
-				walk(nested.GetActions())
-			}
-		}
-	}
-	for _, set := range exec.createActions(run) {
-		walk(set.GetActions())
+		})
 	}
 
 	require.True(t, inWorkflow,
@@ -246,40 +239,53 @@ func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
 	actions := (&tpsExecutor{config: &tpsConfig{NexusEndpoint: "test-endpoint"}}).
 		createNexusAttachCallbacksAction().GetNestedActionSet().GetActions()
 
-	require.NotNil(t, actions[1].GetSendSignal().GetAwaitableChoice().GetAbandon())
+	require.NotNil(t, actions[1].GetNexusOperation().GetAwaitableChoice().GetAbandon())
 	require.NotNil(t, actions[2].GetAwaitPendingActions())
 }
 
 func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	t.Parallel()
 
-	exec := newThroughputStressExecutor()
-	exec.config = &tpsConfig{
-		InternalIterations:          1,
-		NexusEnabled:                true,
-		NexusEndpoint:               "test-endpoint",
-		IncludeNexusSignal:          true,
-		IncludeNexusSignalWithStart: true,
-		IncludeNexusUpdate:          true,
-		SleepTime:                   time.Millisecond,
-		RngSeed:                     1,
-	}
-	exec.rng = rand.New(rand.NewSource(1))
-	info := &loadgen.ScenarioInfo{
-		RunID:       "nexus-workflow-actions",
-		ExecutionID: "exec",
-		Logger:      zap.NewNop().Sugar(),
-	}
+	// Each run creates an endpoint targeting its own task queue.
+	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
 
-	seenSignalWithStartCreator := map[bool]bool{}
-	for iteration := 1; iteration <= 100; iteration++ {
-		run := info.NewRun(iteration)
-		workflowID := fmt.Sprintf("%s-nexus-target-%d",
-			run.DefaultStartWorkflowOptions().ID, iteration-1)
+	for _, tc := range []struct {
+		runID                      string
+		startedWithSignalWithStart bool
+	}{
+		{runID: "nexus-workflow-actions-plain-start"},
+		{runID: "nexus-workflow-actions-signal-with-start-2", startedWithSignalWithStart: true},
+	} {
+		scenarioInfo := loadgen.ScenarioInfo{
+			RunID: tc.runID,
+			Configuration: loadgen.RunConfiguration{
+				Iterations: 1,
+			},
+			Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+				IterFlag:                          "1",
+				NexusEnabledFlag:                  "true",
+				IncludeNexusSignalFlag:            "true",
+				IncludeNexusSignalWithStartFlag:   "true",
+				IncludeNexusUpdateFlag:            "true",
+				SleepTimeFlag:                     "1ms",
+				VisibilityVerificationTimeoutFlag: "10s",
+			}),
+		}
+		exec := newThroughputStressExecutor()
+		var workflowID string
+		var observedActions []*ks.ActionSet
+		exec.onActionsCreated = func(run *loadgen.Run, actions []*ks.ActionSet) {
+			workflowID = run.DefaultStartWorkflowOptions().ID
+			observedActions = actions
+		}
+
+		_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
+		require.NoError(t, err, tc.runID)
+
+		workflowID = fmt.Sprintf("%s-nexus-target-%d", workflowID, 0)
 		var targetActions []*ks.Action
-		var walk func([]*ks.Action)
-		walk = func(actions []*ks.Action) {
-			for _, action := range actions {
+		for _, actionSet := range observedActions {
+			walkActions(actionSet.GetActions(), func(action *ks.Action) {
 				if nested := action.GetNestedActionSet(); nested != nil {
 					for _, nestedAction := range nested.GetActions() {
 						if nestedAction.GetNexusOperation().GetInput().GetWorkflowAction().GetWorkflowId() == workflowID {
@@ -287,18 +293,14 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 							break
 						}
 					}
-					walk(nested.GetActions())
 				}
-			}
-		}
-		for _, actionSet := range exec.createActions(run) {
-			walk(actionSet.GetActions())
+			})
 		}
 
 		require.NotEmpty(t, targetActions)
 		startedWithSignalWithStart := targetActions[0].GetNexusOperation().GetInput().
 			GetWorkflowAction().GetSignal().GetWithStart()
-		seenSignalWithStartCreator[startedWithSignalWithStart] = true
+		require.Equal(t, tc.startedWithSignalWithStart, startedWithSignalWithStart)
 
 		var starts, signals, signalWithStarts, updates int
 		for _, action := range targetActions {
@@ -306,7 +308,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 			if operation == nil {
 				continue
 			}
-			require.Equal(t, "test-endpoint", operation.GetEndpoint())
+			require.Equal(t, exec.config.NexusEndpoint, operation.GetEndpoint())
 			require.Equal(t, ks.KitchenSinkNexusOperationName, operation.GetOperation())
 			workflowAction := operation.GetInput().GetWorkflowAction()
 			require.Equal(t, workflowID, workflowAction.GetWorkflowId())
@@ -325,7 +327,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 			}
 		}
 
-		require.Equal(t, 2, signals)
+		require.Equal(t, 3, signals)
 		require.Equal(t, 1, signalWithStarts)
 		require.Equal(t, 1, updates)
 		if startedWithSignalWithStart {
@@ -333,20 +335,15 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		} else {
 			require.Equal(t, 1, starts)
 		}
-		completeTarget := targetActions[len(targetActions)-2].GetSendSignal()
+		completeTarget := targetActions[len(targetActions)-2].GetNexusOperation()
 		require.NotNil(t, completeTarget)
-		require.Equal(t, workflowID, completeTarget.GetWorkflowId())
-		require.Equal(t, "do_actions_signal", completeTarget.GetSignalName())
-		require.NotNil(t, completeTarget.GetAwaitableChoice().GetWaitFinish())
-		require.Len(t, completeTarget.GetArgs(), 1)
-		var signalAction ks.DoSignal_DoSignalActions
-		require.NoError(t, converter.GetDefaultDataConverter().FromPayload(completeTarget.GetArgs()[0], &signalAction))
-		completingActions := signalAction.GetDoActions().GetActions()
+		completeSignal := completeTarget.GetInput().GetWorkflowAction().GetSignal()
+		require.NotNil(t, completeSignal)
+		completingActions := completeSignal.GetDoSignalActions().GetDoActions().GetActions()
 		require.Len(t, completingActions, 1)
 		require.NotNil(t, completingActions[0].GetReturnResult())
 		require.NotNil(t, targetActions[len(targetActions)-1].GetAwaitPendingActions())
 	}
-	require.Equal(t, map[bool]bool{false: true, true: true}, seenSignalWithStartCreator)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
@@ -595,6 +592,15 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
 		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
 	}, commandTypes)
+}
+
+func walkActions(actions []*ks.Action, visit func(*ks.Action)) {
+	for _, action := range actions {
+		visit(action)
+		if nested := action.GetNestedActionSet(); nested != nil {
+			walkActions(nested.GetActions(), visit)
+		}
+	}
 }
 
 func standaloneActivityOperatorCommandsInConcurrentGroups(actions []*ks.Action) (

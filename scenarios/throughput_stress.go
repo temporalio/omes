@@ -125,12 +125,13 @@ type tpsConfig struct {
 }
 
 type tpsExecutor struct {
-	lock       sync.Mutex
-	state      *tpsState
-	config     *tpsConfig
-	isResuming bool
-	runID      string
-	rng        *rand.Rand
+	lock             sync.Mutex
+	state            *tpsState
+	config           *tpsConfig
+	isResuming       bool
+	runID            string
+	rng              *rand.Rand
+	onActionsCreated func(*loadgen.Run, []*ActionSet)
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -394,7 +395,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				//
 				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
 				// That means these client actions are sent from the activity worker instead of Omes.
-				options.Params.WorkflowInput.InitialActions = t.createActions(run)
+				actions := t.createActions(run)
+				options.Params.WorkflowInput.InitialActions = actions
+				if t.onActionsCreated != nil {
+					t.onActionsCreated(run, actions)
+				}
 
 				return nil
 			},
@@ -933,22 +938,26 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 				{Variant: &Action_NestedActionSet{
 					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
 				}},
-				{Variant: &Action_SendSignal{
-					SendSignal: &SendSignalAction{
-						WorkflowId: handlerWfID,
-						SignalName: "do_actions_signal",
-						Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
-							Variant: &DoSignal_DoSignalActions_DoActions{
-								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
-							},
-						})},
-						AwaitableChoice: &AwaitableChoice{
-							// The operation futures below are the correctness gate. Do not fail if an
-							// active/passive transition replays this after the handler has completed.
-							Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
-						},
+				NexusOperation(&ExecuteNexusOperation{
+					Endpoint: t.config.NexusEndpoint,
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: handlerWfID,
+							Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+								Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+									},
+								}},
+							}},
+						}},
 					},
-				}},
+					AwaitableChoice: &AwaitableChoice{
+						// The operation futures below are the correctness gate. Do not fail if an
+						// active/passive transition replays this after the handler has completed.
+						Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
+					},
+				}),
 				{Variant: &Action_AwaitPendingActions{
 					AwaitPendingActions: &AwaitPendingActions{},
 				}},
@@ -1006,16 +1015,22 @@ func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *
 	actions := append([]*Action{startAction}, targetActions...)
 	actions = append(actions,
 		// Complete the target so the wait_started start operation can finish.
-		&Action{Variant: &Action_SendSignal{SendSignal: &SendSignalAction{
-			WorkflowId: workflowID,
-			SignalName: "do_actions_signal",
-			Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
-				Variant: &DoSignal_DoSignalActions_DoActions{
-					DoActions: SingleActionSet(NewEmptyReturnResultAction()),
-				},
-			})},
-			AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
-		}}},
+		NexusOperation(&ExecuteNexusOperation{
+			Endpoint: t.config.NexusEndpoint,
+			Input: &NexusOperationRequest{
+				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+					WorkflowId: workflowID,
+					Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+						Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+							},
+						}},
+					}},
+				}},
+			},
+			ExpectedOutput: ConvertToPayload(workflowID),
+		}),
 		&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 	)
 	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: actions}}}
