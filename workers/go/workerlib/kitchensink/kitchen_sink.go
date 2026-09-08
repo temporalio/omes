@@ -627,6 +627,7 @@ func startNexusOperation(
 		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(action.Echo)), nil
 	case *kitchensink.NexusOperationRequest_WorkflowAction:
 		workflowAction := cmp.Or(action.WorkflowAction, &kitchensink.NexusWorkflowAction{})
+
 		switch workflowAction.GetAction().(type) {
 		case *kitchensink.NexusWorkflowAction_Start:
 			startOptions := cmp.Or(workflowAction.GetStartOptions(), &kitchensink.NexusWorkflowStartOptions{})
@@ -640,8 +641,8 @@ func startNexusOperation(
 					WorkflowIDConflictPolicy: startOptions.GetWorkflowIdConflictPolicy(),
 				},
 				KitchenSinkWorkflow,
-				cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}),
-			)
+				cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}))
+
 		case *kitchensink.NexusWorkflowAction_Signal:
 			var result temporalnexus.TemporalOperationResult[*common.Payload]
 			if workflowAction.GetWorkflowId() == "" {
@@ -655,30 +656,39 @@ func startNexusOperation(
 				return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 			}
 
+			// Signal-With-Start
 			if signal.GetWithStart() {
-				startOptions := client.StartWorkflowOptions{
-					ID:                       workflowAction.GetWorkflowId(),
-					TaskQueue:                cmp.Or(workflowAction.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
-					WorkflowExecutionTimeout: 60 * time.Minute,
-					WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-				}
-				workflowInput := cmp.Or(workflowAction.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{})
 				run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
-					ctx, workflowAction.GetWorkflowId(), signalName, signalArg, startOptions,
-					KitchenSinkWorkflow, workflowInput)
+					ctx,
+					workflowAction.GetWorkflowId(),
+					signalName,
+					signalArg,
+					client.StartWorkflowOptions{
+						ID:                       workflowAction.GetWorkflowId(),
+						TaskQueue:                cmp.Or(workflowAction.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
+						WorkflowExecutionTimeout: 60 * time.Minute,
+						WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+					},
+					KitchenSinkWorkflow,
+					cmp.Or(workflowAction.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{}))
 				if err != nil {
 					return result, err
 				}
 				return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
 			}
 
-			err = temporalnexus.GetClient(ctx).SignalWorkflow(
-				ctx, workflowAction.GetWorkflowId(), workflowAction.GetRunId(), signalName, signalArg)
-			if err != nil {
+			if err = temporalnexus.GetClient(ctx).SignalWorkflow(
+				ctx,
+				workflowAction.GetWorkflowId(),
+				workflowAction.GetRunId(),
+				signalName,
+				signalArg,
+			); err != nil {
 				return result, err
 			}
-			return temporalnexus.NewSyncResult(
-				kitchensink.ConvertToPayload(workflowAction.GetWorkflowId())), nil
+
+			return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(workflowAction.GetWorkflowId())), nil
+
 		case *kitchensink.NexusWorkflowAction_Update:
 			var result temporalnexus.TemporalOperationResult[*common.Payload]
 			if workflowAction.GetWorkflowId() == "" {
@@ -689,6 +699,7 @@ func startNexusOperation(
 				return result, nexus.HandlerErrorf(
 					nexus.HandlerErrorTypeBadRequest, "update-with-start is not supported by this Nexus operation")
 			}
+
 			updateName, args, err := kitchensink.UpdateNameAndArgs(workflowAction.GetUpdate())
 			if err != nil {
 				return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
@@ -708,11 +719,14 @@ func startNexusOperation(
 				WaitForStage: client.WorkflowUpdateStageAccepted,
 			})
 		}
+
 	case *kitchensink.NexusOperationRequest_StartActivity:
 		return startStandaloneActivityNexusOperation(ctx, nc, action.StartActivity, opts)
+
+	default:
+		return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
 	}
-	return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
-		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
 }
 
 // startStandaloneActivityNexusOperation starts the registered "noop" activity.
