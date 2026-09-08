@@ -116,7 +116,7 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 	ebbFlowActivities := ebbandflow.Activities{}
 
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	if err := service.Register(kitchensink.ExecuteNexusOperation); err != nil {
+	if err := service.Register(kitchensink.KitchenSinkNexusOperation); err != nil {
 		return fmt.Errorf("failed to register nexus operation: %w", err)
 	}
 

@@ -603,8 +603,8 @@ type ReturnOrErr struct {
 	err   error
 }
 
-// ExecuteNexusOperation dispatches kitchen sink Nexus actions.
-var ExecuteNexusOperation = temporalnexus.MustNewTemporalOperation(
+// KitchenSinkNexusOperation dispatches kitchen sink Nexus actions.
+var KitchenSinkNexusOperation = temporalnexus.MustNewTemporalOperation(
 	temporalnexus.TemporalOperationOptions[*kitchensink.NexusOperationRequest, *common.Payload]{
 		Name:  kitchensink.KitchenSinkNexusOperationName,
 		Start: startNexusOperation,

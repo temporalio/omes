@@ -31,7 +31,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	ebbFlowActivities := ebbandflow.Activities{}
 	clientActivities := kitchensink.ClientActivities{Client: client}
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	if err := service.Register(kitchensink.ExecuteNexusOperation); err != nil {
+	if err := service.Register(kitchensink.KitchenSinkNexusOperation); err != nil {
 		panic(err)
 	}
 	w := sdkworker.New(client, context.TaskQueue, context.WorkerOptions)
