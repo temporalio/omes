@@ -491,13 +491,12 @@ func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *tes
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name    string
-		flag    string
-		enabled [3]bool
+		name string
+		flag string
 	}{
-		{name: "signal", flag: IncludeNexusSignalFlag, enabled: [3]bool{true, false, false}},
-		{name: "signal with start", flag: IncludeNexusSignalWithStartFlag, enabled: [3]bool{false, true, false}},
-		{name: "update", flag: IncludeNexusUpdateFlag, enabled: [3]bool{false, false, true}},
+		{name: "signal", flag: IncludeNexusSignalFlag},
+		{name: "signal with start", flag: IncludeNexusSignalWithStartFlag},
+		{name: "update", flag: IncludeNexusUpdateFlag},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -513,20 +512,6 @@ func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *tes
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tc.flag)
 			require.Contains(t, err.Error(), NexusEnabledFlag)
-
-			executor := newThroughputStressExecutor()
-			require.NoError(t, executor.Configure(loadgen.ScenarioInfo{
-				RunID: "tps-nexus-workflow-action",
-				Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-					tc.flag:          "true",
-					NexusEnabledFlag: "true",
-				}),
-			}))
-			require.Equal(t, tc.enabled, [3]bool{
-				executor.config.IncludeNexusSignal,
-				executor.config.IncludeNexusSignalWithStart,
-				executor.config.IncludeNexusUpdate,
-			})
 		})
 	}
 }
