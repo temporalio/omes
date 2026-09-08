@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
 	. "github.com/temporalio/omes/internal/workertest"
@@ -18,7 +17,6 @@ import (
 	"go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
-	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -1219,8 +1217,9 @@ func TestKitchenSink(t *testing.T) {
 			name: "NexusOperation/Sync/Signal",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					NewNexusOperationAction("",
-						&NexusOperationRequest{
+					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+						Operation: KitchenSinkNexusOperationName,
+						Input: &NexusOperationRequest{
 							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 								WorkflowId: "nexus-signal-target",
 								StartOptions: &NexusWorkflowStartOptions{
@@ -1232,20 +1231,25 @@ func TestKitchenSink(t *testing.T) {
 								Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 							}},
 						},
-						nil,
-						&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-					),
-					NewNexusOperationAction("",
-						NexusSignalWorkflowRequest("nexus-signal-target", "", &DoSignal{
-							Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-								Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
-									NewSetWorkflowStateAction("status", "done"),
-								)},
+						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+					}}},
+					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+						Operation:       KitchenSinkNexusOperationName,
+						ExpectedOutput:  ConvertToPayload("nexus-signal-target"),
+						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+						Input: &NexusOperationRequest{
+							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+								WorkflowId: "nexus-signal-target",
+								Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+									Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+										Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
+											NewSetWorkflowStateAction("status", "done"),
+										)},
+									}},
+								}},
 							}},
-						}, nil),
-						ConvertToPayload("nexus-signal-target"),
-						WaitFinishChoice(),
-					),
+						},
+					}}},
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 				}}}},
 			)}},
@@ -1257,18 +1261,28 @@ func TestKitchenSink(t *testing.T) {
 			name: "NexusOperation/Sync/SignalWithStart",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					NewNexusOperationAction("",
-						NexusSignalWorkflowRequest("nexus-sws-target", "", &DoSignal{
-							Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-								Variant: &DoSignal_DoSignalActions_DoActionsInMain{DoActionsInMain: SingleActionSet(
+					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+						Operation:       KitchenSinkNexusOperationName,
+						ExpectedOutput:  ConvertToPayload("nexus-sws-target"),
+						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+						Input: &NexusOperationRequest{
+							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+								WorkflowId: "nexus-sws-target",
+								StartOptions: &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+									NewAwaitWorkflowStateAction("status", "done"),
 									NewEmptyReturnResultAction(),
-								)},
+								)}},
+								Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+									Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+										Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
+											NewSetWorkflowStateAction("status", "done"),
+										)},
+									}},
+									WithStart: true,
+								}},
 							}},
-							WithStart: true,
-						}, &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}}),
-						ConvertToPayload("nexus-sws-target"),
-						WaitFinishChoice(),
-					),
+						},
+					}}},
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 				}}}},
 			)}},
@@ -1280,8 +1294,9 @@ func TestKitchenSink(t *testing.T) {
 			name: "NexusOperation/Async/Update",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				&Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
-					NewNexusOperationAction("",
-						&NexusOperationRequest{
+					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+						Operation: KitchenSinkNexusOperationName,
+						Input: &NexusOperationRequest{
 							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 								WorkflowId: "nexus-update-target",
 								StartOptions: &NexusWorkflowStartOptions{
@@ -1293,21 +1308,30 @@ func TestKitchenSink(t *testing.T) {
 								Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 							}},
 						},
-						nil,
-						&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-					),
-					NewNexusOperationAction("",
-						NexusUpdateWorkflowRequest("nexus-update-target", "", &DoUpdate{
-							Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
-								Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-									NewSetWorkflowStateAction("status", "done"),
-									NewNexusUpdateResultAction("nexus-update-target"),
-								)},
+						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+					}}},
+					&Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+						Operation:       KitchenSinkNexusOperationName,
+						ExpectedOutput:  ConvertToPayload("nexus-update-target"),
+						AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+						Input: &NexusOperationRequest{
+							Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+								WorkflowId: "nexus-update-target",
+								Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+									Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+										Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+											NewSetWorkflowStateAction("status", "done"),
+											// The update handler's return value is itself encoded by the data converter
+											// before the server forwards it to the Nexus completion callback, so the value
+											// is wrapped twice here: the caller decodes the outer layer and compares the
+											// inner Payload against ExecuteNexusOperation.expected_output.
+											NewReturnResultAction(ConvertToPayload(ConvertToPayload("nexus-update-target"))),
+										)},
+									}},
+								}},
 							}},
-						}),
-						ConvertToPayload("nexus-update-target"),
-						WaitFinishChoice(),
-					),
+						},
+					}}},
 					&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 				}}}},
 			)}},
@@ -1412,7 +1436,6 @@ func testForSDK(
 	scenarioInfo := ScenarioInfo{
 		ScenarioName: "kitchenSinkTest",
 		RunID:        fmt.Sprintf("%s-%d", strings.ReplaceAll(t.Name(), "/", "-"), time.Now().Unix()),
-		ExecutionID:  uuid.NewString(),
 		Configuration: RunConfiguration{
 			Iterations: 1,
 		},
@@ -1467,6 +1490,7 @@ func testForSDK(
 			return nil
 		},
 		UpdateWorkflowOptions: func(_ context.Context, _ *Run, opts *KitchenSinkWorkflowOptions) error {
+			opts.StartOptions.ID = scenarioInfo.RunID
 			opts.StartOptions.WorkflowExecutionTimeout = workflowTimeout
 			return nil
 		},
@@ -1514,9 +1538,8 @@ func testSupportedFeature(
 	}
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
-	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
 	historyEvents, historyErr := getWorkflowHistory(
-		t, env.TemporalClient(), env.Namespace(), taskQueueName, scenarioInfo.ExecutionID)
+		t, env.TemporalClient(), scenarioInfo.RunID)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1561,29 +1584,9 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 func getWorkflowHistory(
 	t *testing.T,
 	temporalClient client.Client,
-	namespace string,
-	taskQueueName string,
-	executionID string,
+	workflowID string,
 ) ([]*history.HistoryEvent, error) {
-	executions, err := temporalClient.ListWorkflow(t.Context(),
-		&workflowservice.ListWorkflowExecutionsRequest{
-			Namespace: namespace,
-			Query: fmt.Sprintf(
-				"TaskQueue = '%s' AND WorkflowType = 'kitchenSink' AND %s = '%s'",
-				taskQueueName, OmesExecutionIDSearchAttribute, executionID),
-		})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list workflow executions: %w", err)
-	}
-	if len(executions.Executions) == 0 {
-		return nil, fmt.Errorf("no workflow executions found for task queue %s", taskQueueName)
-	}
-	if len(executions.Executions) > 1 {
-		t.Logf("Warning: found %d kitchenSink workflow executions for task queue %s, using the first one", len(executions.Executions), taskQueueName)
-	}
-
-	execution := executions.Executions[0]
-	historyIter := temporalClient.GetWorkflowHistory(t.Context(), execution.Execution.WorkflowId, execution.Execution.RunId, false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
+	historyIter := temporalClient.GetWorkflowHistory(t.Context(), workflowID, "", false, enums.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
 	var historyEvents []*history.HistoryEvent
 	for historyIter.HasNext() {
 		event, err := historyIter.Next()

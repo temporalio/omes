@@ -746,14 +746,13 @@ func startNexusOperation(
 // Nexus handler error. Namespace handover is worth retrying; a disabled server
 // feature or a bad target is not, because no number of retries fixes either.
 func nexusOutboundError(rpc string, err error) error {
-	var notActive *serviceerror.NamespaceNotActive
-	if errors.As(err, &notActive) {
+	if _, ok := errors.AsType[*serviceerror.NamespaceNotActive](err); ok {
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
 	}
-	var unimplemented *serviceerror.Unimplemented
-	var invalidArg *serviceerror.InvalidArgument
-	var notFound *serviceerror.NotFound
-	if errors.As(err, &unimplemented) || errors.As(err, &invalidArg) || errors.As(err, &notFound) {
+	_, unimplemented := errors.AsType[*serviceerror.Unimplemented](err)
+	_, invalidArgument := errors.AsType[*serviceerror.InvalidArgument](err)
+	_, notFound := errors.AsType[*serviceerror.NotFound](err)
+	if unimplemented || invalidArgument || notFound {
 		return nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s failed: %s", rpc, err.Error())
 	}
 	return fmt.Errorf("%s failed: %w", rpc, err)
