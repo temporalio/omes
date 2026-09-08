@@ -650,10 +650,9 @@ func (t *tpsExecutor) createActionsChunk(
 				}
 			}
 			if t.config.IncludeNexusSignal || t.config.IncludeNexusSignalWithStart || t.config.IncludeNexusUpdate {
-				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d-%s",
+				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d",
 					run.DefaultStartWorkflowOptions().ID,
-					t.internalIterationIndex(run, remainingInternalIters, i),
-					uuid.NewString())
+					t.internalIterationIndex(run, remainingInternalIters, i))
 				syncActions = append(syncActions, t.createNexusWorkflowTargetSequence(nexusWorkflowID, rng))
 			}
 		}
@@ -986,7 +985,29 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 	if t.config.IncludeNexusUpdate {
 		targetActions = append(targetActions, t.createNexusUpdateAction(workflowID))
 	}
-	return NewNexusWorkflowTargetSequence(t.config.NexusEndpoint, workflowID, startAction, targetActions...)
+	if startAction == nil {
+		startAction = NewNexusOperationAction(t.config.NexusEndpoint,
+			&NexusOperationRequest{
+				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+					WorkflowId: workflowID,
+					StartOptions: &NexusWorkflowStartOptions{
+						WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+							NewAwaitWorkflowStateAction("status", "done"),
+							NewEmptyReturnResultAction(),
+						)},
+					},
+					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+				}},
+			},
+			nil,
+			&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+		)
+	}
+	actions := append([]*Action{startAction}, targetActions...)
+	actions = append(actions, &Action{
+		Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}},
+	})
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: actions}}}
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {

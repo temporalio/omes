@@ -104,10 +104,3 @@ and, when standalone Nexus is part of the run, as a standalone Nexus operation. 
 support for standalone activities and activity completion callbacks (dynamic config
 `activity.enableStandalone` and `activity.enableCallbacks`) and a Nexus callback URL; if those are
 off, the operation fails clearly rather than being skipped.
-
-The workflow actions use one target kitchenSink workflow per iteration for all selected actions.
-With signal-with-start enabled, exactly one signal-with-start request is made: it either creates the
-target or messages a target created by a regular Nexus workflow start.
-
-All four options are off by default, require `nexus-enabled`, and are currently supported by Go
-workers.
