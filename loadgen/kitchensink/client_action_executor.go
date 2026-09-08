@@ -209,10 +209,10 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sano *DoStandaloneNexusOperation) error {
 	nexusOp := sano.GetOperation()
 	if nexusOp == nil {
-		return fmt.Errorf("DoStandaloneNexusOperation.operation is required")
+		return fmt.Errorf("standalone Nexus operation requires operation")
 	}
 	if awaitableChoice := nexusOp.GetAwaitableChoice(); awaitableChoice != nil && awaitableChoice.GetWaitFinish() == nil {
-		return fmt.Errorf("DoStandaloneNexusOperation only supports the wait_finish awaitable choice")
+		return fmt.Errorf("standalone Nexus operation only supports the wait_finish awaitable choice")
 	}
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
 	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
@@ -220,7 +220,7 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		Service:  KitchenSinkNexusServiceName,
 	})
 	if err != nil {
-		return fmt.Errorf("New standalone Nexus client: %w", err)
+		return fmt.Errorf("new standalone Nexus client: %w", err)
 	}
 
 	handle, err := nexusClient.ExecuteOperation(ctx, nexusOp.GetOperation(), nexusOp.GetInput(), client.StartNexusOperationOptions{
@@ -228,13 +228,13 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		ScheduleToCloseTimeout: 90 * time.Second,
 	})
 	if err != nil {
-		return fmt.Errorf("Execute standalone Nexus operation: %w", err)
+		return fmt.Errorf("execute standalone Nexus operation: %w", err)
 	}
 
 	if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
 		var result commonpb.Payload
 		if err := handle.Get(ctx, &result); err != nil {
-			return fmt.Errorf("Get standalone Nexus operation: %w", err)
+			return fmt.Errorf("get standalone Nexus operation: %w", err)
 		}
 		if !expectedOutput.Equal(&result) {
 			return fmt.Errorf("expected standalone Nexus operation output %v, got %v", expectedOutput, &result)
@@ -244,7 +244,7 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 
 	err = handle.Get(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("Get standalone Nexus operation: %w", err)
+		return fmt.Errorf("get standalone Nexus operation: %w", err)
 	}
 	return nil
 }
