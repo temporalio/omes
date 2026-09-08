@@ -650,6 +650,7 @@ func (t *tpsExecutor) createActionsChunk(
 				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d",
 					run.DefaultStartWorkflowOptions().ID,
 					t.internalIterationIndex(run, remainingInternalIters, i))
+				// Keep this sequence sequential because AwaitPendingActions drains workflow-global pending actions.
 				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID, rng))
 			}
 		}
