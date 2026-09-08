@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
-	github.com/temporalio/features v0.0.0-20260908163831-001be1efa5dd
+	github.com/temporalio/features v0.0.0-20260908141410-6f64678c5b39
 	// harness/api is a module nested in this repo. This MUST stay a real pseudo-version
 	// (a pushed commit whose workers/go/harness/api tree matches the local one), never the
 	// v0.0.0-00010101... placeholder: downstream consumers inherit this require but NOT the

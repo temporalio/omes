@@ -1,13 +1,13 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH ruby:3.3-bullseye AS build
+FROM --platform=linux/$TARGETARCH ruby:3.3-trixie AS build
 
 # Install protobuf compiler
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-    clang=1:11.0-51+nmu5 \
-    protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+    clang=1:19.0-* \
+    protobuf-compiler=3.21.12-* libprotobuf-dev=3.21.12-*
 
 # Get go compiler
 ARG TARGETARCH
@@ -55,7 +55,7 @@ ENV BUNDLE_APP_CONFIG=.bundle
 RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ruby --dir-name prepared --version "$SDK_VERSION"
 
 # Copy the CLI and built worker to a slim "run" container
-FROM --platform=linux/$TARGETARCH ruby:3.3-slim-bullseye
+FROM --platform=linux/$TARGETARCH ruby:3.3-slim-trixie
 
 # Override BUNDLE_APP_CONFIG so bundler reads .bundle/config from the prepared dir
 ENV BUNDLE_APP_CONFIG=.bundle

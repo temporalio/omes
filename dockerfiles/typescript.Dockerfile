@@ -1,13 +1,13 @@
 # Build in a full featured container
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH node:24-bullseye AS build
+FROM --platform=linux/$TARGETARCH node:24-trixie AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install protobuf compiler
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive \
     apt-get install --no-install-recommends --assume-yes \
-      protobuf-compiler=3.12.4-1+deb11u1 libprotobuf-dev=3.12.4-1+deb11u1
+      protobuf-compiler=3.21.12-* libprotobuf-dev=3.21.12-*
 
 # Get go compiler
 ARG TARGETARCH
@@ -67,7 +67,7 @@ RUN CGO_ENABLED=0 ./temporal-omes prepare-worker --language ts --dir-name prepar
 
 # Copy the CLI and prepared feature to a "run" container.
 # hadolint ignore=DL3006
-FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian11
+FROM --platform=linux/$TARGETARCH gcr.io/distroless/nodejs20-debian13
 
 COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/typescript /app/workers/typescript
