@@ -1210,8 +1210,6 @@ func TestKitchenSink(t *testing.T) {
 					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
 				}),
 				NexusOperation(&ExecuteNexusOperation{
-					ExpectedOutput:  ConvertToPayload("nexus-signal-target"),
-					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 							WorkflowId: "nexus-signal-target",
@@ -1224,6 +1222,7 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						}},
 					},
+					ExpectedOutput: ConvertToPayload("nexus-signal-target"),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
@@ -1235,8 +1234,6 @@ func TestKitchenSink(t *testing.T) {
 			name: "NexusOperation/Sync/SignalWithStart",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
-					ExpectedOutput:  ConvertToPayload("nexus-sws-target"),
-					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 							WorkflowId: "nexus-sws-target",
@@ -1254,6 +1251,7 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						}},
 					},
+					ExpectedOutput: ConvertToPayload("nexus-sws-target"),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
@@ -1280,7 +1278,6 @@ func TestKitchenSink(t *testing.T) {
 					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
 				}),
 				NexusOperation(&ExecuteNexusOperation{
-					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 							WorkflowId: "nexus-update-target",
@@ -1298,7 +1295,7 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						}},
 					},
-					ExpectedOutput:  ConvertToPayload("nexus-update-target"),
+					ExpectedOutput: ConvertToPayload("nexus-update-target"),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
@@ -1423,35 +1420,28 @@ func testForSDK(
 	executor := &KitchenSinkExecutor{
 		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
-			var prepareActions func([]*Action)
-			prepareActions = func(actions []*Action) {
-				for _, action := range actions {
-					if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
-						nexusOp.Endpoint = nexusEndpoint
-					}
-					if nested := action.GetNestedActionSet(); nested != nil {
-						prepareActions(nested.GetActions())
-					}
-					if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
-						for _, cas := range clientSeq.ActionSets {
-							for _, ca := range cas.Actions {
-								if sno := ca.GetDoStandaloneNexusOperation().GetOperation(); sno != nil && sno.Endpoint == "" {
-									sno.Endpoint = nexusEndpoint
-								}
-								if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
-									sa.GetActivity().TaskQueue = runTaskQueue
-								}
-								if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
-									op.GetActivity().TaskQueue = runTaskQueue
+			if input.WorkflowInput != nil {
+				for _, actionSet := range input.WorkflowInput.InitialActions {
+					for _, action := range actionSet.Actions {
+						if nexusOp := action.GetNexusOperation(); nexusOp != nil && nexusOp.Endpoint == "" {
+							nexusOp.Endpoint = nexusEndpoint
+						}
+						if clientSeq := action.GetExecActivity().GetClient().GetClientSequence(); clientSeq != nil {
+							for _, cas := range clientSeq.ActionSets {
+								for _, ca := range cas.Actions {
+									if sno := ca.GetDoStandaloneNexusOperation().GetOperation(); sno != nil && sno.Endpoint == "" {
+										sno.Endpoint = nexusEndpoint
+									}
+									if sa := ca.GetDoStandaloneActivity(); sa.GetActivity() != nil && sa.GetActivity().TaskQueue == "" {
+										sa.GetActivity().TaskQueue = runTaskQueue
+									}
+									if op := ca.GetDoStandaloneActivityOperatorCommands(); op.GetActivity() != nil && op.GetActivity().TaskQueue == "" {
+										op.GetActivity().TaskQueue = runTaskQueue
+									}
 								}
 							}
 						}
 					}
-				}
-			}
-			if input.WorkflowInput != nil {
-				for _, actionSet := range input.WorkflowInput.InitialActions {
-					prepareActions(actionSet.Actions)
 				}
 			}
 			return nil
