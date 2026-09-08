@@ -320,7 +320,7 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 	})
 }
 
-func TestRunCanceledWithNonCancellationErrorIsReportedAsFailure(t *testing.T) {
+func TestRunReportsNonCancellationFailureAfterCancellation(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
