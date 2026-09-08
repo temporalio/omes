@@ -86,6 +86,11 @@ func ListActionSet(actions ...*Action) []*ActionSet {
 	}
 }
 
+func NexusOperation(operation *ExecuteNexusOperation) *Action {
+	operation.Operation = KitchenSinkNexusOperationName
+	return &Action{Variant: &Action_NexusOperation{NexusOperation: operation}}
+}
+
 func ClientActions(clientActions ...*ClientAction) *ClientSequence {
 	return &ClientSequence{
 		ActionSets: []*ClientActionSet{
