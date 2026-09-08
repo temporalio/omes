@@ -84,6 +84,7 @@ func TestRunWaitsForOnCompletion(t *testing.T) {
 		}()
 
 		<-callbackStarted
+		// Let every goroutine reach a durable blocking point before checking whether Run returned.
 		synctest.Wait()
 
 		returned := false
