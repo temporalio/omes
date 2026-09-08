@@ -18,7 +18,7 @@ on: # rebuild any PRs and main branch changes
 jobs:
   test-omes:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -71,7 +71,7 @@ jobs:
 
   check-sdk-dependencies:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       # Avoid mise's precompiled Python metadata endpoint, which has repeatedly timed out in CI,
       # while still installing the repository's configured Python version through mise.
@@ -110,7 +110,7 @@ jobs:
 
   check-worker:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -167,7 +167,7 @@ jobs:
 
   build-worker:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -241,7 +241,7 @@ jobs:
 
   build-worker-from-source:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -332,7 +332,7 @@ jobs:
 
   build-project:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -430,7 +430,7 @@ jobs:
 
   test-kitchensink:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -488,7 +488,7 @@ jobs:
 
   build-ks-gen-and-ensure-protos-up-to-date:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -532,7 +532,7 @@ jobs:
 
   build-cli:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -568,7 +568,7 @@ jobs:
   # to append a "v" to the version string
   prepare-for-docker-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     outputs:
       go-sdk-version: ${{ steps.set-output.outputs.go-sdk-version }}
       ts-sdk-version: ${{ steps.set-output.outputs.ts-sdk-version }}
