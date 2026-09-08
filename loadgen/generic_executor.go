@@ -170,7 +170,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 					}
 				}
 
-				// Notify the waiter after callbacks finish so method cannot return before they update state.
+				// Notify the waiter after callbacks finish so Run cannot return before they do.
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:
