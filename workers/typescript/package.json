@@ -35,6 +35,8 @@
     "@temporalio/workflow": "^1.23.0",
     "commander": "^11.1.0",
     "long": "^5.2.3",
+    "protobufjs": "^8.8.0",
+    "protobufjs-cli": "^2.6.1",
     "winston": "^3.11.0"
   },
   "devDependencies": {
@@ -47,8 +49,6 @@
     "eslint-config-prettier": "^9.1.0",
     "nodemon": "^2.0.12",
     "prettier": "^3.1.1",
-    "protobufjs": "7.5.1",
-    "protobufjs-cli": "^1.0.0",
     "ts-node": "^10.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.10.0"
