@@ -708,6 +708,7 @@ func signalWorkflowNexusOperation(
 	}
 	return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(input.GetWorkflowId())), nil
 }
+
 func updateWorkflowNexusOperation(
 	ctx context.Context,
 	nc temporalnexus.NexusClient,
