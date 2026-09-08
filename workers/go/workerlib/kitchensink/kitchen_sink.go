@@ -656,7 +656,6 @@ func startNexusOperation(
 			}
 
 			if signal.GetWithStart() {
-				// Default to the task queue handling this Nexus request.
 				startOptions := client.StartWorkflowOptions{
 					ID:                       workflowAction.GetWorkflowId(),
 					TaskQueue:                cmp.Or(workflowAction.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
@@ -688,8 +687,7 @@ func startNexusOperation(
 			}
 			if workflowAction.GetUpdate().GetWithStart() {
 				return result, nexus.HandlerErrorf(
-					nexus.HandlerErrorTypeBadRequest,
-					"update-with-start is not supported by this Nexus operation")
+					nexus.HandlerErrorTypeBadRequest, "update-with-start is not supported by this Nexus operation")
 			}
 			updateName, args, err := kitchensink.UpdateNameAndArgs(workflowAction.GetUpdate())
 			if err != nil {
