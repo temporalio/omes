@@ -88,7 +88,7 @@ func TestRunWaitsForOnCompletion(t *testing.T) {
 		}()
 
 		<-callbackStarted
-		// Let every goroutine reach a durable blocking point before checking whether Run returned.
+
 		synctest.Wait()
 
 		returned := false
@@ -341,6 +341,7 @@ func TestRunCanceledWithNonCancellationErrorIsReportedAsFailure(t *testing.T) {
 		require.Error(t, err)
 
 		synctest.Wait()
+
 		reported := false
 		select {
 		case <-failureReported:
