@@ -266,17 +266,14 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.IncludeNexusSignal = info.OptionBool(IncludeNexusSignalFlag)
 	config.IncludeNexusSignalWithStart = info.OptionBool(IncludeNexusSignalWithStartFlag)
 	config.IncludeNexusUpdate = info.OptionBool(IncludeNexusUpdateFlag)
-	for _, nexusWorkflowAction := range []struct {
-		option  string
-		enabled bool
-	}{
-		{IncludeNexusSignalFlag, config.IncludeNexusSignal},
-		{IncludeNexusSignalWithStartFlag, config.IncludeNexusSignalWithStart},
-		{IncludeNexusUpdateFlag, config.IncludeNexusUpdate},
-	} {
-		if nexusWorkflowAction.enabled && !config.NexusEnabled {
-			return fmt.Errorf("%s requires %s", nexusWorkflowAction.option, NexusEnabledFlag)
-		}
+	if config.IncludeNexusSignal && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeNexusSignalFlag, NexusEnabledFlag)
+	}
+	if config.IncludeNexusSignalWithStart && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeNexusSignalWithStartFlag, NexusEnabledFlag)
+	}
+	if config.IncludeNexusUpdate && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeNexusUpdateFlag, NexusEnabledFlag)
 	}
 
 	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
@@ -975,10 +972,13 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *rand.Rand) *Action {
 	var startAction *Action
 	var targetActions []*Action
-	if t.config.IncludeNexusSignalWithStart && rng.Intn(2) == 0 {
-		startAction = t.createNexusSignalWithStartAction(workflowID)
-	} else if t.config.IncludeNexusSignalWithStart {
-		targetActions = append(targetActions, t.createNexusSignalWithStartAction(workflowID))
+	if t.config.IncludeNexusSignalWithStart {
+		signalWithStart := t.createNexusSignalWithStartAction(workflowID)
+		if rng.Intn(2) == 0 {
+			startAction = signalWithStart
+		} else {
+			targetActions = append(targetActions, signalWithStart)
+		}
 	}
 	if t.config.IncludeNexusSignal {
 		targetActions = append(targetActions, t.createNexusSignalAction(workflowID))
@@ -993,10 +993,8 @@ func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *
 				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 					WorkflowId: workflowID,
 					StartOptions: &NexusWorkflowStartOptions{
-						WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-							NewAwaitWorkflowStateAction("status", "done"),
-							NewEmptyReturnResultAction(),
-						)},
+						WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+						WorkflowInput:            &WorkflowInput{},
 					},
 					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 				}},
@@ -1005,9 +1003,20 @@ func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *
 		})
 	}
 	actions := append([]*Action{startAction}, targetActions...)
-	actions = append(actions, &Action{
-		Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}},
-	})
+	actions = append(actions,
+		// Complete the target so the wait_started start operation can finish.
+		&Action{Variant: &Action_SendSignal{SendSignal: &SendSignalAction{
+			WorkflowId: workflowID,
+			SignalName: "do_actions_signal",
+			Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
+				Variant: &DoSignal_DoSignalActions_DoActions{
+					DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+				},
+			})},
+			AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+		}}},
+		&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
+	)
 	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: actions}}}
 }
 

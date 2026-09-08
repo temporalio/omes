@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
+	enumspb "go.temporal.io/api/enums/v1"
 	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/converter"
@@ -312,6 +313,8 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 			switch {
 			case workflowAction.GetStart() != nil:
 				starts++
+				require.Equal(t, enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+					workflowAction.GetStartOptions().GetWorkflowIdConflictPolicy())
 			case workflowAction.GetSignal() != nil:
 				signals++
 				if workflowAction.GetSignal().GetWithStart() {
@@ -330,6 +333,17 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		} else {
 			require.Equal(t, 1, starts)
 		}
+		completeTarget := targetActions[len(targetActions)-2].GetSendSignal()
+		require.NotNil(t, completeTarget)
+		require.Equal(t, workflowID, completeTarget.GetWorkflowId())
+		require.Equal(t, "do_actions_signal", completeTarget.GetSignalName())
+		require.NotNil(t, completeTarget.GetAwaitableChoice().GetWaitFinish())
+		require.Len(t, completeTarget.GetArgs(), 1)
+		var signalAction ks.DoSignal_DoSignalActions
+		require.NoError(t, converter.GetDefaultDataConverter().FromPayload(completeTarget.GetArgs()[0], &signalAction))
+		completingActions := signalAction.GetDoActions().GetActions()
+		require.Len(t, completingActions, 1)
+		require.NotNil(t, completingActions[0].GetReturnResult())
 		require.NotNil(t, targetActions[len(targetActions)-1].GetAwaitPendingActions())
 	}
 	require.Equal(t, map[bool]bool{false: true, true: true}, seenSignalWithStartCreator)
