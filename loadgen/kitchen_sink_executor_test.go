@@ -1495,8 +1495,7 @@ func testSupportedFeature(
 	}
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
-	historyEvents, historyErr := getWorkflowHistory(
-		t, env.TemporalClient(), scenarioInfo.RunID)
+	historyEvents, historyErr := getWorkflowHistory(t, env.TemporalClient(), scenarioInfo.RunID)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
