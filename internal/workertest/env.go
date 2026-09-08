@@ -106,6 +106,10 @@ func (env *TestEnvironment) NexusEndpointName() string {
 	return env.nexusEndpointName
 }
 
+func (env *TestEnvironment) Namespace() string {
+	return testNamespace
+}
+
 func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,

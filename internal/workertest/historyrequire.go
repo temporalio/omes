@@ -262,6 +262,8 @@ func mapIsSuperset(actual, expected map[string]any) bool {
 	return true
 }
 
+// looselyEqual is used by [mapIsSuperset] and in turn for
+// partial/full history matching
 func looselyEqual(x, y any) bool {
 	switch x := x.(type) {
 	case float64:
@@ -278,6 +280,20 @@ func looselyEqual(x, y any) bool {
 			return mapIsSuperset(x, yMap)
 		}
 		return false
+	case []any:
+		// Match the unordered expected list so a spec can
+		// assert only what it knows. Eg, when asserting links, if runID is
+		// not known, it should be possible to assert on just WID+NS
+		yList, ok := y.([]any)
+		if !ok || len(yList) != len(x) {
+			return false
+		}
+		for i, yv := range yList {
+			if !looselyEqual(x[i], yv) {
+				return false
+			}
+		}
+		return true
 	}
 	return reflect.DeepEqual(x, y)
 }

@@ -35,6 +35,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 		kitchensink.EchoSyncOperation,
 		kitchensink.EchoAsyncOperation,
 		kitchensink.StandaloneActivityNexusOperation,
+		kitchensink.QueryWorkflowOperation,
 	} {
 		if err := service.Register(op); err != nil {
 			panic(err)

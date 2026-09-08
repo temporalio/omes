@@ -116,7 +116,12 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 	ebbFlowActivities := ebbandflow.Activities{}
 
 	service := nexus.NewService(kitchensink.KitchenSinkServiceName)
-	for _, op := range []nexus.RegisterableOperation{kitchensink.EchoSyncOperation, kitchensink.EchoAsyncOperation, kitchensink.StandaloneActivityNexusOperation} {
+	for _, op := range []nexus.RegisterableOperation{
+		kitchensink.EchoSyncOperation,
+		kitchensink.EchoAsyncOperation,
+		kitchensink.StandaloneActivityNexusOperation,
+		kitchensink.QueryWorkflowOperation,
+	} {
 		if err := service.Register(op); err != nil {
 			return fmt.Errorf("failed to register nexus operation: %w", err)
 		}
