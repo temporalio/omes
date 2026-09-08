@@ -835,7 +835,7 @@ func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
 }
 
 // createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
-// fire N ops with wait_started, signal the handler to unblock, then await its completion.
+// fire N ops with wait_started, unblock the handler, then await all operation completions.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 	const numOps = 3
 	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
@@ -874,7 +874,9 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 						WorkflowId: handlerWfID,
 						SignalName: "unblock",
 						AwaitableChoice: &AwaitableChoice{
-							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+							// The operation futures below are the correctness gate. Do not fail if an
+							// active/passive transition replays this after the handler has completed.
+							Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
 						},
 					},
 				}},
