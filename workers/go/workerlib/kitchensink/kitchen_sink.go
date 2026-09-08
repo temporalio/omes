@@ -652,29 +652,18 @@ func startNexusOperation(
 			signal := workflowAction.GetSignal()
 			signalName, signalArg, err := kitchensink.SignalNameAndArg(signal)
 			if err != nil {
-				// Default to an empty action set so an operation can exercise signal
-				// delivery without requiring the target workflow to run another action.
-				signalName = "do_actions_signal"
-				signalArg = &kitchensink.DoSignal_DoSignalActions{
-					Variant: &kitchensink.DoSignal_DoSignalActions_DoActions{
-						DoActions: kitchensink.SingleActionSet(),
-					},
-				}
+				return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 			}
 
 			if signal.GetWithStart() {
+				// Default to the task queue handling this Nexus request.
 				startOptions := client.StartWorkflowOptions{
-					ID:                       workflowAction.GetWorkflowId(),
-					TaskQueue:                workflowAction.GetStartOptions().GetTaskQueue(),
+					ID: workflowAction.GetWorkflowId(),
+					TaskQueue: cmp.Or(workflowAction.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
 					WorkflowExecutionTimeout: 60 * time.Minute,
 					WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
 				}
-				if startOptions.TaskQueue == "" {
-					// Default to the task queue handling this Nexus request.
-					startOptions.TaskQueue = temporalnexus.GetOperationInfo(ctx).TaskQueue
-				}
-				workflowInput := cmp.Or(
-					workflowAction.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{})
+				workflowInput := cmp.Or(workflowAction.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{})
 				run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
 					ctx, workflowAction.GetWorkflowId(), signalName, signalArg, startOptions,
 					KitchenSinkWorkflow, workflowInput)
@@ -702,10 +691,9 @@ func startNexusOperation(
 					nexus.HandlerErrorTypeBadRequest,
 					"update-with-start is not supported by this Nexus operation")
 			}
-
 			updateName, args, err := kitchensink.UpdateNameAndArgs(workflowAction.GetUpdate())
 			if err != nil {
-				break
+				return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 			}
 
 			// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the

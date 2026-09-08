@@ -14825,8 +14825,7 @@ namespace Temporal.Omes.KitchenSink {
     /// <summary>
     /// Signal the target workflow. Honors DoSignal.with_start, in which case
     /// start_options supplies the workflow input and an existing workflow is reused.
-    /// run_id selects the run for a signal without start. An unset DoSignal variant
-    /// sends an empty do_actions_signal.
+    /// run_id selects the run for a signal without start.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
