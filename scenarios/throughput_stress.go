@@ -986,8 +986,10 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 		targetActions = append(targetActions, t.createNexusUpdateAction(workflowID))
 	}
 	if startAction == nil {
-		startAction = NewNexusOperationAction(t.config.NexusEndpoint,
-			&NexusOperationRequest{
+		startAction = &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+			Endpoint:  t.config.NexusEndpoint,
+			Operation: KitchenSinkNexusOperationName,
+			Input: &NexusOperationRequest{
 				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 					WorkflowId: workflowID,
 					StartOptions: &NexusWorkflowStartOptions{
@@ -999,9 +1001,8 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 				}},
 			},
-			nil,
-			&AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-		)
+			AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+		}}}
 	}
 	actions := append([]*Action{startAction}, targetActions...)
 	actions = append(actions, &Action{
@@ -1011,38 +1012,59 @@ func (t *tpsExecutor) createNexusWorkflowTargetSequence(workflowID string, rng *
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
-	return NewNexusOperationAction(
-		t.config.NexusEndpoint,
-		NexusSignalWorkflowRequest(workflowID, "", &DoSignal{}, nil),
-		ConvertToPayload(workflowID),
-		WaitFinishChoice(),
-	)
+	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+		Endpoint:        t.config.NexusEndpoint,
+		Operation:       KitchenSinkNexusOperationName,
+		ExpectedOutput:  ConvertToPayload(workflowID),
+		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId: workflowID,
+				Action:     &NexusWorkflowAction_Signal{Signal: &DoSignal{}},
+			}},
+		},
+	}}}
 }
 
 func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string) *Action {
-	return NewNexusOperationAction(
-		t.config.NexusEndpoint,
-		NexusSignalWorkflowRequest(workflowID, "", &DoSignal{WithStart: true}, &NexusWorkflowStartOptions{
-			WorkflowInput: &WorkflowInput{},
-		}),
-		ConvertToPayload(workflowID),
-		WaitFinishChoice(),
-	)
+	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+		Endpoint:        t.config.NexusEndpoint,
+		Operation:       KitchenSinkNexusOperationName,
+		ExpectedOutput:  ConvertToPayload(workflowID),
+		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId:   workflowID,
+				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}},
+				Action:       &NexusWorkflowAction_Signal{Signal: &DoSignal{WithStart: true}},
+			}},
+		},
+	}}}
 }
 
 func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
-	return NewNexusOperationAction(
-		t.config.NexusEndpoint,
-		NexusUpdateWorkflowRequest(workflowID, "", &DoUpdate{
-			Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
-				Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-					NewNexusUpdateResultAction(workflowID),
-				)},
+	return &Action{Variant: &Action_NexusOperation{NexusOperation: &ExecuteNexusOperation{
+		Endpoint:        t.config.NexusEndpoint,
+		Operation:       KitchenSinkNexusOperationName,
+		ExpectedOutput:  ConvertToPayload(workflowID),
+		AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}}},
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId: workflowID,
+				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+							// The update handler's return value is itself encoded by the data converter
+							// before the server forwards it to the Nexus completion callback, so the value
+							// is wrapped twice here: the caller decodes the outer layer and compares the
+							// inner Payload against ExecuteNexusOperation.expected_output.
+							NewReturnResultAction(ConvertToPayload(ConvertToPayload(workflowID))),
+						)},
+					}},
+				}},
 			}},
-		}),
-		ConvertToPayload(workflowID),
-		WaitFinishChoice(),
-	)
+		},
+	}}}
 }
 
 func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperationRequest) *Action {
