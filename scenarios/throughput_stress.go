@@ -67,6 +67,9 @@ const (
 	// Opt-in and off by default (only the Go worker implements the operation); requires Nexus load
 	// (nexus-enabled) and server support for standalone activities + activity completion callbacks.
 	IncludeNexusStandaloneActivityFlag = "include-nexus-standalone-activity"
+	// IncludeNexusWorkflowActionsFlag enables Nexus operations that signal and update a workflow.
+	// Opt-in and off by default; requires Nexus load (nexus-enabled).
+	IncludeNexusWorkflowActionsFlag = "include-nexus-workflow-actions"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
@@ -109,6 +112,7 @@ type tpsConfig struct {
 	IncludeStandaloneActivity                 bool
 	IncludeStandaloneActivityOperatorCommands bool
 	IncludeNexusStandaloneActivity            bool
+	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
 }
 
@@ -119,6 +123,8 @@ type tpsExecutor struct {
 	isResuming bool
 	runID      string
 	rng        *rand.Rand
+	// onActionsCreated observes generated actions and may be called concurrently by iteration goroutines.
+	onActionsCreated func([]*ActionSet)
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -148,6 +154,7 @@ func init() {
 					return c.Namespace.GetStandaloneActivityOperatorCommands()
 				})
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
+			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal and update a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -155,7 +162,10 @@ func init() {
 }
 
 func newThroughputStressExecutor() *tpsExecutor {
-	return &tpsExecutor{state: &tpsState{}}
+	return &tpsExecutor{
+		state:            &tpsState{},
+		onActionsCreated: func([]*ActionSet) {},
+	}
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -248,6 +258,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.IncludeNexusStandaloneActivity && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeNexusStandaloneActivityFlag, NexusEnabledFlag)
 	}
+	config.IncludeNexusWorkflowActions = info.OptionBool(IncludeNexusWorkflowActionsFlag)
+	if config.IncludeNexusWorkflowActions && !config.NexusEnabled {
+		return fmt.Errorf("%s requires %s", IncludeNexusWorkflowActionsFlag, NexusEnabledFlag)
+	}
 
 	if payloadStr := info.OptionString(PayloadDistributionJsonFlag); payloadStr != "" {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
@@ -287,6 +301,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		// Standalone operations are part of Nexus load, so they go with it.
 		t.config.IncludeStandaloneNexus = false
 		t.config.IncludeNexusStandaloneActivity = false
+		t.config.IncludeNexusWorkflowActions = false
 	} else {
 		info.Logger.Infof("Using nexus endpoint %q", nexus.Endpoint)
 	}
@@ -364,7 +379,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				//
 				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
 				// That means these client actions are sent from the activity worker instead of Omes.
-				options.Params.WorkflowInput.InitialActions = t.createActions(run)
+				actions := t.createActions(run)
+				options.Params.WorkflowInput.InitialActions = actions
+				t.onActionsCreated(actions)
 
 				return nil
 			},
@@ -521,6 +538,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
+		iterationIndex := t.internalIterationIndex(run, remainingInternalIters, i)
 		syncActions := []*Action{
 			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
@@ -616,6 +634,10 @@ func (t *tpsExecutor) createActionsChunk(
 					)
 				}
 			}
+			if t.config.IncludeNexusWorkflowActions {
+				nexusWorkflowID := fmt.Sprintf("%s/nexus-workflow-%d", run.DefaultStartWorkflowOptions().ID, iterationIndex)
+				asyncActions = append(asyncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID))
+			}
 		}
 
 		// Add standalone activities, if configured.
@@ -623,11 +645,10 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
 		}
 		if t.config.IncludeStandaloneActivityOperatorCommands {
-			commandOrdinal := t.internalIterationIndex(run, remainingInternalIters, i)
 			asyncActions = append(asyncActions,
 				t.createStandaloneActivityOperatorCommandsAction(
 					loadgen.TaskQueueForRun(run.RunID),
-					commandOrdinal,
+					iterationIndex,
 				),
 			)
 		}
@@ -896,22 +917,26 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 				{Variant: &Action_NestedActionSet{
 					NestedActionSet: &ActionSet{Concurrent: true, Actions: fanout},
 				}},
-				{Variant: &Action_SendSignal{
-					SendSignal: &SendSignalAction{
-						WorkflowId: handlerWfID,
-						SignalName: "do_actions_signal",
-						Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
-							Variant: &DoSignal_DoSignalActions_DoActions{
-								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
-							},
-						})},
-						AwaitableChoice: &AwaitableChoice{
-							// The operation futures below are the correctness gate. Do not fail if an
-							// active/passive transition replays this after the handler has completed.
-							Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
-						},
+				NexusOperation(&ExecuteNexusOperation{
+					Endpoint: t.config.NexusEndpoint,
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: handlerWfID,
+							Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+								Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+									Variant: &DoSignal_DoSignalActions_DoActions{
+										DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+									},
+								}},
+							}},
+						}},
 					},
-				}},
+					AwaitableChoice: &AwaitableChoice{
+						// The operation futures below are the correctness gate. Do not fail if an
+						// active/passive transition replays this after the handler has completed.
+						Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
+					},
+				}),
 				{Variant: &Action_AwaitPendingActions{
 					AwaitPendingActions: &AwaitPendingActions{},
 				}},
@@ -929,6 +954,78 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 				ActivityType: &ExecuteActivityAction_Noop{},
 			}},
 		},
+	})
+}
+
+// createNexusWorkflowActionSequence exercises workflow messaging through one Nexus target.
+func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Action {
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
+		t.createNexusSignalWithStartAction(workflowID, &WorkflowInput{}),
+		t.createNexusUpdateAction(workflowID),
+		t.createNexusSignalAction(workflowID),
+	}}}}
+}
+
+func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId: workflowID,
+				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+						Variant: &DoSignal_DoSignalActions_DoActionsInMain{
+							DoActionsInMain: SingleActionSet(NewEmptyReturnResultAction()),
+						},
+					}},
+				}},
+			}},
+		},
+		ExpectedOutput: ConvertToPayload(workflowID),
+	})
+}
+
+func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string, workflowInput *WorkflowInput) *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId:   workflowID,
+				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: workflowInput},
+				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
+					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+						Variant: &DoSignal_DoSignalActions_DoActions{
+							DoActions: SingleActionSet(NewTimerAction(time.Millisecond)),
+						},
+					}},
+					WithStart: true,
+				}},
+			}},
+		},
+		ExpectedOutput: ConvertToPayload(workflowID),
+	})
+}
+
+func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+				WorkflowId: workflowID,
+				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+							// The update handler's return value is itself encoded by the data converter
+							// before the server forwards it to the Nexus completion callback, so the value
+							// is wrapped twice here: the caller decodes the outer layer and compares the
+							// inner Payload against ExecuteNexusOperation.expected_output.
+							NewReturnResultAction(ConvertToPayload(ConvertToPayload(workflowID))),
+						)},
+					}},
+				}},
+			}},
+		},
+		ExpectedOutput: ConvertToPayload(ConvertToPayload(workflowID)),
 	})
 }
 

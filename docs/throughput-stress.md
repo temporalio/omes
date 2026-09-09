@@ -90,15 +90,15 @@ is any.
 
 Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction, and fails the run.
 
-## Nexus operation with a standalone activity
+## Nexus operation actions
 
-`include-nexus-standalone-activity` adds a standalone activity backed Nexus operation.
-It is driven two ways each iteration: As an in-workflow Nexus operation, and — when standalone Nexus is part of the run —
-as a standalone Nexus operation.
+### `include-nexus-workflow-actions`
 
-This is **opt-in and off by default**; pass `--option include-nexus-standalone-activity=true`.
-It requires `nexus-enabled` and also needs server support for standalone activities and activity
-completion callbacks (dynamic config `activity.enableStandalone` and `activity.enableCallbacks`) and a
-Nexus callback URL; if those are off the operation fails clearly rather than being skipped.
+The workflow actions start their target workflow with signal-with-start, update it, then send an
+ordinary signal that completes it. This requires Nexus update callback support.
 
-Currently only supported and run by Go workers.
+### `include-nexus-standalone-activity`
+
+The standalone activity action is driven two ways each iteration: as an in-workflow Nexus operation
+and, when standalone Nexus is part of the run, as a standalone Nexus operation. This requires
+standalone activity and callback support.
