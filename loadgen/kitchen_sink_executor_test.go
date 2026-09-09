@@ -103,6 +103,8 @@ func TestKitchenSink(t *testing.T) {
 		"history.enableCHASMCallbacks": true,
 		// Nexus Signals rely on CHASM signal backlinks.
 		"history.enableCHASMSignalBacklinks": true,
+		// Nexus Updates rely on CHASM update callbacks.
+		"history.enableUpdateCallbacks": true,
 		// Enable StartActivityExecution for the standalone-activity subtest.
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
@@ -1284,6 +1286,7 @@ func TestKitchenSink(t *testing.T) {
 							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+										NewTimerAction(time.Millisecond),
 										NewSetWorkflowStateAction("status", "done"),
 										// The update handler's return value is itself encoded by the data converter
 										// before the server forwards it to the Nexus completion callback, so the value
@@ -1295,12 +1298,13 @@ func TestKitchenSink(t *testing.T) {
 							}},
 						}},
 					},
-					ExpectedOutput: ConvertToPayload("nexus-update-target"),
+					ExpectedOutput: ConvertToPayload(ConvertToPayload("nexus-update-target")),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
+				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
+				NexusOperationCompleted`),
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
 		{
