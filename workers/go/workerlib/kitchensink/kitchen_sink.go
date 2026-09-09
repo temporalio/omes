@@ -662,6 +662,7 @@ func startWorkflowNexusOperation(
 		cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}))
 }
 
+// signalWorkflowNexusOperation handles both signal and Signal-With-Start.
 func signalWorkflowNexusOperation(
 	ctx context.Context,
 	input *kitchensink.NexusWorkflowAction,
