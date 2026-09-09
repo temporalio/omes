@@ -131,7 +131,7 @@ type tpsExecutor struct {
 	isResuming       bool
 	runID            string
 	rng              *rand.Rand
-	onActionsCreated func(*loadgen.Run, []*ActionSet)
+	onActionsCreated func([]*ActionSet)
 }
 
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
@@ -173,7 +173,7 @@ func init() {
 func newThroughputStressExecutor() *tpsExecutor {
 	return &tpsExecutor{
 		state:            &tpsState{},
-		onActionsCreated: func(*loadgen.Run, []*ActionSet) {},
+		onActionsCreated: func([]*ActionSet) {},
 	}
 }
 
@@ -400,7 +400,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				// That means these client actions are sent from the activity worker instead of Omes.
 				actions := t.createActions(run)
 				options.Params.WorkflowInput.InitialActions = actions
-				t.onActionsCreated(run, actions)
+				t.onActionsCreated(actions)
 
 				return nil
 			},
@@ -557,6 +557,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
+		iterationIndex := t.internalIterationIndex(run, remainingInternalIters, i)
 		syncActions := []*Action{
 			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
@@ -653,10 +654,7 @@ func (t *tpsExecutor) createActionsChunk(
 				}
 			}
 			if t.config.IncludeNexusSignal || t.config.IncludeNexusSignalWithStart || t.config.IncludeNexusUpdate {
-				nexusWorkflowID := fmt.Sprintf("%s-nexus-target-%d",
-					run.DefaultStartWorkflowOptions().ID,
-					t.internalIterationIndex(run, remainingInternalIters, i))
-				// Keep this sequence sequential because AwaitPendingActions drains workflow-global pending actions.
+				nexusWorkflowID := fmt.Sprintf("%s/nexus-workflow-%d", run.DefaultStartWorkflowOptions().ID, iterationIndex)
 				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID, rng))
 			}
 		}
@@ -666,11 +664,10 @@ func (t *tpsExecutor) createActionsChunk(
 			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
 		}
 		if t.config.IncludeStandaloneActivityOperatorCommands {
-			commandOrdinal := t.internalIterationIndex(run, remainingInternalIters, i)
 			asyncActions = append(asyncActions,
 				t.createStandaloneActivityOperatorCommandsAction(
 					loadgen.TaskQueueForRun(run.RunID),
-					commandOrdinal,
+					iterationIndex,
 				),
 			)
 		}

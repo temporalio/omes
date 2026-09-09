@@ -3,6 +3,7 @@ package scenarios
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,7 +168,7 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	}
 	var counts actionCounts
 	exec := newThroughputStressExecutor()
-	exec.onActionsCreated = func(_ *loadgen.Run, actionSets []*ks.ActionSet) {
+	exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
 		for _, actionSet := range actionSets {
 			walkActions(actionSet.GetActions(), func(action *ks.Action) {
 				if action.GetNexusOperation().GetInput().GetStartActivity() != nil {
@@ -218,7 +219,8 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	t.Parallel()
 
 	// Each run creates an endpoint targeting its own task queue.
-	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
+	env := workertest.SetupTestEnvironment(t,
+		workertest.WithExecutorTimeout(time.Minute))
 
 	type actionCounts struct {
 		starts           int
@@ -245,12 +247,11 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var counts actionCounts
 			exec := newThroughputStressExecutor()
-			exec.onActionsCreated = func(run *loadgen.Run, actionSets []*ks.ActionSet) {
-				targetWorkflowID := fmt.Sprintf("%s-nexus-target-%d", run.DefaultStartWorkflowOptions().ID, 0)
+			exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
 				for _, actionSet := range actionSets {
 					walkActions(actionSet.GetActions(), func(action *ks.Action) {
 						workflowAction := action.GetNexusOperation().GetInput().GetWorkflowAction()
-						if workflowAction.GetWorkflowId() != targetWorkflowID {
+						if !strings.Contains(workflowAction.GetWorkflowId(), "/nexus-workflow-") {
 							return
 						}
 						switch {
