@@ -235,12 +235,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		updates          int
 	}
 	var counts actionCounts
-	startInputs := 0
-	wantMarkers := map[string]string{
-		"nexus-signal":            "complete",
-		"nexus-signal-with-start": "complete",
-		"nexus-update":            "complete",
-	}
 	exec := newThroughputStressExecutor()
 	exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
 		for _, actionSet := range actionSets {
@@ -249,28 +243,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 				if !strings.Contains(workflowAction.GetWorkflowId(), "/nexus-workflow-") {
 					return
 				}
-				if input := workflowAction.GetStartOptions().GetWorkflowInput(); input != nil {
-					startInputs++
-					waiters := make(map[string]string)
-					timers := 0
-					returns := 0
-					for _, initialActions := range input.GetInitialActions() {
-						walkActions(initialActions.GetActions(), func(action *ks.Action) {
-							if await := action.GetAwaitWorkflowState(); await != nil {
-								waiters[await.GetKey()] = await.GetValue()
-							}
-							if action.GetTimer() != nil {
-								timers++
-							}
-							if action.GetReturnResult() != nil {
-								returns++
-							}
-						})
-					}
-					require.Equal(t, wantMarkers, waiters)
-					require.Equal(t, 1, timers)
-					require.Equal(t, 1, returns)
-				}
 				switch {
 				case workflowAction.GetStart() != nil:
 					counts.starts++
@@ -278,6 +250,31 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 					counts.signals++
 					if workflowAction.GetSignal().GetWithStart() {
 						counts.signalWithStarts++
+						input := workflowAction.GetStartOptions().GetWorkflowInput()
+						require.NotNil(t, input)
+						waiters := make(map[string]string)
+						timers := 0
+						returns := 0
+						for _, initialActions := range input.GetInitialActions() {
+							walkActions(initialActions.GetActions(), func(action *ks.Action) {
+								if await := action.GetAwaitWorkflowState(); await != nil {
+									waiters[await.GetKey()] = await.GetValue()
+								}
+								if action.GetTimer() != nil {
+									timers++
+								}
+								if action.GetReturnResult() != nil {
+									returns++
+								}
+							})
+						}
+						require.Equal(t, map[string]string{
+							"nexus-signal":            "complete",
+							"nexus-signal-with-start": "complete",
+							"nexus-update":            "complete",
+						}, waiters)
+						require.Equal(t, 1, timers)
+						require.Equal(t, 1, returns)
 					}
 				case workflowAction.GetUpdate() != nil:
 					counts.updates++
@@ -301,7 +298,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
 	require.NoError(t, err, scenarioInfo.RunID)
 	require.Equal(t, actionCounts{signals: 2, signalWithStarts: 1, updates: 1}, counts)
-	require.Equal(t, 1, startInputs)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
