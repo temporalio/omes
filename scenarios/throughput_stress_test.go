@@ -218,7 +218,6 @@ func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
 func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	t.Parallel()
 
-	// Each run creates an endpoint targeting its own task queue.
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(time.Minute))
 
