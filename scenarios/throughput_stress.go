@@ -70,15 +70,19 @@ const (
 	// IncludeNexusSignalFlag enables a Nexus operation that signals a workflow.
 	// Opt-in and off by default; requires Nexus load (nexus-enabled).
 	IncludeNexusSignalFlag = "include-nexus-signal"
-	// IncludeNexusSignalWithStartFlag enables a Nexus operation that signals a workflow,
-	// starting it first if needed. Opt-in and off by default; requires Nexus load (nexus-enabled).
-	IncludeNexusSignalWithStartFlag = "include-nexus-signal-with-start"
 	// IncludeNexusUpdateFlag enables a Nexus operation that updates a workflow.
 	// Opt-in and off by default; requires Nexus load (nexus-enabled).
 	IncludeNexusUpdateFlag = "include-nexus-update"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
+)
+
+const (
+	nexusSignalStateKey          = "nexus-signal"
+	nexusSignalWithStartStateKey = "nexus-signal-with-start"
+	nexusUpdateStateKey          = "nexus-update"
+	nexusActionComplete          = "complete"
 )
 
 type tpsState struct {
@@ -119,7 +123,6 @@ type tpsConfig struct {
 	IncludeStandaloneActivityOperatorCommands bool
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusSignal                        bool
-	IncludeNexusSignalWithStart               bool
 	IncludeNexusUpdate                        bool
 	Payload                                   *loadgen.PayloadConfig
 }
@@ -162,7 +165,6 @@ func init() {
 				})
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusSignalFlag, false, "Include a Nexus operation that signals a workflow (Go worker only).")
-			o.Bool(IncludeNexusSignalWithStartFlag, false, "Include a Nexus operation that signals a workflow, starting it if needed (Go worker only).")
 			o.Bool(IncludeNexusUpdateFlag, false, "Include a Nexus operation that updates a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
@@ -268,13 +270,9 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s requires %s", IncludeNexusStandaloneActivityFlag, NexusEnabledFlag)
 	}
 	config.IncludeNexusSignal = info.OptionBool(IncludeNexusSignalFlag)
-	config.IncludeNexusSignalWithStart = info.OptionBool(IncludeNexusSignalWithStartFlag)
 	config.IncludeNexusUpdate = info.OptionBool(IncludeNexusUpdateFlag)
 	if config.IncludeNexusSignal && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeNexusSignalFlag, NexusEnabledFlag)
-	}
-	if config.IncludeNexusSignalWithStart && !config.NexusEnabled {
-		return fmt.Errorf("%s requires %s", IncludeNexusSignalWithStartFlag, NexusEnabledFlag)
 	}
 	if config.IncludeNexusUpdate && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeNexusUpdateFlag, NexusEnabledFlag)
@@ -319,7 +317,6 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		t.config.IncludeStandaloneNexus = false
 		t.config.IncludeNexusStandaloneActivity = false
 		t.config.IncludeNexusSignal = false
-		t.config.IncludeNexusSignalWithStart = false
 		t.config.IncludeNexusUpdate = false
 	} else {
 		info.Logger.Infof("Using nexus endpoint %q", nexus.Endpoint)
@@ -653,10 +650,10 @@ func (t *tpsExecutor) createActionsChunk(
 					)
 				}
 			}
-			if t.config.IncludeNexusSignal || t.config.IncludeNexusSignalWithStart || t.config.IncludeNexusUpdate {
+			if t.config.IncludeNexusSignal || t.config.IncludeNexusUpdate {
 				nexusWorkflowID := fmt.Sprintf("%s/nexus-workflow-%d", run.DefaultStartWorkflowOptions().ID, iterationIndex)
-				// Keep this sequence sequential because AwaitPendingActions drains workflow-global pending actions.
-				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID, rng))
+				// Keep this sequence sequential so signal-with-start creates the target before the remaining actions.
+				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID))
 			}
 		}
 
@@ -977,62 +974,33 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 	})
 }
 
-// createNexusWorkflowActionSequence starts a workflow, sends the configured actions, and waits for completion.
-func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string, rng *rand.Rand) *Action {
-	var startAction *Action
-	var targetActions []*Action
-	if t.config.IncludeNexusSignalWithStart {
-		signalWithStart := t.createNexusSignalWithStartAction(workflowID)
-		if rng.Intn(2) == 0 {
-			startAction = signalWithStart
-		} else {
-			targetActions = append(targetActions, signalWithStart)
-		}
+// createNexusWorkflowActionSequence starts a workflow that waits for the configured actions before completing.
+func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Action {
+	targetWorkflowActions := []*Action{
+		NewAwaitWorkflowStateAction(nexusSignalWithStartStateKey, nexusActionComplete),
 	}
+	if t.config.IncludeNexusSignal {
+		targetWorkflowActions = append(targetWorkflowActions,
+			NewAwaitWorkflowStateAction(nexusSignalStateKey, nexusActionComplete))
+	}
+	if t.config.IncludeNexusUpdate {
+		targetWorkflowActions = append(targetWorkflowActions,
+			NewAwaitWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete))
+	}
+	// Yield a workflow task so update completion is recorded before the target closes.
+	targetWorkflowActions = append(targetWorkflowActions, NewTimerAction(time.Millisecond))
+	// Complete the target after every configured action has marked itself complete.
+	targetWorkflowActions = append(targetWorkflowActions, NewEmptyReturnResultAction())
+	targetWorkflowInput := &WorkflowInput{InitialActions: ListActionSet(targetWorkflowActions...)}
+
+	targetActions := []*Action{t.createNexusSignalWithStartAction(workflowID, targetWorkflowInput)}
 	if t.config.IncludeNexusSignal {
 		targetActions = append(targetActions, t.createNexusSignalAction(workflowID))
 	}
 	if t.config.IncludeNexusUpdate {
 		targetActions = append(targetActions, t.createNexusUpdateAction(workflowID))
 	}
-	if startAction == nil {
-		startAction = NexusOperation(&ExecuteNexusOperation{
-			Endpoint: t.config.NexusEndpoint,
-			Input: &NexusOperationRequest{
-				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-					WorkflowId: workflowID,
-					StartOptions: &NexusWorkflowStartOptions{
-						WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-						WorkflowInput:            &WorkflowInput{},
-					},
-					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
-				}},
-			},
-			AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
-		})
-	}
-	actions := append([]*Action{startAction}, targetActions...)
-	actions = append(actions,
-		// Complete the target so the wait_started start operation can finish.
-		NexusOperation(&ExecuteNexusOperation{
-			Endpoint: t.config.NexusEndpoint,
-			Input: &NexusOperationRequest{
-				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-					WorkflowId: workflowID,
-					Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
-						Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-							Variant: &DoSignal_DoSignalActions_DoActions{
-								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
-							},
-						}},
-					}},
-				}},
-			},
-			ExpectedOutput: ConvertToPayload(workflowID),
-		}),
-		&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
-	)
-	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: actions}}}
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: targetActions}}}
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
@@ -1043,7 +1011,11 @@ func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
 				WorkflowId: workflowID,
 				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet()},
+						Variant: &DoSignal_DoSignalActions_DoActions{
+							DoActions: SingleActionSet(
+								NewSetWorkflowStateAction(nexusSignalStateKey, nexusActionComplete),
+							),
+						},
 					}},
 				}},
 			}},
@@ -1052,16 +1024,18 @@ func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
 	})
 }
 
-func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string) *Action {
+func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string, workflowInput *WorkflowInput) *Action {
 	return NexusOperation(&ExecuteNexusOperation{
 		Endpoint: t.config.NexusEndpoint,
 		Input: &NexusOperationRequest{
 			Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 				WorkflowId:   workflowID,
-				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: &WorkflowInput{}},
+				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: workflowInput},
 				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet()},
+						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
+							NewSetWorkflowStateAction(nexusSignalWithStartStateKey, nexusActionComplete),
+						)},
 					}},
 					WithStart: true,
 				}},
@@ -1080,6 +1054,7 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+							NewSetWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete),
 							// The update handler's return value is itself encoded by the data converter
 							// before the server forwards it to the Nexus completion callback, so the value
 							// is wrapped twice here: the caller decodes the outer layer and compares the

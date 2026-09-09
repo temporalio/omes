@@ -234,65 +234,85 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		signalWithStarts int
 		updates          int
 	}
-	for _, tc := range []struct {
-		name  string
-		runID string
-		want  actionCounts
-	}{
-		{
-			name:  "Start",
-			runID: "nexus-workflow-actions-plain-start",
-			want:  actionCounts{starts: 1, signals: 3, signalWithStarts: 1, updates: 1},
-		},
-		{
-			name:  "SignalWithStart",
-			runID: "nexus-workflow-actions-signal-with-start-2",
-			want:  actionCounts{signals: 3, signalWithStarts: 1, updates: 1},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var counts actionCounts
-			exec := newThroughputStressExecutor()
-			exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
-				for _, actionSet := range actionSets {
-					walkActions(actionSet.GetActions(), func(action *ks.Action) {
-						workflowAction := action.GetNexusOperation().GetInput().GetWorkflowAction()
-						if !strings.Contains(workflowAction.GetWorkflowId(), "/nexus-workflow-") {
-							return
-						}
-						switch {
-						case workflowAction.GetStart() != nil:
-							counts.starts++
-						case workflowAction.GetSignal() != nil:
-							counts.signals++
-							if workflowAction.GetSignal().GetWithStart() {
-								counts.signalWithStarts++
+	var counts actionCounts
+	markers := make(map[string]string)
+	startInputs := 0
+	wantMarkers := map[string]string{
+		"nexus-signal":            "complete",
+		"nexus-signal-with-start": "complete",
+		"nexus-update":            "complete",
+	}
+	exec := newThroughputStressExecutor()
+	exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
+		for _, actionSet := range actionSets {
+			walkActions(actionSet.GetActions(), func(action *ks.Action) {
+				workflowAction := action.GetNexusOperation().GetInput().GetWorkflowAction()
+				if !strings.Contains(workflowAction.GetWorkflowId(), "/nexus-workflow-") {
+					return
+				}
+				if input := workflowAction.GetStartOptions().GetWorkflowInput(); input != nil {
+					startInputs++
+					waiters := make(map[string]string)
+					timers := 0
+					returns := 0
+					for _, initialActions := range input.GetInitialActions() {
+						walkActions(initialActions.GetActions(), func(action *ks.Action) {
+							if await := action.GetAwaitWorkflowState(); await != nil {
+								waiters[await.GetKey()] = await.GetValue()
 							}
-						case workflowAction.GetUpdate() != nil:
-							counts.updates++
+							if action.GetTimer() != nil {
+								timers++
+							}
+							if action.GetReturnResult() != nil {
+								returns++
+							}
+						})
+					}
+					require.Equal(t, wantMarkers, waiters)
+					require.Equal(t, 1, timers)
+					require.Equal(t, 1, returns)
+				}
+				recordMarkers := func(actions *ks.ActionSet) {
+					walkActions(actions.GetActions(), func(action *ks.Action) {
+						for key, value := range action.GetSetWorkflowState().GetKvs() {
+							markers[key] = value
 						}
 					})
 				}
-			}
-			scenarioInfo := loadgen.ScenarioInfo{
-				RunID:         tc.runID,
-				Configuration: loadgen.RunConfiguration{Iterations: 1},
-				Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-					IterFlag:                          "1",
-					NexusEnabledFlag:                  "true",
-					IncludeNexusSignalFlag:            "true",
-					IncludeNexusSignalWithStartFlag:   "true",
-					IncludeNexusUpdateFlag:            "true",
-					SleepTimeFlag:                     "1ms",
-					VisibilityVerificationTimeoutFlag: "10s",
-				}),
-			}
-
-			_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
-			require.NoError(t, err, tc.runID)
-			require.Equal(t, tc.want, counts)
-		})
+				switch {
+				case workflowAction.GetStart() != nil:
+					counts.starts++
+				case workflowAction.GetSignal() != nil:
+					counts.signals++
+					recordMarkers(workflowAction.GetSignal().GetDoSignalActions().GetDoActions())
+					if workflowAction.GetSignal().GetWithStart() {
+						counts.signalWithStarts++
+					}
+				case workflowAction.GetUpdate() != nil:
+					counts.updates++
+					recordMarkers(workflowAction.GetUpdate().GetDoActions().GetDoActions())
+				}
+			})
+		}
 	}
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID:         "nexus-workflow-actions-signal-with-start",
+		Configuration: loadgen.RunConfiguration{Iterations: 1},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                          "1",
+			NexusEnabledFlag:                  "true",
+			IncludeNexusSignalFlag:            "true",
+			IncludeNexusUpdateFlag:            "true",
+			SleepTimeFlag:                     "1ms",
+			VisibilityVerificationTimeoutFlag: "10s",
+		}),
+	}
+
+	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, scenarioInfo.RunID)
+	require.Equal(t, actionCounts{signals: 2, signalWithStarts: 1, updates: 1}, counts)
+	require.Equal(t, 1, startInputs)
+	require.Equal(t, wantMarkers, markers)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
@@ -415,7 +435,6 @@ func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *tes
 		flag string
 	}{
 		{name: "signal", flag: IncludeNexusSignalFlag},
-		{name: "signal with start", flag: IncludeNexusSignalWithStartFlag},
 		{name: "update", flag: IncludeNexusUpdateFlag},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -96,8 +96,10 @@ The following opt-in options exercise actions from the Nexus handler:
 
 - `include-nexus-standalone-activity`
 - `include-nexus-signal`
-- `include-nexus-signal-with-start`
 - `include-nexus-update`
+
+The signal and update actions start their target workflow with signal-with-start. Enabling
+`include-nexus-signal` also sends an ordinary signal to that target.
 
 The standalone activity action is driven two ways each iteration: as an in-workflow Nexus operation
 and, when standalone Nexus is part of the run, as a standalone Nexus operation. It also needs server
