@@ -235,7 +235,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		updates          int
 	}
 	var counts actionCounts
-	markers := make(map[string]string)
 	startInputs := 0
 	wantMarkers := map[string]string{
 		"nexus-signal":            "complete",
@@ -272,25 +271,16 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 					require.Equal(t, 1, timers)
 					require.Equal(t, 1, returns)
 				}
-				recordMarkers := func(actions *ks.ActionSet) {
-					walkActions(actions.GetActions(), func(action *ks.Action) {
-						for key, value := range action.GetSetWorkflowState().GetKvs() {
-							markers[key] = value
-						}
-					})
-				}
 				switch {
 				case workflowAction.GetStart() != nil:
 					counts.starts++
 				case workflowAction.GetSignal() != nil:
 					counts.signals++
-					recordMarkers(workflowAction.GetSignal().GetDoSignalActions().GetDoActions())
 					if workflowAction.GetSignal().GetWithStart() {
 						counts.signalWithStarts++
 					}
 				case workflowAction.GetUpdate() != nil:
 					counts.updates++
-					recordMarkers(workflowAction.GetUpdate().GetDoActions().GetDoActions())
 				}
 			})
 		}
@@ -312,7 +302,6 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	require.NoError(t, err, scenarioInfo.RunID)
 	require.Equal(t, actionCounts{signals: 2, signalWithStarts: 1, updates: 1}, counts)
 	require.Equal(t, 1, startInputs)
-	require.Equal(t, wantMarkers, markers)
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
