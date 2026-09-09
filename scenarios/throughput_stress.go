@@ -75,11 +75,6 @@ const (
 	PayloadDistributionJsonFlag = "payload-distribution-json"
 )
 
-const (
-	nexusUpdateStateKey = "nexus-update"
-	nexusActionComplete = "complete"
-)
-
 type tpsState struct {
 	// CompletedIterations is the number of iteration that have been completed.
 	CompletedIterations int `json:"completedIterations"`
@@ -962,24 +957,13 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 	})
 }
 
-// createNexusWorkflowActionSequence starts a workflow that waits for the configured actions before completing.
+// createNexusWorkflowActionSequence exercises workflow messaging through one Nexus target.
 func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Action {
-	targetWorkflowActions := []*Action{
-		// Only the update writes state because SetWorkflowState replaces the entire map.
-		NewAwaitWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete),
-		// Yield a workflow task so update completion is recorded before the target closes.
-		NewTimerAction(time.Millisecond),
-		// Complete the target after the final update has marked the sequence complete.
-		NewEmptyReturnResultAction(),
-	}
-	targetWorkflowInput := &WorkflowInput{InitialActions: ListActionSet(targetWorkflowActions...)}
-
-	targetActions := []*Action{
-		t.createNexusSignalWithStartAction(workflowID, targetWorkflowInput),
-		t.createNexusSignalAction(workflowID),
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
+		t.createNexusSignalWithStartAction(workflowID, &WorkflowInput{}),
 		t.createNexusUpdateAction(workflowID),
-	}
-	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: targetActions}}}
+		t.createNexusSignalAction(workflowID),
+	}}}}
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
@@ -990,8 +974,8 @@ func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
 				WorkflowId: workflowID,
 				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-						Variant: &DoSignal_DoSignalActions_DoActions{
-							DoActions: SingleActionSet(NewTimerAction(time.Millisecond)),
+						Variant: &DoSignal_DoSignalActions_DoActionsInMain{
+							DoActionsInMain: SingleActionSet(NewEmptyReturnResultAction()),
 						},
 					}},
 				}},
@@ -1031,7 +1015,6 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-							NewSetWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete),
 							// The update handler's return value is itself encoded by the data converter
 							// before the server forwards it to the Nexus completion callback, so the value
 							// is wrapped twice here: the caller decodes the outer layer and compares the
