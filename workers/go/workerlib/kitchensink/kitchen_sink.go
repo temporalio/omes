@@ -690,7 +690,7 @@ func signalWorkflowNexusOperation(
 				ID:                       input.GetWorkflowId(),
 				TaskQueue:                cmp.Or(input.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
 				WorkflowExecutionTimeout: 60 * time.Minute,
-				WorkflowIDConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+				WorkflowIDConflictPolicy: input.GetStartOptions().GetWorkflowIdConflictPolicy(),
 			},
 			KitchenSinkWorkflow,
 			cmp.Or(input.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{}))
