@@ -142,43 +142,28 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 }
 
 func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {
-	var signalName string
-	var signalArgs any
-	if sigActions := sig.GetDoSignalActions(); sigActions != nil {
-		signalName = "do_actions_signal"
-		signalArgs = sigActions
-	} else if handler := sig.GetCustom(); handler != nil {
-		signalName = handler.Name
-		signalArgs = handler.Args
-	} else {
-		return nil, fmt.Errorf("do_signal must recognizable variant")
+	signalName, signalArg, err := SignalNameAndArg(sig)
+	if err != nil {
+		return nil, err
 	}
 
 	if sig.WithStart {
 		return e.Client.SignalWithStartWorkflow(
-			ctx, e.WorkflowOptions.ID, signalName, signalArgs, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
+			ctx, e.WorkflowOptions.ID, signalName, signalArg, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArgs)
+	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArg)
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
-	var updateOpts client.UpdateWorkflowOptions
-	if actionsUpdate := upd.GetDoActions(); actionsUpdate != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   "do_actions_update",
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{actionsUpdate},
-		}
-	} else if handler := upd.GetCustom(); handler != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   handler.Name,
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{handler.Args},
-		}
-	} else {
-		return nil, fmt.Errorf("do_update must recognizable variant")
+	updateName, args, err := UpdateNameAndArgs(upd)
+	if err != nil {
+		return nil, err
+	}
+	updateOpts := client.UpdateWorkflowOptions{
+		WorkflowID:   e.WorkflowOptions.ID,
+		UpdateName:   updateName,
+		WaitForStage: client.WorkflowUpdateStageCompleted,
+		Args:         args,
 	}
 
 	var handle client.WorkflowUpdateHandle
