@@ -11,7 +11,6 @@ import (
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
-	enumspb "go.temporal.io/api/enums/v1"
 	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/converter"
@@ -148,10 +147,8 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
 }
 
-func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
+func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	t.Parallel()
-
-	runID := fmt.Sprintf("tps-nsa-%d", time.Now().Unix())
 
 	// Enable the activity-backed operation and standalone-Nexus completion path.
 	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
@@ -161,78 +158,12 @@ func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
 		"history.enableCHASMCallbacks":    true,
 	}))
 	env := workertest.SetupTestEnvironment(t,
-		workertest.WithExecutorTimeout(1*time.Minute),
+		workertest.WithExecutorTimeout(time.Minute),
 		workertest.WithDevServer(server))
 
-	scenarioInfo := loadgen.ScenarioInfo{
-		RunID: runID,
-		Configuration: loadgen.RunConfiguration{
-			Iterations: 1,
-		},
-		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-			IterFlag:                           "1",
-			ContinueAsNewAfterIterFlag:         "1",
-			SleepTimeFlag:                      "1ms",
-			VisibilityVerificationTimeoutFlag:  "10s",
-			NexusEnabledFlag:                   "true",
-			IncludeNexusStandaloneActivityFlag: "true",
-		}),
-	}
-
-	executor := newThroughputStressExecutor()
-	_, err := env.RunExecutorTest(t, executor, scenarioInfo, clioptions.LangGo)
-	require.NoError(t, err, "Executor should complete successfully with nexus standalone activity enabled")
-
-	require.True(t, executor.config.IncludeNexusStandaloneActivity,
-		"nexus standalone activity should be enabled")
-	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
-}
-
-func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
-	t.Parallel()
-
-	exec := newThroughputStressExecutor()
-	exec.config = &tpsConfig{
-		InternalIterations:             1,
-		ContinueAsNewAfterIter:         0,
-		NexusEnabled:                   true,
-		NexusEndpoint:                  "test-endpoint",
-		IncludeStandaloneNexus:         true,
-		IncludeNexusStandaloneActivity: true,
-		SleepTime:                      time.Millisecond,
-		RngSeed:                        1,
-	}
-	exec.rng = rand.New(rand.NewSource(1))
-
-	run := (&loadgen.ScenarioInfo{
-		RunID:       "tps-nsa-actions",
-		ExecutionID: "exec",
-		Logger:      zap.NewNop().Sugar(),
-	}).NewRun(0)
-
-	var inWorkflow, standalone bool
-	for _, set := range exec.createActions(run) {
-		walkActions(set.GetActions(), func(a *ks.Action) {
-			if op := a.GetNexusOperation(); op.GetInput().GetStartActivity() != nil {
-				inWorkflow = true
-			}
-			// Find the nested standalone-Nexus client action.
-			if seq := a.GetExecActivity().GetClient().GetClientSequence(); seq != nil {
-				for _, set := range seq.GetActionSets() {
-					for _, ca := range set.GetActions() {
-						if sn := ca.GetDoStandaloneNexusOperation().GetOperation(); sn.GetInput().GetStartActivity() != nil {
-							standalone = true
-						}
-					}
-				}
-			}
-		})
-	}
-
-	require.True(t, inWorkflow,
-		`expected an in-workflow Nexus start-activity action`)
-	require.True(t, standalone,
-		`expected a standalone Nexus start-activity client action`)
+	require.Equal(t,
+		nexusStandaloneActivityActionCounts{inWorkflow: 1, standalone: 1},
+		runThroughputStressNexusStandaloneActivityActions(t, env))
 }
 
 func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
@@ -250,99 +181,24 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
 
 	for _, tc := range []struct {
-		runID                      string
-		startedWithSignalWithStart bool
+		name  string
+		runID string
+		want  nexusWorkflowActionCounts
 	}{
-		{runID: "nexus-workflow-actions-plain-start"},
-		{runID: "nexus-workflow-actions-signal-with-start-2", startedWithSignalWithStart: true},
+		{
+			name:  "Start",
+			runID: "nexus-workflow-actions-plain-start",
+			want:  nexusWorkflowActionCounts{starts: 1, signals: 3, signalWithStarts: 1, updates: 1},
+		},
+		{
+			name:  "SignalWithStart",
+			runID: "nexus-workflow-actions-signal-with-start-2",
+			want:  nexusWorkflowActionCounts{signals: 3, signalWithStarts: 1, updates: 1},
+		},
 	} {
-		scenarioInfo := loadgen.ScenarioInfo{
-			RunID: tc.runID,
-			Configuration: loadgen.RunConfiguration{
-				Iterations: 1,
-			},
-			Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-				IterFlag:                          "1",
-				NexusEnabledFlag:                  "true",
-				IncludeNexusSignalFlag:            "true",
-				IncludeNexusSignalWithStartFlag:   "true",
-				IncludeNexusUpdateFlag:            "true",
-				SleepTimeFlag:                     "1ms",
-				VisibilityVerificationTimeoutFlag: "10s",
-			}),
-		}
-		exec := newThroughputStressExecutor()
-		var workflowID string
-		var observedActions []*ks.ActionSet
-		exec.onActionsCreated = func(run *loadgen.Run, actions []*ks.ActionSet) {
-			workflowID = run.DefaultStartWorkflowOptions().ID
-			observedActions = actions
-		}
-
-		_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
-		require.NoError(t, err, tc.runID)
-
-		workflowID = fmt.Sprintf("%s-nexus-target-%d", workflowID, 0)
-		var targetActions []*ks.Action
-		for _, actionSet := range observedActions {
-			walkActions(actionSet.GetActions(), func(action *ks.Action) {
-				if nested := action.GetNestedActionSet(); nested != nil {
-					for _, nestedAction := range nested.GetActions() {
-						if nestedAction.GetNexusOperation().GetInput().GetWorkflowAction().GetWorkflowId() == workflowID {
-							targetActions = nested.GetActions()
-							break
-						}
-					}
-				}
-			})
-		}
-
-		require.NotEmpty(t, targetActions)
-		startedWithSignalWithStart := targetActions[0].GetNexusOperation().GetInput().
-			GetWorkflowAction().GetSignal().GetWithStart()
-		require.Equal(t, tc.startedWithSignalWithStart, startedWithSignalWithStart)
-
-		var starts, signals, signalWithStarts, updates int
-		for _, action := range targetActions {
-			operation := action.GetNexusOperation()
-			if operation == nil {
-				continue
-			}
-			require.Equal(t, exec.config.NexusEndpoint, operation.GetEndpoint())
-			require.Equal(t, ks.KitchenSinkNexusOperationName, operation.GetOperation())
-			workflowAction := operation.GetInput().GetWorkflowAction()
-			require.Equal(t, workflowID, workflowAction.GetWorkflowId())
-			switch {
-			case workflowAction.GetStart() != nil:
-				starts++
-				require.Equal(t, enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-					workflowAction.GetStartOptions().GetWorkflowIdConflictPolicy())
-			case workflowAction.GetSignal() != nil:
-				signals++
-				if workflowAction.GetSignal().GetWithStart() {
-					signalWithStarts++
-				}
-			case workflowAction.GetUpdate() != nil:
-				updates++
-			}
-		}
-
-		require.Equal(t, 3, signals)
-		require.Equal(t, 1, signalWithStarts)
-		require.Equal(t, 1, updates)
-		if startedWithSignalWithStart {
-			require.Zero(t, starts)
-		} else {
-			require.Equal(t, 1, starts)
-		}
-		completeTarget := targetActions[len(targetActions)-2].GetNexusOperation()
-		require.NotNil(t, completeTarget)
-		completeSignal := completeTarget.GetInput().GetWorkflowAction().GetSignal()
-		require.NotNil(t, completeSignal)
-		completingActions := completeSignal.GetDoSignalActions().GetDoActions().GetActions()
-		require.Len(t, completingActions, 1)
-		require.NotNil(t, completingActions[0].GetReturnResult())
-		require.NotNil(t, targetActions[len(targetActions)-1].GetAwaitPendingActions())
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, runThroughputStressNexusWorkflowActions(t, env, tc.runID))
+		})
 	}
 }
 
@@ -601,6 +457,128 @@ func walkActions(actions []*ks.Action, visit func(*ks.Action)) {
 			walkActions(nested.GetActions(), visit)
 		}
 	}
+}
+
+type nexusStandaloneActivityActionCounts struct {
+	inWorkflow int
+	standalone int
+}
+
+func runThroughputStressNexusStandaloneActivityActions(
+	t *testing.T,
+	env *workertest.TestEnvironment,
+) (counts nexusStandaloneActivityActionCounts) {
+	t.Helper()
+
+	exec := newThroughputStressExecutor()
+	exec.onActionsCreated = func(_ *loadgen.Run, actions []*ks.ActionSet) {
+		counts = countNexusStandaloneActivityActions(actions)
+	}
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID:         "tps-nsa-actions",
+		Configuration: loadgen.RunConfiguration{Iterations: 1},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                           "1",
+			ContinueAsNewAfterIterFlag:         "1",
+			SleepTimeFlag:                      "1ms",
+			VisibilityVerificationTimeoutFlag:  "10s",
+			NexusEnabledFlag:                   "true",
+			IncludeStandaloneNexusFlag:         "true",
+			IncludeNexusStandaloneActivityFlag: "true",
+		}),
+	}
+
+	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err)
+	return counts
+}
+
+func countNexusStandaloneActivityActions(
+	actionSets []*ks.ActionSet,
+) (counts nexusStandaloneActivityActionCounts) {
+	for _, actionSet := range actionSets {
+		walkActions(actionSet.GetActions(), func(action *ks.Action) {
+			if action.GetNexusOperation().GetInput().GetStartActivity() != nil {
+				counts.inWorkflow++
+			}
+			// Find the nested standalone-Nexus client action.
+			if sequence := action.GetExecActivity().GetClient().GetClientSequence(); sequence != nil {
+				for _, clientActionSet := range sequence.GetActionSets() {
+					for _, clientAction := range clientActionSet.GetActions() {
+						operation := clientAction.GetDoStandaloneNexusOperation().GetOperation()
+						if operation.GetInput().GetStartActivity() != nil {
+							counts.standalone++
+						}
+					}
+				}
+			}
+		})
+	}
+	return counts
+}
+
+type nexusWorkflowActionCounts struct {
+	starts           int
+	signals          int
+	signalWithStarts int
+	updates          int
+}
+
+func runThroughputStressNexusWorkflowActions(
+	t *testing.T,
+	env *workertest.TestEnvironment,
+	runID string,
+) (counts nexusWorkflowActionCounts) {
+	t.Helper()
+
+	exec := newThroughputStressExecutor()
+	exec.onActionsCreated = func(run *loadgen.Run, actions []*ks.ActionSet) {
+		targetWorkflowID := fmt.Sprintf("%s-nexus-target-%d", run.DefaultStartWorkflowOptions().ID, 0)
+		counts = countNexusWorkflowActions(actions, targetWorkflowID)
+	}
+	scenarioInfo := loadgen.ScenarioInfo{
+		RunID:         runID,
+		Configuration: loadgen.RunConfiguration{Iterations: 1},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                          "1",
+			NexusEnabledFlag:                  "true",
+			IncludeNexusSignalFlag:            "true",
+			IncludeNexusSignalWithStartFlag:   "true",
+			IncludeNexusUpdateFlag:            "true",
+			SleepTimeFlag:                     "1ms",
+			VisibilityVerificationTimeoutFlag: "10s",
+		}),
+	}
+
+	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
+	require.NoError(t, err, runID)
+	return counts
+}
+
+func countNexusWorkflowActions(
+	actionSets []*ks.ActionSet,
+	targetWorkflowID string,
+) (counts nexusWorkflowActionCounts) {
+	for _, actionSet := range actionSets {
+		walkActions(actionSet.GetActions(), func(action *ks.Action) {
+			workflowAction := action.GetNexusOperation().GetInput().GetWorkflowAction()
+			if workflowAction.GetWorkflowId() != targetWorkflowID {
+				return
+			}
+			switch {
+			case workflowAction.GetStart() != nil:
+				counts.starts++
+			case workflowAction.GetSignal() != nil:
+				counts.signals++
+				if workflowAction.GetSignal().GetWithStart() {
+					counts.signalWithStarts++
+				}
+			case workflowAction.GetUpdate() != nil:
+				counts.updates++
+			}
+		})
+	}
+	return counts
 }
 
 func standaloneActivityOperatorCommandsInConcurrentGroups(actions []*ks.Action) (

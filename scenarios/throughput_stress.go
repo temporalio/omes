@@ -171,7 +171,10 @@ func init() {
 }
 
 func newThroughputStressExecutor() *tpsExecutor {
-	return &tpsExecutor{state: &tpsState{}}
+	return &tpsExecutor{
+		state:            &tpsState{},
+		onActionsCreated: func(*loadgen.Run, []*ActionSet) {},
+	}
 }
 
 // Snapshot returns a snapshot of the current state.
@@ -397,9 +400,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				// That means these client actions are sent from the activity worker instead of Omes.
 				actions := t.createActions(run)
 				options.Params.WorkflowInput.InitialActions = actions
-				if t.onActionsCreated != nil {
-					t.onActionsCreated(run, actions)
-				}
+				t.onActionsCreated(run, actions)
 
 				return nil
 			},
