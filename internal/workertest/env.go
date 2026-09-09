@@ -26,17 +26,25 @@ import (
 )
 
 const (
-	testNamespace         = "default"
+	defaultTestNamespace  = "default"
 	defaultTestRunTimeout = 30 * time.Second
 	workerBuildTimeout    = 1 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
 )
 
 // Functional options configuration
+type devServerConfig struct {
+	dynamicConfig map[string]any
+}
+
+// DevServerOption configures a test dev server.
+type DevServerOption func(*devServerConfig)
+
 type testEnvConfig struct {
 	executorTimeout time.Duration
 	runID           string
-	dynamicConfig   map[string]any
+	namespace       string
+	sharedDevServer *devserver.Server
 }
 
 type TestEnvOption func(*testEnvConfig)
@@ -58,9 +66,23 @@ func WithNexusEndpoint(runID string) TestEnvOption {
 // WithDynamicConfig passes dynamic-config overrides to the dev server, on top
 // of the test-friendly defaults that devserver applies. Use this for opt-in
 // feature gates that a specific test needs.
-func WithDynamicConfig(values map[string]any) TestEnvOption {
-	return func(c *testEnvConfig) {
+func WithDynamicConfig(values map[string]any) DevServerOption {
+	return func(c *devServerConfig) {
 		c.dynamicConfig = values
+	}
+}
+
+// WithNamespace configures the namespace used by the test environment.
+func WithNamespace(namespace string) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.namespace = namespace
+	}
+}
+
+// WithDevServer configures the test environment to use an existing dev server.
+func WithDevServer(server *devserver.Server) TestEnvOption {
+	return func(c *testEnvConfig) {
+		c.sharedDevServer = server
 	}
 }
 
@@ -106,10 +128,28 @@ func (env *TestEnvironment) NexusEndpointName() string {
 	return env.nexusEndpointName
 }
 
-func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+func (env *TestEnvironment) Namespace() string {
+	return env.namespace
+}
+
+func newTestEnvConfig(opts ...TestEnvOption) testEnvConfig {
 	cfg := testEnvConfig{
 		executorTimeout: defaultTestRunTimeout,
+		namespace:       defaultTestNamespace,
 	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
+}
+
+// StartDevServer starts a dev server and stops it during test cleanup.
+func StartDevServer(t *testing.T, opts ...DevServerOption) *devserver.Server {
+	return startDevServer(t, defaultTestNamespace, opts...)
+}
+
+func startDevServer(t *testing.T, namespace string, opts ...DevServerOption) *devserver.Server {
+	var cfg devServerConfig
 	for _, opt := range opts {
 		opt(&cfg)
 	}
@@ -122,16 +162,31 @@ func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment 
 	serverLogger := testLogger.Named("devserver").Sugar()
 	server, err := devserver.Start(t.Context(), devserver.Options{
 		Ref:                 serverRef,
-		Namespace:           testNamespace,
+		Namespace:           namespace,
 		DynamicConfigValues: cfg.dynamicConfig,
 		Output:              workerctl.NewLogWriter(serverLogger),
 		Logger:              serverLogger,
 	})
 	require.NoError(t, err, "Failed to start dev server")
+	t.Cleanup(func() {
+		require.NoError(t, server.Stop(), "Dev server exited abnormally")
+	})
+	return server
+}
+
+func SetupTestEnvironment(t *testing.T, opts ...TestEnvOption) *TestEnvironment {
+	cfg := newTestEnvConfig(opts...)
+	server := cfg.sharedDevServer
+	if server == nil {
+		server = startDevServer(t, cfg.namespace)
+	} else {
+		err := server.RegisterNamespace(t.Context(), cfg.namespace)
+		require.NoErrorf(t, err, "Failed to register namespace %q", cfg.namespace)
+	}
 
 	temporalClient, err := client.Dial(client.Options{
 		HostPort:  server.FrontendHostPort(),
-		Namespace: testNamespace,
+		Namespace: cfg.namespace,
 	})
 	require.NoError(t, err, "Failed to create Temporal client")
 
@@ -163,9 +218,6 @@ func (env *TestEnvironment) cleanup() {
 	if env.temporalClient != nil {
 		env.temporalClient.Close()
 	}
-	if env.devServer != nil {
-		env.devServer.Stop()
-	}
 	env.workerPool.cleanup()
 }
 
@@ -179,7 +231,7 @@ func (env *TestEnvironment) CreateNexusEndpoint(ctx context.Context, runID strin
 				Target: &nexus.EndpointTarget{
 					Variant: &nexus.EndpointTarget_Worker_{
 						Worker: &nexus.EndpointTarget_Worker{
-							Namespace: testNamespace,
+							Namespace: env.namespace,
 							TaskQueue: taskQueueName,
 						},
 					},
@@ -221,11 +273,11 @@ func (env *TestEnvironment) RunExecutorTest(
 	scenarioInfo.Logger = logger.Named("executor")
 	scenarioInfo.MetricsHandler = client.MetricsNopHandler
 	scenarioInfo.Client = env.temporalClient
-	scenarioInfo.Namespace = testNamespace
+	scenarioInfo.Namespace = env.namespace
 
 	// Resolve any capability-gated feature options against the dev server, so
 	// integration tests exercise the same code path as the CLI.
-	if err := loadgen.ResolveFeatureOptions(testCtx, env.temporalClient, testNamespace, scenarioInfo.Options, logger); err != nil {
+	if err := loadgen.ResolveFeatureOptions(testCtx, env.temporalClient, env.namespace, scenarioInfo.Options, logger); err != nil {
 		return TestResult{ObservedLogs: observedLogs}, err
 	}
 

@@ -93,16 +93,17 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	// No WithNexusEndpoint here: the scenario creates its own endpoint for the run,
 	// which is part of the path under test. Pre-creating one would collide on the
 	// same NexusEndpointForRun name.
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
+		// Gates the capabilities the feature options read.
+		"activity.enableStandalone":                        true,
+		"history.enableStandaloneActivityOperatorCommands": true,
+		"nexusoperation.enableStandalone":                  true,
+		// Standalone Nexus system callbacks require CHASM callbacks.
+		"history.enableCHASMCallbacks": true,
+	}))
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
-		workertest.WithDynamicConfig(map[string]any{
-			// Gates the capabilities the feature options read.
-			"activity.enableStandalone":                        true,
-			"history.enableStandaloneActivityOperatorCommands": true,
-			"nexusoperation.enableStandalone":                  true,
-			// Standalone Nexus system callbacks require CHASM callbacks.
-			"history.enableCHASMCallbacks": true,
-		}))
+		workertest.WithDevServer(server))
 
 	// Without the namespace advertising standalone activities there is nothing for
 	// the feature option to resolve from, and the rest of this test proves nothing.
@@ -152,14 +153,15 @@ func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
 	runID := fmt.Sprintf("tps-nsa-%d", time.Now().Unix())
 
 	// Enable the activity-backed operation and standalone-Nexus completion path.
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
+		"activity.enableStandalone":       true,
+		"activity.enableCallbacks":        true,
+		"nexusoperation.enableStandalone": true,
+		"history.enableCHASMCallbacks":    true,
+	}))
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
-		workertest.WithDynamicConfig(map[string]any{
-			"activity.enableStandalone":       true,
-			"activity.enableCallbacks":        true,
-			"nexusoperation.enableStandalone": true,
-			"history.enableCHASMCallbacks":    true,
-		}))
+		workertest.WithDevServer(server))
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,

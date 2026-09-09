@@ -117,7 +117,7 @@ func (w *workerPool) startWorker(
 			},
 		}
 		runner.ClientOptions.FlagSet().Set("server-address", w.env.DevServerAddress())
-		runner.ClientOptions.FlagSet().Set("namespace", testNamespace)
+		runner.ClientOptions.FlagSet().Set("namespace", w.env.Namespace())
 		if errOnUnimplemented {
 			runner.WorkerOptions.FlagSet().Set("worker-err-on-unimplemented", "true")
 		}

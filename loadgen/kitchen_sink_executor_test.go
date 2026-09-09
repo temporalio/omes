@@ -19,11 +19,10 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-const namespace = "default"
 
 var (
 	sdks = []clioptions.Language{
@@ -75,7 +74,22 @@ func TestKitchenSink(t *testing.T) {
 	if os.Getenv("CI") != "" && onlySDK == "" {
 		t.Skip("Skipping kitchensink test in CI without specific SDK set")
 	}
-	env := SetupTestEnvironment(t, WithDynamicConfig(map[string]any{
+
+	var only clioptions.Language
+	if onlySDK != "" {
+		require.NoError(t, only.Set(onlySDK), "invalid SDK env var")
+	}
+
+	var enabledSDKs []clioptions.Language
+	for _, sdk := range sdks {
+		if only != "" && sdk != only {
+			continue // not using t.Skip as it's too noisy
+		}
+		enabledSDKs = append(enabledSDKs, sdk)
+	}
+	require.NotEmpty(t, enabledSDKs, "SDK=%q matches no known SDK", onlySDK)
+
+	server := StartDevServer(t, WithDynamicConfig(map[string]any{
 		// Enable StartNexusOperationExecution for the standalone-nexus subtests.
 		"nexusoperation.enableStandalone": true,
 		// Standalone Nexus system callbacks require CHASM callbacks.
@@ -84,6 +98,14 @@ func TestKitchenSink(t *testing.T) {
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
 	}))
+
+	testEnvironments := make(map[clioptions.Language]*TestEnvironment, len(enabledSDKs))
+	for _, sdk := range enabledSDKs {
+		testEnvironments[sdk] = SetupTestEnvironment(t,
+			WithDevServer(server),
+			WithNamespace(fmt.Sprintf("kitchensink-%s", sdk)),
+		)
+	}
 
 	// Default workflow execution timeout for tests
 	defaultWorkflowTimeout := 30 * time.Second
@@ -1136,10 +1158,8 @@ func TestKitchenSink(t *testing.T) {
 			}
 			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 
-			for _, sdk := range sdks {
-				if onlySDK != "" && string(sdk) != onlySDK {
-					continue // not using t.Skip as it's too noisy
-				}
+			for _, sdk := range enabledSDKs {
+				env := testEnvironments[sdk]
 				t.Run(string(sdk), func(t *testing.T) {
 					t.Parallel()
 					testForSDK(t, tc, sdk, env, defaultWorkflowTimeout)
@@ -1220,8 +1240,12 @@ func testForSDK(
 	// worker picks them up.
 	runTaskQueue := TaskQueueForRun(scenarioInfo.RunID)
 
+	// PrepareTestInput fills the per-run endpoint and task queue into the input in
+	// place, so work on a copy before making further per-run changes.
+	testInput := proto.Clone(tc.testInput).(*TestInput)
+
 	executor := &KitchenSinkExecutor{
-		TestInput: tc.testInput,
+		TestInput: testInput,
 		PrepareTestInput: func(_ context.Context, _ ScenarioInfo, input *TestInput) error {
 			if input.WorkflowInput != nil {
 				for _, actionSet := range input.WorkflowInput.InitialActions {
@@ -1298,7 +1322,7 @@ func testSupportedFeature(
 	_, execErr := env.RunExecutorTest(t, testExecutor, scenarioInfo, sdk)
 
 	taskQueueName := TaskQueueForRun(scenarioInfo.RunID)
-	historyEvents, historyErr := getWorkflowHistory(t, taskQueueName, env.TemporalClient())
+	historyEvents, historyErr := getWorkflowHistory(t, env.TemporalClient(), env.Namespace(), taskQueueName)
 	if execErr != nil {
 		if len(historyEvents) > 0 {
 			t.Logf("History events for debugging:")
@@ -1340,7 +1364,7 @@ func (w *kitchenSinkTestWrapper) Run(ctx context.Context, info ScenarioInfo) err
 	return w.executor.Run(ctx, info)
 }
 
-func getWorkflowHistory(t *testing.T, taskQueueName string, temporalClient client.Client) ([]*history.HistoryEvent, error) {
+func getWorkflowHistory(t *testing.T, temporalClient client.Client, namespace, taskQueueName string) ([]*history.HistoryEvent, error) {
 	executions, err := temporalClient.ListWorkflow(t.Context(),
 		&workflowservice.ListWorkflowExecutionsRequest{
 			Namespace: namespace,
