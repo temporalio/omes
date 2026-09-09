@@ -272,8 +272,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			IterFlag:                          "1",
 			NexusEnabledFlag:                  "true",
-			IncludeNexusSignalFlag:            "true",
-			IncludeNexusUpdateFlag:            "true",
+			"include-nexus-workflow-actions":  "true",
 			SleepTimeFlag:                     "1ms",
 			VisibilityVerificationTimeoutFlag: "10s",
 		}),
@@ -399,29 +398,21 @@ func TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled(t 
 func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		name string
-		flag string
-	}{
-		{name: "signal", flag: IncludeNexusSignalFlag},
-		{name: "update", flag: IncludeNexusUpdateFlag},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	const flag = "include-nexus-workflow-actions"
+	options, err := loadgen.GetScenario("throughput_stress").ResolveOptions(map[string]string{
+		flag:             "true",
+		NexusEnabledFlag: "false",
+	})
+	require.NoError(t, err)
 
-			err := newThroughputStressExecutor().Configure(loadgen.ScenarioInfo{
-				RunID: "tps-nexus-workflow-action",
-				Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
-					tc.flag:          "true",
-					NexusEnabledFlag: "false",
-				}),
-			})
+	err = newThroughputStressExecutor().Configure(loadgen.ScenarioInfo{
+		RunID:   "tps-nexus-workflow-action",
+		Options: options,
+	})
 
-			require.Error(t, err)
-			require.Contains(t, err.Error(), tc.flag)
-			require.Contains(t, err.Error(), NexusEnabledFlag)
-		})
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), flag)
+	require.Contains(t, err.Error(), NexusEnabledFlag)
 }
 
 func TestThroughputStressConfigureInvalidPayload(t *testing.T) {

@@ -95,11 +95,10 @@ Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction
 The following opt-in options exercise actions from the Nexus handler:
 
 - `include-nexus-standalone-activity`
-- `include-nexus-signal`
-- `include-nexus-update`
+- `include-nexus-workflow-actions`
 
-The signal and update actions start their target workflow with signal-with-start. Enabling
-`include-nexus-signal` also sends an ordinary signal to that target.
+The workflow actions start their target workflow with signal-with-start, then send an ordinary
+signal and an update to that target.
 
 The standalone activity action is driven two ways each iteration: as an in-workflow Nexus operation
 and, when standalone Nexus is part of the run, as a standalone Nexus operation. It also needs server
