@@ -43171,7 +43171,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
 
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -43180,7 +43180,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     boolean hasArg();
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -43189,7 +43189,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     io.temporal.api.common.v1.Payload getArg();
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -43453,7 +43453,7 @@ io.temporal.api.common.v1.Payload defaultValue);
     private io.temporal.api.common.v1.Payload arg_;
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -43465,7 +43465,7 @@ io.temporal.api.common.v1.Payload defaultValue);
     }
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -43477,7 +43477,7 @@ io.temporal.api.common.v1.Payload defaultValue);
     }
     /**
      * <pre>
-     * Argument for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
      * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44386,7 +44386,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> argBuilder_;
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44397,7 +44397,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44412,7 +44412,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44432,7 +44432,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44450,7 +44450,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44475,7 +44475,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44492,7 +44492,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44504,7 +44504,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>
@@ -44519,7 +44519,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       }
       /**
        * <pre>
-       * Argument for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
        * <code>.temporal.api.common.v1.Payload arg = 4;</code>

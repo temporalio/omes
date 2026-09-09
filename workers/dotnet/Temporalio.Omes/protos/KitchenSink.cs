@@ -11582,7 +11582,7 @@ namespace Temporal.Omes.KitchenSink {
     public const int ArgFieldNumber = 4;
     private global::Temporalio.Api.Common.V1.Payload arg_;
     /// <summary>
-    /// Argument for the handler
+    /// Argument for the signal handler; encode multiple values as a list
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

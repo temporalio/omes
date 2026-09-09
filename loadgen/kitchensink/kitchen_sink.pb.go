@@ -2623,7 +2623,7 @@ type SendSignalAction struct {
 	RunId      string `protobuf:"bytes,2,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	// Name of the signal handler
 	SignalName string `protobuf:"bytes,3,opt,name=signal_name,json=signalName,proto3" json:"signal_name,omitempty"`
-	// Argument for the handler
+	// Argument for the signal handler; encode multiple values as a list
 	Arg *v1.Payload `protobuf:"bytes,4,opt,name=arg,proto3" json:"arg,omitempty"`
 	// Headers to attach to the signal
 	Headers         map[string]*v1.Payload `protobuf:"bytes,5,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
