@@ -284,7 +284,6 @@ async def handle_nexus_operation(
         endpoint=nexus_op.endpoint,
         service=KITCHEN_SINK_SERVICE_NAME,
     )
-    headers = dict(nexus_op.headers) if nexus_op.headers else None
     choice = nexus_op.awaitable_choice
 
     op_input = NexusHandlerInput(
@@ -307,7 +306,6 @@ async def handle_nexus_operation(
             nexus_op.operation,
             op_input,
             output_type=output_type,
-            headers=headers,
         )
         op_started = True
         result = await handle

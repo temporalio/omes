@@ -722,7 +722,6 @@ impl ExecuteNexusOperation {
             operation: "echo-sync".to_string(),
             input: val.clone(),
             expected_output: val,
-            headers: Default::default(),
             // echo-sync completes immediately, so only WaitFinish is valid.
             awaitable_choice: Some(AwaitableChoice {
                 condition: Some(awaitable_choice::Condition::WaitFinish(())),
@@ -770,7 +769,6 @@ impl<'a> Arbitrary<'a> for ExecuteNexusOperation {
             endpoint,
             operation: operation.to_string(),
             input,
-            headers: Default::default(),
             awaitable_choice: Some(u.arbitrary()?),
             expected_output,
             before_actions,
