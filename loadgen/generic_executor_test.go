@@ -62,6 +62,41 @@ func TestRunHappyPathIterations(t *testing.T) {
 	})
 }
 
+func TestRunWaitsForCompletionCallback(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		callbackStarted := make(chan struct{})
+		releaseCallback := make(chan struct{})
+		runDone := make(chan error, 1)
+		go func() {
+			runDone <- execute(&GenericExecutor{
+				Execute: func(context.Context, *Run) error { return nil },
+			}, RunConfiguration{
+				Iterations:    1,
+				MaxConcurrent: 1,
+				OnCompletion: func(context.Context, *Run) {
+					close(callbackStarted)
+					<-releaseCallback
+				},
+			})
+		}()
+
+		<-callbackStarted
+		synctest.Wait()
+		var earlyErr error
+		returnedEarly := false
+		select {
+		case earlyErr = <-runDone:
+			returnedEarly = true
+		default:
+		}
+		close(releaseCallback)
+		if returnedEarly {
+			require.Failf(t, "run returned before completion callback", "error: %v", earlyErr)
+		}
+		require.NoError(t, <-runDone)
+	})
+}
+
 func TestRunFailIterations(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		tracker := newIterationTracker()

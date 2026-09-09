@@ -76,10 +76,8 @@ const (
 )
 
 const (
-	nexusSignalStateKey          = "nexus-signal"
-	nexusSignalWithStartStateKey = "nexus-signal-with-start"
-	nexusUpdateStateKey          = "nexus-update"
-	nexusActionComplete          = "complete"
+	nexusUpdateStateKey = "nexus-update"
+	nexusActionComplete = "complete"
 )
 
 type tpsState struct {
@@ -124,12 +122,13 @@ type tpsConfig struct {
 }
 
 type tpsExecutor struct {
-	lock             sync.Mutex
-	state            *tpsState
-	config           *tpsConfig
-	isResuming       bool
-	runID            string
-	rng              *rand.Rand
+	lock       sync.Mutex
+	state      *tpsState
+	config     *tpsConfig
+	isResuming bool
+	runID      string
+	rng        *rand.Rand
+	// onActionsCreated observes generated actions and may be called concurrently by iteration goroutines.
 	onActionsCreated func([]*ActionSet)
 }
 
@@ -642,8 +641,7 @@ func (t *tpsExecutor) createActionsChunk(
 			}
 			if t.config.IncludeNexusWorkflowActions {
 				nexusWorkflowID := fmt.Sprintf("%s/nexus-workflow-%d", run.DefaultStartWorkflowOptions().ID, iterationIndex)
-				// Keep this sequence sequential so signal-with-start creates the target before the remaining actions.
-				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID))
+				asyncActions = append(asyncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID))
 			}
 		}
 
@@ -967,12 +965,11 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 // createNexusWorkflowActionSequence starts a workflow that waits for the configured actions before completing.
 func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Action {
 	targetWorkflowActions := []*Action{
-		NewAwaitWorkflowStateAction(nexusSignalWithStartStateKey, nexusActionComplete),
-		NewAwaitWorkflowStateAction(nexusSignalStateKey, nexusActionComplete),
+		// Only the update writes state because SetWorkflowState replaces the entire map.
 		NewAwaitWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete),
 		// Yield a workflow task so update completion is recorded before the target closes.
 		NewTimerAction(time.Millisecond),
-		// Complete the target after every configured action has marked itself complete.
+		// Complete the target after the final update has marked the sequence complete.
 		NewEmptyReturnResultAction(),
 	}
 	targetWorkflowInput := &WorkflowInput{InitialActions: ListActionSet(targetWorkflowActions...)}
@@ -994,9 +991,7 @@ func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
 				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
 						Variant: &DoSignal_DoSignalActions_DoActions{
-							DoActions: SingleActionSet(
-								NewSetWorkflowStateAction(nexusSignalStateKey, nexusActionComplete),
-							),
+							DoActions: SingleActionSet(NewTimerAction(time.Millisecond)),
 						},
 					}},
 				}},
@@ -1015,9 +1010,9 @@ func (t *tpsExecutor) createNexusSignalWithStartAction(workflowID string, workfl
 				StartOptions: &NexusWorkflowStartOptions{WorkflowInput: workflowInput},
 				Action: &NexusWorkflowAction_Signal{Signal: &DoSignal{
 					Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
-						Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
-							NewSetWorkflowStateAction(nexusSignalWithStartStateKey, nexusActionComplete),
-						)},
+						Variant: &DoSignal_DoSignalActions_DoActions{
+							DoActions: SingleActionSet(NewTimerAction(time.Millisecond)),
+						},
 					}},
 					WithStart: true,
 				}},

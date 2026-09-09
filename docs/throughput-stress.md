@@ -98,7 +98,10 @@ The following opt-in options exercise actions from the Nexus handler:
 - `include-nexus-workflow-actions`
 
 The workflow actions start their target workflow with signal-with-start, then send an ordinary
-signal and an update to that target.
+signal and an update to that target. The update completes asynchronously through a completion
+callback, so this needs server support for CHASM callbacks and update callbacks (dynamic config
+`history.enableChasm`, `history.enableCHASMCallbacks`, `history.enableCHASMSignalBacklinks` and
+`history.enableUpdateCallbacks`).
 
 The standalone activity action is driven two ways each iteration: as an in-workflow Nexus operation
 and, when standalone Nexus is part of the run, as a standalone Nexus operation. It also needs server

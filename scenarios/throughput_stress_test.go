@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestThroughputStress(t *testing.T) {
@@ -166,9 +168,12 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 		inWorkflow int
 		standalone int
 	}
+	var countsMu sync.Mutex
 	var counts actionCounts
 	exec := newThroughputStressExecutor()
 	exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
+		countsMu.Lock()
+		defer countsMu.Unlock()
 		for _, actionSet := range actionSets {
 			walkActions(actionSet.GetActions(), func(action *ks.Action) {
 				if action.GetNexusOperation().GetInput().GetStartActivity() != nil {
@@ -204,6 +209,8 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 
 	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
 	require.NoError(t, err)
+	countsMu.Lock()
+	defer countsMu.Unlock()
 	require.Equal(t, actionCounts{inWorkflow: 1, standalone: 1}, counts)
 }
 
@@ -234,9 +241,13 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		signalWithStarts int
 		updates          int
 	}
+	var countsMu sync.Mutex
 	var counts actionCounts
+	var targetWorkflowInput *ks.WorkflowInput
 	exec := newThroughputStressExecutor()
 	exec.onActionsCreated = func(actionSets []*ks.ActionSet) {
+		countsMu.Lock()
+		defer countsMu.Unlock()
 		for _, actionSet := range actionSets {
 			walkActions(actionSet.GetActions(), func(action *ks.Action) {
 				workflowAction := action.GetNexusOperation().GetInput().GetWorkflowAction()
@@ -250,15 +261,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 					counts.signals++
 					if workflowAction.GetSignal().GetWithStart() {
 						counts.signalWithStarts++
-						input := workflowAction.GetStartOptions().GetWorkflowInput()
-						require.NotNil(t, input)
-						require.Equal(t, ks.ListActionSet(
-							ks.NewAwaitWorkflowStateAction("nexus-signal-with-start", "complete"),
-							ks.NewAwaitWorkflowStateAction("nexus-signal", "complete"),
-							ks.NewAwaitWorkflowStateAction("nexus-update", "complete"),
-							ks.NewTimerAction(time.Millisecond),
-							ks.NewEmptyReturnResultAction(),
-						), input.GetInitialActions())
+						targetWorkflowInput = workflowAction.GetStartOptions().GetWorkflowInput()
 					}
 				case workflowAction.GetUpdate() != nil:
 					counts.updates++
@@ -272,7 +275,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
 			IterFlag:                          "1",
 			NexusEnabledFlag:                  "true",
-			"include-nexus-workflow-actions":  "true",
+			IncludeNexusWorkflowActionsFlag:   "true",
 			SleepTimeFlag:                     "1ms",
 			VisibilityVerificationTimeoutFlag: "10s",
 		}),
@@ -280,7 +283,15 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 
 	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
 	require.NoError(t, err, scenarioInfo.RunID)
+	countsMu.Lock()
+	defer countsMu.Unlock()
 	require.Equal(t, actionCounts{signals: 2, signalWithStarts: 1, updates: 1}, counts)
+	require.NotNil(t, targetWorkflowInput)
+	require.True(t, proto.Equal(&ks.WorkflowInput{InitialActions: ks.ListActionSet(
+		ks.NewAwaitWorkflowStateAction(nexusUpdateStateKey, nexusActionComplete),
+		ks.NewTimerAction(time.Millisecond),
+		ks.NewEmptyReturnResultAction(),
+	)}, targetWorkflowInput))
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
@@ -398,10 +409,9 @@ func TestThroughputStressConfigureExplicitStandaloneNexusRequiresNexusEnabled(t 
 func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *testing.T) {
 	t.Parallel()
 
-	const flag = "include-nexus-workflow-actions"
 	options, err := loadgen.GetScenario("throughput_stress").ResolveOptions(map[string]string{
-		flag:             "true",
-		NexusEnabledFlag: "false",
+		IncludeNexusWorkflowActionsFlag: "true",
+		NexusEnabledFlag:                "false",
 	})
 	require.NoError(t, err)
 
@@ -411,7 +421,7 @@ func TestThroughputStressConfigureNexusWorkflowActionsRequireNexusEnabled(t *tes
 	})
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), flag)
+	require.Contains(t, err.Error(), IncludeNexusWorkflowActionsFlag)
 	require.Contains(t, err.Error(), NexusEnabledFlag)
 }
 
