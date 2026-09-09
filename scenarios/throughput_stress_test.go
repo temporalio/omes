@@ -188,6 +188,7 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 
 	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
 	require.NoError(t, err)
+
 	var counts actionCounts
 	for _, actionSet := range <-actionsCreated {
 		walkActions(actionSet.GetActions(), func(action *ks.Action) {
@@ -250,6 +251,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 
 	_, err := env.RunExecutorTest(t, exec, scenarioInfo, clioptions.LangGo)
 	require.NoError(t, err, scenarioInfo.RunID)
+
 	var workflowActions []*ks.NexusWorkflowAction
 	for _, actionSet := range <-actionsCreated {
 		walkActions(actionSet.GetActions(), func(action *ks.Action) {
