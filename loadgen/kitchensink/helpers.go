@@ -14,7 +14,15 @@ import (
 )
 
 // Using human-readable JSON encoding for payloads to aid with debugging.
-var jsonPayloadConverter = converter.NewProtoJSONPayloadConverter()
+var jsonPayloadConverter = converter.GetDefaultDataConverter()
+
+const (
+	// KitchenSinkNexusServiceName is the kitchen sink Nexus service.
+	KitchenSinkNexusServiceName = "kitchen-sink"
+
+	// KitchenSinkNexusOperationName is the operation exposed by the kitchen sink Nexus service.
+	KitchenSinkNexusOperationName = "execute"
+)
 
 // ActivityNameAndArgs maps an ExecuteActivityAction's activity variant to the
 // registered activity name and its args. Shared by the workflow-scheduled path
