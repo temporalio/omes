@@ -154,25 +154,23 @@ func (g *genericRun) Run(ctx context.Context) error {
 				// cancellation while the run is healthy.
 				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
 
-				if stopping {
+				switch {
+				case stopping:
 					g.logger.Debugf("Iteration %v abandoned: run is stopping", run.Iteration)
-					return
-				}
-				if ctx.Err() != nil {
-					return
-				}
-				if iterErr == nil {
+				case iterErr == nil:
 					run.Duration = elapsed
 					g.completed.Add(1)
 					if g.config.OnCompletion != nil {
 						g.config.OnCompletion(ctx, run)
 					}
-				} else {
+				default:
 					g.failed.Add(1)
 					if g.config.OnIterationFailure != nil {
 						g.config.OnIterationFailure(ctx, run, iterErr)
 					}
 				}
+
+				// Notify the waiter after callbacks finish so Run cannot return before they do.
 				select {
 				case <-ctx.Done():
 				case doneCh <- err:

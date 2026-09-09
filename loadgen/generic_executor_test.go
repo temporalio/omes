@@ -37,6 +37,10 @@ func (i *iterationTracker) assertSeen(t *testing.T, iterations int) {
 }
 
 func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
+	return executeContext(context.Background(), executor, runConfig)
+}
+
+func executeContext(ctx context.Context, executor *GenericExecutor, runConfig RunConfiguration) error {
 	logger := zap.Must(zap.NewDevelopment())
 	defer logger.Sync()
 	info := ScenarioInfo{
@@ -44,7 +48,7 @@ func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
 		Logger:         logger.Sugar(),
 		Configuration:  runConfig,
 	}
-	return executor.Run(context.Background(), info)
+	return executor.Run(ctx, info)
 }
 
 func TestRunHappyPathIterations(t *testing.T) {
@@ -62,37 +66,40 @@ func TestRunHappyPathIterations(t *testing.T) {
 	})
 }
 
-func TestRunWaitsForCompletionCallback(t *testing.T) {
+func TestRunWaitsForOnCompletion(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		callbackStarted := make(chan struct{})
 		releaseCallback := make(chan struct{})
 		runDone := make(chan error, 1)
+
 		go func() {
 			runDone <- execute(&GenericExecutor{
-				Execute: func(context.Context, *Run) error { return nil },
-			}, RunConfiguration{
-				Iterations:    1,
-				MaxConcurrent: 1,
-				OnCompletion: func(context.Context, *Run) {
-					close(callbackStarted)
-					<-releaseCallback
+				Execute: func(ctx context.Context, run *Run) error {
+					return nil
+				}},
+				RunConfiguration{
+					Iterations: 1,
+					OnCompletion: func(ctx context.Context, run *Run) {
+						close(callbackStarted)
+						<-releaseCallback
+					},
 				},
-			})
+			)
 		}()
 
 		<-callbackStarted
+
 		synctest.Wait()
-		var earlyErr error
-		returnedEarly := false
+
+		returned := false
 		select {
-		case earlyErr = <-runDone:
-			returnedEarly = true
+		case <-runDone:
+			returned = true
 		default:
 		}
 		close(releaseCallback)
-		if returnedEarly {
-			require.Failf(t, "run returned before completion callback", "error: %v", earlyErr)
-		}
+
+		require.False(t, returned, "executor returned before OnCompletion finished")
 		require.NoError(t, <-runDone)
 	})
 }
@@ -313,6 +320,38 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 	})
 }
 
+func TestRunReportsNonCancellationFailureAfterCancellation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		failureReported := make(chan struct{}, 1)
+		err := executeContext(ctx, &GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				cancel()
+				return errors.New("deliberate fail from test")
+			},
+		}, RunConfiguration{
+			Iterations:                 1,
+			ContinueOnIterationFailure: true,
+			OnIterationFailure: func(ctx context.Context, run *Run, err error) {
+				failureReported <- struct{}{}
+			},
+		})
+		require.Error(t, err)
+
+		synctest.Wait()
+
+		reported := false
+		select {
+		case <-failureReported:
+			reported = true
+		default:
+		}
+		require.True(t, reported, "non-cancellation error should be reported as a failure")
+	})
+}
+
 // TestRunStoppedIterationsAreNotCountedAsFailures pins that iterations abandoned
 // by a caller stopping the run are left out of the tallies, so a clean stop is
 // not reported as a burst of failures.
@@ -326,7 +365,7 @@ func TestRunStoppedIterationsAreNotCountedAsFailures(t *testing.T) {
 		defer cancel()
 
 		var inFlight int
-		executor := &GenericExecutor{
+		err := executeContext(ctx, &GenericExecutor{
 			Execute: func(ctx context.Context, run *Run) error {
 				mu.Lock()
 				inFlight++
@@ -341,27 +380,19 @@ func TestRunStoppedIterationsAreNotCountedAsFailures(t *testing.T) {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-		}
-
-		logger := zap.Must(zap.NewDevelopment())
-		defer logger.Sync()
-		err := executor.Run(ctx, ScenarioInfo{
-			MetricsHandler: client.MetricsNopHandler,
-			Logger:         logger.Sugar(),
-			Configuration: RunConfiguration{
-				Iterations:                 100,
-				MaxConcurrent:              concurrent,
-				ContinueOnIterationFailure: true,
-				OnCompletion: func(ctx context.Context, run *Run) {
-					mu.Lock()
-					defer mu.Unlock()
-					completed = append(completed, run.Iteration)
-				},
-				OnIterationFailure: func(ctx context.Context, run *Run, err error) {
-					mu.Lock()
-					defer mu.Unlock()
-					failed = append(failed, run.Iteration)
-				},
+		}, RunConfiguration{
+			Iterations:                 100,
+			MaxConcurrent:              concurrent,
+			ContinueOnIterationFailure: true,
+			OnCompletion: func(ctx context.Context, run *Run) {
+				mu.Lock()
+				defer mu.Unlock()
+				completed = append(completed, run.Iteration)
+			},
+			OnIterationFailure: func(ctx context.Context, run *Run, err error) {
+				mu.Lock()
+				defer mu.Unlock()
+				failed = append(failed, run.Iteration)
 			},
 		})
 
