@@ -218,8 +218,15 @@ func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
 func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 	t.Parallel()
 
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
+		"history.enableChasm":                true,
+		"history.enableCHASMCallbacks":       true,
+		"history.enableCHASMSignalBacklinks": true,
+		"history.enableUpdateCallbacks":      true,
+	}))
 	env := workertest.SetupTestEnvironment(t,
-		workertest.WithExecutorTimeout(time.Minute))
+		workertest.WithExecutorTimeout(time.Minute),
+		workertest.WithDevServer(server))
 
 	type actionCounts struct {
 		starts           int

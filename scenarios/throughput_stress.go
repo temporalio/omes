@@ -1090,7 +1090,7 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				}},
 			}},
 		},
-		ExpectedOutput: ConvertToPayload(workflowID),
+		ExpectedOutput: ConvertToPayload(ConvertToPayload(workflowID)),
 	})
 }
 
