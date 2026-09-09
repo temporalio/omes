@@ -471,7 +471,7 @@ class AwaitWorkflowState(_message.Message):
     def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class SendSignalAction(_message.Message):
-    __slots__ = ("workflow_id", "run_id", "signal_name", "args", "headers", "awaitable_choice")
+    __slots__ = ("workflow_id", "run_id", "signal_name", "arg", "headers", "awaitable_choice")
     class HeadersEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -482,16 +482,16 @@ class SendSignalAction(_message.Message):
     WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     SIGNAL_NAME_FIELD_NUMBER: _ClassVar[int]
-    ARGS_FIELD_NUMBER: _ClassVar[int]
+    ARG_FIELD_NUMBER: _ClassVar[int]
     HEADERS_FIELD_NUMBER: _ClassVar[int]
     AWAITABLE_CHOICE_FIELD_NUMBER: _ClassVar[int]
     workflow_id: str
     run_id: str
     signal_name: str
-    args: _containers.RepeatedCompositeFieldContainer[_message_pb2.Payload]
+    arg: _message_pb2.Payload
     headers: _containers.MessageMap[str, _message_pb2.Payload]
     awaitable_choice: AwaitableChoice
-    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., signal_name: _Optional[str] = ..., args: _Optional[_Iterable[_Union[_message_pb2.Payload, _Mapping]]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
+    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., signal_name: _Optional[str] = ..., arg: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ..., headers: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., awaitable_choice: _Optional[_Union[AwaitableChoice, _Mapping]] = ...) -> None: ...
 
 class CancelWorkflowAction(_message.Message):
     __slots__ = ("workflow_id", "run_id")

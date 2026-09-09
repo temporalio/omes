@@ -486,12 +486,8 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 }
 
 func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
-	var arg *common.Payload
-	if len(action.Args) > 0 {
-		arg = action.Args[0]
-	}
 	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
-		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, arg)
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, action.Arg)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)

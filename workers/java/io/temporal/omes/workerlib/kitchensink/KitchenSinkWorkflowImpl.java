@@ -212,8 +212,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
           Workflow.newCancellationScope(
               () -> {
                 Promise promise =
-                    Async.procedure(
-                        stub::signal, sendSignal.getSignalName(), sendSignal.getArgsList());
+                    Async.procedure(stub::signal, sendSignal.getSignalName(), sendSignal.getArg());
                 handlePromise(promise, sendSignal.getAwaitableChoice());
               });
       scope.run();

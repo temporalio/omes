@@ -555,6 +555,59 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionUpdateCompleted`),
 		},
 		{
+			name: "SendSignal/DoActions",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						&Action{
+							Variant: &Action_ExecChildWorkflow{
+								ExecChildWorkflow: &ExecuteChildWorkflowAction{
+									WorkflowId:   "send-signal-target",
+									WorkflowType: "kitchenSink",
+									Input: []*common.Payload{ConvertToPayload(&WorkflowInput{
+										InitialActions: ListActionSet(
+											NewAwaitWorkflowStateAction("status", "done"),
+											NewEmptyReturnResultAction(),
+										),
+									})},
+									AwaitableChoice: &AwaitableChoice{
+										Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
+									},
+								},
+							},
+						},
+						NewTimerAction(time.Millisecond),
+						&Action{
+							Variant: &Action_SendSignal{
+								SendSignal: &SendSignalAction{
+									WorkflowId: "send-signal-target",
+									SignalName: "do_actions_signal",
+									Arg: ConvertToPayload(&DoSignal_DoSignalActions{
+										Variant: &DoSignal_DoSignalActions_DoActions{
+											DoActions: SingleActionSet(NewSetWorkflowStateAction("status", "done")),
+										},
+									}),
+								},
+							},
+						},
+						NewTimerAction(100*time.Millisecond),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				StartChildWorkflowExecutionInitiated {"workflowId":"send-signal-target"}
+				ChildWorkflowExecutionStarted
+				...
+				ExternalWorkflowExecutionSignaled
+				...
+				ChildWorkflowExecutionCompleted`),
+			expectedUnsupportedErrs: map[clioptions.Language]string{
+				clioptions.LangRuby:       "unrecognized action",
+				clioptions.LangTypeScript: "unrecognized action",
+				clioptions.LangDotNet:     "unrecognized action",
+			},
+		},
+		{
 			name: "ClientSequence/Signal/DoActions",
 			testInput: &TestInput{
 				ClientSequence: ClientActions(&ClientAction{

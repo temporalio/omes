@@ -43171,47 +43171,30 @@ io.temporal.api.common.v1.Payload defaultValue) {
 
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+     * @return Whether the arg field is set.
      */
-    java.util.List<io.temporal.api.common.v1.Payload> 
-        getArgsList();
+    boolean hasArg();
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+     * @return The arg.
      */
-    io.temporal.api.common.v1.Payload getArgs(int index);
+    io.temporal.api.common.v1.Payload getArg();
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
      */
-    int getArgsCount();
-    /**
-     * <pre>
-     * Arguments for the handler
-     * </pre>
-     *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-     */
-    java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-        getArgsOrBuilderList();
-    /**
-     * <pre>
-     * Arguments for the handler
-     * </pre>
-     *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-     */
-    io.temporal.api.common.v1.PayloadOrBuilder getArgsOrBuilder(
-        int index);
+    io.temporal.api.common.v1.PayloadOrBuilder getArgOrBuilder();
 
     /**
      * <pre>
@@ -43298,7 +43281,6 @@ io.temporal.api.common.v1.Payload defaultValue);
       workflowId_ = "";
       runId_ = "";
       signalName_ = "";
-      args_ = java.util.Collections.emptyList();
     }
 
     @java.lang.Override
@@ -43467,65 +43449,42 @@ io.temporal.api.common.v1.Payload defaultValue);
       }
     }
 
-    public static final int ARGS_FIELD_NUMBER = 4;
-    @SuppressWarnings("serial")
-    private java.util.List<io.temporal.api.common.v1.Payload> args_;
+    public static final int ARG_FIELD_NUMBER = 4;
+    private io.temporal.api.common.v1.Payload arg_;
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+     * @return Whether the arg field is set.
      */
     @java.lang.Override
-    public java.util.List<io.temporal.api.common.v1.Payload> getArgsList() {
-      return args_;
+    public boolean hasArg() {
+      return ((bitField0_ & 0x00000001) != 0);
     }
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+     * @return The arg.
      */
     @java.lang.Override
-    public java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-        getArgsOrBuilderList() {
-      return args_;
+    public io.temporal.api.common.v1.Payload getArg() {
+      return arg_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : arg_;
     }
     /**
      * <pre>
-     * Arguments for the handler
+     * Argument for the signal handler; encode multiple values as a list
      * </pre>
      *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+     * <code>.temporal.api.common.v1.Payload arg = 4;</code>
      */
     @java.lang.Override
-    public int getArgsCount() {
-      return args_.size();
-    }
-    /**
-     * <pre>
-     * Arguments for the handler
-     * </pre>
-     *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-     */
-    @java.lang.Override
-    public io.temporal.api.common.v1.Payload getArgs(int index) {
-      return args_.get(index);
-    }
-    /**
-     * <pre>
-     * Arguments for the handler
-     * </pre>
-     *
-     * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-     */
-    @java.lang.Override
-    public io.temporal.api.common.v1.PayloadOrBuilder getArgsOrBuilder(
-        int index) {
-      return args_.get(index);
+    public io.temporal.api.common.v1.PayloadOrBuilder getArgOrBuilder() {
+      return arg_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : arg_;
     }
 
     public static final int HEADERS_FIELD_NUMBER = 5;
@@ -43631,7 +43590,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
      */
     @java.lang.Override
     public boolean hasAwaitableChoice() {
-      return ((bitField0_ & 0x00000001) != 0);
+      return ((bitField0_ & 0x00000002) != 0);
     }
     /**
      * <code>.temporal.omes.kitchen_sink.AwaitableChoice awaitable_choice = 6;</code>
@@ -43672,8 +43631,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(signalName_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, signalName_);
       }
-      for (int i = 0; i < args_.size(); i++) {
-        output.writeMessage(4, args_.get(i));
+      if (((bitField0_ & 0x00000001) != 0)) {
+        output.writeMessage(4, getArg());
       }
       com.google.protobuf.GeneratedMessageV3
         .serializeStringMapTo(
@@ -43681,7 +43640,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           internalGetHeaders(),
           HeadersDefaultEntryHolder.defaultEntry,
           5);
-      if (((bitField0_ & 0x00000001) != 0)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         output.writeMessage(6, getAwaitableChoice());
       }
       getUnknownFields().writeTo(output);
@@ -43702,9 +43661,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(signalName_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, signalName_);
       }
-      for (int i = 0; i < args_.size(); i++) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, args_.get(i));
+          .computeMessageSize(4, getArg());
       }
       for (java.util.Map.Entry<java.lang.String, io.temporal.api.common.v1.Payload> entry
            : internalGetHeaders().getMap().entrySet()) {
@@ -43716,7 +43675,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
         size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(5, headers__);
       }
-      if (((bitField0_ & 0x00000001) != 0)) {
+      if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, getAwaitableChoice());
       }
@@ -43741,8 +43700,11 @@ io.temporal.api.common.v1.Payload defaultValue) {
           .equals(other.getRunId())) return false;
       if (!getSignalName()
           .equals(other.getSignalName())) return false;
-      if (!getArgsList()
-          .equals(other.getArgsList())) return false;
+      if (hasArg() != other.hasArg()) return false;
+      if (hasArg()) {
+        if (!getArg()
+            .equals(other.getArg())) return false;
+      }
       if (!internalGetHeaders().equals(
           other.internalGetHeaders())) return false;
       if (hasAwaitableChoice() != other.hasAwaitableChoice()) return false;
@@ -43767,9 +43729,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
       hash = (53 * hash) + getRunId().hashCode();
       hash = (37 * hash) + SIGNAL_NAME_FIELD_NUMBER;
       hash = (53 * hash) + getSignalName().hashCode();
-      if (getArgsCount() > 0) {
-        hash = (37 * hash) + ARGS_FIELD_NUMBER;
-        hash = (53 * hash) + getArgsList().hashCode();
+      if (hasArg()) {
+        hash = (37 * hash) + ARG_FIELD_NUMBER;
+        hash = (53 * hash) + getArg().hashCode();
       }
       if (!internalGetHeaders().getMap().isEmpty()) {
         hash = (37 * hash) + HEADERS_FIELD_NUMBER;
@@ -43931,7 +43893,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getArgsFieldBuilder();
+          getArgFieldBuilder();
           getAwaitableChoiceFieldBuilder();
         }
       }
@@ -43942,13 +43904,11 @@ io.temporal.api.common.v1.Payload defaultValue) {
         workflowId_ = "";
         runId_ = "";
         signalName_ = "";
-        if (argsBuilder_ == null) {
-          args_ = java.util.Collections.emptyList();
-        } else {
-          args_ = null;
-          argsBuilder_.clear();
+        arg_ = null;
+        if (argBuilder_ != null) {
+          argBuilder_.dispose();
+          argBuilder_ = null;
         }
-        bitField0_ = (bitField0_ & ~0x00000008);
         internalGetMutableHeaders().clear();
         awaitableChoice_ = null;
         if (awaitableChoiceBuilder_ != null) {
@@ -43981,22 +43941,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
       @java.lang.Override
       public io.temporal.omes.KitchenSink.SendSignalAction buildPartial() {
         io.temporal.omes.KitchenSink.SendSignalAction result = new io.temporal.omes.KitchenSink.SendSignalAction(this);
-        buildPartialRepeatedFields(result);
         if (bitField0_ != 0) { buildPartial0(result); }
         onBuilt();
         return result;
-      }
-
-      private void buildPartialRepeatedFields(io.temporal.omes.KitchenSink.SendSignalAction result) {
-        if (argsBuilder_ == null) {
-          if (((bitField0_ & 0x00000008) != 0)) {
-            args_ = java.util.Collections.unmodifiableList(args_);
-            bitField0_ = (bitField0_ & ~0x00000008);
-          }
-          result.args_ = args_;
-        } else {
-          result.args_ = argsBuilder_.build();
-        }
       }
 
       private void buildPartial0(io.temporal.omes.KitchenSink.SendSignalAction result) {
@@ -44010,15 +43957,21 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (((from_bitField0_ & 0x00000004) != 0)) {
           result.signalName_ = signalName_;
         }
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.arg_ = argBuilder_ == null
+              ? arg_
+              : argBuilder_.build();
+          to_bitField0_ |= 0x00000001;
+        }
         if (((from_bitField0_ & 0x00000010) != 0)) {
           result.headers_ = internalGetHeaders().build(HeadersDefaultEntryHolder.defaultEntry);
         }
-        int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000020) != 0)) {
           result.awaitableChoice_ = awaitableChoiceBuilder_ == null
               ? awaitableChoice_
               : awaitableChoiceBuilder_.build();
-          to_bitField0_ |= 0x00000001;
+          to_bitField0_ |= 0x00000002;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -44082,31 +44035,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
           bitField0_ |= 0x00000004;
           onChanged();
         }
-        if (argsBuilder_ == null) {
-          if (!other.args_.isEmpty()) {
-            if (args_.isEmpty()) {
-              args_ = other.args_;
-              bitField0_ = (bitField0_ & ~0x00000008);
-            } else {
-              ensureArgsIsMutable();
-              args_.addAll(other.args_);
-            }
-            onChanged();
-          }
-        } else {
-          if (!other.args_.isEmpty()) {
-            if (argsBuilder_.isEmpty()) {
-              argsBuilder_.dispose();
-              argsBuilder_ = null;
-              args_ = other.args_;
-              bitField0_ = (bitField0_ & ~0x00000008);
-              argsBuilder_ = 
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getArgsFieldBuilder() : null;
-            } else {
-              argsBuilder_.addAllMessages(other.args_);
-            }
-          }
+        if (other.hasArg()) {
+          mergeArg(other.getArg());
         }
         internalGetMutableHeaders().mergeFrom(
             other.internalGetHeaders());
@@ -44156,16 +44086,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
                 break;
               } // case 26
               case 34: {
-                io.temporal.api.common.v1.Payload m =
-                    input.readMessage(
-                        io.temporal.api.common.v1.Payload.parser(),
-                        extensionRegistry);
-                if (argsBuilder_ == null) {
-                  ensureArgsIsMutable();
-                  args_.add(m);
-                } else {
-                  argsBuilder_.addMessage(m);
-                }
+                input.readMessage(
+                    getArgFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bitField0_ |= 0x00000008;
                 break;
               } // case 34
               case 42: {
@@ -44457,316 +44381,161 @@ io.temporal.api.common.v1.Payload defaultValue) {
         return this;
       }
 
-      private java.util.List<io.temporal.api.common.v1.Payload> args_ =
-        java.util.Collections.emptyList();
-      private void ensureArgsIsMutable() {
-        if (!((bitField0_ & 0x00000008) != 0)) {
-          args_ = new java.util.ArrayList<io.temporal.api.common.v1.Payload>(args_);
-          bitField0_ |= 0x00000008;
-         }
-      }
-
-      private com.google.protobuf.RepeatedFieldBuilderV3<
-          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> argsBuilder_;
-
+      private io.temporal.api.common.v1.Payload arg_;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> argBuilder_;
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+       * @return Whether the arg field is set.
        */
-      public java.util.List<io.temporal.api.common.v1.Payload> getArgsList() {
-        if (argsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(args_);
+      public boolean hasArg() {
+        return ((bitField0_ & 0x00000008) != 0);
+      }
+      /**
+       * <pre>
+       * Argument for the signal handler; encode multiple values as a list
+       * </pre>
+       *
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+       * @return The arg.
+       */
+      public io.temporal.api.common.v1.Payload getArg() {
+        if (argBuilder_ == null) {
+          return arg_ == null ? io.temporal.api.common.v1.Payload.getDefaultInstance() : arg_;
         } else {
-          return argsBuilder_.getMessageList();
+          return argBuilder_.getMessage();
         }
       }
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
        */
-      public int getArgsCount() {
-        if (argsBuilder_ == null) {
-          return args_.size();
-        } else {
-          return argsBuilder_.getCount();
-        }
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload getArgs(int index) {
-        if (argsBuilder_ == null) {
-          return args_.get(index);
-        } else {
-          return argsBuilder_.getMessage(index);
-        }
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder setArgs(
-          int index, io.temporal.api.common.v1.Payload value) {
-        if (argsBuilder_ == null) {
+      public Builder setArg(io.temporal.api.common.v1.Payload value) {
+        if (argBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureArgsIsMutable();
-          args_.set(index, value);
-          onChanged();
+          arg_ = value;
         } else {
-          argsBuilder_.setMessage(index, value);
+          argBuilder_.setMessage(value);
         }
+        bitField0_ |= 0x00000008;
+        onChanged();
         return this;
       }
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
        */
-      public Builder setArgs(
-          int index, io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argsBuilder_ == null) {
-          ensureArgsIsMutable();
-          args_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          argsBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder addArgs(io.temporal.api.common.v1.Payload value) {
-        if (argsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureArgsIsMutable();
-          args_.add(value);
-          onChanged();
-        } else {
-          argsBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder addArgs(
-          int index, io.temporal.api.common.v1.Payload value) {
-        if (argsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureArgsIsMutable();
-          args_.add(index, value);
-          onChanged();
-        } else {
-          argsBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder addArgs(
+      public Builder setArg(
           io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argsBuilder_ == null) {
-          ensureArgsIsMutable();
-          args_.add(builderForValue.build());
-          onChanged();
+        if (argBuilder_ == null) {
+          arg_ = builderForValue.build();
         } else {
-          argsBuilder_.addMessage(builderForValue.build());
+          argBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * Argument for the signal handler; encode multiple values as a list
+       * </pre>
+       *
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+       */
+      public Builder mergeArg(io.temporal.api.common.v1.Payload value) {
+        if (argBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) != 0) &&
+            arg_ != null &&
+            arg_ != io.temporal.api.common.v1.Payload.getDefaultInstance()) {
+            getArgBuilder().mergeFrom(value);
+          } else {
+            arg_ = value;
+          }
+        } else {
+          argBuilder_.mergeFrom(value);
+        }
+        if (arg_ != null) {
+          bitField0_ |= 0x00000008;
+          onChanged();
         }
         return this;
       }
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
        */
-      public Builder addArgs(
-          int index, io.temporal.api.common.v1.Payload.Builder builderForValue) {
-        if (argsBuilder_ == null) {
-          ensureArgsIsMutable();
-          args_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          argsBuilder_.addMessage(index, builderForValue.build());
+      public Builder clearArg() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        arg_ = null;
+        if (argBuilder_ != null) {
+          argBuilder_.dispose();
+          argBuilder_ = null;
         }
+        onChanged();
         return this;
       }
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
        */
-      public Builder addAllArgs(
-          java.lang.Iterable<? extends io.temporal.api.common.v1.Payload> values) {
-        if (argsBuilder_ == null) {
-          ensureArgsIsMutable();
-          com.google.protobuf.AbstractMessageLite.Builder.addAll(
-              values, args_);
-          onChanged();
+      public io.temporal.api.common.v1.Payload.Builder getArgBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getArgFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * Argument for the signal handler; encode multiple values as a list
+       * </pre>
+       *
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
+       */
+      public io.temporal.api.common.v1.PayloadOrBuilder getArgOrBuilder() {
+        if (argBuilder_ != null) {
+          return argBuilder_.getMessageOrBuilder();
         } else {
-          argsBuilder_.addAllMessages(values);
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder clearArgs() {
-        if (argsBuilder_ == null) {
-          args_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000008);
-          onChanged();
-        } else {
-          argsBuilder_.clear();
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public Builder removeArgs(int index) {
-        if (argsBuilder_ == null) {
-          ensureArgsIsMutable();
-          args_.remove(index);
-          onChanged();
-        } else {
-          argsBuilder_.remove(index);
-        }
-        return this;
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder getArgsBuilder(
-          int index) {
-        return getArgsFieldBuilder().getBuilder(index);
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public io.temporal.api.common.v1.PayloadOrBuilder getArgsOrBuilder(
-          int index) {
-        if (argsBuilder_ == null) {
-          return args_.get(index);  } else {
-          return argsBuilder_.getMessageOrBuilder(index);
+          return arg_ == null ?
+              io.temporal.api.common.v1.Payload.getDefaultInstance() : arg_;
         }
       }
       /**
        * <pre>
-       * Arguments for the handler
+       * Argument for the signal handler; encode multiple values as a list
        * </pre>
        *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
+       * <code>.temporal.api.common.v1.Payload arg = 4;</code>
        */
-      public java.util.List<? extends io.temporal.api.common.v1.PayloadOrBuilder> 
-           getArgsOrBuilderList() {
-        if (argsBuilder_ != null) {
-          return argsBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(args_);
-        }
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder addArgsBuilder() {
-        return getArgsFieldBuilder().addBuilder(
-            io.temporal.api.common.v1.Payload.getDefaultInstance());
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public io.temporal.api.common.v1.Payload.Builder addArgsBuilder(
-          int index) {
-        return getArgsFieldBuilder().addBuilder(
-            index, io.temporal.api.common.v1.Payload.getDefaultInstance());
-      }
-      /**
-       * <pre>
-       * Arguments for the handler
-       * </pre>
-       *
-       * <code>repeated .temporal.api.common.v1.Payload args = 4;</code>
-       */
-      public java.util.List<io.temporal.api.common.v1.Payload.Builder> 
-           getArgsBuilderList() {
-        return getArgsFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilderV3<
+      private com.google.protobuf.SingleFieldBuilderV3<
           io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder> 
-          getArgsFieldBuilder() {
-        if (argsBuilder_ == null) {
-          argsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+          getArgFieldBuilder() {
+        if (argBuilder_ == null) {
+          argBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
               io.temporal.api.common.v1.Payload, io.temporal.api.common.v1.Payload.Builder, io.temporal.api.common.v1.PayloadOrBuilder>(
-                  args_,
-                  ((bitField0_ & 0x00000008) != 0),
+                  getArg(),
                   getParentForChildren(),
                   isClean());
-          args_ = null;
+          arg_ = null;
         }
-        return argsBuilder_;
+        return argBuilder_;
       }
 
       private static final class HeadersConverter implements com.google.protobuf.MapFieldBuilder.Converter<java.lang.String, io.temporal.api.common.v1.PayloadOrBuilder, io.temporal.api.common.v1.Payload> {
@@ -60376,97 +60145,97 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "tesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.t" +
       "emporal.api.common.v1.Payload:\0028\001\"0\n\022Awa" +
       "itWorkflowState\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 " +
-      "\001(\t\"\337\002\n\020SendSignalAction\022\023\n\013workflow_id\030" +
+      "\001(\t\"\336\002\n\020SendSignalAction\022\023\n\013workflow_id\030" +
       "\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013signal_name\030\003 \001" +
-      "(\t\022-\n\004args\030\004 \003(\0132\037.temporal.api.common.v" +
-      "1.Payload\022J\n\007headers\030\005 \003(\01329.temporal.om" +
-      "es.kitchen_sink.SendSignalAction.Headers" +
-      "Entry\022E\n\020awaitable_choice\030\006 \001(\0132+.tempor" +
-      "al.omes.kitchen_sink.AwaitableChoice\032O\n\014" +
-      "HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\013" +
-      "2\037.temporal.api.common.v1.Payload:\0028\001\";\n" +
-      "\024CancelWorkflowAction\022\023\n\013workflow_id\030\001 \001" +
-      "(\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerActi" +
-      "on\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010" +
-      "\0228\n\014inner_action\030\003 \001(\0132\".temporal.omes.k" +
-      "itchen_sink.Action\"\343\001\n\034UpsertSearchAttri" +
-      "butesAction\022i\n\021search_attributes\030\001 \003(\0132N" +
-      ".temporal.omes.kitchen_sink.UpsertSearch" +
-      "AttributesAction.SearchAttributesEntry\032X" +
-      "\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005" +
-      "value\030\002 \001(\0132\037.temporal.api.common.v1.Pay" +
-      "load:\0028\001\"G\n\020UpsertMemoAction\0223\n\rupserted" +
-      "_memo\030\001 \001(\0132\034.temporal.api.common.v1.Mem" +
-      "o\"J\n\022ReturnResultAction\0224\n\013return_this\030\001" +
-      " \001(\0132\037.temporal.api.common.v1.Payload\"F\n" +
-      "\021ReturnErrorAction\0221\n\007failure\030\001 \001(\0132 .te" +
-      "mporal.api.failure.v1.Failure\"\336\006\n\023Contin" +
-      "ueAsNewAction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\n" +
-      "task_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.te" +
-      "mporal.api.common.v1.Payload\0227\n\024workflow" +
-      "_run_timeout\030\004 \001(\0132\031.google.protobuf.Dur" +
-      "ation\0228\n\025workflow_task_timeout\030\005 \001(\0132\031.g" +
-      "oogle.protobuf.Duration\022G\n\004memo\030\006 \003(\01329." +
-      "temporal.omes.kitchen_sink.ContinueAsNew" +
-      "Action.MemoEntry\022M\n\007headers\030\007 \003(\0132<.temp" +
-      "oral.omes.kitchen_sink.ContinueAsNewActi" +
-      "on.HeadersEntry\022`\n\021search_attributes\030\010 \003" +
-      "(\0132E.temporal.omes.kitchen_sink.Continue" +
-      "AsNewAction.SearchAttributesEntry\0229\n\014ret" +
-      "ry_policy\030\t \001(\0132#.temporal.api.common.v1" +
-      ".RetryPolicy\022G\n\021versioning_intent\030\n \001(\0162" +
-      ",.temporal.omes.kitchen_sink.VersioningI" +
-      "ntent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value" +
+      "(\t\022,\n\003arg\030\004 \001(\0132\037.temporal.api.common.v1" +
+      ".Payload\022J\n\007headers\030\005 \003(\01329.temporal.ome" +
+      "s.kitchen_sink.SendSignalAction.HeadersE" +
+      "ntry\022E\n\020awaitable_choice\030\006 \001(\0132+.tempora" +
+      "l.omes.kitchen_sink.AwaitableChoice\032O\n\014H" +
+      "eadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132" +
+      "\037.temporal.api.common.v1.Payload:\0028\001\";\n\024" +
+      "CancelWorkflowAction\022\023\n\013workflow_id\030\001 \001(" +
+      "\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatchMarkerActio" +
+      "n\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndeprecated\030\002 \001(\010\022" +
+      "8\n\014inner_action\030\003 \001(\0132\".temporal.omes.ki" +
+      "tchen_sink.Action\"\343\001\n\034UpsertSearchAttrib" +
+      "utesAction\022i\n\021search_attributes\030\001 \003(\0132N." +
+      "temporal.omes.kitchen_sink.UpsertSearchA" +
+      "ttributesAction.SearchAttributesEntry\032X\n" +
+      "\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005v" +
+      "alue\030\002 \001(\0132\037.temporal.api.common.v1.Payl" +
+      "oad:\0028\001\"G\n\020UpsertMemoAction\0223\n\rupserted_" +
+      "memo\030\001 \001(\0132\034.temporal.api.common.v1.Memo" +
+      "\"J\n\022ReturnResultAction\0224\n\013return_this\030\001 " +
+      "\001(\0132\037.temporal.api.common.v1.Payload\"F\n\021" +
+      "ReturnErrorAction\0221\n\007failure\030\001 \001(\0132 .tem" +
+      "poral.api.failure.v1.Failure\"\336\006\n\023Continu" +
+      "eAsNewAction\022\025\n\rworkflow_type\030\001 \001(\t\022\022\n\nt" +
+      "ask_queue\030\002 \001(\t\0222\n\targuments\030\003 \003(\0132\037.tem" +
+      "poral.api.common.v1.Payload\0227\n\024workflow_" +
+      "run_timeout\030\004 \001(\0132\031.google.protobuf.Dura" +
+      "tion\0228\n\025workflow_task_timeout\030\005 \001(\0132\031.go" +
+      "ogle.protobuf.Duration\022G\n\004memo\030\006 \003(\01329.t" +
+      "emporal.omes.kitchen_sink.ContinueAsNewA" +
+      "ction.MemoEntry\022M\n\007headers\030\007 \003(\0132<.tempo" +
+      "ral.omes.kitchen_sink.ContinueAsNewActio" +
+      "n.HeadersEntry\022`\n\021search_attributes\030\010 \003(" +
+      "\0132E.temporal.omes.kitchen_sink.ContinueA" +
+      "sNewAction.SearchAttributesEntry\0229\n\014retr" +
+      "y_policy\030\t \001(\0132#.temporal.api.common.v1." +
+      "RetryPolicy\022G\n\021versioning_intent\030\n \001(\0162," +
+      ".temporal.omes.kitchen_sink.VersioningIn" +
+      "tent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030" +
+      "\002 \001(\0132\037.temporal.api.common.v1.Payload:\002" +
+      "8\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value" +
       "\030\002 \001(\0132\037.temporal.api.common.v1.Payload:" +
-      "\0028\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005valu" +
-      "e\030\002 \001(\0132\037.temporal.api.common.v1.Payload" +
-      ":\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001" +
-      "(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common." +
-      "v1.Payload:\0028\001\"\321\001\n\025RemoteActivityOptions" +
-      "\022O\n\021cancellation_type\030\001 \001(\01624.temporal.o" +
-      "mes.kitchen_sink.ActivityCancellationTyp" +
-      "e\022\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021ver" +
-      "sioning_intent\030\003 \001(\0162,.temporal.omes.kit" +
-      "chen_sink.VersioningIntent\"\377\001\n\025ExecuteNe" +
-      "xusOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperat" +
-      "ion\030\002 \001(\t\022@\n\005input\030\003 \001(\01321.temporal.omes" +
-      ".kitchen_sink.NexusOperationRequest\022E\n\020a" +
-      "waitable_choice\030\005 \001(\0132+.temporal.omes.ki" +
-      "tchen_sink.AwaitableChoice\0228\n\017expected_o" +
-      "utput\030\006 \001(\0132\037.temporal.api.common.v1.Pay" +
-      "load\"\312\001\n\025NexusOperationRequest\022\016\n\004echo\030\001" +
-      " \001(\tH\000\022J\n\017workflow_action\030\002 \001(\0132/.tempor" +
-      "al.omes.kitchen_sink.NexusWorkflowAction" +
-      "H\000\022K\n\016start_activity\030\003 \001(\01321.temporal.om" +
-      "es.kitchen_sink.ExecuteActivityActionH\000B" +
-      "\010\n\006action\"\253\002\n\023NexusWorkflowAction\022\023\n\013wor" +
-      "kflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022L\n\rstart_" +
-      "options\030\003 \001(\01325.temporal.omes.kitchen_si" +
-      "nk.NexusWorkflowStartOptions\022\'\n\005start\030\004 " +
-      "\001(\0132\026.google.protobuf.EmptyH\000\0226\n\006signal\030" +
-      "\005 \001(\0132$.temporal.omes.kitchen_sink.DoSig" +
-      "nalH\000\0226\n\006update\030\006 \001(\0132$.temporal.omes.ki" +
-      "tchen_sink.DoUpdateH\000B\010\n\006action\"\310\001\n\031Nexu" +
-      "sWorkflowStartOptions\022\022\n\ntask_queue\030\001 \001(" +
-      "\t\022T\n\033workflow_id_conflict_policy\030\002 \001(\0162/" +
-      ".temporal.api.enums.v1.WorkflowIdConflic" +
-      "tPolicy\022A\n\016workflow_input\030\003 \001(\0132).tempor" +
-      "al.omes.kitchen_sink.WorkflowInput\"\025\n\023Aw" +
-      "aitPendingActions*\244\001\n\021ParentClosePolicy\022" +
-      "#\n\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035" +
-      "PARENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PAREN" +
-      "T_CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE" +
-      "_POLICY_REQUEST_CANCEL\020\003*@\n\020VersioningIn" +
-      "tent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n" +
-      "\007DEFAULT\020\002*\242\001\n\035ChildWorkflowCancellation" +
-      "Type\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_T" +
-      "RY_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATIO" +
-      "N_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLAT" +
-      "ION_REQUESTED\020\003*X\n\030ActivityCancellationT" +
-      "ype\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION" +
-      "_COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal" +
-      ".omesZ.github.com/temporalio/omes/loadge" +
-      "n/kitchensinkb\006proto3"
+      "\0028\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(" +
+      "\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v" +
+      "1.Payload:\0028\001\"\321\001\n\025RemoteActivityOptions\022" +
+      "O\n\021cancellation_type\030\001 \001(\01624.temporal.om" +
+      "es.kitchen_sink.ActivityCancellationType" +
+      "\022\036\n\026do_not_eagerly_execute\030\002 \001(\010\022G\n\021vers" +
+      "ioning_intent\030\003 \001(\0162,.temporal.omes.kitc" +
+      "hen_sink.VersioningIntent\"\377\001\n\025ExecuteNex" +
+      "usOperation\022\020\n\010endpoint\030\001 \001(\t\022\021\n\toperati" +
+      "on\030\002 \001(\t\022@\n\005input\030\003 \001(\01321.temporal.omes." +
+      "kitchen_sink.NexusOperationRequest\022E\n\020aw" +
+      "aitable_choice\030\005 \001(\0132+.temporal.omes.kit" +
+      "chen_sink.AwaitableChoice\0228\n\017expected_ou" +
+      "tput\030\006 \001(\0132\037.temporal.api.common.v1.Payl" +
+      "oad\"\312\001\n\025NexusOperationRequest\022\016\n\004echo\030\001 " +
+      "\001(\tH\000\022J\n\017workflow_action\030\002 \001(\0132/.tempora" +
+      "l.omes.kitchen_sink.NexusWorkflowActionH" +
+      "\000\022K\n\016start_activity\030\003 \001(\01321.temporal.ome" +
+      "s.kitchen_sink.ExecuteActivityActionH\000B\010" +
+      "\n\006action\"\253\002\n\023NexusWorkflowAction\022\023\n\013work" +
+      "flow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022L\n\rstart_o" +
+      "ptions\030\003 \001(\01325.temporal.omes.kitchen_sin" +
+      "k.NexusWorkflowStartOptions\022\'\n\005start\030\004 \001" +
+      "(\0132\026.google.protobuf.EmptyH\000\0226\n\006signal\030\005" +
+      " \001(\0132$.temporal.omes.kitchen_sink.DoSign" +
+      "alH\000\0226\n\006update\030\006 \001(\0132$.temporal.omes.kit" +
+      "chen_sink.DoUpdateH\000B\010\n\006action\"\310\001\n\031Nexus" +
+      "WorkflowStartOptions\022\022\n\ntask_queue\030\001 \001(\t" +
+      "\022T\n\033workflow_id_conflict_policy\030\002 \001(\0162/." +
+      "temporal.api.enums.v1.WorkflowIdConflict" +
+      "Policy\022A\n\016workflow_input\030\003 \001(\0132).tempora" +
+      "l.omes.kitchen_sink.WorkflowInput\"\025\n\023Awa" +
+      "itPendingActions*\244\001\n\021ParentClosePolicy\022#" +
+      "\n\037PARENT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035P" +
+      "ARENT_CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT" +
+      "_CLOSE_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_" +
+      "POLICY_REQUEST_CANCEL\020\003*@\n\020VersioningInt" +
+      "ent\022\017\n\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007" +
+      "DEFAULT\020\002*\242\001\n\035ChildWorkflowCancellationT" +
+      "ype\022\024\n\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TR" +
+      "Y_CANCEL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION" +
+      "_COMPLETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATI" +
+      "ON_REQUESTED\020\003*X\n\030ActivityCancellationTy" +
+      "pe\022\016\n\nTRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_" +
+      "COMPLETED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal." +
+      "omesZ.github.com/temporalio/omes/loadgen" +
+      "/kitchensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -60698,7 +60467,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     internal_static_temporal_omes_kitchen_sink_SendSignalAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_SendSignalAction_descriptor,
-        new java.lang.String[] { "WorkflowId", "RunId", "SignalName", "Args", "Headers", "AwaitableChoice", });
+        new java.lang.String[] { "WorkflowId", "RunId", "SignalName", "Arg", "Headers", "AwaitableChoice", });
     internal_static_temporal_omes_kitchen_sink_SendSignalAction_HeadersEntry_descriptor =
       internal_static_temporal_omes_kitchen_sink_SendSignalAction_descriptor.getNestedTypes().get(0);
     internal_static_temporal_omes_kitchen_sink_SendSignalAction_HeadersEntry_fieldAccessorTable = new
