@@ -655,6 +655,7 @@ func (t *tpsExecutor) createActionsChunk(
 			}
 			if t.config.IncludeNexusSignal || t.config.IncludeNexusSignalWithStart || t.config.IncludeNexusUpdate {
 				nexusWorkflowID := fmt.Sprintf("%s/nexus-workflow-%d", run.DefaultStartWorkflowOptions().ID, iterationIndex)
+				// Keep this sequence sequential because AwaitPendingActions drains workflow-global pending actions.
 				syncActions = append(syncActions, t.createNexusWorkflowActionSequence(nexusWorkflowID, rng))
 			}
 		}
