@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("java", "../../workers/java"),
         ("go", "../../loadgen/kitchensink"),
         ("dotnet", "../../workers/dotnet/Temporalio.Omes/protos"),
+        ("ruby", "../../workers/ruby/protos"),
     ] {
         let mut cmd = Command::new(protoc.clone());
 
@@ -63,6 +64,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cmd.arg(format!("--go_out={out_dir}"));
         } else if lang == "dotnet" {
             cmd.arg(format!("--csharp_out={out_dir}"));
+        } else if lang == "ruby" {
+            cmd.arg(format!("--ruby_out={out_dir}"));
         }
 
         if !PathBuf::from(out_dir).exists() {
@@ -88,6 +91,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut dst = fs::File::create(&fpath)?;
                 dst.write_all(new_data.as_bytes())?;
             }
+        } else if lang == "ruby" {
+            let fpath = format!("{out_dir}/kitchen_sink_pb.rb");
+            let new_data = fs::read_to_string(&fpath)?
+                .split_inclusive('\n')
+                .map(|line| {
+                    line.strip_prefix("require 'temporal/api/")
+                        .and_then(|path| path.strip_suffix("_pb'\n"))
+                        .map_or_else(
+                            || line.to_owned(),
+                            |path| format!("require 'temporalio/api/{path}'\n"),
+                        )
+                })
+                .collect::<String>();
+            fs::write(&fpath, new_data)?;
         }
     }
 

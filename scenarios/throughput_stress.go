@@ -582,20 +582,37 @@ func (t *tpsExecutor) createActionsChunk(
 		// Add Nexus operations, if configured.
 		if t.config.NexusEnabled {
 			asyncActions = append(asyncActions, t.createNexusEchoSyncAction())
-			asyncActions = append(asyncActions, t.createNexusEchoAsyncAction())
+			asyncActions = append(asyncActions, t.createNexusStartWorkflowAction())
 			asyncActions = append(asyncActions, t.createNexusWaitForCancelAction())
 			asyncActions = append(asyncActions, t.createNexusAttachCallbacksAction())
 			if t.config.IncludeStandaloneNexus {
 				asyncActions = append(asyncActions,
-					t.createStandaloneNexusOperationAction("echo-async"),
-					t.createStandaloneNexusOperationAction("echo-sync"),
+					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{
+							WorkflowAction: &NexusWorkflowAction{
+								StartOptions: &NexusWorkflowStartOptions{
+									WorkflowInput: &WorkflowInput{
+										InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+									},
+								},
+								Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+							},
+						},
+					}),
+					t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+						Action: &NexusOperationRequest_Echo{Echo: "hello"},
+					}),
 				)
 			}
 			if t.config.IncludeNexusStandaloneActivity {
 				asyncActions = append(asyncActions, t.createNexusStandaloneActivityAction())
 				if t.config.IncludeStandaloneNexus {
 					asyncActions = append(asyncActions,
-						t.createStandaloneNexusOperationAction("standalone-activity"),
+						t.createStandaloneNexusOperationAction(&NexusOperationRequest{
+							Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
+								ActivityType: &ExecuteActivityAction_Noop{},
+							}},
+						}),
 					)
 				}
 			}
@@ -790,72 +807,82 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 }
 
 func (t *tpsExecutor) createNexusEchoSyncAction() *Action {
-	return &Action{
-		Variant: &Action_NexusOperation{
-			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-sync",
-				Input:          "hello",
-				ExpectedOutput: "hello",
-			},
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_Echo{Echo: "hello"},
 		},
-	}
+		ExpectedOutput: ConvertToPayload("hello"),
+	})
 }
 
-func (t *tpsExecutor) createNexusEchoAsyncAction() *Action {
-	return &Action{
-		Variant: &Action_NexusOperation{
-			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:       t.config.NexusEndpoint,
-				Operation:      "echo-async",
-				Input:          "hello",
-				ExpectedOutput: "hello",
-			},
-		},
-	}
-}
-
-func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
-	return &Action{
-		Variant: &Action_NexusOperation{
-			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:  t.config.NexusEndpoint,
-				Operation: "echo-async",
-				BeforeActions: ListActionSet(
-					NewAwaitWorkflowStateAction("never", "resolves"),
-				),
-				AwaitableChoice: &AwaitableChoice{
-					Condition: &AwaitableChoice_CancelAfterStarted{
-						CancelAfterStarted: &emptypb.Empty{},
+func (t *tpsExecutor) createNexusStartWorkflowAction() *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{
+				WorkflowAction: &NexusWorkflowAction{
+					StartOptions: &NexusWorkflowStartOptions{
+						WorkflowInput: &WorkflowInput{
+							InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+						},
 					},
+					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 				},
 			},
 		},
-	}
+	})
+}
+
+func (t *tpsExecutor) createNexusWaitForCancelAction() *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{
+				WorkflowAction: &NexusWorkflowAction{
+					StartOptions: &NexusWorkflowStartOptions{
+						WorkflowInput: &WorkflowInput{
+							InitialActions: ListActionSet(
+								NewAwaitWorkflowStateAction("never", "resolves"),
+							),
+						},
+					},
+					Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+				},
+			},
+		},
+		AwaitableChoice: &AwaitableChoice{
+			Condition: &AwaitableChoice_CancelAfterStarted{
+				CancelAfterStarted: &emptypb.Empty{},
+			},
+		},
+	})
 }
 
 // createNexusAttachCallbacksAction exercises Nexus USE_EXISTING callback coalescing:
-// fire N ops with wait_started, signal the handler to unblock, then await its completion.
+// fire N ops with wait_started, unblock the handler, then await all operation completions.
 func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 	const numOps = 3
 	handlerWfID := "nexus-attach-handler-" + uuid.NewString()
 
 	waitStartedOp := func() *Action {
-		return &Action{
-			Variant: &Action_NexusOperation{
-				NexusOperation: &ExecuteNexusOperation{
-					Endpoint:                        t.config.NexusEndpoint,
-					Operation:                       "echo-async",
-					Input:                           "hello",
-					HandlerWorkflowId:               handlerWfID,
-					HandlerWorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
-					WaitForSignal:                   true,
-					AwaitableChoice: &AwaitableChoice{
-						Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
+		return NexusOperation(&ExecuteNexusOperation{
+			Endpoint: t.config.NexusEndpoint,
+			Input: &NexusOperationRequest{
+				Action: &NexusOperationRequest_WorkflowAction{
+					WorkflowAction: &NexusWorkflowAction{
+						WorkflowId: handlerWfID,
+						StartOptions: &NexusWorkflowStartOptions{
+							WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+						},
+						Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
 					},
 				},
 			},
-		}
+			AwaitableChoice: &AwaitableChoice{
+				Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}},
+			},
+		})
 	}
 	fanout := make([]*Action, 0, numOps)
 	for range numOps {
@@ -872,9 +899,16 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 				{Variant: &Action_SendSignal{
 					SendSignal: &SendSignalAction{
 						WorkflowId: handlerWfID,
-						SignalName: "unblock",
+						SignalName: "do_actions_signal",
+						Args: []*common.Payload{ConvertToPayload(&DoSignal_DoSignalActions{
+							Variant: &DoSignal_DoSignalActions_DoActions{
+								DoActions: SingleActionSet(NewEmptyReturnResultAction()),
+							},
+						})},
 						AwaitableChoice: &AwaitableChoice{
-							Condition: &AwaitableChoice_WaitFinish{WaitFinish: &emptypb.Empty{}},
+							// The operation futures below are the correctness gate. Do not fail if an
+							// active/passive transition replays this after the handler has completed.
+							Condition: &AwaitableChoice_Abandon{Abandon: &emptypb.Empty{}},
 						},
 					},
 				}},
@@ -888,23 +922,25 @@ func (t *tpsExecutor) createNexusAttachCallbacksAction() *Action {
 
 // createNexusStandaloneActivityAction invokes a standalone activity backed Nexus operation from within the workflow.
 func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
-	return &Action{
-		Variant: &Action_NexusOperation{
-			NexusOperation: &ExecuteNexusOperation{
-				Endpoint:  t.config.NexusEndpoint,
-				Operation: "standalone-activity",
-			},
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_StartActivity{StartActivity: &ExecuteActivityAction{
+				ActivityType: &ExecuteActivityAction_Noop{},
+			}},
 		},
-	}
+	})
 }
 
-func (t *tpsExecutor) createStandaloneNexusOperationAction(operation string) *Action {
+func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperationRequest) *Action {
 	return ClientActivity(ClientActions(&ClientAction{
 		Variant: &ClientAction_DoStandaloneNexusOperation{
 			DoStandaloneNexusOperation: &DoStandaloneNexusOperation{
-				Endpoint:  t.config.NexusEndpoint,
-				Service:   "kitchen-sink",
-				Operation: operation,
+				Operation: &ExecuteNexusOperation{
+					Endpoint:  t.config.NexusEndpoint,
+					Operation: KitchenSinkNexusOperationName,
+					Input:     input,
+				},
 			},
 		},
 	}), DefaultRemoteActivity)

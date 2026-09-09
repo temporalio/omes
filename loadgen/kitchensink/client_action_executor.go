@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/workflow"
@@ -141,43 +142,28 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 }
 
 func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *DoSignal) (client.WorkflowRun, error) {
-	var signalName string
-	var signalArgs any
-	if sigActions := sig.GetDoSignalActions(); sigActions != nil {
-		signalName = "do_actions_signal"
-		signalArgs = sigActions
-	} else if handler := sig.GetCustom(); handler != nil {
-		signalName = handler.Name
-		signalArgs = handler.Args
-	} else {
-		return nil, fmt.Errorf("do_signal must recognizable variant")
+	signalName, signalArg, err := SignalNameAndArg(sig)
+	if err != nil {
+		return nil, err
 	}
 
 	if sig.WithStart {
 		return e.Client.SignalWithStartWorkflow(
-			ctx, e.WorkflowOptions.ID, signalName, signalArgs, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
+			ctx, e.WorkflowOptions.ID, signalName, signalArg, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArgs)
+	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArg)
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
-	var updateOpts client.UpdateWorkflowOptions
-	if actionsUpdate := upd.GetDoActions(); actionsUpdate != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   "do_actions_update",
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{actionsUpdate},
-		}
-	} else if handler := upd.GetCustom(); handler != nil {
-		updateOpts = client.UpdateWorkflowOptions{
-			WorkflowID:   e.WorkflowOptions.ID,
-			UpdateName:   handler.Name,
-			WaitForStage: client.WorkflowUpdateStageCompleted,
-			Args:         []any{handler.Args},
-		}
-	} else {
-		return nil, fmt.Errorf("do_update must recognizable variant")
+	updateName, args, err := UpdateNameAndArgs(upd)
+	if err != nil {
+		return nil, err
+	}
+	updateOpts := client.UpdateWorkflowOptions{
+		WorkflowID:   e.WorkflowOptions.ID,
+		UpdateName:   updateName,
+		WaitForStage: client.WorkflowUpdateStageCompleted,
+		Args:         args,
 	}
 
 	var handle client.WorkflowUpdateHandle
@@ -205,27 +191,45 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	return run, err
 }
 
-func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sno *DoStandaloneNexusOperation) error {
+func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Context, sano *DoStandaloneNexusOperation) error {
+	nexusOp := sano.GetOperation()
+	if nexusOp == nil {
+		return fmt.Errorf("standalone Nexus operation requires operation")
+	}
+	if awaitableChoice := nexusOp.GetAwaitableChoice(); awaitableChoice != nil && awaitableChoice.GetWaitFinish() == nil {
+		return fmt.Errorf("standalone Nexus operation only supports the wait_finish awaitable choice")
+	}
 	operationID := fmt.Sprintf("standalone-nexus-%s-%s", e.WorkflowOptions.ID, uuid.NewString())
 	nexusClient, err := e.Client.NewNexusClient(client.NexusClientOptions{
-		Endpoint: sno.Endpoint,
-		Service:  sno.Service,
+		Endpoint: nexusOp.GetEndpoint(),
+		Service:  KitchenSinkNexusServiceName,
 	})
 	if err != nil {
-		return fmt.Errorf("NewNexusClient: %w", err)
+		return fmt.Errorf("new standalone Nexus client: %w", err)
 	}
 
-	handle, err := nexusClient.ExecuteOperation(ctx, sno.Operation, &NexusHandlerInput{}, client.StartNexusOperationOptions{
+	handle, err := nexusClient.ExecuteOperation(ctx, nexusOp.GetOperation(), nexusOp.GetInput(), client.StartNexusOperationOptions{
 		ID:                     operationID,
 		ScheduleToCloseTimeout: 90 * time.Second,
 	})
 	if err != nil {
-		return fmt.Errorf("ExecuteOperation: %w", err)
+		return fmt.Errorf("execute standalone Nexus operation: %w", err)
+	}
+
+	if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
+		var result commonpb.Payload
+		if err := handle.Get(ctx, &result); err != nil {
+			return fmt.Errorf("get standalone Nexus operation: %w", err)
+		}
+		if !expectedOutput.Equal(&result) {
+			return fmt.Errorf("expected standalone Nexus operation output %v, got %v", expectedOutput, &result)
+		}
+		return nil
 	}
 
 	err = handle.Get(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("Get standalone nexus operation: %w", err)
+		return fmt.Errorf("get standalone Nexus operation: %w", err)
 	}
 	return nil
 }

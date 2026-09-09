@@ -25,7 +25,6 @@ from protos.kitchen_sink_pb2 import (
     DoSignal,
     ExecuteActivityAction,
     ExecuteNexusOperation,
-    NexusHandlerInput,
     SendSignalAction,
     WorkflowInput,
     WorkflowState,
@@ -284,17 +283,7 @@ async def handle_nexus_operation(
         endpoint=nexus_op.endpoint,
         service=KITCHEN_SINK_SERVICE_NAME,
     )
-    headers = dict(nexus_op.headers) if nexus_op.headers else None
     choice = nexus_op.awaitable_choice
-
-    op_input = NexusHandlerInput(
-        input=nexus_op.input,
-        before_actions=nexus_op.before_actions,
-        handler_workflow_id=nexus_op.handler_workflow_id,
-        handler_workflow_id_conflict_policy=nexus_op.handler_workflow_id_conflict_policy,
-        wait_for_signal=nexus_op.wait_for_signal,
-    )
-    output_type = str
 
     # Track whether the operation has started so we can wait for it
     op_started = False
@@ -305,13 +294,12 @@ async def handle_nexus_operation(
         nonlocal op_started
         handle = await client.start_operation(
             nexus_op.operation,
-            op_input,
-            output_type=output_type,
-            headers=headers,
+            nexus_op.input,
+            output_type=Payload,
         )
         op_started = True
         result = await handle
-        if nexus_op.expected_output and result != nexus_op.expected_output:
+        if nexus_op.HasField("expected_output") and result != nexus_op.expected_output:
             raise exceptions.ApplicationError(
                 f"expected output {nexus_op.expected_output!r}, got {result!r}"
             )
@@ -409,21 +397,3 @@ def convert_act_cancel_type(
         return temporalio.workflow.ActivityCancellationType.ABANDON
     else:
         raise NotImplementedError("Unknown cancellation type " + str(ctype))
-
-
-@workflow.defn
-class NexusHandlerWorkflow:
-    _unblocked: bool = False
-
-    @workflow.run
-    async def run(self, input: NexusHandlerInput) -> str:
-        state = KitchenSinkWorkflow()
-        for action_set in input.before_actions:
-            await state.handle_action_set(action_set)
-        if input.wait_for_signal:
-            await workflow.wait_condition(lambda: self._unblocked)
-        return input.input
-
-    @workflow.signal(name="unblock")
-    async def unblock(self) -> None:
-        self._unblocked = True

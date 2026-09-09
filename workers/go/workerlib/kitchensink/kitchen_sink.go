@@ -1,6 +1,7 @@
 package kitchensink
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -449,7 +450,7 @@ func withAwaitableChoiceCustom[F workflow.Future](
 			ws.pendingActions = append(ws.pendingActions, fut)
 		}
 	} else {
-		err = fut.Get(ctx, nil)
+		err = afterCompletedWaiter(ctx, fut)
 	}
 
 	// If we intentionally cancelled we want to swallow the cancel error to avoid bombing out the
@@ -464,27 +465,19 @@ func withAwaitableChoiceCustom[F workflow.Future](
 func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexusOperation, state *KSWorkflowState) error {
 	return withAwaitableChoiceCustom(ctx, state, func(ctx workflow.Context) workflow.NexusOperationFuture {
 		client := workflow.NewNexusClient(nexusOp.Endpoint, KitchenSinkServiceName)
-		nexusOptions := workflow.NexusOperationOptions{}
-		input := &kitchensink.NexusHandlerInput{
-			Input:                           nexusOp.Input,
-			BeforeActions:                   nexusOp.BeforeActions,
-			HandlerWorkflowId:               nexusOp.HandlerWorkflowId,
-			HandlerWorkflowIdConflictPolicy: nexusOp.HandlerWorkflowIdConflictPolicy,
-			WaitForSignal:                   nexusOp.WaitForSignal,
-		}
-		return client.ExecuteOperation(ctx, nexusOp.Operation, input, nexusOptions)
+		return client.ExecuteOperation(ctx, nexusOp.Operation, nexusOp.GetInput(), workflow.NexusOperationOptions{})
 	}, nexusOp.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			return fut.GetNexusOperationExecution().Get(ctx, nil)
 		},
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
-			if expOutput := nexusOp.GetExpectedOutput(); expOutput != "" {
-				var result string
+			if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
+				var result common.Payload
 				if err := fut.Get(ctx, &result); err != nil {
 					return err
 				}
-				if expOutput != result {
-					return fmt.Errorf("expected output %q, got %q", expOutput, result)
+				if !expectedOutput.Equal(&result) {
+					return fmt.Errorf("expected output %v, got %v", expectedOutput, &result)
 				}
 				return nil
 			}
@@ -493,8 +486,12 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 }
 
 func handleSendSignal(ctx workflow.Context, ws *KSWorkflowState, action *kitchensink.SendSignalAction) error {
+	var arg *common.Payload
+	if len(action.Args) > 0 {
+		arg = action.Args[0]
+	}
 	return withAwaitableChoiceCustom(ctx, ws, func(ctx workflow.Context) workflow.Future {
-		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, nil)
+		return workflow.SignalExternalWorkflow(ctx, action.WorkflowId, action.RunId, action.SignalName, arg)
 	}, action.AwaitableChoice,
 		func(ctx workflow.Context, fut workflow.Future) error {
 			return fut.Get(ctx, nil)
@@ -610,69 +607,169 @@ type ReturnOrErr struct {
 	err   error
 }
 
-func NexusHandlerWorkflow(ctx workflow.Context, input *kitchensink.NexusHandlerInput) (string, error) {
-	state := KSWorkflowState{
-		workflowState: &kitchensink.WorkflowState{},
-	}
-	for _, actionSet := range input.BeforeActions {
-		if _, err := state.handleActionSet(ctx, actionSet); err != nil {
-			return "", err
-		}
-	}
-	if input.WaitForSignal {
-		workflow.GetSignalChannel(ctx, "unblock").Receive(ctx, nil)
-	}
-	return input.Input, nil
-}
-
-// EchoSyncOperation returns the input synchronously without starting a workflow.
-var EchoSyncOperation = nexus.NewSyncOperation("echo-sync", func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (string, error) {
-	if len(input.BeforeActions) > 0 {
-		return "", nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "before_actions not supported in echo-sync")
-	}
-	return input.Input, nil
-})
-
-// EchoAsyncOperation starts a NexusHandlerWorkflow that runs before_actions and returns the input.
-var EchoAsyncOperation = temporalnexus.NewWorkflowRunOperation("echo-async", NexusHandlerWorkflow, func(ctx context.Context, input *kitchensink.NexusHandlerInput, opts nexus.StartOperationOptions) (client.StartWorkflowOptions, error) {
-	if input.HandlerWorkflowId != "" {
-		return client.StartWorkflowOptions{
-			ID:                       input.HandlerWorkflowId,
-			WorkflowIDConflictPolicy: input.HandlerWorkflowIdConflictPolicy,
-			WorkflowExecutionTimeout: 60 * time.Minute,
-		}, nil
-	}
-	return client.StartWorkflowOptions{
-		ID: opts.RequestID,
-	}, nil
-})
-
-// StandaloneActivityNexusOperationName is the registered name of StandaloneActivityNexusOperation.
-const StandaloneActivityNexusOperationName = "standalone-activity"
-
-// StandaloneActivityNexusOperation starts a standalone "noop" activity.
-var StandaloneActivityNexusOperation = temporalnexus.MustNewTemporalOperation(
-	temporalnexus.TemporalOperationOptions[*kitchensink.NexusHandlerInput, string]{
-		Name:  StandaloneActivityNexusOperationName,
-		Start: startStandaloneActivityNexusOperation,
+// KitchenSinkNexusOperation dispatches kitchen sink Nexus actions.
+var KitchenSinkNexusOperation = temporalnexus.MustNewTemporalOperation(
+	temporalnexus.TemporalOperationOptions[*kitchensink.NexusOperationRequest, *common.Payload]{
+		Name:  kitchensink.KitchenSinkNexusOperationName,
+		Start: startNexusOperation,
 	},
 )
+
+func startNexusOperation(
+	ctx context.Context,
+	nc temporalnexus.NexusClient,
+	input *kitchensink.NexusOperationRequest,
+	opts temporalnexus.StartTemporalOperationOptions,
+) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+	input = cmp.Or(input, &kitchensink.NexusOperationRequest{})
+	switch action := input.GetAction().(type) {
+	case *kitchensink.NexusOperationRequest_Echo:
+		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(action.Echo)), nil
+	case *kitchensink.NexusOperationRequest_WorkflowAction:
+		workflowAction := cmp.Or(action.WorkflowAction, &kitchensink.NexusWorkflowAction{})
+		switch workflowAction.GetAction().(type) {
+		case *kitchensink.NexusWorkflowAction_Start:
+			return startWorkflowNexusOperation(ctx, nc, workflowAction, opts)
+		case *kitchensink.NexusWorkflowAction_Signal:
+			return signalWorkflowNexusOperation(ctx, workflowAction)
+		case *kitchensink.NexusWorkflowAction_Update:
+			return updateWorkflowNexusOperation(ctx, nc, workflowAction)
+		}
+	case *kitchensink.NexusOperationRequest_StartActivity:
+		return startStandaloneActivityNexusOperation(ctx, nc, action.StartActivity, opts)
+	}
+	return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
+		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
+}
+
+func startWorkflowNexusOperation(
+	ctx context.Context,
+	nc temporalnexus.NexusClient,
+	input *kitchensink.NexusWorkflowAction,
+	opts temporalnexus.StartTemporalOperationOptions,
+) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+	startOptions := cmp.Or(input.GetStartOptions(), &kitchensink.NexusWorkflowStartOptions{})
+	return temporalnexus.StartUntypedWorkflow[*common.Payload](
+		ctx,
+		nc,
+		client.StartWorkflowOptions{
+			ID:                       cmp.Or(input.GetWorkflowId(), opts.RequestID),
+			TaskQueue:                startOptions.GetTaskQueue(),
+			WorkflowExecutionTimeout: 60 * time.Minute,
+			WorkflowIDConflictPolicy: startOptions.GetWorkflowIdConflictPolicy(),
+		},
+		KitchenSinkWorkflow,
+		cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}))
+}
+
+// signalWorkflowNexusOperation handles both signal and Signal-With-Start.
+func signalWorkflowNexusOperation(
+	ctx context.Context,
+	input *kitchensink.NexusWorkflowAction,
+) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+	var result temporalnexus.TemporalOperationResult[*common.Payload]
+	if input.GetWorkflowId() == "" {
+		return result, nexus.HandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest, "signal target must include a workflow ID")
+	}
+
+	signal := input.GetSignal()
+	signalName, signalArg, err := kitchensink.SignalNameAndArg(signal)
+	if err != nil {
+		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
+	}
+
+	// Signal-With-Start
+	if signal.GetWithStart() {
+		run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
+			ctx,
+			input.GetWorkflowId(),
+			signalName,
+			signalArg,
+			client.StartWorkflowOptions{
+				ID:                       input.GetWorkflowId(),
+				TaskQueue:                cmp.Or(input.GetStartOptions().GetTaskQueue(), temporalnexus.GetOperationInfo(ctx).TaskQueue),
+				WorkflowExecutionTimeout: 60 * time.Minute,
+				WorkflowIDConflictPolicy: input.GetStartOptions().GetWorkflowIdConflictPolicy(),
+			},
+			KitchenSinkWorkflow,
+			cmp.Or(input.GetStartOptions().GetWorkflowInput(), &kitchensink.WorkflowInput{}))
+		if err != nil {
+			return result, err
+		}
+		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
+	}
+
+	if err = temporalnexus.GetClient(ctx).SignalWorkflow(
+		ctx,
+		input.GetWorkflowId(),
+		input.GetRunId(),
+		signalName,
+		signalArg,
+	); err != nil {
+		return result, err
+	}
+
+	return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(input.GetWorkflowId())), nil
+}
+
+func updateWorkflowNexusOperation(
+	ctx context.Context,
+	nc temporalnexus.NexusClient,
+	input *kitchensink.NexusWorkflowAction,
+) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+	var result temporalnexus.TemporalOperationResult[*common.Payload]
+	if input.GetWorkflowId() == "" {
+		return result, nexus.HandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest, "update target must include a workflow ID")
+	}
+	if input.GetUpdate().GetWithStart() {
+		return result, nexus.HandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest, "update-with-start is not supported by this Nexus operation")
+	}
+
+	updateName, args, err := kitchensink.UpdateNameAndArgs(input.GetUpdate())
+	if err != nil {
+		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
+	}
+
+	// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the
+	// Nexus request ID, so a retried Nexus task attaches to the original update
+	// rather than starting a second one.
+	return temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
+		WorkflowID: input.GetWorkflowId(),
+		RunID:      input.GetRunId(),
+		UpdateName: updateName,
+		Args:       args,
+		// Accepted is the only stage a Nexus-backed update supports: the operation
+		// goes async once the update is accepted, and the update's result reaches
+		// the caller later through the operation's completion callback.
+		WaitForStage: client.WorkflowUpdateStageAccepted,
+	})
+}
 
 // startStandaloneActivityNexusOperation starts the registered "noop" activity.
 func startStandaloneActivityNexusOperation(
 	ctx context.Context,
 	nc temporalnexus.NexusClient,
-	_ *kitchensink.NexusHandlerInput,
+	input *kitchensink.ExecuteActivityAction,
 	opts temporalnexus.StartTemporalOperationOptions,
-) (temporalnexus.TemporalOperationResult[string], error) {
+) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+	input = cmp.Or(input, &kitchensink.ExecuteActivityAction{})
 	activityOpts := client.StartActivityOptions{
 		// Reuse the Nexus request ID so retries attach to the original activity.
 		ID:                       "nexus-standalone-activity-" + opts.RequestID,
-		StartToCloseTimeout:      30 * time.Second,
+		TaskQueue:                input.GetTaskQueue(),
+		ScheduleToCloseTimeout:   input.GetScheduleToCloseTimeout().AsDuration(),
+		ScheduleToStartTimeout:   input.GetScheduleToStartTimeout().AsDuration(),
+		StartToCloseTimeout:      cmp.Or(input.GetStartToCloseTimeout().AsDuration(), 30*time.Second),
+		HeartbeatTimeout:         input.GetHeartbeatTimeout().AsDuration(),
+		RetryPolicy:              kitchensink.ConvertFromPBRetryPolicy(input.GetRetryPolicy()),
 		ActivityIDConflictPolicy: enumspb.ACTIVITY_ID_CONFLICT_POLICY_USE_EXISTING,
 	}
 
-	res, err := temporalnexus.StartUntypedActivity[string](ctx, nc, activityOpts, "noop")
+	activityType, args := kitchensink.ActivityNameAndArgs(input)
+	res, err := temporalnexus.StartUntypedActivity[*common.Payload](ctx, nc, activityOpts, activityType, args...)
 	if err != nil {
 		// Treat namespace handover as retryable.
 		var notActive *serviceerror.NamespaceNotActive

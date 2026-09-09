@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -278,6 +279,11 @@ func looselyEqual(x, y any) bool {
 			return mapIsSuperset(x, yMap)
 		}
 		return false
+	case []any:
+		// Compare element-wise so each expected element can be a partial map. The
+		// lengths must match, but not every field of each element.
+		yList, ok := y.([]any)
+		return ok && slices.EqualFunc(x, yList, looselyEqual)
 	}
 	return reflect.DeepEqual(x, y)
 }

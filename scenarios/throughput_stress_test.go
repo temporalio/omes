@@ -93,16 +93,17 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	// No WithNexusEndpoint here: the scenario creates its own endpoint for the run,
 	// which is part of the path under test. Pre-creating one would collide on the
 	// same NexusEndpointForRun name.
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
+		// Gates the capabilities the feature options read.
+		"activity.enableStandalone":                        true,
+		"history.enableStandaloneActivityOperatorCommands": true,
+		"nexusoperation.enableStandalone":                  true,
+		// Standalone Nexus system callbacks require CHASM callbacks.
+		"history.enableCHASMCallbacks": true,
+	}))
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
-		workertest.WithDynamicConfig(map[string]any{
-			// Gates the capabilities the feature options read.
-			"activity.enableStandalone":                        true,
-			"history.enableStandaloneActivityOperatorCommands": true,
-			"nexusoperation.enableStandalone":                  true,
-			// Standalone Nexus system callbacks require CHASM callbacks.
-			"history.enableCHASMCallbacks": true,
-		}))
+		workertest.WithDevServer(server))
 
 	// Without the namespace advertising standalone activities there is nothing for
 	// the feature option to resolve from, and the rest of this test proves nothing.
@@ -152,14 +153,15 @@ func TestThroughputStressNexusStandaloneActivity(t *testing.T) {
 	runID := fmt.Sprintf("tps-nsa-%d", time.Now().Unix())
 
 	// Enable the activity-backed operation and standalone-Nexus completion path.
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{
+		"activity.enableStandalone":       true,
+		"activity.enableCallbacks":        true,
+		"nexusoperation.enableStandalone": true,
+		"history.enableCHASMCallbacks":    true,
+	}))
 	env := workertest.SetupTestEnvironment(t,
 		workertest.WithExecutorTimeout(1*time.Minute),
-		workertest.WithDynamicConfig(map[string]any{
-			"activity.enableStandalone":       true,
-			"activity.enableCallbacks":        true,
-			"nexusoperation.enableStandalone": true,
-			"history.enableCHASMCallbacks":    true,
-		}))
+		workertest.WithDevServer(server))
 
 	scenarioInfo := loadgen.ScenarioInfo{
 		RunID: runID,
@@ -211,14 +213,14 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	var walk func(actions []*ks.Action)
 	walk = func(actions []*ks.Action) {
 		for _, a := range actions {
-			if op := a.GetNexusOperation(); op.GetOperation() == "standalone-activity" {
+			if op := a.GetNexusOperation(); op.GetInput().GetStartActivity() != nil {
 				inWorkflow = true
 			}
 			// Find the nested standalone-Nexus client action.
 			if seq := a.GetExecActivity().GetClient().GetClientSequence(); seq != nil {
 				for _, set := range seq.GetActionSets() {
 					for _, ca := range set.GetActions() {
-						if sn := ca.GetDoStandaloneNexusOperation(); sn.GetOperation() == "standalone-activity" {
+						if sn := ca.GetDoStandaloneNexusOperation().GetOperation(); sn.GetInput().GetStartActivity() != nil {
 							standalone = true
 						}
 					}
@@ -234,9 +236,17 @@ func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
 	}
 
 	require.True(t, inWorkflow,
-		`expected an in-workflow Nexus operation action with Operation "standalone-activity"`)
+		`expected an in-workflow Nexus start-activity action`)
 	require.True(t, standalone,
-		`expected a DoStandaloneNexusOperation client action with Operation "standalone-activity"`)
+		`expected a standalone Nexus start-activity client action`)
+}
+
+func TestThroughputStressNexusAttachSignalIsFireAndForget(t *testing.T) {
+	actions := (&tpsExecutor{config: &tpsConfig{NexusEndpoint: "test-endpoint"}}).
+		createNexusAttachCallbacksAction().GetNestedActionSet().GetActions()
+
+	require.NotNil(t, actions[1].GetSendSignal().GetAwaitableChoice().GetAbandon())
+	require.NotNil(t, actions[2].GetAwaitPendingActions())
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {

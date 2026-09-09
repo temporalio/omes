@@ -36,6 +36,9 @@ func registerNamespace(ctx context.Context, frontendAddr, namespace string) erro
 		if err == nil || isAlreadyExists(err) {
 			return nil
 		}
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
 		if !isRetryable(err) {
 			return err
 		}
