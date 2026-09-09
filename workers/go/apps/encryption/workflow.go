@@ -29,8 +29,8 @@ const (
 // Search attributes. Both must already exist in the namespace, or the first upsert
 // fails the workflow task.
 const (
-	keywordSearchAttributeName = "EncryptionKeyword"
-	intSearchAttributeName     = "EncryptionInt"
+	keywordSearchAttributeName = "KS_Keyword"
+	intSearchAttributeName     = "KS_Int"
 )
 
 var (
