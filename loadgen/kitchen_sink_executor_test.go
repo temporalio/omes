@@ -1317,6 +1317,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
 				}),
+				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
 				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}

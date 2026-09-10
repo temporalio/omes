@@ -175,7 +175,7 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 }
 
 func NewEmptyReturnResultAction() *Action {
-	return NewReturnResultAction(&common.Payload{})
+	return NewReturnResultAction(ConvertToPayload(nil))
 }
 
 func NewReturnResultAction(payload *common.Payload) *Action {
