@@ -299,7 +299,7 @@ async def handle_nexus_operation(
         )
         op_started = True
         result = await handle
-        if (nexus_op.HasField("expected_output") and result.payload != nexus_op.expected_output):
+        if nexus_op.HasField("expected_output") and result.payload != nexus_op.expected_output:
             raise exceptions.ApplicationError(
                 f"expected output {nexus_op.expected_output!r}, got {result.payload!r}"
             )
