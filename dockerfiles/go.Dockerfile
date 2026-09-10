@@ -45,4 +45,4 @@ COPY --from=build /app/temporal-omes /app/temporal-omes
 COPY --from=build /app/workers/go/prepared /app/workers/go/prepared
 
 # Put the language and dir, but let other options (like required scenario and run-id) be given by user
-ENTRYPOINT ["/app/temporal-omes", "run-worker", "--language", "go", "--dir-name", "prepared"]
+ENTRYPOINT ["/app/temporal-omes", "run-worker", "--language", "go", "--dir-name", "prepared", "--app", "encryption"]
