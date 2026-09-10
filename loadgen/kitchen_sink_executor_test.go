@@ -998,7 +998,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedWorkflowError:   `goodbye`,
 		},
 		{
-			name: "NexusOperation/Async",
+			name: "NexusOperation/Async/StartWorkflow",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1010,7 +1010,7 @@ func TestKitchenSink(t *testing.T) {
 											WorkflowInput: &WorkflowInput{
 												InitialActions: ListActionSet(
 													NewTimerAction(1),
-													NewEmptyReturnResultAction(),
+													NewReturnResultAction(ConvertToPayload("nexus-workflow-result")),
 												),
 											},
 										},
@@ -1018,7 +1018,7 @@ func TestKitchenSink(t *testing.T) {
 									},
 								},
 							},
-							ExpectedOutput: &common.Payload{},
+							ExpectedOutput: ConvertToPayload("nexus-workflow-result"),
 							AwaitableChoice: &AwaitableChoice{
 								Condition: &AwaitableChoice_WaitFinish{
 									WaitFinish: &emptypb.Empty{},
@@ -1283,6 +1283,7 @@ func TestKitchenSink(t *testing.T) {
 					},
 					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
 				}),
+				// Run the update and record its result by ID.
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
@@ -1301,17 +1302,14 @@ func TestKitchenSink(t *testing.T) {
 					},
 					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
 				}),
+				// Reuse the completed update result by ID.
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
 							WorkflowId: "nexus-sync-update-target",
 							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
-									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-										NewTimerAction(time.Millisecond),
-										NewSetWorkflowStateAction("status", "done"),
-										NewReturnResultAction(ConvertToPayload("nexus-sync-update-target")),
-									)},
+									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet()},
 								}},
 								UpdateId: "nexus-sync-update",
 							}},
