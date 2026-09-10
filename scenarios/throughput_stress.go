@@ -1015,8 +1015,6 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-							// RawValue preserves this payload through both synchronous responses
-							// and asynchronous Nexus completion callbacks.
 							NewReturnResultAction(ConvertToPayload(workflowID)),
 						)},
 					}},
