@@ -143,10 +143,8 @@ public class ClientActionExecutor {
       UpdateOptions.Builder<KitchenSink.WorkflowState> updateOptions =
           UpdateOptions.newBuilder(KitchenSink.WorkflowState.class)
               .setUpdateName(updateName)
-              .setWaitForStage(WorkflowUpdateStage.COMPLETED);
-      if (!update.getUpdateId().isEmpty()) {
-        updateOptions.setUpdateId(update.getUpdateId());
-      }
+              .setWaitForStage(WorkflowUpdateStage.COMPLETED)
+              .setUpdateId(update.getUpdateId());
 
       if (update.getWithStart()) {
         WorkflowOptions workflowOptions =
