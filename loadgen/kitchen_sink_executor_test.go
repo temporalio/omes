@@ -407,6 +407,7 @@ func TestKitchenSink(t *testing.T) {
 												},
 											},
 										},
+										UpdateId: "exec-activity-client-update",
 									},
 								},
 							}),
@@ -418,7 +419,7 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`
 				ActivityTaskScheduled {"activityType":{"name":"client"}}
 				...
-				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"input":{"name":"do_actions_update"}}}`),
+				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"meta":{"updateId":"exec-activity-client-update"},"input":{"name":"do_actions_update"}}}`),
 		},
 		{
 			name: "ExecActivity/Client/Update/Custom/Failure",
