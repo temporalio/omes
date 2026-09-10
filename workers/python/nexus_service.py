@@ -30,36 +30,36 @@ class KitchenSinkNexusServiceHandler:
         client: nexus.TemporalNexusClient,
         input: NexusOperationRequest,
     ) -> nexus.TemporalOperationResult[temporalio.common.RawValue]:
-        action = input.WhichOneof("action")
-        if action == "echo":
-            return nexus.TemporalOperationResult.sync(
-                temporalio.common.RawValue(
-                    Payload(
-                        metadata={"encoding": b"json/plain"},
-                        data=json.dumps(input.echo).encode(),
+        match input.WhichOneof("action"):
+            case "echo":
+                return nexus.TemporalOperationResult.sync(
+                    temporalio.common.RawValue(
+                        Payload(
+                            metadata={"encoding": b"json/plain"},
+                            data=json.dumps(input.echo).encode(),
+                        )
                     )
                 )
-            )
-        if action == "workflow_action":
-            workflow_action = input.workflow_action
-            if workflow_action.HasField("start"):
-                start = workflow_action.start_options
-                workflow_input = (
-                    start.workflow_input
-                    if start.HasField("workflow_input")
-                    else WorkflowInput()
-                )
-                policy = temporalio.common.WorkflowIDConflictPolicy(
-                    cast(int, start.workflow_id_conflict_policy)
-                )
-                return await client.start_workflow(
-                    KitchenSinkWorkflow.run,
-                    workflow_input,
-                    id=workflow_action.workflow_id or ctx.request_id,
-                    task_queue=start.task_queue or None,
-                    id_conflict_policy=policy,
-                    execution_timeout=timedelta(minutes=60),
-                )
+            case "workflow_action":
+                workflow_action = input.workflow_action
+                if workflow_action.HasField("start"):
+                    start = workflow_action.start_options
+                    workflow_input = (
+                        start.workflow_input
+                        if start.HasField("workflow_input")
+                        else WorkflowInput()
+                    )
+                    policy = temporalio.common.WorkflowIDConflictPolicy(
+                        cast(int, start.workflow_id_conflict_policy)
+                    )
+                    return await client.start_workflow(
+                        KitchenSinkWorkflow.run,
+                        workflow_input,
+                        id=workflow_action.workflow_id or ctx.request_id,
+                        task_queue=start.task_queue or None,
+                        id_conflict_policy=policy,
+                        execution_timeout=timedelta(minutes=60),
+                    )
 
         raise nexusrpc.HandlerError(
             "Nexus operation request has no supported action set",
