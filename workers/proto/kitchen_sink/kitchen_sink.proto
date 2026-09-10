@@ -140,6 +140,8 @@ message DoUpdate {
   }
   // If set, the Update is an Update-with-Start.
   bool with_start = 3;
+  // If set, use this Update ID instead of an SDK-generated ID.
+  string update_id = 4;
   // If set, the client should expect the update to fail
   bool failure_expected = 10;
 }

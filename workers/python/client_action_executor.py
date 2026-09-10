@@ -126,12 +126,15 @@ class ClientActionExecutor:
                     update_name,
                     update_args,
                     start_workflow_operation=start_op,
+                    id=update.update_id or None,
                 )
 
                 workflow_handle = await start_op.workflow_handle()
             else:
                 handle = self.client.get_workflow_handle(self.workflow_id)
-                await handle.execute_update(update_name, update_args)
+                await handle.execute_update(
+                    update_name, update_args, id=update.update_id or None
+                )
         except Exception:
             if not update.failure_expected:
                 raise

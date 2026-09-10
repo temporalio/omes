@@ -161,6 +161,7 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	}
 	updateOpts := client.UpdateWorkflowOptions{
 		WorkflowID:   e.WorkflowOptions.ID,
+		UpdateID:     upd.GetUpdateId(),
 		UpdateName:   updateName,
 		WaitForStage: client.WorkflowUpdateStageCompleted,
 		Args:         args,

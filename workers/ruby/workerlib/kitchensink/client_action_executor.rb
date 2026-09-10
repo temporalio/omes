@@ -134,11 +134,15 @@ class ClientActionExecutor
         )
         @client.execute_update_with_start_workflow(
           update_name, *update_args,
-          start_workflow_operation: start_op
+          start_workflow_operation: start_op,
+          id: update.update_id.empty? ? nil : update.update_id
         )
       else
         handle = @client.workflow_handle(@workflow_id)
-        handle.execute_update(update_name, *update_args)
+        handle.execute_update(
+          update_name, *update_args,
+          id: update.update_id.empty? ? nil : update.update_id
+        )
       end
     rescue StandardError
       raise unless update.failure_expected

@@ -733,12 +733,12 @@ func updateWorkflowNexusOperation(
 		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 	}
 
-	// UpdateID is deliberately left unset: StartUpdateWorkflow derives it from the
-	// Nexus request ID, so a retried Nexus task attaches to the original update
-	// rather than starting a second one.
+	// StartUpdateWorkflow derives an empty UpdateID from the Nexus request ID, so
+	// a retried Nexus task attaches to the original update.
 	return temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
 		WorkflowID: input.GetWorkflowId(),
 		RunID:      input.GetRunId(),
+		UpdateID:   input.GetUpdate().GetUpdateId(),
 		UpdateName: updateName,
 		Args:       args,
 		// Accepted is the only stage a Nexus-backed update supports: the operation

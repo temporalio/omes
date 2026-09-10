@@ -10,6 +10,7 @@ import io.temporal.client.UpdateOptions;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
+import io.temporal.client.WorkflowUpdateStage;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.omes.KitchenSink;
 
@@ -139,6 +140,14 @@ public class ClientActionExecutor {
     }
 
     try {
+      UpdateOptions.Builder<KitchenSink.WorkflowState> updateOptions =
+          UpdateOptions.newBuilder(KitchenSink.WorkflowState.class)
+              .setUpdateName(updateName)
+              .setWaitForStage(WorkflowUpdateStage.COMPLETED);
+      if (!update.getUpdateId().isEmpty()) {
+        updateOptions.setUpdateId(update.getUpdateId());
+      }
+
       if (update.getWithStart()) {
         WorkflowOptions workflowOptions =
             WorkflowOptions.newBuilder()
@@ -149,16 +158,11 @@ public class ClientActionExecutor {
                 .build();
         WorkflowStub stub = client.newUntypedWorkflowStub(workflowType, workflowOptions);
 
-        UpdateOptions<KitchenSink.WorkflowState> updateOptions =
-            UpdateOptions.newBuilder(KitchenSink.WorkflowState.class)
-                .setUpdateName(updateName)
-                .build();
-
         stub.executeUpdateWithStart(
-            updateOptions, new Object[] {updateArgs}, new Object[] {workflowInput});
+            updateOptions.build(), new Object[] {updateArgs}, new Object[] {workflowInput});
       } else {
         WorkflowStub stub = client.newUntypedWorkflowStub(workflowId);
-        stub.update(updateName, KitchenSink.WorkflowState.class, updateArgs);
+        stub.startUpdate(updateOptions.build(), updateArgs).getResult();
       }
     } catch (Exception e) {
       if (!update.getFailureExpected()) {

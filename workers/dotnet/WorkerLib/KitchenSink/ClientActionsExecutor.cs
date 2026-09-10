@@ -179,7 +179,9 @@ public class ClientActionsExecutor
                 await _client.ExecuteUpdateWithStartWorkflowAsync(
                     updateName,
                     args,
-                    new(startOperation));
+                    string.IsNullOrEmpty(update.UpdateId) ?
+                        new WorkflowUpdateWithStartOptions(startOperation) :
+                        new WorkflowUpdateWithStartOptions(update.UpdateId, startOperation));
 
                 var handle = await startOperation.GetHandleAsync();
                 WorkflowId = handle.Id;
@@ -188,7 +190,12 @@ public class ClientActionsExecutor
             else
             {
                 var handle = _client.GetWorkflowHandle(WorkflowId!);
-                await handle.ExecuteUpdateAsync(updateName, args);
+                await handle.ExecuteUpdateAsync(
+                    updateName,
+                    args,
+                    string.IsNullOrEmpty(update.UpdateId) ?
+                        new WorkflowUpdateOptions() :
+                        new WorkflowUpdateOptions(update.UpdateId));
             }
         }
         catch (Exception)
