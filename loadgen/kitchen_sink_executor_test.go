@@ -1264,6 +1264,68 @@ func TestKitchenSink(t *testing.T) {
 				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sws-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
+		// Repeating a completed update ID makes StartUpdateWorkflow return synchronously.
+		{
+			name: "NexusOperation/Sync/Update",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							StartOptions: &NexusWorkflowStartOptions{
+								WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+									NewAwaitWorkflowStateAction("status", "done"),
+									NewEmptyReturnResultAction(),
+								)},
+							},
+							Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+						}},
+					},
+					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+				}),
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+										NewTimerAction(time.Millisecond),
+										NewSetWorkflowStateAction("status", "done"),
+										NewReturnResultAction(ConvertToPayload("nexus-sync-update-target")),
+									)},
+								}},
+								UpdateId: "nexus-sync-update",
+							}},
+						}},
+					},
+					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
+				}),
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+										NewTimerAction(time.Millisecond),
+										NewSetWorkflowStateAction("status", "done"),
+										NewReturnResultAction(ConvertToPayload("nexus-sync-update-target")),
+									)},
+								}},
+								UpdateId: "nexus-sync-update",
+							}},
+						}},
+					},
+					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
+				}),
+			)}},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
+				NexusOperationCompleted
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
 		{
 			name: "NexusOperation/Async/Update",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
