@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const buildKitCacheScopeEnv = "OMES_BUILDKIT_CACHE_SCOPE"
+
 type baseImageBuilder struct {
 	logger         *zap.SugaredLogger
 	tagAsLatest    bool
@@ -84,6 +86,12 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		"--pull",
 		"--file", dockerFile,
 		"--platform", strings.Join(b.platforms, ","),
+	}
+	if cacheScope := os.Getenv(buildKitCacheScopeEnv); cacheScope != "" {
+		dockerArgs = append(dockerArgs,
+			"--cache-from", fmt.Sprintf("type=gha,scope=%s,timeout=5m,version=2", cacheScope),
+			"--cache-to", fmt.Sprintf("type=gha,scope=%s,mode=max,ignore-error=true,timeout=5m,version=2", cacheScope),
+		)
 	}
 
 	// Handle multi-platform build requirements
