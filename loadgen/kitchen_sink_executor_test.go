@@ -468,6 +468,7 @@ func TestKitchenSink(t *testing.T) {
 											},
 										},
 										WithStart: true, // This makes it an update-with-start
+										UpdateId:  "exec-activity-client-update-with-start",
 									},
 								},
 							}),
@@ -477,7 +478,9 @@ func TestKitchenSink(t *testing.T) {
 					),
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionUpdateCompleted`),
+			historyMatcher: PartialHistoryMatcher(`
+				WorkflowExecutionUpdateAccepted {"acceptedRequest":{"meta":{"updateId":"exec-activity-client-update-with-start"},"input":{"name":"do_actions_update"}}}
+				WorkflowExecutionUpdateCompleted`),
 		},
 		{
 			name: "ExecActivity/Client/Concurrent",

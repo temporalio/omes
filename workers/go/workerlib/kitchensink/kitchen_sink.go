@@ -737,7 +737,8 @@ func updateWorkflowNexusOperation(
 		WorkflowID: input.GetWorkflowId(),
 		RunID:      input.GetRunId(),
 		// When UpdateID is empty, StartUpdateWorkflow uses the Nexus request ID so
-		// retries attach to the same update.
+		// retries attach to the same update. Setting it lets separate operations
+		// reuse the same update result.
 		UpdateID:   input.GetUpdate().GetUpdateId(),
 		UpdateName: updateName,
 		Args:       args,

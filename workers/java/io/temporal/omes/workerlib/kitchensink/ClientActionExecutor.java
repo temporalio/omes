@@ -144,7 +144,7 @@ public class ClientActionExecutor {
           UpdateOptions.newBuilder(KitchenSink.WorkflowState.class)
               .setUpdateName(updateName)
               .setWaitForStage(WorkflowUpdateStage.COMPLETED)
-              .setUpdateId(update.getUpdateId());
+              .setUpdateId(update.getUpdateId().isEmpty() ? null : update.getUpdateId());
 
       if (update.getWithStart()) {
         WorkflowOptions workflowOptions =
