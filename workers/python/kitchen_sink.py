@@ -53,7 +53,7 @@ class KitchenSinkWorkflow:
         # IF variant was rejected we wouldn't even be in here, so access action set directly
         retval = await self.handle_action_set(actions_update.do_actions)
         if retval is not None:
-            return retval
+            return RawValue(retval)
         return self.workflow_state
 
     @do_actions_update.validator
@@ -66,7 +66,7 @@ class KitchenSinkWorkflow:
         return self.workflow_state
 
     @workflow.run
-    async def run(self, input: Optional[WorkflowInput] = None) -> Payload:
+    async def run(self, input: Optional[WorkflowInput] = None) -> RawValue:
         workflow.logger.debug("Started kitchen sink workflow")
 
         # Run all initial input actions
@@ -88,14 +88,14 @@ class KitchenSinkWorkflow:
 
         # If initial actions returned a value, return it now
         if initial_return_value is not None:
-            return initial_return_value
+            return RawValue(initial_return_value)
 
         # Run all actions from signals
         while True:
             action_set = await self.action_set_queue.get()
             return_value = await self.handle_action_set(action_set)
             if return_value is not None:
-                return return_value
+                return RawValue(return_value)
 
     async def handle_action_set(self, action_set: ActionSet) -> Optional[Payload]:
         return_value = None
@@ -159,6 +159,7 @@ class KitchenSinkWorkflow:
                     child,
                     id=child_action.workflow_id,
                     args=args,
+                    result_type=RawValue,
                     search_attributes=typed_attrs,
                 ),
                 child_action.awaitable_choice,
@@ -299,7 +300,10 @@ async def handle_nexus_operation(
         )
         op_started = True
         result = await handle
-        if nexus_op.HasField("expected_output") and result.payload != nexus_op.expected_output:
+        if (
+            nexus_op.HasField("expected_output")
+            and result.payload != nexus_op.expected_output
+        ):
             raise exceptions.ApplicationError(
                 f"expected output {nexus_op.expected_output!r}, got {result.payload!r}"
             )

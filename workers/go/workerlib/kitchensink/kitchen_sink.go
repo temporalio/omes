@@ -48,7 +48,7 @@ type KSWorkflowState struct {
 	pendingActions []workflow.Future
 }
 
-func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
+func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (converter.RawValue, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
@@ -71,7 +71,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
-		return nil, queryErr
+		return converter.RawValue{}, queryErr
 	}
 
 	// Setup update handler.
@@ -91,7 +91,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			},
 		})
 	if updateErr != nil {
-		return nil, updateErr
+		return converter.RawValue{}, updateErr
 	}
 
 	// Setup signal handler.
@@ -132,7 +132,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				workflow.GetLogger(ctx).Debug("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
 				// If there's an error, return immediately without waiting for signals
 				if err != nil {
-					return ret, err
+					return converter.RawValue{}, err
 				}
 				// Otherwise, store the return value to use later
 				initialRetOrErr = &ReturnOrErr{ret, err}
@@ -157,7 +157,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// If there's an error, return immediately without waiting for signals
 	if retOrErr.err != nil {
-		return retOrErr.retme, retOrErr.err
+		return converter.RawValue{}, retOrErr.err
 	}
 
 	// Only wait for signals if we're expecting any
@@ -185,11 +185,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			if !ok {
 				err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
 			}
-			return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+			return converter.RawValue{}, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
 		}
 	}
 
-	return retOrErr.retme, nil
+	return converter.NewRawValue(retOrErr.retme), nil
 }
 
 func (ws *KSWorkflowState) handleActionSet(
@@ -625,7 +625,8 @@ func startNexusOperation(
 	input = cmp.Or(input, &kitchensink.NexusOperationRequest{})
 	switch action := input.GetAction().(type) {
 	case *kitchensink.NexusOperationRequest_Echo:
-		return temporalnexus.NewSyncResult(converter.NewRawValue(kitchensink.ConvertToPayload(action.Echo))), nil
+		return temporalnexus.NewSyncResult(
+			converter.NewRawValue(kitchensink.ConvertToPayload(action.Echo))), nil
 	case *kitchensink.NexusOperationRequest_WorkflowAction:
 		workflowAction := cmp.Or(action.WorkflowAction, &kitchensink.NexusWorkflowAction{})
 		switch workflowAction.GetAction().(type) {
@@ -698,7 +699,8 @@ func signalWorkflowNexusOperation(
 		if err != nil {
 			return result, err
 		}
-		return temporalnexus.NewSyncResult(converter.NewRawValue(kitchensink.ConvertToPayload(run.GetID()))), nil
+		return temporalnexus.NewSyncResult(
+			converter.NewRawValue(kitchensink.ConvertToPayload(run.GetID()))), nil
 	}
 
 	if err = temporalnexus.GetClient(ctx).SignalWorkflow(
@@ -711,7 +713,8 @@ func signalWorkflowNexusOperation(
 		return result, err
 	}
 
-	return temporalnexus.NewSyncResult(converter.NewRawValue(kitchensink.ConvertToPayload(input.GetWorkflowId()))), nil
+	return temporalnexus.NewSyncResult(
+		converter.NewRawValue(kitchensink.ConvertToPayload(input.GetWorkflowId()))), nil
 }
 
 func updateWorkflowNexusOperation(
