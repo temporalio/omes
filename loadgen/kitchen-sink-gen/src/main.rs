@@ -557,7 +557,7 @@ impl<'a> Arbitrary<'a> for DoUpdate {
             variant: Some(variant),
             failure_expected,
             with_start: u.arbitrary()?,
-            update_id: String::new(),
+            ..Default::default()
         })
     }
 }
