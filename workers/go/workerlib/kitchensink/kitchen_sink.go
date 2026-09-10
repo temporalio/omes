@@ -733,11 +733,11 @@ func updateWorkflowNexusOperation(
 		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 	}
 
-	// StartUpdateWorkflow derives an empty UpdateID from the Nexus request ID, so
-	// a retried Nexus task attaches to the original update.
 	return temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
 		WorkflowID: input.GetWorkflowId(),
 		RunID:      input.GetRunId(),
+		// When UpdateID is empty, StartUpdateWorkflow uses the Nexus request ID so
+		// retries attach to the same update.
 		UpdateID:   input.GetUpdate().GetUpdateId(),
 		UpdateName: updateName,
 		Args:       args,
