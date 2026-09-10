@@ -1289,8 +1289,6 @@ func TestKitchenSink(t *testing.T) {
 									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
 										NewTimerAction(time.Millisecond),
 										NewSetWorkflowStateAction("status", "done"),
-										// RawValue preserves this payload through both synchronous responses
-										// and asynchronous Nexus completion callbacks.
 										NewReturnResultAction(ConvertToPayload("nexus-update-target")),
 									)},
 								}},
