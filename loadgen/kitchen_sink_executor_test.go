@@ -1289,17 +1289,15 @@ func TestKitchenSink(t *testing.T) {
 									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
 										NewTimerAction(time.Millisecond),
 										NewSetWorkflowStateAction("status", "done"),
-										// The update handler's return value is itself encoded by the data converter
-										// before the server forwards it to the Nexus completion callback, so the value
-										// is wrapped twice here: the caller decodes the outer layer and compares the
-										// inner Payload against ExecuteNexusOperation.expected_output.
-										NewReturnResultAction(ConvertToPayload(ConvertToPayload("nexus-update-target"))),
+										// RawValue preserves this payload through both synchronous responses
+										// and asynchronous Nexus completion callbacks.
+										NewReturnResultAction(ConvertToPayload("nexus-update-target")),
 									)},
 								}},
 							}},
 						}},
 					},
-					ExpectedOutput: ConvertToPayload(ConvertToPayload("nexus-update-target")),
+					ExpectedOutput: ConvertToPayload("nexus-update-target"),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},

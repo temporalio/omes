@@ -295,13 +295,16 @@ async def handle_nexus_operation(
         handle = await client.start_operation(
             nexus_op.operation,
             nexus_op.input,
-            output_type=Payload,
+            output_type=RawValue,
         )
         op_started = True
         result = await handle
-        if nexus_op.HasField("expected_output") and result != nexus_op.expected_output:
+        if (
+            nexus_op.HasField("expected_output")
+            and result.payload != nexus_op.expected_output
+        ):
             raise exceptions.ApplicationError(
-                f"expected output {nexus_op.expected_output!r}, got {result!r}"
+                f"expected output {nexus_op.expected_output!r}, got {result.payload!r}"
             )
 
     async def after_nexus_started(task: asyncio.Task):
