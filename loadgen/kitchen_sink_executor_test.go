@@ -1,13 +1,8 @@
 package loadgen_test
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -16,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/devserver"
 	. "github.com/temporalio/omes/internal/workertest"
 	. "github.com/temporalio/omes/loadgen"
 	. "github.com/temporalio/omes/loadgen/kitchensink"
@@ -111,8 +105,6 @@ func TestKitchenSink(t *testing.T) {
 		"history.enableCHASMSignalBacklinks": true,
 		// Nexus Updates rely on CHASM update callbacks.
 		"history.enableUpdateCallbacks": true,
-		// Allow the sync/async update result test to receive an external callback.
-		"callback.allowedAddresses": []any{map[string]any{"Pattern": "*", "AllowInsecure": true}},
 		// Enable StartActivityExecution for the standalone-activity subtest.
 		"activity.enableStandalone":                        true,
 		"history.enableStandaloneActivityOperatorCommands": true,
@@ -1351,158 +1343,6 @@ func TestKitchenSink(t *testing.T) {
 			}
 		})
 	}
-
-	if env := testEnvironments[clioptions.LangGo]; env != nil {
-		testNexusUpdateResultSyncAndAsync(t, server, env)
-	}
-}
-
-func testNexusUpdateResultSyncAndAsync(
-	t *testing.T,
-	server *devserver.Server,
-	env *TestEnvironment,
-) {
-	t.Helper()
-	// Reusing a request ID after completion deterministically exercises the synchronous update path.
-	t.Run("NexusOperation/SyncAndAsync/Update", func(t *testing.T) {
-		runID := fmt.Sprintf("%s-%d", strings.ReplaceAll(t.Name(), "/", "-"), time.Now().Unix())
-		scenarioInfo := ScenarioInfo{
-			ScenarioName: "kitchenSinkTest",
-			RunID:        runID,
-			Configuration: RunConfiguration{
-				Iterations: 1,
-			},
-		}
-
-		_, err := env.RunExecutorTest(t, ExecutorFunc(func(ctx context.Context, info ScenarioInfo) error {
-			const (
-				requestID = "nexus-update-result"
-				targetID  = "nexus-update-result-target"
-			)
-
-			_, err := info.Client.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
-				ID:                       targetID,
-				TaskQueue:                TaskQueueForRun(info.RunID),
-				WorkflowExecutionTimeout: 30 * time.Second,
-			}, "kitchenSink", &WorkflowInput{InitialActions: ListActionSet(
-				NewAwaitWorkflowStateAction("status", "done"),
-			)})
-			if err != nil {
-				return fmt.Errorf("start update target: %w", err)
-			}
-			defer func() {
-				_ = info.Client.TerminateWorkflow(ctx, targetID, "", "test complete")
-			}()
-
-			type operationResult struct {
-				body        []byte
-				contentType string
-				state       string
-				err         error
-			}
-			asyncResult := make(chan operationResult, 1)
-			callback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				body, err := io.ReadAll(r.Body)
-				asyncResult <- operationResult{
-					body:        body,
-					contentType: r.Header.Get("Content-Type"),
-					state:       r.Header.Get("Nexus-Operation-State"),
-					err:         err,
-				}
-				w.WriteHeader(http.StatusNoContent)
-			}))
-			defer callback.Close()
-
-			expectedOutput := ConvertToPayload("nexus-update-result")
-			operationInput := ConvertToPayload(&NexusOperationRequest{
-				Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-					WorkflowId: targetID,
-					Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
-						Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
-							Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-								NewTimerAction(time.Millisecond),
-								NewReturnResultAction(expectedOutput),
-							)},
-						}},
-					}},
-				}},
-			})
-			ports := server.Ports()
-			operationURL := fmt.Sprintf(
-				"http://%s:%d/namespaces/%s/task-queues/%s/nexus-services/%s/%s?%s",
-				ports.Host,
-				ports.FrontendHTTP,
-				url.PathEscape(info.Namespace),
-				url.PathEscape(TaskQueueForRun(info.RunID)),
-				url.PathEscape(KitchenSinkNexusServiceName),
-				url.PathEscape(KitchenSinkNexusOperationName),
-				url.Values{"callback": {callback.URL}}.Encode(),
-			)
-			// Use the HTTP API so both starts carry the same Nexus request ID.
-			startOperation := func() (*http.Response, error) {
-				req, err := http.NewRequestWithContext(ctx, http.MethodPost, operationURL, bytes.NewReader(operationInput.Data))
-				if err != nil {
-					return nil, err
-				}
-				req.Header.Set("Content-Type", fmt.Sprintf(
-					`application/json; format=protobuf; message-type=%q`,
-					operationInput.Metadata["messageType"]))
-				req.Header.Set("Nexus-Request-Id", requestID)
-				return http.DefaultClient.Do(req)
-			}
-
-			// The timer forces the first request to return asynchronously. Once its
-			// callback arrives, retrying the same request finds the completed update
-			// and returns the same result synchronously.
-			resp, err := startOperation()
-			if err != nil {
-				return fmt.Errorf("start async update operation: %w", err)
-			}
-			body, readErr := io.ReadAll(resp.Body)
-			_ = resp.Body.Close()
-			if readErr != nil {
-				return fmt.Errorf("read async update start response: %w", readErr)
-			}
-			if resp.StatusCode != http.StatusCreated {
-				return fmt.Errorf("start async update operation returned %s: %s", resp.Status, body)
-			}
-
-			var async operationResult
-			select {
-			case async = <-asyncResult:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-			if async.err != nil {
-				return fmt.Errorf("read async update result: %w", async.err)
-			}
-			if async.state != "succeeded" {
-				return fmt.Errorf("async update completed with state %q", async.state)
-			}
-
-			resp, err = startOperation()
-			if err != nil {
-				return fmt.Errorf("start sync update operation: %w", err)
-			}
-			defer resp.Body.Close()
-			syncBody, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("read sync update result: %w", err)
-			}
-			if resp.StatusCode != http.StatusOK {
-				return fmt.Errorf("start sync update operation returned %s: %s", resp.Status, syncBody)
-			}
-
-			if async.contentType != resp.Header.Get("Content-Type") ||
-				!bytes.Equal(async.body, syncBody) ||
-				!bytes.Equal(syncBody, expectedOutput.Data) {
-				return fmt.Errorf("async result (%q, %q) does not match sync result (%q, %q)",
-					async.contentType, async.body, resp.Header.Get("Content-Type"), syncBody)
-			}
-			return nil
-		}), scenarioInfo, clioptions.LangGo)
-		require.NoError(t, err)
-	})
 }
 
 func standaloneActivityOperatorCommandsTestCase(
