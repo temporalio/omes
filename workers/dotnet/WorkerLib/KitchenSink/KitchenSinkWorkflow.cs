@@ -34,7 +34,7 @@ public class KitchenSinkWorkflow
         var retval = await HandleActionSetAsync(actionsUpdate.DoActions);
         if (retval != null)
         {
-            return retval;
+            return new RawValue(retval);
         }
 
         return CurrentWorkflowState;
@@ -53,7 +53,7 @@ public class KitchenSinkWorkflow
     public WorkflowState CurrentWorkflowState { get; private set; } = new();
 
     [WorkflowRun]
-    public async Task<Payload?> RunAsync(WorkflowInput? workflowInput)
+    public async Task<RawValue?> RunAsync(WorkflowInput? workflowInput)
     {
         // Run all initial input actions
         Payload? initialReturnValue = null;
@@ -81,7 +81,7 @@ public class KitchenSinkWorkflow
         // If initial actions returned a value, return it now
         if (initialReturnValue != null)
         {
-            return initialReturnValue;
+            return new RawValue(initialReturnValue);
         }
 
         // Run all actions from signals
@@ -92,7 +92,7 @@ public class KitchenSinkWorkflow
             var returnMe = await HandleActionSetAsync(actionSet);
             if (returnMe != null)
             {
-                return returnMe;
+                return new RawValue(returnMe);
             }
         }
     }

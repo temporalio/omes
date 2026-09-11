@@ -8,7 +8,7 @@ KS = Temporal::Omes::KitchenSink
 class KitchenSinkWorkflow < Temporalio::Workflow::Definition
   workflow_name 'kitchenSink'
   workflow_arg_hint KS::WorkflowInput
-  workflow_result_hint Temporalio::Api::Common::V1::Payload
+  workflow_result_hint Temporalio::Converters::RawValue
 
   def initialize
     super
@@ -37,13 +37,13 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
       )
     end
 
-    return initial_return_value unless initial_return_value.nil?
+    return Temporalio::Converters::RawValue.new(initial_return_value) unless initial_return_value.nil?
 
     loop do
       Temporalio::Workflow.wait_condition { !@action_set_queue.empty? }
       action_set = @action_set_queue.shift
       return_value = handle_action_set(action_set)
-      return return_value unless return_value.nil?
+      return Temporalio::Converters::RawValue.new(return_value) unless return_value.nil?
     end
   end
 
@@ -59,7 +59,7 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
   workflow_update arg_hints: [KS::DoActionsUpdate]
   def do_actions_update(actions_update)
     retval = handle_action_set(actions_update.do_actions)
-    return retval unless retval.nil?
+    return Temporalio::Converters::RawValue.new(retval) unless retval.nil?
 
     @workflow_state
   end

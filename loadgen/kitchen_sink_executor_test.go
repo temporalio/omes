@@ -18,6 +18,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -73,6 +74,7 @@ type testCase struct {
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
+	expectedWorkflowOutput  *common.Payload
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -144,6 +146,14 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`
 				TimerStarted {"startToFireTimeout":"0.001s"}
 				TimerFired`),
+		},
+		{
+			name: "ReturnResult",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NewReturnResultAction(ConvertToPayload("workflow-result")),
+			)}},
+			historyMatcher:         PartialHistoryMatcher(`WorkflowExecutionCompleted`),
+			expectedWorkflowOutput: ConvertToPayload("workflow-result"),
 		},
 		{
 			name: "ExecActivity/Noop",
@@ -1148,6 +1158,7 @@ func TestKitchenSink(t *testing.T) {
 											Input: &NexusOperationRequest{
 												Action: &NexusOperationRequest_Echo{Echo: "hello"},
 											},
+											ExpectedOutput: ConvertToPayload("hello"),
 										},
 									},
 								},
@@ -1393,7 +1404,9 @@ func TestKitchenSink(t *testing.T) {
 			if input.WorkflowInput == nil {
 				input.WorkflowInput = &WorkflowInput{}
 			}
-			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+			if tc.expectedWorkflowOutput == nil {
+				input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+			}
 
 			for _, sdk := range enabledSDKs {
 				env := testEnvironments[sdk]
@@ -1585,6 +1598,11 @@ func testSupportedFeature(
 		require.Truef(t, hasWorkflowFailed, "SDK %s workflow should have WorkflowExecutionFailed event in history", sdk)
 	} else {
 		require.NoError(t, execErr, "executor failed")
+	}
+	if tc.expectedWorkflowOutput != nil {
+		var result converter.RawValue
+		require.NoError(t, env.TemporalClient().GetWorkflow(t.Context(), scenarioInfo.RunID, "").Get(t.Context(), &result))
+		require.Equal(t, tc.expectedWorkflowOutput, result.Payload())
 	}
 
 	require.NoError(t, historyErr, "failed to get workflow history")
