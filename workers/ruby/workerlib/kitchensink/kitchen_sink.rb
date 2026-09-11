@@ -136,7 +136,8 @@ class KitchenSinkWorkflow < Temporalio::Workflow::Definition
             *args,
             id: child_action.workflow_id,
             task_queue: child_action.task_queue.empty? ? nil : child_action.task_queue,
-            search_attributes: Temporalio::SearchAttributes._from_proto(proto_sa)
+            search_attributes: Temporalio::SearchAttributes._from_proto(proto_sa),
+            result_hint: Temporalio::Converters::RawValue
           )
         },
         child_action.awaitable_choice,

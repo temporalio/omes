@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
@@ -528,8 +527,8 @@ type KitchenSinkWorkflowOptions struct {
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
-// completion. Concurrently it will perform any client actions specified in
-// kitchensink.TestInput.ClientSequence.
+// completion ignoring its result. Concurrently it will perform any client actions specified in
+// kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
 	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
 	cancelCtx, cancel := context.WithCancel(ctx)
@@ -567,23 +566,12 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		}()
 	}
 
-	expectedOutput := options.Params.GetExpectedOutput()
-	var result converter.RawValue
-	var resultPtr any
-	if expectedOutput != nil {
-		resultPtr = &result
-	}
-	executeErr := executor.Handle.Get(cancelCtx, resultPtr)
+	executeErr := executor.Handle.Get(cancelCtx, nil)
 	if executeErr != nil {
 		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}
 	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
 		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
-	}
-	if expectedOutput != nil {
-		if err := kitchensink.CheckExpectedOutput(expectedOutput, result); err != nil {
-			return fmt.Errorf("kitchen sink workflow: %w", err)
-		}
 	}
 	return nil
 }

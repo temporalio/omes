@@ -16,8 +16,6 @@ message TestInput {
   WorkflowInput workflow_input = 1;
   ClientSequence client_sequence = 2;
   WithStartClientAction with_start_action = 3;
-  // If set, the workflow's output is compared against this value after completion.
-  temporal.api.common.v1.Payload expected_output = 4;
   // Technically worker options should be known as well. We don't have any common format for that
   // and creating one feels overkill to start with. Requiring the harness to print the config at
   // startup seems good enough for now.

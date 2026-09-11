@@ -351,7 +351,6 @@ impl<'a> Arbitrary<'a> for TestInput {
             workflow_input: u.arbitrary()?,
             client_sequence: None,
             with_start_action: with_start_action,
-            expected_output: None,
         };
 
         // Finally, return at the end
