@@ -18,7 +18,6 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -73,8 +72,8 @@ type testCase struct {
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
+	expectedExecutorError   string
 	expectedWorkflowError   string
-	expectedWorkflowOutput  *common.Payload
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -149,11 +148,24 @@ func TestKitchenSink(t *testing.T) {
 		},
 		{
 			name: "ReturnResult",
-			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
-				NewReturnResultAction(ConvertToPayload("workflow-result")),
-			)}},
-			historyMatcher:         PartialHistoryMatcher(`WorkflowExecutionCompleted`),
-			expectedWorkflowOutput: ConvertToPayload("workflow-result"),
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+					NewReturnResultAction(ConvertToPayload("workflow-result")),
+				)},
+				ExpectedOutput: ConvertToPayload("workflow-result"),
+			},
+			historyMatcher: PartialHistoryMatcher(`WorkflowExecutionCompleted`),
+		},
+		{
+			name: "ReturnResult/ExpectedOutputMismatch",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+					NewReturnResultAction(ConvertToPayload("workflow-result")),
+				)},
+				ExpectedOutput: ConvertToPayload("unexpected-result"),
+			},
+			historyMatcher:        PartialHistoryMatcher(`WorkflowExecutionCompleted`),
+			expectedExecutorError: "expected output",
 		},
 		{
 			name: "ExecActivity/Noop",
@@ -1404,7 +1416,7 @@ func TestKitchenSink(t *testing.T) {
 			if input.WorkflowInput == nil {
 				input.WorkflowInput = &WorkflowInput{}
 			}
-			if tc.expectedWorkflowOutput == nil {
+			if input.GetExpectedOutput() == nil {
 				input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
 			}
 
@@ -1581,7 +1593,9 @@ func testSupportedFeature(
 	}
 
 	// Check if workflow failure is expected
-	if tc.expectedWorkflowError != "" {
+	if tc.expectedExecutorError != "" {
+		require.ErrorContains(t, execErr, tc.expectedExecutorError, "executor should fail")
+	} else if tc.expectedWorkflowError != "" {
 		require.Errorf(t, execErr, "SDK %s should fail with workflow error", sdk)
 		require.Containsf(t, strings.ToLower(execErr.Error()), strings.ToLower(tc.expectedWorkflowError),
 			"SDK %s workflow error should contain '%s'", sdk, tc.expectedWorkflowError)
@@ -1599,12 +1613,6 @@ func testSupportedFeature(
 	} else {
 		require.NoError(t, execErr, "executor failed")
 	}
-	if tc.expectedWorkflowOutput != nil {
-		var result converter.RawValue
-		require.NoError(t, env.TemporalClient().GetWorkflow(t.Context(), scenarioInfo.RunID, "").Get(t.Context(), &result))
-		require.Equal(t, tc.expectedWorkflowOutput, result.Payload())
-	}
-
 	require.NoError(t, historyErr, "failed to get workflow history")
 	require.NotNilf(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
 	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)

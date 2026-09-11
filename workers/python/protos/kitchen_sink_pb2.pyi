@@ -52,14 +52,16 @@ WAIT_CANCELLATION_COMPLETED: ActivityCancellationType
 ABANDON: ActivityCancellationType
 
 class TestInput(_message.Message):
-    __slots__ = ("workflow_input", "client_sequence", "with_start_action")
+    __slots__ = ("workflow_input", "client_sequence", "with_start_action", "expected_output")
     WORKFLOW_INPUT_FIELD_NUMBER: _ClassVar[int]
     CLIENT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
     WITH_START_ACTION_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_OUTPUT_FIELD_NUMBER: _ClassVar[int]
     workflow_input: WorkflowInput
     client_sequence: ClientSequence
     with_start_action: WithStartClientAction
-    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., with_start_action: _Optional[_Union[WithStartClientAction, _Mapping]] = ...) -> None: ...
+    expected_output: _message_pb2.Payload
+    def __init__(self, workflow_input: _Optional[_Union[WorkflowInput, _Mapping]] = ..., client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., with_start_action: _Optional[_Union[WithStartClientAction, _Mapping]] = ..., expected_output: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ...) -> None: ...
 
 class ClientSequence(_message.Message):
     __slots__ = ("action_sets",)
