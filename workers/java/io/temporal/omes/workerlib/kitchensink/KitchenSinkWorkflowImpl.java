@@ -266,7 +266,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               ChildWorkflowStub stub =
                   Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
               Promise result =
-                  stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
+                  stub.executeAsync(RawValue.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;
               switch (executeChildWorkflow.getAwaitableChoice().getConditionCase()) {
                 case ABANDON:

@@ -200,7 +200,7 @@ public class KitchenSinkWorkflow
                 afterCompletedFn: async t =>
                 {
                     var childHandle = await t;
-                    await childHandle.GetResultAsync();
+                    await childHandle.GetResultAsync<RawValue>();
                 });
         }
         else if (action.SetPatchMarker is { } setPatchMarker)
