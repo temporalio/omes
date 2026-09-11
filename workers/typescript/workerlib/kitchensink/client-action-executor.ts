@@ -151,10 +151,14 @@ export class ClientActionExecutor {
         await this.client.workflow.executeUpdateWithStart(updateName, {
           args: [updateArgs],
           startWorkflowOperation,
+          updateId: update.updateId || undefined,
         });
       } else {
         const handle = this.client.workflow.getHandle(this.workflowId);
-        await handle.executeUpdate(updateName, { args: [updateArgs] });
+        await handle.executeUpdate(updateName, {
+          args: [updateArgs],
+          updateId: update.updateId || undefined,
+        });
       }
     } catch (error) {
       console.error(`Update execution failed for ${updateName}:`, error);
