@@ -80,7 +80,10 @@ each scenario.
 Iteration retries and the terminal-failure policy are independent. `--max-iteration-attempts` controls
 how many times one logical iteration may execute. With the default `fail-fast` policy, exhausting those
 attempts stops the run and exits non-zero. The `continue` policy logs the terminal failure, keeps starting
-load, and emits a warning summary before exiting zero if the run otherwise completes.
+load, and emits a warning summary before exiting zero if the run otherwise completes. The summary includes
+attempted, succeeded, and failed totals plus success/failure rates and successful iterations per second. When the
+load-driver Prometheus endpoint is enabled with `--prom-listen-address`, the same terminal outcomes are
+exported as `omes_iterations_total`, labeled by scenario, outcome, and status code.
 
 ### 2. Per-scenario options (`--option key=value`)
 
