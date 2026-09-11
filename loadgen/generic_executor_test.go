@@ -44,8 +44,7 @@ func execute(executor *GenericExecutor, runConfig RunConfiguration) error {
 }
 
 func executeContext(ctx context.Context, executor *GenericExecutor, runConfig RunConfiguration) error {
-	logger := zap.Must(zap.NewDevelopment())
-	defer logger.Sync()
+	logger := zap.NewNop()
 	info := ScenarioInfo{
 		MetricsHandler: client.MetricsNopHandler,
 		Logger:         logger.Sugar(),

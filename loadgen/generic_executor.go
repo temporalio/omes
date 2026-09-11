@@ -52,6 +52,36 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	}, nil
 }
 
+func (g *genericRun) logRunSummary(elapsed time.Duration) {
+	succeeded := g.completed.Load()
+	failed := g.failed.Load()
+	attempted := succeeded + failed
+
+	var successRate, failureRate, successfulThroughput float64
+	if attempted > 0 {
+		successRate = float64(succeeded) / float64(attempted)
+		failureRate = float64(failed) / float64(attempted)
+	}
+	if elapsed > 0 {
+		successfulThroughput = float64(succeeded) / elapsed.Seconds()
+	}
+
+	fields := []any{
+		"elapsed", elapsed,
+		"attempted", attempted,
+		"succeeded", succeeded,
+		"failed", failed,
+		"success_rate", successRate,
+		"failure_rate", failureRate,
+		"successful_iterations_per_second", successfulThroughput,
+	}
+	if failed > 0 {
+		g.logger.Warnw("Run completed with iteration failures", fields...)
+	} else {
+		g.logger.Infow("Run completed", fields...)
+	}
+}
+
 // Run a scenario.
 // Spins up coroutines according to the scenario configuration.
 // Each coroutine runs the scenario Execute method in a loop until the scenario duration or max
@@ -229,12 +259,7 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// success/failure counts and apply its own policy on top.
 	if failed := g.failed.Load(); failed > 0 {
 		succeeded := g.completed.Load()
-		g.logger.Warnw("Run completed with iteration failures",
-			"elapsed", elapsed,
-			"attempted", succeeded+failed,
-			"succeeded", succeeded,
-			"failed", failed,
-		)
+		g.logRunSummary(elapsed)
 		return &IterationFailuresError{
 			Attempted: succeeded + failed,
 			Succeeded: succeeded,
@@ -242,6 +267,6 @@ func (g *genericRun) Run(ctx context.Context) error {
 			Elapsed:   elapsed,
 		}
 	}
-	g.logger.Infof("Run completed in %v", elapsed)
+	g.logRunSummary(elapsed)
 	return nil
 }
