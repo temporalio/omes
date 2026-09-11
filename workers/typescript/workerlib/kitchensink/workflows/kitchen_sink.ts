@@ -24,6 +24,7 @@ import {
   ActivityOptions,
   decodePriority,
   LocalActivityOptions,
+  RawValue,
   SearchAttributes,
 } from '@temporalio/common';
 import { decodeTypedSearchAttributes } from '@temporalio/common/lib/converter/payload-search-attributes';
@@ -49,9 +50,9 @@ import IWorkflowState = temporal.omes.kitchen_sink.IWorkflowState;
 
 const reportStateQuery = defineQuery<IWorkflowState, [Payload]>('report_state');
 const actionsSignal = defineSignal<[DoSignalActions]>('do_actions_signal');
-const actionsUpdate = defineUpdate<IPayload | undefined, [DoActionsUpdate]>('do_actions_update');
+const actionsUpdate = defineUpdate<RawValue | undefined, [DoActionsUpdate]>('do_actions_update');
 
-export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPayload | undefined> {
+export async function kitchenSink(input: WorkflowInput | undefined): Promise<RawValue | undefined> {
   let workflowState: IWorkflowState = WorkflowState.create();
   const actionsQueue = new Array<IActionSet>();
 
@@ -225,7 +226,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     actionsUpdate,
     async (actions) => {
       const rval = await handleActionSet(actions.doActions!);
-      return rval;
+      return rval ? RawValue.fromPayload(Payload.create(rval)) : undefined;
     },
     {
       validator: (actions) => {
@@ -257,7 +258,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
 
   // If initial actions returned a value, return it now
   if (initialReturnValue) {
-    return initialReturnValue;
+    return RawValue.fromPayload(Payload.create(initialReturnValue));
   }
 
   // Run all actions from signals
@@ -266,7 +267,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<IPa
     const actions = actionsQueue.pop()!;
     const rval = await handleActionSet(actions);
     if (rval) {
-      return rval;
+      return RawValue.fromPayload(Payload.create(rval));
     }
   }
 }

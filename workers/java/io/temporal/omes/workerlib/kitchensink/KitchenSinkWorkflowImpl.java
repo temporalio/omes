@@ -10,6 +10,7 @@ import io.temporal.api.enums.v1.ParentClosePolicy;
 import io.temporal.common.Priority;
 import io.temporal.common.RetryOptions;
 import io.temporal.common.VersioningIntent;
+import io.temporal.common.converter.RawValue;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.failure.ApplicationFailure;
 import io.temporal.failure.CanceledFailure;
@@ -31,7 +32,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   WorkflowQueue<KitchenSink.ActionSet> signalActionQueue = Workflow.newWorkflowQueue(1_000);
 
   @Override
-  public Payload execute(KitchenSink.WorkflowInput input) {
+  public RawValue execute(KitchenSink.WorkflowInput input) {
     // Run all initial input actions
     Payload initialReturnValue = null;
     if (input != null) {
@@ -53,7 +54,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
 
     // If initial actions returned a value, return it now
     if (initialReturnValue != null) {
-      return initialReturnValue;
+      return new RawValue(initialReturnValue);
     }
 
     // Run all actions from signals
@@ -61,7 +62,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
       KitchenSink.ActionSet actionSet = signalActionQueue.cancellableTake();
       Payload result = handleActionSet(actionSet);
       if (result != null) {
-        return result;
+        return new RawValue(result);
       }
     }
   }
@@ -82,7 +83,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
   public Object doActionsUpdate(KitchenSink.DoActionsUpdate updateInput) {
     Payload result = handleActionSet(updateInput.getDoActions());
     if (result != null) {
-      return result;
+      return new RawValue(result);
     }
     return this.state;
   }
@@ -265,7 +266,7 @@ public class KitchenSinkWorkflowImpl implements KitchenSinkWorkflow {
               ChildWorkflowStub stub =
                   Workflow.newUntypedChildWorkflowStub(childWorkflowType, optionsBuilder.build());
               Promise result =
-                  stub.executeAsync(Payload.class, executeChildWorkflow.getInputList().get(0));
+                  stub.executeAsync(RawValue.class, executeChildWorkflow.getInputList().get(0));
               boolean expectCancelled = false;
               switch (executeChildWorkflow.getAwaitableChoice().getConditionCase()) {
                 case ABANDON:

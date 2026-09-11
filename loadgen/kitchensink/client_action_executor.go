@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
 	"golang.org/x/sync/errgroup"
 )
@@ -218,12 +218,12 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 	}
 
 	if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
-		var result commonpb.Payload
+		var result converter.RawValue
 		if err := handle.Get(ctx, &result); err != nil {
 			return fmt.Errorf("get standalone Nexus operation: %w", err)
 		}
-		if !expectedOutput.Equal(&result) {
-			return fmt.Errorf("expected standalone Nexus operation output %v, got %v", expectedOutput, &result)
+		if err := CheckExpectedOutput(expectedOutput, result); err != nil {
+			return fmt.Errorf("standalone Nexus operation: %w", err)
 		}
 		return nil
 	}

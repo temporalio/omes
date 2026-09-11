@@ -18,6 +18,7 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -73,6 +74,7 @@ type testCase struct {
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
+	expectedWorkflowOutput  *common.Payload
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -144,6 +146,14 @@ func TestKitchenSink(t *testing.T) {
 			historyMatcher: PartialHistoryMatcher(`
 				TimerStarted {"startToFireTimeout":"0.001s"}
 				TimerFired`),
+		},
+		{
+			name: "ReturnResult",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NewReturnResultAction(ConvertToPayload("workflow-result")),
+			)}},
+			historyMatcher:         PartialHistoryMatcher(`WorkflowExecutionCompleted`),
+			expectedWorkflowOutput: ConvertToPayload("workflow-result"),
 		},
 		{
 			name: "ExecActivity/Noop",
@@ -239,7 +249,9 @@ func TestKitchenSink(t *testing.T) {
 									WorkflowType: "kitchenSink",
 									Input: []*common.Payload{
 										ConvertToPayload(&WorkflowInput{
-											InitialActions: ListActionSet(NewEmptyReturnResultAction()),
+											InitialActions: ListActionSet(
+												NewReturnResultAction(ConvertToPayload("child-result")),
+											),
 										})},
 								},
 							},
@@ -960,6 +972,7 @@ func TestKitchenSink(t *testing.T) {
 							Input: &NexusOperationRequest{
 								Action: &NexusOperationRequest_Echo{Echo: "hello"},
 							},
+							ExpectedOutput: ConvertToPayload("hello"),
 							AwaitableChoice: &AwaitableChoice{
 								Condition: &AwaitableChoice_WaitFinish{
 									WaitFinish: &emptypb.Empty{},
@@ -1000,7 +1013,7 @@ func TestKitchenSink(t *testing.T) {
 			expectedWorkflowError:   `goodbye`,
 		},
 		{
-			name: "NexusOperation/Async",
+			name: "NexusOperation/Async/StartWorkflow",
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1012,7 +1025,7 @@ func TestKitchenSink(t *testing.T) {
 											WorkflowInput: &WorkflowInput{
 												InitialActions: ListActionSet(
 													NewTimerAction(1),
-													NewEmptyReturnResultAction(),
+													NewReturnResultAction(ConvertToPayload("nexus-workflow-result")),
 												),
 											},
 										},
@@ -1020,6 +1033,7 @@ func TestKitchenSink(t *testing.T) {
 									},
 								},
 							},
+							ExpectedOutput: ConvertToPayload("nexus-workflow-result"),
 							AwaitableChoice: &AwaitableChoice{
 								Condition: &AwaitableChoice_WaitFinish{
 									WaitFinish: &emptypb.Empty{},
@@ -1149,6 +1163,7 @@ func TestKitchenSink(t *testing.T) {
 											Input: &NexusOperationRequest{
 												Action: &NexusOperationRequest_Echo{Echo: "hello"},
 											},
+											ExpectedOutput: ConvertToPayload("hello"),
 										},
 									},
 								},
@@ -1265,13 +1280,74 @@ func TestKitchenSink(t *testing.T) {
 				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sws-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED"}}}]}`),
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
+		// Repeating a completed update ID makes StartUpdateWorkflow return synchronously.
+		{
+			name: "NexusOperation/Sync/Update",
+			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							StartOptions: &NexusWorkflowStartOptions{
+								WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
+									NewAwaitWorkflowStateAction("status", "done"),
+									NewEmptyReturnResultAction(),
+								)},
+							},
+							Action: &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+						}},
+					},
+					AwaitableChoice: &AwaitableChoice{Condition: &AwaitableChoice_WaitStarted{WaitStarted: &emptypb.Empty{}}},
+				}),
+				// Run the update and record its result by ID.
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
+										NewTimerAction(time.Millisecond),
+										NewSetWorkflowStateAction("status", "done"),
+										NewReturnResultAction(ConvertToPayload("nexus-sync-update-target")),
+									)},
+								}},
+								UpdateId: "nexus-sync-update",
+							}},
+						}},
+					},
+					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
+				}),
+				// Reuse the completed update result by ID.
+				NexusOperation(&ExecuteNexusOperation{
+					Input: &NexusOperationRequest{
+						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
+							WorkflowId: "nexus-sync-update-target",
+							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
+								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
+									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet()},
+								}},
+								UpdateId: "nexus-sync-update",
+							}},
+						}},
+					},
+					ExpectedOutput: ConvertToPayload("nexus-sync-update-target"),
+				}),
+				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
+			)}},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
+				NexusOperationCompleted
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
 		{
 			name: "NexusOperation/Async/Update",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-							WorkflowId: "nexus-update-target",
+							WorkflowId: "nexus-async-update-target",
 							StartOptions: &NexusWorkflowStartOptions{
 								WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 									NewAwaitWorkflowStateAction("status", "done"),
@@ -1286,28 +1362,24 @@ func TestKitchenSink(t *testing.T) {
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
 						Action: &NexusOperationRequest_WorkflowAction{WorkflowAction: &NexusWorkflowAction{
-							WorkflowId: "nexus-update-target",
+							WorkflowId: "nexus-async-update-target",
 							Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 								Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 									Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
 										NewTimerAction(time.Millisecond),
 										NewSetWorkflowStateAction("status", "done"),
-										// The update handler's return value is itself encoded by the data converter
-										// before the server forwards it to the Nexus completion callback, so the value
-										// is wrapped twice here: the caller decodes the outer layer and compares the
-										// inner Payload against ExecuteNexusOperation.expected_output.
-										NewReturnResultAction(ConvertToPayload(ConvertToPayload("nexus-update-target"))),
+										NewReturnResultAction(ConvertToPayload("nexus-async-update-target")),
 									)},
 								}},
 							}},
 						}},
 					},
-					ExpectedOutput: ConvertToPayload(ConvertToPayload("nexus-update-target")),
+					ExpectedOutput: ConvertToPayload("nexus-async-update-target"),
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
 			historyMatcher: PartialHistoryMatcher(`
-				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
+				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-async-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
 				NexusOperationCompleted`),
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
@@ -1333,11 +1405,14 @@ func TestKitchenSink(t *testing.T) {
 			t.Parallel()
 
 			// Ensure the workflow completes by appending a return action at the end.
+			// Cases that check the workflow output supply their own return action so it can return the expected value.
 			input := tc.testInput
 			if input.WorkflowInput == nil {
 				input.WorkflowInput = &WorkflowInput{}
 			}
-			input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+			if tc.expectedWorkflowOutput == nil {
+				input.WorkflowInput.InitialActions = append(input.WorkflowInput.InitialActions, ListActionSet(NewEmptyReturnResultAction())...)
+			}
 
 			for _, sdk := range enabledSDKs {
 				env := testEnvironments[sdk]
@@ -1529,6 +1604,11 @@ func testSupportedFeature(
 		require.Truef(t, hasWorkflowFailed, "SDK %s workflow should have WorkflowExecutionFailed event in history", sdk)
 	} else {
 		require.NoError(t, execErr, "executor failed")
+	}
+	if tc.expectedWorkflowOutput != nil {
+		var result converter.RawValue
+		require.NoError(t, env.TemporalClient().GetWorkflow(t.Context(), scenarioInfo.RunID, "").Get(t.Context(), &result))
+		require.Equal(t, tc.expectedWorkflowOutput, result.Payload())
 	}
 
 	require.NoError(t, historyErr, "failed to get workflow history")

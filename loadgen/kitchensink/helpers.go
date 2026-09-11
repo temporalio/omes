@@ -175,7 +175,7 @@ func ResourceConsumingActivity(bytesToAllocate uint64, cpuYieldEveryNIters uint3
 }
 
 func NewEmptyReturnResultAction() *Action {
-	return NewReturnResultAction(&common.Payload{})
+	return NewReturnResultAction(ConvertToPayload(nil))
 }
 
 func NewReturnResultAction(payload *common.Payload) *Action {
@@ -457,4 +457,11 @@ func ConvertToPayload(newInput any) *common.Payload {
 		panic(fmt.Sprintf("failed to convert input %T to payload: %v", newInput, err))
 	}
 	return payload
+}
+
+func CheckExpectedOutput(expected *common.Payload, actual converter.RawValue) error {
+	if !expected.Equal(actual.Payload()) {
+		return fmt.Errorf("expected output %v, got %v", expected, actual.Payload())
+	}
+	return nil
 }

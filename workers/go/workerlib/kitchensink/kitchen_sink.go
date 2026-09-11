@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/temporalnexus"
 	"go.temporal.io/sdk/workflow"
@@ -47,7 +48,7 @@ type KSWorkflowState struct {
 	pendingActions []workflow.Future
 }
 
-func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (*common.Payload, error) {
+func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput) (converter.RawValue, error) {
 	workflow.GetLogger(ctx).Debug("Started kitchen sink workflow")
 
 	state := KSWorkflowState{
@@ -70,7 +71,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			return state.workflowState, nil
 		})
 	if queryErr != nil {
-		return nil, queryErr
+		return converter.RawValue{}, queryErr
 	}
 
 	// Setup update handler.
@@ -78,7 +79,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 		func(ctx workflow.Context, actions *kitchensink.DoActionsUpdate) (rval any, err error) {
 			payload, err := state.handleActionSet(ctx, actions.GetDoActions())
 			if payload != nil {
-				return payload, err
+				return converter.NewRawValue(payload), err
 			}
 			return state.workflowState, err
 		}, workflow.UpdateHandlerOptions{
@@ -90,7 +91,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			},
 		})
 	if updateErr != nil {
-		return nil, updateErr
+		return converter.RawValue{}, updateErr
 	}
 
 	// Setup signal handler.
@@ -131,7 +132,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 				workflow.GetLogger(ctx).Debug("Got return/error from initial actions", "ret", ret, "err", err, "actionSet", actionSet)
 				// If there's an error, return immediately without waiting for signals
 				if err != nil {
-					return ret, err
+					return converter.RawValue{}, err
 				}
 				// Otherwise, store the return value to use later
 				initialRetOrErr = &ReturnOrErr{ret, err}
@@ -156,7 +157,7 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 
 	// If there's an error, return immediately without waiting for signals
 	if retOrErr.err != nil {
-		return retOrErr.retme, retOrErr.err
+		return converter.RawValue{}, retOrErr.err
 	}
 
 	// Only wait for signals if we're expecting any
@@ -184,11 +185,11 @@ func KitchenSinkWorkflow(ctx workflow.Context, params *kitchensink.WorkflowInput
 			if !ok {
 				err = fmt.Errorf("timeout waiting for all signals before deadline, missing signals: %v, err: %w", missingSignals, err)
 			}
-			return nil, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
+			return converter.RawValue{}, fmt.Errorf("failed waiting for signals, missing signals: %v, err: %w", missingSignals, err)
 		}
 	}
 
-	return retOrErr.retme, nil
+	return converter.NewRawValue(retOrErr.retme), nil
 }
 
 func (ws *KSWorkflowState) handleActionSet(
@@ -472,14 +473,11 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 		},
 		func(ctx workflow.Context, fut workflow.NexusOperationFuture) error {
 			if expectedOutput := nexusOp.GetExpectedOutput(); expectedOutput != nil {
-				var result common.Payload
+				var result converter.RawValue
 				if err := fut.Get(ctx, &result); err != nil {
 					return err
 				}
-				if !expectedOutput.Equal(&result) {
-					return fmt.Errorf("expected output %v, got %v", expectedOutput, &result)
-				}
-				return nil
+				return kitchensink.CheckExpectedOutput(expectedOutput, result)
 			}
 			return fut.Get(ctx, nil)
 		})
@@ -609,7 +607,7 @@ type ReturnOrErr struct {
 
 // KitchenSinkNexusOperation dispatches kitchen sink Nexus actions.
 var KitchenSinkNexusOperation = temporalnexus.MustNewTemporalOperation(
-	temporalnexus.TemporalOperationOptions[*kitchensink.NexusOperationRequest, *common.Payload]{
+	temporalnexus.TemporalOperationOptions[*kitchensink.NexusOperationRequest, converter.RawValue]{
 		Name:  kitchensink.KitchenSinkNexusOperationName,
 		Start: startNexusOperation,
 	},
@@ -620,11 +618,12 @@ func startNexusOperation(
 	nc temporalnexus.NexusClient,
 	input *kitchensink.NexusOperationRequest,
 	opts temporalnexus.StartTemporalOperationOptions,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
 	input = cmp.Or(input, &kitchensink.NexusOperationRequest{})
 	switch action := input.GetAction().(type) {
 	case *kitchensink.NexusOperationRequest_Echo:
-		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(action.Echo)), nil
+		return temporalnexus.NewSyncResult(
+			converter.NewRawValue(kitchensink.ConvertToPayload(action.Echo))), nil
 	case *kitchensink.NexusOperationRequest_WorkflowAction:
 		workflowAction := cmp.Or(action.WorkflowAction, &kitchensink.NexusWorkflowAction{})
 		switch workflowAction.GetAction().(type) {
@@ -638,7 +637,7 @@ func startNexusOperation(
 	case *kitchensink.NexusOperationRequest_StartActivity:
 		return startStandaloneActivityNexusOperation(ctx, nc, action.StartActivity, opts)
 	}
-	return temporalnexus.TemporalOperationResult[*common.Payload]{}, nexus.HandlerErrorf(
+	return temporalnexus.TemporalOperationResult[converter.RawValue]{}, nexus.HandlerErrorf(
 		nexus.HandlerErrorTypeBadRequest, "Nexus operation request has no supported action set")
 }
 
@@ -647,9 +646,9 @@ func startWorkflowNexusOperation(
 	nc temporalnexus.NexusClient,
 	input *kitchensink.NexusWorkflowAction,
 	opts temporalnexus.StartTemporalOperationOptions,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
 	startOptions := cmp.Or(input.GetStartOptions(), &kitchensink.NexusWorkflowStartOptions{})
-	return temporalnexus.StartUntypedWorkflow[*common.Payload](
+	return temporalnexus.StartUntypedWorkflow[converter.RawValue](
 		ctx,
 		nc,
 		client.StartWorkflowOptions{
@@ -666,8 +665,8 @@ func startWorkflowNexusOperation(
 func signalWorkflowNexusOperation(
 	ctx context.Context,
 	input *kitchensink.NexusWorkflowAction,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
-	var result temporalnexus.TemporalOperationResult[*common.Payload]
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
+	var result temporalnexus.TemporalOperationResult[converter.RawValue]
 	if input.GetWorkflowId() == "" {
 		return result, nexus.HandlerErrorf(
 			nexus.HandlerErrorTypeBadRequest, "signal target must include a workflow ID")
@@ -697,7 +696,8 @@ func signalWorkflowNexusOperation(
 		if err != nil {
 			return result, err
 		}
-		return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(run.GetID())), nil
+		return temporalnexus.NewSyncResult(
+			converter.NewRawValue(kitchensink.ConvertToPayload(run.GetID()))), nil
 	}
 
 	if err = temporalnexus.GetClient(ctx).SignalWorkflow(
@@ -710,15 +710,16 @@ func signalWorkflowNexusOperation(
 		return result, err
 	}
 
-	return temporalnexus.NewSyncResult(kitchensink.ConvertToPayload(input.GetWorkflowId())), nil
+	return temporalnexus.NewSyncResult(
+		converter.NewRawValue(kitchensink.ConvertToPayload(input.GetWorkflowId()))), nil
 }
 
 func updateWorkflowNexusOperation(
 	ctx context.Context,
 	nc temporalnexus.NexusClient,
 	input *kitchensink.NexusWorkflowAction,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
-	var result temporalnexus.TemporalOperationResult[*common.Payload]
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
+	var result temporalnexus.TemporalOperationResult[converter.RawValue]
 	if input.GetWorkflowId() == "" {
 		return result, nexus.HandlerErrorf(
 			nexus.HandlerErrorTypeBadRequest, "update target must include a workflow ID")
@@ -733,7 +734,7 @@ func updateWorkflowNexusOperation(
 		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 	}
 
-	return temporalnexus.StartUpdateWorkflow[*common.Payload](ctx, nc, client.UpdateWorkflowOptions{
+	return temporalnexus.StartUpdateWorkflow[converter.RawValue](ctx, nc, client.UpdateWorkflowOptions{
 		WorkflowID: input.GetWorkflowId(),
 		RunID:      input.GetRunId(),
 		// When UpdateID is empty, StartUpdateWorkflow uses the Nexus request ID so
@@ -755,7 +756,7 @@ func startStandaloneActivityNexusOperation(
 	nc temporalnexus.NexusClient,
 	input *kitchensink.ExecuteActivityAction,
 	opts temporalnexus.StartTemporalOperationOptions,
-) (temporalnexus.TemporalOperationResult[*common.Payload], error) {
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
 	input = cmp.Or(input, &kitchensink.ExecuteActivityAction{})
 	activityOpts := client.StartActivityOptions{
 		// Reuse the Nexus request ID so retries attach to the original activity.
@@ -770,7 +771,7 @@ func startStandaloneActivityNexusOperation(
 	}
 
 	activityType, args := kitchensink.ActivityNameAndArgs(input)
-	res, err := temporalnexus.StartUntypedActivity[*common.Payload](ctx, nc, activityOpts, activityType, args...)
+	res, err := temporalnexus.StartUntypedActivity[converter.RawValue](ctx, nc, activityOpts, activityType, args...)
 	if err != nil {
 		// Treat namespace handover as retryable.
 		var notActive *serviceerror.NamespaceNotActive
