@@ -460,6 +460,17 @@ type vsConfig struct {
 	// WriterConcurrency is the number of goroutines starting workflows in parallel.
 	// See runWriter for why this must exceed 1 to reach the higher presets' WfRPS.
 	WriterConcurrency int
+	// WorkflowTimeout overrides WorkflowExecutionTimeout for every workflow the writer
+	// starts. Zero means derive it from the CSA update count via vsComputeTimeout.
+	//
+	// The derived value is a function of how much work the workflow does on the upsert
+	// path, which stops being meaningful under CSAAtStart: there the attributes are
+	// attached at start and the workflow may do nothing at all, so the derived value
+	// collapses to vsComputeTimeout's 5s floor. On a loaded cell, workflow-task dispatch
+	// latency exceeds 5s, so every workflow expires before a worker reaches it and the
+	// corpus comes out entirely TimedOut. Set this to give workflows a budget that
+	// reflects dispatch latency rather than update count.
+	WorkflowTimeout time.Duration
 	// CSAAtStart attaches one value for every CSA in the preset to StartWorkflowOptions,
 	// so the visibility document carries them from the moment it is created.
 	//
@@ -558,7 +569,7 @@ var _ loadgen.Configurable = (*visibilityStressExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Visibility store stress test.\n" +
-			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, namespaceCount, createNamespaces, retention, cleanup,\n" +
+			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, workflowTimeout, namespaceCount, createNamespaces, retention, cleanup,\n" +
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
@@ -582,6 +593,17 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	cfg.VocabZipfSkew = info.ScenarioOptionFloat("vocabZipfSkew", vsDefaultVocabZipfSkew)
 	if cfg.VocabZipfSkew <= 1.0 {
 		return fmt.Errorf("vocabZipfSkew must be > 1.0, got %.2f", cfg.VocabZipfSkew)
+	}
+
+	if v := info.ScenarioOptions["workflowTimeout"]; v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("invalid workflowTimeout %q: %w", v, err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("workflowTimeout must be positive, got %v", d)
+		}
+		cfg.WorkflowTimeout = d
 	}
 
 	retentionStr := info.ScenarioOptionString("retention", "168h")
@@ -920,6 +942,22 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	info.Logger.Infof("Task queue: %s", e.taskQueue)
 	info.Logger.Infof("CSAs: %d total, csaAtStart=%v", len(e.config.CSADefs), e.config.CSAAtStart)
 
+	if e.config.WorkflowTimeout > 0 {
+		info.Logger.Infof("Workflow timeout: %v (explicit)", e.config.WorkflowTimeout)
+		// The workflow sleeps UpdateDelay between consecutive update groups, so a budget
+		// below that guarantees workflows that DO get dispatched still time out mid-run.
+		if l := e.config.Load; l != nil && l.UpdatesPerWF > 1 {
+			need := time.Duration((l.UpdatesPerWF - 1) * float64(l.UpdateDelay))
+			if e.config.WorkflowTimeout < need {
+				info.Logger.Warnf(
+					"workflowTimeout=%v is below the %v of sleeps implied by updatesPerWF=%.1f and updateDelay=%v; dispatched workflows will time out mid-run",
+					e.config.WorkflowTimeout, need, l.UpdatesPerWF, l.UpdateDelay)
+			}
+		}
+	} else {
+		info.Logger.Infof("Workflow timeout: derived from updatesPerWF (min 5s)")
+	}
+
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
 			l.WfRPS, l.UpdatesPerWF, l.WfRPS*l.UpdatesPerWF, l.DeleteRPS)
@@ -1039,7 +1077,7 @@ func (e *visibilityStressExecutor) runWriterLoop(
 		opts := client.StartWorkflowOptions{
 			ID:                       wfID,
 			TaskQueue:                e.taskQueue,
-			WorkflowExecutionTimeout: vsComputeTimeout(len(input.CSAUpdates)),
+			WorkflowExecutionTimeout: e.workflowTimeout(len(input.CSAUpdates)),
 		}
 
 		if e.config.CSAAtStart {
@@ -1545,6 +1583,15 @@ func (e *visibilityStressExecutor) buildWorkflowInput(rng *vsRand) *vstypes.Visi
 		ShouldFail:    shouldFail,
 		ShouldTimeout: shouldTimeout,
 	}
+}
+
+// workflowTimeout returns the execution timeout for a single workflow: the explicit
+// workflowTimeout option when set, otherwise the value derived from its CSA update count.
+func (e *visibilityStressExecutor) workflowTimeout(numCSAUpdates int) time.Duration {
+	if e.config.WorkflowTimeout > 0 {
+		return e.config.WorkflowTimeout
+	}
+	return vsComputeTimeout(numCSAUpdates)
 }
 
 func vsComputeTimeout(numCSAUpdates int) time.Duration {

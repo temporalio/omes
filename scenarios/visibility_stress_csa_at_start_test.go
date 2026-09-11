@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"testing"
+	"time"
 
 	"go.temporal.io/api/enums/v1"
 )
@@ -50,5 +51,30 @@ func TestStartSearchAttribute_RejectsWrongValueType(t *testing.T) {
 	}
 	if _, err := startSearchAttribute(d, "not-a-number"); err == nil {
 		t.Error("expected an error for a string value on an Int CSA, got nil")
+	}
+}
+
+// workflowTimeout must override the derived value, and fall back to it when unset.
+// The fallback matters: vsComputeTimeout's 5s floor is what every existing run relies on.
+func TestWorkflowTimeout_OverrideAndFallback(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		explicit time.Duration
+		updates  int
+		want     time.Duration
+	}{
+		{"unset falls back to 5s floor", 0, 0, 5 * time.Second},
+		{"unset derives from updates", 0, 10, 20 * time.Second},
+		{"explicit overrides the floor", 90 * time.Second, 0, 90 * time.Second},
+		{"explicit overrides the derived value", 90 * time.Second, 10, 90 * time.Second},
+		{"explicit may be below the floor", 2 * time.Second, 0, 2 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := &visibilityStressExecutor{config: &vsConfig{WorkflowTimeout: tc.explicit}}
+			if got := e.workflowTimeout(tc.updates); got != tc.want {
+				t.Errorf("workflowTimeout(%d) with explicit=%v: got %v, want %v",
+					tc.updates, tc.explicit, got, tc.want)
+			}
+		})
 	}
 }
