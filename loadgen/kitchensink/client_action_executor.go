@@ -222,8 +222,8 @@ func (e *ClientActionsExecutor) executeStandaloneNexusOperation(ctx context.Cont
 		if err := handle.Get(ctx, &result); err != nil {
 			return fmt.Errorf("get standalone Nexus operation: %w", err)
 		}
-		if !expectedOutput.Equal(result.Payload()) {
-			return fmt.Errorf("expected standalone Nexus operation output %v, got %v", expectedOutput, result.Payload())
+		if err := CheckExpectedOutput(expectedOutput, result); err != nil {
+			return fmt.Errorf("standalone Nexus operation: %w", err)
 		}
 		return nil
 	}

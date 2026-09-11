@@ -477,10 +477,7 @@ func handleNexusOperation(ctx workflow.Context, nexusOp *kitchensink.ExecuteNexu
 				if err := fut.Get(ctx, &result); err != nil {
 					return err
 				}
-				if !expectedOutput.Equal(result.Payload()) {
-					return fmt.Errorf("expected output %v, got %v", expectedOutput, result.Payload())
-				}
-				return nil
+				return kitchensink.CheckExpectedOutput(expectedOutput, result)
 			}
 			return fut.Get(ctx, nil)
 		})

@@ -458,3 +458,10 @@ func ConvertToPayload(newInput any) *common.Payload {
 	}
 	return payload
 }
+
+func CheckExpectedOutput(expected *common.Payload, actual converter.RawValue) error {
+	if !expected.Equal(actual.Payload()) {
+		return fmt.Errorf("expected output %v, got %v", expected, actual.Payload())
+	}
+	return nil
+}

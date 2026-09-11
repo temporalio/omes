@@ -1,5 +1,6 @@
 package io.temporal.omes.workerlib.kitchensink;
 
+import io.temporal.common.converter.RawValue;
 import io.temporal.omes.KitchenSink;
 import io.temporal.workflow.*;
 
@@ -7,7 +8,7 @@ import io.temporal.workflow.*;
 public interface KitchenSinkWorkflow {
 
   @WorkflowMethod(name = "kitchenSink")
-  Object execute(KitchenSink.WorkflowInput input);
+  RawValue execute(KitchenSink.WorkflowInput input);
 
   @SignalMethod(name = "do_actions_signal")
   void doActionsSignal(KitchenSink.DoSignal.DoSignalActions signalInput);
