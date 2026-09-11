@@ -72,7 +72,7 @@ type testCase struct {
 	testInput               *TestInput
 	historyMatcher          HistoryMatcher
 	expectedUnsupportedErrs map[clioptions.Language]string
-	expectedExecutorError   string
+	expectedRunError        string
 	expectedWorkflowError   string
 }
 
@@ -164,8 +164,8 @@ func TestKitchenSink(t *testing.T) {
 				)},
 				ExpectedOutput: ConvertToPayload("unexpected-result"),
 			},
-			historyMatcher:        PartialHistoryMatcher(`WorkflowExecutionCompleted`),
-			expectedExecutorError: "expected output",
+			historyMatcher:   PartialHistoryMatcher(`WorkflowExecutionCompleted`),
+			expectedRunError: "expected output",
 		},
 		{
 			name: "ExecActivity/Noop",
@@ -1593,8 +1593,8 @@ func testSupportedFeature(
 	}
 
 	// Check if workflow failure is expected
-	if tc.expectedExecutorError != "" {
-		require.ErrorContains(t, execErr, tc.expectedExecutorError, "executor should fail")
+	if tc.expectedRunError != "" {
+		require.ErrorContains(t, execErr, tc.expectedRunError, "run should fail")
 	} else if tc.expectedWorkflowError != "" {
 		require.Errorf(t, execErr, "SDK %s should fail with workflow error", sdk)
 		require.Containsf(t, strings.ToLower(execErr.Error()), strings.ToLower(tc.expectedWorkflowError),
