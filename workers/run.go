@@ -112,26 +112,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 	}
 
-	// Build command args
-	var args []string
-	if r.SdkOptions.Language == clioptions.LangPython {
-		// Python needs module name first
-		args = append(args, "main")
-	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
-		// Node also needs module
-		args = append(args, "./tslib/omes.js")
-	}
-	args = append(args, "--task-queue", r.TaskQueueName)
-	if r.TaskQueueIndexSuffixEnd > 0 {
-		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
-		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
-	}
-	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
-	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
-	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
-	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
-	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
+	args := r.workerArgs()
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
 	if err != nil {
@@ -206,6 +187,41 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 		}
 		return nil
 	}
+}
+
+// workerArgs assembles the argv handed to the prepared worker binary.
+//
+// Extracted from Run so the flag forwarding is testable without spawning a process: the
+// prefix passed to each passthrough call is the whole contract between this process and
+// the child, and getting one wrong fails at worker startup rather than at build time.
+func (r *Runner) workerArgs() []string {
+	var args []string
+	if r.SdkOptions.Language == clioptions.LangPython {
+		// Python needs module name first
+		args = append(args, "main")
+	} else if r.SdkOptions.Language == clioptions.LangTypeScript {
+		// Node also needs module
+		args = append(args, "./tslib/omes.js")
+	}
+	args = append(args, "--task-queue", r.TaskQueueName)
+	if r.TaskQueueIndexSuffixEnd > 0 {
+		args = append(args, "--task-queue-suffix-index-start", strconv.Itoa(r.TaskQueueIndexSuffixStart))
+		args = append(args, "--task-queue-suffix-index-end", strconv.Itoa(r.TaskQueueIndexSuffixEnd))
+	}
+	// Note: --language, --version, --scenario, --run-id are NOT passed to workers.
+	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
+	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
+	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
+	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	// WorkerOptions is NOT prefix-stripped, unlike MetricsOptions above. MetricsOptions.FlagSet
+	// takes the prefix as an argument, so the prefix is added on the way out and must be
+	// stripped on the way in. WorkerOptions.FlagSet bakes "worker-" into the flag names
+	// themselves, and the prepared worker registers that same flag set -- so stripping it
+	// here emitted --max-concurrent-workflow-pollers to a binary that only accepts
+	// --worker-max-concurrent-workflow-pollers, and the worker died with "unknown flag".
+	// Only --build-id survived, being the one name in that set without the prefix.
+	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "")...)
+	return args
 }
 
 func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
