@@ -133,7 +133,7 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<Raw
     } else if (action.returnError) {
       throw new ApplicationFailure(action.returnError.failure?.message);
     } else if (action.continueAsNew) {
-      await continueAsNew(action.continueAsNew.arguments![0]);
+      await continueAsNew(RawValue.fromPayload(Payload.create(action.continueAsNew.arguments![0])));
     } else if (action.timer) {
       const ms = numify(action.timer.milliseconds);
       const sleeper = () => sleep(ms);
@@ -149,7 +149,8 @@ export async function kitchenSink(input: WorkflowInput | undefined): Promise<Raw
       await handleAwaitableChoice(
         () => {
           return startChild(execChild.workflowType || 'kitchenSink', {
-            args: execChild.input ?? [],
+            args:
+              execChild.input?.map((input) => RawValue.fromPayload(Payload.create(input))) ?? [],
             // Do not set workflowId field if not supplied
             ...(execChild.workflowId && { workflowId: execChild.workflowId }),
             typedSearchAttributes: decodeTypedSearchAttributes(
