@@ -28,6 +28,7 @@ import (
 	"go.temporal.io/api/operatorservice/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -368,6 +369,81 @@ func randomCSAValue(c csaDef, rng *vsRand) any {
 	}
 }
 
+// buildStartSearchAttributes renders one value for every CSA in the preset as a typed
+// search-attribute update, for attachment to StartWorkflowOptions.
+//
+// The whole preset is covered rather than a random subset, because the point is that every
+// document in the corpus is answerable by every CSA filter class the querier can generate.
+// Values come from randomCSAValue, the same generator the upsert path uses, so the value
+// distributions the querier calibrates selMu against are unchanged.
+func buildStartSearchAttributes(defs []csaDef, rng *vsRand) (temporal.SearchAttributes, error) {
+	updates := make([]temporal.SearchAttributeUpdate, 0, len(defs))
+	for _, d := range defs {
+		u, err := startSearchAttribute(d, randomCSAValue(d, rng))
+		if err != nil {
+			return temporal.SearchAttributes{}, fmt.Errorf("CSA %q: %w", d.Name, err)
+		}
+		updates = append(updates, u)
+	}
+	return temporal.NewSearchAttributes(updates...), nil
+}
+
+// startSearchAttribute converts one generated CSA value into a typed update.
+//
+// This switches on csaDef.Type, where the worker-side equivalent has to switch on the name
+// prefix: the worker receives values as JSON and has lost the type, while the executor still
+// holds the csaDef that produced them. Keeping the executor on the declared type means the
+// two sides cannot disagree about a CSA whose name does not follow the VS_<Type>_<N> shape.
+func startSearchAttribute(c csaDef, val any) (temporal.SearchAttributeUpdate, error) {
+	switch c.Type {
+	case csaTypeInt:
+		// randomCSAValue yields float64 for Int so that the value survives the JSON round
+		// trip on the upsert path unchanged; narrow it here.
+		f, ok := val.(float64)
+		if !ok {
+			return nil, fmt.Errorf("expected float64 for Int CSA, got %T", val)
+		}
+		return temporal.NewSearchAttributeKeyInt64(c.Name).ValueSet(int64(f)), nil
+	case csaTypeKeyword:
+		sv, ok := val.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string for Keyword CSA, got %T", val)
+		}
+		return temporal.NewSearchAttributeKeyKeyword(c.Name).ValueSet(sv), nil
+	case csaTypeBool:
+		b, ok := val.(bool)
+		if !ok {
+			return nil, fmt.Errorf("expected bool for Bool CSA, got %T", val)
+		}
+		return temporal.NewSearchAttributeKeyBool(c.Name).ValueSet(b), nil
+	case csaTypeDouble:
+		f, ok := val.(float64)
+		if !ok {
+			return nil, fmt.Errorf("expected float64 for Double CSA, got %T", val)
+		}
+		return temporal.NewSearchAttributeKeyFloat64(c.Name).ValueSet(f), nil
+	case csaTypeText:
+		// Text maps to the SDK's String key, matching the worker-side upsert path.
+		sv, ok := val.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string for Text CSA, got %T", val)
+		}
+		return temporal.NewSearchAttributeKeyString(c.Name).ValueSet(sv), nil
+	case csaTypeDatetime:
+		sv, ok := val.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string (RFC3339) for Datetime CSA, got %T", val)
+		}
+		t, err := time.Parse(time.RFC3339, sv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Datetime CSA value %q: %w", sv, err)
+		}
+		return temporal.NewSearchAttributeKeyTime(c.Name).ValueSet(t), nil
+	default:
+		return nil, fmt.Errorf("unsupported CSA type %v", c.Type)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -384,6 +460,16 @@ type vsConfig struct {
 	// WriterConcurrency is the number of goroutines starting workflows in parallel.
 	// See runWriter for why this must exceed 1 to reach the higher presets' WfRPS.
 	WriterConcurrency int
+	// CSAAtStart attaches one value for every CSA in the preset to StartWorkflowOptions,
+	// so the visibility document carries them from the moment it is created.
+	//
+	// Without this, CSAs reach a document only via UpsertTypedSearchAttributes inside the
+	// workflow body, which means a workflow that is never dispatched produces a document
+	// with system attributes and nothing else. That is fine for load generation and fatal
+	// for corpus building: a corpus whose documents have no CSAs cannot serve any of the
+	// querier's CSA filter classes, and selMu's selectivity calibration has nothing to
+	// select on. It is off by default because turning it on changes what a start costs.
+	CSAAtStart bool
 	// VocabZipfSkew is the Zipf exponent for write-side vocabulary draws. Lives on
 	// the config rather than the load preset because the querier's vsRand needs a
 	// valid value even in read-only mode, where Load is nil.
@@ -472,7 +558,7 @@ var _ loadgen.Configurable = (*visibilityStressExecutor)(nil)
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Visibility store stress test.\n" +
-			"Options: loadPreset, queryPreset, csaPreset, namespaceCount, createNamespaces, retention, cleanup,\n" +
+			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, namespaceCount, createNamespaces, retention, cleanup,\n" +
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
@@ -492,6 +578,7 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		DeleteNamespaces: info.ScenarioOptionBool("deleteNamespaces", false),
 	}
 
+	cfg.CSAAtStart = info.ScenarioOptionBool("csaAtStart", false)
 	cfg.VocabZipfSkew = info.ScenarioOptionFloat("vocabZipfSkew", vsDefaultVocabZipfSkew)
 	if cfg.VocabZipfSkew <= 1.0 {
 		return fmt.Errorf("vocabZipfSkew must be > 1.0, got %.2f", cfg.VocabZipfSkew)
@@ -831,7 +918,7 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	info.Logger.Infof("Mode: %s", mode)
 	info.Logger.Infof("Namespaces: %v", e.namespaces)
 	info.Logger.Infof("Task queue: %s", e.taskQueue)
-	info.Logger.Infof("CSAs: %d total", len(e.config.CSADefs))
+	info.Logger.Infof("CSAs: %d total, csaAtStart=%v", len(e.config.CSADefs), e.config.CSAAtStart)
 
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
@@ -953,6 +1040,19 @@ func (e *visibilityStressExecutor) runWriterLoop(
 			ID:                       wfID,
 			TaskQueue:                e.taskQueue,
 			WorkflowExecutionTimeout: vsComputeTimeout(len(input.CSAUpdates)),
+		}
+
+		if e.config.CSAAtStart {
+			sa, err := buildStartSearchAttributes(e.config.CSADefs, rng)
+			if err != nil {
+				// A malformed CSA definition is a configuration fault, not a transient
+				// one, so it would recur on every iteration; count it and move on rather
+				// than spinning silently.
+				e.totalErrors.Add(1)
+				info.Logger.Warnf("Failed to build start search attributes: %v", err)
+				continue
+			}
+			opts.TypedSearchAttributes = sa
 		}
 
 		// Fire and forget.

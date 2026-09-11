@@ -27,3 +27,6 @@ workers/*/prepared/
 tsconfig.tsbuildinfo
 
 temporal-omes
+
+.DS_Store
+cmd/cmd
