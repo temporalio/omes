@@ -70,11 +70,17 @@ These apply to every scenario and override its defaults:
 | `--max-concurrent` | Max iterations running at once. |
 | `--max-iterations-per-second` | Rate limit on starting iterations (0 = unlimited). |
 | `--max-iteration-attempts` | Attempts per iteration (default 1). |
+| `--iteration-failure-policy` | `fail-fast` (default) stops on the first terminal failure; `continue` records failures and keeps generating load. |
 | `--timeout` | Hard stop; cancels in-flight iterations and exits non-zero. |
 
 If you set neither `--iterations` nor `--duration`, the scenario's own default applies — and most
 scenarios declare none, in which case omes's default does. `list-scenarios` states which is the case for
 each scenario.
+
+Iteration retries and the terminal-failure policy are independent. `--max-iteration-attempts` controls
+how many times one logical iteration may execute. With the default `fail-fast` policy, exhausting those
+attempts stops the run and exits non-zero. The `continue` policy logs the terminal failure, keeps starting
+load, and emits a warning summary before exiting zero if the run otherwise completes.
 
 ### 2. Per-scenario options (`--option key=value`)
 

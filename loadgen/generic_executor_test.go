@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type iterationTracker struct {
@@ -309,10 +312,13 @@ func TestRunContinueOnIterationFailure(t *testing.T) {
 			},
 		)
 
-		// Every iteration runs (tolerated failures don't abort), but the verdict is
-		// unchanged: the run still fails because iterations failed.
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "3 of 6 iterations failed")
+		// Every iteration runs (tolerated failures don't abort), while library
+		// callers still receive a structured degraded-run verdict.
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		require.Equal(t, int64(6), failures.Attempted)
+		require.Equal(t, int64(3), failures.Succeeded)
+		require.Equal(t, int64(3), failures.Failed)
 		mu.Lock()
 		defer mu.Unlock()
 		require.ElementsMatch(t, []int{1, 3, 5}, completed)
@@ -349,6 +355,64 @@ func TestRunReportsNonCancellationFailureAfterCancellation(t *testing.T) {
 		default:
 		}
 		require.True(t, reported, "non-cancellation error should be reported as a failure")
+	})
+}
+
+func TestRunContinueOnIterationFailureDuration(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var attempts atomic.Int64
+		err := execute(&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				time.Sleep(10 * time.Millisecond)
+				attempts.Add(1)
+				if run.Iteration%2 == 0 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			}},
+			RunConfiguration{
+				Duration:                   50 * time.Millisecond,
+				MaxConcurrent:              1,
+				ContinueOnIterationFailure: true,
+			},
+		)
+
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		require.Equal(t, attempts.Load(), failures.Attempted)
+		require.Positive(t, failures.Succeeded)
+		require.Positive(t, failures.Failed)
+	})
+}
+
+func TestRunContinueOnIterationFailureLogsWarning(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		core, logs := observer.New(zapcore.DebugLevel)
+		err := (&GenericExecutor{
+			Execute: func(ctx context.Context, run *Run) error {
+				if run.Iteration == 2 {
+					return errors.New("deliberate fail from test")
+				}
+				return nil
+			},
+		}).Run(context.Background(), ScenarioInfo{
+			MetricsHandler: client.MetricsNopHandler,
+			Logger:         zap.New(core).Sugar(),
+			Configuration: RunConfiguration{
+				Iterations:                 2,
+				MaxConcurrent:              1,
+				ContinueOnIterationFailure: true,
+			},
+		})
+
+		var failures *IterationFailuresError
+		require.ErrorAs(t, err, &failures)
+		entries := logs.FilterMessage("Run completed with iteration failures").All()
+		require.Len(t, entries, 1)
+		fields := entries[0].ContextMap()
+		require.Equal(t, int64(2), fields["attempted"])
+		require.Equal(t, int64(1), fields["succeeded"])
+		require.Equal(t, int64(1), fields["failed"])
 	})
 }
 

@@ -218,8 +218,9 @@ func (g *genericRun) Run(ctx context.Context) error {
 			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
 		}
 	}
+	elapsed := time.Since(startTime)
 	if runErr != nil {
-		return fmt.Errorf("run finished with error after %v: %w", time.Since(startTime), runErr)
+		return fmt.Errorf("run finished with error after %v: %w", elapsed, runErr)
 	}
 	// ContinueOnIterationFailure changed only when the run stops (it ran to
 	// completion instead of aborting on the first failure); the verdict is
@@ -227,11 +228,20 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// outcomes were tallied into the snapshot, so the caller can read the
 	// success/failure counts and apply its own policy on top.
 	if failed := g.failed.Load(); failed > 0 {
-		completed := g.completed.Load()
-		g.logger.Infof("Run completed in %v: %d iterations succeeded, %d failed",
-			time.Since(startTime), completed, failed)
-		return fmt.Errorf("run completed with %d of %d iterations failed", failed, completed+failed)
+		succeeded := g.completed.Load()
+		g.logger.Warnw("Run completed with iteration failures",
+			"elapsed", elapsed,
+			"attempted", succeeded+failed,
+			"succeeded", succeeded,
+			"failed", failed,
+		)
+		return &IterationFailuresError{
+			Attempted: succeeded + failed,
+			Succeeded: succeeded,
+			Failed:    failed,
+			Elapsed:   elapsed,
+		}
 	}
-	g.logger.Infof("Run completed in %v", time.Since(startTime))
+	g.logger.Infof("Run completed in %v", elapsed)
 	return nil
 }
