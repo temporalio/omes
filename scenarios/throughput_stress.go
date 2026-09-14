@@ -1015,17 +1015,13 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 				Action: &NexusWorkflowAction_Update{Update: &DoUpdate{
 					Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{DoActions: SingleActionSet(
-							// The update handler's return value is itself encoded by the data converter
-							// before the server forwards it to the Nexus completion callback, so the value
-							// is wrapped twice here: the caller decodes the outer layer and compares the
-							// inner Payload against ExecuteNexusOperation.expected_output.
-							NewReturnResultAction(ConvertToPayload(ConvertToPayload(workflowID))),
+							NewReturnResultAction(ConvertToPayload(workflowID)),
 						)},
 					}},
 				}},
 			}},
 		},
-		ExpectedOutput: ConvertToPayload(ConvertToPayload(workflowID)),
+		ExpectedOutput: ConvertToPayload(workflowID),
 	})
 }
 

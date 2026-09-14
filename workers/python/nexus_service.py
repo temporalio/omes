@@ -16,9 +16,9 @@ from protos.kitchen_sink_pb2 import NexusOperationRequest, WorkflowInput
 
 @nexusrpc.service(name=KITCHEN_SINK_SERVICE_NAME)
 class KitchenSinkNexusService:
-    execute: nexusrpc.Operation[NexusOperationRequest, Payload] = nexusrpc.Operation(
-        name="execute"
-    )
+    execute: nexusrpc.Operation[
+        NexusOperationRequest, temporalio.common.RawValue
+    ] = nexusrpc.Operation(name="execute")
 
 
 @nexusrpc.handler.service_handler(service=KitchenSinkNexusService)
@@ -29,13 +29,15 @@ class KitchenSinkNexusServiceHandler:
         ctx: nexus.TemporalStartOperationContext,
         client: nexus.TemporalNexusClient,
         input: NexusOperationRequest,
-    ) -> nexus.TemporalOperationResult[Payload]:
+    ) -> nexus.TemporalOperationResult[temporalio.common.RawValue]:
         action = input.WhichOneof("action")
         if action == "echo":
             return nexus.TemporalOperationResult.sync(
-                Payload(
-                    metadata={"encoding": b"json/plain"},
-                    data=json.dumps(input.echo).encode(),
+                temporalio.common.RawValue(
+                    Payload(
+                        metadata={"encoding": b"json/plain"},
+                        data=json.dumps(input.echo).encode(),
+                    )
                 )
             )
         if action == "workflow_action":
