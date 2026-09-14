@@ -171,16 +171,18 @@ class DoQuery(_message.Message):
     def __init__(self, report_state: _Optional[_Union[_message_pb2.Payloads, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., failure_expected: bool = ...) -> None: ...
 
 class DoUpdate(_message.Message):
-    __slots__ = ("do_actions", "custom", "with_start", "failure_expected")
+    __slots__ = ("do_actions", "custom", "with_start", "update_id", "failure_expected")
     DO_ACTIONS_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
     WITH_START_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_ID_FIELD_NUMBER: _ClassVar[int]
     FAILURE_EXPECTED_FIELD_NUMBER: _ClassVar[int]
     do_actions: DoActionsUpdate
     custom: HandlerInvocation
     with_start: bool
+    update_id: str
     failure_expected: bool
-    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ..., failure_expected: bool = ...) -> None: ...
+    def __init__(self, do_actions: _Optional[_Union[DoActionsUpdate, _Mapping]] = ..., custom: _Optional[_Union[HandlerInvocation, _Mapping]] = ..., with_start: bool = ..., update_id: _Optional[str] = ..., failure_expected: bool = ...) -> None: ...
 
 class DoActionsUpdate(_message.Message):
     __slots__ = ("do_actions", "reject_me")

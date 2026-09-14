@@ -126,6 +126,7 @@ class ClientActionExecutor
       raise 'DoUpdate must have a recognizable variant'
     end
 
+    update_options = update.update_id.empty? ? {} : { id: update.update_id }
     begin
       if update.with_start
         start_op = Temporalio::Client::WithStartWorkflowOperation.new(
@@ -134,11 +135,12 @@ class ClientActionExecutor
         )
         @client.execute_update_with_start_workflow(
           update_name, *update_args,
-          start_workflow_operation: start_op
+          start_workflow_operation: start_op,
+          **update_options
         )
       else
         handle = @client.workflow_handle(@workflow_id)
-        handle.execute_update(update_name, *update_args)
+        handle.execute_update(update_name, *update_args, **update_options)
       end
     rescue StandardError
       raise unless update.failure_expected
