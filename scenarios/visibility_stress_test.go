@@ -1,6 +1,7 @@
 package scenarios
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strings"
@@ -8,10 +9,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
+	workflowservice "go.temporal.io/api/workflowservice/v1"
+	sdkclient "go.temporal.io/sdk/client"
+	sdkmocks "go.temporal.io/sdk/mocks"
 )
 
 // TestVisibilityStressConfigure tests the configuration/validation logic without
@@ -136,6 +141,91 @@ func TestVisibilityStressConfigure(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVisibilityStressQueryConcurrency(t *testing.T) {
+	t.Parallel()
+
+	configure := func(value string) (*visibilityStressExecutor, error) {
+		options := map[string]string{
+			"queryPreset": "heavy",
+			"csaPreset":   "medium",
+		}
+		if value != "" {
+			options["queryConcurrency"] = value
+		}
+		executor := &visibilityStressExecutor{}
+		err := executor.Configure(loadgen.ScenarioInfo{
+			Configuration:   loadgen.RunConfiguration{Duration: time.Minute},
+			ScenarioOptions: options,
+			Namespace:       "default",
+		})
+		return executor, err
+	}
+
+	executor, err := configure("")
+	require.NoError(t, err)
+	assert.Equal(t, 1, executor.config.QueryConcurrency)
+
+	executor, err = configure("100")
+	require.NoError(t, err)
+	assert.Equal(t, 100, executor.config.QueryConcurrency)
+
+	_, err = configure("0")
+	require.ErrorContains(t, err, "queryConcurrency must be >= 1")
+}
+
+func TestRunQuerierUsesConfiguredConcurrency(t *testing.T) {
+	t.Parallel()
+
+	const concurrency = 4
+	entered := make(chan struct{}, concurrency)
+	release := make(chan struct{})
+	mockClient := &sdkmocks.Client{}
+	mockClient.On("ListWorkflow", mock.Anything, mock.Anything).
+		Run(func(mock.Arguments) {
+			entered <- struct{}{}
+			<-release
+		}).
+		Return(&workflowservice.ListWorkflowExecutionsResponse{}, nil)
+
+	executor := &visibilityStressExecutor{
+		config: &vsConfig{
+			Query: &vsQueryPreset{
+				ListRPS:            10_000,
+				ListNoFilterWeight: 1,
+			},
+			QueryConcurrency: concurrency,
+			VocabZipfSkew:    vsDefaultVocabZipfSkew,
+		},
+		clients:    []sdkclient.Client{mockClient},
+		namespaces: []string{"default"},
+		rng:        newVSRand(42, vsDefaultVocabZipfSkew),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		executor.runQuerier(ctx, loadgen.ScenarioInfo{})
+	}()
+
+	for range concurrency {
+		select {
+		case <-entered:
+		case <-time.After(2 * time.Second):
+			t.Fatal("query workers did not issue requests concurrently")
+		}
+	}
+
+	cancel()
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("query workers did not stop after cancellation")
+	}
+	mockClient.AssertNumberOfCalls(t, "ListWorkflow", concurrency)
 }
 
 // TestCSAParsing tests the CSA name prefix parsing logic.
@@ -711,13 +801,13 @@ func TestVisibilityStressWriteOnly(t *testing.T) {
 			Duration: 5 * time.Second,
 		},
 		ScenarioOptions: map[string]string{
-			"loadPreset":    "light",
-			"csaPreset":     "small",
-			"wfRPS":         "5",   // low rate for test speed
-			"updatesPerWF":  "2",   // few updates per WF
-			"deleteRPS":     "0",   // no deletes (keep test simple)
-			"failPercent":   "0",   // no failures
-			"timeoutPercent": "0",  // no timeouts
+			"loadPreset":     "light",
+			"csaPreset":      "small",
+			"wfRPS":          "5", // low rate for test speed
+			"updatesPerWF":   "2", // few updates per WF
+			"deleteRPS":      "0", // no deletes (keep test simple)
+			"failPercent":    "0", // no failures
+			"timeoutPercent": "0", // no timeouts
 		},
 	}
 

@@ -217,9 +217,11 @@ var keywordVocabulary = []string{
 // ---------------------------------------------------------------------------
 // Randomness
 //
-// math/rand.Rand is not safe for concurrent use, so every goroutine that
-// generates values or filters owns a vsRand. The Zipf generator is bound to its
-// parent Rand, which is why it lives here rather than as a package-level var.
+// math/rand.Rand is not safe for concurrent use. Writer goroutines own separate
+// vsRand instances; query goroutines briefly serialize access to the executor's
+// query RNG while constructing filters and making pagination decisions. The Zipf
+// generator is bound to its parent Rand, which is why it lives here rather than
+// as a package-level var.
 // ---------------------------------------------------------------------------
 
 type vsRand struct {
@@ -460,6 +462,10 @@ type vsConfig struct {
 	// WriterConcurrency is the number of goroutines starting workflows in parallel.
 	// See runWriter for why this must exceed 1 to reach the higher presets' WfRPS.
 	WriterConcurrency int
+	// QueryConcurrency is the number of goroutines issuing visibility queries in
+	// parallel. They share one limiter, so CountRPS+ListRPS remains the aggregate
+	// target for this executor rather than being multiplied by concurrency.
+	QueryConcurrency int
 	// WorkflowTimeout overrides WorkflowExecutionTimeout for every workflow the writer
 	// starts. Zero means derive it from the CSA update count via vsComputeTimeout.
 	//
@@ -555,6 +561,7 @@ type visibilityStressExecutor struct {
 	taskQueue   string
 	executionID string
 	rng         *vsRand
+	rngMu       sync.Mutex
 
 	totalCreated atomic.Int64
 	totalDeleted atomic.Int64
@@ -571,6 +578,7 @@ func init() {
 		Description: "Visibility store stress test.\n" +
 			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, workflowTimeout, namespaceCount, createNamespaces, retention, cleanup,\n" +
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
+			"queryConcurrency (parallel visibility readers sharing the configured aggregate RPS; defaults to 1),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
 			"pageContinueProb/maxQueryPages (geometric List pagination depth).\n" +
@@ -718,6 +726,10 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		}
 		if preset.MaxPages < 1 {
 			return fmt.Errorf("maxQueryPages must be >= 1, got %d", preset.MaxPages)
+		}
+		cfg.QueryConcurrency = info.ScenarioOptionInt("queryConcurrency", 1)
+		if cfg.QueryConcurrency < 1 {
+			return fmt.Errorf("queryConcurrency must be >= 1, got %d", cfg.QueryConcurrency)
 		}
 		cfg.Query = &preset
 	}
@@ -967,7 +979,8 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 			l.FailPercent, l.TimeoutPercent, l.UpdateDelay)
 	}
 	if q := e.config.Query; q != nil {
-		info.Logger.Infof("Read: countRPS=%.1f, listRPS=%.1f", q.CountRPS, q.ListRPS)
+		info.Logger.Infof("Read: countRPS=%.1f, listRPS=%.1f, queryConcurrency=%d",
+			q.CountRPS, q.ListRPS, e.config.QueryConcurrency)
 		info.Logger.Infof("      filter weights: noFilter=%d open=%d closed=%d simpleCSA=%d compoundCSA=%d disjunction=%d",
 			q.ListNoFilterWeight, q.ListOpenWeight, q.ListClosedWeight,
 			q.ListSimpleCSAWeight, q.ListCompoundCSAWeight, q.ListDisjunctionWeight)
@@ -1242,10 +1255,11 @@ func (e *visibilityStressExecutor) recordQuery(
 	}
 }
 
-// runQuerier issues List and Count workflow queries at the configured RPS.
-// Query type is chosen by weighted random from the queryPreset distribution.
-// List queries fetch a geometrically distributed number of pages to exercise
-// search_after pagination; see shouldFetchNextPage.
+// runQuerier fans out QueryConcurrency workers that share one rate limiter, so
+// CountRPS+ListRPS is the aggregate target for this executor. Query type is
+// chosen by weighted random from the queryPreset distribution. List queries
+// fetch a geometrically distributed number of pages to exercise search_after
+// pagination; see shouldFetchNextPage.
 func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.ScenarioInfo) {
 	q := e.config.Query
 	totalRPS := q.CountRPS + q.ListRPS
@@ -1253,29 +1267,58 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 		return
 	}
 
-	limiter := rate.NewLimiter(rate.Limit(totalRPS), 1)
-	var nsIndex int
 	startTime := time.Now()
+	limiter := rate.NewLimiter(rate.Limit(totalRPS), 1)
+	var nsIndex atomic.Uint64
 	var queryErrors atomic.Int64
+	var lastLogNanos atomic.Int64
+	lastLogNanos.Store(startTime.UnixNano())
+
+	var wg sync.WaitGroup
+	for workerIdx := 0; workerIdx < e.config.QueryConcurrency; workerIdx++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			e.runQueryLoop(ctx, info, limiter, startTime, &nsIndex, &queryErrors, &lastLogNanos)
+		}()
+	}
+	wg.Wait()
+}
+
+// runQueryLoop is one synchronous visibility reader. The limiter, namespace
+// counter, totals, and log timestamp are safe to share. Filter generation and
+// pagination decisions briefly hold rngMu because math/rand.Rand is not safe for
+// concurrent use; no network call is made while holding that lock.
+func (e *visibilityStressExecutor) runQueryLoop(
+	ctx context.Context,
+	info loadgen.ScenarioInfo,
+	limiter *rate.Limiter,
+	startTime time.Time,
+	nsIndex *atomic.Uint64,
+	queryErrors *atomic.Int64,
+	lastLogNanos *atomic.Int64,
+) {
+	q := e.config.Query
+	totalRPS := q.CountRPS + q.ListRPS
 
 	totalWeight := q.ListNoFilterWeight + q.ListOpenWeight + q.ListClosedWeight +
 		q.ListSimpleCSAWeight + q.ListCompoundCSAWeight + q.ListDisjunctionWeight
 
 	// Log every ~1 second worth of queries, with a minimum of every 1s.
 	logInterval := int64(math.Max(1, totalRPS))
-	lastLogTime := time.Now()
 
 	for {
 		if err := limiter.Wait(ctx); err != nil {
 			return
 		}
 
-		nsIdx := nsIndex % len(e.namespaces)
-		nsIndex++
+		nsIdx := int((nsIndex.Add(1) - 1) % uint64(len(e.namespaces)))
 		ns := e.namespaces[nsIdx]
 
+		e.rngMu.Lock()
 		isCount := e.rng.Float64() < q.CountRPS/totalRPS
 		filter, class := e.generateFilter(isCount, totalWeight)
+		e.rngMu.Unlock()
 
 		var queryType string
 		if isCount {
@@ -1310,7 +1353,13 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 					info.Logger.Warnf("[querier] List failed (filter=%s): %v", filter, err)
 					break
 				}
-				if len(resp.NextPageToken) == 0 || !e.shouldFetchNextPage(page) {
+				if len(resp.NextPageToken) == 0 {
+					break
+				}
+				e.rngMu.Lock()
+				fetchNext := e.shouldFetchNextPage(page)
+				e.rngMu.Unlock()
+				if !fetchNext {
 					break
 				}
 				pageToken = resp.NextPageToken
@@ -1319,13 +1368,23 @@ func (e *visibilityStressExecutor) runQuerier(ctx context.Context, info loadgen.
 
 		total := e.totalQueries.Add(1)
 
-		// Periodic logging.
-		if total%logInterval == 0 || time.Since(lastLogTime) >= 5*time.Second {
-			elapsed := time.Since(startTime)
+		// Periodic logging. The CAS keeps a slow workload from producing one
+		// fallback log line per reader every five seconds.
+		now := time.Now()
+		shouldLog := total%logInterval == 0
+		if !shouldLog {
+			last := lastLogNanos.Load()
+			if now.UnixNano()-last >= int64(5*time.Second) {
+				shouldLog = lastLogNanos.CompareAndSwap(last, now.UnixNano())
+			}
+		} else {
+			lastLogNanos.Store(now.UnixNano())
+		}
+		if shouldLog {
+			elapsed := now.Sub(startTime)
 			info.Logger.Infof("[querier] t=%v queries=%d errors=%d actual_rps=%.1f last=%s class=%s filter=%s",
 				elapsed.Round(time.Second), total, queryErrors.Load(),
 				float64(total)/elapsed.Seconds(), queryType, class, filter)
-			lastLogTime = time.Now()
 		}
 	}
 }

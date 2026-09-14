@@ -363,6 +363,7 @@ Cleanup terminates all running workflows and deletes all workflows with
 |------------|-------|-------------------------------------------------------------|
 | `countRPS` | float | CountWorkflowExecutions per second                         |
 | `listRPS`  | float | ListWorkflowExecutions per second                          |
+| `queryConcurrency` | int | Parallel query workers; they share the aggregate `countRPS + listRPS` limiter (default `1`) |
 | `selMu`    | float | log10 of median filter selectivity (must be `<= 0`); derived from the load preset if unset |
 | `selSigma` | float | Spread of log10(selectivity); must be positive             |
 | `pageContinueProb` | float | Chance of fetching one more List page; must be in `[0,1]` |
@@ -405,8 +406,8 @@ Cleanup terminates all running workflows and deletes all workflows with
    (completed / failed / timed out).
 4. **Deleter goroutines**: One per namespace. Each periodically lists terminal workflows and
    deletes them. The list query itself is a visibility read (realistic!).
-5. **Querier goroutine**: Rate-limited loop issues List/Count queries with varying filter
-   complexity, fetching up to 3 pages per query.
+5. **Querier goroutines**: `queryConcurrency` parallel readers share one aggregate rate limiter
+   and issue List/Count queries with varying filter complexity and geometric pagination.
 6. **Teardown**: Log final stats (total created, deleted, queried, errors).
 
 ### Metrics
@@ -453,4 +454,3 @@ Write: wfRPS=100.0, updatesPerWF=10.0, effective CSA update RPS≈1000, deleteRP
        failPercent=0.10, timeoutPercent=0.05, updateDelay=1s
 Read: countRPS=5.0, listRPS=10.0
 ```
-
