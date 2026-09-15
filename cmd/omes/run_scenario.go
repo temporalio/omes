@@ -9,10 +9,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/clioptions"
-	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+
+	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/loadgen"
 )
 
 func runScenarioCmd() *cobra.Command {
@@ -57,6 +58,7 @@ type scenarioRunConfig struct {
 	ignoreAlreadyStarted          bool
 	exportHistoriesDir            string
 	exportHistoriesFilter         string
+	continueOnIterationFailure    bool
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -87,6 +89,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 		"Ignore if a workflow with the same ID already exists. A Scenario may choose to override this behavior.")
 	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
+	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -201,6 +204,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			Timeout:                       r.timeout,
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
+			ContinueOnIterationFailure:    r.continueOnIterationFailure,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
