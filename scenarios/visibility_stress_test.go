@@ -223,24 +223,56 @@ func TestVisibilityStressDeleterQueryScopesToExecutorInvocation(t *testing.T) {
 	assert.Equal(t, "vs-r01-01JABC-", visibilityStressWorkflowIDPrefix("r01", "01JABC"))
 }
 
-func TestRunDeleteBatchUsesConfiguredConcurrency(t *testing.T) {
+func TestVSRecentDeleteSetDeduplicatesAndRetriesFailures(t *testing.T) {
+	t.Parallel()
+
+	recent := newVSRecentDeleteSet(2)
+	execution := func(id string) *commonpb.WorkflowExecution {
+		return &commonpb.WorkflowExecution{WorkflowId: id, RunId: "run"}
+	}
+
+	first, ok := recent.add(execution("one"))
+	require.True(t, ok)
+	_, ok = recent.add(execution("one"))
+	require.False(t, ok, "an in-flight or successful delete must not be submitted twice")
+
+	recent.remove(first)
+	retry, ok := recent.add(execution("one"))
+	require.True(t, ok, "a failed delete must become eligible for retry")
+	recent.remove(first)
+	_, ok = recent.add(execution("one"))
+	require.False(t, ok, "an old failed attempt must not remove a newer generation")
+
+	_, ok = recent.add(execution("two"))
+	require.True(t, ok)
+	_, ok = recent.add(execution("three"))
+	require.True(t, ok)
+	_, ok = recent.add(execution("one"))
+	require.True(t, ok, "the bounded set must eventually evict its oldest generation")
+	_ = retry
+}
+
+func TestRunDeleteWorkersUsesConfiguredConcurrency(t *testing.T) {
 	t.Parallel()
 
 	const concurrency = 4
-	candidates := make([]vsDeleteCandidate, concurrency)
-	for i := range candidates {
-		candidates[i] = vsDeleteCandidate{
+	jobs := make(chan vsDeleteCandidate, concurrency)
+	results := make(chan vsDeleteResult, concurrency)
+	for i := range concurrency {
+		jobs <- vsDeleteCandidate{
 			execution: &commonpb.WorkflowExecution{WorkflowId: fmt.Sprintf("wf-%d", i)},
 		}
 	}
+	close(jobs)
 
 	entered := make(chan struct{}, concurrency)
 	release := make(chan struct{})
-	done := make(chan []vsDeleteResult, 1)
+	done := make(chan struct{})
 	go func() {
-		done <- runDeleteBatch(
+		runDeleteWorkers(
 			context.Background(),
-			candidates,
+			jobs,
+			results,
 			rate.NewLimiter(rate.Inf, 1),
 			concurrency,
 			func(context.Context, *commonpb.WorkflowExecution) error {
@@ -249,6 +281,8 @@ func TestRunDeleteBatchUsesConfiguredConcurrency(t *testing.T) {
 				return nil
 			},
 		)
+		close(results)
+		close(done)
 	}()
 
 	for range concurrency {
@@ -261,14 +295,16 @@ func TestRunDeleteBatchUsesConfiguredConcurrency(t *testing.T) {
 	close(release)
 
 	select {
-	case results := <-done:
-		require.Len(t, results, concurrency)
-		for _, result := range results {
-			require.NoError(t, result.err)
-		}
+	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("delete workers did not finish")
 	}
+	var resultCount int
+	for result := range results {
+		require.NoError(t, result.err)
+		resultCount++
+	}
+	require.Equal(t, concurrency, resultCount)
 }
 
 func TestRunQuerierUsesConfiguredConcurrency(t *testing.T) {
