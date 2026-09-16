@@ -14,6 +14,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -26,6 +27,7 @@ import (
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -470,6 +472,11 @@ type vsConfig struct {
 	// requests in parallel. They share one limiter, so DeleteRPS remains the aggregate
 	// target. Deletion must be parallel because each request is a blocking RPC.
 	DeleteConcurrency int
+	// DeleteGracePeriod is the minimum age of a closed workflow before the deleter
+	// submits DeleteWorkflowExecution. Temporal advances the transfer-queue close-task
+	// acknowledgement asynchronously; deleting immediately after close can therefore
+	// make DeleteExecutionTask retry until that acknowledgement catches up.
+	DeleteGracePeriod time.Duration
 	// WorkflowTimeout overrides WorkflowExecutionTimeout for every workflow the writer
 	// starts. Zero means derive it from the CSA update count via vsComputeTimeout.
 	//
@@ -517,6 +524,12 @@ const (
 	// Temporal caps ListWorkflowExecutions pages at 1,000. A deleter that asks for its
 	// entire per-second budget in one page silently receives only this many results.
 	vsDeletePageSize = 1000
+	// Waiting one minute before deletion keeps DeleteExecutionTask from racing the
+	// transfer queue's asynchronously persisted close-task acknowledgement.
+	vsDefaultDeleteGracePeriod = time.Minute
+	// Keep successful submissions protected for an additional minute after the grace
+	// period while their asynchronous visibility delete reaches the search index.
+	vsDeleteVisibilityLagAllowance = time.Minute
 )
 
 // estimateCorpusSize approximates how many documents the visibility index holds
@@ -592,6 +605,7 @@ func init() {
 			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, workflowTimeout, namespaceCount, createNamespaces, retention, cleanup,\n" +
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
 			"deleteConcurrency (parallel workflow deleters; defaults to deleteRPS/25),\n" +
+			"deleteGracePeriod (minimum closed-workflow age before deletion; defaults to 1m),\n" +
 			"queryConcurrency (parallel visibility readers sharing the configured aggregate RPS; defaults to 1),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
@@ -612,6 +626,17 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	cfg.CSAAtStart = info.ScenarioOptionBool("csaAtStart", false)
+	cfg.DeleteGracePeriod = vsDefaultDeleteGracePeriod
+	if v := info.ScenarioOptions["deleteGracePeriod"]; v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("invalid deleteGracePeriod %q: %w", v, err)
+		}
+		if d < 0 {
+			return fmt.Errorf("deleteGracePeriod must be non-negative, got %v", d)
+		}
+		cfg.DeleteGracePeriod = d
+	}
 	cfg.VocabZipfSkew = info.ScenarioOptionFloat("vocabZipfSkew", vsDefaultVocabZipfSkew)
 	if cfg.VocabZipfSkew <= 1.0 {
 		return fmt.Errorf("vocabZipfSkew must be > 1.0, got %.2f", cfg.VocabZipfSkew)
@@ -999,8 +1024,8 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
 			l.WfRPS, l.UpdatesPerWF, l.WfRPS*l.UpdatesPerWF, l.DeleteRPS)
-		info.Logger.Infof("       writerConcurrency=%d, deleteConcurrency=%d (max achievable rps ≈ concurrency/rpc_latency)",
-			e.config.WriterConcurrency, e.config.DeleteConcurrency)
+		info.Logger.Infof("       writerConcurrency=%d, deleteConcurrency=%d, deleteGracePeriod=%v (max achievable rps ≈ concurrency/rpc_latency)",
+			e.config.WriterConcurrency, e.config.DeleteConcurrency, e.config.DeleteGracePeriod)
 		info.Logger.Infof("       failPercent=%.2f, timeoutPercent=%.2f, updateDelay=%v",
 			l.FailPercent, l.TimeoutPercent, l.UpdateDelay)
 	}
@@ -1160,12 +1185,33 @@ func visibilityQueryString(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
 
-func visibilityStressDeleterQuery(taskQueue, runID, executionID string) string {
-	return fmt.Sprintf(
+func visibilityStressDeleterQuery(
+	taskQueue, runID, executionID string,
+	closedBefore time.Time,
+) string {
+	query := fmt.Sprintf(
 		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND TaskQueue = %s AND WorkflowId STARTS_WITH %s",
 		visibilityQueryString(taskQueue),
 		visibilityQueryString(visibilityStressWorkflowIDPrefix(runID, executionID)),
 	)
+	if !closedBefore.IsZero() {
+		query += fmt.Sprintf(" AND CloseTime < %s",
+			visibilityQueryString(closedBefore.UTC().Format(time.RFC3339Nano)))
+	}
+	return query
+}
+
+func visibilityStressDeleteSeenLimit(deleteRPS float64, gracePeriod time.Duration) int {
+	window := gracePeriod + vsDeleteVisibilityLagAllowance
+	return int(math.Max(vsDeletePageSize, math.Ceil(deleteRPS*window.Seconds())))
+}
+
+func visibilityStressDeleteShouldRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	var notFound *serviceerror.NotFound
+	return !errors.As(err, &notFound)
 }
 
 func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen.ScenarioInfo) {
@@ -1287,7 +1333,8 @@ func runDeleteWorkers(
 // scanner feeding a bounded channel and a persistent delete-worker pool. The recent-ID set
 // prevents a scan from
 // repeatedly submitting the same successfully deleted workflows while the visibility index
-// waits for its next refresh.
+// waits for its next refresh. The retention window covers both the pre-delete grace
+// period and an additional visibility-convergence allowance.
 // The query is scoped by both TaskQueue and this executor invocation's workflow-ID prefix.
 // TaskQueue alone is not sufficient when the same run ID is reused: a restarted executor would
 // otherwise rediscover visibility records whose asynchronous delete tasks were submitted by an
@@ -1302,9 +1349,7 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 	}
 
 	limiter := rate.NewLimiter(rate.Limit(deleteRPS), 1)
-	// Keep enough IDs to span a minute at the target rate. That comfortably exceeds the
-	// benchmark index refresh interval without growing for the lifetime of a long run.
-	seenLimit := int(math.Max(vsDeletePageSize, math.Ceil(deleteRPS*60)))
+	seenLimit := visibilityStressDeleteSeenLimit(deleteRPS, e.config.DeleteGracePeriod)
 	recent := newVSRecentDeleteSet(seenLimit)
 	var nextPageToken []byte
 	endOfScanPause := time.Second
@@ -1315,7 +1360,7 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		endOfScanPause = 50 * time.Millisecond
 	}
 
-	query := visibilityStressDeleterQuery(e.taskQueue, info.RunID, e.executionID)
+	var query string
 	jobs := make(chan vsDeleteCandidate, 2*vsDeletePageSize)
 	results := make(chan vsDeleteResult, 2*vsDeletePageSize)
 	workersDone := make(chan struct{})
@@ -1343,6 +1388,12 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		defer close(resultsDone)
 		for result := range results {
 			if result.err != nil {
+				if !visibilityStressDeleteShouldRetry(result.err) {
+					// The mutable state is already gone while its visibility document is
+					// still searchable. Keep the ID in the recent set: removing it here
+					// makes every scan resubmit the same terminally deleted execution.
+					continue
+				}
 				recent.remove(result.candidate)
 				if ctx.Err() == nil {
 					deleteErrors.Add(1)
@@ -1367,6 +1418,17 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 	for {
 		if ctx.Err() != nil {
 			return
+		}
+		if len(nextPageToken) == 0 {
+			var closedBefore time.Time
+			if e.config.DeleteGracePeriod > 0 {
+				closedBefore = time.Now().Add(-e.config.DeleteGracePeriod)
+			}
+			// Keep the cutoff fixed for every page in one scan. Changing the query
+			// while carrying a page token would invalidate the snapshot represented
+			// by that token. A fresh cutoff is calculated at the next full scan.
+			query = visibilityStressDeleterQuery(
+				e.taskQueue, info.RunID, e.executionID, closedBefore)
 		}
 
 		// The deleter's own List is a visibility read on the same search path as the

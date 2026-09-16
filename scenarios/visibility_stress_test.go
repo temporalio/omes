@@ -15,6 +15,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
 	commonpb "go.temporal.io/api/common/v1"
+	"go.temporal.io/api/serviceerror"
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
@@ -196,6 +197,7 @@ func TestVisibilityStressDeleteConcurrency(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 56, executor.config.DeleteConcurrency)
+	assert.Equal(t, time.Minute, executor.config.DeleteGracePeriod)
 
 	executor, err = configure(map[string]string{
 		"loadPreset":        "no-failures",
@@ -205,22 +207,52 @@ func TestVisibilityStressDeleteConcurrency(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 64, executor.config.DeleteConcurrency)
 
+	executor, err = configure(map[string]string{
+		"loadPreset":        "no-failures",
+		"deleteGracePeriod": "45s",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 45*time.Second, executor.config.DeleteGracePeriod)
+
 	_, err = configure(map[string]string{
 		"loadPreset":        "no-failures",
 		"deleteConcurrency": "0",
 	})
 	require.ErrorContains(t, err, "deleteConcurrency must be >= 1")
+
+	_, err = configure(map[string]string{
+		"loadPreset":        "no-failures",
+		"deleteGracePeriod": "-1s",
+	})
+	require.ErrorContains(t, err, "deleteGracePeriod must be non-negative")
 }
 
 func TestVisibilityStressDeleterQueryScopesToExecutorInvocation(t *testing.T) {
 	t.Parallel()
 
+	cutoff := time.Date(2026, time.September, 16, 17, 0, 0, 123, time.FixedZone("test", -7*60*60))
 	assert.Equal(t,
 		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND "+
-			"TaskQueue = 'queue''one' AND WorkflowId STARTS_WITH 'vs-run''id-exec''id-'",
-		visibilityStressDeleterQuery("queue'one", "run'id", "exec'id"),
+			"TaskQueue = 'queue''one' AND WorkflowId STARTS_WITH 'vs-run''id-exec''id-' AND "+
+			"CloseTime < '2026-09-17T00:00:00.000000123Z'",
+		visibilityStressDeleterQuery("queue'one", "run'id", "exec'id", cutoff),
 	)
+	assert.NotContains(t,
+		visibilityStressDeleterQuery("queue", "run", "exec", time.Time{}),
+		"CloseTime")
 	assert.Equal(t, "vs-r01-01JABC-", visibilityStressWorkflowIDPrefix("r01", "01JABC"))
+	assert.Equal(t, 1000, visibilityStressDeleteSeenLimit(1, time.Minute))
+	assert.Equal(t, 2400, visibilityStressDeleteSeenLimit(20, time.Minute))
+}
+
+func TestVisibilityStressDeleteShouldRetry(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, visibilityStressDeleteShouldRetry(nil))
+	assert.False(t, visibilityStressDeleteShouldRetry(serviceerror.NewNotFound("gone")))
+	assert.False(t, visibilityStressDeleteShouldRetry(
+		fmt.Errorf("wrapped: %w", serviceerror.NewNotFound("gone"))))
+	assert.True(t, visibilityStressDeleteShouldRetry(fmt.Errorf("temporary failure")))
 }
 
 func TestVSRecentDeleteSetDeduplicatesAndRetriesFailures(t *testing.T) {
