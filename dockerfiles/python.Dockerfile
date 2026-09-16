@@ -30,7 +30,15 @@ WORKDIR /app
 # to resolve the module graph.
 COPY go.mod go.sum ./
 COPY workers/go/harness/api ./workers/go/harness/api
-RUN go mod download
+RUN for attempt in 1 2 3; do \
+      go mod download && exit 0; \
+      if [ "$attempt" -lt 3 ]; then \
+        delay=$((attempt * 5)); \
+        echo "go mod download failed (attempt $attempt/3); retrying in ${delay}s" >&2; \
+        sleep "$delay"; \
+      fi; \
+    done; \
+    exit 1
 
 # Copy CLI source and build the CLI.
 COPY cmd ./cmd
