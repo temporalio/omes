@@ -212,6 +212,17 @@ func TestVisibilityStressDeleteConcurrency(t *testing.T) {
 	require.ErrorContains(t, err, "deleteConcurrency must be >= 1")
 }
 
+func TestVisibilityStressDeleterQueryScopesToExecutorInvocation(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t,
+		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND "+
+			"TaskQueue = 'queue''one' AND WorkflowId STARTS_WITH 'vs-run''id-exec''id-'",
+		visibilityStressDeleterQuery("queue'one", "run'id", "exec'id"),
+	)
+	assert.Equal(t, "vs-r01-01JABC-", visibilityStressWorkflowIDPrefix("r01", "01JABC"))
+}
+
 func TestRunDeleteBatchUsesConfiguredConcurrency(t *testing.T) {
 	t.Parallel()
 

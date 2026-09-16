@@ -1111,7 +1111,7 @@ func (e *visibilityStressExecutor) runWriterLoop(
 		nsIdx := int((e.nsCounter.Add(1) - 1) % uint64(len(e.namespaces)))
 
 		input := e.buildWorkflowInput(rng)
-		wfID := fmt.Sprintf("vs-%s-%s-%d", info.RunID, e.executionID, e.wfCounter.Add(1))
+		wfID := fmt.Sprintf("%s%d", visibilityStressWorkflowIDPrefix(info.RunID, e.executionID), e.wfCounter.Add(1))
 
 		opts := client.StartWorkflowOptions{
 			ID:                       wfID,
@@ -1150,6 +1150,22 @@ func (e *visibilityStressExecutor) runWriterLoop(
 				e.totalErrors.Load(), float64(created)/elapsed.Seconds())
 		}
 	}
+}
+
+func visibilityStressWorkflowIDPrefix(runID, executionID string) string {
+	return fmt.Sprintf("vs-%s-%s-", runID, executionID)
+}
+
+func visibilityQueryString(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
+}
+
+func visibilityStressDeleterQuery(taskQueue, runID, executionID string) string {
+	return fmt.Sprintf(
+		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND TaskQueue = %s AND WorkflowId STARTS_WITH %s",
+		visibilityQueryString(taskQueue),
+		visibilityQueryString(visibilityStressWorkflowIDPrefix(runID, executionID)),
+	)
 }
 
 func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen.ScenarioInfo) {
@@ -1230,7 +1246,11 @@ func runDeleteBatch(
 // scanner plus a bounded concurrent delete batch. The recent-ID set prevents a scan from
 // repeatedly submitting the same successfully deleted workflows while the visibility index
 // waits for its next refresh.
-// The query is scoped by TaskQueue to avoid touching workflows from other runs.
+// The query is scoped by both TaskQueue and this executor invocation's workflow-ID prefix.
+// TaskQueue alone is not sufficient when the same run ID is reused: a restarted executor would
+// otherwise rediscover visibility records whose asynchronous delete tasks were submitted by an
+// earlier invocation. Those duplicate DeleteWorkflowExecution calls amplify transfer-queue work
+// without producing new visibility deletes.
 func (e *visibilityStressExecutor) runDeleterForNamespace(
 	ctx context.Context, info loadgen.ScenarioInfo,
 	nsIdx int, ns string, deleteRPS float64,
@@ -1256,9 +1276,7 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		endOfScanPause = 50 * time.Millisecond
 	}
 
-	query := fmt.Sprintf(
-		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND TaskQueue = '%s'",
-		e.taskQueue)
+	query := visibilityStressDeleterQuery(e.taskQueue, info.RunID, e.executionID)
 
 	for {
 		if ctx.Err() != nil {
