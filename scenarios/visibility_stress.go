@@ -466,6 +466,10 @@ type vsConfig struct {
 	// parallel. They share one limiter, so CountRPS+ListRPS remains the aggregate
 	// target for this executor rather than being multiplied by concurrency.
 	QueryConcurrency int
+	// DeleteConcurrency is the number of goroutines issuing DeleteWorkflowExecution
+	// requests in parallel. They share one limiter, so DeleteRPS remains the aggregate
+	// target. Deletion must be parallel because each request is a blocking RPC.
+	DeleteConcurrency int
 	// WorkflowTimeout overrides WorkflowExecutionTimeout for every workflow the writer
 	// starts. Zero means derive it from the CSA update count via vsComputeTimeout.
 	//
@@ -504,6 +508,15 @@ const (
 	// can't spawn an unbounded number of goroutines. Can be exceeded explicitly via
 	// the writerConcurrency option.
 	vsMaxWriterConcurrency = 256
+	// Deletion is also a blocking RPC. Use the same conservative per-goroutine
+	// throughput assumption as workflow starts when deriving delete concurrency.
+	vsRPSPerDeleter = 25
+	// Bound an accidental extreme override while still leaving ample headroom for the
+	// benchmark's ~1.4k delete/s writer namespace.
+	vsMaxDeleteConcurrency = 256
+	// Temporal caps ListWorkflowExecutions pages at 1,000. A deleter that asks for its
+	// entire per-second budget in one page silently receives only this many results.
+	vsDeletePageSize = 1000
 )
 
 // estimateCorpusSize approximates how many documents the visibility index holds
@@ -578,6 +591,7 @@ func init() {
 		Description: "Visibility store stress test.\n" +
 			"Options: loadPreset, queryPreset, csaPreset, csaAtStart, workflowTimeout, namespaceCount, createNamespaces, retention, cleanup,\n" +
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
+			"deleteConcurrency (parallel workflow deleters; defaults to deleteRPS/25),\n" +
 			"queryConcurrency (parallel visibility readers sharing the configured aggregate RPS; defaults to 1),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
@@ -682,6 +696,18 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		cfg.WriterConcurrency = info.ScenarioOptionInt("writerConcurrency", defaultConcurrency)
 		if cfg.WriterConcurrency < 1 {
 			return fmt.Errorf("writerConcurrency must be >= 1, got %d", cfg.WriterConcurrency)
+		}
+
+		defaultDeleteConcurrency := int(math.Ceil(preset.DeleteRPS / vsRPSPerDeleter))
+		if defaultDeleteConcurrency < 1 {
+			defaultDeleteConcurrency = 1
+		}
+		if defaultDeleteConcurrency > vsMaxDeleteConcurrency {
+			defaultDeleteConcurrency = vsMaxDeleteConcurrency
+		}
+		cfg.DeleteConcurrency = info.ScenarioOptionInt("deleteConcurrency", defaultDeleteConcurrency)
+		if cfg.DeleteConcurrency < 1 {
+			return fmt.Errorf("deleteConcurrency must be >= 1, got %d", cfg.DeleteConcurrency)
 		}
 	}
 
@@ -973,8 +999,8 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
 			l.WfRPS, l.UpdatesPerWF, l.WfRPS*l.UpdatesPerWF, l.DeleteRPS)
-		info.Logger.Infof("       writerConcurrency=%d (max achievable rps ≈ concurrency/start_latency)",
-			e.config.WriterConcurrency)
+		info.Logger.Infof("       writerConcurrency=%d, deleteConcurrency=%d (max achievable rps ≈ concurrency/rpc_latency)",
+			e.config.WriterConcurrency, e.config.DeleteConcurrency)
 		info.Logger.Infof("       failPercent=%.2f, timeoutPercent=%.2f, updateDelay=%v",
 			l.FailPercent, l.TimeoutPercent, l.UpdateDelay)
 	}
@@ -1134,8 +1160,76 @@ func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen
 	}
 }
 
-// runDeleterForNamespace periodically lists terminal workflows (via the visibility store)
-// and deletes them at the configured rate.
+type vsDeleteCandidate struct {
+	execution  *commonpb.WorkflowExecution
+	key        string
+	generation uint64
+}
+
+type vsDeleteResult struct {
+	candidate vsDeleteCandidate
+	err       error
+}
+
+// runDeleteBatch deletes one visibility page with bounded concurrency. The shared limiter
+// controls aggregate throughput; concurrency only hides the latency of the blocking delete
+// RPC and therefore does not multiply DeleteRPS.
+func runDeleteBatch(
+	ctx context.Context,
+	candidates []vsDeleteCandidate,
+	limiter *rate.Limiter,
+	concurrency int,
+	deleteFn func(context.Context, *commonpb.WorkflowExecution) error,
+) []vsDeleteResult {
+	if len(candidates) == 0 {
+		return nil
+	}
+	if concurrency > len(candidates) {
+		concurrency = len(candidates)
+	}
+
+	jobs := make(chan vsDeleteCandidate, len(candidates))
+	results := make(chan vsDeleteResult, len(candidates))
+	for _, candidate := range candidates {
+		jobs <- candidate
+	}
+	close(jobs)
+
+	var wg sync.WaitGroup
+	for range concurrency {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for candidate := range jobs {
+				if err := limiter.Wait(ctx); err != nil {
+					results <- vsDeleteResult{candidate: candidate, err: err}
+					continue
+				}
+				results <- vsDeleteResult{
+					candidate: candidate,
+					err:       deleteFn(ctx, candidate.execution),
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	out := make([]vsDeleteResult, 0, len(candidates))
+	for result := range results {
+		out = append(out, result)
+	}
+	return out
+}
+
+// runDeleterForNamespace continuously pages through terminal workflows (via the visibility
+// store) and deletes them at the configured aggregate rate.
+//
+// A single serial loop tops out at roughly 1/delete-RPC-latency (about 125/s in the test
+// cells), far below the benchmark's ~1.4k/s writer namespace. This implementation uses one
+// scanner plus a bounded concurrent delete batch. The recent-ID set prevents a scan from
+// repeatedly submitting the same successfully deleted workflows while the visibility index
+// waits for its next refresh.
 // The query is scoped by TaskQueue to avoid touching workflows from other runs.
 func (e *visibilityStressExecutor) runDeleterForNamespace(
 	ctx context.Context, info loadgen.ScenarioInfo,
@@ -1145,25 +1239,30 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		return
 	}
 
-	tickInterval := time.Second
-	batchSize := int32(math.Max(1, deleteRPS))
-	if deleteRPS < 1 {
-		tickInterval = time.Duration(float64(time.Second) / deleteRPS)
-		batchSize = 1
+	limiter := rate.NewLimiter(rate.Limit(deleteRPS), 1)
+	// Keep enough IDs to span a minute at the target rate. That comfortably exceeds the
+	// benchmark index refresh interval without growing for the lifetime of a long run.
+	seenLimit := int(math.Max(vsDeletePageSize, math.Ceil(deleteRPS*60)))
+	seen := make(map[string]uint64, seenLimit)
+	seenOrder := make([]vsDeleteCandidate, 0, seenLimit)
+	seenHead := 0
+	var generation uint64
+	var nextPageToken []byte
+	endOfScanPause := time.Second
+	if pageFillTime := time.Duration(float64(time.Second) * vsDeletePageSize / deleteRPS); pageFillTime < endOfScanPause {
+		endOfScanPause = pageFillTime
 	}
-
-	ticker := time.NewTicker(tickInterval)
-	defer ticker.Stop()
+	if endOfScanPause < 50*time.Millisecond {
+		endOfScanPause = 50 * time.Millisecond
+	}
 
 	query := fmt.Sprintf(
 		"WorkflowType = 'visibilityStressWorker' AND ExecutionStatus != 'Running' AND TaskQueue = '%s'",
 		e.taskQueue)
 
 	for {
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			return
-		case <-ticker.C:
 		}
 
 		// The deleter's own List is a visibility read on the same search path as the
@@ -1171,39 +1270,97 @@ func (e *visibilityStressExecutor) runDeleterForNamespace(
 		// load that scales with deleteRPS and skews the querier's latencies.
 		start := time.Now()
 		resp, err := e.clients[nsIdx].ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
-			Namespace: ns,
-			Query:     query,
-			PageSize:  batchSize,
+			Namespace:     ns,
+			Query:         query,
+			PageSize:      vsDeletePageSize,
+			NextPageToken: nextPageToken,
 		})
 		e.recordQuery(info, "list", vsClassDeleterList, 1, time.Since(start), err)
 		if err != nil {
-			// TODO: better error handling
+			if ctx.Err() != nil {
+				return
+			}
 			info.Logger.Warnf("[deleter/%s] List failed: %v", ns, err)
+			nextPageToken = nil
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(250 * time.Millisecond):
+			}
 			continue
 		}
 
-		tickDeleteErrors := 0
+		candidates := make([]vsDeleteCandidate, 0, len(resp.Executions))
 		for _, exec := range resp.Executions {
 			wfExec := exec.Execution
-			_, err := e.clients[nsIdx].WorkflowService().DeleteWorkflowExecution(ctx,
-				&workflowservice.DeleteWorkflowExecutionRequest{
-					Namespace: ns,
-					WorkflowExecution: &commonpb.WorkflowExecution{
-						WorkflowId: wfExec.WorkflowId,
-						RunId:      wfExec.RunId,
-					},
-				})
-			if err != nil {
-				// TODO: better error handling
-				tickDeleteErrors++
-				info.Logger.Warnf("[deleter/%s] Delete %s failed: %v", ns, wfExec.WorkflowId, err)
+			key := wfExec.WorkflowId + "\x00" + wfExec.RunId
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			generation++
+			candidate := vsDeleteCandidate{execution: wfExec, key: key, generation: generation}
+			seen[key] = generation
+			seenOrder = append(seenOrder, candidate)
+			candidates = append(candidates, candidate)
+		}
+
+		// Bound the de-duplication set. Queue entries carry a generation so an old failed
+		// attempt cannot evict a newer retry of the same workflow.
+		for len(seenOrder)-seenHead > seenLimit {
+			old := seenOrder[seenHead]
+			seenHead++
+			if seen[old.key] == old.generation {
+				delete(seen, old.key)
+			}
+		}
+		if seenHead > seenLimit && seenHead*2 > len(seenOrder) {
+			seenOrder = append([]vsDeleteCandidate(nil), seenOrder[seenHead:]...)
+			seenHead = 0
+		}
+
+		results := runDeleteBatch(ctx, candidates, limiter, e.config.DeleteConcurrency,
+			func(deleteCtx context.Context, wfExec *commonpb.WorkflowExecution) error {
+				_, err := e.clients[nsIdx].WorkflowService().DeleteWorkflowExecution(deleteCtx,
+					&workflowservice.DeleteWorkflowExecutionRequest{
+						Namespace: ns,
+						WorkflowExecution: &commonpb.WorkflowExecution{
+							WorkflowId: wfExec.WorkflowId,
+							RunId:      wfExec.RunId,
+						},
+					})
+				return err
+			})
+
+		tickDeleteErrors := 0
+		for _, result := range results {
+			if result.err != nil {
+				if seen[result.candidate.key] == result.candidate.generation {
+					delete(seen, result.candidate.key)
+				}
+				if ctx.Err() == nil {
+					tickDeleteErrors++
+					info.Logger.Warnf("[deleter/%s] Delete %s failed: %v",
+						ns, result.candidate.execution.WorkflowId, result.err)
+				}
 				continue
 			}
 			e.totalDeleted.Add(1)
 		}
 
-		info.Logger.Infof("[deleter/%s] deleted=%d errors=%d found=%d",
-			ns, e.totalDeleted.Load(), tickDeleteErrors, len(resp.Executions))
+		info.Logger.Infof("[deleter/%s] deleted=%d errors=%d found=%d submitted=%d",
+			ns, e.totalDeleted.Load(), tickDeleteErrors, len(resp.Executions), len(candidates))
+
+		nextPageToken = resp.NextPageToken
+		if len(nextPageToken) == 0 || len(candidates) == 0 {
+			// At the end of a scan (or on a page containing only recently submitted IDs),
+			// yield long enough for one page of new work to accumulate. This keeps the
+			// deleter's List traffic near the minimum required by its delete target.
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(endOfScanPause):
+			}
+		}
 	}
 }
 

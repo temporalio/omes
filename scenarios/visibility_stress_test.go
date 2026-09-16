@@ -14,9 +14,11 @@ import (
 	"github.com/temporalio/omes/cmd/clioptions"
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/workers"
+	commonpb "go.temporal.io/api/common/v1"
 	workflowservice "go.temporal.io/api/workflowservice/v1"
 	sdkclient "go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
+	"golang.org/x/time/rate"
 )
 
 // TestVisibilityStressConfigure tests the configuration/validation logic without
@@ -173,6 +175,89 @@ func TestVisibilityStressQueryConcurrency(t *testing.T) {
 
 	_, err = configure("0")
 	require.ErrorContains(t, err, "queryConcurrency must be >= 1")
+}
+
+func TestVisibilityStressDeleteConcurrency(t *testing.T) {
+	t.Parallel()
+
+	configure := func(options map[string]string) (*visibilityStressExecutor, error) {
+		executor := &visibilityStressExecutor{}
+		err := executor.Configure(loadgen.ScenarioInfo{
+			Configuration:   loadgen.RunConfiguration{Duration: time.Minute},
+			ScenarioOptions: options,
+			Namespace:       "default",
+		})
+		return executor, err
+	}
+
+	executor, err := configure(map[string]string{
+		"loadPreset": "no-failures",
+		"deleteRPS":  "1381.84",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 56, executor.config.DeleteConcurrency)
+
+	executor, err = configure(map[string]string{
+		"loadPreset":        "no-failures",
+		"deleteRPS":         "1381.84",
+		"deleteConcurrency": "64",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 64, executor.config.DeleteConcurrency)
+
+	_, err = configure(map[string]string{
+		"loadPreset":        "no-failures",
+		"deleteConcurrency": "0",
+	})
+	require.ErrorContains(t, err, "deleteConcurrency must be >= 1")
+}
+
+func TestRunDeleteBatchUsesConfiguredConcurrency(t *testing.T) {
+	t.Parallel()
+
+	const concurrency = 4
+	candidates := make([]vsDeleteCandidate, concurrency)
+	for i := range candidates {
+		candidates[i] = vsDeleteCandidate{
+			execution: &commonpb.WorkflowExecution{WorkflowId: fmt.Sprintf("wf-%d", i)},
+		}
+	}
+
+	entered := make(chan struct{}, concurrency)
+	release := make(chan struct{})
+	done := make(chan []vsDeleteResult, 1)
+	go func() {
+		done <- runDeleteBatch(
+			context.Background(),
+			candidates,
+			rate.NewLimiter(rate.Inf, 1),
+			concurrency,
+			func(context.Context, *commonpb.WorkflowExecution) error {
+				entered <- struct{}{}
+				<-release
+				return nil
+			},
+		)
+	}()
+
+	for range concurrency {
+		select {
+		case <-entered:
+		case <-time.After(2 * time.Second):
+			t.Fatal("delete workers did not issue requests concurrently")
+		}
+	}
+	close(release)
+
+	select {
+	case results := <-done:
+		require.Len(t, results, concurrency)
+		for _, result := range results {
+			require.NoError(t, result.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("delete workers did not finish")
+	}
 }
 
 func TestRunQuerierUsesConfiguredConcurrency(t *testing.T) {
