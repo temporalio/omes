@@ -44,8 +44,9 @@ func getEnvDefault(key, defaultVal string) string {
 // TLS / credentials (fetched from AWS Secrets Manager):
 //
 //	ENABLE_TLS                - set to any non-empty value to enable TLS
-//	TLS_CERT                  - Secrets Manager secret ID for the client certificate (PEM)
-//	TLS_KEY                   - Secrets Manager secret ID for the client private key (PEM)
+//	TLS_COMBINED              - Secrets Manager secret ID for tls-combined.pem
+//	TLS_CERT, TLS_KEY         - the same credential as two secret IDs; the older
+//	                            form, still set by deployed workers
 //	API_KEY                   - Secrets Manager secret ID for the Temporal API key
 //
 // Worker deployment versioning:
@@ -62,8 +63,9 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 	opts.TaskQueue = getEnvDefault("TEMPORAL_TASK_QUEUE", defaultTaskQueueName)
 
 	enableTLS := os.Getenv("ENABLE_TLS")
-	tlsKeyID := os.Getenv("TLS_KEY")
+	tlsCombinedID := os.Getenv("TLS_COMBINED")
 	tlsCertID := os.Getenv("TLS_CERT")
+	tlsKeyID := os.Getenv("TLS_KEY")
 	apiKeyID := os.Getenv("API_KEY")
 
 	ctx := context.Background()
@@ -80,22 +82,12 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 		}
 		svc := secretsmanager.NewFromConfig(cfg)
 
-		if tlsCertID != "" && tlsKeyID != "" {
-			clientCert, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &tlsCertID})
-			if err != nil {
-				return fmt.Errorf("failed to fetch TLS cert secret: %w", err)
-			}
-
-			clientKey, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &tlsKeyID})
-			if err != nil {
-				return fmt.Errorf("failed to fetch TLS key secret: %w", err)
-			}
-
-			cert, err := tls.X509KeyPair([]byte(*clientCert.SecretString), []byte(*clientKey.SecretString))
-			if err != nil {
-				return fmt.Errorf("failed to parse TLS key pair: %w", err)
-			}
-			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		cert, err := loadClientCert(ctx, svc, tlsCombinedID, tlsCertID, tlsKeyID)
+		if err != nil {
+			return err
+		}
+		if cert != nil {
+			tlsConfig.Certificates = append(tlsConfig.Certificates, *cert)
 		}
 
 		if apiKeyID != "" {
@@ -135,4 +127,54 @@ func configureLambdaWorker(opts *lambdaworker.Options) error {
 	opts.RegisterNexusService(service)
 
 	return nil
+}
+
+// loadClientCert reads the mTLS keypair from Secrets Manager, either as one
+// combined PEM or as the older cert/key pair. Returns nil when none is set.
+func loadClientCert(
+	ctx context.Context, svc *secretsmanager.Client, combinedID, certID, keyID string,
+) (*tls.Certificate, error) {
+	switch {
+	case combinedID != "" && (certID != "" || keyID != ""):
+		return nil, fmt.Errorf("set TLS_COMBINED or TLS_CERT/TLS_KEY, not both")
+	case combinedID != "":
+		combined, err := fetchSecretString(ctx, svc, combinedID)
+		if err != nil {
+			return nil, err
+		}
+		cert, err := clioptions.X509KeyPairFromCombinedPEM([]byte(combined))
+		if err != nil {
+			return nil, err
+		}
+		return &cert, nil
+	case certID != "" && keyID != "":
+		clientCert, err := fetchSecretString(ctx, svc, certID)
+		if err != nil {
+			return nil, err
+		}
+		clientKey, err := fetchSecretString(ctx, svc, keyID)
+		if err != nil {
+			return nil, err
+		}
+		cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse TLS key pair: %w", err)
+		}
+		return &cert, nil
+	case certID != "" || keyID != "":
+		return nil, fmt.Errorf("TLS_CERT and TLS_KEY must be set together")
+	default:
+		return nil, nil
+	}
+}
+
+func fetchSecretString(ctx context.Context, svc *secretsmanager.Client, id string) (string, error) {
+	out, err := svc.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{SecretId: &id})
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch secret %s: %w", id, err)
+	}
+	if out.SecretString == nil {
+		return "", fmt.Errorf("secret %s has no string value; it must be pushed as a string, not binary", id)
+	}
+	return *out.SecretString, nil
 }
