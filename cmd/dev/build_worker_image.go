@@ -60,6 +60,13 @@ func (b *workerImageBuilder) build(ctx context.Context, allowPush bool) error {
 	lang := b.sdkOptions.Language.String()
 	sdkVersion := b.sdkOptions.Version
 
+	// The TypeScript worker build runs proto-gen, which compiles the upstream API protos.
+	if lang == "typescript" {
+		if err := checkProtoSubmodule(); err != nil {
+			return err
+		}
+	}
+
 	// If no version is provided, load it from mise.toml.
 	if sdkVersion == "" {
 		if loadedVersion, err := getVersion(lang + "_sdk"); err == nil {
