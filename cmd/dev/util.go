@@ -40,6 +40,7 @@ var (
 		"uv":            {"uv", "--version"},
 		"poe":           {"poe", "--version"},
 	}
+	protoAPIUpstreamPath = filepath.Join("workers", "proto", "api_upstream")
 )
 
 // getVersion returns the version for a given tool from mise.toml.
@@ -150,6 +151,28 @@ func checkMise() error {
 		return fmt.Errorf("mise is not installed. Please install mise first: https://mise.jdx.dev/getting-started.html")
 	}
 	return nil
+}
+
+// verifies that the proto submodule is not missing
+func checkProtoSubmodule() error {
+	repoDir, err := getRepoDir()
+	if err != nil {
+		return err
+	}
+	return checkProtoSubmoduleDir(repoDir)
+}
+
+// verifies that the proto submodule is not missing - this is used for tests
+func checkProtoSubmoduleDir(repoDir string) error {
+	entries, err := os.ReadDir(filepath.Join(repoDir, protoAPIUpstreamPath))
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read %s: %w", protoAPIUpstreamPath, err)
+	}
+	if len(entries) > 0 {
+		return nil
+	}
+	return fmt.Errorf("%s is empty: the upstream Temporal API protos live in a git submodule "+
+		"that this clone has not checked out. Run: git submodule update --init --recursive", protoAPIUpstreamPath)
 }
 
 // checkTool checks that the tool and its dependencies are available;
