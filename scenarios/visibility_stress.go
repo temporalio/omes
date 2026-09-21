@@ -13,6 +13,7 @@
 package scenarios
 
 import (
+	"container/heap"
 	"context"
 	"errors"
 	"fmt"
@@ -477,6 +478,12 @@ type vsConfig struct {
 	// acknowledgement asynchronously; deleting immediately after close can therefore
 	// make DeleteExecutionTask retry until that acknowledgement catches up.
 	DeleteGracePeriod time.Duration
+	// UseDeleteQueue deletes workflow IDs captured directly from successful starts instead
+	// of rediscovering them through ListWorkflowExecutions. Queue entries become eligible
+	// after WorkflowExecutionTimeout plus DeleteGracePeriod, which guarantees that the
+	// execution is terminal while removing visibility refresh and pagination from the
+	// delete-generation path.
+	UseDeleteQueue bool
 	// WorkflowTimeout overrides WorkflowExecutionTimeout for every workflow the writer
 	// starts. Zero means derive it from the CSA update count via vsComputeTimeout.
 	//
@@ -595,6 +602,7 @@ type visibilityStressExecutor struct {
 	totalErrors  atomic.Int64
 	wfCounter    atomic.Uint64
 	nsCounter    atomic.Uint64
+	deleteQueues []chan vsDeleteCandidate
 }
 
 var _ loadgen.Configurable = (*visibilityStressExecutor)(nil)
@@ -606,6 +614,7 @@ func init() {
 			"writerConcurrency (parallel workflow starters; defaults to wfRPS/25),\n" +
 			"deleteConcurrency (parallel workflow deleters; defaults to deleteRPS/25),\n" +
 			"deleteGracePeriod (minimum closed-workflow age before deletion; defaults to 1m),\n" +
+			"useDeleteQueue (delete IDs captured from successful starts instead of scanning visibility; defaults to false),\n" +
 			"queryConcurrency (parallel visibility readers sharing the configured aggregate RPS; defaults to 1),\n" +
 			"vocabZipfSkew (write-side keyword popularity skew, >1),\n" +
 			"selMu/selSigma (log10 selectivity distribution for generated CSA filters),\n" +
@@ -626,6 +635,7 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 	}
 
 	cfg.CSAAtStart = info.ScenarioOptionBool("csaAtStart", false)
+	cfg.UseDeleteQueue = info.ScenarioOptionBool("useDeleteQueue", false)
 	cfg.DeleteGracePeriod = vsDefaultDeleteGracePeriod
 	if v := info.ScenarioOptions["deleteGracePeriod"]; v != "" {
 		d, err := time.ParseDuration(v)
@@ -707,6 +717,11 @@ func (e *visibilityStressExecutor) Configure(info loadgen.ScenarioInfo) error {
 		}
 		if preset.WfRPS <= 0 {
 			return fmt.Errorf("wfRPS must be positive")
+		}
+		if cfg.UseDeleteQueue && preset.DeleteRPS > 0 && preset.DeleteRPS < preset.WfRPS {
+			return fmt.Errorf(
+				"useDeleteQueue requires deleteRPS >= wfRPS to keep the in-memory queue bounded, got %.2f < %.2f",
+				preset.DeleteRPS, preset.WfRPS)
 		}
 		cfg.Load = &preset
 
@@ -1024,8 +1039,9 @@ func (e *visibilityStressExecutor) logConfig(info loadgen.ScenarioInfo) {
 	if l := e.config.Load; l != nil {
 		info.Logger.Infof("Write: wfRPS=%.1f, updatesPerWF=%.1f, effective CSA update RPS≈%.0f, deleteRPS=%.1f",
 			l.WfRPS, l.UpdatesPerWF, l.WfRPS*l.UpdatesPerWF, l.DeleteRPS)
-		info.Logger.Infof("       writerConcurrency=%d, deleteConcurrency=%d, deleteGracePeriod=%v (max achievable rps ≈ concurrency/rpc_latency)",
-			e.config.WriterConcurrency, e.config.DeleteConcurrency, e.config.DeleteGracePeriod)
+		info.Logger.Infof("       writerConcurrency=%d, deleteConcurrency=%d, deleteGracePeriod=%v, useDeleteQueue=%v (max achievable rps ≈ concurrency/rpc_latency)",
+			e.config.WriterConcurrency, e.config.DeleteConcurrency, e.config.DeleteGracePeriod,
+			e.config.UseDeleteQueue)
 		info.Logger.Infof("       failPercent=%.2f, timeoutPercent=%.2f, updateDelay=%v",
 			l.FailPercent, l.TimeoutPercent, l.UpdateDelay)
 	}
@@ -1057,14 +1073,23 @@ func (e *visibilityStressExecutor) runSteadyState(ctx context.Context, info load
 	ctx, cancel := context.WithTimeout(ctx, info.Configuration.Duration)
 	defer cancel()
 
+	// The queue-backed deleter needs its ingress channels before writers can publish
+	// successfully started workflow IDs. The visibility-scanning deleter needs no setup.
+	if e.config.Load != nil && e.config.Load.DeleteRPS > 0 {
+		if e.config.UseDeleteQueue {
+			e.deleteQueues = make([]chan vsDeleteCandidate, len(e.namespaces))
+			for i := range e.deleteQueues {
+				e.deleteQueues[i] = make(chan vsDeleteCandidate, 2*vsDeletePageSize)
+			}
+			go e.runQueuedDeleters(ctx, info)
+		} else {
+			go e.runDeleters(ctx, info)
+		}
+	}
+
 	// Writer goroutine.
 	if e.config.Load != nil {
 		go e.runWriter(ctx, info)
-	}
-
-	// Deleter goroutines.
-	if e.config.Load != nil && e.config.Load.DeleteRPS > 0 {
-		go e.runDeleters(ctx, info)
 	}
 
 	// Querier goroutine.
@@ -1138,10 +1163,11 @@ func (e *visibilityStressExecutor) runWriterLoop(
 		input := e.buildWorkflowInput(rng)
 		wfID := fmt.Sprintf("%s%d", visibilityStressWorkflowIDPrefix(info.RunID, e.executionID), e.wfCounter.Add(1))
 
+		workflowTimeout := e.workflowTimeout(len(input.CSAUpdates))
 		opts := client.StartWorkflowOptions{
 			ID:                       wfID,
 			TaskQueue:                e.taskQueue,
-			WorkflowExecutionTimeout: e.workflowTimeout(len(input.CSAUpdates)),
+			WorkflowExecutionTimeout: workflowTimeout,
 		}
 
 		if e.config.CSAAtStart {
@@ -1159,16 +1185,32 @@ func (e *visibilityStressExecutor) runWriterLoop(
 
 		// Fire and forget.
 		// TODO: better error handling (retry? circuit breaker?)
-		_, err := e.clients[nsIdx].ExecuteWorkflow(ctx, opts, "visibilityStressWorker", input)
+		run, err := e.clients[nsIdx].ExecuteWorkflow(ctx, opts, "visibilityStressWorker", input)
 		if err != nil {
 			e.totalErrors.Add(1)
 			info.Logger.Warnf("Failed to start workflow: %v", err)
 			continue
 		}
 
+		created := e.totalCreated.Add(1)
+		if e.config.UseDeleteQueue && e.config.Load.DeleteRPS > 0 {
+			candidate := vsDeleteCandidate{
+				execution: &commonpb.WorkflowExecution{
+					WorkflowId: wfID,
+					RunId:      run.GetRunID(),
+				},
+				readyAt: time.Now().Add(workflowTimeout + e.config.DeleteGracePeriod),
+			}
+			select {
+			case e.deleteQueues[nsIdx] <- candidate:
+			case <-ctx.Done():
+				return
+			}
+		}
+
 		// Log off the shared total so the cadence stays ~1/sec regardless of how many
 		// writers are running; whichever goroutine lands on the boundary emits the line.
-		if created := e.totalCreated.Add(1); created%logEvery == 0 {
+		if created%logEvery == 0 {
 			elapsed := time.Since(startTime)
 			info.Logger.Infof("[writer] t=%v created=%d errors=%d actual_rps=%.1f",
 				elapsed.Round(time.Second), created,
@@ -1222,15 +1264,84 @@ func (e *visibilityStressExecutor) runDeleters(ctx context.Context, info loadgen
 	}
 }
 
+// runQueuedDeleters deletes exact workflow/run IDs captured by the writers. Unlike the
+// visibility-scanning deleter, this path does not depend on index refresh, pagination, or
+// search result ordering to supply delete candidates.
+func (e *visibilityStressExecutor) runQueuedDeleters(ctx context.Context, info loadgen.ScenarioInfo) {
+	perNsDeleteRPS := e.config.Load.DeleteRPS / float64(len(e.namespaces))
+	for i, ns := range e.namespaces {
+		i, ns := i, ns
+		go e.runQueuedDeleterForNamespace(ctx, info, i, ns, perNsDeleteRPS)
+	}
+}
+
+func (e *visibilityStressExecutor) runQueuedDeleterForNamespace(
+	ctx context.Context, info loadgen.ScenarioInfo,
+	nsIdx int, ns string, deleteRPS float64,
+) {
+	if deleteRPS <= 0 {
+		return
+	}
+
+	var submitted atomic.Int64
+	var deleteErrors atomic.Int64
+	runScheduledDeleteQueue(
+		ctx,
+		e.deleteQueues[nsIdx],
+		rate.NewLimiter(rate.Limit(deleteRPS), 1),
+		e.config.DeleteConcurrency,
+		func(deleteCtx context.Context, execution *commonpb.WorkflowExecution) error {
+			submitted.Add(1)
+			_, err := e.clients[nsIdx].WorkflowService().DeleteWorkflowExecution(deleteCtx,
+				&workflowservice.DeleteWorkflowExecutionRequest{
+					Namespace:         ns,
+					WorkflowExecution: execution,
+				})
+			return err
+		},
+		func(result vsDeleteResult) {
+			if result.err != nil {
+				if visibilityStressDeleteShouldRetry(result.err) && ctx.Err() == nil {
+					deleteErrors.Add(1)
+					info.Logger.Warnf("[delete-queue/%s] Delete %s failed: %v",
+						ns, result.candidate.execution.WorkflowId, result.err)
+				}
+				return
+			}
+			if deleted := e.totalDeleted.Add(1); deleted%vsDeletePageSize == 0 {
+				info.Logger.Infof("[delete-queue/%s] deleted=%d errors=%d submitted=%d ingress=%d",
+					ns, deleted, deleteErrors.Load(), submitted.Load(), len(e.deleteQueues[nsIdx]))
+			}
+		},
+	)
+}
+
 type vsDeleteCandidate struct {
 	execution  *commonpb.WorkflowExecution
 	key        string
 	generation uint64
+	readyAt    time.Time
 }
 
 type vsDeleteResult struct {
 	candidate vsDeleteCandidate
 	err       error
+}
+
+type vsDeleteCandidateHeap []vsDeleteCandidate
+
+func (h vsDeleteCandidateHeap) Len() int           { return len(h) }
+func (h vsDeleteCandidateHeap) Less(i, j int) bool { return h[i].readyAt.Before(h[j].readyAt) }
+func (h vsDeleteCandidateHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *vsDeleteCandidateHeap) Push(value any) {
+	*h = append(*h, value.(vsDeleteCandidate))
+}
+func (h *vsDeleteCandidateHeap) Pop() any {
+	old := *h
+	n := len(old)
+	value := old[n-1]
+	*h = old[:n-1]
+	return value
 }
 
 type vsRecentDeleteSet struct {
@@ -1323,6 +1434,74 @@ func runDeleteWorkers(
 		}()
 	}
 	wg.Wait()
+}
+
+// runScheduledDeleteQueue maintains a time-ordered queue and feeds candidates to the same
+// rate-limited concurrent workers used by the visibility scanner. A transient RPC failure is
+// retried after a short delay; NotFound is terminal because the execution is already gone.
+func runScheduledDeleteQueue(
+	ctx context.Context,
+	ingress <-chan vsDeleteCandidate,
+	limiter *rate.Limiter,
+	concurrency int,
+	deleteFn func(context.Context, *commonpb.WorkflowExecution) error,
+	onResult func(vsDeleteResult),
+) {
+	const (
+		dispatchInterval = 100 * time.Millisecond
+		retryDelay       = 250 * time.Millisecond
+	)
+
+	jobs := make(chan vsDeleteCandidate, 2*vsDeletePageSize)
+	results := make(chan vsDeleteResult, 2*vsDeletePageSize)
+	workersDone := make(chan struct{})
+	go func() {
+		runDeleteWorkers(ctx, jobs, results, limiter, concurrency, deleteFn)
+		close(results)
+		close(workersDone)
+	}()
+
+	pending := &vsDeleteCandidateHeap{}
+	heap.Init(pending)
+	ticker := time.NewTicker(dispatchInterval)
+	defer func() {
+		ticker.Stop()
+		close(jobs)
+		<-workersDone
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case candidate := <-ingress:
+			heap.Push(pending, candidate)
+		case result, ok := <-results:
+			if !ok {
+				return
+			}
+			if result.err != nil && visibilityStressDeleteShouldRetry(result.err) {
+				result.candidate.readyAt = time.Now().Add(retryDelay)
+				heap.Push(pending, result.candidate)
+			}
+			if onResult != nil {
+				onResult(result)
+			}
+		case now := <-ticker.C:
+		dispatchReady:
+			for pending.Len() > 0 && !(*pending)[0].readyAt.After(now) {
+				candidate := (*pending)[0]
+				select {
+				case jobs <- candidate:
+					heap.Pop(pending)
+				default:
+					// Workers and their bounded input are full. Keep the candidate at
+					// the head and retry on the next tick without blocking result handling.
+					break dispatchReady
+				}
+			}
+		}
+	}
 }
 
 // runDeleterForNamespace continuously pages through terminal workflows (via the visibility

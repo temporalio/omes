@@ -198,6 +198,7 @@ func TestVisibilityStressDeleteConcurrency(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 56, executor.config.DeleteConcurrency)
 	assert.Equal(t, time.Minute, executor.config.DeleteGracePeriod)
+	assert.False(t, executor.config.UseDeleteQueue)
 
 	executor, err = configure(map[string]string{
 		"loadPreset":        "no-failures",
@@ -206,6 +207,22 @@ func TestVisibilityStressDeleteConcurrency(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 64, executor.config.DeleteConcurrency)
+
+	executor, err = configure(map[string]string{
+		"loadPreset":     "no-failures",
+		"deleteRPS":      "100",
+		"useDeleteQueue": "true",
+	})
+	require.NoError(t, err)
+	assert.True(t, executor.config.UseDeleteQueue)
+
+	_, err = configure(map[string]string{
+		"loadPreset":     "no-failures",
+		"wfRPS":          "100",
+		"deleteRPS":      "99",
+		"useDeleteQueue": "true",
+	})
+	require.ErrorContains(t, err, "useDeleteQueue requires deleteRPS >= wfRPS")
 
 	executor, err = configure(map[string]string{
 		"loadPreset":        "no-failures",
@@ -337,6 +354,125 @@ func TestRunDeleteWorkersUsesConfiguredConcurrency(t *testing.T) {
 		resultCount++
 	}
 	require.Equal(t, concurrency, resultCount)
+}
+
+func TestRunScheduledDeleteQueueHonorsReadyTimeAndRetries(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ingress := make(chan vsDeleteCandidate, 1)
+	calls := make(chan string, 2)
+	results := make(chan vsDeleteResult, 2)
+	done := make(chan struct{})
+	attempts := 0
+
+	go func() {
+		defer close(done)
+		runScheduledDeleteQueue(
+			ctx,
+			ingress,
+			rate.NewLimiter(rate.Inf, 1),
+			1,
+			func(_ context.Context, execution *commonpb.WorkflowExecution) error {
+				attempts++
+				calls <- execution.WorkflowId
+				if attempts == 1 {
+					return fmt.Errorf("transient")
+				}
+				return nil
+			},
+			func(result vsDeleteResult) { results <- result },
+		)
+	}()
+
+	ingress <- vsDeleteCandidate{
+		execution: &commonpb.WorkflowExecution{WorkflowId: "queued", RunId: "run"},
+		readyAt:   time.Now().Add(200 * time.Millisecond),
+	}
+
+	select {
+	case <-calls:
+		t.Fatal("delete ran before the candidate became eligible")
+	case <-time.After(75 * time.Millisecond):
+	}
+
+	for i := 0; i < 2; i++ {
+		select {
+		case id := <-calls:
+			assert.Equal(t, "queued", id)
+		case <-time.After(2 * time.Second):
+			t.Fatal("scheduled delete or retry did not run")
+		}
+	}
+
+	first := <-results
+	require.Error(t, first.err)
+	second := <-results
+	require.NoError(t, second.err)
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("scheduled delete queue did not stop after cancellation")
+	}
+}
+
+func TestWriterPublishesExactExecutionToDeleteQueue(t *testing.T) {
+	t.Parallel()
+
+	mockRun := &sdkmocks.WorkflowRun{}
+	mockRun.On("GetRunID").Return("run-id")
+	mockClient := &sdkmocks.Client{}
+	mockClient.On("ExecuteWorkflow",
+		mock.Anything, mock.Anything, "visibilityStressWorker", mock.Anything,
+	).Return(mockRun, nil)
+
+	queue := make(chan vsDeleteCandidate, 8)
+	executor := &visibilityStressExecutor{
+		config: &vsConfig{
+			Load: &vsLoadPreset{
+				WfRPS:        100_000,
+				UpdatesPerWF: 0,
+				DeleteRPS:    100_000,
+			},
+			WorkflowTimeout:   30 * time.Second,
+			DeleteGracePeriod: time.Minute,
+			UseDeleteQueue:    true,
+			VocabZipfSkew:     vsDefaultVocabZipfSkew,
+		},
+		clients:      []sdkclient.Client{mockClient},
+		namespaces:   []string{"default"},
+		executionID:  "execution-id",
+		deleteQueues: []chan vsDeleteCandidate{queue},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	startedAt := time.Now()
+	go func() {
+		defer close(done)
+		executor.runWriterLoop(ctx, loadgen.ScenarioInfo{RunID: "run-id"},
+			rate.NewLimiter(rate.Inf, 1), startedAt, 0)
+	}()
+
+	var candidate vsDeleteCandidate
+	select {
+	case candidate = <-queue:
+	case <-time.After(2 * time.Second):
+		t.Fatal("writer did not publish a delete candidate")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("writer did not stop after cancellation")
+	}
+
+	assert.True(t, strings.HasPrefix(candidate.execution.WorkflowId,
+		"vs-run-id-execution-id-"))
+	assert.Equal(t, "run-id", candidate.execution.RunId)
+	assert.WithinDuration(t, startedAt.Add(90*time.Second), candidate.readyAt, time.Second)
 }
 
 func TestRunQuerierUsesConfiguredConcurrency(t *testing.T) {
