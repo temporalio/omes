@@ -41,6 +41,8 @@ type ClientOptions struct {
 	ClientCertPath string
 	// TLS client private key
 	ClientKeyPath string
+	// TLS client key and certificate in one PEM file
+	ClientCombinedPath string
 	// TLS server name
 	TLSServerName string
 	// Authorization header value
@@ -51,6 +53,16 @@ type ClientOptions struct {
 	fs *pflag.FlagSet
 }
 
+// X509KeyPairFromCombinedPEM parses cert-manager's tls-combined.pem. X509KeyPair
+// scans each argument for the block type it needs, so one blob serves as both.
+func X509KeyPairFromCombinedPEM(pemBytes []byte) (tls.Certificate, error) {
+	cert, err := tls.X509KeyPair(pemBytes, pemBytes)
+	if err != nil {
+		return tls.Certificate{}, fmt.Errorf("failed to parse combined PEM: %w", err)
+	}
+	return cert, nil
+}
+
 // loadTLSConfig inits a TLS config from the provided cert and key files.
 func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{
@@ -58,13 +70,28 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 		ServerName:         c.TLSServerName,
 		MinVersion:         tls.VersionTLS13,
 	}
+	if c.ClientCombinedPath != "" {
+		if c.ClientCertPath != "" || c.ClientKeyPath != "" {
+			return nil, errors.New("got combined TLS PEM together with a cert or key path; use one or the other")
+		}
+		pemBytes, err := os.ReadFile(c.ClientCombinedPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read combined TLS PEM: %w", err)
+		}
+		cert, err := X509KeyPairFromCombinedPEM(pemBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load certs: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		return tlsConfig, nil
+	}
 	if c.ClientCertPath != "" {
 		if c.ClientKeyPath == "" {
 			return nil, errors.New("got TLS cert with no key")
 		}
 		cert, err := tls.LoadX509KeyPair(c.ClientCertPath, c.ClientKeyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load certs: %s", err)
+			return nil, fmt.Errorf("failed to load certs: %w", err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 		return tlsConfig, nil
@@ -144,6 +171,8 @@ func (c *ClientOptions) FlagSet() *pflag.FlagSet {
 	c.fs.BoolVar(&c.EnableTLS, "tls", false, "Enable TLS")
 	c.fs.StringVar(&c.ClientCertPath, "tls-cert-path", "", "Path to client TLS certificate")
 	c.fs.StringVar(&c.ClientKeyPath, "tls-key-path", "", "Path to client private key")
+	c.fs.StringVar(&c.ClientCombinedPath, "tls-combined-path", "",
+		"Path to one PEM file holding both the client private key and certificate (cert-manager's tls-combined.pem). Mutually exclusive with --tls-cert-path and --tls-key-path")
 	c.fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
 	c.fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
 	c.fs.StringVar(&c.AuthHeader, "auth-header", "",

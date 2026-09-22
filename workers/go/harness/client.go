@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,6 +35,7 @@ type clientConfigOptions struct {
 	EnableTLS               bool
 	TLSCertPath             string
 	TLSKeyPath              string
+	TLSCombinedPath         string
 	TLSServerName           string
 	DisableHostVerification bool
 	PromListenAddress       string
@@ -105,6 +107,21 @@ func buildTLSConfig(opts clientConfigOptions) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: opts.DisableHostVerification,
 		ServerName:         opts.TLSServerName,
+	}
+	if opts.TLSCombinedPath != "" {
+		if opts.TLSCertPath != "" || opts.TLSKeyPath != "" {
+			return nil, fmt.Errorf("Combined TLS PEM specified together with a cert or key path!")
+		}
+		pemBytes, err := os.ReadFile(opts.TLSCombinedPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read combined TLS PEM: %w", err)
+		}
+		cert, err := clioptions.X509KeyPairFromCombinedPEM(pemBytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load certs: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+		return tlsConfig, nil
 	}
 	if opts.TLSCertPath != "" {
 		if opts.TLSKeyPath == "" {
