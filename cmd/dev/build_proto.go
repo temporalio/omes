@@ -27,6 +27,10 @@ func buildProtoCmd() *cobra.Command {
 func runBuildKitchensink(ctx context.Context) error {
 	fmt.Println("Building kitchen-sink proto...")
 
+	if err := checkProtoSubmodule(); err != nil {
+		return err
+	}
+
 	if err := checkTool(ctx, "cargo"); err != nil {
 		return err
 	}

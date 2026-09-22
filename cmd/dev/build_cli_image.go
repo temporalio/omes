@@ -49,6 +49,11 @@ func (b *cliImageBuilder) addCLIFlags(fs *pflag.FlagSet) {
 func (b *cliImageBuilder) build(ctx context.Context, allowPush bool) error {
 	b.logger = b.loggingOptions.MustCreateLogger()
 
+	// The image builds kitchen-sink-gen, which compiles the upstream API protos.
+	if err := checkProtoSubmodule(); err != nil {
+		return err
+	}
+
 	// At some point we probably want to replace this with a meaningful version of omes itself
 	omesVersion, err := getCurrentCommitSha(ctx)
 	if err != nil {

@@ -23,6 +23,13 @@ Omes (pronounced oh-mess) is the Hebrew word for "load" (עומס).
 
 Run `mise install` to install every pinned development tool. SDK and Temporal server references are also in `mise.toml`.
 
+The upstream Temporal API protos are a git submodule at `workers/proto/api_upstream`. Kitchen-sink code generation
+imports them, so clone with `--recursive`, or check the submodule out after the fact:
+
+```sh
+git submodule update --init --recursive
+```
+
 ## Architecture
 
 This (simplified) diagram shows the main components of Omes:

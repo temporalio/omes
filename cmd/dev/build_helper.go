@@ -30,7 +30,7 @@ func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {
 	fs.AddFlagSet(b.loggingOptions.FlagSet())
 	fs.BoolVar(&b.tagAsLatest, "tag-as-latest", false,
 		"If set, tag the image as latest in addition to the omes commit sha tag")
-	fs.StringSliceVar(&b.platforms, "platform", []string{"amd64"}, "Platforms for use in docker build --platform")
+	fs.StringSliceVar(&b.platforms, "platform", []string{"linux/amd64"}, "Platforms for use in docker build --platform")
 	fs.StringVar(&b.imageName, "image-name", "omes", "Name of the image to build")
 	fs.StringVar(&b.repoPrefix, "repo-prefix", "", "Repository prefix (e.g., 'temporaliotest'). If empty, no prefix is used.")
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
@@ -83,7 +83,7 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		"build",
 		"--pull",
 		"--file", dockerFile,
-		"--platform", strings.Join(b.platforms, ","),
+		"--platform", strings.Join(qualifyPlatforms(b.platforms), ","),
 	}
 
 	// Handle multi-platform build requirements
@@ -162,6 +162,20 @@ func (b *baseImageBuilder) handleImageSave(ctx context.Context, imageTagsForPubl
 		}
 	}
 	return nil
+}
+
+// qualifyPlatforms prefixes bare architectures with the linux OS. Docker resolves the OS of an unqualified platform
+// from the host, so "amd64" means linux/amd64 on a CI runner but darwin/amd64 on a Mac, where the build itself
+// succeeds and only the final export fails with "operating system is not supported".
+func qualifyPlatforms(platforms []string) []string {
+	qualified := make([]string, 0, len(platforms))
+	for _, platform := range platforms {
+		if !strings.Contains(platform, "/") {
+			platform = "linux/" + platform
+		}
+		qualified = append(qualified, platform)
+	}
+	return qualified
 }
 
 func gitRef(ctx context.Context, gitDir string) (string, error) {
