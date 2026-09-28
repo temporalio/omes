@@ -633,6 +633,8 @@ func startNexusOperation(
 			return signalWorkflowNexusOperation(ctx, workflowAction)
 		case *kitchensink.NexusWorkflowAction_Update:
 			return updateWorkflowNexusOperation(ctx, nc, workflowAction)
+		case *kitchensink.NexusWorkflowAction_Query:
+			return queryWorkflowNexusOperation(ctx, workflowAction)
 		}
 	case *kitchensink.NexusOperationRequest_StartActivity:
 		return startStandaloneActivityNexusOperation(ctx, nc, action.StartActivity, opts)
@@ -748,6 +750,58 @@ func updateWorkflowNexusOperation(
 		// the caller later through the operation's completion callback.
 		WaitForStage: client.WorkflowUpdateStageAccepted,
 	})
+}
+
+func queryWorkflowNexusOperation(
+	ctx context.Context,
+	input *kitchensink.NexusWorkflowAction,
+) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
+	var result temporalnexus.TemporalOperationResult[converter.RawValue]
+	if input.GetWorkflowId() == "" {
+		return result, nexus.NewHandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest,
+			"query target must include a workflow ID",
+		)
+	}
+
+	queryType, queryArgs, err := kitchensink.QueryNameAndArgs(input.GetQuery())
+	if err != nil {
+		return result, nexus.NewHandlerErrorf(
+			nexus.HandlerErrorTypeBadRequest,
+			"unsupported query type: %s",
+			err.Error(),
+		)
+	}
+
+	// Pass the Kitchen Sink-owned payloads through without serializing them again.
+	args := make([]any, len(queryArgs.GetPayloads()))
+	for i, payload := range queryArgs.GetPayloads() {
+		args[i] = converter.NewRawValue(payload)
+	}
+	queryResult, err := temporalnexus.GetClient(ctx).QueryWorkflow(
+		ctx,
+		input.GetWorkflowId(),
+		input.GetRunId(),
+		queryType,
+		args...,
+	)
+	if err != nil {
+		// Treat namespace handover as retryable.
+		if _, ok := errors.AsType[*serviceerror.NamespaceNotActive](err); ok {
+			return result, nexus.NewHandlerErrorf(nexus.HandlerErrorTypeUnavailable, "%s", err.Error())
+		}
+		return result, err
+	}
+	queryResultPayloads := converter.GetPayloads(queryResult)
+	if len(queryResultPayloads.GetPayloads()) != 1 {
+		return result, nexus.NewHandlerErrorf(
+			nexus.HandlerErrorTypeInternal,
+			"query response has %d payloads, expected one",
+			len(queryResultPayloads.GetPayloads()),
+		)
+	}
+
+	return temporalnexus.NewSyncResult(converter.NewRawValue(queryResultPayloads.GetPayloads()[0])), nil
 }
 
 // startStandaloneActivityNexusOperation starts the registered "noop" activity.
