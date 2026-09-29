@@ -56898,6 +56898,33 @@ io.temporal.api.common.v1.Payload defaultValue) {
      */
     io.temporal.omes.KitchenSink.DoUpdateOrBuilder getUpdateOrBuilder();
 
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     * @return Whether the query field is set.
+     */
+    boolean hasQuery();
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     * @return The query.
+     */
+    io.temporal.omes.KitchenSink.DoQuery getQuery();
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     */
+    io.temporal.omes.KitchenSink.DoQueryOrBuilder getQueryOrBuilder();
+
     io.temporal.omes.KitchenSink.NexusWorkflowAction.ActionCase getActionCase();
   }
   /**
@@ -56947,6 +56974,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       START(4),
       SIGNAL(5),
       UPDATE(6),
+      QUERY(7),
       ACTION_NOT_SET(0);
       private final int value;
       private ActionCase(int value) {
@@ -56967,6 +56995,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
           case 4: return START;
           case 5: return SIGNAL;
           case 6: return UPDATE;
+          case 7: return QUERY;
           case 0: return ACTION_NOT_SET;
           default: return null;
         }
@@ -57224,6 +57253,49 @@ io.temporal.api.common.v1.Payload defaultValue) {
       return io.temporal.omes.KitchenSink.DoUpdate.getDefaultInstance();
     }
 
+    public static final int QUERY_FIELD_NUMBER = 7;
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     * @return Whether the query field is set.
+     */
+    @java.lang.Override
+    public boolean hasQuery() {
+      return actionCase_ == 7;
+    }
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     * @return The query.
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoQuery getQuery() {
+      if (actionCase_ == 7) {
+         return (io.temporal.omes.KitchenSink.DoQuery) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+    }
+    /**
+     * <pre>
+     * Query the target workflow selected by workflow_id and run_id.
+     * </pre>
+     *
+     * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+     */
+    @java.lang.Override
+    public io.temporal.omes.KitchenSink.DoQueryOrBuilder getQueryOrBuilder() {
+      if (actionCase_ == 7) {
+         return (io.temporal.omes.KitchenSink.DoQuery) action_;
+      }
+      return io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -57256,6 +57328,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
       if (actionCase_ == 6) {
         output.writeMessage(6, (io.temporal.omes.KitchenSink.DoUpdate) action_);
       }
+      if (actionCase_ == 7) {
+        output.writeMessage(7, (io.temporal.omes.KitchenSink.DoQuery) action_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -57286,6 +57361,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
       if (actionCase_ == 6) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, (io.temporal.omes.KitchenSink.DoUpdate) action_);
+      }
+      if (actionCase_ == 7) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, (io.temporal.omes.KitchenSink.DoQuery) action_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -57325,6 +57404,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
           if (!getUpdate()
               .equals(other.getUpdate())) return false;
           break;
+        case 7:
+          if (!getQuery()
+              .equals(other.getQuery())) return false;
+          break;
         case 0:
         default:
       }
@@ -57359,6 +57442,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         case 6:
           hash = (37 * hash) + UPDATE_FIELD_NUMBER;
           hash = (53 * hash) + getUpdate().hashCode();
+          break;
+        case 7:
+          hash = (37 * hash) + QUERY_FIELD_NUMBER;
+          hash = (53 * hash) + getQuery().hashCode();
           break;
         case 0:
         default:
@@ -57516,6 +57603,9 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (updateBuilder_ != null) {
           updateBuilder_.clear();
         }
+        if (queryBuilder_ != null) {
+          queryBuilder_.clear();
+        }
         actionCase_ = 0;
         action_ = null;
         return this;
@@ -57582,6 +57672,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
         if (actionCase_ == 6 &&
             updateBuilder_ != null) {
           result.action_ = updateBuilder_.build();
+        }
+        if (actionCase_ == 7 &&
+            queryBuilder_ != null) {
+          result.action_ = queryBuilder_.build();
         }
       }
 
@@ -57655,6 +57749,10 @@ io.temporal.api.common.v1.Payload defaultValue) {
             mergeUpdate(other.getUpdate());
             break;
           }
+          case QUERY: {
+            mergeQuery(other.getQuery());
+            break;
+          }
           case ACTION_NOT_SET: {
             break;
           }
@@ -57723,6 +57821,13 @@ io.temporal.api.common.v1.Payload defaultValue) {
                 actionCase_ = 6;
                 break;
               } // case 50
+              case 58: {
+                input.readMessage(
+                    getQueryFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                actionCase_ = 7;
+                break;
+              } // case 58
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -58579,6 +58684,184 @@ io.temporal.api.common.v1.Payload defaultValue) {
         actionCase_ = 6;
         onChanged();
         return updateBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoQuery, io.temporal.omes.KitchenSink.DoQuery.Builder, io.temporal.omes.KitchenSink.DoQueryOrBuilder> queryBuilder_;
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       * @return Whether the query field is set.
+       */
+      @java.lang.Override
+      public boolean hasQuery() {
+        return actionCase_ == 7;
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       * @return The query.
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoQuery getQuery() {
+        if (queryBuilder_ == null) {
+          if (actionCase_ == 7) {
+            return (io.temporal.omes.KitchenSink.DoQuery) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+        } else {
+          if (actionCase_ == 7) {
+            return queryBuilder_.getMessage();
+          }
+          return io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      public Builder setQuery(io.temporal.omes.KitchenSink.DoQuery value) {
+        if (queryBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          action_ = value;
+          onChanged();
+        } else {
+          queryBuilder_.setMessage(value);
+        }
+        actionCase_ = 7;
+        return this;
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      public Builder setQuery(
+          io.temporal.omes.KitchenSink.DoQuery.Builder builderForValue) {
+        if (queryBuilder_ == null) {
+          action_ = builderForValue.build();
+          onChanged();
+        } else {
+          queryBuilder_.setMessage(builderForValue.build());
+        }
+        actionCase_ = 7;
+        return this;
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      public Builder mergeQuery(io.temporal.omes.KitchenSink.DoQuery value) {
+        if (queryBuilder_ == null) {
+          if (actionCase_ == 7 &&
+              action_ != io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance()) {
+            action_ = io.temporal.omes.KitchenSink.DoQuery.newBuilder((io.temporal.omes.KitchenSink.DoQuery) action_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            action_ = value;
+          }
+          onChanged();
+        } else {
+          if (actionCase_ == 7) {
+            queryBuilder_.mergeFrom(value);
+          } else {
+            queryBuilder_.setMessage(value);
+          }
+        }
+        actionCase_ = 7;
+        return this;
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      public Builder clearQuery() {
+        if (queryBuilder_ == null) {
+          if (actionCase_ == 7) {
+            actionCase_ = 0;
+            action_ = null;
+            onChanged();
+          }
+        } else {
+          if (actionCase_ == 7) {
+            actionCase_ = 0;
+            action_ = null;
+          }
+          queryBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      public io.temporal.omes.KitchenSink.DoQuery.Builder getQueryBuilder() {
+        return getQueryFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      @java.lang.Override
+      public io.temporal.omes.KitchenSink.DoQueryOrBuilder getQueryOrBuilder() {
+        if ((actionCase_ == 7) && (queryBuilder_ != null)) {
+          return queryBuilder_.getMessageOrBuilder();
+        } else {
+          if (actionCase_ == 7) {
+            return (io.temporal.omes.KitchenSink.DoQuery) action_;
+          }
+          return io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * Query the target workflow selected by workflow_id and run_id.
+       * </pre>
+       *
+       * <code>.temporal.omes.kitchen_sink.DoQuery query = 7;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          io.temporal.omes.KitchenSink.DoQuery, io.temporal.omes.KitchenSink.DoQuery.Builder, io.temporal.omes.KitchenSink.DoQueryOrBuilder> 
+          getQueryFieldBuilder() {
+        if (queryBuilder_ == null) {
+          if (!(actionCase_ == 7)) {
+            action_ = io.temporal.omes.KitchenSink.DoQuery.getDefaultInstance();
+          }
+          queryBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              io.temporal.omes.KitchenSink.DoQuery, io.temporal.omes.KitchenSink.DoQuery.Builder, io.temporal.omes.KitchenSink.DoQueryOrBuilder>(
+                  (io.temporal.omes.KitchenSink.DoQuery) action_,
+                  getParentForChildren(),
+                  isClean());
+          action_ = null;
+        }
+        actionCase_ = 7;
+        onChanged();
+        return queryBuilder_;
       }
       @java.lang.Override
       public final Builder setUnknownFields(
@@ -60623,7 +60906,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "tion\030\002 \001(\0132/.temporal.omes.kitchen_sink." +
       "NexusWorkflowActionH\000\022K\n\016start_activity\030" +
       "\003 \001(\01321.temporal.omes.kitchen_sink.Execu" +
-      "teActivityActionH\000B\010\n\006action\"\253\002\n\023NexusWo" +
+      "teActivityActionH\000B\010\n\006action\"\341\002\n\023NexusWo" +
       "rkflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run" +
       "_id\030\002 \001(\t\022L\n\rstart_options\030\003 \001(\01325.tempo" +
       "ral.omes.kitchen_sink.NexusWorkflowStart" +
@@ -60631,26 +60914,28 @@ io.temporal.api.common.v1.Payload defaultValue) {
       ".EmptyH\000\0226\n\006signal\030\005 \001(\0132$.temporal.omes" +
       ".kitchen_sink.DoSignalH\000\0226\n\006update\030\006 \001(\013" +
       "2$.temporal.omes.kitchen_sink.DoUpdateH\000" +
-      "B\010\n\006action\"\310\001\n\031NexusWorkflowStartOptions" +
-      "\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033workflow_id_conf" +
-      "lict_policy\030\002 \001(\0162/.temporal.api.enums.v" +
-      "1.WorkflowIdConflictPolicy\022A\n\016workflow_i" +
-      "nput\030\003 \001(\0132).temporal.omes.kitchen_sink." +
-      "WorkflowInput\"\025\n\023AwaitPendingActions*\244\001\n" +
-      "\021ParentClosePolicy\022#\n\037PARENT_CLOSE_POLIC" +
-      "Y_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_POLICY_T" +
-      "ERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_ABANDO" +
-      "N\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST_CANCE" +
-      "L\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECIFIED\020\000" +
-      "\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035ChildW" +
-      "orkflowCancellationType\022\024\n\020CHILD_WF_ABAN" +
-      "DON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$CHILD_" +
-      "WF_WAIT_CANCELLATION_COMPLETED\020\002\022(\n$CHIL" +
-      "D_WF_WAIT_CANCELLATION_REQUESTED\020\003*X\n\030Ac" +
-      "tivityCancellationType\022\016\n\nTRY_CANCEL\020\000\022\037" +
-      "\n\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n\007ABAND" +
-      "ON\020\002BB\n\020io.temporal.omesZ.github.com/tem" +
-      "poralio/omes/loadgen/kitchensinkb\006proto3"
+      "\0224\n\005query\030\007 \001(\0132#.temporal.omes.kitchen_" +
+      "sink.DoQueryH\000B\010\n\006action\"\310\001\n\031NexusWorkfl" +
+      "owStartOptions\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033wo" +
+      "rkflow_id_conflict_policy\030\002 \001(\0162/.tempor" +
+      "al.api.enums.v1.WorkflowIdConflictPolicy" +
+      "\022A\n\016workflow_input\030\003 \001(\0132).temporal.omes" +
+      ".kitchen_sink.WorkflowInput\"\025\n\023AwaitPend" +
+      "ingActions*\244\001\n\021ParentClosePolicy\022#\n\037PARE" +
+      "NT_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_" +
+      "CLOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE" +
+      "_POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY" +
+      "_REQUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n" +
+      "\013UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAUL" +
+      "T\020\002*\242\001\n\035ChildWorkflowCancellationType\022\024\n" +
+      "\020CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANC" +
+      "EL\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPL" +
+      "ETED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQ" +
+      "UESTED\020\003*X\n\030ActivityCancellationType\022\016\n\n" +
+      "TRY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLE" +
+      "TED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ." +
+      "github.com/temporalio/omes/loadgen/kitch" +
+      "ensinkb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -60978,7 +61263,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowAction_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_NexusWorkflowAction_descriptor,
-        new java.lang.String[] { "WorkflowId", "RunId", "StartOptions", "Start", "Signal", "Update", "Action", });
+        new java.lang.String[] { "WorkflowId", "RunId", "StartOptions", "Start", "Signal", "Update", "Query", "Action", });
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowStartOptions_descriptor =
       getDescriptor().getMessageTypes().get(35);
     internal_static_temporal_omes_kitchen_sink_NexusWorkflowStartOptions_fieldAccessorTable = new

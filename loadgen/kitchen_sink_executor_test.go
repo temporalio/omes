@@ -1213,6 +1213,64 @@ func TestKitchenSink(t *testing.T) {
 		standaloneActivityOperatorCommandsTestCase("Update",
 			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE),
 		{
+			name: "NexusOperation/Sync/Query",
+			testInput: &TestInput{
+				WorkflowInput: &WorkflowInput{
+					InitialActions: ListActionSet(
+						// Start the target workflow so it can be queried.
+						NexusOperation(&ExecuteNexusOperation{
+							Input: &NexusOperationRequest{
+								Action: &NexusOperationRequest_WorkflowAction{
+									WorkflowAction: &NexusWorkflowAction{
+										WorkflowId: "nexus-query-target",
+										Action:     &NexusWorkflowAction_Start{Start: &emptypb.Empty{}},
+										StartOptions: &NexusWorkflowStartOptions{
+											WorkflowInput: &WorkflowInput{
+												InitialActions: ListActionSet(
+													NewSetWorkflowStateAction("query-result", "query successful"),
+													NewAwaitWorkflowStateAction("never", "resolves"),
+												),
+											},
+										},
+									},
+								},
+							},
+							AwaitableChoice: &AwaitableChoice{
+								Condition: &AwaitableChoice_WaitStarted{
+									WaitStarted: &emptypb.Empty{},
+								},
+							},
+						}),
+						// Now, Query the target workflow as a Nexus op.
+						NexusOperation(&ExecuteNexusOperation{
+							Input: &NexusOperationRequest{
+								Action: &NexusOperationRequest_WorkflowAction{
+									WorkflowAction: &NexusWorkflowAction{
+										WorkflowId: "nexus-query-target",
+										Action: &NexusWorkflowAction_Query{
+											Query: &DoQuery{
+												Variant: &DoQuery_ReportState{
+													ReportState: &common.Payloads{},
+												},
+											},
+										},
+									},
+								},
+							},
+							ExpectedOutput: ConvertToPayload(
+								&WorkflowState{
+									Kvs: map[string]string{"query-result": "query successful"},
+								},
+							),
+						}),
+					),
+				},
+			},
+			historyMatcher: PartialHistoryMatcher(`
+				NexusOperationCompleted {"links":[{"workflow":{"workflowId":"nexus-query-target","reason":"Query processed"}}]}`),
+			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
+		},
+		{
 			name: "NexusOperation/Sync/Signal",
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{

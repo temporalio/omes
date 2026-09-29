@@ -624,20 +624,22 @@ class NexusOperationRequest(_message.Message):
     def __init__(self, echo: _Optional[str] = ..., workflow_action: _Optional[_Union[NexusWorkflowAction, _Mapping]] = ..., start_activity: _Optional[_Union[ExecuteActivityAction, _Mapping]] = ...) -> None: ...
 
 class NexusWorkflowAction(_message.Message):
-    __slots__ = ("workflow_id", "run_id", "start_options", "start", "signal", "update")
+    __slots__ = ("workflow_id", "run_id", "start_options", "start", "signal", "update", "query")
     WORKFLOW_ID_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     START_OPTIONS_FIELD_NUMBER: _ClassVar[int]
     START_FIELD_NUMBER: _ClassVar[int]
     SIGNAL_FIELD_NUMBER: _ClassVar[int]
     UPDATE_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
     workflow_id: str
     run_id: str
     start_options: NexusWorkflowStartOptions
     start: _empty_pb2.Empty
     signal: DoSignal
     update: DoUpdate
-    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., start_options: _Optional[_Union[NexusWorkflowStartOptions, _Mapping]] = ..., start: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., signal: _Optional[_Union[DoSignal, _Mapping]] = ..., update: _Optional[_Union[DoUpdate, _Mapping]] = ...) -> None: ...
+    query: DoQuery
+    def __init__(self, workflow_id: _Optional[str] = ..., run_id: _Optional[str] = ..., start_options: _Optional[_Union[NexusWorkflowStartOptions, _Mapping]] = ..., start: _Optional[_Union[_empty_pb2.Empty, _Mapping]] = ..., signal: _Optional[_Union[DoSignal, _Mapping]] = ..., update: _Optional[_Union[DoUpdate, _Mapping]] = ..., query: _Optional[_Union[DoQuery, _Mapping]] = ...) -> None: ...
 
 class NexusWorkflowStartOptions(_message.Message):
     __slots__ = ("task_queue", "workflow_id_conflict_policy", "workflow_input")

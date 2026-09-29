@@ -22,7 +22,7 @@ require (
 	// Bump this whenever workers/go/harness/api changes.
 	github.com/temporalio/omes/workers/go/harness/api v0.0.0-20260601200529-2419bd37e739
 	go.temporal.io/api v1.63.5
-	go.temporal.io/sdk v1.48.0
+	go.temporal.io/sdk v1.49.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.38.0
 	golang.org/x/sync v0.22.0

@@ -567,6 +567,8 @@ message NexusWorkflowAction {
     // Update the target workflow selected by workflow_id and run_id.
     // DoUpdate.with_start is not supported.
     DoUpdate update = 6;
+    // Query the target workflow selected by workflow_id and run_id.
+    DoQuery query = 7;
   }
 }
 

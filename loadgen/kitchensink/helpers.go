@@ -69,6 +69,15 @@ func UpdateNameAndArgs(update *DoUpdate) (string, []any, error) {
 	return "", nil, fmt.Errorf("do_update must recognizable variant")
 }
 
+func QueryNameAndArgs(query *DoQuery) (string, *common.Payloads, error) {
+	if reportState := query.GetReportState(); reportState != nil {
+		return "report_state", reportState, nil
+	} else if handler := query.GetCustom(); handler != nil {
+		return handler.GetName(), &common.Payloads{Payloads: handler.GetArgs()}, nil
+	}
+	return "", nil, fmt.Errorf("do_query must recognizable variant")
+}
+
 // ConvertFromPBRetryPolicy converts a proto RetryPolicy into an SDK RetryPolicy.
 func ConvertFromPBRetryPolicy(retryPolicy *common.RetryPolicy) *temporal.RetryPolicy {
 	if retryPolicy == nil {
