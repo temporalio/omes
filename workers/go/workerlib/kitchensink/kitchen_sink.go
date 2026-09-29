@@ -794,11 +794,11 @@ func queryWorkflowNexusOperation(
 	}
 	queryResultPayloads := converter.GetPayloads(queryResult)
 	if len(queryResultPayloads.GetPayloads()) != 1 {
-		return result, nexus.NewHandlerErrorf(
-			nexus.HandlerErrorTypeInternal,
-			"query response has %d payloads, expected one",
-			len(queryResultPayloads.GetPayloads()),
-		)
+		return result, &nexus.HandlerError{
+			Type:          nexus.HandlerErrorTypeInternal,
+			Message:       fmt.Sprintf("query response has %d payloads, expected one", len(queryResultPayloads.GetPayloads())),
+			RetryBehavior: nexus.HandlerErrorRetryBehaviorNonRetryable,
+		}
 	}
 
 	return temporalnexus.NewSyncResult(converter.NewRawValue(queryResultPayloads.GetPayloads()[0])), nil
