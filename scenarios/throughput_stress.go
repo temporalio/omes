@@ -67,7 +67,7 @@ const (
 	// Opt-in and off by default (only the Go worker implements the operation); requires Nexus load
 	// (nexus-enabled) and server support for standalone activities + activity completion callbacks.
 	IncludeNexusStandaloneActivityFlag = "include-nexus-standalone-activity"
-	// IncludeNexusWorkflowActionsFlag enables Nexus operations that signal and update a workflow.
+	// IncludeNexusWorkflowActionsFlag enables Nexus operations that signal, update, and query a workflow.
 	// Opt-in and off by default; requires Nexus load (nexus-enabled).
 	IncludeNexusWorkflowActionsFlag = "include-nexus-workflow-actions"
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
@@ -154,7 +154,7 @@ func init() {
 					return c.Namespace.GetStandaloneActivityOperatorCommands()
 				})
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
-			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal and update a workflow (Go worker only).")
+			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -963,6 +963,7 @@ func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Acti
 		t.createNexusSignalWithStartAction(workflowID, &WorkflowInput{}),
 		t.createNexusUpdateAction(workflowID),
 		t.createNexusSignalAction(workflowID),
+		t.createNexusQueryAction(workflowID),
 	}}}}
 }
 
@@ -1022,6 +1023,26 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 			}},
 		},
 		ExpectedOutput: ConvertToPayload(workflowID),
+	})
+}
+
+func (t *tpsExecutor) createNexusQueryAction(workflowID string) *Action {
+	return NexusOperation(&ExecuteNexusOperation{
+		Endpoint: t.config.NexusEndpoint,
+		Input: &NexusOperationRequest{
+			Action: &NexusOperationRequest_WorkflowAction{
+				WorkflowAction: &NexusWorkflowAction{
+					WorkflowId: workflowID,
+					Action: &NexusWorkflowAction_Query{
+						Query: &DoQuery{
+							Variant: &DoQuery_ReportState{
+								ReportState: &common.Payloads{},
+							},
+						},
+					},
+				},
+			},
+		},
 	})
 }
 

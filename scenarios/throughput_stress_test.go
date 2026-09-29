@@ -261,7 +261,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 			}
 		})
 	}
-	require.Len(t, workflowActions, 3)
+	require.Len(t, workflowActions, 4)
 
 	signalWithStartAction := workflowActions[0]
 	require.True(t, signalWithStartAction.GetSignal().GetWithStart())
@@ -277,6 +277,10 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 		ks.SingleActionSet(ks.NewEmptyReturnResultAction()),
 		signalAction.GetSignal().GetDoSignalActions().GetDoActionsInMain(),
 	))
+
+	queryAction := workflowActions[3]
+	require.NotNil(t, queryAction.GetQuery())
+	require.NotNil(t, queryAction.GetQuery().GetReportState())
 }
 
 func TestThroughputStressConfigurePayload(t *testing.T) {
