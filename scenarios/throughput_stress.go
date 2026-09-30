@@ -386,7 +386,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				return nil
 			},
 		}
-		if err := ksExec.Run(ctx, info); err != nil {
+		if err := ksExec.Run(ctx, info); err != nil && !errors.Is(err, context.Canceled) {
+			// A context-canceled error means the caller stopped the load (expected for
+			// standing load driven by a suite). Fall through to post-run checks so the
+			// iterations that completed before the stop are still verified against
+			// Visibility. Any other error is a genuine run failure.
 			return err
 		}
 	}
@@ -426,8 +430,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	var tpsErrors []error
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
+	// Use context.Background() so the check runs even when the scenario ctx is
+	// canceled (the caller stopped the load); the timeout is enforced by the
+	// waitAtMost parameter inside MinVisibilityCountEventually.
 	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
+		context.Background(),
 		info,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: info.Namespace,
@@ -464,9 +471,12 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// gate that yields no count, whereas a tolerant run's verdict comes from the
 	// counted iteration-failure tally (snapshot FailedIterations) plus the caller's
 	// policy. This block is only reached when no iteration failed anyway — a
-	// tolerated failure makes ksExec.Run return a failure verdict and we return early.
+	// tolerated failure makes ksExec.Run return a non-canceled error and we return
+	// early above. Use context.Background() for the same reason as MinVisibilityCountEventually.
 	if !info.Configuration.ContinueOnIterationFailure {
-		if err := loadgen.VerifyNoFailedWorkflows(ctx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
+		verifyCtx, verifyCancel := context.WithTimeout(context.Background(), t.config.VisibilityVerificationTimeout)
+		defer verifyCancel()
+		if err := loadgen.VerifyNoFailedWorkflows(verifyCtx, info, loadgen.OmesExecutionIDSearchAttribute, info.ExecutionID); err != nil {
 			tpsErrors = append(tpsErrors, err)
 		}
 	}

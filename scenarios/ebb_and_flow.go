@@ -235,10 +235,11 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	var started, completed, backlog, target int64
 	lastIteration := time.Now()
 
-	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
+	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration && ctx.Err() == nil; elapsed = time.Since(e.startTime) {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			// ctx.Err() != nil; loop condition exits on next check so post-run
+			// checks still run for the workflows that completed before the stop.
 		case err := <-errCh:
 			if err != nil {
 				e.Logger.Errorf("Failed to spawn workflow: %v", err)
@@ -297,8 +298,11 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
+	// Use context.Background() so the check runs even when the scenario ctx is
+	// canceled (the caller stopped the load); the timeout is enforced by the
+	// waitAtMost parameter inside MinVisibilityCountEventually.
 	if err := loadgen.MinVisibilityCountEventually(
-		ctx,
+		context.Background(),
 		e.ScenarioInfo,
 		&workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: e.Namespace,
@@ -312,7 +316,10 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	}
 
 	// Post-scenario: ensure there are no failed or terminated workflows for this run.
-	return loadgen.VerifyNoFailedWorkflows(ctx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
+	// Use context.Background() for the same reason as MinVisibilityCountEventually.
+	verifyCtx, verifyCancel := context.WithTimeout(context.Background(), config.VisibilityVerificationTimeout)
+	defer verifyCancel()
+	return loadgen.VerifyNoFailedWorkflows(verifyCtx, e.ScenarioInfo, loadgen.OmesExecutionIDSearchAttribute, e.ExecutionID)
 }
 
 // Snapshot returns a snapshot of the current state.
