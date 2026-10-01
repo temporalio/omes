@@ -74,16 +74,18 @@ module Harness
     end
 
     def build_runtime(prom_listen_address)
-      prometheus = if prom_listen_address
-                     Temporalio::Runtime::PrometheusMetricsOptions.new(
-                       bind_address: prom_listen_address,
-                       durations_as_seconds: true
-                     )
-                   end
+      metrics = if prom_listen_address
+                  Temporalio::Runtime::MetricsOptions.new(
+                    prometheus: Temporalio::Runtime::PrometheusMetricsOptions.new(
+                      bind_address: prom_listen_address,
+                      durations_as_seconds: true
+                    )
+                  )
+                end
 
       Temporalio::Runtime.new(
         telemetry: Temporalio::Runtime::TelemetryOptions.new(
-          metrics: prometheus,
+          metrics:,
           logging: Temporalio::Runtime::LoggingOptions.new(
             log_filter: Temporalio::Runtime::LoggingFilterOptions.new(
               core_level: ENV.fetch('TEMPORAL_CORE_LOG_LEVEL', 'INFO'),
