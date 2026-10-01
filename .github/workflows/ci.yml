@@ -196,15 +196,19 @@ jobs:
           go run ./cmd/dev build-worker-image \
             --language ${{ matrix.sdk }} \
             --tag-as-latest
+      # Serve worker metrics like load-test harnesses do, so metrics setup is
+      # exercised on every SDK version bump.
       - name: Start ${{ matrix.sdk }} worker image
         run: |
           docker run \
             --rm \
-            -i -p 10233:10233 omes:${{ matrix.sdk }}-latest \
+            -i -p 10233:10233 -p 9092:9092 omes:${{ matrix.sdk }}-latest \
             --scenario workflow_with_single_noop_activity \
             --log-level debug \
             --language ${{ matrix.sdk }} \
             --run-id ${{ github.run_id }} \
+            --worker-prom-listen-address 0.0.0.0:9092 \
+            --worker-process-metrics-address 0.0.0.0:9093 \
             --embedded-server-address 0.0.0.0:10233 &
       - name: Wait for ${{ matrix.sdk }} worker image to start
         run: |
@@ -238,6 +242,10 @@ jobs:
             --option sleep-time=1ms \
             --option visibility-count-timeout=2m \
             --option nexus-enabled=false
+      - name: Check ${{ matrix.sdk }} worker serves SDK metrics
+        run: |
+          curl -sf http://127.0.0.1:9092/metrics | grep -q '^temporal_' ||
+            (echo "${{ matrix.sdk }} worker did not serve SDK metrics" && exit 1)
 
   build-worker-from-source:
     runs-on: ubuntu-latest
