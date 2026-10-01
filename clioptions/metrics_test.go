@@ -2,7 +2,6 @@ package clioptions
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -36,8 +35,8 @@ func TestMetricsServer(t *testing.T) {
 			PrometheusListenAddress: ":19090",
 		}
 
-		metrics := opts.MustCreateMetrics(ctx, logger)
-		defer metrics.Shutdown(ctx, logger, "", "", "")
+		metrics := opts.MustCreateMetrics(logger)
+		defer metrics.Shutdown(ctx)
 
 		eventually(t, 2*time.Second, func() error {
 			sdkMetrics, err := tryFetchMetrics("http://localhost:19090/metrics")
@@ -59,14 +58,14 @@ func TestMetricsServer(t *testing.T) {
 			PrometheusListenAddress: ":19091",
 		}
 
-		metrics := opts.MustCreateMetrics(ctx, logger)
+		metrics := opts.MustCreateMetrics(logger)
 
 		eventually(t, 2*time.Second, func() error {
 			_, err := tryFetchMetrics("http://localhost:19091/metrics")
 			return err
 		})
 
-		err := metrics.Shutdown(ctx, logger, "", "", "")
+		err := metrics.Shutdown(ctx)
 		if err != nil {
 			t.Errorf("Shutdown returned error: %v", err)
 		}
@@ -86,14 +85,7 @@ func TestProcessMetricsSidecar(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("sidecar has process metrics", func(t *testing.T) {
-		sidecar := StartProcessMetricsSidecar(
-			logger,
-			":19092",
-			os.Getpid(),
-			"v1.24.0",
-			"test-build-123",
-			"go",
-		)
+		sidecar := StartProcessMetricsSidecar(logger, ":19092", os.Getpid())
 		defer sidecar.Shutdown(ctx)
 
 		eventually(t, 2*time.Second, func() error {
@@ -114,55 +106,8 @@ func TestProcessMetricsSidecar(t *testing.T) {
 		})
 	})
 
-	t.Run("info endpoint returns sdk_version, build_id, and language", func(t *testing.T) {
-		sidecar := StartProcessMetricsSidecar(
-			logger,
-			":19093",
-			os.Getpid(),
-			"v1.24.0",
-			"test-build-456",
-			"python",
-		)
-		defer sidecar.Shutdown(ctx)
-
-		eventually(t, 2*time.Second, func() error {
-			resp, err := http.Get("http://localhost:19093/info")
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-
-			if resp.Header.Get("Content-Type") != "application/json" {
-				return errors.New("Expected Content-Type application/json")
-			}
-
-			var info InfoResponse
-			if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-				return err
-			}
-
-			if info.SDKVersion != "v1.24.0" {
-				return errors.New("Expected sdk_version v1.24.0")
-			}
-			if info.BuildID != "test-build-456" {
-				return errors.New("Expected build_id test-build-456")
-			}
-			if info.Language != "python" {
-				return errors.New("Expected language python")
-			}
-			return nil
-		})
-	})
-
 	t.Run("sidecar shutdown", func(t *testing.T) {
-		sidecar := StartProcessMetricsSidecar(
-			logger,
-			":19094",
-			os.Getpid(),
-			"v1.24.0",
-			"test-build",
-			"typescript",
-		)
+		sidecar := StartProcessMetricsSidecar(logger, ":19094", os.Getpid())
 
 		eventually(t, 2*time.Second, func() error {
 			_, err := tryFetchMetrics("http://localhost:19094/metrics")

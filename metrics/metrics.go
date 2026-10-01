@@ -12,7 +12,6 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
 	"go.temporal.io/sdk/client"
-	"go.uber.org/zap"
 )
 
 // Metrics is a component for instrumenting an application with Prometheus metrics.
@@ -22,7 +21,6 @@ type Metrics struct {
 	Registry             *prometheus.Registry
 	Cache                map[string]any
 	mutex                sync.Mutex
-	PromInstance         *PrometheusInstance
 }
 
 // Handler returns a new Temporal-client-compatible metrics handler.
@@ -32,14 +30,8 @@ func (m *Metrics) NewHandler() client.MetricsHandler {
 	}
 }
 
-// Shutdown the Prometheus HTTP server and local Prometheus process if they were set up.
-// scenario, runID, and runFamily are passed to the export function for metrics metadata.
-func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scenario, runID, runFamily string) error {
-	// Shutdown prometheus process if running
-	if m.PromInstance != nil {
-		m.PromInstance.Shutdown(ctx, logger, scenario, runID, runFamily)
-	}
-
+// Shutdown the Prometheus HTTP servers if they were set up.
+func (m *Metrics) Shutdown(ctx context.Context) error {
 	var err error
 	// Shutdown main HTTP server
 	if m.Server != nil {
