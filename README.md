@@ -9,6 +9,8 @@ benchmark features and situations. Backwards compatibility may not be maintained
   profiles, and running against a specific SDK version.
 - **[Authoring scenarios](./docs/authoring-scenarios.md)** — writing a new scenario, choosing an
   executor, exposing options, and authoring conventions.
+- **[The bandwidth_stress scenario](./docs/bandwidth-stress.md)** — configurable payload traffic for
+  bandwidth limiter and storage calibration.
 - **[The throughput_stress scenario](./docs/throughput-stress.md)** — sleep activities, Nexus,
   standalone activities, and standalone Nexus operations.
 
