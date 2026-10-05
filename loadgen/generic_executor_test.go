@@ -119,6 +119,9 @@ func TestRunFailIterations(t *testing.T) {
 			RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
 		)
 		require.ErrorContains(t, err, "run finished with error")
+		// Run returns on the first error without waiting for iterations already in flight, so iteration 1 may not
+		// have executed yet.
+		synctest.Wait()
 		tracker.assertSeen(t, 2)
 	})
 }
@@ -153,6 +156,9 @@ func TestRunFailDuration(t *testing.T) {
 			RunConfiguration{Duration: 200 * time.Millisecond},
 		)
 		require.ErrorContains(t, err, "run finished with error")
+		// Run returns on the first error without waiting for iterations already in flight, so iteration 1 may not
+		// have executed yet.
+		synctest.Wait()
 		tracker.assertSeen(t, 2)
 	})
 }
