@@ -246,6 +246,21 @@ jobs:
         run: |
           curl -sf http://127.0.0.1:9092/metrics | grep -q '^temporal_' ||
             (echo "${{ matrix.sdk }} worker did not serve SDK metrics" && exit 1)
+      # The Go worker exports SDK metrics through omes's own metrics handler. The namespace and task queue names should
+      # only ever show up under their own labels; anywhere else means label values were assigned to the wrong names.
+      - name: Check go worker SDK metrics carry the right label values
+        if: matrix.sdk == 'go'
+        run: |
+          metrics=$(curl -sf http://127.0.0.1:9092/metrics | grep '^temporal_')
+          tq='omes-${{ github.run_id }}'
+          grep -q "task_queue=\"$tq\"" <<<"$metrics" || (echo "No SDK metric has task_queue=\"$tq\"" && exit 1)
+          misplaced=$(grep -oE "[a-z_]+=\"($tq|default)\"" <<<"$metrics" |
+            grep -vE "^(task_queue=\"$tq\"|namespace=\"default\")$" || true)
+          if [ -n "$misplaced" ]; then
+            echo "Namespace or task queue values under the wrong label:"
+            sort <<<"$misplaced" | uniq -c
+            exit 1
+          fi
 
   build-worker-from-source:
     runs-on: ubuntu-latest
