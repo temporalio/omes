@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -62,30 +63,18 @@ func (m *Metrics) Shutdown(ctx context.Context, logger *zap.SugaredLogger, scena
 
 type metricsHandler struct {
 	metrics *Metrics
-	labels  []string
-	values  []string
+	tags    prometheus.Labels
 }
 
 var _ client.MetricsHandler = (*metricsHandler)(nil)
 
 func (h *metricsHandler) WithTags(tags map[string]string) client.MetricsHandler {
-	// Make enough space for the handlers tags which are populated first
-	mergedTags := make(map[string]string, len(h.labels))
-	for i, l := range h.labels {
-		mergedTags[l] = h.values[i]
-	}
+	mergedTags := make(prometheus.Labels, len(h.tags)+len(tags))
+	maps.Copy(mergedTags, h.tags)
 	maps.Copy(mergedTags, tags)
-
-	var labels, values []string
-	for l, v := range mergedTags {
-		labels = append(labels, l)
-		values = append(values, v)
-	}
-
 	return &metricsHandler{
 		metrics: h.metrics,
-		labels:  labels,
-		values:  values,
+		tags:    mergedTags,
 	}
 }
 
@@ -102,13 +91,13 @@ func (h *metricsHandler) Counter(name string) client.MetricsCounter {
 	} else {
 		ctr = prometheus.NewCounterVec(
 			prometheus.CounterOpts{Name: name},
-			h.labels,
+			h.labelNames(),
 		)
 		h.metrics.Registry.MustRegister(ctr)
 		h.metrics.Cache[name] = ctr
 	}
 
-	return metricsCounter{ctr.WithLabelValues(h.values...)}
+	return metricsCounter{ctr.With(h.tags)}
 }
 
 func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
@@ -124,13 +113,13 @@ func (h *metricsHandler) Gauge(name string) client.MetricsGauge {
 	} else {
 		gauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{Name: name},
-			h.labels,
+			h.labelNames(),
 		)
 		h.metrics.Registry.MustRegister(gauge)
 		h.metrics.Cache[name] = gauge
 	}
 
-	return metricsGauge{gauge.WithLabelValues(h.values...)}
+	return metricsGauge{gauge.With(h.tags)}
 }
 
 func (h *metricsHandler) Timer(name string) client.MetricsTimer {
@@ -145,12 +134,17 @@ func (h *metricsHandler) Timer(name string) client.MetricsTimer {
 		}
 	} else {
 		// TODO: buckets
-		timer = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, h.labels)
+		timer = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: name}, h.labelNames())
 		h.metrics.Registry.MustRegister(timer)
 		h.metrics.Cache[name] = timer
 	}
 
-	return metricsTimer{timer.WithLabelValues(h.values...)}
+	return metricsTimer{timer.With(h.tags)}
+}
+
+// labelNames returns the handler's tag names in sorted order so the vec layout doesn't depend on map iteration.
+func (h *metricsHandler) labelNames() []string {
+	return slices.Sorted(maps.Keys(h.tags))
 }
 
 type metricsCounter struct {
