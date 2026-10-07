@@ -111,8 +111,8 @@ scenario (its action tree / executor), not by combining scenarios on the command
   - `resource-based-default` — the SDK resource-based worker tuner.
   - `throughput-stress-baseline` — a fixed config for `throughput_stress` runs (workflow cache 50, 8
     workflow-task slots, 32 activity/local-activity slots, 2 workflow-task pollers, 4 activity pollers).
-  - `throughput-stress-baseline-x2`, `-x4`, `-x8`, `-x16`, `-x32` — `throughput-stress-baseline` with every
-    limit multiplied by 2, 4, 8, 16, or 32.
+  - `throughput-stress-baseline-x2`, `-x4`, `-x8`, `-x16`, `-x32`, `-x64` — `throughput-stress-baseline` with every
+    limit multiplied by 2, 4, 8, 16, 32, or 64.
 - `--task-queue-suffix-index-start` / `--task-queue-suffix-index-end` run the worker across an inclusive
   range of task queues (`<task-queue>-<start>` … `<task-queue>-<end>`), for multi-task-queue scenarios.
 - `--embedded-server` starts an embedded localhost server (cannot be combined with TLS or a non-default

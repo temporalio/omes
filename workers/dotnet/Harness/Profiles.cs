@@ -25,7 +25,7 @@ internal static class WorkerProfiles
             [ThroughputStressBaselineProfile] = ThroughputStressProfile(1),
         };
         // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
-        foreach (var scale in new[] { 2, 4, 8, 16, 32 })
+        foreach (var scale in new[] { 2, 4, 8, 16, 32, 64 })
         {
             profiles[$"{ThroughputStressBaselineProfile}-x{scale}"] = ThroughputStressProfile(scale);
         }

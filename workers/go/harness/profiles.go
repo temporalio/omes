@@ -45,7 +45,7 @@ func init() {
 	}
 }
 
-var throughputStressScales = []int{2, 4, 8, 16, 32}
+var throughputStressScales = []int{2, 4, 8, 16, 32, 64}
 
 func throughputStressProfile(scale int) workerProfile {
 	return workerProfile{
