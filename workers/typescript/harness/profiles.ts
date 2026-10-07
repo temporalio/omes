@@ -43,5 +43,8 @@ function throughputStressProfile(scale: number): WorkerProfile {
 registerWorkerProfile(THROUGHPUT_STRESS_BASELINE_PROFILE, throughputStressProfile(1));
 // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
 for (const scale of [2, 4, 8, 16, 32]) {
-  registerWorkerProfile(`${THROUGHPUT_STRESS_BASELINE_PROFILE}-x${scale}`, throughputStressProfile(scale));
+  registerWorkerProfile(
+    `${THROUGHPUT_STRESS_BASELINE_PROFILE}-x${scale}`,
+    throughputStressProfile(scale),
+  );
 }
