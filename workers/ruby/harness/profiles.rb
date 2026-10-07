@@ -32,18 +32,23 @@ module Harness
       }
     )
 
-    register(
-      THROUGHPUT_STRESS_BASELINE_PROFILE,
+    def self.throughput_stress_profile(scale)
       {
         tuner: Temporalio::Worker::Tuner.create_fixed(
-          workflow_slots: 8,
-          activity_slots: 32,
-          local_activity_slots: 32
+          workflow_slots: 8 * scale,
+          activity_slots: 32 * scale,
+          local_activity_slots: 32 * scale
         ),
-        max_cached_workflows: 50,
-        max_concurrent_workflow_task_polls: 2,
-        max_concurrent_activity_task_polls: 4
+        max_cached_workflows: 50 * scale,
+        max_concurrent_workflow_task_polls: 2 * scale,
+        max_concurrent_activity_task_polls: 4 * scale
       }
-    )
+    end
+
+    register(THROUGHPUT_STRESS_BASELINE_PROFILE, throughput_stress_profile(1))
+    # The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+    [2, 4, 8, 16].each do |scale|
+      register("#{THROUGHPUT_STRESS_BASELINE_PROFILE}-x#{scale}", throughput_stress_profile(scale))
+    end
   end
 end

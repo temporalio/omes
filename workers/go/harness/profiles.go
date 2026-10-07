@@ -38,16 +38,26 @@ func init() {
 			Tuner: mustResourceBasedTuner(0.8, 0.8),
 		},
 	})
-	registerWorkerProfile(throughputStressBaselineWorkerProfile, workerProfile{
-		StickyWorkflowCacheSize: 50,
+	registerWorkerProfile(throughputStressBaselineWorkerProfile, throughputStressProfile(1))
+	// The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+	for _, scale := range throughputStressScales {
+		registerWorkerProfile(fmt.Sprintf("%s-x%d", throughputStressBaselineWorkerProfile, scale), throughputStressProfile(scale))
+	}
+}
+
+var throughputStressScales = []int{2, 4, 8, 16}
+
+func throughputStressProfile(scale int) workerProfile {
+	return workerProfile{
+		StickyWorkflowCacheSize: 50 * scale,
 		Options: sdkworker.Options{
-			MaxConcurrentWorkflowTaskExecutionSize:  8,
-			MaxConcurrentActivityExecutionSize:      32,
-			MaxConcurrentLocalActivityExecutionSize: 32,
-			MaxConcurrentWorkflowTaskPollers:        2,
-			MaxConcurrentActivityTaskPollers:        4,
+			MaxConcurrentWorkflowTaskExecutionSize:  8 * scale,
+			MaxConcurrentActivityExecutionSize:      32 * scale,
+			MaxConcurrentLocalActivityExecutionSize: 32 * scale,
+			MaxConcurrentWorkflowTaskPollers:        2 * scale,
+			MaxConcurrentActivityTaskPollers:        4 * scale,
 		},
-	})
+	}
 }
 
 func mustResourceBasedTuner(targetMem, targetCpu float64) sdkworker.WorkerTuner {

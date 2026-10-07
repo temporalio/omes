@@ -10,8 +10,11 @@ internal static class WorkerProfiles
     public const string ResourceBasedDefaultProfile = "resource-based-default";
     public const string ThroughputStressBaselineProfile = "throughput-stress-baseline";
 
-    private static readonly IReadOnlyDictionary<string, WorkerProfile> Profiles =
-        new Dictionary<string, WorkerProfile>
+    private static readonly IReadOnlyDictionary<string, WorkerProfile> Profiles = BuildProfiles();
+
+    private static Dictionary<string, WorkerProfile> BuildProfiles()
+    {
+        var profiles = new Dictionary<string, WorkerProfile>
         {
             [ResourceBasedDefaultProfile] = new TemporalWorkerOptions
             {
@@ -19,16 +22,25 @@ internal static class WorkerProfiles
                     targetMemoryUsage: 0.8,
                     targetCpuUsage: 0.8),
             },
-            [ThroughputStressBaselineProfile] = new TemporalWorkerOptions
-            {
-                MaxCachedWorkflows = 50,
-                MaxConcurrentWorkflowTasks = 8,
-                MaxConcurrentActivities = 32,
-                MaxConcurrentLocalActivities = 32,
-                MaxConcurrentWorkflowTaskPolls = 2,
-                MaxConcurrentActivityTaskPolls = 4,
-            },
+            [ThroughputStressBaselineProfile] = ThroughputStressProfile(1),
         };
+        // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+        foreach (var scale in new[] { 2, 4, 8, 16 })
+        {
+            profiles[$"{ThroughputStressBaselineProfile}-x{scale}"] = ThroughputStressProfile(scale);
+        }
+        return profiles;
+    }
+
+    private static WorkerProfile ThroughputStressProfile(int scale) => new TemporalWorkerOptions
+    {
+        MaxCachedWorkflows = 50 * scale,
+        MaxConcurrentWorkflowTasks = 8 * scale,
+        MaxConcurrentActivities = 32 * scale,
+        MaxConcurrentLocalActivities = 32 * scale,
+        MaxConcurrentWorkflowTaskPolls = 2 * scale,
+        MaxConcurrentActivityTaskPolls = 4 * scale,
+    };
 
     public static WorkerProfile LookupWorkerProfile(string name)
     {
