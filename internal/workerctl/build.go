@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/temporalio/features/sdkbuild"
@@ -161,14 +162,37 @@ func (b *Builder) buildJava(ctx context.Context, baseDir string) (sdkbuild.Progr
 		Version:           b.SdkOptions.Version,
 		MainClass:         "io.temporal.omes.apps.Registry",
 		HarnessDependency: "io.temporal:omes:0.1.0",
-		Build:             true,
 		Stdout:            b.stdout,
 		Stderr:            b.stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing: %w", err)
 	}
+	// Install the worker's start script and libraries, which run-worker runs
+	// directly instead of gradlew run (see javaWorkerScript).
+	gradlew := []string{"/bin/sh", "../gradlew"}
+	if runtime.GOOS == "windows" {
+		gradlew = []string{"cmd.exe", "/C", "..\\gradlew"}
+	}
+	cmd := exec.CommandContext(ctx, gradlew[0], append(gradlew[1:], "--no-daemon", "--include-build", "../", "installDist")...)
+	cmd.Dir, cmd.Stdout, cmd.Stderr = prog.Dir(), b.stdout, b.stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed installing: %w", err)
+	}
 	return prog, nil
+}
+
+// javaWorkerScript is the start script installDist writes for a Java worker
+// built in dir. It execs the JVM, so the worker is the process run-worker
+// starts. gradlew run would start it as a grandchild, under Gradle's client
+// and daemon, which the process metrics would measure instead.
+func javaWorkerScript(dir string) string {
+	name := filepath.Base(dir)
+	script := filepath.Join(dir, "build", "install", name, "bin", name)
+	if runtime.GOOS == "windows" {
+		script += ".bat"
+	}
+	return script
 }
 
 func (b *Builder) buildTypeScript(ctx context.Context, baseDir string) (sdkbuild.Program, error) {

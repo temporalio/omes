@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -138,8 +139,12 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
-	cmd, err := prog.NewCommand(context.Background(), args...)
-	if err != nil {
+	var cmd *exec.Cmd
+	var err error
+	if r.SdkOptions.Language == clioptions.LangJava {
+		cmd = exec.Command(javaWorkerScript(prog.Dir()), args...)
+		cmd.Dir = prog.Dir()
+	} else if cmd, err = prog.NewCommand(context.Background(), args...); err != nil {
 		return fmt.Errorf("failed creating command: %w", err)
 	}
 	cmd.Env = withEnv(cmd.Environ(), WorkerProfileEnvVar, r.WorkerProfile)
