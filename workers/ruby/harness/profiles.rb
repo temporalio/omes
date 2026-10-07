@@ -47,7 +47,7 @@ module Harness
 
     register(THROUGHPUT_STRESS_BASELINE_PROFILE, throughput_stress_profile(1))
     # The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
-    [2, 4, 8, 16].each do |scale|
+    [2, 4, 8, 16, 32].each do |scale|
       register("#{THROUGHPUT_STRESS_BASELINE_PROFILE}-x#{scale}", throughput_stress_profile(scale))
     end
   end

@@ -43,7 +43,7 @@ final class WorkerProfiles {
             .build());
     register(THROUGHPUT_STRESS_BASELINE_PROFILE, throughputStressProfile(1));
     // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
-    for (int scale : new int[] {2, 4, 8, 16}) {
+    for (int scale : new int[] {2, 4, 8, 16, 32}) {
       register(THROUGHPUT_STRESS_BASELINE_PROFILE + "-x" + scale, throughputStressProfile(scale));
     }
   }

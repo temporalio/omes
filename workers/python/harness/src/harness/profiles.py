@@ -49,7 +49,7 @@ def _throughput_stress_profile(scale: int) -> WorkerProfile:
 
 _register_profile(THROUGHPUT_STRESS_BASELINE_PROFILE, _throughput_stress_profile(1))
 # The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
-for _scale in (2, 4, 8, 16):
+for _scale in (2, 4, 8, 16, 32):
     _register_profile(
         f"{THROUGHPUT_STRESS_BASELINE_PROFILE}-x{_scale}",
         _throughput_stress_profile(_scale),
