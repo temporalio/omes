@@ -316,7 +316,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	if isResuming {
 		info.Logger.Info(fmt.Sprintf("Resuming scenario from state: %#v", currentState))
-		info.Configuration.StartFromIteration = int(currentState.CompletedIterations) + 1
+		info.Configuration.StartFromIteration = currentState.CompletedIterations
 	}
 
 	// Listen to iteration completion events to update the state.
