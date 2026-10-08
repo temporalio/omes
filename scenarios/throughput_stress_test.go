@@ -83,6 +83,42 @@ func TestThroughputStress(t *testing.T) {
 	})
 }
 
+func TestThroughputStressResumeRunsNextIteration(t *testing.T) {
+	t.Parallel()
+
+	runID := fmt.Sprintf("tps-resume-%d", time.Now().UnixNano())
+	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
+	info := loadgen.ScenarioInfo{
+		RunID:       runID,
+		ExecutionID: runID,
+		Configuration: loadgen.RunConfiguration{
+			Iterations: 1,
+		},
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			IterFlag:                          "1",
+			ContinueAsNewAfterIterFlag:        "1",
+			SleepTimeFlag:                     "1ms",
+			VisibilityVerificationTimeoutFlag: "10s",
+		}),
+	}
+
+	first := newThroughputStressExecutor()
+	_, err := env.RunExecutorTest(t, first, info, clioptions.LangGo)
+	require.NoError(t, err)
+	require.Equal(t, 1, first.Snapshot().(tpsState).CompletedIterations)
+
+	resumed := newThroughputStressExecutor()
+	payload, err := converter.GetDefaultDataConverter().ToPayload(first.Snapshot())
+	require.NoError(t, err)
+	require.NoError(t, resumed.LoadState(func(state any) error {
+		return converter.GetDefaultDataConverter().FromPayload(payload, state)
+	}))
+	info.Configuration.Iterations = 2
+	_, err = env.RunExecutorTest(t, resumed, info, clioptions.LangGo)
+	require.NoError(t, err)
+	require.Equal(t, 2, resumed.Snapshot().(tpsState).CompletedIterations)
+}
+
 // TestThroughputStressFeatureAutoEnable exercises capability-gated feature options
 // end to end. The dev server runs with the standalone-activity, operator-command,
 // and standalone-Nexus gates on, and the scenario leaves those feature options
