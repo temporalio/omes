@@ -36,14 +36,21 @@ _register_profile(
 )
 
 
-_register_profile(
-    THROUGHPUT_STRESS_BASELINE_PROFILE,
-    {
-        "max_cached_workflows": 50,
-        "max_concurrent_workflow_tasks": 8,
-        "max_concurrent_activities": 32,
-        "max_concurrent_local_activities": 32,
-        "max_concurrent_workflow_task_polls": 2,
-        "max_concurrent_activity_task_polls": 4,
-    },
-)
+def _throughput_stress_profile(scale: int) -> WorkerProfile:
+    return {
+        "max_cached_workflows": 50 * scale,
+        "max_concurrent_workflow_tasks": 8 * scale,
+        "max_concurrent_activities": 32 * scale,
+        "max_concurrent_local_activities": 32 * scale,
+        "max_concurrent_workflow_task_polls": 2 * scale,
+        "max_concurrent_activity_task_polls": 4 * scale,
+    }
+
+
+_register_profile(THROUGHPUT_STRESS_BASELINE_PROFILE, _throughput_stress_profile(1))
+# The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+for _scale in (2, 4, 8, 16, 32, 64):
+    _register_profile(
+        f"{THROUGHPUT_STRESS_BASELINE_PROFILE}-x{_scale}",
+        _throughput_stress_profile(_scale),
+    )

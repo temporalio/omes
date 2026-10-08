@@ -326,6 +326,7 @@ module Harness
 
     def self.register: (String name, Hash[Symbol, untyped] profile) -> Hash[Symbol, untyped]
     def self.lookup: (String name) -> Hash[Symbol, untyped]
+    def self.throughput_stress_profile: (Integer scale) -> Hash[Symbol, untyped]
   end
 
   module WorkerCLI

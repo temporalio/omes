@@ -41,17 +41,23 @@ final class WorkerProfiles {
                         ResourceBasedControllerOptions.newBuilder(0.8, 0.8).build())
                     .build())
             .build());
-    register(
-        THROUGHPUT_STRESS_BASELINE_PROFILE,
-        new WorkerProfile(
-            WorkerOptions.newBuilder()
-                .setMaxConcurrentWorkflowTaskExecutionSize(8)
-                .setMaxConcurrentActivityExecutionSize(32)
-                .setMaxConcurrentLocalActivityExecutionSize(32)
-                .setMaxConcurrentWorkflowTaskPollers(2)
-                .setMaxConcurrentActivityTaskPollers(4)
-                .build(),
-            50));
+    register(THROUGHPUT_STRESS_BASELINE_PROFILE, throughputStressProfile(1));
+    // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+    for (int scale : new int[] {2, 4, 8, 16, 32, 64}) {
+      register(THROUGHPUT_STRESS_BASELINE_PROFILE + "-x" + scale, throughputStressProfile(scale));
+    }
+  }
+
+  private static WorkerProfile throughputStressProfile(int scale) {
+    return new WorkerProfile(
+        WorkerOptions.newBuilder()
+            .setMaxConcurrentWorkflowTaskExecutionSize(8 * scale)
+            .setMaxConcurrentActivityExecutionSize(32 * scale)
+            .setMaxConcurrentLocalActivityExecutionSize(32 * scale)
+            .setMaxConcurrentWorkflowTaskPollers(2 * scale)
+            .setMaxConcurrentActivityTaskPollers(4 * scale)
+            .build(),
+        50 * scale);
   }
 
   private WorkerProfiles() {}

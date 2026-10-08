@@ -29,11 +29,22 @@ registerWorkerProfile(RESOURCE_BASED_DEFAULT_PROFILE, {
   },
 });
 
-registerWorkerProfile(THROUGHPUT_STRESS_BASELINE_PROFILE, {
-  maxCachedWorkflows: 50,
-  maxConcurrentWorkflowTaskExecutions: 8,
-  maxConcurrentActivityTaskExecutions: 32,
-  maxConcurrentLocalActivityExecutions: 32,
-  maxConcurrentWorkflowTaskPolls: 2,
-  maxConcurrentActivityTaskPolls: 4,
-});
+function throughputStressProfile(scale: number): WorkerProfile {
+  return {
+    maxCachedWorkflows: 50 * scale,
+    maxConcurrentWorkflowTaskExecutions: 8 * scale,
+    maxConcurrentActivityTaskExecutions: 32 * scale,
+    maxConcurrentLocalActivityExecutions: 32 * scale,
+    maxConcurrentWorkflowTaskPolls: 2 * scale,
+    maxConcurrentActivityTaskPolls: 4 * scale,
+  };
+}
+
+registerWorkerProfile(THROUGHPUT_STRESS_BASELINE_PROFILE, throughputStressProfile(1));
+// The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.
+for (const scale of [2, 4, 8, 16, 32, 64]) {
+  registerWorkerProfile(
+    `${THROUGHPUT_STRESS_BASELINE_PROFILE}-x${scale}`,
+    throughputStressProfile(scale),
+  );
+}
