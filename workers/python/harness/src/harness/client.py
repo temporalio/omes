@@ -61,10 +61,15 @@ def _build_runtime(prom_listen_address: str | None) -> Runtime:
         telemetry=TelemetryConfig(
             metrics=prometheus,
             logging=LoggingConfig(
+                # DEBUG BRANCH ONLY (core WFT race investigation): core's
+                # workflow-task bookkeeping at debug level.
                 filter=TelemetryFilter(
                     core_level=os.getenv("TEMPORAL_CORE_LOG_LEVEL", "INFO"),
                     other_level="WARN",
-                )
+                ).formatted()
+                + ",temporalio_sdk_core::worker::workflow=debug"
+                + ",temporalio_sdk_core::worker::workflow::machines=info"
+                + ",temporalio_sdk_core::worker::workflow::driven_workflow=info"
             ),
         ),
     )
