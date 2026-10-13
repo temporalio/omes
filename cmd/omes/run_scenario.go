@@ -56,6 +56,7 @@ type scenarioRunner struct {
 }
 
 type scenarioRunConfig struct {
+	startAt                       string
 	iterations                    int
 	duration                      time.Duration
 	maxConcurrent                 int
@@ -79,6 +80,7 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&r.startAt, "start-at", "", "Optional RFC3339 start time for synchronized scenarios")
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
@@ -110,6 +112,14 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("run ID not found")
 	} else if r.iterations > 0 && r.duration > 0 {
 		return fmt.Errorf("cannot provide both iterations and duration")
+	}
+	var startAt time.Time
+	if r.startAt != "" {
+		var err error
+		startAt, err = time.Parse(time.RFC3339Nano, r.startAt)
+		if err != nil {
+			return fmt.Errorf("invalid --start-at %q: %w", r.startAt, err)
+		}
 	}
 
 	// Parse options
@@ -179,6 +189,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Client:         client,
 		ClientOptions:  r.clientOptions,
 		Configuration: loadgen.RunConfiguration{
+			StartAt:                       startAt,
 			Iterations:                    r.iterations,
 			Duration:                      r.duration,
 			MaxConcurrent:                 r.maxConcurrent,

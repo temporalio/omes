@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"iter"
 	"math"
 	"math/rand"
 	"sync"
@@ -38,38 +37,29 @@ const (
 	MaxConsecutiveErrorsFlag = "max-consecutive-errors"
 	// BacklogLogIntervalFlag defines how often the current backlog stats are logged.
 	BacklogLogIntervalFlag = "backlog-log-interval"
-	// MinAddRateFlag defines the minimum add rate in activities/sec. When both
-	// min-add-rate and max-add-rate are set, the scenario operates in rate mode.
-	MinAddRateFlag = "min-add-rate"
-	// MaxAddRateFlag defines the maximum add rate in activities/sec.
-	MaxAddRateFlag = "max-add-rate"
-	// RatePeriodFlag defines the period of rate oscillation.
-	RatePeriodFlag = "rate-period"
-	// BacklogPeriodFlag defines the period of backlog oscillation. Defaults to
-	// the value of PeriodFlag for backwards compatibility.
-	BacklogPeriodFlag = "backlog-period"
-	// BatchSizeFlag defines the max activities per workflow (0 = unlimited).
-	BatchSizeFlag = "batch-size"
 )
 
 type ebbAndFlowConfig struct {
-	MinBacklog                    int64
-	MaxBacklog                    int64
-	Period                        time.Duration
-	SleepDuration                 time.Duration
-	MaxRate                       int64
-	ControlInterval               time.Duration
-	MaxConsecutiveErrors          int
-	BacklogLogInterval            time.Duration
+	// MinBacklog is the lower bound of the sinusoidal backlog target.
+	MinBacklog int64
+	// MaxBacklog is the upper bound of the sinusoidal backlog target.
+	MaxBacklog int64
+	// Period is the duration of one complete min-to-max-to-min backlog cycle.
+	Period time.Duration
+	// SleepDuration is how long each generated activity waits before completing.
+	SleepDuration time.Duration
+	// MaxRate caps the number of activities the scenario may schedule during one control interval.
+	MaxRate int64
+	// ControlInterval is how often the scenario measures backlog and schedules more work.
+	ControlInterval time.Duration
+	// MaxConsecutiveErrors is the number of consecutive start errors tolerated before aborting.
+	MaxConsecutiveErrors int
+	// BacklogLogInterval controls how often the scenario reports its current backlog state.
+	BacklogLogInterval time.Duration
+	// VisibilityVerificationTimeout bounds the final wait for all accepted work to become visible as completed.
 	VisibilityVerificationTimeout time.Duration
-	SleepActivityConfig           *loadgen.SleepActivityConfig
-	// Rate mode: enabled when MinAddRate and MaxAddRate are both set.
-	RateMode      bool
-	MinAddRate    float64
-	MaxAddRate    float64
-	RatePeriod    time.Duration
-	BacklogPeriod time.Duration
-	BatchSize     int64
+	// SleepActivityConfig configures the activity groups used by the scenario's workflows.
+	SleepActivityConfig *loadgen.SleepActivityConfig
 }
 
 type ebbAndFlowState struct {
@@ -96,8 +86,7 @@ var _ loadgen.Resumable = (*ebbAndFlowExecutor)(nil)
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
-		Description: "Oscillates backlog between min and max. Set both min-add-rate and\n" +
-			"max-add-rate to switch to rate mode. Duration must be set.",
+		Description: "Oscillates backlog between min and max. Duration must be set.",
 		Options: func(o *loadgen.OptionSet) {
 			o.Int(MinBacklogFlag, 0, "Minimum total backlog to target.")
 			o.Int(MaxBacklogFlag, 30, "Maximum total backlog to target.")
@@ -109,11 +98,6 @@ func init() {
 			o.Duration(BacklogLogIntervalFlag, 30*time.Second, "How often backlog stats are logged.")
 			o.Duration(VisibilityVerificationTimeoutFlag, 30*time.Second, "Timeout for the visibility count check.")
 			o.String(SleepActivityJsonFlag, "", "JSON sleep-activity configuration; use @<file> to read from a file.")
-			o.Float64(MinAddRateFlag, 0, "Minimum activities added per second; enables rate mode with max-add-rate.")
-			o.Float64(MaxAddRateFlag, 0, "Maximum activities added per second; enables rate mode with min-add-rate.")
-			o.Duration(RatePeriodFlag, 10*time.Minute, "Period of add-rate oscillation.")
-			o.Duration(BacklogPeriodFlag, 0, "Period of backlog-size oscillation; defaults to period.")
-			o.Int(BatchSizeFlag, 0, "Maximum activities per spawned workflow; 0 means unlimited.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newEbbAndFlowExecutor() },
 	})
@@ -134,13 +118,10 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 		MaxConsecutiveErrors:          info.OptionInt(MaxConsecutiveErrorsFlag),
 		BacklogLogInterval:            info.OptionDuration(BacklogLogIntervalFlag),
 		VisibilityVerificationTimeout: info.OptionDuration(VisibilityVerificationTimeoutFlag),
-		MinAddRate:                    info.OptionFloat64(MinAddRateFlag),
-		MaxAddRate:                    info.OptionFloat64(MaxAddRateFlag),
-		RatePeriod:                    info.OptionDuration(RatePeriodFlag),
-		BacklogPeriod:                 info.OptionDuration(BacklogPeriodFlag),
-		BatchSize:                     int64(info.OptionInt(BatchSizeFlag)),
 	}
-
+	if config.MaxConsecutiveErrors <= 0 {
+		return fmt.Errorf("max-consecutive-errors must be greater than 0, got %d", config.MaxConsecutiveErrors)
+	}
 	if config.MinBacklog < 0 {
 		return fmt.Errorf("min-backlog must be non-negative, got %d", config.MinBacklog)
 	}
@@ -151,19 +132,6 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	if config.Period <= 0 {
 		return fmt.Errorf("period must be greater than 0, got %v", config.Period)
-	}
-
-	// Backlog oscillation falls back to the shared period when not set explicitly.
-	if config.BacklogPeriod <= 0 {
-		config.BacklogPeriod = config.Period
-	}
-
-	config.RateMode = config.MinAddRate > 0 && config.MaxAddRate > 0
-	if config.RateMode && config.MaxAddRate <= config.MinAddRate {
-		return fmt.Errorf("max-add-rate must be greater than min-add-rate, got max=%v min=%v", config.MaxAddRate, config.MinAddRate)
-	}
-	if config.RateMode && config.RatePeriod <= 0 {
-		return fmt.Errorf("rate-period must be greater than 0, got %v", config.RatePeriod)
 	}
 
 	if sleepActivitiesStr := info.OptionString(SleepActivityJsonFlag); sleepActivitiesStr != "" {
@@ -219,21 +187,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	var startWG sync.WaitGroup
 	var iter int64 = 1
 
-	if config.RateMode {
-		e.Logger.Infof("Starting ebb and flow scenario (rate mode): min_add_rate=%.1f, max_add_rate=%.1f, rate_period=%v, "+
-			"min_backlog=%d, max_backlog=%d, backlog_period=%v, batch_size=%d, duration=%v",
-			config.MinAddRate, config.MaxAddRate, config.RatePeriod,
-			config.MinBacklog, config.MaxBacklog, config.BacklogPeriod,
-			config.BatchSize, e.Configuration.Duration)
-	} else {
-		e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
-			config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
-	}
+	e.Logger.Infof("Starting ebb and flow scenario: min_backlog=%d, max_backlog=%d, period=%v, duration=%v",
+		config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 
 	e.RegisterDefaultSearchAttributes(ctx)
 
-	var started, completed, backlog, target int64
-	lastIteration := time.Now()
+	var started, completed, backlog, target, activities int64
 
 	for elapsed := time.Duration(0); elapsed < e.Configuration.Duration; elapsed = time.Since(e.startTime) {
 		select {
@@ -254,32 +213,21 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			completed = e.completedActivities.Load()
 			backlog = started - completed
 
-			backlogTarget := calculateSineTarget(
-				elapsed, config.BacklogPeriod, float64(config.MinBacklog), float64(config.MaxBacklog))
-			target = int64(math.Round(backlogTarget))
-			deficit := math.Max(0, backlogTarget-float64(backlog))
-
-			if config.RateMode {
-				rateTarget := calculateSineTarget(elapsed, config.RatePeriod, config.MinAddRate, config.MaxAddRate)
-				now := time.Now()
-				rateActivities := rateTarget * now.Sub(lastIteration).Seconds()
-				lastIteration = now
-				deficit = math.Max(deficit, rateActivities)
-			}
-			toStart := int64(math.Round(deficit))
-			toStart = min(toStart, config.MaxRate)
-			for batch := range batches(toStart, config.BatchSize) {
-				// iter is bound per batch: the closure must not observe the
-				// increment below, which races with the spawned goroutine.
-				iteration := iter
-				startWG.Go(func() {
-					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, batch, config.SleepActivityConfig)
-				})
+			target = calculateBacklogTarget(elapsed, config.Period, config.MinBacklog, config.MaxBacklog)
+			activities = target - backlog
+			activities = max(activities, 0)
+			activities = min(activities, config.MaxRate)
+			if activities > 0 {
+				startWG.Add(1)
+				go func(iter, activities int64) {
+					defer startWG.Done()
+					errCh <- e.spawnWorkflowWithActivities(ctx, iter, activities, config.SleepActivityConfig)
+				}(iter, activities)
 				iter++
 			}
 		case <-backlogTicker.C:
-			e.Logger.Infof("Backlog: %d, target: %d, started: %d, completed: %d",
-				backlog, target, started, completed)
+			e.Logger.Debugf("Backlog: %d, target: %d, last iter: %d, started: %d, completed: %d",
+				backlog, target, activities, started, completed)
 		}
 	}
 
@@ -391,27 +339,13 @@ func (e *ebbAndFlowExecutor) incrementTotalCompletedWorkflow() {
 	e.stateLock.Unlock()
 }
 
-// calculateSineTarget oscillates between minVal and maxVal over the given
-// period, starting at minVal.
-func calculateSineTarget(elapsed, period time.Duration, minVal, maxVal float64) float64 {
+func calculateBacklogTarget(
+	elapsed, period time.Duration,
+	minBacklog, maxBacklog int64,
+) int64 {
 	periods := elapsed.Seconds() / period.Seconds()
 	osc := (math.Sin(2*math.Pi*(periods-0.25)) + 1.0) / 2
-	return minVal + osc*(maxVal-minVal)
-}
-
-// batches yields batch sizes that partition total into chunks of at most
-// batchSize. If batchSize <= 0, yields total as a single batch.
-func batches(total, batchSize int64) iter.Seq[int64] {
-	return func(yield func(int64) bool) {
-		for total > 0 {
-			batch := total
-			if batchSize > 0 {
-				batch = min(batch, batchSize)
-			}
-			total -= batch
-			if !yield(batch) {
-				return
-			}
-		}
-	}
+	backlogRange := float64(maxBacklog - minBacklog)
+	baseTarget := float64(minBacklog) + osc*backlogRange
+	return int64(math.Round(baseTarget))
 }

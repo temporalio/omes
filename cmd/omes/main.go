@@ -20,6 +20,7 @@ func main() {
 	rootCmd.AddCommand(prepareWorkerCmd())
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
+	rootCmd.AddCommand(runPhasedWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
 	if err := rootCmd.Execute(); err != nil {

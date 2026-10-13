@@ -252,6 +252,9 @@ const BaseIterationRetryBackoff = 1 * time.Second
 const MaxIterationRetryBackoff = 60 * time.Second
 
 type RunConfiguration struct {
+	// StartAt is an optional absolute start time used by scenarios that need to
+	// synchronize their timeline with another process.
+	StartAt time.Time
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
 	// StartFromIteration is the iteration to start from when resuming a run.

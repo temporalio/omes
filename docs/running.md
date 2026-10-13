@@ -104,6 +104,85 @@ go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --langua
     --run-id local-profile-test --worker-profile resource-based-default
 ```
 
+## Dynamic-partitioning load and drain tests
+
+`phased_activity_load` produces an open-loop activity add rate independently of worker polling. It
+starts standalone activities directly, so this scenario requires server dynamic config
+`activity.enableStandalone=true`. Each `addRate` is the aggregate activities-per-second target for that
+omes process; zero is valid. This is separate from `ebb_and_flow`, which remains a closed-loop controller
+that adjusts workflow-batched production to follow a sinusoidal backlog target.
+
+Create a plan such as `phase-plan.json`:
+
+```json
+{
+  "phases": [
+    {"name": "load", "duration": "70s", "addRate": 12000, "workerProfile": null},
+    {"name": "drain", "duration": "7m", "addRate": 0, "workerProfile": "resource-based-default"}
+  ]
+}
+```
+
+The plan deliberately contains no start time, so it can be reused across runs. A `null`
+`workerProfile` means no worker (`Pz`); a string names the OMES worker profile for that phase. Every
+phase must specify both `addRate` and `workerProfile`.
+
+Prepare the worker before scheduling the experiment so compilation cannot delay a phase transition:
+
+```sh
+go run ./cmd/omes prepare-worker --language go --dir-name dp-worker
+```
+
+Choose an RFC3339 timestamp far enough in the future for both processes to initialize. Then start the
+generator and phased worker as separate processes using the same plan, start time, run ID, server, and
+namespace. Both wait for `--start-at` and calculate all later boundaries from that absolute time:
+
+```sh
+go run ./cmd/omes run-scenario --scenario phased_activity_load --run-id dp-high \
+  --start-at 2030-01-02T03:04:05Z \
+  --option phase-plan-json=@phase-plan.json \
+  --option start-concurrency=256 \
+  --option visibility-verification-timeout=15m
+```
+
+```sh
+go run ./cmd/omes run-phased-worker --run-id dp-high --language go --dir-name dp-worker \
+  --start-at 2030-01-02T03:04:05Z \
+  --phase-plan-file phase-plan.json \
+  --worker-max-concurrent-activity-pollers=32 \
+  --worker-max-concurrent-activities=1000
+```
+
+The load generator never waits for worker transitions. At a boundary the phased worker runner stops
+the old worker when the profile changes, starts the new profile, and records scheduled, process-start,
+and stop timestamps. Worker startup latency is therefore visible in the experiment rather than
+shifting the load timeline. Consecutive phases with the same profile reuse the running worker.
+
+Useful generator ranges for the production partition-scaler thresholds are:
+
+| Experiment | Aggregate add rate | Expected use |
+| --- | ---: | --- |
+| Early scale-up | 1k–3k/s | Threshold crossing and initial partition growth. |
+| Multi-step scale-up | 8k–16k/s | Roughly 10–20 partitions, depending on the active scaler window. |
+| Maximum-scale qualification | 100k–160k/s | Approaching 200 partitions; use multiple qualified generators. |
+
+Increase `start-concurrency` until achieved rate stops improving. If one process is insufficient, run
+multiple generators against the same task queue and divide the desired aggregate rate among them.
+Execution-specific activity IDs prevent collisions. Do not mix phased standalone generation with
+workflow-batched generation in one measurement.
+
+The useful sizing approximations are:
+
+- To exceed a scaler target at `N` partitions, aggregate add rate must exceed `N × target rate`.
+- With zero polling, `backlog = add rate × phase duration`.
+- With active workers, backlog growth is approximately `(add rate − completion rate) × duration`.
+- Drain time is approximately `backlog / (completion rate − continuing add rate)`.
+
+Hold a downscale phase longer than the scaler's down window. Validate the offered load with server-side
+`tasks_added` per partition; the scenario also reports requested and achieved start rates and fails a
+sustained phase below `min-achieved-rate-ratio` (default 90% over phases of at least 10 seconds). Set the
+ratio to zero to disable this check during generator qualification.
+
 ## Running a specific SDK version
 
 `--version` accepts a released version (`v1.24.0`) or a local path to an SDK checkout — useful for
