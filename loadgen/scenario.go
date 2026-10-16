@@ -410,12 +410,11 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		},
 		Namespace: s.Namespace,
 	})
-	// Throw an error if the attributes could not be registered, but ignore the
-	// case where they already exist (re-registration on a reused namespace).
-	if err != nil && status.Code(err) != codes.AlreadyExists {
-		return fmt.Errorf("failed to register search attributes: %w", err)
+	var alreadyExists *serviceerror.AlreadyExists
+	if err == nil || errors.As(err, &alreadyExists) || status.Code(err) == codes.AlreadyExists {
+		return nil
 	}
-	return nil
+	return fmt.Errorf("failed to register search attributes: %w", err)
 }
 
 // TaskQueueForRun returns the task queue name for the given run ID.
@@ -541,7 +540,6 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", err)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag
@@ -554,11 +552,11 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 	}
 
 	executeErr := executor.Handle.Get(cancelCtx, nil)
-	if executeErr != nil {
-		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
-	}
 	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
 		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
+	}
+	if executeErr != nil {
+		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}
 	return nil
 }
