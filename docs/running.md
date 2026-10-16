@@ -106,13 +106,18 @@ scenario (its action tree / executor), not by combining scenarios on the command
 - `--worker-profile <name>` selects a code-defined worker configuration profile in the language harness.
   It is forwarded to the worker via the `OMES_WORKER_PROFILE` env var (it is not a worker CLI flag), and
   when set it **takes precedence over** the individual tuning flags (poller counts, autoscale, slot
-  counts, activity rate limits, versioning). Non-tuning flags (task queue, client connection, logging,
+  counts, activity rate limits, versioning). The .NET cache override below is an exception.
+  Non-tuning flags (task queue, client connection, logging,
   metrics, `--worker-err-on-unimplemented`) still apply. Built-in profiles:
   - `resource-based-default` — the SDK resource-based worker tuner.
   - `throughput-stress-baseline` — a fixed config for `throughput_stress` runs (workflow cache 50, 8
     workflow-task slots, 32 activity/local-activity slots, 2 workflow-task pollers, 4 activity pollers).
   - `throughput-stress-baseline-x2`, `-x4`, `-x8`, `-x16`, `-x32`, `-x64` — `throughput-stress-baseline` with every
     limit multiplied by 2, 4, 8, 16, 32, or 64.
+- `--worker-max-cached-workflows <non-negative integer>` sets the .NET worker's cache size.
+  Unlike other tuning flags, it overrides the cache size even when a worker profile is selected.
+  Omit it to keep the profile or SDK default; zero disables caching. For CWT, pass
+  `--worker-arg=--worker-profile=throughput-stress-baseline-x8 --worker-arg=--worker-max-cached-workflows=50000`.
 - `--task-queue-suffix-index-start` / `--task-queue-suffix-index-end` run the worker across an inclusive
   range of task queues (`<task-queue>-<start>` … `<task-queue>-<end>`), for multi-task-queue scenarios.
 - `--embedded-server` starts an embedded localhost server (cannot be combined with TLS or a non-default

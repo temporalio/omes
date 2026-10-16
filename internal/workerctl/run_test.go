@@ -3,7 +3,28 @@ package workerctl
 import (
 	"slices"
 	"testing"
+
+	"github.com/temporalio/omes/clioptions"
 )
+
+func TestCacheOverridePassthrough(t *testing.T) {
+	for _, value := range []string{"50000", "0"} {
+		t.Run(value, func(t *testing.T) {
+			var options clioptions.WorkerOptions
+			flags := options.FlagSet()
+			if got := passthrough(flags, "worker-"); len(got) != 0 {
+				t.Fatalf("unset options must not override harness defaults: %v", got)
+			}
+			if err := flags.Set("worker-max-cached-workflows", value); err != nil {
+				t.Fatal(err)
+			}
+			want := []string{"--max-cached-workflows=" + value}
+			if got := passthrough(flags, "worker-"); !slices.Equal(got, want) {
+				t.Fatalf("expected %v, got %v", want, got)
+			}
+		})
+	}
+}
 
 func TestWithEnv(t *testing.T) {
 	const name = "TEST_ENV_VAR"

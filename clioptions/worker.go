@@ -16,6 +16,7 @@ type WorkerOptions struct {
 	WorkflowPollerAutoscaleMax   int // overrides MaxConcurrentWorkflowPollers
 	MaxConcurrentActivities      int
 	MaxConcurrentWorkflowTasks   int
+	MaxCachedWorkflows           int
 	WorkerActivitiesPerSecond    float64
 	ErrOnUnimplemented           bool
 
@@ -48,6 +49,7 @@ func (m *WorkerOptions) FlagSetWithPrefix(prefix string) *pflag.FlagSet {
 	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
 	m.fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
+	m.fs.IntVar(&m.MaxCachedWorkflows, prefix+"max-cached-workflows", 0, "Max cached workflows (.NET only; overrides worker profile; zero disables caching)")
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
 	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"activities-per-second", 0, "Per-worker activity rate limit")

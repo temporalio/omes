@@ -69,6 +69,10 @@ internal static class WorkerHarness
         name: "--max-concurrent-workflow-tasks",
         description: "Max concurrent workflow tasks");
 
+    private static readonly Option<int?> MaxCachedWorkflowsOption = new(
+        name: "--max-cached-workflows",
+        description: "Max cached workflows (overrides the worker profile; zero disables caching)");
+
     private static readonly Option<double?> ActivitiesPerSecondOption = new(
         name: "--activities-per-second",
         description: "Per-worker activity rate limit");
@@ -310,6 +314,7 @@ internal static class WorkerHarness
             Profile: profile,
             MaxConcurrentActivities: options.MaxConcurrentActivities,
             MaxConcurrentWorkflowTasks: options.MaxConcurrentWorkflowTasks,
+            MaxCachedWorkflows: options.MaxCachedWorkflows,
             ActivitiesPerSecond: options.ActivitiesPerSecond,
             MaxConcurrentActivityPollers: options.MaxConcurrentActivityPollers,
             MaxConcurrentWorkflowPollers: options.MaxConcurrentWorkflowPollers,
@@ -318,14 +323,20 @@ internal static class WorkerHarness
 
     private static TemporalWorkerOptions BuildWorkerOptions(string taskQueue, WorkerSettings settings)
     {
-        if (!string.IsNullOrEmpty(settings.Profile))
+        var workerOptions = string.IsNullOrEmpty(settings.Profile)
+            ? new TemporalWorkerOptions(taskQueue)
+            : WorkerProfiles.LookupWorkerProfile(settings.Profile);
+        workerOptions.TaskQueue = taskQueue;
+        if (settings.MaxCachedWorkflows is { } maxCachedWorkflows)
         {
-            var profileOptions = WorkerProfiles.LookupWorkerProfile(settings.Profile);
-            profileOptions.TaskQueue = taskQueue;
-            return profileOptions;
+            workerOptions.MaxCachedWorkflows = maxCachedWorkflows;
         }
 
-        var workerOptions = new TemporalWorkerOptions(taskQueue);
+        if (!string.IsNullOrEmpty(settings.Profile))
+        {
+            return workerOptions;
+        }
+
         if (settings.MaxConcurrentWorkflowTasks is { } maxConcurrentWorkflowTasks)
         {
             workerOptions.MaxConcurrentWorkflowTasks = maxConcurrentWorkflowTasks;
@@ -375,6 +386,7 @@ internal static class WorkerHarness
             WorkflowPollerAutoscaleMax: parseResult.GetValueForOption(WorkflowPollerAutoscaleMaxOption),
             MaxConcurrentActivities: parseResult.GetValueForOption(MaxConcurrentActivitiesOption),
             MaxConcurrentWorkflowTasks: parseResult.GetValueForOption(MaxConcurrentWorkflowTasksOption),
+            MaxCachedWorkflows: parseResult.GetValueForOption(MaxCachedWorkflowsOption),
             ActivitiesPerSecond: parseResult.GetValueForOption(ActivitiesPerSecondOption),
             LogLevel: parseResult.GetValueForOption(LogLevelOption)!,
             LogEncoding: parseResult.GetValueForOption(LogEncodingOption)!,
@@ -401,6 +413,7 @@ internal static class WorkerHarness
         command.AddOption(WorkflowPollerAutoscaleMaxOption);
         command.AddOption(MaxConcurrentActivitiesOption);
         command.AddOption(MaxConcurrentWorkflowTasksOption);
+        command.AddOption(MaxCachedWorkflowsOption);
         command.AddOption(ActivitiesPerSecondOption);
         command.AddOption(LogLevelOption);
         command.AddOption(LogEncodingOption);
@@ -412,6 +425,14 @@ internal static class WorkerHarness
         command.AddOption(PromHandlerPathOption);
         command.AddOption(BuildIdOption);
         command.AddOption(ErrOnUnimplementedOption);
+        command.AddValidator(result =>
+        {
+            var cacheArgument = result.FindResultFor(MaxCachedWorkflowsOption)?.Tokens.SingleOrDefault()?.Value;
+            if (int.TryParse(cacheArgument, out var cacheSize) && cacheSize < 0)
+            {
+                result.ErrorMessage = "--max-cached-workflows must be non-negative";
+            }
+        });
         return command;
     }
 
@@ -419,6 +440,7 @@ internal static class WorkerHarness
         string? Profile,
         int? MaxConcurrentActivities,
         int? MaxConcurrentWorkflowTasks,
+        int? MaxCachedWorkflows,
         double? ActivitiesPerSecond,
         int? MaxConcurrentActivityPollers,
         int? MaxConcurrentWorkflowPollers,
@@ -437,6 +459,7 @@ internal static class WorkerHarness
         int? WorkflowPollerAutoscaleMax,
         int? MaxConcurrentActivities,
         int? MaxConcurrentWorkflowTasks,
+        int? MaxCachedWorkflows,
         double? ActivitiesPerSecond,
         string LogLevel,
         string LogEncoding,

@@ -7,6 +7,57 @@ namespace Temporalio.Omes.Projects.Tests.HarnessTests;
 
 public class WorkerTests
 {
+    [Theory]
+    [InlineData(null, null, 10000)]
+    [InlineData(null, 50000, 50000)]
+    [InlineData(null, 0, 0)]
+    [InlineData("throughput-stress-baseline-x8", null, 400)]
+    [InlineData("throughput-stress-baseline-x8", 50000, 50000)]
+    [InlineData("throughput-stress-baseline-x8", 0, 0)]
+    public async Task CacheOverridePreservesOtherWorkerSettings(
+        string? profile, int? cacheSize, int expectedCacheSize)
+    {
+        var args = new List<string> { "--max-concurrent-workflow-tasks", "17", "--log-level", "panic" };
+        if (cacheSize is { } value)
+        {
+            args.Add($"--max-cached-workflows={value}");
+        }
+
+        var parseResult = WorkerHarness.CreateWorkerCommand().Parse(args.ToArray());
+        Assert.Empty(parseResult.Errors);
+        var options = WorkerHarness.ParseWorkerOptions(parseResult);
+        var sharedClient = HarnessTestSupport.CreateStrictTemporalClientProbe();
+
+        await WorkerHarness.RunCoreAsync(
+            workerFactory: (client, context) =>
+            {
+                Assert.Equal(expectedCacheSize, context.WorkerOptions.MaxCachedWorkflows);
+                Assert.Equal(profile is null ? 17 : 64, context.WorkerOptions.MaxConcurrentWorkflowTasks);
+                Assert.Equal("omes", context.WorkerOptions.TaskQueue);
+                return context.TaskQueue;
+            },
+            clientFactory: _ => Task.FromResult(sharedClient),
+            options: options,
+            runWorkersAsync: _ => Task.CompletedTask,
+            workerProfile: profile);
+
+        if (profile is not null)
+        {
+            Assert.Equal(400, WorkerProfiles.LookupWorkerProfile(profile).MaxCachedWorkflows);
+        }
+    }
+
+    [Theory]
+    [InlineData("--max-cached-workflows=-1")]
+    [InlineData("--max-cached-workflows=not-a-number")]
+    [InlineData("--max-cached-workflows=2147483648")]
+    [InlineData("--max-cached-workflows")]
+    public void InvalidCacheSizeIsRejected(string argument)
+    {
+        var parseResult = WorkerHarness.CreateWorkerCommand().Parse([argument]);
+        Assert.NotEmpty(parseResult.Errors);
+    }
+
     [Fact]
     public async Task RunPassesSharedClientAndContextToEachWorkerFactory()
     {
