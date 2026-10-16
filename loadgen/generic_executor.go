@@ -217,6 +217,8 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 					g.failed.Add(1)
 					if g.config.OnIterationFailure != nil {
 						g.config.OnIterationFailure(ctx, run, iterErr)
+					} else if g.config.ContinueOnIterationFailure {
+						g.logger.Error(iterErr)
 					}
 				}
 
@@ -237,13 +239,9 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 
 				backoff, retry := run.ShouldRetry(err)
 				if retry {
-					// Transient: this attempt is superseded by the retry and
-					// never propagated, so log it here as the only record.
 					err = fmt.Errorf("iteration %v encountered error: %w", run.Iteration, err)
 					g.logger.Error(err)
 				} else {
-					// Terminal: propagated via doneCh and reported by Run's
-					// caller, so don't also log it here.
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
 					break retryLoop
 				}
