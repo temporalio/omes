@@ -120,6 +120,7 @@ type tpsConfig struct {
 	Payload                                   *loadgen.PayloadConfig
 	ChildPayload                              *loadgen.PayloadConfig
 	RemotePayloadHeartbeatTimeout             time.Duration
+	FiniteScheduleRootPercentage              int
 }
 
 type tpsExecutor struct {
@@ -560,6 +561,13 @@ func (t *tpsExecutor) createActionsChunk(
 	itersPerChunk := cmp.Or(t.config.ContinueAsNewAfterIter, t.config.InternalIterations) // no CAN? all iters in one chunk
 	isLastChunk := remainingInternalIters <= itersPerChunk
 	itersPerChunk = min(itersPerChunk, remainingInternalIters) // cap chunk size to remaining iterations
+	var finiteScheduleRootID string
+	if t.config.FiniteScheduleRootPercentage > 0 {
+		rootID := run.DefaultStartWorkflowOptions().ID
+		if finiteScheduleRootSelected(rootID, t.config.FiniteScheduleRootPercentage) {
+			finiteScheduleRootID = rootID
+		}
+	}
 
 	// Create actions for the current chunk
 	for i := 0; i < itersPerChunk; i++ {
@@ -592,6 +600,9 @@ func (t *tpsExecutor) createActionsChunk(
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
 			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+		}
+		if finiteScheduleRootID != "" {
+			asyncActions = append(asyncActions, finiteScheduleAction(finiteScheduleRootID, iterationIndex))
 		}
 
 		// Add retry/timeout/heartbeat activities if flag is enabled.
