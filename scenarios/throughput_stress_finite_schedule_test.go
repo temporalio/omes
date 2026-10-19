@@ -13,9 +13,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
 	commonpb "go.temporal.io/api/common/v1"
-	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
-	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
 )
@@ -164,7 +162,10 @@ func TestThroughputFiniteScheduleNativeGeneration(t *testing.T) {
 		ids := []string{finiteScheduleID(rootID, 0), finiteScheduleID(rootID, 1)}
 		defer func() {
 			for _, id := range ids {
-				if err := deleteFiniteScheduleForTest(run.Client.ScheduleClient().GetHandle(ctx, id)); err != nil {
+				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				err := ks.DeleteFiniteSchedule(cleanupCtx, run.Client.ScheduleClient(), ks.FiniteScheduleInput{ScheduleID: id}, run.TaskQueue())
+				cancel()
+				if err != nil {
 					retErr = errors.Join(retErr, fmt.Errorf("cleaning generated schedule %s: %w", id, err))
 				}
 			}
@@ -177,49 +178,13 @@ func TestThroughputFiniteScheduleNativeGeneration(t *testing.T) {
 		}); err != nil {
 			return err
 		}
-		deadline := time.Now().Add(65 * time.Second)
-		runs := make(map[string]bool)
+		verifyCtx, cancel := context.WithTimeout(ctx, 65*time.Second)
+		defer cancel()
 		for _, id := range ids {
-			handle := run.Client.ScheduleClient().GetHandle(ctx, id)
-			var description *client.ScheduleDescription
-			for {
-				var err error
-				description, err = handle.Describe(ctx)
-				if err != nil {
-					return err
-				}
-				if description.Schedule.State.RemainingActions == 0 && description.Info.NumActions == 4 {
-					break
-				}
-				if !time.Now().Before(deadline) {
-					return fmt.Errorf("finite schedule %s did not settle four actions", id)
-				}
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-time.After(250 * time.Millisecond):
-				}
+			if err := ks.VerifyFiniteSchedule(verifyCtx, run.Client, ks.FiniteScheduleInput{ScheduleID: id}, run.TaskQueue()); err != nil {
+				return err
 			}
-			if len(description.Info.RecentActions) != 4 || description.Info.NumActionsSkippedOverlap != 0 || description.Info.NumActionsMissedCatchupWindow != 0 {
-				return fmt.Errorf("finite schedule %s has missing or skipped outcomes", id)
-			}
-			for _, action := range description.Info.RecentActions {
-				if action.StartWorkflowResult == nil || action.StartWorkflowResult.FirstExecutionRunID == "" {
-					return fmt.Errorf("finite schedule %s has no execution identity", id)
-				}
-				if runs[action.StartWorkflowResult.FirstExecutionRunID] {
-					return fmt.Errorf("finite schedules reused execution %s", action.StartWorkflowResult.FirstExecutionRunID)
-				}
-				runs[action.StartWorkflowResult.FirstExecutionRunID] = true
-				var result string
-				if err := run.Client.GetWorkflow(ctx, action.StartWorkflowResult.WorkflowID, action.StartWorkflowResult.FirstExecutionRunID).Get(ctx, &result); err != nil {
-					return err
-				}
-				if result != "scheduled" {
-					return fmt.Errorf("finite schedule %s returned %q", id, result)
-				}
-				checked++
-			}
+			checked += 4
 		}
 		count, err := run.Client.CountWorkflow(ctx, &workflowservice.CountWorkflowExecutionsRequest{
 			Namespace: run.Namespace,
@@ -236,32 +201,4 @@ func TestThroughputFiniteScheduleNativeGeneration(t *testing.T) {
 	_, err := env.RunExecutorTest(t, execute, info, clioptions.LangGo)
 	require.NoError(t, err)
 	require.Equal(t, 8, checked)
-}
-
-func deleteFiniteScheduleForTest(handle client.ScheduleHandle) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := handle.Delete(ctx); err != nil {
-		var notFound *serviceerror.NotFound
-		if !errors.As(err, &notFound) {
-			return err
-		}
-	}
-	tick := time.NewTicker(100 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		_, err := handle.Describe(ctx)
-		var notFound *serviceerror.NotFound
-		if errors.As(err, &notFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-tick.C:
-		}
-	}
 }
