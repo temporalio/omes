@@ -41,6 +41,8 @@ func TestThroughputStress(t *testing.T) {
 			SleepTimeFlag:                     "1ms", // reduce to safe time
 			VisibilityVerificationTimeoutFlag: "10s", // lower timeout to fail fast
 			RemotePayloadHeartbeatTimeoutFlag: "10s",
+			PayloadDistributionJsonFlag:       `{"size":{"type":"fixed","value":0}}`,
+			ChildPayloadDistributionJsonFlag:  `{"size":{"type":"normal","mean":128,"stdDev":32,"min":1,"max":511}}`,
 		}),
 	}
 

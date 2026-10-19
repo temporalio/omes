@@ -73,6 +73,8 @@ const (
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
+	// ChildPayloadDistributionJsonFlag overrides child activity payload sizes; unset sizes inherit the root distribution.
+	ChildPayloadDistributionJsonFlag = "child-payload-distribution-json"
 	// RemotePayloadHeartbeatTimeoutFlag opts Go remote payload activities into an initial heartbeat.
 	RemotePayloadHeartbeatTimeoutFlag = "remote-payload-heartbeat-timeout"
 )
@@ -116,6 +118,7 @@ type tpsConfig struct {
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
+	ChildPayload                              *loadgen.PayloadConfig
 	RemotePayloadHeartbeatTimeout             time.Duration
 }
 
@@ -159,6 +162,7 @@ func init() {
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
+			o.String(ChildPayloadDistributionJsonFlag, "", "JSON child activity payload-size distribution; unset sizes inherit payload-distribution-json. Use @<file> to read from a file.")
 			o.Duration(RemotePayloadHeartbeatTimeoutFlag, 0, "Heartbeat timeout for remote payload activities; sends one initial heartbeat (Go worker only, 0 disables).")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
@@ -275,6 +279,12 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		config.Payload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", PayloadDistributionJsonFlag, err)
+		}
+	}
+	if payloadStr := info.OptionString(ChildPayloadDistributionJsonFlag); payloadStr != "" {
+		config.ChildPayload, err = loadgen.ParseAndValidatePayloadConfig(payloadStr)
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", ChildPayloadDistributionJsonFlag, err)
 		}
 	}
 
@@ -486,6 +496,13 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 // Payload distribution, falling back to 256 bytes when none is configured.
 func (t *tpsExecutor) samplePayloadSize(rng *rand.Rand) int {
 	return int(t.config.Payload.SamplePayloadSize(rng, 256))
+}
+
+func (t *tpsExecutor) sampleChildPayloadSize(rng *rand.Rand) int {
+	if t.config.ChildPayload == nil || t.config.ChildPayload.Size == nil {
+		return t.samplePayloadSize(rng)
+	}
+	return int(t.config.ChildPayload.SamplePayloadSize(rng, 256))
 }
 
 func (t *tpsExecutor) updateStateOnIterationCompletion(d time.Duration) {
@@ -718,9 +735,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, r
 						InitialActions: []*ActionSet{
 							{
 								Actions: []*Action{
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
+									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
+									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
+									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
 									NewEmptyReturnResultAction(),
 								},
 								Concurrent: false,
