@@ -73,6 +73,8 @@ const (
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
+	// RemotePayloadHeartbeatTimeoutFlag opts Go remote payload activities into an initial heartbeat.
+	RemotePayloadHeartbeatTimeoutFlag = "remote-payload-heartbeat-timeout"
 )
 
 type tpsState struct {
@@ -114,6 +116,7 @@ type tpsConfig struct {
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
+	RemotePayloadHeartbeatTimeout             time.Duration
 }
 
 type tpsExecutor struct {
@@ -156,6 +159,7 @@ func init() {
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
+			o.Duration(RemotePayloadHeartbeatTimeoutFlag, 0, "Heartbeat timeout for remote payload activities; sends one initial heartbeat (Go worker only, 0 disables).")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
@@ -211,6 +215,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.SleepTime = info.OptionDuration(SleepTimeFlag)
 	if config.SleepTime <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", SleepTimeFlag, config.SleepTime)
+	}
+	config.RemotePayloadHeartbeatTimeout = info.OptionDuration(RemotePayloadHeartbeatTimeoutFlag)
+	if config.RemotePayloadHeartbeatTimeout < 0 {
+		return fmt.Errorf("%s must be non-negative, got %v", RemotePayloadHeartbeatTimeoutFlag, config.RemotePayloadHeartbeatTimeout)
 	}
 
 	config.InternalIterations = info.OptionInt(IterFlag)
@@ -556,8 +564,8 @@ func (t *tpsExecutor) createActionsChunk(
 		childCount++
 		asyncActions := []*Action{
 			t.createChildWorkflowAction(run, childCount, rng),
-			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
-			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
+			PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			GenericActivity("noop", DefaultLocalActivity),
@@ -710,9 +718,9 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, r
 						InitialActions: []*ActionSet{
 							{
 								Actions: []*Action{
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
-									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), DefaultRemoteActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
+									PayloadActivity(t.samplePayloadSize(rng), t.samplePayloadSize(rng), t.remotePayloadActivity),
 									NewEmptyReturnResultAction(),
 								},
 								Concurrent: false,
@@ -797,7 +805,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayload() *ClientAction {
 					DoActions: &DoActionsUpdate{
 						Variant: &DoActionsUpdate_DoActions{
 							DoActions: SingleActionSet(
-								PayloadActivity(0, 256, DefaultRemoteActivity),
+								PayloadActivity(0, 256, t.remotePayloadActivity),
 							),
 						},
 					},
@@ -1074,6 +1082,7 @@ func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand
 					},
 					TaskQueue:           taskQueue,
 					StartToCloseTimeout: durationpb.New(30 * time.Second),
+					HeartbeatTimeout:    t.remotePayloadHeartbeatTimeout(),
 					RetryPolicy: &common.RetryPolicy{
 						InitialInterval:    durationpb.New(100 * time.Millisecond),
 						BackoffCoefficient: 1,
@@ -1082,6 +1091,18 @@ func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand
 			},
 		},
 	}), DefaultRemoteActivity)
+}
+
+func (t *tpsExecutor) remotePayloadHeartbeatTimeout() *durationpb.Duration {
+	if t.config.RemotePayloadHeartbeatTimeout == 0 {
+		return nil
+	}
+	return durationpb.New(t.config.RemotePayloadHeartbeatTimeout)
+}
+
+func (t *tpsExecutor) remotePayloadActivity(activity *ExecuteActivityAction) *Action {
+	activity.HeartbeatTimeout = t.remotePayloadHeartbeatTimeout()
+	return DefaultRemoteActivity(activity)
 }
 
 // createStandaloneActivityOperatorCommandsAction creates operator load as a client activity.

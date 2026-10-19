@@ -40,6 +40,7 @@ func TestThroughputStress(t *testing.T) {
 			NexusEndpointFlag:                 env.NexusEndpointName(),
 			SleepTimeFlag:                     "1ms", // reduce to safe time
 			VisibilityVerificationTimeoutFlag: "10s", // lower timeout to fail fast
+			RemotePayloadHeartbeatTimeoutFlag: "10s",
 		}),
 	}
 

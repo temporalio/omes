@@ -515,7 +515,11 @@ func Noop(_ context.Context) error {
 	return nil
 }
 
-func Payload(_ context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
+func Payload(ctx context.Context, inputData []byte, bytesToReturn int32) ([]byte, error) {
+	info := activity.GetInfo(ctx)
+	if !info.IsLocalActivity && info.HeartbeatTimeout > 0 {
+		activity.RecordHeartbeat(ctx)
+	}
 	output := make([]byte, bytesToReturn)
 	//goland:noinspection GoDeprecation -- This is fine. We don't need crypto security.
 	rand.Read(output)
