@@ -70,6 +70,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		TLSKeyPath:              options.clientOptions.ClientKeyPath,
 		TLSCombinedPath:         options.clientOptions.ClientCombinedPath,
 		TLSServerName:           options.clientOptions.TLSServerName,
+		TLSCAPath:               options.clientOptions.ServerCACertPath,
 		DisableHostVerification: options.clientOptions.DisableHostVerification,
 		PromListenAddress:       options.metricsOptions.PrometheusListenAddress,
 		PromHandlerPath:         options.metricsOptions.PrometheusHandlerPath,
