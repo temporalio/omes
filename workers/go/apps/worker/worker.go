@@ -5,6 +5,7 @@ import (
 
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/clioptions"
+	ks "github.com/temporalio/omes/loadgen/kitchensink"
 	"github.com/temporalio/omes/workers/go/harness"
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
@@ -44,6 +45,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterActivityWithOptions(kitchensink.Timeout, activity.RegisterOptions{Name: "timeout"})
 	w.RegisterActivityWithOptions(kitchensink.Heartbeat, activity.RegisterOptions{Name: "heartbeat"})
 	w.RegisterActivityWithOptions(clientActivities.ExecuteClientActivity, activity.RegisterOptions{Name: "client"})
+	w.RegisterActivityWithOptions(clientActivities.CreateFiniteSchedule, activity.RegisterOptions{Name: ks.CreateFiniteScheduleActivityName})
 	w.RegisterWorkflowWithOptions(ebbandflow.EbbAndFlowTrackWorkflow, workflow.RegisterOptions{Name: "ebbAndFlowTrack"})
 	w.RegisterActivity(&ebbFlowActivities)
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
