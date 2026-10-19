@@ -29,7 +29,13 @@ const (
 // (worker launchActivity) and the standalone-activity client path so the two
 // stay in sync. Unrecognized variants fall back to "noop".
 func ActivityNameAndArgs(act *ExecuteActivityAction) (string, []any) {
-	if delay := act.GetDelay(); delay != nil {
+	if generic := act.GetGeneric(); generic != nil {
+		args := make([]any, len(generic.Arguments))
+		for i, payload := range generic.Arguments {
+			args[i] = converter.NewRawValue(payload)
+		}
+		return generic.Type, args
+	} else if delay := act.GetDelay(); delay != nil {
 		return "delay", []any{delay.AsDuration()}
 	} else if payload := act.GetPayload(); payload != nil {
 		// Fill with pseudo-random, incompressible bytes so the payload occupies its full
