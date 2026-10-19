@@ -94,7 +94,8 @@ type tpsState struct {
 	// in nanoseconds. Useful for detecting degraded recovery: even when throughput
 	// barely drops during a disruption, individual iteration latency can spike
 	// significantly. Zero means no iteration has completed yet.
-	MaxElapsedNanos int64 `json:"maxElapsedNanos"`
+	MaxElapsedNanos int64                `json:"maxElapsedNanos"`
+	FiniteSchedules *finiteScheduleState `json:"finiteSchedules,omitempty"`
 }
 
 type tpsConfig struct {
@@ -182,7 +183,9 @@ func (t *tpsExecutor) Snapshot() any {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	return *t.state
+	state := *t.state
+	state.FiniteSchedules = t.state.FiniteSchedules.clone()
+	return state
 }
 
 // LoadState loads the state from the provided byte slice.
@@ -191,11 +194,16 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 	if err := loader(&state); err != nil {
 		return err
 	}
+	if err := state.FiniteSchedules.validate(); err != nil {
+		return fmt.Errorf("loading finite schedule state: %w", err)
+	}
+	loaded := state
+	loaded.FiniteSchedules = state.FiniteSchedules.clone()
 
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.state = &state
+	t.state = &loaded
 	t.isResuming = true
 
 	return nil
