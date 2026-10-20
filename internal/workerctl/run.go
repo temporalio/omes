@@ -232,9 +232,7 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 func workerMetricsArgs(options *clioptions.MetricsOptions) []string {
 	fs := options.FlagSet("worker-")
 	workerFlags := pflag.NewFlagSet("worker_sdk_metrics", pflag.ContinueOnError)
-	for _, name := range []string{"prom-listen-address", "prom-handler-path"} {
-		workerFlags.AddFlag(fs.Lookup("worker-" + name))
-	}
+	workerFlags.AddFlag(fs.Lookup("worker-prom-listen-address"))
 	return passthrough(workerFlags, "worker-")
 }
 

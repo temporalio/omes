@@ -147,7 +147,6 @@ public final class ProjectHarness {
                 conn.getTlsKeyPath(),
                 conn.getTlsServerName(),
                 conn.getDisableHostVerification(),
-                null,
                 null);
       } catch (IllegalArgumentException e) {
         abort(responseObserver, Status.INVALID_ARGUMENT, messageOf(e));

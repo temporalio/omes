@@ -39,8 +39,7 @@ public final class HarnessClients {
       String tlsKeyPath,
       String tlsServerName,
       boolean disableHostVerification,
-      String promListenAddress,
-      String promHandlerPath) {
+      String promListenAddress) {
     if (disableHostVerification) {
       logger.warn("disable_host_verification is not supported by the Java SDK harness; ignoring");
     }
@@ -51,7 +50,6 @@ public final class HarnessClients {
         buildApiKey(authHeader),
         buildTlsContext(tls, tlsCertPath, tlsKeyPath),
         normalizeEmpty(promListenAddress),
-        normalizeEmpty(promHandlerPath),
         normalizeEmpty(tlsServerName));
   }
 
@@ -76,7 +74,7 @@ public final class HarnessClients {
       serviceOptionsBuilder.addApiKey(() -> config.apiKey);
     }
 
-    Scope metricsScope = maybeCreateMetricsScope(config.promListenAddress, config.promHandlerPath);
+    Scope metricsScope = maybeCreateMetricsScope(config.promListenAddress);
     if (metricsScope != null) {
       serviceOptionsBuilder.setMetricsScope(metricsScope);
     }
@@ -102,7 +100,6 @@ public final class HarnessClients {
     public final String apiKey;
     public final SslContext tls;
     final String promListenAddress;
-    final String promHandlerPath;
     final String tlsServerName;
 
     public ClientConfig(
@@ -111,14 +108,12 @@ public final class HarnessClients {
         String apiKey,
         SslContext tls,
         String promListenAddress,
-        String promHandlerPath,
         String tlsServerName) {
       this.targetHost = targetHost;
       this.namespace = namespace;
       this.apiKey = apiKey;
       this.tls = tls;
       this.promListenAddress = promListenAddress;
-      this.promHandlerPath = promHandlerPath;
       this.tlsServerName = tlsServerName;
     }
   }
@@ -161,7 +156,7 @@ public final class HarnessClients {
     return null;
   }
 
-  private static Scope maybeCreateMetricsScope(String promListenAddress, String promHandlerPath) {
+  private static Scope maybeCreateMetricsScope(String promListenAddress) {
     if (promListenAddress == null || promListenAddress.isEmpty()) {
       return null;
     }
@@ -183,8 +178,7 @@ public final class HarnessClients {
             .reporter(reporter)
             .reportEvery(com.uber.m3.util.Duration.ofSeconds(1));
     HttpServer scrapeEndpoint =
-        HarnessMetricsUtils.startPrometheusScrapeEndpoint(
-            registry, promHandlerPath, promListenAddress);
+        HarnessMetricsUtils.startPrometheusScrapeEndpoint(registry, promListenAddress);
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(() -> scrapeEndpoint.stop(1), "omes-java-harness-metrics-shutdown"));

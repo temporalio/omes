@@ -72,17 +72,14 @@ type MetricsOptions struct {
 	// Address for the Prometheus HTTP listener.
 	// If empty, the listener will not be started.
 	PrometheusListenAddress string
-	// HTTP path for serving metrics.
-	// Default "/metrics".
-	PrometheusHandlerPath string
 	// Address for separate process metrics server (CPU/memory only).
 	// If empty, process metrics will not be served separately.
 	WorkerProcessMetricsAddress string
 	// MetricsVersionTag is the SDK version/ref to report in metrics.
 	// This is used by the sidecar's /info endpoint and is NOT passed to the worker.
 	// If empty, falls back to the --version flag value.
-	MetricsVersionTag           string
-	prometheusInstanceOptions   PrometheusInstanceFlags
+	MetricsVersionTag         string
+	prometheusInstanceOptions PrometheusInstanceFlags
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -99,7 +96,6 @@ func (m *MetricsOptions) FlagSet(prefix string) *pflag.FlagSet {
 	m.usedPrefix = prefix
 	m.fs = pflag.NewFlagSet("metrics_options", pflag.ExitOnError)
 	m.fs.StringVar(&m.PrometheusListenAddress, prefix+"prom-listen-address", "", "Prometheus listen address")
-	m.fs.StringVar(&m.PrometheusHandlerPath, prefix+"prom-handler-path", "/metrics", "Prometheus handler path")
 	m.fs.StringVar(&m.WorkerProcessMetricsAddress, prefix+"process-metrics-address", "", "Address for separate process metrics server (CPU/memory only)")
 	m.fs.StringVar(&m.MetricsVersionTag, prefix+"metrics-version-tag", "", "SDK version/ref to report in metrics (sidecar only, not passed to worker)")
 	m.fs.AddFlagSet(m.prometheusInstanceOptions.FlagSet(prefix))
@@ -130,13 +126,8 @@ func (m *MetricsOptions) MustCreateMetrics(ctx context.Context, logger *zap.Suga
 
 func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, registry *prometheus.Registry) *http.Server {
 	address := m.PrometheusListenAddress
-	handlerPath := m.PrometheusHandlerPath
-	if handlerPath == "" {
-		handlerPath = "/metrics"
-	}
-
 	handler := http.NewServeMux()
-	handler.Handle(handlerPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	handler.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 
 	server := &http.Server{Addr: address, Handler: handler}
 	listener, err := net.Listen("tcp", address)

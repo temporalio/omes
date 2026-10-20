@@ -72,7 +72,6 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		TLSServerName:           options.clientOptions.TLSServerName,
 		DisableHostVerification: options.clientOptions.DisableHostVerification,
 		PromListenAddress:       options.metricsOptions.PrometheusListenAddress,
-		PromHandlerPath:         options.metricsOptions.PrometheusHandlerPath,
 	})
 	if err != nil {
 		return err

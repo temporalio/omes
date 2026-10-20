@@ -16,7 +16,6 @@ func TestWorkerMetricsArgs(t *testing.T) {
 		want  []string
 	}{
 		{"worker-prom-listen-address", "127.0.0.1:9090", []string{"--prom-listen-address=127.0.0.1:9090"}},
-		{"worker-prom-handler-path", "/sdk-metrics", []string{"--prom-handler-path=/sdk-metrics"}},
 		{"worker-process-metrics-address", "127.0.0.1:9091", nil},
 		{"worker-metrics-version-tag", "sdk-ref", nil},
 		{"worker-prom-instance-addr", "http://127.0.0.1:9092", nil},
@@ -57,7 +56,7 @@ func TestWorkerMetricsArgs(t *testing.T) {
 			t.Errorf("missing routing expectation for metrics flag %s", flag.Name)
 		}
 	})
-	want := []string{"--prom-handler-path=/sdk-metrics", "--prom-listen-address=127.0.0.1:9090"}
+	want := []string{"--prom-listen-address=127.0.0.1:9090"}
 	if got := workerMetricsArgs(all); !slices.Equal(got, want) {
 		t.Fatalf("all flags set: expected %v, got %v", want, got)
 	}

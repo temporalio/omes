@@ -39,7 +39,6 @@ type clientConfigOptions struct {
 	TLSServerName           string
 	DisableHostVerification bool
 	PromListenAddress       string
-	PromHandlerPath         string
 }
 
 // BuildSDKClientOptions converts the harness client config into Go SDK client
@@ -89,7 +88,7 @@ func buildClientConfig(opts clientConfigOptions) (ClientConfig, error) {
 	if err != nil {
 		return ClientConfig{}, err
 	}
-	clientMetrics, err := buildMetrics(logger, opts.PromListenAddress, opts.PromHandlerPath)
+	clientMetrics, err := buildMetrics(logger, opts.PromListenAddress)
 	if err != nil {
 		return ClientConfig{}, err
 	}
@@ -150,7 +149,7 @@ func buildAPIKey(authHeader string) string {
 	return strings.TrimPrefix(authHeader, "Bearer ")
 }
 
-func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) (*metrics.Metrics, error) {
+func buildMetrics(logger *zap.SugaredLogger, listenAddress string) (*metrics.Metrics, error) {
 	registry := prometheus.NewRegistry()
 	clientMetrics := &metrics.Metrics{
 		Registry: registry,
@@ -159,11 +158,8 @@ func buildMetrics(logger *zap.SugaredLogger, listenAddress, handlerPath string) 
 	if listenAddress == "" {
 		return clientMetrics, nil
 	}
-	if handlerPath == "" {
-		handlerPath = "/metrics"
-	}
 	mux := http.NewServeMux()
-	mux.Handle(handlerPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize Prometheus HTTP listener on %s: %w", listenAddress, err)
