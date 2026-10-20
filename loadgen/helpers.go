@@ -110,9 +110,13 @@ func MinVisibilityCountEventually(
 	return nil
 }
 
+// ErrUnexpectedWorkflowOutcomes marks observed failed or terminated workflows.
+// Retrying verification cannot repair those histories.
+var ErrUnexpectedWorkflowOutcomes = errors.New("unexpected workflow outcomes")
+
 // VerifyNoFailedWorkflows verifies that there are no failed or terminated workflows for the given search attribute.
 func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttribute, runID string) error {
-	var errors []string
+	var failures []error
 
 	for _, status := range []enums.WorkflowExecutionStatus{
 		enums.WORKFLOW_EXECUTION_STATUS_TERMINATED,
@@ -126,16 +130,16 @@ func VerifyNoFailedWorkflows(ctx context.Context, info ScenarioInfo, searchAttri
 			Query:     statusQuery,
 		})
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("failed to run query %q: %v", statusQuery, err))
+			failures = append(failures, fmt.Errorf("querying %q: %w", statusQuery, err))
 			continue
 		}
 		if visibilityCount.Count > 0 {
-			errors = append(errors, fmt.Sprintf("unexpected %d workflows with status %s", visibilityCount.Count, status))
+			failures = append(failures, fmt.Errorf("%w: unexpected %d workflows with status %s", ErrUnexpectedWorkflowOutcomes, visibilityCount.Count, status))
 		}
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("workflow verification failed: %s", strings.Join(errors, "; "))
+	if len(failures) > 0 {
+		return fmt.Errorf("workflow verification failed: %w", errors.Join(failures...))
 	}
 	return nil
 }

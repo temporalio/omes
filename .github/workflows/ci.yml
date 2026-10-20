@@ -498,6 +498,9 @@ jobs:
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
             go-junit-report \
             -set-exit-code -iocopy -out junit-kitchensink-${{ matrix.sdk }}.xml
+      - name: Test Go heartbeat retry contract
+        if: matrix.sdk == 'go'
+        run: go -C workers/go test -v -race ./apps/worker -run '^TestHeartbeatTimeoutRetry$' -timeout=2m
       - name: Publish Kitchensink Test Results
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6
         if: failure()
