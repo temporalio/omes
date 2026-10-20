@@ -16,11 +16,12 @@ type nexusSignalRequestIDKey struct{}
 // KitchenSinkNexusOperation.
 func NexusSignalRequestIDInterceptor(ctx context.Context, method string, request, response any, connection *grpc.ClientConn, invoke grpc.UnaryInvoker, options ...grpc.CallOption) error {
 	if id, _ := ctx.Value(nexusSignalRequestIDKey{}).(string); id != "" {
-		switch request := request.(type) {
+		// Each signal request type has its own RequestId field.
+		switch signal := request.(type) {
 		case *workflowservice.SignalWorkflowExecutionRequest:
-			request.RequestId = id
+			signal.RequestId = id
 		case *workflowservice.SignalWithStartWorkflowExecutionRequest:
-			request.RequestId = id
+			signal.RequestId = id
 		}
 	}
 	return invoke(ctx, method, request, response, connection, options...)
