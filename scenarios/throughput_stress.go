@@ -75,6 +75,11 @@ const (
 	PayloadDistributionJsonFlag = "payload-distribution-json"
 	// ChildPayloadDistributionJsonFlag overrides child activity payload sizes; unset sizes inherit the root distribution.
 	ChildPayloadDistributionJsonFlag = "child-payload-distribution-json"
+	// ChildActivityCountMinFlag sets the inclusive minimum remote activity count per child.
+	ChildActivityCountMinFlag = "child-activity-count-min"
+	// ChildActivityCountMaxFlag sets the inclusive maximum remote activity count per child.
+	ChildActivityCountMaxFlag = "child-activity-count-max"
+	maxChildActivityCount     = 1000
 	// RemotePayloadHeartbeatTimeoutFlag opts Go remote payload activities into an initial heartbeat.
 	RemotePayloadHeartbeatTimeoutFlag = "remote-payload-heartbeat-timeout"
 	// FiniteScheduleRootPercentageFlag selects roots that create finite schedules.
@@ -124,6 +129,8 @@ type tpsConfig struct {
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
 	ChildPayload                              *loadgen.PayloadConfig
+	ChildActivityCountMin                     int
+	ChildActivityCountMax                     int
 	RemotePayloadHeartbeatTimeout             time.Duration
 	FiniteScheduleRootPercentage              int
 	FiniteScheduleDisruptionRecovery          bool
@@ -170,6 +177,8 @@ func init() {
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 			o.String(ChildPayloadDistributionJsonFlag, "", "JSON child activity payload-size distribution; unset sizes inherit payload-distribution-json. Use @<file> to read from a file.")
+			o.Int(ChildActivityCountMinFlag, 3, fmt.Sprintf("Minimum remote payload activities per child workflow (1..%d).", maxChildActivityCount))
+			o.Int(ChildActivityCountMaxFlag, 3, fmt.Sprintf("Maximum remote payload activities per child workflow, inclusive (1..%d).", maxChildActivityCount))
 			o.Duration(RemotePayloadHeartbeatTimeoutFlag, 0, "Heartbeat timeout for remote payload activities; sends one initial heartbeat (Go worker only, 0 disables).")
 			o.Int(FiniteScheduleRootPercentageFlag, 0, "Percentage of roots creating finite schedules (Go worker only, 0 disables). Exhausted schedules are retained for parent-owned namespace cleanup.")
 			o.Bool(FiniteScheduleDisruptionRecoveryFlag, false, "Allow finite-schedule overlap skips during deliberate disruption; all four scheduled executions must still succeed. Leave false for healthy calibration.")
@@ -219,12 +228,17 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &tpsConfig{
-		InternalIterTimeout:  info.OptionDuration(IterTimeoutFlag),
-		NexusEnabled:         info.OptionBool(NexusEnabledFlag),
-		NexusEndpoint:        info.OptionString(NexusEndpointFlag),
-		MinThroughputPerHour: info.OptionFloat64(MinThroughputPerHourFlag),
-		ScenarioRunID:        info.RunID,
-		ExecutionID:          info.ExecutionID,
+		InternalIterTimeout:   info.OptionDuration(IterTimeoutFlag),
+		NexusEnabled:          info.OptionBool(NexusEnabledFlag),
+		NexusEndpoint:         info.OptionString(NexusEndpointFlag),
+		MinThroughputPerHour:  info.OptionFloat64(MinThroughputPerHourFlag),
+		ScenarioRunID:         info.RunID,
+		ExecutionID:           info.ExecutionID,
+		ChildActivityCountMin: info.OptionInt(ChildActivityCountMinFlag),
+		ChildActivityCountMax: info.OptionInt(ChildActivityCountMaxFlag),
+	}
+	if config.ChildActivityCountMin < 1 || config.ChildActivityCountMax < config.ChildActivityCountMin || config.ChildActivityCountMax > maxChildActivityCount {
+		return fmt.Errorf("%s/%s must satisfy 1 <= min <= max <= %d", ChildActivityCountMinFlag, ChildActivityCountMaxFlag, maxChildActivityCount)
 	}
 
 	// Generate random number generator seed based on the run ID.
@@ -778,6 +792,15 @@ func (t *tpsExecutor) createActionsChunk(
 }
 
 func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, rng *rand.Rand) *Action {
+	count := t.config.ChildActivityCountMin
+	if t.config.ChildActivityCountMax > count {
+		count += rng.Intn(t.config.ChildActivityCountMax - count + 1)
+	}
+	actions := make([]*Action, 0, count+1)
+	for range count {
+		actions = append(actions, PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity))
+	}
+	actions = append(actions, NewEmptyReturnResultAction())
 	return &Action{
 		Variant: &Action_ExecChildWorkflow{
 			ExecChildWorkflow: &ExecuteChildWorkflowAction{
@@ -785,12 +808,7 @@ func (t *tpsExecutor) createChildWorkflowAction(run *loadgen.Run, childID int, r
 					ConvertToPayload(&WorkflowInput{
 						InitialActions: []*ActionSet{
 							{
-								Actions: []*Action{
-									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
-									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
-									PayloadActivity(t.sampleChildPayloadSize(rng), t.sampleChildPayloadSize(rng), t.remotePayloadActivity),
-									NewEmptyReturnResultAction(),
-								},
+								Actions:    actions,
 								Concurrent: false,
 							},
 						},
