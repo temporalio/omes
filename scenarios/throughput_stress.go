@@ -74,12 +74,19 @@ const (
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
 	// HealthyHeartbeatActivitiesFlag is how many healthy heartbeating remote
-	// activities each internal iteration runs. Default 0 disables them.
+	// activities each internal iteration runs.
 	HealthyHeartbeatActivitiesFlag = "healthy-heartbeat-activities"
 	// HealthyHeartbeatDurationFlag is how long each healthy heartbeat activity runs.
 	HealthyHeartbeatDurationFlag = "healthy-heartbeat-duration"
 	// HealthyHeartbeatTimeoutFlag is the heartbeat timeout of each healthy heartbeat activity.
 	HealthyHeartbeatTimeoutFlag = "healthy-heartbeat-timeout"
+)
+
+const (
+	// DefaultHealthyHeartbeatActivities disables healthy heartbeat activities.
+	DefaultHealthyHeartbeatActivities = 0
+	DefaultHealthyHeartbeatDuration   = 30 * time.Second
+	DefaultHealthyHeartbeatTimeout    = 10 * time.Second
 )
 
 type tpsState struct {
@@ -166,9 +173,9 @@ func init() {
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
-			o.Int(HealthyHeartbeatActivitiesFlag, 0, "Healthy heartbeating activities per internal iteration (Go worker only).")
-			o.Duration(HealthyHeartbeatDurationFlag, 30*time.Second, "How long each healthy heartbeat activity runs.")
-			o.Duration(HealthyHeartbeatTimeoutFlag, 10*time.Second, "Heartbeat timeout of each healthy heartbeat activity.")
+			o.Int(HealthyHeartbeatActivitiesFlag, DefaultHealthyHeartbeatActivities, "Healthy heartbeating activities per internal iteration (Go worker only).")
+			o.Duration(HealthyHeartbeatDurationFlag, DefaultHealthyHeartbeatDuration, "How long each healthy heartbeat activity runs.")
+			o.Duration(HealthyHeartbeatTimeoutFlag, DefaultHealthyHeartbeatTimeout, "Heartbeat timeout of each healthy heartbeat activity.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
