@@ -69,6 +69,13 @@ const (
 	// PayloadDistributionJsonFlag is a JSON string (or @file) configuring a weighted
 	// activity payload-size distribution. See loadgen.PayloadConfig for details.
 	PayloadDistributionJsonFlag = "payload-distribution-json"
+	// HealthyHeartbeatActivitiesFlag is how many healthy heartbeating remote
+	// activities each internal iteration runs. Default 0 disables them.
+	HealthyHeartbeatActivitiesFlag = "healthy-heartbeat-activities"
+	// HealthyHeartbeatDurationFlag is how long each healthy heartbeat activity runs.
+	HealthyHeartbeatDurationFlag = "healthy-heartbeat-duration"
+	// HealthyHeartbeatTimeoutFlag is the heartbeat timeout of each healthy heartbeat activity.
+	HealthyHeartbeatTimeoutFlag = "healthy-heartbeat-timeout"
 )
 
 type tpsState struct {
@@ -117,6 +124,9 @@ type tpsConfig struct {
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
+	HealthyHeartbeatActivities                int
+	HealthyHeartbeatDuration                  time.Duration
+	HealthyHeartbeatTimeout                   time.Duration
 }
 
 type tpsExecutor struct {
@@ -155,6 +165,9 @@ func init() {
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
+			o.Int(HealthyHeartbeatActivitiesFlag, 0, "Healthy heartbeating activities per internal iteration (Go worker only).")
+			o.Duration(HealthyHeartbeatDurationFlag, 30*time.Second, "How long each healthy heartbeat activity runs.")
+			o.Duration(HealthyHeartbeatTimeoutFlag, 10*time.Second, "Heartbeat timeout of each healthy heartbeat activity.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
@@ -268,6 +281,19 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		if err != nil {
 			return fmt.Errorf("invalid %s: %w", PayloadDistributionJsonFlag, err)
 		}
+	}
+
+	config.HealthyHeartbeatActivities = info.OptionInt(HealthyHeartbeatActivitiesFlag)
+	if config.HealthyHeartbeatActivities < 0 {
+		return fmt.Errorf("%s must be non-negative, got %d", HealthyHeartbeatActivitiesFlag, config.HealthyHeartbeatActivities)
+	}
+	config.HealthyHeartbeatDuration = info.OptionDuration(HealthyHeartbeatDurationFlag)
+	if config.HealthyHeartbeatDuration <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", HealthyHeartbeatDurationFlag, config.HealthyHeartbeatDuration)
+	}
+	config.HealthyHeartbeatTimeout = info.OptionDuration(HealthyHeartbeatTimeoutFlag)
+	if config.HealthyHeartbeatTimeout <= 0 {
+		return fmt.Errorf("%s must be positive, got %v", HealthyHeartbeatTimeoutFlag, config.HealthyHeartbeatTimeout)
 	}
 
 	t.config = config
@@ -707,6 +733,11 @@ func (t *tpsExecutor) createActionsChunk(
 				// Test heartbeat timeout: skips heartbeats on 1st attempt, sends them on 2nd
 				HeartbeatActivity(1, 0*time.Second, 2*time.Second, 10*time.Second, 1*time.Second, 2, 500*time.Millisecond, 1.0),
 			)
+		}
+
+		for range t.config.HealthyHeartbeatActivities {
+			asyncActions = append(asyncActions,
+				healthyHeartbeatActivity(t.config.HealthyHeartbeatDuration, t.config.HealthyHeartbeatTimeout))
 		}
 
 		// Add sleep activities, if configured.
@@ -1176,6 +1207,29 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperation
 			},
 		},
 	}), DefaultRemoteActivity)
+}
+
+// healthyHeartbeatActivity heartbeats for its whole duration and is not
+// retried, so a heartbeat timeout on a healthy activity fails the run. It
+// heartbeats more often than the SDK's heartbeat send window, so that window
+// sets the RPC rate.
+func healthyHeartbeatActivity(duration, heartbeatTimeout time.Duration) *Action {
+	return &Action{
+		Variant: &Action_ExecActivity{
+			ExecActivity: &ExecuteActivityAction{
+				ActivityType: &ExecuteActivityAction_Heartbeat{
+					Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
+						SuccessDuration:   durationpb.New(duration),
+						HeartbeatInterval: durationpb.New(heartbeatTimeout / 4),
+					},
+				},
+				StartToCloseTimeout: durationpb.New(duration + heartbeatTimeout),
+				HeartbeatTimeout:    durationpb.New(heartbeatTimeout),
+				RetryPolicy:         &common.RetryPolicy{MaximumAttempts: 1},
+				Locality:            &ExecuteActivityAction_Remote{Remote: &RemoteActivityOptions{}},
+			},
+		},
+	}
 }
 
 func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand.Rand) *Action {
