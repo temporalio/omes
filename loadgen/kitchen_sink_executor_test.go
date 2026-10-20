@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -599,26 +601,32 @@ func TestKitchenSink(t *testing.T) {
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					ExpectedSignalCount: 5,
+					// Keep the workflow open until the client has sent every data
+					// signal. Expected IDs 1..5 alone permit completion before the
+					// unexpected IDs 6..10 arrive, making the history check race.
+					InitialActions: ListActionSet(&Action{Variant: &Action_AwaitWorkflowState{
+						AwaitWorkflowState: &AwaitWorkflowState{Key: "all_sent", Value: "yes"},
+					}}),
 				},
 				ClientSequence: &ClientSequence{
 					ActionSets: []*ClientActionSet{
 						{
-							Actions: NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+							Actions: append(NewSignalActionsWithIDs(1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+								&ClientAction{Variant: &ClientAction_DoSignal{DoSignal: &DoSignal{
+									Variant: &DoSignal_DoSignalActions_{DoSignalActions: &DoSignal_DoSignalActions{
+										// ID zero is a barrier, not part of dedup accounting.
+										Variant: &DoSignal_DoSignalActions_DoActions{DoActions: SingleActionSet(
+											&Action{Variant: &Action_SetWorkflowState{SetWorkflowState: &WorkflowState{
+												Kvs: map[string]string{"all_sent": "yes"},
+											}}},
+										)},
+									}},
+								}}}),
 						},
 					},
 				},
 			},
-			historyMatcher: PartialHistoryMatcher(`
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled
-				WorkflowExecutionSignaled`),
+			historyMatcher: signalIDsHistoryMatcher{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 			expectedUnsupportedErrs: map[clioptions.Language]string{
 				clioptions.LangJava:       "signal deduplication not implemented",
 				clioptions.LangPython:     "signal deduplication not implemented",
@@ -1672,6 +1680,35 @@ func testSupportedFeature(
 	require.NoError(t, historyErr, "failed to get workflow history")
 	require.NotNilf(t, tc.historyMatcher, "Test case '%s': historyMatcher must be set", tc.name)
 	require.NoErrorf(t, tc.historyMatcher.Match(t, historyEvents), "Test case '%s': history matcher failed", tc.name)
+}
+
+// Match the data signals themselves, excluding the zero-ID completion barrier.
+// A generic count could accidentally count the barrier in place of a missing ID.
+type signalIDsHistoryMatcher []int32
+
+func (m signalIDsHistoryMatcher) Match(t *testing.T, events []*history.HistoryEvent) error {
+	t.Helper()
+	var actual []int32
+	for _, event := range events {
+		signal := event.GetWorkflowExecutionSignaledEventAttributes()
+		if signal.GetSignalName() != "do_actions_signal" {
+			continue
+		}
+		if len(signal.GetInput().GetPayloads()) != 1 {
+			return fmt.Errorf("signal has %d payloads, expected one", len(signal.GetInput().GetPayloads()))
+		}
+		var actions DoSignal_DoSignalActions
+		if err := protojson.Unmarshal(signal.Input.Payloads[0].Data, &actions); err != nil {
+			return fmt.Errorf("decode signal actions: %w", err)
+		}
+		if actions.SignalId != 0 {
+			actual = append(actual, actions.SignalId)
+		}
+	}
+	if !slices.Equal([]int32(m), actual) {
+		return fmt.Errorf("signal IDs: expected %v, got %v", m, actual)
+	}
+	return nil
 }
 
 type kitchenSinkTestWrapper struct {

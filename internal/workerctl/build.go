@@ -28,7 +28,7 @@ type Builder struct {
 func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, error) {
 	if b.DirName == "" {
 		return nil, fmt.Errorf("output directory name required")
-	} else if strings.ContainsAny(b.DirName, `/\`) {
+	} else if b.DirName == "." || b.DirName == ".." || strings.ContainsAny(b.DirName, `/\`) {
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
 
