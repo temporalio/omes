@@ -25,6 +25,9 @@ on:
       ruby-version:
         description: Ruby SDK version to build. Skipped if not specified. Must start with v.
         type: string
+      rust-version:
+        description: Rust SDK version to build. Skipped if not specified. Must start with v.
+        type: string
       do-push:
         description: If set, push the built images to Docker Hub.
         type: boolean
@@ -54,6 +57,9 @@ on:
         type: string
       ruby-version:
         description: Ruby SDK version to build. Skipped if not specified. Must start with v.
+        type: string
+      rust-version:
+        description: Rust SDK version to build. Skipped if not specified. Must start with v.
         type: string
       do-push:
         description: If set, push the built images to Docker Hub.
@@ -122,6 +128,16 @@ jobs:
     with:
       lang: ruby
       sdk-version: ${{ inputs.ruby-version }}
+      do-push: ${{ inputs.do-push }}
+      as-latest: ${{ inputs.as-latest }}
+
+  build-rust-docker-images:
+    if: inputs.rust-version
+    uses: ./.github/workflows/docker-images.yml
+    secrets: inherit
+    with:
+      lang: rust
+      sdk-version: ${{ inputs.rust-version }}
       do-push: ${{ inputs.do-push }}
       as-latest: ${{ inputs.as-latest }}
 

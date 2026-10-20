@@ -138,8 +138,13 @@ go run ./cmd/omes run-scenario-with-worker \
 - **A default run is quiet.** Per-iteration progress logs at debug level, so at the default `info` level
   you'll see a connect line, a long silence, then a completion line. Pass `--log-level debug` to watch
   iterations, and always sanity-check that work actually ran rather than trusting the absence of errors.
+- **Not every worker can serve Nexus operations.** Scenarios with Nexus load (e.g. `throughput_stress`)
+  enable it when the server supports Nexus, and route operations to the worker under test. The Rust
+  worker can't handle them, so `run-scenario-with-worker --language rust` defaults
+  `--option nexus-enabled=false`; with plain `run-scenario`, pass it yourself or point
+  `--option nexus-endpoint` at an endpoint served by another worker.
 - **Language names and aliases.** `--language` accepts `go`, `python` (`py`), `java`, `typescript`
-  (`ts`), `dotnet` (`cs`), `ruby` (`rb`). If you pass an unknown value the error message lists the
+  (`ts`), `dotnet` (`cs`), `ruby` (`rb`), `rust` (`rs`). If you pass an unknown value the error message lists the
   accepted set.
 - **A scenario accepts exactly the options it declares.** An unknown name or a value of the wrong type
   is rejected before the run starts — before omes even connects, and before
