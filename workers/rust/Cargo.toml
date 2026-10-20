@@ -1,0 +1,40 @@
+[package]
+name = "omes-rust-worker"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+publish = false
+
+[[bin]]
+name = "program"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+futures = "0.3"
+prost = "0.14"
+prost-reflect = { version = "0.16", features = ["serde"] }
+prost-types = "0.14"
+prost-wkt-types = "0.7"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+serde = "1"
+serde_json = "1"
+temporalio-client = "=1.1.0"
+temporalio-common = { version = "=1.1.0", features = ["prometheus"] }
+temporalio-macros = "=1.1.0"
+temporalio-sdk = { version = "=1.1.0", default-features = false, features = ["prometheus", "experimental"] }
+temporalio-workflow = "=1.1.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync", "net", "time"] }
+tonic = "0.14"
+tonic-prost = "0.14"
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+uuid = { version = "1", default-features = false, features = ["v4"] }
+
+[build-dependencies]
+prost-build = "0.14"
+tonic-prost-build = "0.14"
+
+[workspace]
