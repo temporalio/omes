@@ -182,6 +182,7 @@ func TestFiniteScheduleProductionActivity(t *testing.T) {
 	require.Equal(t, before+1, loss.calls.Load(), "configuration collision must not retry")
 	input := ks.FiniteScheduleInput{ScheduleID: ids[0]}
 	require.ErrorIs(t, ks.VerifyFiniteSchedule(ctx, control, input, queue), ks.ErrFiniteScheduleMismatch)
+	require.ErrorIs(t, ks.VerifyFiniteScheduleAfterDisruption(ctx, control, input, queue), ks.ErrFiniteScheduleMismatch)
 	require.ErrorIs(t, ks.DeleteFiniteSchedule(ctx, control.ScheduleClient(), input, queue), ks.ErrFiniteScheduleMismatch)
 	_, err = handle.Describe(ctx)
 	require.NoError(t, err, "mismatched schedule must remain untouched")
@@ -208,6 +209,7 @@ func TestFiniteScheduleProductionActivity(t *testing.T) {
 	require.ErrorAs(t, err, &workflowError, "scheduled execution failure must not be hidden by counts")
 	require.ErrorAs(t, err, &applicationError)
 	require.Equal(t, "InjectedScheduledFailure", applicationError.Type())
+	require.ErrorAs(t, ks.VerifyFiniteScheduleAfterDisruption(ctx, control, failedInput, queue), &workflowError)
 	failedDescription, err := control.ScheduleClient().GetHandle(ctx, failedID).Describe(ctx)
 	require.NoError(t, err)
 	require.Less(t, failedDescription.Info.NumActions, 4, "known failure must surface before the full schedule finishes")
@@ -222,6 +224,7 @@ func TestFiniteScheduleProductionActivity(t *testing.T) {
 	_, err = control.ScheduleClient().Create(ctx, options)
 	require.NoError(t, err)
 	require.ErrorContains(t, ks.VerifyFiniteSchedule(ctx, control, continuedInput, queue), "did not complete directly")
+	require.ErrorContains(t, ks.VerifyFiniteScheduleAfterDisruption(ctx, control, continuedInput, queue), "did not complete directly")
 }
 
 func TestFiniteScheduleDeleteGuard(t *testing.T) {

@@ -47,7 +47,7 @@ func TestFiniteStateRoundTripAndReconstruction(t *testing.T) {
 }
 
 func TestFiniteStateRejectsIdentityAndProfileChanges(t *testing.T) {
-	for _, change := range []string{"run", "execution", "namespace", "iterations", "percentage", "disabled"} {
+	for _, change := range []string{"run", "execution", "namespace", "iterations", "percentage", "disabled", "verification policy"} {
 		t.Run(change, func(t *testing.T) {
 			executor, info := finiteStateExecutor(t)
 			before := executor.Snapshot()
@@ -64,6 +64,8 @@ func TestFiniteStateRejectsIdentityAndProfileChanges(t *testing.T) {
 				executor.config.FiniteScheduleRootPercentage = 50
 			case "disabled":
 				executor.config.FiniteScheduleRootPercentage = 0
+			case "verification policy":
+				executor.config.FiniteScheduleDisruptionRecovery = true
 			}
 			require.Error(t, executor.prepareFiniteScheduleState(info))
 			require.Equal(t, before, executor.Snapshot(), "failed prepare must not discard retained ownership")
@@ -91,6 +93,31 @@ func TestFiniteStateReconstructsSelectedRoots(t *testing.T) {
 	}
 	require.Positive(t, selected)
 	require.Positive(t, skipped)
+}
+
+func TestFiniteStateDisruptionPolicyRoundTrip(t *testing.T) {
+	info := loadgen.ScenarioInfo{
+		RunID: "policy-run", ExecutionID: "policy-execution", Namespace: "policy-namespace",
+		Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+			FiniteScheduleRootPercentageFlag: "100", FiniteScheduleDisruptionRecoveryFlag: "true",
+		}),
+	}
+	executor := newThroughputStressExecutor()
+	require.NoError(t, executor.Configure(info))
+	require.True(t, executor.config.FiniteScheduleDisruptionRecovery)
+	require.NoError(t, executor.prepareFiniteScheduleState(info))
+	require.True(t, executor.Snapshot().(tpsState).FiniteSchedules.DisruptionRecovery)
+	dc := converter.GetDefaultDataConverter()
+	payload, err := dc.ToPayload(executor.Snapshot())
+	require.NoError(t, err)
+	resumed := newThroughputStressExecutor()
+	require.NoError(t, resumed.LoadState(func(target any) error { return dc.FromPayload(payload, target) }))
+	require.NoError(t, resumed.Configure(info))
+	require.NoError(t, resumed.prepareFiniteScheduleState(info))
+	require.Equal(t, executor.Snapshot(), resumed.Snapshot())
+	strict := newThroughputStressExecutor()
+	require.NoError(t, strict.Configure(finiteScheduleTestInfo("1")))
+	require.False(t, strict.config.FiniteScheduleDisruptionRecovery)
 }
 
 func TestFiniteStateProgressGuards(t *testing.T) {

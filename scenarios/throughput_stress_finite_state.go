@@ -17,6 +17,7 @@ type finiteScheduleState struct {
 	RootPercentage       int    `json:"rootPercentage"`
 	LastPlannedIteration int    `json:"lastPlannedIteration"`
 	VerifiedThrough      int    `json:"verifiedThrough"`
+	DisruptionRecovery   bool   `json:"disruptionRecovery,omitempty"`
 }
 
 func (state *finiteScheduleState) validate() error {
@@ -57,7 +58,8 @@ func (t *tpsExecutor) prepareFiniteScheduleState(info loadgen.ScenarioInfo) erro
 			return err
 		}
 		if state.RunID != info.RunID || state.ExecutionID != info.ExecutionID || state.Namespace != info.Namespace ||
-			state.InternalIterations != t.config.InternalIterations || state.RootPercentage != percentage {
+			state.InternalIterations != t.config.InternalIterations || state.RootPercentage != percentage ||
+			state.DisruptionRecovery != t.config.FiniteScheduleDisruptionRecovery {
 			return errors.New("finite schedule resume identity or profile differs from retained state")
 		}
 		return nil
@@ -68,6 +70,7 @@ func (t *tpsExecutor) prepareFiniteScheduleState(info loadgen.ScenarioInfo) erro
 	state = &finiteScheduleState{
 		Version: 1, RunID: info.RunID, ExecutionID: info.ExecutionID, Namespace: info.Namespace,
 		InternalIterations: t.config.InternalIterations, RootPercentage: percentage,
+		DisruptionRecovery: t.config.FiniteScheduleDisruptionRecovery,
 	}
 	if err := state.validate(); err != nil {
 		return err

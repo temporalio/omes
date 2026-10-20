@@ -107,6 +107,15 @@ func MatchesFiniteSchedule(existing *client.ScheduleDescription, id, queue strin
 // VerifyFiniteSchedule requires four distinct successful executions, checking known outcomes before all actions settle.
 // The caller supplies the observation deadline through ctx.
 func VerifyFiniteSchedule(ctx context.Context, c client.Client, input FiniteScheduleInput, queue string) error {
+	return verifyFiniteSchedule(ctx, c, input, queue, false)
+}
+
+// VerifyFiniteScheduleAfterDisruption allows overlap skips but still requires all four distinct executions to complete successfully.
+func VerifyFiniteScheduleAfterDisruption(ctx context.Context, c client.Client, input FiniteScheduleInput, queue string) error {
+	return verifyFiniteSchedule(ctx, c, input, queue, true)
+}
+
+func verifyFiniteSchedule(ctx context.Context, c client.Client, input FiniteScheduleInput, queue string, allowOverlapSkips bool) error {
 	if err := validateFiniteScheduleInput(input, queue); err != nil {
 		return err
 	}
@@ -122,7 +131,7 @@ func VerifyFiniteSchedule(ctx context.Context, c client.Client, input FiniteSche
 		if !MatchesFiniteSchedule(description, input.ScheduleID, queue) {
 			return fmt.Errorf("verifying finite schedule %s: %w", input.ScheduleID, ErrFiniteScheduleMismatch)
 		}
-		if description.Info.NumActions > 4 || description.Info.NumActionsSkippedOverlap != 0 || description.Info.NumActionsMissedCatchupWindow != 0 {
+		if description.Info.NumActions > 4 || (!allowOverlapSkips && description.Info.NumActionsSkippedOverlap != 0) || description.Info.NumActionsMissedCatchupWindow != 0 {
 			return fmt.Errorf("finite schedule %s has extra, skipped or missed actions", input.ScheduleID)
 		}
 		seen := make(map[string]bool)

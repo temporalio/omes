@@ -79,6 +79,8 @@ const (
 	RemotePayloadHeartbeatTimeoutFlag = "remote-payload-heartbeat-timeout"
 	// FiniteScheduleRootPercentageFlag selects roots that create finite schedules.
 	FiniteScheduleRootPercentageFlag = "finite-schedule-root-percentage"
+	// FiniteScheduleDisruptionRecoveryFlag allows overlap skips while requiring all scheduled executions to succeed.
+	FiniteScheduleDisruptionRecoveryFlag = "finite-schedule-disruption-recovery"
 )
 
 type tpsState struct {
@@ -124,6 +126,7 @@ type tpsConfig struct {
 	ChildPayload                              *loadgen.PayloadConfig
 	RemotePayloadHeartbeatTimeout             time.Duration
 	FiniteScheduleRootPercentage              int
+	FiniteScheduleDisruptionRecovery          bool
 }
 
 type tpsExecutor struct {
@@ -169,6 +172,7 @@ func init() {
 			o.String(ChildPayloadDistributionJsonFlag, "", "JSON child activity payload-size distribution; unset sizes inherit payload-distribution-json. Use @<file> to read from a file.")
 			o.Duration(RemotePayloadHeartbeatTimeoutFlag, 0, "Heartbeat timeout for remote payload activities; sends one initial heartbeat (Go worker only, 0 disables).")
 			o.Int(FiniteScheduleRootPercentageFlag, 0, "Percentage of roots creating finite schedules (Go worker only, 0 disables). Exhausted schedules are retained for parent-owned namespace cleanup.")
+			o.Bool(FiniteScheduleDisruptionRecoveryFlag, false, "Allow finite-schedule overlap skips during deliberate disruption; all four scheduled executions must still succeed. Leave false for healthy calibration.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
@@ -230,6 +234,7 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.SleepTime = info.OptionDuration(SleepTimeFlag)
 	config.FiniteScheduleRootPercentage = info.OptionInt(FiniteScheduleRootPercentageFlag)
+	config.FiniteScheduleDisruptionRecovery = info.OptionBool(FiniteScheduleDisruptionRecoveryFlag)
 	if config.FiniteScheduleRootPercentage < 0 || config.FiniteScheduleRootPercentage > 100 {
 		return fmt.Errorf("%s must be between 0 and 100", FiniteScheduleRootPercentageFlag)
 	}

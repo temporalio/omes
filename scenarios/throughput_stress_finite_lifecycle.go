@@ -72,6 +72,10 @@ func (t *tpsExecutor) verifyFiniteScheduleRoots(ctx context.Context, info loadge
 	t.lock.Lock()
 	state := t.state.FiniteSchedules.clone()
 	t.lock.Unlock()
+	verify := ks.VerifyFiniteSchedule
+	if state.DisruptionRecovery {
+		verify = ks.VerifyFiniteScheduleAfterDisruption
+	}
 	for first := state.VerifiedThrough + 1; first <= state.LastPlannedIteration; first += 8 {
 		last := min(first+7, state.LastPlannedIteration)
 		group, groupCtx := errgroup.WithContext(ctx)
@@ -82,7 +86,7 @@ func (t *tpsExecutor) verifyFiniteScheduleRoots(ctx context.Context, info loadge
 					return fmt.Errorf("settling finite schedule parent %s: %w", id, err)
 				}
 				for _, input := range state.inputsForRoot(iteration) {
-					if err := ks.VerifyFiniteSchedule(groupCtx, info.Client, input, loadgen.TaskQueueForRun(state.RunID)); err != nil {
+					if err := verify(groupCtx, info.Client, input, loadgen.TaskQueueForRun(state.RunID)); err != nil {
 						return err
 					}
 				}
