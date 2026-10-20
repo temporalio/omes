@@ -13,6 +13,7 @@ import (
 	sdkclient "go.temporal.io/sdk/client"
 	sdkworker "go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
+	"google.golang.org/grpc"
 )
 
 var App = harness.App{
@@ -54,6 +55,8 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 func buildClient(config harness.ClientConfig) (sdkclient.Client, error) {
 	options := harness.BuildSDKClientOptions(config)
 	options.DataConverter = clioptions.OmesDataConverter()
+	options.ConnectionOptions.DialOptions = append(options.ConnectionOptions.DialOptions,
+		grpc.WithChainUnaryInterceptor(kitchensink.NexusSignalRequestIDInterceptor))
 	client, err := sdkclient.Dial(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %w", err)
