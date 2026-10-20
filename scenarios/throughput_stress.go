@@ -77,6 +77,8 @@ const (
 	ChildPayloadDistributionJsonFlag = "child-payload-distribution-json"
 	// RemotePayloadHeartbeatTimeoutFlag opts Go remote payload activities into an initial heartbeat.
 	RemotePayloadHeartbeatTimeoutFlag = "remote-payload-heartbeat-timeout"
+	// FiniteScheduleRootPercentageFlag selects roots that create finite schedules.
+	FiniteScheduleRootPercentageFlag = "finite-schedule-root-percentage"
 )
 
 type tpsState struct {
@@ -166,6 +168,7 @@ func init() {
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
 			o.String(ChildPayloadDistributionJsonFlag, "", "JSON child activity payload-size distribution; unset sizes inherit payload-distribution-json. Use @<file> to read from a file.")
 			o.Duration(RemotePayloadHeartbeatTimeoutFlag, 0, "Heartbeat timeout for remote payload activities; sends one initial heartbeat (Go worker only, 0 disables).")
+			o.Int(FiniteScheduleRootPercentageFlag, 0, "Percentage of roots creating finite schedules (Go worker only, 0 disables). Exhausted schedules are retained for parent-owned namespace cleanup.")
 		},
 		ExecutorFn: func() loadgen.Executor { return newThroughputStressExecutor() },
 	})
@@ -226,6 +229,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config.RngSeed = int64(h.Sum64())
 
 	config.SleepTime = info.OptionDuration(SleepTimeFlag)
+	config.FiniteScheduleRootPercentage = info.OptionInt(FiniteScheduleRootPercentageFlag)
+	if config.FiniteScheduleRootPercentage < 0 || config.FiniteScheduleRootPercentage > 100 {
+		return fmt.Errorf("%s must be between 0 and 100", FiniteScheduleRootPercentageFlag)
+	}
 	if config.SleepTime <= 0 {
 		return fmt.Errorf("%s must be positive, got %v", SleepTimeFlag, config.SleepTime)
 	}
@@ -312,6 +319,9 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
 	if err := t.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
+	}
+	if err := t.prepareFiniteScheduleState(info); err != nil {
+		return err
 	}
 	t.runID = info.RunID
 
@@ -406,6 +416,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				//
 				// NOTE: No client actions (e.g. Signal) are defined; however, client action activities are.
 				// That means these client actions are sent from the activity worker instead of Omes.
+				if t.config.FiniteScheduleRootPercentage > 0 {
+					if err := t.recordFiniteScheduleRoot(run.Iteration); err != nil {
+						return err
+					}
+				}
 				actions := t.createActions(run)
 				options.Params.WorkflowInput.InitialActions = actions
 				t.onActionsCreated(actions)
@@ -423,6 +438,18 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	t.state.AccumulatedDuration += time.Since(currentRunStartTime)
 	totalDuration := t.state.AccumulatedDuration
 	t.lock.Unlock()
+
+	if t.config.FiniteScheduleRootPercentage > 0 {
+		verifyCtx, cancel := context.WithTimeout(ctx, t.config.VisibilityVerificationTimeout)
+		err := t.verifyFiniteScheduleRoots(verifyCtx, info)
+		cancel()
+		if err != nil {
+			return err
+		}
+		t.lock.Lock()
+		completedIterations = t.state.CompletedIterations
+		t.lock.Unlock()
+	}
 
 	completedChildWorkflows := completedIterations * t.config.InternalIterations
 
