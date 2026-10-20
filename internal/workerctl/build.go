@@ -32,6 +32,9 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return nil, fmt.Errorf("output directory name is not a full path, it is a single name")
 	}
 
+	if b.ProjectName != "" && b.SdkOptions.Language == clioptions.LangRust {
+		return nil, fmt.Errorf("--project-name is not supported for Rust; register apps and use --app")
+	}
 	if b.ProjectName != "" {
 		baseDir = ProjectDir(baseDir, b.ProjectName)
 	}
@@ -61,6 +64,15 @@ func (b *Builder) Build(ctx context.Context, baseDir string) (sdkbuild.Program, 
 		return b.buildDotNet(ctx, baseDir)
 	case clioptions.LangRuby:
 		return b.buildRuby(ctx, baseDir)
+	case clioptions.LangRust:
+		return sdkbuild.BuildRustProgram(ctx, sdkbuild.BuildRustProgramOptions{
+			PackageDir: baseDir,
+			BaseDir:    baseDir,
+			DirName:    b.DirName,
+			Version:    b.SdkOptions.Version,
+			Stdout:     b.stdout,
+			Stderr:     b.stderr,
+		})
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", b.SdkOptions.Language)
 	}
@@ -81,6 +93,8 @@ func LoadProgramFromDir(loadDir, baseDir string, lang clioptions.Language) (sdkb
 		return sdkbuild.DotNetProgramFromDir(loadDir)
 	case clioptions.LangRuby:
 		return sdkbuild.RubyProgramFromDir(loadDir, baseDir)
+	case clioptions.LangRust:
+		return sdkbuild.RustProgramFromDir(loadDir)
 	default:
 		return nil, fmt.Errorf("unrecognized language %v", lang)
 	}

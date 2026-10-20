@@ -32,6 +32,7 @@ var (
 		clioptions.LangJava,
 		clioptions.LangPython,
 		clioptions.LangRuby,
+		clioptions.LangRust,
 		clioptions.LangTypeScript,
 		clioptions.LangDotNet,
 	}
@@ -77,6 +78,9 @@ type testCase struct {
 	expectedUnsupportedErrs map[clioptions.Language]string
 	expectedWorkflowError   string
 	expectedWorkflowOutput  *common.Payload
+	// These cases serve Nexus operations from the worker under test, so they
+	// need an SDK that can handle Nexus operations, not just call them.
+	requiresNativeNexusHandler bool
 }
 
 // TestKitchenSink tests specific kitchensink features across SDKs.
@@ -972,7 +976,8 @@ func TestKitchenSink(t *testing.T) {
 				WorkflowExecutionCompleted`),
 		},
 		{
-			name: "NexusOperation/Sync/Echo",
+			name:                       "NexusOperation/Sync/Echo",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -996,7 +1001,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Sync/ExpectedOutputMismatch",
+			name:                       "NexusOperation/Sync/ExpectedOutputMismatch",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1021,7 +1027,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedWorkflowError:   `goodbye`,
 		},
 		{
-			name: "NexusOperation/Async/StartWorkflow",
+			name:                       "NexusOperation/Async/StartWorkflow",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1058,7 +1065,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Async/Cancel",
+			name:                       "NexusOperation/Async/Cancel",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1094,7 +1102,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Sync/Abandon",
+			name:                       "NexusOperation/Sync/Abandon",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1118,7 +1127,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusUnsupportedSDKs,
 		},
 		{
-			name: "ExecActivity/Client/StandaloneNexusOperation/Async",
+			name:                       "ExecActivity/Client/StandaloneNexusOperation/Async",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1157,7 +1167,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: standaloneNexusUnsupportedSDKs,
 		},
 		{
-			name: "ExecActivity/Client/StandaloneNexusOperation/Sync",
+			name:                       "ExecActivity/Client/StandaloneNexusOperation/Sync",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1221,7 +1232,8 @@ func TestKitchenSink(t *testing.T) {
 		standaloneActivityOperatorCommandsTestCase("Update",
 			DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE),
 		{
-			name: "NexusOperation/Sync/Query",
+			name:                       "NexusOperation/Sync/Query",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: ListActionSet(
@@ -1279,7 +1291,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Sync/Signal",
+			name:                       "NexusOperation/Sync/Signal",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
@@ -1318,7 +1331,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Sync/SignalWithStart",
+			name:                       "NexusOperation/Sync/SignalWithStart",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
@@ -1348,7 +1362,8 @@ func TestKitchenSink(t *testing.T) {
 		},
 		// Repeating a completed update ID makes StartUpdateWorkflow return synchronously.
 		{
-			name: "NexusOperation/Sync/Update",
+			name:                       "NexusOperation/Sync/Update",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
@@ -1408,7 +1423,8 @@ func TestKitchenSink(t *testing.T) {
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
 		{
-			name: "NexusOperation/Async/Update",
+			name:                       "NexusOperation/Async/Update",
+			requiresNativeNexusHandler: true,
 			testInput: &TestInput{WorkflowInput: &WorkflowInput{InitialActions: ListActionSet(
 				NexusOperation(&ExecuteNexusOperation{
 					Input: &NexusOperationRequest{
@@ -1462,6 +1478,7 @@ func TestKitchenSink(t *testing.T) {
 				clioptions.LangJava:       "unrecognized action",
 				clioptions.LangPython:     "unrecognized action",
 				clioptions.LangRuby:       "unrecognized action",
+				clioptions.LangRust:       "unrecognized action",
 				clioptions.LangTypeScript: "unrecognized action",
 				clioptions.LangDotNet:     "unrecognized action",
 			},
@@ -1540,6 +1557,11 @@ func testForSDK(
 	env *TestEnvironment,
 	workflowTimeout time.Duration,
 ) {
+	if sdk == clioptions.LangRust && tc.requiresNativeNexusHandler {
+		t.Skip("this shared fixture runs Nexus callers and handlers on the same worker; " +
+			"Rust SDK 1.1 supports callers but not native Nexus handlers")
+	}
+
 	// Use mutex to ensure only one Java test runs at a time/a Gradle limitation.
 	if sdk == clioptions.LangJava {
 		javaMutex.Lock()
