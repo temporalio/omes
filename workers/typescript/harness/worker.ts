@@ -253,6 +253,8 @@ function buildWorkerOptions(
     };
   } else if (options.maxConcurrentActivityPollers !== undefined) {
     workerOptions.maxConcurrentActivityTaskPolls = options.maxConcurrentActivityPollers;
+  } else {
+    workerOptions.activityTaskPollerBehavior = { type: 'autoscaling' };
   }
 
   if (options.workflowPollerAutoscaleMax !== undefined) {
@@ -262,6 +264,8 @@ function buildWorkerOptions(
     };
   } else if (options.maxConcurrentWorkflowPollers !== undefined) {
     workerOptions.maxConcurrentWorkflowTaskPolls = options.maxConcurrentWorkflowPollers;
+  } else {
+    workerOptions.workflowTaskPollerBehavior = { type: 'autoscaling' };
   }
 
   if (options.maxConcurrentActivities !== undefined) {

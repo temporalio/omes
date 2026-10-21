@@ -98,6 +98,7 @@ func TestRunWorkersStopsRemainingWorkersOnFailure(t *testing.T) {
 }
 
 func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
+	defaultAutoscaling := sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
 	for _, tc := range []struct {
 		name             string
 		argv             []string
@@ -105,8 +106,10 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 		workflowBehavior sdkworker.PollerBehavior
 	}{
 		{
-			name: "no poller flags leaves both unset",
-			argv: nil,
+			name:             "no poller flags autoscales both with SDK defaults",
+			argv:             nil,
+			activityBehavior: defaultAutoscaling,
+			workflowBehavior: defaultAutoscaling,
 		},
 		{
 			// The autoscaling max must not also pin the initial poller count;
@@ -116,10 +119,12 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			activityBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
 				MaximumNumberOfPollers: 20,
 			}),
+			workflowBehavior: defaultAutoscaling,
 		},
 		{
-			name: "workflow autoscale max sets only the maximum",
-			argv: []string{"--workflow-poller-autoscale-max=10"},
+			name:             "workflow autoscale max sets only the maximum",
+			argv:             []string{"--workflow-poller-autoscale-max=10"},
+			activityBehavior: defaultAutoscaling,
 			workflowBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
 				MaximumNumberOfPollers: 10,
 			}),
@@ -130,6 +135,7 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			activityBehavior: sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 				MaximumNumberOfPollers: 3,
 			}),
+			workflowBehavior: defaultAutoscaling,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
