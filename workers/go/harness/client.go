@@ -37,6 +37,7 @@ type clientConfigOptions struct {
 	TLSKeyPath              string
 	TLSCombinedPath         string
 	TLSServerName           string
+	TLSCAPath               string
 	DisableHostVerification bool
 	PromListenAddress       string
 	PromHandlerPath         string
@@ -108,6 +109,13 @@ func buildTLSConfig(opts clientConfigOptions) (*tls.Config, error) {
 		InsecureSkipVerify: opts.DisableHostVerification,
 		ServerName:         opts.TLSServerName,
 	}
+	if opts.TLSCAPath != "" {
+		pool, err := clioptions.LoadCertPool(opts.TLSCAPath)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.RootCAs = pool
+	}
 	if opts.TLSCombinedPath != "" {
 		if opts.TLSCertPath != "" || opts.TLSKeyPath != "" {
 			return nil, fmt.Errorf("Combined TLS PEM specified together with a cert or key path!")
@@ -137,7 +145,7 @@ func buildTLSConfig(opts clientConfigOptions) (*tls.Config, error) {
 	if opts.TLSKeyPath != "" {
 		return nil, fmt.Errorf("Client key specified, but not client cert!")
 	}
-	if opts.EnableTLS {
+	if opts.EnableTLS || opts.TLSCAPath != "" {
 		return tlsConfig, nil
 	}
 	return nil, nil
