@@ -3,12 +3,15 @@ package loadgen
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -104,6 +107,144 @@ func TestRunWaitsForOnCompletion(t *testing.T) {
 	})
 }
 
+func TestRunCancellationWaitsForCallbacks(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		callbackStarted := make(chan struct{})
+		releaseCallback := make(chan struct{})
+		callbackFinished := make(chan struct{})
+		runDone := make(chan error, 1)
+		go func() {
+			runDone <- executeContext(ctx, &GenericExecutor{
+				Execute: func(context.Context, *Run) error { return nil },
+			}, RunConfiguration{
+				Iterations: 1,
+				OnCompletion: func(context.Context, *Run) {
+					close(callbackStarted)
+					<-releaseCallback
+					close(callbackFinished)
+				},
+			})
+		}()
+		<-callbackStarted
+		cancel()
+		synctest.Wait()
+		var runErr error
+		returned := false
+		select {
+		case runErr = <-runDone:
+			returned = true
+		default:
+		}
+		close(releaseCallback)
+		if !returned {
+			runErr = <-runDone
+		}
+		require.False(t, returned, "Run returned while its completion callback was still running")
+		require.ErrorIs(t, runErr, context.Canceled)
+		select {
+		case <-callbackFinished:
+		default:
+			t.Fatal("Run returned before the completion callback finished")
+		}
+	})
+}
+
+func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		iterationError error
+		stopRun        bool
+		wantFailed     int
+	}{
+		{"context stop", context.Canceled, true, 0},
+		{"service stop", fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")), true, 0},
+		{"service cancellation while running", serviceerror.NewCanceled("workflow canceled"), false, 1},
+		{"failure during stop", errors.New("workflow failed"), true, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				var failed atomic.Int64
+				err := executeContext(ctx, &GenericExecutor{
+					Execute: func(context.Context, *Run) error {
+						if tc.stopRun {
+							cancel()
+						}
+						return tc.iterationError
+					},
+				}, RunConfiguration{
+					Iterations:         1,
+					OnIterationFailure: func(context.Context, *Run, error) { failed.Add(1) },
+				})
+				require.Error(t, err)
+				require.EqualValues(t, tc.wantFailed, failed.Load())
+			})
+		})
+	}
+}
+
+func TestRunErrorWaitsForInFlightCallbacks(t *testing.T) {
+	for _, timeout := range []time.Duration{0, time.Second} {
+		t.Run(timeout.String(), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				callbackStarted := make(chan struct{})
+				releaseCallback := make(chan struct{})
+				failIteration := make(chan struct{})
+				runDone := make(chan error, 1)
+				failure := errors.New("iteration failed")
+				go func() {
+					runDone <- execute(&GenericExecutor{
+						Execute: func(ctx context.Context, run *Run) error {
+							if run.Iteration == 1 {
+								return nil
+							}
+							if timeout > 0 {
+								<-ctx.Done()
+								return ctx.Err()
+							}
+							<-failIteration
+							return failure
+						},
+					}, RunConfiguration{
+						Iterations: 2,
+						Timeout:    timeout,
+						OnCompletion: func(context.Context, *Run) {
+							close(callbackStarted)
+							<-releaseCallback
+						},
+					})
+				}()
+				<-callbackStarted
+				close(failIteration)
+				if timeout > 0 {
+					time.Sleep(timeout)
+				}
+				synctest.Wait()
+				var runErr error
+				returned := false
+				select {
+				case runErr = <-runDone:
+					returned = true
+				default:
+				}
+				close(releaseCallback)
+				if !returned {
+					runErr = <-runDone
+				}
+				require.False(t, returned, "Run returned before an in-flight callback finished")
+				if timeout > 0 {
+					require.ErrorIs(t, runErr, context.DeadlineExceeded)
+				} else {
+					require.ErrorIs(t, runErr, failure)
+				}
+			})
+		})
+	}
+}
+
 func TestRunFailIterations(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		tracker := newIterationTracker()
@@ -119,9 +260,6 @@ func TestRunFailIterations(t *testing.T) {
 			RunConfiguration{MaxConcurrent: concurrency, Iterations: 50},
 		)
 		require.ErrorContains(t, err, "run finished with error")
-		// Run returns on the first error without waiting for iterations already in flight, so iteration 1 may not
-		// have executed yet.
-		synctest.Wait()
 		tracker.assertSeen(t, 2)
 	})
 }
@@ -156,9 +294,6 @@ func TestRunFailDuration(t *testing.T) {
 			RunConfiguration{Duration: 200 * time.Millisecond},
 		)
 		require.ErrorContains(t, err, "run finished with error")
-		// Run returns on the first error without waiting for iterations already in flight, so iteration 1 may not
-		// have executed yet.
-		synctest.Wait()
 		tracker.assertSeen(t, 2)
 	})
 }
