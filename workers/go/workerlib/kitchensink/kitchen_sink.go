@@ -630,7 +630,7 @@ func startNexusOperation(
 		case *kitchensink.NexusWorkflowAction_Start:
 			return startWorkflowNexusOperation(ctx, nc, workflowAction, opts)
 		case *kitchensink.NexusWorkflowAction_Signal:
-			return signalWorkflowNexusOperation(ctx, workflowAction)
+			return signalWorkflowNexusOperation(ctx, workflowAction, opts)
 		case *kitchensink.NexusWorkflowAction_Update:
 			return updateWorkflowNexusOperation(ctx, nc, workflowAction)
 		case *kitchensink.NexusWorkflowAction_Query:
@@ -667,6 +667,7 @@ func startWorkflowNexusOperation(
 func signalWorkflowNexusOperation(
 	ctx context.Context,
 	input *kitchensink.NexusWorkflowAction,
+	opts temporalnexus.StartTemporalOperationOptions,
 ) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
 	var result temporalnexus.TemporalOperationResult[converter.RawValue]
 	if input.GetWorkflowId() == "" {
@@ -679,6 +680,7 @@ func signalWorkflowNexusOperation(
 	if err != nil {
 		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 	}
+	ctx = context.WithValue(ctx, nexusSignalRequestIDKey{}, opts.RequestID)
 
 	// Signal-With-Start
 	if signal.GetWithStart() {
