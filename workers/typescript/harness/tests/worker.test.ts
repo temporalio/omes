@@ -66,6 +66,11 @@ void test('runWorker passes shared client and context to each worker factory', a
     undefined,
   );
 
+  // With no poller flags, both poller types default to autoscaling.
+  const defaultWorkerOptions = {
+    activityTaskPollerBehavior: { type: 'autoscaling' },
+    workflowTaskPollerBehavior: { type: 'autoscaling' },
+  };
   assert.strictEqual(workerFactoryCalls[0]?.client, client);
   assert.strictEqual(workerFactoryCalls[1]?.client, client);
   assert.deepEqual(
@@ -78,12 +83,12 @@ void test('runWorker passes shared client and context to each worker factory', a
       {
         taskQueue: 'omes-1',
         errOnUnimplemented: false,
-        workerOptions: {},
+        workerOptions: defaultWorkerOptions,
       },
       {
         taskQueue: 'omes-2',
         errOnUnimplemented: false,
-        workerOptions: {},
+        workerOptions: defaultWorkerOptions,
       },
     ],
   );
