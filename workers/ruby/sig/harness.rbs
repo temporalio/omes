@@ -92,9 +92,11 @@ module Temporalio
 
     class PollerBehavior
       class Autoscaling
+        attr_reader minimum: Integer
         attr_reader maximum: Integer
+        attr_reader initial: Integer
 
-        def initialize: (maximum: Integer) -> void
+        def initialize: (?minimum: Integer, ?maximum: Integer, ?initial: Integer) -> void
       end
     end
 

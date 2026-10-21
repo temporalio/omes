@@ -237,6 +237,8 @@ def _build_worker_kwargs(
         worker_kwargs[
             "max_concurrent_activity_task_polls"
         ] = args.max_concurrent_activity_pollers
+    else:
+        worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling()
     if args.workflow_poller_autoscale_max is not None:
         worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
             maximum=args.workflow_poller_autoscale_max
@@ -245,6 +247,8 @@ def _build_worker_kwargs(
         worker_kwargs[
             "max_concurrent_workflow_task_polls"
         ] = args.max_concurrent_workflow_pollers
+    else:
+        worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling()
     if args.max_concurrent_activities is not None:
         worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:

@@ -175,6 +175,8 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 			MaximumNumberOfPollers: args.MaxConcurrentActivityPollers,
 		})
+	} else {
+		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
 	}
 	if flags.Changed("workflow-poller-autoscale-max") {
 		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
@@ -184,6 +186,8 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 			MaximumNumberOfPollers: args.MaxConcurrentWorkflowPollers,
 		})
+	} else {
+		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
 	}
 	if flags.Changed("max-concurrent-activities") {
 		options.MaxConcurrentActivityExecutionSize = args.MaxConcurrentActivities
