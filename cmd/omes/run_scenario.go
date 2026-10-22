@@ -149,8 +149,8 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return err
 	}
 
-	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	metrics := r.metricsOptions.MustCreateMetrics(r.logger)
+	defer metrics.Shutdown(ctx)
 	start := time.Now()
 	var client client.Client
 	for {

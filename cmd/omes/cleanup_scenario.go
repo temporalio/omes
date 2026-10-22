@@ -61,8 +61,8 @@ func (c *scenarioCleaner) run(ctx context.Context) error {
 	} else if c.scenario.RunID == "" {
 		return loadgen.NewUsageError("--run-id must not be empty")
 	}
-	metrics := c.metricsOptions.MustCreateMetrics(ctx, c.logger)
-	defer metrics.Shutdown(ctx, c.logger, c.scenario.Scenario, c.scenario.RunID, c.scenario.RunFamily)
+	metrics := c.metricsOptions.MustCreateMetrics(c.logger)
+	defer metrics.Shutdown(ctx)
 	client := c.clientOptions.MustDial(metrics, c.logger)
 	defer client.Close()
 	taskQueue := loadgen.TaskQueueForRun(c.scenario.RunID)

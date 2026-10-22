@@ -78,7 +78,7 @@ func runWorkerCLI(workerFactory WorkerFactory, clientFactory ClientFactory, argv
 		return err
 	}
 	if config.Metrics != nil {
-		defer config.Metrics.Shutdown(context.Background(), logger, "", "", "")
+		defer config.Metrics.Shutdown(context.Background())
 	}
 	client, err := clientFactory(config)
 	if err != nil {
