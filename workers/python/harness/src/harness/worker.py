@@ -203,9 +203,6 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--tls-key-path", default="", help="Path to client private key")
     parser.add_argument("--prom-listen-address", help="Prometheus listen address")
-    parser.add_argument(
-        "--prom-handler-path", default="/metrics", help="Prometheus handler path"
-    )
     parser.add_argument("--auth-header", default="", help="Authorization header value")
     parser.add_argument("--build-id", default="", help="Build ID")
     return parser

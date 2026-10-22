@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workerctl"
@@ -70,7 +71,12 @@ func (w *workerPool) ensureWorkerBuilt(
 			Logger:     logger.Named(fmt.Sprintf("%s-builder", sdk)),
 		}
 
-		buildCtx, buildCancel := context.WithTimeout(t.Context(), workerBuildTimeout)
+		buildTimeout := workerBuildTimeout
+		if sdk == clioptions.LangRust {
+			// A cold Rust release build compiles the whole SDK and can take minutes.
+			buildTimeout = 5 * time.Minute
+		}
+		buildCtx, buildCancel := context.WithTimeout(t.Context(), buildTimeout)
 		defer buildCancel()
 
 		_, err := builder.Build(buildCtx, baseDir)

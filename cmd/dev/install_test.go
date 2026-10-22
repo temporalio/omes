@@ -40,6 +40,7 @@ func TestInstallAllUsesBareMiseInstall(t *testing.T) {
 				"exec -- npm ci|false",
 				"exec -- uv sync --python 3.10 --all-packages --all-groups|false",
 				"exec -- bundle install|false",
+				"exec -- cargo fetch --locked|false",
 			}, lines)
 		})
 	}

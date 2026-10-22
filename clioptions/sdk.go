@@ -15,6 +15,7 @@ const (
 	LangTypeScript Language = "typescript"
 	LangDotNet     Language = "dotnet"
 	LangRuby       Language = "ruby"
+	LangRust       Language = "rust"
 )
 
 func (lf *Language) String() string {
@@ -35,8 +36,10 @@ func (lf *Language) Set(value string) error {
 		*lf = LangDotNet
 	case string(LangRuby), "rb":
 		*lf = LangRuby
+	case string(LangRust), "rs":
+		*lf = LangRust
 	default:
-		return fmt.Errorf("invalid language %q, must be one of: [go, python, java, typescript, dotnet, ruby] or aliases [py, ts, cs, rb]", value)
+		return fmt.Errorf("invalid language %q, must be one of: [go, python, java, typescript, dotnet, ruby, rust] or aliases [py, ts, cs, rb, rs]", value)
 	}
 	return nil
 }
@@ -51,6 +54,6 @@ type SdkOptions struct {
 }
 
 func (s *SdkOptions) AddCLIFlags(fs *pflag.FlagSet) {
-	fs.Var(&s.Language, "language", "Language to use (go, python, ts, cs, java, rb)")
+	fs.Var(&s.Language, "language", "Language to use (go, python, ts, cs, java, rb, rust)")
 	fs.StringVar(&s.Version, "version", "", "SDK version to use - treated as path if slash present")
 }

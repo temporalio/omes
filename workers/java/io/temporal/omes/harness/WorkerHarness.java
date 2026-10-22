@@ -52,8 +52,7 @@ public final class WorkerHarness {
                 args.tlsKeyPath,
                 null,
                 false,
-                args.promListenAddress,
-                args.promHandlerPath));
+                args.promListenAddress));
     WorkerFactory workerFactory =
         WorkerFactory.newInstance(
             client,
@@ -333,12 +332,6 @@ public final class WorkerHarness {
 
     @CommandLine.Option(names = "--prom-listen-address", description = "Prometheus listen address")
     String promListenAddress;
-
-    @CommandLine.Option(
-        names = "--prom-handler-path",
-        description = "Prometheus handler path",
-        defaultValue = "/metrics")
-    String promHandlerPath;
 
     @CommandLine.Option(
         names = "--auth-header",

@@ -74,6 +74,14 @@ func lintAndFormat(ctx context.Context, target string) error {
 		return lintAndFormatDotnetWorker(ctx, targetDir)
 	case "ruby":
 		return lintAndFormatRubyWorker(ctx, targetDir)
+	case "rust":
+		if err := checkTool(ctx, "rust"); err != nil {
+			return err
+		}
+		if err := runCommandInDir(ctx, targetDir, "cargo", "fmt"); err != nil {
+			return err
+		}
+		return runCommandInDir(ctx, targetDir, "cargo", "clippy", "--release", "--locked", "--all-targets", "--", "-D", "warnings")
 	case "kitchensink-gen":
 		return lintAndFormatRustKitchenSinkGen(ctx)
 	default:

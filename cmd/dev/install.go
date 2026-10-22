@@ -13,6 +13,7 @@ var installToolDependencies = map[string][]string{
 	"node":   {"node", "pnpm"},
 	"protoc": {"protoc", "protoc-gen-go"},
 	"python": {"python", "uv", "pipx:poethepoet"},
+	"rust":   {"rust", "protoc"},
 }
 
 func installCmd() *cobra.Command {
@@ -145,7 +146,13 @@ func setupInstalledTool(ctx context.Context, tool string) error {
 			return err
 		}
 		return runMiseExecInDir(ctx, workerDir, "bundle", "install")
-	case "buf", "protoc", "rust":
+	case "rust":
+		workerDir, err := getTargetDir("rust")
+		if err != nil {
+			return err
+		}
+		return runMiseExecInDir(ctx, workerDir, "cargo", "fetch", "--locked")
+	case "buf", "protoc":
 		return nil
 	default:
 		return fmt.Errorf("unsupported tool: %s", tool)

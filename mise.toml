@@ -13,7 +13,7 @@ python = "3.10"
 "pipx:poethepoet" = "0.48.0"
 ruby = "3.3"
 "gem:bundler" = "4.0.10"
-rust = { version = "1.74.0", profile = "default" }
+rust = { version = "1.93.1", profile = "default" }
 uv = "0.7.19"
 
 [_.sdk]
@@ -22,6 +22,7 @@ go = "1.49.1-0.20260930191651-f161b6560fe5"
 java = "1.37.0"
 python = "1.31.0"
 ruby = "1.10.0"
+rust = "1.1.0"
 typescript = "1.24.0"
 
 [_.server]
@@ -87,6 +88,18 @@ python3 "$MISE_CONFIG_ROOT/scripts/sdk-sync/update_ruby.py" "$TEMPORAL_SDK_VERSI
 mise exec gem:bundler -- bundle lock --update temporalio --conservative
 '''
 
+[tasks."sync-sdk:rust"]
+description = "Sync Rust SDK dependencies to the version in mise.toml"
+dir = "workers/rust"
+run = '''
+TEMPORAL_SDK_VERSION="$(mise config get _.sdk.rust)"
+python3 "$MISE_CONFIG_ROOT/scripts/sdk-sync/update_rust.py" "$TEMPORAL_SDK_VERSION"
+cargo update \
+  --package temporalio-client --package temporalio-common \
+  --package temporalio-macros --package temporalio-sdk \
+  --package temporalio-workflow
+'''
+
 [tasks.sync-sdk]
 description = "Sync all SDK dependencies to the versions in mise.toml"
 depends = [
@@ -95,5 +108,6 @@ depends = [
   "sync-sdk:java",
   "sync-sdk:python",
   "sync-sdk:ruby",
+  "sync-sdk:rust",
   "sync-sdk:typescript",
 ]

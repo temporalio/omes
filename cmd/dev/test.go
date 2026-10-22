@@ -101,6 +101,12 @@ func runTestWorker(ctx context.Context, language string) error {
 			return err
 		}
 	}
+	if language == "rust" {
+		workerDir := filepath.Join(repoDir, "workers", "rust")
+		if err := runCommandInDir(ctx, workerDir, "cargo", "test", "--release", "--locked"); err != nil {
+			return fmt.Errorf("failed Rust harness tests: %w", err)
+		}
+	}
 	return testWorkerLocally(ctx, repoDir, language, sdkVersion)
 }
 

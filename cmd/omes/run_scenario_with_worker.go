@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workerctl"
+	"github.com/temporalio/omes/loadgen"
 )
 
 func runScenarioWithWorkerCmd() *cobra.Command {
@@ -49,6 +52,14 @@ func (r *workerWithScenarioRunner) preRun() {
 func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	if r.SdkOptions.Language == clioptions.LangRust {
+		if options, changed := disableSelfTargetedNexus(r.ScenarioID.Scenario, r.scenarioOptions); changed {
+			r.Logger.Infof("Rust workers cannot handle Nexus operations; defaulting --option %s=false",
+				loadgen.NexusEnabledOption)
+			r.scenarioOptions = options
+		}
+	}
 
 	// Reject bad input before building and starting a worker, which for some
 	// languages takes minutes. Judging that needs only the scenario name and run
@@ -101,4 +112,23 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("worker failed: %w", workerErr)
 	}
 	return nil
+}
+
+// disableSelfTargetedNexus turns off Nexus load for a scenario whose default
+// endpoint targets the worker under test, unless the user chose Nexus options
+// explicitly. Workers that cannot handle Nexus operations would otherwise hang.
+func disableSelfTargetedNexus(scenarioName string, options []string) ([]string, bool) {
+	scenario := loadgen.GetScenario(scenarioName)
+	if scenario == nil || !slices.ContainsFunc(scenario.DeclaredOptions(), func(o loadgen.DeclaredOption) bool {
+		return o.Name == loadgen.NexusEnabledOption
+	}) {
+		return options, false
+	}
+	for _, option := range options {
+		key, _, _ := strings.Cut(option, "=")
+		if key == loadgen.NexusEnabledOption || key == loadgen.NexusEndpointOption {
+			return options, false
+		}
+	}
+	return append(slices.Clone(options), loadgen.NexusEnabledOption+"=false"), true
 }

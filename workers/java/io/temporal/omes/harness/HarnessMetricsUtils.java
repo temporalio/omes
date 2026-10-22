@@ -12,7 +12,7 @@ final class HarnessMetricsUtils {
   private HarnessMetricsUtils() {}
 
   static HttpServer startPrometheusScrapeEndpoint(
-      PrometheusMeterRegistry registry, String path, String address) {
+      PrometheusMeterRegistry registry, String address) {
     try {
       String[] parts = address.split(":");
       if (parts.length > 2) {
@@ -23,7 +23,7 @@ final class HarnessMetricsUtils {
 
       HttpServer server = HttpServer.create(new InetSocketAddress(host, port), 0);
       server.createContext(
-          path,
+          "/metrics",
           httpExchange -> {
             String response = registry.scrape();
             httpExchange

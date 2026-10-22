@@ -14,6 +14,7 @@ workers/java/bin
 workers/java/**/build
 
 /loadgen/kitchen-sink-gen/target/
+/workers/rust/target/
 
 omes.sln
 /workers/dotnet/**/obj/

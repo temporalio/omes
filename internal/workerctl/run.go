@@ -135,7 +135,7 @@ func (r *Runner) Run(ctx context.Context, baseDir string) error {
 	// The process metrics sidecar (with /info endpoint) is started by run.go, not the worker.
 	args = append(args, passthrough(r.ClientOptions.FlagSet(), "")...)
 	args = append(args, passthrough(r.LoggingOptions.FlagSet(), "")...)
-	args = append(args, passthroughExcluding(r.MetricsOptions.FlagSet("worker-"), "worker-", "process-metrics-address", "metrics-version-tag")...)
+	args = append(args, workerMetricsArgs(&r.MetricsOptions)...)
 	args = append(args, passthrough(r.WorkerOptions.FlagSet(), "worker-")...)
 
 	cmd, err := prog.NewCommand(context.Background(), args...)
@@ -227,22 +227,13 @@ func passthrough(fs *pflag.FlagSet, prefix string) (flags []string) {
 	return
 }
 
-func passthroughExcluding(fs *pflag.FlagSet, prefix string, exclude ...string) (flags []string) {
-	excludeSet := make(map[string]bool)
-	for _, e := range exclude {
-		excludeSet[e] = true
-	}
-	fs.VisitAll(func(f *pflag.Flag) {
-		if !f.Changed {
-			return
-		}
-		name := strings.TrimPrefix(f.Name, prefix)
-		if excludeSet[name] {
-			return
-		}
-		flags = append(flags, fmt.Sprintf("--%s=%s", name, f.Value.String()))
-	})
-	return
+// workerMetricsArgs forwards only the SDK metrics listener address. Prometheus
+// instance management, export and the process sidecar are handled by Omes itself.
+func workerMetricsArgs(options *clioptions.MetricsOptions) []string {
+	fs := options.FlagSet("worker-")
+	workerFlags := pflag.NewFlagSet("worker_sdk_metrics", pflag.ContinueOnError)
+	workerFlags.AddFlag(fs.Lookup("worker-prom-listen-address"))
+	return passthrough(workerFlags, "worker-")
 }
 
 func sendInterrupt(process *os.Process) error {

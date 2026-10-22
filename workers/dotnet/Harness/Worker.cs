@@ -106,11 +106,6 @@ internal static class WorkerHarness
         description: "Authorization header value",
         getDefaultValue: () => string.Empty);
 
-    private static readonly Option<string?> PromHandlerPathOption = new(
-        name: "--prom-handler-path",
-        description: "Prometheus handler path",
-        getDefaultValue: () => "/metrics");
-
     private static readonly Option<string?> BuildIdOption = new(
         name: "--build-id",
         description: "Build ID");
@@ -391,7 +386,6 @@ internal static class WorkerHarness
             TlsKeyPath: parseResult.GetValueForOption(TlsKeyPathOption)!,
             PromListenAddress: parseResult.GetValueForOption(PromListenAddressOption),
             AuthHeader: parseResult.GetValueForOption(AuthHeaderOption)!,
-            PromHandlerPath: parseResult.GetValueForOption(PromHandlerPathOption),
             BuildId: parseResult.GetValueForOption(BuildIdOption),
             ErrOnUnimplemented: parseResult.GetValueForOption(ErrOnUnimplementedOption));
 
@@ -417,7 +411,6 @@ internal static class WorkerHarness
         command.AddOption(TlsKeyPathOption);
         command.AddOption(PromListenAddressOption);
         command.AddOption(AuthHeaderOption);
-        command.AddOption(PromHandlerPathOption);
         command.AddOption(BuildIdOption);
         command.AddOption(ErrOnUnimplementedOption);
         return command;
@@ -453,7 +446,6 @@ internal static class WorkerHarness
         string TlsKeyPath,
         string? PromListenAddress,
         string AuthHeader,
-        string? PromHandlerPath,
         string? BuildId,
         bool ErrOnUnimplemented);
 }

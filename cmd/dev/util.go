@@ -14,7 +14,7 @@ import (
 
 var (
 	supportedTargets = []string{
-		"dotnet", "go", "java", "ruby", "python", "typescript", "kitchensink-gen",
+		"dotnet", "go", "java", "ruby", "python", "rust", "typescript", "kitchensink-gen",
 	}
 	supportedTools = []string{
 		"buf", "dotnet", "go", "java", "node", "protoc", "python", "ruby", "rust",
@@ -22,6 +22,7 @@ var (
 	toolDependencies = map[string][]string{
 		"python":     {"python3", "uv", "poe"},
 		"ruby":       {"ruby", "bundle"},
+		"rust":       {"cargo", "rustc", "protoc"},
 		"typescript": {"node"},
 		"protoc":     {"protoc", "protoc-gen-go"},
 	}
@@ -33,6 +34,7 @@ var (
 		"node":          {"node", "--version"},
 		"dotnet":        {"dotnet", "--version"},
 		"cargo":         {"cargo", "--version"},
+		"rustc":         {"rustc", "--version"},
 		"protoc":        {"protoc", "--version"},
 		"protoc-gen-go": {"protoc-gen-go", "--version"},
 		"ruby":          {"ruby", "--version"},

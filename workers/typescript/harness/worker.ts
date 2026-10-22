@@ -34,7 +34,6 @@ interface WorkerCliOptions {
   tlsCertPath: string;
   tlsKeyPath: string;
   promListenAddress?: string;
-  promHandlerPath: string;
   authHeader: string;
   buildId: string;
 }
@@ -213,7 +212,6 @@ function buildParser(): Command {
     .option('--tls-cert-path <clientCertPath>', 'Path to a client certificate for TLS', '')
     .option('--tls-key-path <clientKeyPath>', 'Path to a client key for TLS', '')
     .option('--prom-listen-address <promListenAddress>', 'Prometheus listen address')
-    .option('--prom-handler-path <promHandlerPath>', 'Prometheus handler path', '/metrics')
     .option('--auth-header <authHeader>', 'Authorization header value', '')
     .option('--build-id <buildId>', 'Build ID', '');
 }

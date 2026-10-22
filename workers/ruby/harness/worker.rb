@@ -104,7 +104,6 @@ module Harness
         opts.on('--tls-cert-path PATH') { |value| options[:tls_cert_path] = value }
         opts.on('--tls-key-path PATH') { |value| options[:tls_key_path] = value }
         opts.on('--prom-listen-address ADDRESS') { |value| options[:prom_listen_address] = value }
-        opts.on('--prom-handler-path PATH') { |_value| nil }
         opts.on('--auth-header HEADER') { |value| options[:auth_header] = value }
         opts.on('--build-id ID') { |_value| nil }
       end

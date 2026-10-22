@@ -17,6 +17,7 @@ var cleanCommands = map[string][]string{
 	"python":          {"uv", "clean"},
 	"typescript":      {"npm", "run", "clean"},
 	"dotnet":          {"dotnet", "clean"},
+	"rust":            {"cargo", "clean"},
 	"kitchensink-gen": {"cargo", "clean"},
 }
 
