@@ -139,13 +139,13 @@ func TestSchedulerReadRecovery(t *testing.T) {
 	}{
 		{"healthy", true, 0, nil, 1, false},
 		{"timeout_then_success", true, 1, serviceerror.NewDeadlineExceeded("server persistence timeout"), 2, false},
-		{"local_deadline", true, 1, context.DeadlineExceeded, 1, true},
-		{"local_cancellation", true, 1, context.Canceled, 1, true},
+		{"raw_context_deadline", true, 1, context.DeadlineExceeded, 1, true},
+		{"raw_context_cancellation", true, 1, context.Canceled, 1, true},
 		{"disabled", false, 1, serviceerror.NewDeadlineExceeded("server persistence timeout"), 1, true},
 		{"exhausted", true, 2, serviceerror.NewDeadlineExceeded("server persistence timeout"), 2, true},
 		{"permission", true, 1, serviceerror.NewPermissionDenied("denied", ""), 1, true},
 		{"invalid", true, 1, serviceerror.NewInvalidArgument("invalid"), 1, true},
-		{"sdk_retryable_exhausted", true, 1, serviceerror.NewUnavailable("exhausted SDK retries"), 1, true},
+		{"returned_unavailable", true, 1, serviceerror.NewUnavailable("returned Unavailable"), 1, true},
 		{"not_found_compatibility", true, 1, serviceerror.NewNotFound("missing"), 1, false},
 	}
 	for _, tc := range cases {

@@ -35,7 +35,7 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
-			o.Bool(RetryScheduleReadsFlag, false, "Retry a schedule read once after a server timeout, before its original EndAt.")
+			o.Bool(RetryScheduleReadsFlag, false, "Retry a schedule read once after RPC DeadlineExceeded, before its original EndAt.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
@@ -283,11 +283,11 @@ func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogg
 func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, endAt time.Time, logger *zap.SugaredLogger) error {
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
 	_, err := handle.Describe(ctx)
-	var serverTimeout *serviceerror.DeadlineExceeded
+	var rpcDeadline *serviceerror.DeadlineExceeded
 	const retryDelay = 100 * time.Millisecond
-	if s.config.RetryScheduleReads && errors.As(err, &serverTimeout) && ctx.Err() == nil && time.Until(endAt) > retryDelay {
-		// DeadlineExceeded is excluded from SDK transport retries. Only the read
-		// is repeated; no write is replayed or inferred from matching state.
+	if s.config.RetryScheduleReads && errors.As(err, &rpcDeadline) && ctx.Err() == nil && time.Until(endAt) > retryDelay {
+		// The typed deadline can come from the server or the SDK child context,
+		// including after SDK retries. Repeat only this read, never a write.
 		retryCtx, cancel := context.WithDeadline(ctx, endAt)
 		defer cancel()
 		timer := time.NewTimer(retryDelay)
@@ -300,7 +300,7 @@ func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Clien
 		if ctxErr := retryCtx.Err(); ctxErr != nil {
 			return errors.Join(err, ctxErr)
 		}
-		logger.Debugw("Retrying schedule read after server timeout", "scheduleID", scheduleID)
+		logger.Debugw("Retrying schedule read after RPC deadline", "scheduleID", scheduleID)
 		_, err = handle.Describe(retryCtx)
 	}
 	if err != nil {
