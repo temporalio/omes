@@ -148,6 +148,8 @@ public final class WorkerHarness {
           new PollerBehaviorAutoscaling(null, args.workflowPollerAutoscaleMax, null));
     } else if (args.maxConcurrentWorkflowPollers != null) {
       workerOptions.setMaxConcurrentWorkflowTaskPollers(args.maxConcurrentWorkflowPollers);
+    } else {
+      workerOptions.setWorkflowTaskPollersBehavior(new PollerBehaviorAutoscaling(null, null, null));
     }
 
     if (args.activityPollerAutoscaleMax != null) {
@@ -155,6 +157,8 @@ public final class WorkerHarness {
           new PollerBehaviorAutoscaling(null, args.activityPollerAutoscaleMax, null));
     } else if (args.maxConcurrentActivityPollers != null) {
       workerOptions.setMaxConcurrentActivityTaskPollers(args.maxConcurrentActivityPollers);
+    } else {
+      workerOptions.setActivityTaskPollersBehavior(new PollerBehaviorAutoscaling(null, null, null));
     }
 
     if (args.maxConcurrentActivities != null) {

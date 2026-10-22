@@ -17,7 +17,7 @@ rust = { version = "1.93.1", profile = "default" }
 uv = "0.7.19"
 
 [_.sdk]
-dotnet = "1.20.0"
+dotnet = "1.21.0"
 go = "1.49.1-0.20260930191651-f161b6560fe5"
 java = "1.37.0"
 python = "1.31.0"

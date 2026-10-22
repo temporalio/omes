@@ -130,6 +130,8 @@ module Harness
         )
       elsif options[:max_concurrent_activity_pollers]
         worker_kwargs[:max_concurrent_activity_task_polls] = options[:max_concurrent_activity_pollers]
+      else
+        worker_kwargs[:activity_task_poller_behavior] = Temporalio::Worker::PollerBehavior::Autoscaling.new
       end
 
       if options[:workflow_poller_autoscale_max]
@@ -138,6 +140,8 @@ module Harness
         )
       elsif options[:max_concurrent_workflow_pollers]
         worker_kwargs[:max_concurrent_workflow_task_polls] = options[:max_concurrent_workflow_pollers]
+      else
+        worker_kwargs[:workflow_task_poller_behavior] = Temporalio::Worker::PollerBehavior::Autoscaling.new
       end
 
       if options[:max_concurrent_activities]

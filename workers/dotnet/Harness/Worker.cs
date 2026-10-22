@@ -344,6 +344,10 @@ internal static class WorkerHarness
         {
             workerOptions.MaxConcurrentActivityTaskPolls = maxConcurrentActivityPollers;
         }
+        else
+        {
+            workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling();
+        }
 
         if (settings.WorkflowPollerAutoscaleMax is { } workflowAutoscaleMax)
         {
@@ -352,6 +356,10 @@ internal static class WorkerHarness
         else if (settings.MaxConcurrentWorkflowPollers is { } maxConcurrentWorkflowPollers)
         {
             workerOptions.MaxConcurrentWorkflowTaskPolls = maxConcurrentWorkflowPollers;
+        }
+        else
+        {
+            workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling();
         }
 
         return workerOptions;
