@@ -1,0 +1,193 @@
+name: Build Rust docker images
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERSION: v2025.12.1
+  MISE_NODE_VERIFY: no
+
+on:
+  workflow_call:
+    inputs:
+      sdk-repo-ref:
+        description: Git ref of SDK repo to use to build (overrides "sdk-version")
+        required: false
+        type: string
+      sdk-repo-url:
+        description: URL of SDK repo to use to build (only used if "sdk-repo-ref" is provided)
+        required: false
+        type: string
+      sdk-version:
+        description: Version of SDK to use (ignored if "sdk-repo-ref" is provided)
+        required: false
+        type: string
+      docker-tag-ext:
+        description: Tag extension to use for the built image (only when using sdk-repo-ref)
+        required: false
+        type: string
+      do-push:
+        description: If set, push the built images to Docker Hub.
+        type: boolean
+        default: false
+      as-latest:
+        description: If set, tag the images as latest in addition to commit-specific tags.
+        type: boolean
+        default: false
+      omes-repo-path:
+        type: string
+        default: "temporalio/omes"
+      omes-repo-ref:
+        type: string
+
+jobs:
+  publish-dockerhub:
+    name: Publish rust (${{ matrix.arch }}) to Docker Hub
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    if: inputs.do-push && !github.event.pull_request.head.repo.fork
+    timeout-minutes: 30
+    steps:
+      - name: Checkout omes repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ inputs.omes-repo-path }}
+          ref: >-
+            ${{ inputs.omes-repo-ref ||
+                (inputs.omes-repo-path == github.repository &&
+                 (github.event.pull_request.head.sha || github.sha)) || github.head_ref }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Checkout lang repo
+        if: ${{ inputs.sdk-repo-ref }}
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ inputs.sdk-repo-url }}
+          submodules: recursive
+          path: checked-out-sdk/
+          ref: ${{ inputs.sdk-repo-ref }}
+          fetch-depth: 0
+
+      - name: Install mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: ${{ env.MISE_VERSION }}
+          install_args: "go"
+      - name: Restore Go dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', '**/go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      # Raw buildx commands need these variables to use the GitHub Actions cache.
+      - name: Expose GitHub cache runtime
+        uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: Build and push to Docker Hub
+        env:
+          IMAGE_TAG_ARGS: ${{ inputs.sdk-repo-ref && format('--image-tag rust-{0}', inputs.docker-tag-ext) || ''}}
+          TAG_LATEST_ARGS: ${{ inputs.as-latest && '--tag-as-latest' || ''}}
+          VERSION_ARGS: ${{ inputs.sdk-repo-ref && '--version checked-out-sdk/' || (inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '') }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          # Optional argument strings intentionally expand into flag/value pairs.
+          # shellcheck disable=SC2086
+          go run ./cmd/dev build-push-worker-image \
+          --language rust \
+          --platform "linux/$ARCH" \
+          --repo-prefix temporaliotest \
+          --push-by-digest --metadata-file "$RUNNER_TEMP/image.json" \
+          --cache-from "type=gha,scope=omes-rust-$ARCH,version=2" \
+          --cache-to "type=gha,scope=omes-rust-$ARCH,version=2,mode=max,ignore-error=true" \
+          $VERSION_ARGS \
+          $IMAGE_TAG_ARGS \
+          $TAG_LATEST_ARGS
+
+      - name: Record Rust image digest and final tags
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          sdk_revision=""
+          if [ -d checked-out-sdk ]; then
+            sdk_revision="$(git -C checked-out-sdk rev-parse HEAD)"
+          fi
+          jq -e --arg tags "$BUILT_IMAGE_TAGS" --arg revision "$(git rev-parse HEAD)" \
+            --arg sdk_revision "$sdk_revision" \
+            '{digest: ."containerimage.digest", tags: ($tags | split(";")),
+              revision: $revision, sdk_revision: $sdk_revision}
+             | select(.digest | test("^sha256:[0-9a-f]{64}$"))' \
+            "$RUNNER_TEMP/image.json" > "$RUNNER_TEMP/rust-$ARCH.json"
+
+      - name: Upload Rust image metadata
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: rust-image-${{ inputs.docker-tag-ext || inputs.sdk-version || 'default' }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/rust-${{ matrix.arch }}.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-rust-manifest:
+    name: Publish Rust multiarch tags
+    needs: publish-dockerhub
+    if: inputs.do-push && !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download Rust AMD64 image metadata
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: rust-image-${{ inputs.docker-tag-ext || inputs.sdk-version || 'default' }}-amd64
+          path: ${{ runner.temp }}/rust-manifests
+
+      - name: Download Rust ARM64 image metadata
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: rust-image-${{ inputs.docker-tag-ext || inputs.sdk-version || 'default' }}-arm64
+          path: ${{ runner.temp }}/rust-manifests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: Combine native images and publish final tags
+        run: |
+          cd "$RUNNER_TEMP/rust-manifests"
+          # Never combine images from different source revisions or tag selections.
+          jq -e -s '.[0].revision == .[1].revision
+            and .[0].sdk_revision == .[1].sdk_revision
+            and .[0].tags == .[1].tags and (.[0].tags | length > 0)' \
+            rust-amd64.json rust-arm64.json
+          mapfile -t tags < <(jq -r '.tags[]' rust-amd64.json)
+          tag_args=()
+          for tag in "${tags[@]}"; do
+            tag_args+=(--tag "$tag")
+          done
+          images=()
+          for arch in amd64 arm64; do
+            digest="$(jq -er '.digest' "rust-$arch.json")"
+            images+=("temporaliotest/omes@$digest")
+          done
+          docker buildx imagetools create "${tag_args[@]}" "${images[@]}"
+          docker buildx imagetools inspect "${tags[0]}"

@@ -133,10 +133,9 @@ jobs:
 
   build-rust-docker-images:
     if: inputs.rust-version
-    uses: ./.github/workflows/docker-images.yml
+    uses: ./.github/workflows/rust-docker-images.yml
     secrets: inherit
     with:
-      lang: rust
       sdk-version: ${{ inputs.rust-version }}
       do-push: ${{ inputs.do-push }}
       as-latest: ${{ inputs.as-latest }}

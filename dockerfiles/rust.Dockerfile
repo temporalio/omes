@@ -1,6 +1,6 @@
-# Build Go separately so the Rust compiler and runtime use matching Debian ABIs.
+# Cross-compile Go natively; keep the Rust compiler and runtime on matching Debian ABIs.
 ARG TARGETARCH
-FROM --platform=linux/$TARGETARCH golang:1.26 AS cli
+FROM --platform=$BUILDPLATFORM golang:1.26 AS cli
 WORKDIR /app
 COPY go.mod go.sum ./
 COPY workers/go/harness/api ./workers/go/harness/api
@@ -11,7 +11,9 @@ COPY loadgen ./loadgen
 COPY metrics ./metrics
 COPY scenarios ./scenarios
 COPY internal ./internal
-RUN CGO_ENABLED=0 go build -o temporal-omes ./cmd/omes
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o temporal-omes ./cmd/omes
 
 FROM --platform=linux/$TARGETARCH rust:1.93.1-bookworm AS build
 RUN apt-get update \

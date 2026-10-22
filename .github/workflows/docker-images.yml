@@ -106,6 +106,8 @@ jobs:
           VERSION_ARGS: ${{ inputs.sdk-repo-ref && '--version checked-out-sdk/' || (inputs.sdk-version && format('--version {0}', inputs.sdk-version) || '') }}
           PUSH_COMMAND: ${{ inputs.push-command }}
         run: |
+          # Optional argument strings intentionally expand into flag/value pairs.
+          # shellcheck disable=SC2086
           go run ./cmd/dev "$PUSH_COMMAND" \
           --platform linux/amd64,linux/arm64 \
           --repo-prefix temporaliotest \

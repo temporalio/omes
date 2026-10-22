@@ -23,6 +23,10 @@ type baseImageBuilder struct {
 	saveImage      string
 	tags           []string
 	labels         []string
+	cacheFrom      []string
+	cacheTo        []string
+	pushByDigest   bool
+	metadataFile   string
 	loggingOptions clioptions.LoggingOptions
 }
 
@@ -36,6 +40,10 @@ func (b *baseImageBuilder) addBaseCLIFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&b.dryRun, "dry-run", false, "If set, just print the commands that would run but do not run them")
 	fs.StringSliceVar(&b.tags, "image-tag", nil, "Additional tags to add to the image")
 	fs.StringSliceVar(&b.labels, "image-label", nil, "Additional labels to add to the image")
+	fs.StringArrayVar(&b.cacheFrom, "cache-from", nil, "Buildx cache source (repeatable)")
+	fs.StringArrayVar(&b.cacheTo, "cache-to", nil, "Buildx cache destination (repeatable)")
+	fs.BoolVar(&b.pushByDigest, "push-by-digest", false, "Push a single-platform image by digest without publishing tags")
+	fs.StringVar(&b.metadataFile, "metadata-file", "", "Write Buildx build metadata to this file")
 	fs.StringVar(&b.saveImage, "save-image", "", "If set, will run `docker save` on the produced image, saving it to the provided path")
 }
 
@@ -86,8 +94,23 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		"--platform", strings.Join(qualifyPlatforms(b.platforms), ","),
 	}
 
-	// Handle multi-platform build requirements
-	if len(b.platforms) > 1 {
+	// Digest-only exports leave tags for a separate manifest publishing step.
+	if b.pushByDigest {
+		if !allowPush {
+			return nil, fmt.Errorf("push-by-digest requires pushing to registry")
+		}
+		if len(b.platforms) != 1 {
+			return nil, fmt.Errorf("push-by-digest requires exactly one platform")
+		}
+		if b.saveImage != "" {
+			return nil, fmt.Errorf("push-by-digest cannot be combined with save-image")
+		}
+		repository := b.imageName
+		if b.repoPrefix != "" {
+			repository = b.repoPrefix + "/" + repository
+		}
+		dockerArgs = append(dockerArgs, "--output", "type=image,name="+repository+",push-by-digest=true,name-canonical=true,push=true")
+	} else if len(b.platforms) > 1 {
 		if !allowPush {
 			err = fmt.Errorf("multi-platform builds require pushing to registry")
 			return
@@ -97,10 +120,21 @@ func (b *baseImageBuilder) buildDockerArgs(dockerFile string, allowPush bool, bu
 		dockerArgs = append(dockerArgs, "--load")
 	}
 
-	// Add tags
-	imageTags := b.generateImageTags()
-	for _, tagVal := range imageTags {
-		dockerArgs = append(dockerArgs, "--tag", tagVal)
+	for _, cache := range b.cacheFrom {
+		dockerArgs = append(dockerArgs, "--cache-from", cache)
+	}
+	for _, cache := range b.cacheTo {
+		dockerArgs = append(dockerArgs, "--cache-to", cache)
+	}
+	if b.metadataFile != "" {
+		dockerArgs = append(dockerArgs, "--metadata-file", b.metadataFile)
+	}
+
+	// Final tags are still computed and exported, but digest-only builds must not publish them.
+	if !b.pushByDigest {
+		for _, tagVal := range b.generateImageTags() {
+			dockerArgs = append(dockerArgs, "--tag", tagVal)
+		}
 	}
 
 	// Add labels
