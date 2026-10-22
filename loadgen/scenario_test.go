@@ -2,14 +2,24 @@ package loadgen
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/operatorservicemock/v1"
 	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestEnsureNexusEndpointReusesExistingEndpoint(t *testing.T) {
@@ -88,4 +98,70 @@ func TestScenarioConfigValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegisterDefaultSearchAttributes(t *testing.T) {
+	unexpected := serviceerror.NewUnavailable("visibility storage unavailable")
+	for _, tc := range []struct {
+		name    string
+		err     error
+		wantErr bool
+	}{
+		{name: "success"},
+		{name: "typed duplicate", err: serviceerror.NewAlreadyExists("duplicate")},
+		{name: "wrapped typed duplicate", err: fmt.Errorf("operator: %w", serviceerror.NewAlreadyExists("duplicate"))},
+		{name: "grpc duplicate", err: status.Error(codes.AlreadyExists, "duplicate")},
+		{name: "legacy allocation race", err: serviceerror.NewUnavailable("Generated search attributes mapping unavailble."), wantErr: true},
+		{name: "unrelated unavailable", err: unexpected, wantErr: true},
+		{name: "permission denied", err: serviceerror.NewPermissionDenied("registration forbidden", ""), wantErr: true},
+		{name: "untyped duplicate text", err: errors.New("already exists"), wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			operatorClient := operatorservicemock.NewMockOperatorServiceClient(gomock.NewController(t))
+			operatorClient.EXPECT().AddSearchAttributes(gomock.Any(), gomock.Any()).Return(nil, tc.err)
+			temporalClient := &sdkmocks.Client{}
+			temporalClient.On("OperatorService").Return(operatorClient)
+			info := ScenarioInfo{Client: temporalClient, Namespace: "test-namespace"}
+			err := info.RegisterDefaultSearchAttributes(t.Context())
+			if tc.wantErr {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestExecuteKitchenSinkWorkflowPreservesClientActionError(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		cause := errors.New("describe failed")
+		cleanupErr := errors.New("terminate failed")
+		core, logs := observer.New(zap.DebugLevel)
+		workflowRun := &sdkmocks.WorkflowRun{}
+		workflowRun.On("GetRunID").Return("test-run")
+		workflowRun.On("Get", mock.Anything, mock.Anything).Return(func(ctx context.Context, _ any) error { <-ctx.Done(); return ctx.Err() })
+		temporalClient := &sdkmocks.Client{}
+		temporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, "kitchenSink", mock.Anything).Return(workflowRun, nil)
+		temporalClient.On("DescribeWorkflowExecution", mock.Anything, "test-workflow", "").Return(nil, cause)
+		temporalClient.On("TerminateWorkflow", mock.Anything, "test-workflow", "", "client actions failed", nil).Return(cleanupErr)
+		info := ScenarioInfo{Client: temporalClient, Logger: zap.New(core).Sugar()}
+		run := Run{ScenarioInfo: &info, Logger: info.Logger}
+		action := &kitchensink.ClientAction{
+			Variant: &kitchensink.ClientAction_DoDescribe{DoDescribe: &kitchensink.DoDescribe{}},
+		}
+		err := run.ExecuteKitchenSinkWorkflow(t.Context(), &KitchenSinkWorkflowOptions{
+			StartOptions: client.StartWorkflowOptions{ID: "test-workflow"},
+			Params: &kitchensink.TestInput{
+				ClientSequence: &kitchensink.ClientSequence{
+					ActionSets: []*kitchensink.ClientActionSet{{Actions: []*kitchensink.ClientAction{action}}},
+				},
+			},
+		})
+		require.ErrorIs(t, err, cause)
+		require.NotErrorIs(t, err, context.Canceled)
+		synctest.Wait()
+		require.Equal(t, 1, logs.FilterMessageSnippet(cleanupErr.Error()).Len())
+		require.Zero(t, logs.FilterMessageSnippet(cause.Error()).Len())
+		temporalClient.AssertExpectations(t)
+	})
 }
