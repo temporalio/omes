@@ -35,6 +35,7 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+			o.Bool(RetryScheduleReadsFlag, false, "Retry a schedule read once after RPC DeadlineExceeded, before its original EndAt.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
@@ -64,6 +65,7 @@ type schedulerExecutorConfig struct {
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
 	EnableChasmScheduler          bool
+	RetryScheduleReads            bool
 }
 
 var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
@@ -90,6 +92,7 @@ const (
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
 	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
+	RetryScheduleReadsFlag            = "retry-schedule-reads"
 )
 
 const (
@@ -124,6 +127,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
 		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
 		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
+		RetryScheduleReads:            info.OptionBool(RetryScheduleReadsFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {
@@ -190,10 +194,9 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 				return
 			}
 			<-ticker.C
-			// Read and update failures fall through to the delete below; an
-			// abandoned schedule would outlive the iteration until its EndAt.
+			// Read and update failures still fall through to deletion.
 			for range s.config.ScheduleReadsPerCreation {
-				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				if err := s.describeSchedule(ctx, client, sc.ScheduleID, sc.EndAt, logger); err != nil {
 					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
 				}
 				<-ticker.C // Wait between read operations
@@ -212,7 +215,7 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 					record(fmt.Errorf("deleting schedule %s: %w", sc.ScheduleID, err))
 				}
 			case <-ctx.Done():
-				// Left undeleted; EndAt bounds how long it survives.
+				// Cancellation can leave the schedule object behind after EndAt.
 			}
 		})
 	}
@@ -230,6 +233,7 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 type ScheduleState struct {
 	ScheduleID  string
 	DeleteAfter time.Duration
+	EndAt       time.Time
 }
 
 func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, taskQueue string, logger *zap.SugaredLogger) (ScheduleState, error) {
@@ -251,13 +255,13 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 
 	//Add some time to give the executor enough time to delete the schedule
 	endTime := time.Now().Add(sc.DeleteAfter).Add(dur)
+	sc.EndAt = endTime
 
 	options := client.ScheduleOptions{
 		ID: scheduleID,
 		Spec: client.ScheduleSpec{
 			CronExpressions: []string{s.config.CronExpression},
-			// defining an end at ensures all schedules will be removed
-			// regardless of errors from this executor
+			// EndAt stops scheduled actions; it does not delete the schedule.
 			EndAt: endTime,
 		},
 		Action:  action,
@@ -276,9 +280,29 @@ func pickOverlap(policies []enums.ScheduleOverlapPolicy, logger *zap.SugaredLogg
 	return policies[n.Int64()]
 }
 
-func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, logger *zap.SugaredLogger) error {
+func (s *SchedulerExecutor) describeSchedule(ctx context.Context, c client.Client, scheduleID string, endAt time.Time, logger *zap.SugaredLogger) error {
 	handle := c.ScheduleClient().GetHandle(ctx, scheduleID)
 	_, err := handle.Describe(ctx)
+	var rpcDeadline *serviceerror.DeadlineExceeded
+	const retryDelay = 100 * time.Millisecond
+	if s.config.RetryScheduleReads && errors.As(err, &rpcDeadline) && ctx.Err() == nil && time.Until(endAt) > retryDelay {
+		// The typed deadline can come from the server or the SDK child context,
+		// including after SDK retries. Repeat only this read, never a write.
+		retryCtx, cancel := context.WithDeadline(ctx, endAt)
+		defer cancel()
+		timer := time.NewTimer(retryDelay)
+		defer timer.Stop()
+		select {
+		case <-retryCtx.Done():
+			return errors.Join(err, retryCtx.Err())
+		case <-timer.C:
+		}
+		if ctxErr := retryCtx.Err(); ctxErr != nil {
+			return errors.Join(err, ctxErr)
+		}
+		logger.Debugw("Retrying schedule read after RPC deadline", "scheduleID", scheduleID)
+		_, err = handle.Describe(retryCtx)
+	}
 	if err != nil {
 		var notFoundErr *serviceerror.NotFound
 		if errors.As(err, &notFoundErr) {
