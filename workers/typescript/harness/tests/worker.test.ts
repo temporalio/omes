@@ -66,10 +66,10 @@ void test('runWorker passes shared client and context to each worker factory', a
     undefined,
   );
 
-  // With no poller flags, both poller types default to autoscaling.
+  // With no poller flags, both poller types are pinned to the SDK's default fixed count.
   const defaultWorkerOptions = {
-    activityTaskPollerBehavior: { type: 'autoscaling' },
-    workflowTaskPollerBehavior: { type: 'autoscaling' },
+    maxConcurrentActivityTaskPolls: 10,
+    maxConcurrentWorkflowTaskPolls: 10,
   };
   assert.strictEqual(workerFactoryCalls[0]?.client, client);
   assert.strictEqual(workerFactoryCalls[1]?.client, client);

@@ -21,6 +21,9 @@ internal static class WorkerProfiles
                 Tuner = WorkerTuner.CreateResourceBased(
                     targetMemoryUsage: 0.8,
                     targetCpuUsage: 0.8),
+                // Set pollers explicitly so this profile is never auto-enrolled into poller autoscaling.
+                MaxConcurrentWorkflowTaskPolls = WorkerHarness.DefaultPollerCount,
+                MaxConcurrentActivityTaskPolls = WorkerHarness.DefaultPollerCount,
             },
             [ThroughputStressBaselineProfile] = ThroughputStressProfile(1),
         };

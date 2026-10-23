@@ -22,6 +22,10 @@ internal delegate TWorker WorkerFactoryCore<out TWorker>(ITemporalClient client,
 
 internal static class WorkerHarness
 {
+    // Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed
+    // so the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
+    internal const int DefaultPollerCount = 5;
+
     private static readonly Option<string> ServerAddressOption = new(
         aliases: new[] { "-a", "--server-address" },
         description: "The host:port of the server",
@@ -346,7 +350,7 @@ internal static class WorkerHarness
         }
         else
         {
-            workerOptions.ActivityTaskPollerBehavior = new PollerBehavior.Autoscaling();
+            workerOptions.MaxConcurrentActivityTaskPolls = DefaultPollerCount;
         }
 
         if (settings.WorkflowPollerAutoscaleMax is { } workflowAutoscaleMax)
@@ -359,7 +363,7 @@ internal static class WorkerHarness
         }
         else
         {
-            workerOptions.WorkflowTaskPollerBehavior = new PollerBehavior.Autoscaling();
+            workerOptions.MaxConcurrentWorkflowTaskPolls = DefaultPollerCount;
         }
 
         return workerOptions;

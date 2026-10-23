@@ -40,6 +40,10 @@ final class WorkerProfiles {
                     .setControllerOptions(
                         ResourceBasedControllerOptions.newBuilder(0.8, 0.8).build())
                     .build())
+            // Set pollers explicitly so this profile is never auto-enrolled into poller
+            // autoscaling.
+            .setMaxConcurrentWorkflowTaskPollers(WorkerHarness.DEFAULT_POLLER_COUNT)
+            .setMaxConcurrentActivityTaskPollers(WorkerHarness.DEFAULT_POLLER_COUNT)
             .build());
     register(THROUGHPUT_STRESS_BASELINE_PROFILE, throughputStressProfile(1));
     // The baseline profile with every limit scaled, e.g. throughput-stress-baseline-x4.

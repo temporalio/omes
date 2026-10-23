@@ -14,7 +14,11 @@ from temporalio.worker import PollerBehaviorAutoscaling, Worker
 
 from harness.client import ClientFactory, build_client_config
 from harness.helpers import configure_logger
-from harness.profiles import WORKER_PROFILE_ENV_VAR, lookup_profile
+from harness.profiles import (
+    DEFAULT_POLLER_COUNT,
+    WORKER_PROFILE_ENV_VAR,
+    lookup_profile,
+)
 
 
 @dataclass(frozen=True)
@@ -235,7 +239,7 @@ def _build_worker_kwargs(
             "max_concurrent_activity_task_polls"
         ] = args.max_concurrent_activity_pollers
     else:
-        worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling()
+        worker_kwargs["max_concurrent_activity_task_polls"] = DEFAULT_POLLER_COUNT
     if args.workflow_poller_autoscale_max is not None:
         worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
             maximum=args.workflow_poller_autoscale_max
@@ -245,7 +249,7 @@ def _build_worker_kwargs(
             "max_concurrent_workflow_task_polls"
         ] = args.max_concurrent_workflow_pollers
     else:
-        worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling()
+        worker_kwargs["max_concurrent_workflow_task_polls"] = DEFAULT_POLLER_COUNT
     if args.max_concurrent_activities is not None:
         worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:

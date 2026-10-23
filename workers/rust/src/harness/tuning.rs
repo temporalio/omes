@@ -28,6 +28,8 @@ pub(super) struct Options {
 }
 
 const DEFAULT_SLOTS: usize = 100;
+// Matches the SDK's default fixed poller count.
+const DEFAULT_POLLERS: usize = 5;
 
 fn fixed(workflows: usize, activities: usize, local_activities: usize) -> WorkerTuner {
     TunerHolder::builder()
@@ -52,7 +54,9 @@ fn pollers(max: usize, autoscale: usize) -> Option<PollerBehavior> {
     } else if max > 0 {
         Some(PollerBehavior::SimpleMaximum(max))
     } else {
-        None
+        // Set explicitly rather than left to the SDK so the worker is not auto-enrolled into
+        // poller autoscaling when the namespace advertises it.
+        Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS))
     }
 }
 
@@ -68,6 +72,9 @@ impl Options {
                 )
                 .build()
                 .into();
+            // Set pollers explicitly so this profile is never auto-enrolled into autoscaling.
+            config.workflow_task_poller_behavior = pollers(DEFAULT_POLLERS, 0);
+            config.activity_task_poller_behavior = pollers(DEFAULT_POLLERS, 0);
         } else if !profile.is_empty() {
             let scale = if profile == "throughput-stress-baseline" {
                 1
@@ -134,6 +141,14 @@ mod tests {
             .apply(&mut config, "resource-based-default")
             .unwrap();
         assert!(matches!(config.tuner, WorkerTuner::ResourceBased(_)));
+        assert_eq!(
+            config.workflow_task_poller_behavior,
+            pollers(DEFAULT_POLLERS, 0)
+        );
+        assert_eq!(
+            config.activity_task_poller_behavior,
+            pollers(DEFAULT_POLLERS, 0)
+        );
         assert!(options.apply(&mut config, "unknown").is_err());
         assert!(
             options
@@ -146,6 +161,9 @@ mod tests {
     fn autoscaling_takes_precedence_over_fixed_pollers() {
         assert!(matches!(pollers(9, 4), Some(PollerBehavior::Autoscaling(o))
             if o.maximum == 4 && o.minimum == 1 && o.initial == 4));
-        assert_eq!(pollers(0, 0), None);
+        assert_eq!(
+            pollers(0, 0),
+            Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS))
+        );
     }
 }

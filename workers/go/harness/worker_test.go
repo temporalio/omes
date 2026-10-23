@@ -98,7 +98,7 @@ func TestRunWorkersStopsRemainingWorkersOnFailure(t *testing.T) {
 }
 
 func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
-	defaultAutoscaling := sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
+	defaultFixed := defaultPollerBehavior()
 	for _, tc := range []struct {
 		name             string
 		argv             []string
@@ -106,10 +106,10 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 		workflowBehavior sdkworker.PollerBehavior
 	}{
 		{
-			name:             "no poller flags autoscales both with SDK defaults",
+			name:             "no poller flags pins both to the default fixed count",
 			argv:             nil,
-			activityBehavior: defaultAutoscaling,
-			workflowBehavior: defaultAutoscaling,
+			activityBehavior: defaultFixed,
+			workflowBehavior: defaultFixed,
 		},
 		{
 			// The autoscaling max must not also pin the initial poller count;
@@ -119,12 +119,12 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			activityBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
 				MaximumNumberOfPollers: 20,
 			}),
-			workflowBehavior: defaultAutoscaling,
+			workflowBehavior: defaultFixed,
 		},
 		{
 			name:             "workflow autoscale max sets only the maximum",
 			argv:             []string{"--workflow-poller-autoscale-max=10"},
-			activityBehavior: defaultAutoscaling,
+			activityBehavior: defaultFixed,
 			workflowBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
 				MaximumNumberOfPollers: 10,
 			}),
@@ -135,7 +135,7 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			activityBehavior: sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 				MaximumNumberOfPollers: 3,
 			}),
-			workflowBehavior: defaultAutoscaling,
+			workflowBehavior: defaultFixed,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -157,5 +157,19 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 					options.WorkflowTaskPollerBehavior, tc.workflowBehavior)
 			}
 		})
+	}
+}
+
+func TestResourceBasedProfileSetsExplicitPollers(t *testing.T) {
+	var args clioptions.WorkerOptions
+	flags := args.FlagSetWithPrefix("")
+	options, err := buildWorkerOptions(flags, args, resourceBasedDefaultWorkerProfile)
+	if err != nil {
+		t.Fatalf("buildWorkerOptions failed: %v", err)
+	}
+	if options.MaxConcurrentWorkflowTaskPollers != defaultPollerCount ||
+		options.MaxConcurrentActivityTaskPollers != defaultPollerCount {
+		t.Errorf("pollers = %d workflow, %d activity, want %d each",
+			options.MaxConcurrentWorkflowTaskPollers, options.MaxConcurrentActivityTaskPollers, defaultPollerCount)
 	}
 }

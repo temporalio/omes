@@ -20,6 +20,9 @@ export function lookupWorkerProfile(name: string): Partial<WorkerOptions> {
   return { ...profile };
 }
 
+// The SDK's default fixed poller count when executions are left at their defaults.
+const DEFAULT_POLLER_COUNT = 10;
+
 registerWorkerProfile(RESOURCE_BASED_DEFAULT_PROFILE, {
   tuner: {
     tunerOptions: {
@@ -27,6 +30,9 @@ registerWorkerProfile(RESOURCE_BASED_DEFAULT_PROFILE, {
       targetCpuUsage: 0.8,
     },
   },
+  // Set pollers explicitly so this profile is never auto-enrolled into poller autoscaling.
+  maxConcurrentWorkflowTaskPolls: DEFAULT_POLLER_COUNT,
+  maxConcurrentActivityTaskPolls: DEFAULT_POLLER_COUNT,
 });
 
 function throughputStressProfile(scale: number): WorkerProfile {

@@ -128,6 +128,18 @@ func parseVersioningBehavior(value string) (workflow.VersioningBehavior, error) 
 	}
 }
 
+// defaultPollerCount matches the SDK's default fixed poller count.
+const defaultPollerCount = 2
+
+// defaultPollerBehavior is used when no poller flags are passed. It is set explicitly, rather
+// than left to the SDK, so the worker is not auto-enrolled into poller autoscaling when the
+// namespace advertises that capability.
+func defaultPollerBehavior() sdkworker.PollerBehavior {
+	return sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
+		MaximumNumberOfPollers: defaultPollerCount,
+	})
+}
+
 func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, profileName string) (sdkworker.Options, error) {
 	if profileName != "" {
 		profile, err := lookupWorkerProfile(profileName)
@@ -175,7 +187,7 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 			MaximumNumberOfPollers: args.MaxConcurrentActivityPollers,
 		})
 	} else {
-		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
+		options.ActivityTaskPollerBehavior = defaultPollerBehavior()
 	}
 	if flags.Changed("workflow-poller-autoscale-max") {
 		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
@@ -186,7 +198,7 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 			MaximumNumberOfPollers: args.MaxConcurrentWorkflowPollers,
 		})
 	} else {
-		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{})
+		options.WorkflowTaskPollerBehavior = defaultPollerBehavior()
 	}
 	if flags.Changed("max-concurrent-activities") {
 		options.MaxConcurrentActivityExecutionSize = args.MaxConcurrentActivities

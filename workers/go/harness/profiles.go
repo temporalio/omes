@@ -36,6 +36,9 @@ func init() {
 	registerWorkerProfile(resourceBasedDefaultWorkerProfile, workerProfile{
 		Options: sdkworker.Options{
 			Tuner: mustResourceBasedTuner(0.8, 0.8),
+			// Set pollers explicitly so this profile is never auto-enrolled into poller autoscaling.
+			MaxConcurrentWorkflowTaskPollers: defaultPollerCount,
+			MaxConcurrentActivityTaskPollers: defaultPollerCount,
 		},
 	})
 	registerWorkerProfile(throughputStressBaselineWorkerProfile, throughputStressProfile(1))
