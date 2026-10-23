@@ -141,8 +141,14 @@ mod tests {
             .apply(&mut config, "resource-based-default")
             .unwrap();
         assert!(matches!(config.tuner, WorkerTuner::ResourceBased(_)));
-        assert_eq!(config.workflow_task_poller_behavior, pollers(DEFAULT_POLLERS, 0));
-        assert_eq!(config.activity_task_poller_behavior, pollers(DEFAULT_POLLERS, 0));
+        assert_eq!(
+            config.workflow_task_poller_behavior,
+            pollers(DEFAULT_POLLERS, 0)
+        );
+        assert_eq!(
+            config.activity_task_poller_behavior,
+            pollers(DEFAULT_POLLERS, 0)
+        );
         assert!(options.apply(&mut config, "unknown").is_err());
         assert!(
             options
@@ -155,6 +161,9 @@ mod tests {
     fn autoscaling_takes_precedence_over_fixed_pollers() {
         assert!(matches!(pollers(9, 4), Some(PollerBehavior::Autoscaling(o))
             if o.maximum == 4 && o.minimum == 1 && o.initial == 4));
-        assert_eq!(pollers(0, 0), Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS)));
+        assert_eq!(
+            pollers(0, 0),
+            Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS))
+        );
     }
 }
