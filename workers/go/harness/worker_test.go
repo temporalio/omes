@@ -159,3 +159,17 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceBasedProfileSetsExplicitPollers(t *testing.T) {
+	var args clioptions.WorkerOptions
+	flags := args.FlagSetWithPrefix("")
+	options, err := buildWorkerOptions(flags, args, resourceBasedDefaultWorkerProfile)
+	if err != nil {
+		t.Fatalf("buildWorkerOptions failed: %v", err)
+	}
+	if options.MaxConcurrentWorkflowTaskPollers != defaultPollerCount ||
+		options.MaxConcurrentActivityTaskPollers != defaultPollerCount {
+		t.Errorf("pollers = %d workflow, %d activity, want %d each",
+			options.MaxConcurrentWorkflowTaskPollers, options.MaxConcurrentActivityTaskPollers, defaultPollerCount)
+	}
+}

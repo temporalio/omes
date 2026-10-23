@@ -19,7 +19,7 @@ public final class WorkerHarness {
 
   // Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed
   // so the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
-  private static final int DEFAULT_POLLER_COUNT = 5;
+  static final int DEFAULT_POLLER_COUNT = 5;
 
   @FunctionalInterface
   public interface WorkerRegistrar {

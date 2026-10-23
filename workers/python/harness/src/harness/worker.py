@@ -14,7 +14,11 @@ from temporalio.worker import PollerBehaviorAutoscaling, Worker
 
 from harness.client import ClientFactory, build_client_config
 from harness.helpers import configure_logger
-from harness.profiles import WORKER_PROFILE_ENV_VAR, lookup_profile
+from harness.profiles import (
+    DEFAULT_POLLER_COUNT,
+    WORKER_PROFILE_ENV_VAR,
+    lookup_profile,
+)
 
 
 @dataclass(frozen=True)
@@ -28,11 +32,6 @@ class WorkerContext:
 
 
 WorkerFactory = Callable[[Client, WorkerContext], Worker]
-
-# Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed so
-# the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
-DEFAULT_POLLER_COUNT = 5
-
 
 def run_worker_cli(
     worker_factory: WorkerFactory,

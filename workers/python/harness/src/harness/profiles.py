@@ -8,6 +8,11 @@ WORKER_PROFILE_ENV_VAR = "OMES_WORKER_PROFILE"
 RESOURCE_BASED_DEFAULT_PROFILE = "resource-based-default"
 THROUGHPUT_STRESS_BASELINE_PROFILE = "throughput-stress-baseline"
 
+# Matches the SDK's default fixed poller count. Workers set it explicitly when no
+# poller flags or profile poller settings apply, so they are not auto-enrolled
+# into poller autoscaling when the namespace advertises it.
+DEFAULT_POLLER_COUNT = 5
+
 WorkerProfile = dict[str, Any]
 
 
@@ -31,7 +36,11 @@ _register_profile(
         "tuner": WorkerTuner.create_resource_based(
             target_memory_usage=0.8,
             target_cpu_usage=0.8,
-        )
+        ),
+        # Set pollers explicitly so this profile is never auto-enrolled into
+        # poller autoscaling.
+        "max_concurrent_workflow_task_polls": DEFAULT_POLLER_COUNT,
+        "max_concurrent_activity_task_polls": DEFAULT_POLLER_COUNT,
     },
 )
 

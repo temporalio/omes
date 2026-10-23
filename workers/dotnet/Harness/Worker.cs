@@ -24,7 +24,7 @@ internal static class WorkerHarness
 {
     // Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed
     // so the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
-    private const int DefaultPollerCount = 5;
+    internal const int DefaultPollerCount = 5;
 
     private static readonly Option<string> ServerAddressOption = new(
         aliases: new[] { "-a", "--server-address" },

@@ -72,6 +72,9 @@ impl Options {
                 )
                 .build()
                 .into();
+            // Set pollers explicitly so this profile is never auto-enrolled into autoscaling.
+            config.workflow_task_poller_behavior = pollers(DEFAULT_POLLERS, 0);
+            config.activity_task_poller_behavior = pollers(DEFAULT_POLLERS, 0);
         } else if !profile.is_empty() {
             let scale = if profile == "throughput-stress-baseline" {
                 1
@@ -138,6 +141,8 @@ mod tests {
             .apply(&mut config, "resource-based-default")
             .unwrap();
         assert!(matches!(config.tuner, WorkerTuner::ResourceBased(_)));
+        assert_eq!(config.workflow_task_poller_behavior, pollers(DEFAULT_POLLERS, 0));
+        assert_eq!(config.activity_task_poller_behavior, pollers(DEFAULT_POLLERS, 0));
         assert!(options.apply(&mut config, "unknown").is_err());
         assert!(
             options
