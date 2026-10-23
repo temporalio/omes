@@ -33,6 +33,7 @@ class WorkerContext:
 
 WorkerFactory = Callable[[Client, WorkerContext], Worker]
 
+
 def run_worker_cli(
     worker_factory: WorkerFactory,
     client_factory: ClientFactory,
