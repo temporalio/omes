@@ -29,6 +29,10 @@ class WorkerContext:
 
 WorkerFactory = Callable[[Client, WorkerContext], Worker]
 
+# Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed so
+# the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
+DEFAULT_POLLER_COUNT = 5
+
 
 def run_worker_cli(
     worker_factory: WorkerFactory,
@@ -235,7 +239,7 @@ def _build_worker_kwargs(
             "max_concurrent_activity_task_polls"
         ] = args.max_concurrent_activity_pollers
     else:
-        worker_kwargs["activity_task_poller_behavior"] = PollerBehaviorAutoscaling()
+        worker_kwargs["max_concurrent_activity_task_polls"] = DEFAULT_POLLER_COUNT
     if args.workflow_poller_autoscale_max is not None:
         worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling(
             maximum=args.workflow_poller_autoscale_max
@@ -245,7 +249,7 @@ def _build_worker_kwargs(
             "max_concurrent_workflow_task_polls"
         ] = args.max_concurrent_workflow_pollers
     else:
-        worker_kwargs["workflow_task_poller_behavior"] = PollerBehaviorAutoscaling()
+        worker_kwargs["max_concurrent_workflow_task_polls"] = DEFAULT_POLLER_COUNT
     if args.max_concurrent_activities is not None:
         worker_kwargs["max_concurrent_activities"] = args.max_concurrent_activities
     if args.max_concurrent_workflow_tasks is not None:

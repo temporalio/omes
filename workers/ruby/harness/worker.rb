@@ -15,6 +15,10 @@ module Harness
   )
 
   module WorkerCLI
+    # Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed
+    # so the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
+    DEFAULT_POLLER_COUNT = 5
+
     module_function
 
     def run_cli(
@@ -131,7 +135,7 @@ module Harness
       elsif options[:max_concurrent_activity_pollers]
         worker_kwargs[:max_concurrent_activity_task_polls] = options[:max_concurrent_activity_pollers]
       else
-        worker_kwargs[:activity_task_poller_behavior] = Temporalio::Worker::PollerBehavior::Autoscaling.new
+        worker_kwargs[:max_concurrent_activity_task_polls] = DEFAULT_POLLER_COUNT
       end
 
       if options[:workflow_poller_autoscale_max]
@@ -141,7 +145,7 @@ module Harness
       elsif options[:max_concurrent_workflow_pollers]
         worker_kwargs[:max_concurrent_workflow_task_polls] = options[:max_concurrent_workflow_pollers]
       else
-        worker_kwargs[:workflow_task_poller_behavior] = Temporalio::Worker::PollerBehavior::Autoscaling.new
+        worker_kwargs[:max_concurrent_workflow_task_polls] = DEFAULT_POLLER_COUNT
       end
 
       if options[:max_concurrent_activities]

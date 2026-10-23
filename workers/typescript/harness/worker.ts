@@ -252,7 +252,9 @@ function buildWorkerOptions(
   } else if (options.maxConcurrentActivityPollers !== undefined) {
     workerOptions.maxConcurrentActivityTaskPolls = options.maxConcurrentActivityPollers;
   } else {
-    workerOptions.activityTaskPollerBehavior = { type: 'autoscaling' };
+    workerOptions.maxConcurrentActivityTaskPolls = defaultPollerCount(
+      options.maxConcurrentActivities ?? 100,
+    );
   }
 
   if (options.workflowPollerAutoscaleMax !== undefined) {
@@ -263,7 +265,9 @@ function buildWorkerOptions(
   } else if (options.maxConcurrentWorkflowPollers !== undefined) {
     workerOptions.maxConcurrentWorkflowTaskPolls = options.maxConcurrentWorkflowPollers;
   } else {
-    workerOptions.workflowTaskPollerBehavior = { type: 'autoscaling' };
+    workerOptions.maxConcurrentWorkflowTaskPolls = defaultPollerCount(
+      options.maxConcurrentWorkflowTasks ?? 40,
+    );
   }
 
   if (options.maxConcurrentActivities !== undefined) {
@@ -276,4 +280,12 @@ function buildWorkerOptions(
     workerOptions.maxActivitiesPerSecond = options.activitiesPerSecond;
   }
   return workerOptions;
+}
+
+// Matches the SDK's default fixed poller count, min(10, max concurrent executions), where the
+// SDK defaults executions to 40 for workflow tasks and 100 for activities. Set explicitly when no
+// poller flags are passed so the worker is not auto-enrolled into poller autoscaling when the
+// namespace advertises it.
+function defaultPollerCount(maxConcurrentExecutions: number): number {
+  return Math.min(10, maxConcurrentExecutions);
 }

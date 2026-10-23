@@ -17,6 +17,10 @@ import picocli.CommandLine;
 
 public final class WorkerHarness {
 
+  // Matches the SDK's default fixed poller count. Set explicitly when no poller flags are passed
+  // so the worker is not auto-enrolled into poller autoscaling when the namespace advertises it.
+  private static final int DEFAULT_POLLER_COUNT = 5;
+
   @FunctionalInterface
   public interface WorkerRegistrar {
     void register(WorkflowClient client, Worker worker, WorkerContext context) throws Exception;
@@ -149,7 +153,7 @@ public final class WorkerHarness {
     } else if (args.maxConcurrentWorkflowPollers != null) {
       workerOptions.setMaxConcurrentWorkflowTaskPollers(args.maxConcurrentWorkflowPollers);
     } else {
-      workerOptions.setWorkflowTaskPollersBehavior(new PollerBehaviorAutoscaling(null, null, null));
+      workerOptions.setMaxConcurrentWorkflowTaskPollers(DEFAULT_POLLER_COUNT);
     }
 
     if (args.activityPollerAutoscaleMax != null) {
@@ -158,7 +162,7 @@ public final class WorkerHarness {
     } else if (args.maxConcurrentActivityPollers != null) {
       workerOptions.setMaxConcurrentActivityTaskPollers(args.maxConcurrentActivityPollers);
     } else {
-      workerOptions.setActivityTaskPollersBehavior(new PollerBehaviorAutoscaling(null, null, null));
+      workerOptions.setMaxConcurrentActivityTaskPollers(DEFAULT_POLLER_COUNT);
     }
 
     if (args.maxConcurrentActivities != null) {

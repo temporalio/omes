@@ -28,6 +28,8 @@ pub(super) struct Options {
 }
 
 const DEFAULT_SLOTS: usize = 100;
+// Matches the SDK's default fixed poller count.
+const DEFAULT_POLLERS: usize = 5;
 
 fn fixed(workflows: usize, activities: usize, local_activities: usize) -> WorkerTuner {
     TunerHolder::builder()
@@ -52,7 +54,9 @@ fn pollers(max: usize, autoscale: usize) -> Option<PollerBehavior> {
     } else if max > 0 {
         Some(PollerBehavior::SimpleMaximum(max))
     } else {
-        None
+        // Set explicitly rather than left to the SDK so the worker is not auto-enrolled into
+        // poller autoscaling when the namespace advertises it.
+        Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS))
     }
 }
 
@@ -146,6 +150,6 @@ mod tests {
     fn autoscaling_takes_precedence_over_fixed_pollers() {
         assert!(matches!(pollers(9, 4), Some(PollerBehavior::Autoscaling(o))
             if o.maximum == 4 && o.minimum == 1 && o.initial == 4));
-        assert_eq!(pollers(0, 0), None);
+        assert_eq!(pollers(0, 0), Some(PollerBehavior::SimpleMaximum(DEFAULT_POLLERS)));
     }
 }
