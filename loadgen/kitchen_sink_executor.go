@@ -10,6 +10,9 @@ import (
 type KitchenSinkExecutor struct {
 	TestInput *kitchensink.TestInput
 
+	// RecoverOriginalStart retains the iteration request and acknowledged execution across retries.
+	RecoverOriginalStart bool
+
 	// Called once on start
 	PrepareTestInput func(context.Context, ScenarioInfo, *kitchensink.TestInput) error
 
@@ -27,7 +30,11 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	// Create generic executor and run it
 	ge := &GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
+			if k.RecoverOriginalStart && run.kitchenSinkExecution != nil {
+				return run.ExecuteKitchenSinkWorkflow(ctx, &run.kitchenSinkExecution.options)
+			}
 			options := run.DefaultKitchenSinkWorkflowOptions()
+			options.recoverOriginalStart = k.RecoverOriginalStart
 			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
 			if !ok {
 				panic("failed to clone test input")

@@ -391,6 +391,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		mainResult.finishedAt = time.Now()
 	} else {
 		ksExec := &loadgen.KitchenSinkExecutor{
+			RecoverOriginalStart: !isResuming && !info.Configuration.IgnoreAlreadyStarted,
 			TestInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: []*ActionSet{},

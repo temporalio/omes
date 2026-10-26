@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
@@ -22,6 +23,9 @@ type ClientActionsExecutor struct {
 	WorkflowInput   *WorkflowInput
 	Handle          client.WorkflowRun
 	runID           string
+	// RecoverOriginalStart rejects duplicate starts and retains acknowledged run/update handles.
+	RecoverOriginalStart bool
+	originalStart        *originalStart
 }
 
 func (e *ClientActionsExecutor) Start(
@@ -29,6 +33,30 @@ func (e *ClientActionsExecutor) Start(
 	withStartAction *WithStartClientAction,
 ) error {
 	var err error
+	if e.RecoverOriginalStart {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if e.originalStart == nil {
+			if withStartAction.GetDoSignal() != nil {
+				return errors.New("original start recovery does not support Signal-with-Start")
+			}
+			e.freezeStart(withStartAction)
+		}
+		withStartAction = e.originalStart.action
+		if e.originalStart.update != nil {
+			if err := e.originalStart.update.Get(ctx, nil); err != nil {
+				return err
+			}
+		}
+		if e.Handle != nil {
+			e.runID = e.Handle.GetRunID()
+			return nil
+		}
+		if e.originalStart.withStartErr != nil {
+			return e.originalStart.withStartErr
+		}
+	}
 	if withStartAction == nil {
 		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	} else if sig := withStartAction.GetDoSignal(); sig != nil {
@@ -37,6 +65,16 @@ func (e *ClientActionsExecutor) Start(
 		e.Handle, err = e.executeUpdateAction(ctx, upd)
 	} else {
 		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
+	}
+	if err != nil && e.RecoverOriginalStart {
+		if withStartAction == nil {
+			var already *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(err, &already) && already.RunId != "" {
+				err = e.attachOriginalStart(ctx, already.RunId)
+			}
+		} else {
+			e.originalStart.withStartErr = err
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
@@ -170,7 +208,11 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	var handle client.WorkflowUpdateHandle
 	if upd.WithStart {
 		workflowOpts := e.WorkflowOptions
-		workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		if !e.RecoverOriginalStart {
+			workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		} else {
+			updateOpts.WaitForStage = client.WorkflowUpdateStageAccepted
+		}
 		op := e.Client.NewWithStartWorkflowOperation(workflowOpts, e.WorkflowType, e.WorkflowInput)
 		handle, err = e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
 			StartWorkflowOperation: op,
@@ -181,6 +223,10 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	}
 
 	if err == nil {
+		if upd.WithStart && e.RecoverOriginalStart {
+			e.originalStart.update = handle
+			run = e.Client.GetWorkflow(ctx, handle.WorkflowID(), handle.RunID())
+		}
 		err = handle.Get(ctx, nil)
 		if upd.WithStart {
 			run = e.Client.GetWorkflow(ctx, handle.WorkflowID(), handle.RunID())
