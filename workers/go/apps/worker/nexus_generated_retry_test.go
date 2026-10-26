@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -119,8 +120,11 @@ func TestGeneratedNexusSequenceSurvivesLostAcknowledgements(t *testing.T) {
 	targetID := info.NewRun(1).DefaultStartWorkflowOptions().ID + "/nexus-workflow-0"
 	target, err := env.TemporalClient().DescribeWorkflowExecution(ctx, targetID, "")
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(loss.startRuns), 2)
-	for _, runID := range loss.startRuns {
+	loss.mu.Lock()
+	startRuns := slices.Clone(loss.startRuns)
+	loss.mu.Unlock()
+	require.GreaterOrEqual(t, len(startRuns), 2)
+	for _, runID := range startRuns {
 		require.Equal(t, target.WorkflowExecutionInfo.Execution.RunId, runID,
 			"a retried Signal-With-Start must reuse the target's run")
 	}
