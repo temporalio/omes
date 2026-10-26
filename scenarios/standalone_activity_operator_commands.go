@@ -3,7 +3,6 @@ package scenarios
 import (
 	"context"
 	"fmt"
-	"math"
 	"sync/atomic"
 	"time"
 
@@ -78,12 +77,12 @@ func (config *tpsConfig) configureStandaloneActivityOperator(info loadgen.Scenar
 			return fmt.Errorf("%s must be positive", StandaloneActivityOperatorMaxConcurrentFlag)
 		}
 
-		rate := config.StandaloneActivityOperator.MaxIterationsPerSecond
-		if rate != 0 {
-			interval := float64(time.Second) / rate
-			if rate < 0 || math.IsNaN(rate) || interval < 1 || interval >= float64(math.MaxInt64) {
-				return fmt.Errorf("%s must be 0 (unlimited) or a positive rate that produces a valid ticker interval", StandaloneActivityOperatorMaxIterationsPerSecondFlag)
-			}
+		operatorConfig := loadgen.RunConfiguration{
+			MaxConcurrent:          config.StandaloneActivityOperator.MaxConcurrent,
+			MaxIterationsPerSecond: config.StandaloneActivityOperator.MaxIterationsPerSecond,
+		}
+		if err := operatorConfig.Validate(); err != nil {
+			return fmt.Errorf("%s: %w", StandaloneActivityOperatorMaxIterationsPerSecondFlag, err)
 		}
 
 		if config.StandaloneActivityOperator.DrainTimeout <= 0 {
