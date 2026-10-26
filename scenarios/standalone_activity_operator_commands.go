@@ -82,7 +82,7 @@ func (config *tpsConfig) configureStandaloneActivityOperator(info loadgen.Scenar
 		if rate != 0 {
 			interval := float64(time.Second) / rate
 			if rate < 0 || math.IsNaN(rate) || interval < 1 || interval >= float64(math.MaxInt64) {
-				return fmt.Errorf("%s must be 0 (unlimited) or produce a finite ticker interval between 1ns and 292 years", StandaloneActivityOperatorMaxIterationsPerSecondFlag)
+				return fmt.Errorf("%s must be 0 (unlimited) or a positive rate that produces a valid ticker interval", StandaloneActivityOperatorMaxIterationsPerSecondFlag)
 			}
 		}
 

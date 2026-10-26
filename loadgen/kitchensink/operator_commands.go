@@ -51,8 +51,8 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 	activityID := fmt.Sprintf("standalone-activity-operator-%s", uuid.NewString())
 	target := standaloneActivityOperatorTarget{namespace: e.Namespace, activityID: activityID}
 	service := e.Client.WorkflowService()
-	// Arm cleanup before Start: a failed response may still have created the
-	// activity. Its unique ID safely identifies this attempt even without a run ID.
+	// Clean up even if starting the activity returns an error: the server may
+	// have created it. Use the activity ID if no run ID was returned.
 	defer func() {
 		if retErr == nil {
 			return
