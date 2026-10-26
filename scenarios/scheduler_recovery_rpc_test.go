@@ -12,6 +12,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	commonpb "go.temporal.io/api/common/v1"
 	schedulepb "go.temporal.io/api/schedule/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
@@ -25,7 +26,7 @@ import (
 type scheduleFault struct {
 	code          codes.Code
 	apply         bool
-	delayedEffect time.Duration
+	delayedEffect bool
 	foreign       bool
 	cancel        context.CancelFunc
 	block         bool
@@ -33,14 +34,15 @@ type scheduleFault struct {
 }
 
 type scheduleRecord struct {
-	schedule *schedulepb.Schedule
-	memo     *commonpb.Memo
+	schedule           *schedulepb.Schedule
+	memo               *commonpb.Memo
+	pending            *schedulepb.Schedule
+	probesUntilApplied int
 }
 
 type scheduleRecoveryService struct {
 	workflowservice.UnimplementedWorkflowServiceServer
 	mu             sync.Mutex
-	effects        sync.WaitGroup
 	records        map[string]scheduleRecord
 	faults         map[string]map[int]scheduleFault
 	calls          map[string]int
@@ -82,7 +84,7 @@ func (s *scheduleRecoveryService) CreateSchedule(ctx context.Context, r *workflo
 		if f.foreign {
 			memo = &commonpb.Memo{}
 		}
-		s.records[r.ScheduleId] = scheduleRecord{proto.Clone(r.Schedule).(*schedulepb.Schedule), memo}
+		s.records[r.ScheduleId] = scheduleRecord{schedule: proto.Clone(r.Schedule).(*schedulepb.Schedule), memo: memo}
 	}
 	if f.code != codes.OK {
 		return nil, status.Error(f.code, "scripted create response loss or rejection")
@@ -108,6 +110,15 @@ func (s *scheduleRecoveryService) DescribeSchedule(_ context.Context, r *workflo
 	if !ok {
 		return nil, status.Error(codes.NotFound, "absent")
 	}
+	if record.pending != nil {
+		if record.probesUntilApplied == 0 {
+			record.schedule = record.pending
+			record.pending = nil
+		} else {
+			record.probesUntilApplied--
+		}
+		s.records[r.ScheduleId] = record
+	}
 	var memo *commonpb.Memo
 	if record.memo != nil {
 		memo = proto.Clone(record.memo).(*commonpb.Memo)
@@ -125,22 +136,13 @@ func (s *scheduleRecoveryService) UpdateSchedule(_ context.Context, r *workflows
 	}
 	if f.code == codes.OK || f.apply {
 		updated := proto.Clone(r.Schedule).(*schedulepb.Schedule)
-		if f.delayedEffect == 0 {
-			record.schedule = updated
-			s.records[r.ScheduleId] = record
+		if f.delayedEffect {
+			record.pending = updated
+			record.probesUntilApplied = 1
 		} else {
-			s.effects.Add(1)
-			go func() {
-				defer s.effects.Done()
-				time.Sleep(f.delayedEffect)
-				s.mu.Lock()
-				defer s.mu.Unlock()
-				if current, ok := s.records[r.ScheduleId]; ok {
-					current.schedule = updated
-					s.records[r.ScheduleId] = current
-				}
-			}()
+			record.schedule = updated
 		}
+		s.records[r.ScheduleId] = record
 	}
 	if f.vanish {
 		delete(s.records, r.ScheduleId)
@@ -180,7 +182,7 @@ func scheduleRecoveryRPCFixture(t *testing.T) (client.Client, *scheduleRecoveryS
 	workflowservice.RegisterWorkflowServiceServer(server, s)
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()
-	t.Cleanup(func() { server.Stop(); require.NoError(t, <-done); s.effects.Wait() })
+	t.Cleanup(func() { server.Stop(); require.NoError(t, <-done) })
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 	c, err := client.DialContext(ctx, client.Options{HostPort: listener.Addr().String(), Namespace: "scheduler-recovery"})
@@ -191,19 +193,14 @@ func scheduleRecoveryRPCFixture(t *testing.T) (client.Client, *scheduleRecoveryS
 }
 
 func scheduleRecoveryInfo(c client.Client, logger *zap.SugaredLogger, enabled bool) loadgen.ScenarioInfo {
-	options := loadgen.MustResolveScenarioOptions("scheduler_stress", map[string]string{
+	values := map[string]string{
 		"schedule-creation-per-iteration": "1", "schedule-reads-per-creation": "1", "schedule-updates-per-creation": "1",
 		"scheduler-duration-per-iteration": "1s", "wait-time-before-cleanup": "0s", "operation-interval": "1ms",
-	})
-	// Exercise faults independently of option registration.
-	if options.Lookup("recover-schedule-operations") == nil {
-		options.Bool("recover-schedule-operations", false, "")
 	}
 	if enabled {
-		if err := options.Set("recover-schedule-operations", "true"); err != nil {
-			panic(err)
-		}
+		values[RecoverScheduleOperationsFlag] = "true"
 	}
+	options := loadgen.MustResolveScenarioOptions("scheduler_stress", values)
 	return loadgen.ScenarioInfo{RunID: "crud-recovery", Client: c, Logger: logger, Options: options}
 }
 
@@ -211,14 +208,15 @@ func TestSchedulerOperationRecoverySDK(t *testing.T) {
 	cases := []struct {
 		name                                 string
 		faults                               map[string]map[int]scheduleFault
-		wantErr                              string
+		wantErr                              error
+		wantCode                             codes.Code
 		creates, updates, deletes, remaining int
 		outcome                              string
 		sdkRetry                             bool
 	}{
 		{name: "healthy", creates: 1, updates: 1, deletes: 1},
-		{name: "read_permanent_rejection", faults: map[string]map[int]scheduleFault{"describe": {1: {code: codes.PermissionDenied}}}, wantErr: "describe rejection", creates: 1, updates: 1, deletes: 1},
-		{name: "create_last_probe_not_found_no_fifth_call", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded}}}, wantErr: "budget exhausted", creates: 2},
+		{name: "read_permanent_rejection", faults: map[string]map[int]scheduleFault{"describe": {1: {code: codes.PermissionDenied}}}, wantCode: codes.PermissionDenied, creates: 1, updates: 1, deletes: 1},
+		{name: "create_last_probe_not_found_no_fifth_call", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded}}}, wantErr: errScheduleRecoveryBudget, creates: 2},
 		{name: "sdk_unavailable_retries_same_rpc_request", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.Unavailable}}}, creates: 2, updates: 1, deletes: 1, sdkRetry: true},
 		{name: "sdk_accepted_create_then_exists", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.Unavailable, apply: true}}}, creates: 2, updates: 1, deletes: 1, sdkRetry: true, outcome: "observed_owned_create"},
 		{name: "describe_not_found_compatible", faults: map[string]map[int]scheduleFault{"describe": {1: {code: codes.NotFound, apply: true}}}, creates: 1, outcome: "not_found_compatible"},
@@ -229,16 +227,16 @@ func TestSchedulerOperationRecoverySDK(t *testing.T) {
 		{name: "read_deadline", faults: map[string]map[int]scheduleFault{"describe": {1: {code: codes.DeadlineExceeded}}}, creates: 1, updates: 1, deletes: 1, outcome: "acknowledged"},
 		{name: "update_internal_describe_deadline", faults: map[string]map[int]scheduleFault{"describe": {2: {code: codes.DeadlineExceeded}}}, creates: 1, updates: 1, deletes: 1, outcome: "acknowledged"},
 		{name: "update_accepted_response_lost", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded, apply: true}}}, creates: 1, updates: 1, deletes: 1, outcome: "observed_update_witness"},
-		{name: "update_late_effect_no_replay", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded, apply: true, delayedEffect: 150 * time.Millisecond}}}, creates: 1, updates: 1, deletes: 1, outcome: "observed_update_witness"},
-		{name: "update_identical_old_payload_not_success", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded}}}, wantErr: "outcome unknown", creates: 1, updates: 1, deletes: 1},
-		{name: "update_response_lost_then_absent_is_unknown", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded, apply: true, vanish: true}}}, wantErr: "outcome unknown", creates: 1, updates: 1},
-		{name: "update_permanent_rejection", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.PermissionDenied}}}, wantErr: "update response loss or rejection", creates: 1, updates: 1, deletes: 1},
+		{name: "update_late_effect_no_replay", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded, apply: true, delayedEffect: true}}}, creates: 1, updates: 1, deletes: 1, outcome: "observed_update_witness"},
+		{name: "update_identical_old_payload_not_success", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded}}}, wantErr: errScheduleUpdateUnknown, creates: 1, updates: 1, deletes: 1},
+		{name: "update_response_lost_then_absent_is_unknown", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.DeadlineExceeded, apply: true, vanish: true}}}, wantErr: errScheduleUpdateUnknown, creates: 1, updates: 1},
+		{name: "update_permanent_rejection", faults: map[string]map[int]scheduleFault{"update": {1: {code: codes.PermissionDenied}}}, wantCode: codes.PermissionDenied, creates: 1, updates: 1, deletes: 1},
 		{name: "delete_accepted_response_lost", faults: map[string]map[int]scheduleFault{"delete": {1: {code: codes.DeadlineExceeded, apply: true}}}, creates: 1, updates: 1, deletes: 1, outcome: "observed_absence"},
 		{name: "delete_not_accepted_retry_after_owned_probe", faults: map[string]map[int]scheduleFault{"delete": {1: {code: codes.DeadlineExceeded}}}, creates: 1, updates: 1, deletes: 2, outcome: "acknowledged"},
-		{name: "delete_last_response_lost_no_fifth_probe", faults: map[string]map[int]scheduleFault{"delete": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded, apply: true}}}, wantErr: "budget exhausted", creates: 1, updates: 1, deletes: 2},
-		{name: "foreign_owner_never_adopted_or_deleted", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.AlreadyExists, apply: true, foreign: true}}}, wantErr: "ownership or intent mismatch", creates: 1, remaining: 1},
-		{name: "create_probe_exhausted_namespace_cleanup_owned", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.DeadlineExceeded, apply: true}}, "describe": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded}, 3: {code: codes.DeadlineExceeded}}}, wantErr: "budget exhausted", creates: 1, remaining: 1},
-		{name: "permanent_create_rejection", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.InvalidArgument}}}, wantErr: "create response loss or rejection", creates: 1},
+		{name: "delete_last_response_lost_no_fifth_probe", faults: map[string]map[int]scheduleFault{"delete": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded, apply: true}}}, wantErr: errScheduleRecoveryBudget, creates: 1, updates: 1, deletes: 2},
+		{name: "foreign_owner_never_adopted_or_deleted", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.AlreadyExists, apply: true, foreign: true}}}, wantErr: errScheduleIntentMismatch, creates: 1, remaining: 1},
+		{name: "create_probe_exhausted_namespace_cleanup_owned", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.DeadlineExceeded, apply: true}}, "describe": {1: {code: codes.DeadlineExceeded}, 2: {code: codes.DeadlineExceeded}, 3: {code: codes.DeadlineExceeded}}}, wantErr: errScheduleRecoveryBudget, creates: 1, remaining: 1},
+		{name: "permanent_create_rejection", faults: map[string]map[int]scheduleFault{"create": {1: {code: codes.InvalidArgument}}}, wantCode: codes.InvalidArgument, creates: 1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -248,10 +246,12 @@ func TestSchedulerOperationRecoverySDK(t *testing.T) {
 			}
 			info := scheduleRecoveryInfo(c, logger, true)
 			err := new(SchedulerExecutor).Execute(t.Context(), info.NewRun(1))
-			if tc.wantErr == "" {
-				require.NoError(t, err)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+			} else if tc.wantCode != codes.OK {
+				require.Equal(t, tc.wantCode, serviceerror.ToStatus(err).Code())
 			} else {
-				require.ErrorContains(t, err, tc.wantErr)
+				require.NoError(t, err)
 			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
@@ -301,7 +301,7 @@ func TestSchedulerOperationRecoveryDefaultUnchanged(t *testing.T) {
 	s.faults = map[string]map[int]scheduleFault{"create": {1: {code: codes.DeadlineExceeded, apply: true}}}
 	info := scheduleRecoveryInfo(c, logger, false)
 	err := new(SchedulerExecutor).Execute(t.Context(), info.NewRun(1))
-	require.ErrorContains(t, err, "scripted create")
+	require.Equal(t, codes.DeadlineExceeded, serviceerror.ToStatus(err).Code())
 	require.Len(t, s.creates, 1)
 	require.Nil(t, s.creates[0].Memo)
 	require.Zero(t, s.calls["describe"])
@@ -344,7 +344,7 @@ func TestSchedulerOperationRecoveryIntentMismatch(t *testing.T) {
 			}
 			info := scheduleRecoveryInfo(c, logger, true)
 			err := new(SchedulerExecutor).Execute(t.Context(), info.NewRun(1))
-			require.ErrorContains(t, err, "ownership or intent mismatch")
+			require.ErrorIs(t, err, errScheduleIntentMismatch)
 			require.Empty(t, s.updates)
 			require.Empty(t, s.deletes)
 			require.Len(t, s.records, 1)
@@ -409,7 +409,7 @@ func TestSchedulerOperationRecoveryFreshUpdateWitness(t *testing.T) {
 	info := scheduleRecoveryInfo(c, logger, true)
 	require.NoError(t, info.Options.Set("schedule-updates-per-creation", "2"))
 	err := new(SchedulerExecutor).Execute(t.Context(), info.NewRun(1))
-	require.ErrorContains(t, err, "outcome unknown")
+	require.ErrorIs(t, err, errScheduleUpdateUnknown)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	require.Len(t, s.updates, 2)
