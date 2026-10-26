@@ -396,6 +396,8 @@ type Run struct {
 
 	// tracks how many attempts have been made for this iteration
 	attemptCount int
+
+	kitchenSinkExecution *kitchenSinkExecution
 }
 
 // NewRun creates a new run.
@@ -534,8 +536,9 @@ func (r *Run) ShouldRetry(err error) (time.Duration, bool) {
 }
 
 type KitchenSinkWorkflowOptions struct {
-	Params       *kitchensink.TestInput
-	StartOptions client.StartWorkflowOptions
+	recoverOriginalStart bool
+	Params               *kitchensink.TestInput
+	StartOptions         client.StartWorkflowOptions
 }
 
 // ExecuteKitchenSinkWorkflow starts the generic "kitchen sink" workflow and waits for its
@@ -552,6 +555,13 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
+	}
+	if options.recoverOriginalStart {
+		if r.kitchenSinkExecution == nil {
+			r.kitchenSinkExecution = freezeKitchenSinkExecution(*options, executor)
+		}
+		options = &r.kitchenSinkExecution.options
+		executor = r.kitchenSinkExecution.executor
 	}
 	startErr := executor.Start(ctx, options.Params.WithStartAction)
 	if startErr != nil {
