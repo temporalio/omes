@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 )
@@ -57,8 +59,13 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 // Each coroutine runs the scenario Execute method in a loop until the scenario duration or max
 // iterations is reached.
 func (g *genericRun) Run(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	ctx, cancelRun := context.WithCancel(ctx)
+	var iterations sync.WaitGroup
+	defer func() {
+		cancelRun()
+		// Callers read final counters as soon as Run returns.
+		iterations.Wait()
+	}()
 
 	if !g.info.Configuration.DoNotRegisterSearchAttributes {
 		err := g.info.RegisterDefaultSearchAttributes(ctx)
@@ -70,12 +77,14 @@ func (g *genericRun) Run(ctx context.Context) error {
 	// If set, timeout overrides the default context.
 	if g.config.Timeout > 0 {
 		g.logger.Debugf("Will timeout after %v", g.config.Timeout)
-		ctx, cancel = context.WithTimeout(ctx, g.config.Timeout)
+		timeoutCtx, cancel := context.WithTimeout(ctx, g.config.Timeout)
+		ctx = timeoutCtx
 		defer cancel()
 	}
 
 	durationCtx := ctx
 	if g.config.Duration > 0 {
+		var cancel context.CancelFunc
 		durationCtx, cancel = context.WithTimeout(ctx, g.config.Duration)
 		defer cancel()
 	}
@@ -129,7 +138,9 @@ func (g *genericRun) Run(ctx context.Context) error {
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
+		iterations.Add(1)
 		go func() {
+			defer iterations.Done()
 			var err error
 			iterStart := time.Now()
 
@@ -152,7 +163,8 @@ func (g *genericRun) Run(ctx context.Context) error {
 				// Both conditions are needed: the run's context is also done once a
 				// run simply finishes, and an iteration can fail with its own
 				// cancellation while the run is healthy.
-				stopping := iterErr != nil && ctx.Err() != nil && errors.Is(iterErr, context.Canceled)
+				stopping := ctx.Err() != nil && (errors.Is(iterErr, context.Canceled) ||
+					errors.As(iterErr, new(*serviceerror.Canceled)))
 
 				switch {
 				case stopping:
