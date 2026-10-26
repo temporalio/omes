@@ -136,8 +136,7 @@ func runStandaloneActivityOperatorSequences(ctx context.Context, info loadgen.Sc
 	}
 
 	executor := loadgen.GenericExecutor{
-		WaitForInFlightOnExit: true,
-		StopNewIterations:     stopNewIterations,
+		StopNewIterations: stopNewIterations,
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			started.Add(1)
 			action := standaloneActivityOperatorClientAction(run.TaskQueue(), run.Iteration-1)

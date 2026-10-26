@@ -151,9 +151,9 @@ The iteration holds its concurrency slot until it finishes, including any retrie
 handles scheduling, rate limits, concurrency, retries, and duration metrics. Callbacks may run
 concurrently. Give each call its own mutable test data, and synchronize access to shared data.
 
-`StopNewIterations` stops new iterations and drains those already running without canceling them. Set
-`WaitForInFlightOnExit` when the callback needs to finish cleanup before the client closes. Callbacks
-must honor cancellation and use a timeout for cleanup so shutdown cannot wait indefinitely.
+`StopNewIterations` stops new iterations and drains those already running without canceling them.
+`Run` waits for running tests and their callbacks before returning, including after cancellation.
+Callbacks must honor cancellation and use a timeout for cleanup so shutdown cannot wait indefinitely.
 
 See [`standalone_activity_operator_commands`](../scenarios/standalone_activity_operator_commands.go)
 for an example, and [running an independent load](./running.md#running-an-independent-load) for run commands.

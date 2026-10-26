@@ -700,7 +700,7 @@ func TestRunLoads(t *testing.T) {
 					info := loadTestInfo(0, 2)
 					info.Configuration.OnCompletion = func(context.Context, *loadgen.Run) { independentCompleted.Add(1) }
 					executor := &loadgen.GenericExecutor{
-						StopNewIterations: stop, WaitForInFlightOnExit: true,
+						StopNewIterations: stop,
 						Execute: func(ctx context.Context, run *loadgen.Run) error {
 							independentStarted.Add(1)
 							if run.Iteration > 2 {
@@ -769,7 +769,7 @@ func TestRunLoads(t *testing.T) {
 						Name: "independent", DrainTimeout: time.Minute,
 						Run: func(ctx context.Context, stop <-chan struct{}) error {
 							executor := &loadgen.GenericExecutor{
-								StopNewIterations: stop, WaitForInFlightOnExit: true,
+								StopNewIterations: stop,
 								Execute: func(ctx context.Context, run *loadgen.Run) error {
 									started <- struct{}{}
 									if source == "independent" && run.Iteration == 1 {
@@ -826,7 +826,7 @@ func TestRunLoads(t *testing.T) {
 				Name: "independent", DrainTimeout: time.Second,
 				Run: func(ctx context.Context, stop <-chan struct{}) error {
 					executor := &loadgen.GenericExecutor{
-						StopNewIterations: stop, WaitForInFlightOnExit: true,
+						StopNewIterations: stop,
 						Execute: func(ctx context.Context, _ *loadgen.Run) error {
 							close(started)
 							<-ctx.Done()

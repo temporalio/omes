@@ -14,13 +14,9 @@ import (
 )
 
 type GenericExecutor struct {
-	// Function to execute a single iteration of this scenario
+	// Execute runs one iteration and must respond to cancellation and bound cleanup.
+	// Run waits for all running tests and their callbacks before returning.
 	Execute func(context.Context, *Run) error
-
-	// WaitForInFlightOnExit makes Run wait for running tests and their completion
-	// callbacks before returning, even when canceled.
-	// Execute must respond to cancellation and use a timeout for cleanup.
-	WaitForInFlightOnExit bool
 
 	// StopNewIterations, when closed, stops launching new tests and lets running tests finish.
 	// Without an iteration or duration limit, run until it closes or cancellation occurs.
@@ -71,18 +67,20 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	ctx, cancelRun := context.WithCancel(ctx)
 	var inFlight sync.WaitGroup
-	var iterationErrorsDuringShutdownMu sync.Mutex
-	var iterationErrorsDuringShutdown []error
-	// On early exit, cancel unfinished work and optionally wait for cleanup and
-	// completion callbacks before the caller can close the client.
+	doneCh := make(chan error, g.config.MaxConcurrent)
+	var lastHandledError error
+	// On exit, cancel unfinished work and wait for cleanup and completion callbacks.
 	// Add errors from canceled tests to the returned error after waiting for cleanup.
 	defer func() {
 		cancelRun()
 		// Callers read final counters as soon as Run returns.
 		inFlight.Wait()
-		if g.executor.WaitForInFlightOnExit {
-			// Include errors from tests that finished during shutdown.
-			retErr = errors.Join(append([]error{retErr}, iterationErrorsDuringShutdown...)...)
+		if lastHandledError != nil && !errors.Is(retErr, lastHandledError) {
+			retErr = errors.Join(retErr, lastHandledError)
+		}
+		// Preserve results that cancellation prevented the scheduler from consuming.
+		for len(doneCh) > 0 {
+			retErr = errors.Join(retErr, <-doneCh)
 		}
 	}()
 
@@ -116,15 +114,21 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 
 	startTime := time.Now()
 	var runErr error
-	doneCh := make(chan error, g.config.MaxConcurrent)
 	var currentlyRunning int
+	finishIteration := func(err error) {
+		currentlyRunning--
+		if err != nil {
+			// Keep the latest failure without accumulating a long run's error history.
+			lastHandledError = err
+			if !g.config.ContinueOnIterationFailure {
+				runErr = err
+			}
+		}
+	}
 	waitOne := func(contextToWaitOn context.Context) {
 		select {
 		case err := <-doneCh:
-			currentlyRunning--
-			if err != nil {
-				runErr = err
-			}
+			finishIteration(err)
 		case <-contextToWaitOn.Done():
 		}
 	}
@@ -149,12 +153,17 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 
 		// If there is a rate limit, enforce it
 		if rateLimiter != nil {
-			select {
-			case <-rateLimiter:
-			case <-durationCtx.Done():
-				break
+			nextStartAllowed := false
+			for !nextStartAllowed && runErr == nil && durationCtx.Err() == nil {
+				select {
+				case <-rateLimiter:
+					nextStartAllowed = true
+				case err := <-doneCh:
+					finishIteration(err)
+				case <-durationCtx.Done():
+				}
 			}
-			if durationCtx.Err() != nil {
+			if runErr != nil || durationCtx.Err() != nil {
 				break
 			}
 		}
@@ -184,20 +193,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				elapsed := time.Since(iterStart)
 				g.executeTimer.Record(elapsed)
 
-				// Swallow the error for the spawn loop only, so a tolerated failure
-				// doesn't stop new iterations from starting. It is not ignored: it is
-				// counted (g.failed) and surfaced via OnIterationFailure, and the run
-				// still fails at the end if the tally is nonzero.
 				iterErr := err
-				if g.executor.WaitForInFlightOnExit && iterErr != nil && ctx.Err() != nil {
-					// Save the error here because cancellation may prevent sending it to doneCh.
-					iterationErrorsDuringShutdownMu.Lock()
-					iterationErrorsDuringShutdown = append(iterationErrorsDuringShutdown, fmt.Errorf("iteration %d during shutdown: %w", run.Iteration, iterErr))
-					iterationErrorsDuringShutdownMu.Unlock()
-				}
-				if iterErr != nil && g.config.ContinueOnIterationFailure {
-					err = nil
-				}
 
 				// An iteration cut short because the run is stopping is left out of
 				// both tallies.
@@ -225,10 +221,8 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				}
 
 				// Notify the waiter after callbacks finish so Run cannot return before they do.
-				select {
-				case <-ctx.Done():
-				case doneCh <- err:
-				}
+				// The buffer holds every outstanding result, even after scheduling stops.
+				doneCh <- iterErr
 			}()
 
 		retryLoop:
@@ -269,7 +263,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	for runErr == nil && currentlyRunning > 0 {
 		waitOne(ctx)
 		if ctx.Err() != nil {
-			return fmt.Errorf("timed out while waiting for runs to complete: %w", ctx.Err())
+			return fmt.Errorf("timed out while waiting for runs to complete: %w", errors.Join(ctx.Err(), runErr))
 		}
 	}
 	if runErr != nil {
