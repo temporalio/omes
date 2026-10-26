@@ -724,17 +724,12 @@ func updateWorkflowNexusOperation(
 		return result, nexus.HandlerErrorf(
 			nexus.HandlerErrorTypeBadRequest, "update target must include a workflow ID")
 	}
-	if input.GetUpdate().GetWithStart() {
-		return result, nexus.HandlerErrorf(
-			nexus.HandlerErrorTypeBadRequest, "update-with-start is not supported by this Nexus operation")
-	}
-
 	updateName, args, err := kitchensink.UpdateNameAndArgs(input.GetUpdate())
 	if err != nil {
 		return result, nexus.HandlerErrorf(nexus.HandlerErrorTypeBadRequest, "%s", err.Error())
 	}
 
-	return temporalnexus.StartUpdateWorkflow[converter.RawValue](ctx, nc, client.UpdateWorkflowOptions{
+	updateOptions := client.UpdateWorkflowOptions{
 		WorkflowID: input.GetWorkflowId(),
 		RunID:      input.GetRunId(),
 		// When UpdateID is empty, StartUpdateWorkflow uses the Nexus request ID so
@@ -747,7 +742,21 @@ func updateWorkflowNexusOperation(
 		// goes async once the update is accepted, and the update's result reaches
 		// the caller later through the operation's completion callback.
 		WaitForStage: client.WorkflowUpdateStageAccepted,
-	})
+	}
+	if input.GetUpdate().GetWithStart() {
+		startOptions := input.GetStartOptions()
+		startOperation := nc.NewWithStartWorkflowOperation(client.StartWorkflowOptions{
+			ID:                       input.GetWorkflowId(),
+			TaskQueue:                startOptions.GetTaskQueue(),
+			WorkflowExecutionTimeout: 60 * time.Minute,
+			WorkflowIDConflictPolicy: cmp.Or(startOptions.GetWorkflowIdConflictPolicy(), enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING),
+		}, KitchenSinkWorkflow, cmp.Or(startOptions.GetWorkflowInput(), &kitchensink.WorkflowInput{}))
+		return temporalnexus.StartUpdateWithStartWorkflow[converter.RawValue](ctx, nc, client.UpdateWithStartWorkflowOptions{
+			StartWorkflowOperation: startOperation,
+			UpdateOptions:          updateOptions,
+		})
+	}
+	return temporalnexus.StartUpdateWorkflow[converter.RawValue](ctx, nc, updateOptions)
 }
 
 func queryWorkflowNexusOperation(

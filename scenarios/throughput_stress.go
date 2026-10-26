@@ -1128,12 +1128,20 @@ func (t *tpsExecutor) createNexusStandaloneActivityAction() *Action {
 
 // createNexusWorkflowActionSequence exercises workflow messaging through one Nexus target.
 func (t *tpsExecutor) createNexusWorkflowActionSequence(workflowID string) *Action {
-	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: []*Action{
+	actions := []*Action{
 		t.createNexusSignalWithStartAction(workflowID, &WorkflowInput{}),
 		t.createNexusUpdateAction(workflowID),
 		t.createNexusSignalAction(workflowID),
 		t.createNexusQueryAction(workflowID),
-	}}}}
+	}
+	target := workflowID + "-update-with-start"
+	actions = append(actions,
+		t.createNexusUpdateWithStartAction(target, "new"),
+		t.createNexusUpdateWithStartAction(target, "existing"),
+		t.createNexusUpdateWithStartAction(target, "existing"),
+		t.createNexusSignalAction(target),
+	)
+	return &Action{Variant: &Action_NestedActionSet{NestedActionSet: &ActionSet{Actions: actions}}}
 }
 
 func (t *tpsExecutor) createNexusSignalAction(workflowID string) *Action {
@@ -1193,6 +1201,19 @@ func (t *tpsExecutor) createNexusUpdateAction(workflowID string) *Action {
 		},
 		ExpectedOutput: ConvertToPayload(workflowID),
 	})
+}
+
+// createNexusUpdateWithStartAction reuses the Update action and its result validation.
+func (t *tpsExecutor) createNexusUpdateWithStartAction(workflowID, updateID string) *Action {
+	action := t.createNexusUpdateAction(workflowID)
+	target := action.GetNexusOperation().GetInput().GetWorkflowAction()
+	target.StartOptions = &NexusWorkflowStartOptions{
+		WorkflowInput:            &WorkflowInput{},
+		WorkflowIdConflictPolicy: enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING,
+	}
+	target.GetUpdate().WithStart = true
+	target.GetUpdate().UpdateId = updateID
+	return action
 }
 
 func (t *tpsExecutor) createNexusQueryAction(workflowID string) *Action {

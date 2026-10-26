@@ -3540,7 +3540,8 @@ type NexusWorkflowAction_Signal struct {
 
 type NexusWorkflowAction_Update struct {
 	// Update the target workflow selected by workflow_id and run_id.
-	// DoUpdate.with_start is not supported.
+	// With DoUpdate.with_start, start_options supplies the workflow input and
+	// conflict policy; run_id must be empty. Supported by the Go Nexus handler.
 	Update *DoUpdate `protobuf:"bytes,6,opt,name=update,proto3,oneof"`
 }
 
