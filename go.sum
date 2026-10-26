@@ -67,8 +67,8 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nexus-rpc/nexus-proto-annotations v0.1.0 h1:2fELd+9sqUtNu6Fg//pw8YFsxOvp8vZ8hfP0nHhNI80=
 github.com/nexus-rpc/nexus-proto-annotations v0.1.0/go.mod h1:n3UjF1bPCW8llR8tHvbxJ+27yPWrhpo8w/Yg1IOuY0Y=
-github.com/nexus-rpc/sdk-go v0.7.0 h1:38NrfY5rLnZAiMMs2ZfCKI/CSDzdfJG+27iAgfA8bUI=
-github.com/nexus-rpc/sdk-go v0.7.0/go.mod h1:FHdPfVQwRuJFZFTF0Y2GOAxCrbIBNrcPna9slkGKPYk=
+github.com/nexus-rpc/sdk-go v0.8.0 h1:xQbsF3KHlCwbIt7fMkAk6gx2iE/NYsg9pHRTZgq95VQ=
+github.com/nexus-rpc/sdk-go v0.8.0/go.mod h1:FHdPfVQwRuJFZFTF0Y2GOAxCrbIBNrcPna9slkGKPYk=
 github.com/parquet-go/parquet-go v0.25.1 h1:l7jJwNM0xrk0cnIIptWMtnSnuxRkwq53S+Po3KG8Xgo=
 github.com/parquet-go/parquet-go v0.25.1/go.mod h1:AXBuotO1XiBtcqJb/FKFyjBG4aqa3aQAAWF3ZPzCanY=
 github.com/pelletier/go-toml/v2 v2.4.3 h1:GTRvJQutkOSftxIFD5xw9aepkYNuPWmVJpffdDPYVpY=
@@ -130,8 +130,8 @@ go.opentelemetry.io/otel/trace v1.44.0 h1:jxF5CsGYCe74MCRx2X4g7WsY/VBKRqqpNvXlX/
 go.opentelemetry.io/otel/trace v1.44.0/go.mod h1:oLl1jrMQAVo6v3GAggN+1VH9VIz9iUSvW53sW1Q8PIE=
 go.temporal.io/api v1.64.3 h1:Q2oP9jVB5pSputb2j3BLAEjJsi8A2tSzMojqcSGyga0=
 go.temporal.io/api v1.64.3/go.mod h1:acM0I9WPuYg8W3Pd9jOZvEgi7mRUttUQ4+e7fowKVnM=
-go.temporal.io/sdk v1.51.0 h1:RsEghFfg91qWgNaecRgPrms9TA7iXskSzSQO2BwhJRs=
-go.temporal.io/sdk v1.51.0/go.mod h1:Gj2KwnQAlMhPRSX1RoqV3Zez8Y0U+6dCGxn1sg+j9kg=
+go.temporal.io/sdk v1.51.1-0.20261124170623-3393715bfba8 h1:s+oIR/YZDY5VqAturmz31J1CXDyJtmhcrEEdRWxyKYg=
+go.temporal.io/sdk v1.51.1-0.20261124170623-3393715bfba8/go.mod h1:7Y12GFTIhBPoejTbjudl2+SLKFn8fXcP0dKGwVqmS14=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
