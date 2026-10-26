@@ -303,6 +303,10 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s must be positive, got %v", HealthyHeartbeatTimeoutFlag, config.HealthyHeartbeatTimeout)
 	}
 
+	if config.HealthyHeartbeatDuration > time.Duration(1<<63-1)-config.HealthyHeartbeatTimeout {
+		return fmt.Errorf("%s plus %s exceeds the maximum duration", HealthyHeartbeatDurationFlag, HealthyHeartbeatTimeoutFlag)
+	}
+
 	t.config = config
 	t.rng = rand.New(rand.NewSource(config.RngSeed))
 	return nil
@@ -1216,10 +1220,7 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperation
 	}), DefaultRemoteActivity)
 }
 
-// healthyHeartbeatActivity heartbeats for its whole duration and is not
-// retried, so a heartbeat timeout on a healthy activity fails the run. It
-// heartbeats more often than the SDK's heartbeat send window, so that window
-// sets the RPC rate.
+// A missed heartbeat must fail the load.
 func healthyHeartbeatActivity(duration, heartbeatTimeout time.Duration) *Action {
 	return &Action{
 		Variant: &Action_ExecActivity{

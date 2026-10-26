@@ -101,3 +101,29 @@ func TestThroughputStressHealthyHeartbeatKeepsActivityAlive(t *testing.T) {
 	}, clioptions.LangGo)
 	require.NoError(t, err)
 }
+
+func TestThroughputStressHealthyHeartbeatDurationOverflow(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		duration time.Duration
+		invalid  bool
+	}{
+		{name: "largest representable sum", duration: time.Duration(1<<63-1) - time.Second},
+		{name: "sum overflows", duration: time.Duration(1<<63 - 1), invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			info := loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+				NexusEnabledFlag:             "false",
+				HealthyHeartbeatDurationFlag: tc.duration.String(),
+				HealthyHeartbeatTimeoutFlag:  time.Second.String(),
+			})}
+			err := newThroughputStressExecutor().Configure(info)
+			if tc.invalid {
+				require.ErrorContains(t, err, HealthyHeartbeatDurationFlag)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, time.Duration(1<<63-1), healthyHeartbeatActivity(tc.duration, time.Second).GetExecActivity().GetStartToCloseTimeout().AsDuration())
+			}
+		})
+	}
+}
