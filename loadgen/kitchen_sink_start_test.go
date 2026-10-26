@@ -2,7 +2,6 @@ package loadgen
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -46,10 +45,8 @@ func TestKitchenSinkOriginalStartFreezesRetryConstruction(t *testing.T) {
 		o.Params.WorkflowInput.ExpectedSignalCount = generation
 		return nil
 	}}
-	// Keep the regression executable on the base, where this capability is absent.
-	if f := reflect.ValueOf(&executor).Elem().FieldByName("RecoverOriginalStart"); f.IsValid() {
-		f.SetBool(true)
-	}
+	executor.RecoverOriginalStart = true
+
 	info := ScenarioInfo{Client: cl, Namespace: "default", RunID: "frozen", ExecutionID: "same", Logger: zap.NewNop().Sugar(), MetricsHandler: client.MetricsNopHandler, Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: 1, MaxIterationAttempts: 2, DoNotRegisterSearchAttributes: true}}
 	require.NoError(t, executor.Run(t.Context(), info))
 	require.Len(t, cl.ids, 2)
