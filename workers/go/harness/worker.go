@@ -151,6 +151,9 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 		}
 		return profile.Options, nil
 	}
+	if args.MaxHeartbeatThrottleInterval < 0 {
+		return sdkworker.Options{}, fmt.Errorf("max-heartbeat-throttle-interval cannot be negative")
+	}
 
 	options := sdkworker.Options{}
 	if args.DeploymentName != "" {
@@ -208,6 +211,9 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 	}
 	if flags.Changed("activities-per-second") {
 		options.WorkerActivitiesPerSecond = args.WorkerActivitiesPerSecond
+	}
+	if flags.Changed("max-heartbeat-throttle-interval") {
+		options.MaxHeartbeatThrottleInterval = args.MaxHeartbeatThrottleInterval
 	}
 	return options, nil
 }

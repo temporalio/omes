@@ -157,6 +157,8 @@ go run ./cmd/omes run-scenario-with-worker \
     limit multiplied by 2, 4, 8, 16, 32, or 64.
 - `--task-queue-suffix-index-start` / `--task-queue-suffix-index-end` run the worker across an inclusive
   range of task queues (`<task-queue>-<start>` … `<task-queue>-<end>`), for multi-task-queue scenarios.
+- `--worker-max-heartbeat-throttle-interval` caps heartbeat RPC batching for Go
+  workers. Zero keeps the SDK default; a worker profile takes precedence.
 - `--embedded-server` starts an embedded localhost server (cannot be combined with TLS or a non-default
   `--server-address`).
 

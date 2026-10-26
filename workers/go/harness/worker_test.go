@@ -173,3 +173,45 @@ func TestResourceBasedProfileSetsExplicitPollers(t *testing.T) {
 			options.MaxConcurrentWorkflowTaskPollers, options.MaxConcurrentActivityTaskPollers, defaultPollerCount)
 	}
 }
+
+func TestBuildWorkerOptionsHeartbeatThrottle(t *testing.T) {
+	for _, profile := range []string{"", throughputStressBaselineWorkerProfile} {
+		for _, tc := range []struct {
+			value   string
+			want    time.Duration
+			invalid bool
+		}{
+			{},
+			{value: "0s"},
+			{value: "2s", want: 2 * time.Second},
+			{value: "-1s", invalid: true},
+		} {
+			t.Run(profile+"/"+tc.value, func(t *testing.T) {
+				var args clioptions.WorkerOptions
+				flags := args.FlagSetWithPrefix("")
+				if tc.value != "" {
+					if err := flags.Parse([]string{"--max-heartbeat-throttle-interval=" + tc.value}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				options, err := buildWorkerOptions(flags, args, profile)
+				if tc.invalid && profile == "" {
+					if err == nil {
+						t.Fatal("negative heartbeat interval accepted")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := tc.want
+				if profile != "" {
+					want = 0
+				}
+				if options.MaxHeartbeatThrottleInterval != want {
+					t.Fatalf("heartbeat throttle interval = %v, want %v", options.MaxHeartbeatThrottleInterval, want)
+				}
+			})
+		}
+	}
+}
