@@ -43,6 +43,9 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 	default:
 		return fmt.Errorf("unsupported standalone activity operator command type %s", commandType)
 	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("start standalone activity for operator commands: %w", err)
+	}
 
 	activityType, args := ActivityNameAndArgs(act)
 	activityID := fmt.Sprintf("standalone-activity-operator-%s", uuid.NewString())

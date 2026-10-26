@@ -334,7 +334,8 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Warnf("Iteration %d failed (tolerated): %v", run.Iteration, err)
 	}
 
-	var mainLoadFinishedAt time.Time
+	var mainResult mainLoadResult
+	var loadErr error
 
 	// Start the scenario run.
 	//
@@ -342,7 +343,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// In that case, we skip the executor run and go straight to the post-scenario verification.
 	if isResuming && info.Configuration.Duration <= 0 && info.Configuration.Iterations == 0 {
 		info.Logger.Info("Skipping executor run: out of time")
-		mainLoadFinishedAt = time.Now()
+		mainResult.finishedAt = time.Now()
 	} else {
 		ksExec := &loadgen.KitchenSinkExecutor{
 			TestInput: &TestInput{
@@ -389,20 +390,20 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				return nil
 			},
 		}
-		var err error
 		var independentLoads []independentLoad
 		if t.config.IncludeStandaloneActivityOperatorCommands {
 			independentLoads = append(independentLoads, t.standaloneActivityOperatorLoad(info))
 		}
-		mainLoadFinishedAt, err = runLoads(ctx, info, ksExec, independentLoads)
-		if err != nil {
-			return err
+		mainResult, loadErr = runLoads(ctx, info, ksExec, independentLoads)
+		// If only operator tests failed, still record and verify the completed main load.
+		if loadErr != nil && (mainResult.finishedAt.IsZero() || mainResult.err != nil) {
+			return loadErr
 		}
 	}
 
 	t.lock.Lock()
 	completedIterations := t.state.CompletedIterations
-	t.state.AccumulatedDuration += mainLoadFinishedAt.Sub(currentRunStartTime)
+	t.state.AccumulatedDuration += mainResult.finishedAt.Sub(currentRunStartTime)
 	totalDuration := t.state.AccumulatedDuration
 	t.lock.Unlock()
 
@@ -429,10 +430,10 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 
 	// Post-scenario: verify that at least one iteration was completed.
 	if completedIterations == 0 {
-		return errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly.")
+		return errors.Join(loadErr, errors.New("No iterations completed. Either the scenario never ran, or it failed to resume correctly."))
 	}
 
-	var tpsErrors []error
+	tpsErrors := []error{loadErr}
 
 	// Post-scenario: verify reported workflow completion count from Visibility.
 	if err := loadgen.MinVisibilityCountEventually(
@@ -521,17 +522,22 @@ type runningIndependentLoad struct {
 	drainErr     error
 }
 
+type mainLoadResult struct {
+	finishedAt time.Time
+	err        error
+}
+
 // runLoads coordinates explicitly selected loads alongside the main load without
-// sharing scheduling slots. The returned timestamp marks main load completion,
-// before time spent draining the other loads.
-func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.Executor, loads []independentLoad) (time.Time, error) {
+// sharing scheduling slots. The main result records its error and completion time
+// before draining the other loads; the returned error includes failures from any load.
+func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.Executor, loads []independentLoad) (mainLoadResult, error) {
 	if len(loads) == 0 {
 		err := mainLoad.Run(ctx, info)
-		return time.Now(), err
+		return mainLoadResult{finishedAt: time.Now(), err: err}, err
 	}
 	for _, load := range loads {
 		if load.Name == "" || load.Run == nil || load.DrainTimeout <= 0 {
-			return time.Time{}, fmt.Errorf("independent load %q requires a name, runner, and positive drain timeout", load.Name)
+			return mainLoadResult{}, fmt.Errorf("independent load %q requires a name, runner, and positive drain timeout", load.Name)
 		}
 	}
 
@@ -546,7 +552,7 @@ func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.E
 	running, results := startIndependentLoads(loopCtx, loads, stopNewIterations, cancel)
 
 	mainErr := mainLoad.Run(loopCtx, info)
-	mainFinishedAt := time.Now()
+	mainResult := mainLoadResult{finishedAt: time.Now(), err: mainErr}
 	// Stop new tests while allowing running tests to finish.
 	close(stopNewIterations)
 	if mainErr != nil {
@@ -554,7 +560,7 @@ func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.E
 	}
 
 	loadErr := drainAndWaitForLoads(running, results)
-	return mainFinishedAt, errors.Join(mainErr, loadErr)
+	return mainResult, errors.Join(mainErr, loadErr)
 }
 
 // startIndependentLoads starts each runner with its own context and cancels the

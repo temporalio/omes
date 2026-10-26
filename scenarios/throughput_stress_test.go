@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
@@ -24,6 +25,7 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -209,6 +211,76 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 			}
 		}, 10*time.Second, 100*time.Millisecond)
 	})
+
+	t.Run("OperatorDrainFailureStillVerifiesMainLoad", func(t *testing.T) {
+		verificationErr := errors.New("main visibility verification failed")
+		waitingForState := make(chan struct{})
+		drainingExecutor := newThroughputStressExecutor()
+		drainingExecutor.onActionsCreated = func([]*ks.ActionSet) { <-waitingForState }
+		executor := loadgen.ExecutorFunc(func(ctx context.Context, info loadgen.ScenarioInfo) error {
+			info.Client = &drainAccountingTestClient{
+				Client:          info.Client,
+				verificationErr: verificationErr,
+				service: &blockedOperatorStateService{
+					WorkflowServiceClient: info.Client.WorkflowService(),
+					waiting:               waitingForState,
+				},
+			}
+			return drainingExecutor.Run(ctx, info)
+		})
+		info := loadgen.ScenarioInfo{
+			RunID: runID + "-drain", ExecutionID: runID + "-drain",
+			Configuration: loadgen.RunConfiguration{Iterations: 1},
+			Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+				IterFlag:                      "1",
+				NexusEnabledFlag:              "false",
+				IncludeStandaloneActivityFlag: "false",
+				StandaloneActivityOperatorMaxConcurrentFlag: "1",
+				StandaloneActivityOperatorDrainTimeoutFlag:  "1ms",
+				VisibilityVerificationTimeoutFlag:           "10s",
+			}),
+		}
+
+		_, err := env.RunExecutorTest(t, executor, info, clioptions.LangGo)
+		require.ErrorContains(t, err, "operator drain exceeded 1ms")
+		require.ErrorIs(t, err, verificationErr, "main verification must run and preserve its error")
+		state := drainingExecutor.Snapshot().(tpsState)
+		require.Equal(t, 1, state.CompletedIterations)
+		require.Positive(t, state.AccumulatedDuration, "completed main work must retain its elapsed time")
+	})
+}
+
+type blockedOperatorStateService struct {
+	workflowservice.WorkflowServiceClient
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (s *blockedOperatorStateService) DescribeActivityExecution(ctx context.Context, request *workflowservice.DescribeActivityExecutionRequest, options ...grpc.CallOption) (*workflowservice.DescribeActivityExecutionResponse, error) {
+	block := false
+	s.once.Do(func() {
+		block = true
+		close(s.waiting)
+	})
+	if block {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	return s.WorkflowServiceClient.DescribeActivityExecution(ctx, request, options...)
+}
+
+type drainAccountingTestClient struct {
+	client.Client
+	service         workflowservice.WorkflowServiceClient
+	verificationErr error
+}
+
+func (c *drainAccountingTestClient) WorkflowService() workflowservice.WorkflowServiceClient {
+	return c.service
+}
+
+func (c *drainAccountingTestClient) CountWorkflow(context.Context, *workflowservice.CountWorkflowExecutionsRequest) (*workflowservice.CountWorkflowExecutionsResponse, error) {
+	return nil, c.verificationErr
 }
 
 func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
@@ -654,8 +726,8 @@ func decodeContinueAsNewChunk(t *testing.T, actions []*ks.Action) []*ks.Action {
 }
 
 type loadTestResult struct {
-	mainFinishedAt time.Time
-	err            error
+	main mainLoadResult
+	err  error
 }
 
 func loadTestInfo(iterations, concurrent int) loadgen.ScenarioInfo {
@@ -736,9 +808,10 @@ func TestRunLoads(t *testing.T) {
 			require.False(t, returnedEarly, "must wait for independent work after main load finishes")
 			require.Equal(t, int64(3), completedBeforeDrain, "blocked independent work must not hold main scheduling slots")
 			require.NoError(t, result.err)
+			require.NoError(t, result.main.err)
 			require.Equal(t, int64(2), independentStarted.Load(), "must not start new tests during drain")
 			require.Equal(t, int64(2), independentCompleted.Load(), "running tests must finish without cancellation")
-			require.Equal(t, start.Add(3*time.Second), result.mainFinishedAt, "main throughput must exclude drain time")
+			require.Equal(t, start.Add(3*time.Second), result.main.finishedAt, "main throughput must exclude drain time")
 		})
 	})
 
@@ -752,7 +825,7 @@ func TestRunLoads(t *testing.T) {
 					fail := make(chan struct{})
 					cleanupStarted := make(chan struct{}, 2)
 					releaseCleanup := make(chan struct{})
-					done := make(chan error, 1)
+					done := make(chan loadTestResult, 1)
 					var cleaned atomic.Int64
 
 					mainLoad := loadgen.ExecutorFunc(func(ctx context.Context, _ loadgen.ScenarioInfo) error {
@@ -788,19 +861,24 @@ func TestRunLoads(t *testing.T) {
 					}
 
 					go func() {
-						_, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
-						done <- err
+						main, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
+						done <- loadTestResult{main, err}
 					}()
 					<-cleanupStarted
 					synctest.Wait()
 					returnedEarly := len(done) != 0
 					close(releaseCleanup)
-					err := <-done
+					result := <-done
 
 					require.False(t, returnedEarly, "must wait for cleanup even after failure")
-					require.ErrorIs(t, err, primaryErr)
-					require.ErrorIs(t, err, cleanupErr)
-					require.ErrorIs(t, err, context.Canceled)
+					require.ErrorIs(t, result.err, primaryErr)
+					require.ErrorIs(t, result.err, cleanupErr)
+					require.ErrorIs(t, result.err, context.Canceled)
+					if source == "main" {
+						require.ErrorIs(t, result.main.err, primaryErr)
+					} else {
+						require.ErrorIs(t, result.main.err, context.Canceled)
+					}
 					wantCleaned := int64(2)
 					if source == "independent" {
 						wantCleaned = 1
@@ -816,7 +894,7 @@ func TestRunLoads(t *testing.T) {
 			started := make(chan struct{})
 			cleanupStarted := make(chan struct{})
 			releaseCleanup := make(chan struct{})
-			done := make(chan error, 1)
+			done := make(chan loadTestResult, 1)
 			cleanupErr := errors.New("cleanup failed")
 			mainLoad := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
 				<-started
@@ -841,8 +919,8 @@ func TestRunLoads(t *testing.T) {
 
 			start := time.Now()
 			go func() {
-				_, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
-				done <- err
+				main, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
+				done <- loadTestResult{main, err}
 			}()
 			<-cleanupStarted
 			synctest.Wait()
@@ -850,12 +928,14 @@ func TestRunLoads(t *testing.T) {
 			canceledAfter := time.Since(start)
 			time.Sleep(2 * time.Second)
 			close(releaseCleanup)
-			err := <-done
+			result := <-done
 
 			require.Equal(t, time.Second, canceledAfter)
 			require.False(t, returnedEarly, "drain expiry must cancel work but still wait for cleanup")
-			require.ErrorContains(t, err, "independent drain exceeded 1s")
-			require.ErrorIs(t, err, cleanupErr)
+			require.NoError(t, result.main.err, "main load succeeded despite the independent drain failure")
+			require.False(t, result.main.finishedAt.IsZero())
+			require.ErrorContains(t, result.err, "independent drain exceeded 1s")
+			require.ErrorIs(t, result.err, cleanupErr)
 		})
 	})
 }
