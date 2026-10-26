@@ -16,7 +16,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.11.1
 	go.temporal.io/api v1.64.0
-	go.temporal.io/sdk v1.50.1-0.20261026204401-a8561555674b
+	go.temporal.io/sdk v1.50.1-0.20261026210345-8b4775a099a1
 	go.temporal.io/sdk/contrib/aws/lambdaworker v0.1.1
 	go.temporal.io/sdk/contrib/sysinfo v0.1.0
 	go.uber.org/zap v1.27.0
