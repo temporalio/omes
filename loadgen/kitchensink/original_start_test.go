@@ -2,9 +2,6 @@ package kitchensink
 
 import (
 	"context"
-	"errors"
-	"os"
-	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,13 +23,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-// Optional by reflection so the same regression executes against the base implementation.
-func enableOriginalStart(executor *ClientActionsExecutor) {
-	if field := reflect.ValueOf(executor).Elem().FieldByName("RecoverOriginalStart"); field.IsValid() {
-		field.SetBool(true)
-	}
-}
 
 type responseLossClient struct {
 	client.Client
@@ -107,12 +97,7 @@ func TestOriginalStartProtocol(t *testing.T) {
 	defer cancel()
 	ref, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
-	options := devserver.Options{Ref: ref, OutputDir: os.Getenv("OMES_START_TEST_SERVER_CACHE")}
-	if source := os.Getenv("OMES_START_TEST_SERVER_SOURCE"); source != "" {
-		options.Ref = ""
-		options.SourceDir = source
-	}
-	server, err := devserver.Start(ctx, options)
+	server, err := devserver.Start(ctx, devserver.Options{Ref: ref})
 	require.NoError(t, err)
 	defer func() { require.NoError(t, server.Stop()) }()
 	c, err := client.Dial(client.Options{HostPort: server.FrontendHostPort(), Namespace: "default"})
@@ -125,7 +110,7 @@ func TestOriginalStartProtocol(t *testing.T) {
 	defer w.Stop()
 	newExecutor := func(cl client.Client) *ClientActionsExecutor {
 		e := &ClientActionsExecutor{Client: cl, Namespace: "default", WorkflowType: "kitchenSink", WorkflowInput: &WorkflowInput{}, WorkflowOptions: client.StartWorkflowOptions{ID: uuid.NewString(), TaskQueue: queue, WorkflowExecutionErrorWhenAlreadyStarted: true}}
-		enableOriginalStart(e)
+		e.RecoverOriginalStart = true
 		return e
 	}
 	for _, state := range []string{"running", "completed", "failed"} {
@@ -221,7 +206,7 @@ func TestOriginalStartProtocol(t *testing.T) {
 		require.NotEmpty(t, a.GetDoUpdate().GetUpdateId())
 		canceled, stop := context.WithCancel(ctx)
 		stop()
-		require.True(t, errors.Is(e.Start(canceled, a), context.Canceled))
+		require.ErrorIs(t, e.Start(canceled, a), context.Canceled)
 		require.NoError(t, c.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", "finish", nil))
 		require.NoError(t, c.GetWorkflow(ctx, e.WorkflowOptions.ID, "").Get(ctx, nil))
 	})
@@ -316,9 +301,8 @@ func TestOriginalStartProtocol(t *testing.T) {
 		requestCount := len(requests)
 		mu.Unlock()
 		require.Equal(t, 1, requestCount, "outer recovery must not reconstruct a new multi-operation request")
-		if firstErr != nil {
-			require.Error(t, secondErr)
-		}
+		require.Error(t, firstErr)
+		require.Error(t, secondErr)
 		require.NoError(t, c.SignalWorkflow(ctx, foreign.GetID(), foreign.GetRunID(), "finish", nil))
 		require.NoError(t, foreign.Get(ctx, nil))
 	})
