@@ -6,7 +6,8 @@ benchmark features and situations. Backwards compatibility may not be maintained
 ## Documentation
 
 - **[Running & configuring omes](./docs/running.md)** — run commands, load configuration, worker
-  profiles, and running against a specific SDK version.
+  profiles, [running an independent load](./docs/running.md#running-an-independent-load), and running against
+  a specific SDK version.
 - **[Authoring scenarios](./docs/authoring-scenarios.md)** — writing a new scenario, choosing an
   executor, exposing options, and authoring conventions.
 - **[The throughput_stress scenario](./docs/throughput-stress.md)** — sleep activities, Nexus,

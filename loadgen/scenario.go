@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -342,7 +343,12 @@ type RunConfiguration struct {
 }
 
 func (r *RunConfiguration) ApplyDefaults() {
-	if r.Iterations == 0 && r.Duration == 0 {
+	r.applyDefaults(true)
+}
+
+// applyDefaults optionally supplies an iteration limit; explicit limits are preserved.
+func (r *RunConfiguration) applyDefaults(useDefaultIterationLimit bool) {
+	if useDefaultIterationLimit && r.Iterations == 0 && r.Duration == 0 {
 		r.Iterations = DefaultIterations
 	}
 	if r.MaxConcurrent == 0 {
@@ -356,6 +362,12 @@ func (r *RunConfiguration) ApplyDefaults() {
 func (r RunConfiguration) Validate() error {
 	if r.Duration < 0 {
 		return fmt.Errorf("Duration cannot be negative")
+	}
+	if rate := r.MaxIterationsPerSecond; rate != 0 {
+		interval := float64(time.Second) / rate
+		if rate < 0 || math.IsNaN(rate) || interval < 1 || interval >= float64(math.MaxInt64) {
+			return fmt.Errorf("MaxIterationsPerSecond must be 0 (unlimited) or produce a finite ticker interval between 1ns and 292 years")
+		}
 	}
 	if r.Iterations > 0 {
 		if r.Duration > 0 {

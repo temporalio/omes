@@ -59,10 +59,6 @@ const (
 	// On by default when the namespace under test reports support (dynamic config
 	// activity.enableStandalone); pass include-standalone-activity=false to force off.
 	IncludeStandaloneActivityFlag = "include-standalone-activity"
-	// IncludeStandaloneActivityOperatorCommandsFlag enables operator commands for
-	// standalone activities in throughput_stress. It is independent of plain
-	// standalone activity load and follows the namespace capability by default.
-	IncludeStandaloneActivityOperatorCommandsFlag = "include-standalone-activity-operator-commands"
 	// IncludeNexusStandaloneActivityFlag enables Nexus operations backed by a standalone activity.
 	// Opt-in and off by default (only the Go worker implements the operation); requires Nexus load
 	// (nexus-enabled) and server support for standalone activities + activity completion callbacks.
@@ -93,6 +89,12 @@ type tpsState struct {
 	MaxElapsedNanos int64 `json:"maxElapsedNanos"`
 }
 
+type independentLoadConfig struct {
+	MaxConcurrent          int
+	MaxIterationsPerSecond float64
+	DrainTimeout           time.Duration
+}
+
 type tpsConfig struct {
 	InternalIterations                        int
 	InternalIterTimeout                       time.Duration
@@ -111,6 +113,7 @@ type tpsConfig struct {
 	IncludeStandaloneNexus                    bool
 	IncludeStandaloneActivity                 bool
 	IncludeStandaloneActivityOperatorCommands bool
+	StandaloneActivityOperator                independentLoadConfig
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
@@ -148,11 +151,7 @@ func init() {
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneNexusOperation() })
 			o.Feature(IncludeStandaloneActivityFlag, "Include standalone activities.",
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneActivities() })
-			o.Feature(IncludeStandaloneActivityOperatorCommandsFlag,
-				"Include standalone activity operator commands (Go worker only).",
-				func(c loadgen.Capabilities) bool {
-					return c.Namespace.GetStandaloneActivityOperatorCommands()
-				})
+			declareStandaloneActivityOperatorOptions(o)
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
@@ -252,8 +251,9 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
 	}
 	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
-	config.IncludeStandaloneActivityOperatorCommands = info.OptionBool(
-		IncludeStandaloneActivityOperatorCommandsFlag)
+	if err := config.configureStandaloneActivityOperator(info); err != nil {
+		return err
+	}
 	config.IncludeNexusStandaloneActivity = info.OptionBool(IncludeNexusStandaloneActivityFlag)
 	if config.IncludeNexusStandaloneActivity && !config.NexusEnabled {
 		return fmt.Errorf("%s requires %s", IncludeNexusStandaloneActivityFlag, NexusEnabledFlag)
@@ -334,12 +334,15 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		info.Logger.Warnf("Iteration %d failed (tolerated): %v", run.Iteration, err)
 	}
 
+	var mainLoadFinishedAt time.Time
+
 	// Start the scenario run.
 	//
 	// NOTE: When resuming, it can happen that there are no more iterations/time left to run more iterations.
 	// In that case, we skip the executor run and go straight to the post-scenario verification.
 	if isResuming && info.Configuration.Duration <= 0 && info.Configuration.Iterations == 0 {
 		info.Logger.Info("Skipping executor run: out of time")
+		mainLoadFinishedAt = time.Now()
 	} else {
 		ksExec := &loadgen.KitchenSinkExecutor{
 			TestInput: &TestInput{
@@ -386,14 +389,20 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 				return nil
 			},
 		}
-		if err := ksExec.Run(ctx, info); err != nil {
+		var err error
+		var independentLoads []independentLoad
+		if t.config.IncludeStandaloneActivityOperatorCommands {
+			independentLoads = append(independentLoads, t.standaloneActivityOperatorLoad(info))
+		}
+		mainLoadFinishedAt, err = runLoads(ctx, info, ksExec, independentLoads)
+		if err != nil {
 			return err
 		}
 	}
 
 	t.lock.Lock()
 	completedIterations := t.state.CompletedIterations
-	t.state.AccumulatedDuration += time.Since(currentRunStartTime)
+	t.state.AccumulatedDuration += mainLoadFinishedAt.Sub(currentRunStartTime)
 	totalDuration := t.state.AccumulatedDuration
 	t.lock.Unlock()
 
@@ -494,6 +503,117 @@ func (t *tpsExecutor) updateStateOnIterationFailure() {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	t.state.FailedIterations += 1
+}
+
+// independentLoad runs alongside the main load with its own scheduling limits.
+// Run must stop launching tests when the stop channel closes, respond to cancellation,
+// and finish cleanup within a timeout before returning.
+type independentLoad struct {
+	Name         string
+	Run          func(context.Context, <-chan struct{}) error
+	DrainTimeout time.Duration
+}
+
+type runningIndependentLoad struct {
+	cancel       context.CancelCauseFunc
+	done         <-chan struct{}
+	drainTimeout time.Duration
+	drainErr     error
+}
+
+// runLoads coordinates explicitly selected loads alongside the main load without
+// sharing scheduling slots. The returned timestamp marks main load completion,
+// before time spent draining the other loads.
+func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.Executor, loads []independentLoad) (time.Time, error) {
+	if len(loads) == 0 {
+		err := mainLoad.Run(ctx, info)
+		return time.Now(), err
+	}
+	for _, load := range loads {
+		if load.Name == "" || load.Run == nil || load.DrainTimeout <= 0 {
+			return time.Time{}, fmt.Errorf("independent load %q requires a name, runner, and positive drain timeout", load.Name)
+		}
+	}
+
+	if info.Configuration.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, info.Configuration.Timeout)
+		defer cancel()
+	}
+	loopCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	stopNewIterations := make(chan struct{})
+	running, results := startIndependentLoads(loopCtx, loads, stopNewIterations, cancel)
+
+	mainErr := mainLoad.Run(loopCtx, info)
+	mainFinishedAt := time.Now()
+	// Stop new tests while allowing running tests to finish.
+	close(stopNewIterations)
+	if mainErr != nil {
+		cancel(mainErr)
+	}
+
+	loadErr := drainAndWaitForLoads(running, results)
+	return mainFinishedAt, errors.Join(mainErr, loadErr)
+}
+
+// startIndependentLoads starts each runner with its own context and cancels the
+// shared run on failure. Each runner reports one result after its cleanup finishes.
+func startIndependentLoads(
+	ctx context.Context,
+	loads []independentLoad,
+	stopNewIterations <-chan struct{},
+	cancelOnFailure context.CancelCauseFunc,
+) ([]runningIndependentLoad, <-chan error) {
+	results := make(chan error, len(loads))
+
+	running := make([]runningIndependentLoad, 0, len(loads))
+	for _, load := range loads {
+		loadCtx, cancelLoad := context.WithCancelCause(ctx)
+		done := make(chan struct{})
+		drainErr := fmt.Errorf("%s drain exceeded %s", load.Name, load.DrainTimeout)
+		running = append(running, runningIndependentLoad{
+			cancel:       cancelLoad,
+			done:         done,
+			drainTimeout: load.DrainTimeout,
+			drainErr:     drainErr,
+		})
+		go func() {
+			defer cancelLoad(nil)
+			err := load.Run(loadCtx, stopNewIterations)
+			// Report drain timeout even if the runner returns nil after cancellation.
+			if errors.Is(context.Cause(loadCtx), drainErr) {
+				err = errors.Join(err, drainErr)
+			}
+			if err != nil {
+				err = fmt.Errorf("%s load: %w", load.Name, err)
+				cancelOnFailure(err)
+			}
+			close(done)
+			results <- err
+		}()
+	}
+
+	return running, results
+}
+
+// drainAndWaitForLoads cancels loads that exceed their drain timeout, then waits
+// for every runner to finish cleanup and returns their combined errors.
+func drainAndWaitForLoads(running []runningIndependentLoad, results <-chan error) error {
+	// Start all drain timers together so loads drain concurrently.
+	for _, load := range running {
+		select {
+		case <-load.done:
+		default:
+			timer := time.AfterFunc(load.drainTimeout, func() { load.cancel(load.drainErr) })
+			defer timer.Stop()
+		}
+	}
+	var allErrors []error
+	for range running {
+		allErrors = append(allErrors, <-results)
+	}
+	return errors.Join(allErrors...)
 }
 
 func (t *tpsExecutor) createActions(run *loadgen.Run) []*ActionSet {
@@ -643,14 +763,6 @@ func (t *tpsExecutor) createActionsChunk(
 		// Add standalone activities, if configured.
 		if t.config.IncludeStandaloneActivity {
 			asyncActions = append(asyncActions, t.createStandaloneActivityAction(loadgen.TaskQueueForRun(run.RunID), rng))
-		}
-		if t.config.IncludeStandaloneActivityOperatorCommands {
-			asyncActions = append(asyncActions,
-				t.createStandaloneActivityOperatorCommandsAction(
-					loadgen.TaskQueueForRun(run.RunID),
-					iterationIndex,
-				),
-			)
 		}
 
 		chunkActions = append(chunkActions, syncActions...)
@@ -1082,43 +1194,6 @@ func (t *tpsExecutor) createStandaloneActivityAction(taskQueue string, rng *rand
 			},
 		},
 	}), DefaultRemoteActivity)
-}
-
-// createStandaloneActivityOperatorCommandsAction creates operator load as a client activity.
-//
-// TODO: Use each SDK's operator-command APIs once they are supported. For now,
-// the Go worker uses direct RPCs and other SDK workers treat this as unsupported.
-func (t *tpsExecutor) createStandaloneActivityOperatorCommandsAction(
-	taskQueue string,
-	commandOrdinal int,
-) *Action {
-	commandTypes := []DoStandaloneActivityOperatorCommands_CommandType{
-		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-	}
-	commandType := commandTypes[commandOrdinal%len(commandTypes)]
-	clientAction := &ClientAction{
-		Variant: &ClientAction_DoStandaloneActivityOperatorCommands{
-			DoStandaloneActivityOperatorCommands: &DoStandaloneActivityOperatorCommands{
-				CommandType: commandType,
-				Activity: &ExecuteActivityAction{
-					ActivityType: &ExecuteActivityAction_Heartbeat{
-						Heartbeat: &ExecuteActivityAction_HeartbeatTimeoutActivity{
-							SuccessDuration:   durationpb.New(5 * time.Second),
-							HeartbeatInterval: durationpb.New(time.Second),
-						},
-					},
-					TaskQueue:              taskQueue,
-					ScheduleToCloseTimeout: durationpb.New(2 * time.Minute),
-					StartToCloseTimeout:    durationpb.New(15 * time.Second),
-					HeartbeatTimeout:       durationpb.New(3 * time.Second),
-					RetryPolicy:            &common.RetryPolicy{MaximumAttempts: 2},
-				},
-			},
-		},
-	}
-	return ClientActivity(ClientActions(clientAction), DefaultRemoteActivity)
 }
 
 func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {

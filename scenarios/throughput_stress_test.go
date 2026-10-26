@@ -497,9 +497,8 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 		"payload-size sequence must advance across continue-as-new, not restart identically")
 }
 
-// TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew guards against
-// losing operator load or restarting its command rotation at either boundary.
-func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T) {
+// Operator sequences are scheduled by the driver, never embedded in workflow chunks.
+func TestThroughputStressOperatorCommandsOutsideWorkflow(t *testing.T) {
 	t.Parallel()
 
 	executor := newThroughputStressExecutor()
@@ -517,7 +516,6 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 	sets := executor.createActions(info.NewRun(2))
 	require.Len(t, sets, 1)
 
-	var commandTypes []ks.DoStandaloneActivityOperatorCommands_CommandType
 	var commandsPerChunk []int
 	chunk := sets[0].GetActions()
 	for {
@@ -532,9 +530,6 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 
 		commands := standaloneActivityOperatorCommandsInConcurrentGroups(chunk[:terminalIndex])
 		commandsPerChunk = append(commandsPerChunk, len(commands))
-		for _, command := range commands {
-			commandTypes = append(commandTypes, command.GetCommandType())
-		}
 
 		if chunk[terminalIndex].GetContinueAsNew() == nil {
 			break
@@ -542,19 +537,7 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 		chunk = decodeContinueAsNewChunk(t, chunk)
 	}
 
-	require.Equal(t, []int{3, 3, 3, 1}, commandsPerChunk)
-	require.Equal(t, []ks.DoStandaloneActivityOperatorCommands_CommandType{
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-	}, commandTypes)
+	require.Equal(t, []int{0, 0, 0, 0}, commandsPerChunk)
 }
 
 func walkActions(actions []*ks.Action, visit func(*ks.Action)) {

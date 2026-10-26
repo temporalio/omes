@@ -95,9 +95,51 @@ go run ./cmd/omes run-scenario-with-worker --scenario throughput_stress --langua
 
 ### One scenario per run
 
-A single omes run executes exactly **one** scenario. To run two load shapes at the same time, start two
-runs, each with its own `--run-id` (hence its own task queue). Composing load happens **within** a
-scenario (its action tree / executor), not by combining scenarios on the command line.
+A single omes run executes exactly **one** scenario, which can compose multiple load shapes.
+To run different scenarios at the same time, start separate runs, each with its own `--run-id`
+(hence its own task queue).
+
+### Running an independent load
+
+A separate scheduler gives additional load its own rate and concurrency limits, so slow tests do not
+occupy the main load's scheduling slots. The loads still share server and machine resources.
+A scenario can implement this using separate `GenericExecutor` instances for the main and additional
+loads. See [client-side load without a workflow](./authoring-scenarios.md#client-side-load-without-a-workflow).
+
+#### Example: operator commands in throughput_stress
+
+`throughput_stress` runs standalone-activity operator checks in a separate driver loop when the
+namespace reports support. The existing `include-standalone-activity-operator-commands` option controls
+this load. No additional CLI invocation is needed, and baseline workflow iterations do not wait for
+operator tests. Both loops use the same client, worker, and task queue.
+
+For example:
+
+```sh
+go run ./cmd/omes run-scenario-with-worker \
+  --scenario throughput_stress --language go \
+  --run-id mixed-load --server-address 127.0.0.1:17233 \
+  --duration 30s --max-concurrent 2 --max-iterations-per-second 2 --timeout 2m \
+  --option standalone-activity-operator-max-concurrent=3 \
+  --option standalone-activity-operator-max-iterations-per-second=1
+```
+
+The standard flags control the main load. The `throughput_stress`-specific operator options control
+operator tests, defaulting to concurrency 3 with no rate cap.
+
+When baseline completes, the operator loop stops starting new tests and waits up to
+`standalone-activity-operator-drain-timeout` (default 30s) for ongoing work. Failure, timeout, or
+cancellation stops both loops. Operator work and final drain time are excluded from baseline
+completion counts and throughput.
+
+To run operator load on its own, use the standard rate and concurrency flags:
+
+```sh
+go run ./cmd/omes run-scenario-with-worker \
+  --scenario standalone_activity_operator_commands --language go \
+  --run-id operator-only --server-address 127.0.0.1:17233 \
+  --duration 30s --max-concurrent 3 --max-iterations-per-second 1 --timeout 1m
+```
 
 ## Worker configuration
 
