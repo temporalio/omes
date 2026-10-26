@@ -35,6 +35,7 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+			o.Bool(RecoverScheduleOperationsFlag, false, "Recover transient schedule CRUD operations with bounded calls and observed effects.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
@@ -64,6 +65,7 @@ type schedulerExecutorConfig struct {
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
 	EnableChasmScheduler          bool
+	RecoverScheduleOperations     bool
 }
 
 var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
@@ -90,6 +92,7 @@ const (
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
 	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
+	RecoverScheduleOperationsFlag     = "recover-schedule-operations"
 )
 
 const (
@@ -124,6 +127,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
 		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
 		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
+		RecoverScheduleOperations:     info.OptionBool(RecoverScheduleOperationsFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {
@@ -181,6 +185,18 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		wg.Go(func() {
 			ticker := time.NewTicker(s.config.OperationInterval)
 			defer ticker.Stop()
+			wait := func() bool {
+				if !s.config.RecoverScheduleOperations {
+					<-ticker.C
+					return true
+				}
+				select {
+				case <-ticker.C:
+					return true
+				case <-ctx.Done():
+					return false
+				}
+			}
 			start := time.Now()
 
 			scheduleID := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
@@ -189,30 +205,53 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 				record(fmt.Errorf("creating schedule %s: %w", scheduleID, err))
 				return
 			}
-			<-ticker.C
-			// Read and update failures fall through to the delete below; an
-			// abandoned schedule would outlive the iteration until its EndAt.
+			if !wait() {
+				return
+			}
+			// Read and update failures still fall through to deletion.
 			for range s.config.ScheduleReadsPerCreation {
-				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				var err error
+				if sc.recovery != nil {
+					err = sc.recovery.describe(ctx)
+				} else {
+					err = s.describeSchedule(ctx, client, sc.ScheduleID, logger)
+				}
+				if err != nil {
 					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
 				}
-				<-ticker.C // Wait between read operations
+				if !wait() {
+					return
+				}
 			}
 
 			for range s.config.ScheduleUpdatesPerCreation {
-				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				var err error
+				if sc.recovery != nil {
+					err = sc.recovery.update(ctx)
+				} else {
+					err = s.updateSchedule(ctx, client, sc.ScheduleID, logger)
+				}
+				if err != nil {
 					record(fmt.Errorf("updating schedule %s: %w", sc.ScheduleID, err))
 				}
-				<-ticker.C // Wait between update operations
+				if !wait() {
+					return
+				}
 			}
 			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
 			select {
 			case <-time.After(dur):
-				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				var err error
+				if sc.recovery != nil {
+					err = sc.recovery.delete(ctx)
+				} else {
+					err = s.deleteSchedule(ctx, client, sc.ScheduleID, logger)
+				}
+				if err != nil {
 					record(fmt.Errorf("deleting schedule %s: %w", sc.ScheduleID, err))
 				}
 			case <-ctx.Done():
-				// Left undeleted; EndAt bounds how long it survives.
+				// Cancellation can leave the schedule object behind after EndAt.
 			}
 		})
 	}
@@ -230,6 +269,7 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 type ScheduleState struct {
 	ScheduleID  string
 	DeleteAfter time.Duration
+	recovery    *scheduleRecovery
 }
 
 func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, taskQueue string, logger *zap.SugaredLogger) (ScheduleState, error) {
@@ -256,12 +296,17 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		ID: scheduleID,
 		Spec: client.ScheduleSpec{
 			CronExpressions: []string{s.config.CronExpression},
-			// defining an end at ensures all schedules will be removed
-			// regardless of errors from this executor
+			// EndAt stops scheduled actions; it does not delete the schedule.
 			EndAt: endTime,
 		},
 		Action:  action,
 		Overlap: pickOverlap(s.config.OverlapPolicy, logger),
+	}
+	if s.config.RecoverScheduleOperations {
+		owner := uuid.NewString()
+		options.Memo = map[string]any{scheduleOwnerMemo: owner}
+		sc.recovery = &scheduleRecovery{api: c.ScheduleClient(), options: options, owner: owner, logger: logger}
+		return sc, sc.recovery.create(ctx)
 	}
 	_, err := c.ScheduleClient().Create(ctx, options)
 	return sc, err
