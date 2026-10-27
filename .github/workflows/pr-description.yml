@@ -1,0 +1,15 @@
+name: PR description
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: pin to main once temporalio/public-actions#33 is merged.
+      - uses: temporalio/public-actions/github/pr-description@8346c604153357ac9ec430cad0a39f214e885529
