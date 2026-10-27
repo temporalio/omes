@@ -128,10 +128,10 @@ go.opentelemetry.io/otel/sdk/metric v1.44.0 h1:3LlKgI+VjbVsjNRFZJZAJ30WjXC5VkNRk
 go.opentelemetry.io/otel/sdk/metric v1.44.0/go.mod h1:5B5pMARnXxKhltooO4xUuCBorl65a4EpnTalObqOigA=
 go.opentelemetry.io/otel/trace v1.44.0 h1:jxF5CsGYCe74MCRx2X4g7WsY/VBKRqqpNvXlX/6gtIk=
 go.opentelemetry.io/otel/trace v1.44.0/go.mod h1:oLl1jrMQAVo6v3GAggN+1VH9VIz9iUSvW53sW1Q8PIE=
-go.temporal.io/api v1.63.5 h1:c11+kPYHkXXL3UiShPdbMD+xtvqGsbTibUA9ypmiCa4=
-go.temporal.io/api v1.63.5/go.mod h1:SrlW2JMwVlDP4nRWSNznUFqnSHd+YeMDS1BkYo63HCQ=
-go.temporal.io/sdk v1.49.1-0.20260930191651-f161b6560fe5 h1:2Pu+9JM6D8u04n+b5vhE84CE9sTtFDFTQY0FvovNBb0=
-go.temporal.io/sdk v1.49.1-0.20260930191651-f161b6560fe5/go.mod h1:xP0FulN5JJSfisESUP60LlWsrKz2tLSStGjVdk8r5cc=
+go.temporal.io/api v1.64.0 h1:Wu7TMdVN/4KdU+v0As6SMm86uapnM1yI7PhC5Hvhqso=
+go.temporal.io/api v1.64.0/go.mod h1:acM0I9WPuYg8W3Pd9jOZvEgi7mRUttUQ4+e7fowKVnM=
+go.temporal.io/sdk v1.50.1-0.20261026201706-040e58fc1839 h1:QenlG2uJJ71z2WRSXziK5se1eT44/1iA6mI53LIm9vw=
+go.temporal.io/sdk v1.50.1-0.20261026201706-040e58fc1839/go.mod h1:luulJ+M+axp5vVfpe1YOLI1mr4eTRQrg7O4ZG7KoT2Q=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
