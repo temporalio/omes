@@ -630,7 +630,7 @@ func startNexusOperation(
 		case *kitchensink.NexusWorkflowAction_Start:
 			return startWorkflowNexusOperation(ctx, nc, workflowAction, opts)
 		case *kitchensink.NexusWorkflowAction_Signal:
-			return signalWorkflowNexusOperation(ctx, workflowAction)
+			return signalWorkflowNexusOperation(ctx, nc, workflowAction)
 		case *kitchensink.NexusWorkflowAction_Update:
 			return updateWorkflowNexusOperation(ctx, nc, workflowAction)
 		case *kitchensink.NexusWorkflowAction_Query:
@@ -664,8 +664,12 @@ func startWorkflowNexusOperation(
 }
 
 // signalWorkflowNexusOperation handles both signal and Signal-With-Start.
+//
+// Signals go through nc.GetWorkflowClient so they reuse the operation's request ID: a retried
+// Nexus task is then deduplicated by the server, even after the signal completed the workflow.
 func signalWorkflowNexusOperation(
 	ctx context.Context,
+	nc temporalnexus.NexusClient,
 	input *kitchensink.NexusWorkflowAction,
 ) (temporalnexus.TemporalOperationResult[converter.RawValue], error) {
 	var result temporalnexus.TemporalOperationResult[converter.RawValue]
@@ -682,7 +686,7 @@ func signalWorkflowNexusOperation(
 
 	// Signal-With-Start
 	if signal.GetWithStart() {
-		run, err := temporalnexus.GetClient(ctx).SignalWithStartWorkflow(
+		run, err := nc.GetWorkflowClient().SignalWithStartWorkflow(
 			ctx,
 			input.GetWorkflowId(),
 			signalName,
@@ -702,7 +706,7 @@ func signalWorkflowNexusOperation(
 			converter.NewRawValue(kitchensink.ConvertToPayload(run.GetID()))), nil
 	}
 
-	if err = temporalnexus.GetClient(ctx).SignalWorkflow(
+	if err = nc.GetWorkflowClient().SignalWorkflow(
 		ctx,
 		input.GetWorkflowId(),
 		input.GetRunId(),
