@@ -664,9 +664,7 @@ func startWorkflowNexusOperation(
 }
 
 // signalWorkflowNexusOperation handles both signal and Signal-With-Start.
-//
-// Signals go through nc.GetWorkflowClient so they reuse the operation's request ID: a retried
-// Nexus task is then deduplicated by the server, even after the signal completed the workflow.
+// nc.GetWorkflowClient reuses the Nexus request ID, so the server dedupes retried signals.
 func signalWorkflowNexusOperation(
 	ctx context.Context,
 	nc temporalnexus.NexusClient,
