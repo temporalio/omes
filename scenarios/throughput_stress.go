@@ -1220,7 +1220,7 @@ func (t *tpsExecutor) createStandaloneNexusOperationAction(input *NexusOperation
 	}), DefaultRemoteActivity)
 }
 
-// A missed heartbeat must fail the load.
+// Keep heartbeat timeouts observable rather than masking them with activity retries.
 func healthyHeartbeatActivity(duration, heartbeatTimeout time.Duration) *Action {
 	return &Action{
 		Variant: &Action_ExecActivity{
