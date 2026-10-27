@@ -12,4 +12,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # TODO: pin to main once temporalio/public-actions#33 is merged.
-      - uses: temporalio/public-actions/github/pr-description@8346c604153357ac9ec430cad0a39f214e885529
+      - uses: temporalio/public-actions/github/pr-description@4b98e9c9209eb241b4d09eb7838bf1443be2d149
