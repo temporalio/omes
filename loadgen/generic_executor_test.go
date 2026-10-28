@@ -395,6 +395,103 @@ func TestRunIterationsWithRateLimit(t *testing.T) {
 	})
 }
 
+func TestRunFailureHandling(t *testing.T) {
+	t.Run("RateLimitedFailureStopsScheduling", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			failure := errors.New("operator check failed")
+			failureTimes := make(chan time.Time, 3)
+			var started atomic.Int64
+
+			err := execute(&GenericExecutor{
+				StopNewIterations: make(chan struct{}),
+				Execute: func(context.Context, *Run) error {
+					started.Add(1)
+					return failure
+				},
+			}, RunConfiguration{
+				MaxConcurrent:                 3,
+				MaxIterationsPerSecond:        1.0 / 60,
+				DoNotRegisterSearchAttributes: true,
+				OnIterationFailure: func(context.Context, *Run, error) {
+					failureTimes <- time.Now()
+				},
+			})
+
+			require.ErrorIs(t, err, failure)
+			require.Equal(t, time.Duration(0), time.Since(<-failureTimes), "must report failure without waiting for another rate tick")
+			require.Equal(t, int64(1), started.Load(), "must not launch more tests after terminal failure")
+		})
+	})
+
+	t.Run("PreservesFailureWhenCallbackCancels", func(t *testing.T) {
+		for _, continueOnFailure := range []bool{false, true} {
+			name := "stop-on-failure"
+			if continueOnFailure {
+				name = "continue-on-failure"
+			}
+			t.Run(name, func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(context.Background())
+					defer cancel()
+					failure := errors.New("cleanup RPC failed")
+
+					err := executeContext(ctx, &GenericExecutor{
+						Execute: func(context.Context, *Run) error {
+							return failure
+						},
+					}, RunConfiguration{
+						Iterations:                    1,
+						MaxConcurrent:                 1,
+						ContinueOnIterationFailure:    continueOnFailure,
+						DoNotRegisterSearchAttributes: true,
+						OnIterationFailure: func(context.Context, *Run, error) {
+							cancel()
+						},
+					})
+
+					require.ErrorIs(t, err, context.Canceled)
+					require.ErrorIs(t, err, failure, "cancellation must not replace the iteration error")
+				})
+			})
+		}
+	})
+
+	t.Run("PreservesHandledFailureOnCancellation", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			failure := errors.New("operator check failed")
+			failed := make(chan struct{})
+			done := make(chan error, 1)
+
+			go func() {
+				done <- executeContext(ctx, &GenericExecutor{
+					StopNewIterations: make(chan struct{}),
+					Execute: func(context.Context, *Run) error {
+						return failure
+					},
+				}, RunConfiguration{
+					MaxConcurrent:                 1,
+					MaxIterationsPerSecond:        1.0 / 60,
+					ContinueOnIterationFailure:    true,
+					DoNotRegisterSearchAttributes: true,
+					OnIterationFailure: func(context.Context, *Run, error) {
+						close(failed)
+					},
+				})
+			}()
+			<-failed
+			// Let the scheduler consume the failure and wait for its next rate tick.
+			synctest.Wait()
+			cancel()
+			err := <-done
+
+			require.ErrorIs(t, err, context.Canceled)
+			require.ErrorIs(t, err, failure, "consuming a tolerated failure must not hide it on cancellation")
+		})
+	})
+}
+
 func TestExecutorRetries(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		totalTracker := newIterationTracker()

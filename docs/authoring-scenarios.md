@@ -139,6 +139,56 @@ Optional interfaces an executor may implement: `Configurable` (a `Configure` hoo
 up front) and `Resumable` (`Snapshot`/`LoadState`). To declare default iterations/concurrency, prefer the
 scenario's `DefaultConfiguration` field over the older `HasDefaultConfiguration` executor interface.
 
+### Client-side load without a workflow
+
+Use this pattern when additional work is slower or needs different rate and concurrency settings
+than the main workload. Scheduling it separately lets the main workload start new iterations
+without waiting for that work to finish, and lets you adjust each workload independently.
+
+For client-side load that does not need a workflow, use `GenericExecutor` with an
+`Execute func(context.Context, *loadgen.Run) error` callback. Each call runs your test once. Return `nil` for success or an error for configured retry/failure handling.
+The iteration holds its concurrency slot until it finishes, including any retries. The executor
+handles scheduling, rate limits, concurrency, retries, and duration metrics. Callbacks may run
+concurrently. Give each call its own mutable test data, and synchronize access to shared data.
+
+`StopNewIterations` stops new iterations and drains those already running without canceling them.
+`Run` waits for running tests and their callbacks before returning, including after cancellation.
+Callbacks must honor cancellation and use a timeout for cleanup so shutdown cannot wait indefinitely.
+
+See [`standalone_activity_operator_commands`](../scenarios/standalone_activity_operator_commands.go)
+for an example, and [running an independent load](./running.md#running-an-independent-load) for run commands.
+To run your test alongside the main workload, add it to `independentLoads` in `throughput_stress.Run`.
+Give it separate scheduling limits and progress tracking, and specify how long it may finish running
+after the main workload ends.
+
+#### Coordinating main and independent loads
+
+The `throughput_stress` example uses separate `GenericExecutor` instances for the main workflow load
+and operator tests:
+
+```mermaid
+flowchart TD
+    subgraph TPS["throughput_stress.go"]
+        C["Run selected loads and coordinate shutdown"]
+    end
+    subgraph SAA["standalone_activity_operator_commands.go"]
+        R["Operator runner"]
+        A["Operator-test callback"]
+    end
+    subgraph G["generic_executor.go"]
+        B["Separate instance: main load scheduler"]
+        O["Separate instance: operator scheduler"]
+    end
+    C -->|"via KitchenSinkExecutor"| B
+    B --> W["Main load workflows"]
+    C --> R
+    R --> O
+    O -->|"each iteration"| A
+```
+
+The coordinator starts both loads, then stops new independent iterations when the main load finishes.
+It waits for remaining work to finish or clean up before returning.
+
 ## Exposing options
 
 Scenario configuration arrives through **two separate channels**, and knowing which is which matters:

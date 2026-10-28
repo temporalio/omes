@@ -65,15 +65,15 @@ Implemented for the Go, Python, TypeScript, .NET, Java, and Ruby workers.
 
 ## Standalone activity operator commands
 
-`include-standalone-activity-operator-commands` adds standalone-activity operator-command load,
-rotating through pause, reset, and update-options across Continue-As-New. It is independently
-selectable from plain standalone-activity load and turns on by itself when the namespace reports the
-`StandaloneActivityOperatorCommands` capability. Passing
-`--option include-standalone-activity-operator-commands=false` forces it off.
+`include-standalone-activity-operator-commands` enables an independent driver loop that rotates through
+pause/unpause, reset, and update. It is enabled by default when the namespace reports the
+`StandaloneActivityOperatorCommands` capability; pass
+`--option include-standalone-activity-operator-commands=false` to disable it.
 
-The workload currently sends the commands through WorkflowService RPCs in the Go worker while the
-SDK command APIs are being added. Other language workers skip the action in the default non-strict
-mode and report it as unsupported with `--worker-err-on-unimplemented`.
+Commands run directly in the Go driver, while heartbeat activities run on the selected worker.
+Baseline workflow iterations do not wait for these sequences. Operator rate and concurrency are
+controlled separately; see [running an independent load](./running.md#running-an-independent-load) for
+configuration and shutdown behavior.
 
 ## Standalone Nexus operations
 

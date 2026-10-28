@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -39,6 +40,39 @@ func TestScenarioConfigValidation(t *testing.T) {
 			name:          "default",
 			configuration: RunConfiguration{},
 			expectedErr:   "",
+		},
+		{
+			name:          "positive rate",
+			configuration: RunConfiguration{MaxIterationsPerSecond: 1},
+		},
+		{
+			name:          "one nanosecond interval",
+			configuration: RunConfiguration{MaxIterationsPerSecond: 1e9},
+		},
+		{
+			name:          "negative rate",
+			configuration: RunConfiguration{MaxIterationsPerSecond: -1},
+			expectedErr:   "MaxIterationsPerSecond",
+		},
+		{
+			name:          "NaN rate",
+			configuration: RunConfiguration{MaxIterationsPerSecond: math.NaN()},
+			expectedErr:   "MaxIterationsPerSecond",
+		},
+		{
+			name:          "infinite rate",
+			configuration: RunConfiguration{MaxIterationsPerSecond: math.Inf(1)},
+			expectedErr:   "MaxIterationsPerSecond",
+		},
+		{
+			name:          "interval below one nanosecond",
+			configuration: RunConfiguration{MaxIterationsPerSecond: 1e9 + 1},
+			expectedErr:   "MaxIterationsPerSecond",
+		},
+		{
+			name:          "interval overflows duration",
+			configuration: RunConfiguration{MaxIterationsPerSecond: 1e-12},
+			expectedErr:   "MaxIterationsPerSecond",
 		},
 		{
 			name:          "only iterations",

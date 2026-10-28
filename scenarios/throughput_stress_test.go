@@ -1,21 +1,31 @@
 package scenarios
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
 	ks "github.com/temporalio/omes/loadgen/kitchensink"
+
+	enumspb "go.temporal.io/api/enums/v1"
 	namespacev1 "go.temporal.io/api/namespace/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -183,6 +193,94 @@ func TestThroughputStressFeatureAutoEnable(t *testing.T) {
 	require.True(t, executor.config.NexusEnabled)
 	require.Equal(t, caps.GetStandaloneNexusOperation(), executor.config.IncludeStandaloneNexus)
 	require.Equal(t, 1, executor.Snapshot().(tpsState).CompletedIterations)
+
+	t.Run("OperatorTestsComplete", func(t *testing.T) {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			response, err := env.TemporalClient().WorkflowService().ListActivityExecutions(t.Context(),
+				&workflowservice.ListActivityExecutionsRequest{
+					Namespace: "default",
+					Query: fmt.Sprintf("TaskQueue = '%s' AND ActivityType = 'heartbeat'",
+						loadgen.TaskQueueForRun(runID)),
+				})
+			if !assert.NoError(c, err) {
+				return
+			}
+			assert.NotEmpty(c, response.GetExecutions(), "operator tests must actually run")
+			for _, activity := range response.GetExecutions() {
+				assert.Equal(c, enumspb.ACTIVITY_EXECUTION_STATUS_COMPLETED, activity.GetStatus())
+			}
+		}, 10*time.Second, 100*time.Millisecond)
+	})
+
+	t.Run("OperatorDrainFailureStillVerifiesMainLoad", func(t *testing.T) {
+		verificationErr := errors.New("main visibility verification failed")
+		waitingForState := make(chan struct{})
+		drainingExecutor := newThroughputStressExecutor()
+		drainingExecutor.onActionsCreated = func([]*ks.ActionSet) { <-waitingForState }
+		executor := loadgen.ExecutorFunc(func(ctx context.Context, info loadgen.ScenarioInfo) error {
+			info.Client = &drainAccountingTestClient{
+				Client:          info.Client,
+				verificationErr: verificationErr,
+				service: &blockedOperatorStateService{
+					WorkflowServiceClient: info.Client.WorkflowService(),
+					waiting:               waitingForState,
+				},
+			}
+			return drainingExecutor.Run(ctx, info)
+		})
+		info := loadgen.ScenarioInfo{
+			RunID: runID + "-drain", ExecutionID: runID + "-drain",
+			Configuration: loadgen.RunConfiguration{Iterations: 1},
+			Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
+				IterFlag:                      "1",
+				NexusEnabledFlag:              "false",
+				IncludeStandaloneActivityFlag: "false",
+				StandaloneActivityOperatorMaxConcurrentFlag: "1",
+				StandaloneActivityOperatorDrainTimeoutFlag:  "1ms",
+				VisibilityVerificationTimeoutFlag:           "10s",
+			}),
+		}
+
+		_, err := env.RunExecutorTest(t, executor, info, clioptions.LangGo)
+		require.ErrorContains(t, err, "operator drain exceeded 1ms")
+		require.ErrorIs(t, err, verificationErr, "main verification must run and preserve its error")
+		state := drainingExecutor.Snapshot().(tpsState)
+		require.Equal(t, 1, state.CompletedIterations)
+		require.Positive(t, state.AccumulatedDuration, "completed main work must retain its elapsed time")
+	})
+}
+
+type blockedOperatorStateService struct {
+	workflowservice.WorkflowServiceClient
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (s *blockedOperatorStateService) DescribeActivityExecution(ctx context.Context, request *workflowservice.DescribeActivityExecutionRequest, options ...grpc.CallOption) (*workflowservice.DescribeActivityExecutionResponse, error) {
+	block := false
+	s.once.Do(func() {
+		block = true
+		close(s.waiting)
+	})
+	if block {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	return s.WorkflowServiceClient.DescribeActivityExecution(ctx, request, options...)
+}
+
+type drainAccountingTestClient struct {
+	client.Client
+	service         workflowservice.WorkflowServiceClient
+	verificationErr error
+}
+
+func (c *drainAccountingTestClient) WorkflowService() workflowservice.WorkflowServiceClient {
+	return c.service
+}
+
+func (c *drainAccountingTestClient) CountWorkflow(context.Context, *workflowservice.CountWorkflowExecutionsRequest) (*workflowservice.CountWorkflowExecutionsResponse, error) {
+	return nil, c.verificationErr
 }
 
 func TestThroughputStressNexusStandaloneActivityActions(t *testing.T) {
@@ -497,9 +595,8 @@ func TestThroughputStressPayloadSequenceAcrossContinueAsNew(t *testing.T) {
 		"payload-size sequence must advance across continue-as-new, not restart identically")
 }
 
-// TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew guards against
-// losing operator load or restarting its command rotation at either boundary.
-func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T) {
+// Operator sequences are scheduled by the driver, never embedded in workflow chunks.
+func TestThroughputStressOperatorCommandsOutsideWorkflow(t *testing.T) {
 	t.Parallel()
 
 	executor := newThroughputStressExecutor()
@@ -517,7 +614,6 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 	sets := executor.createActions(info.NewRun(2))
 	require.Len(t, sets, 1)
 
-	var commandTypes []ks.DoStandaloneActivityOperatorCommands_CommandType
 	var commandsPerChunk []int
 	chunk := sets[0].GetActions()
 	for {
@@ -532,9 +628,6 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 
 		commands := standaloneActivityOperatorCommandsInConcurrentGroups(chunk[:terminalIndex])
 		commandsPerChunk = append(commandsPerChunk, len(commands))
-		for _, command := range commands {
-			commandTypes = append(commandTypes, command.GetCommandType())
-		}
 
 		if chunk[terminalIndex].GetContinueAsNew() == nil {
 			break
@@ -542,19 +635,7 @@ func TestThroughputStressOperatorCommandsAcrossRunsAndContinueAsNew(t *testing.T
 		chunk = decodeContinueAsNewChunk(t, chunk)
 	}
 
-	require.Equal(t, []int{3, 3, 3, 1}, commandsPerChunk)
-	require.Equal(t, []ks.DoStandaloneActivityOperatorCommands_CommandType{
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_UPDATE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE,
-		ks.DoStandaloneActivityOperatorCommands_COMMAND_TYPE_RESET,
-	}, commandTypes)
+	require.Equal(t, []int{0, 0, 0, 0}, commandsPerChunk)
 }
 
 func walkActions(actions []*ks.Action, visit func(*ks.Action)) {
@@ -642,4 +723,219 @@ func decodeContinueAsNewChunk(t *testing.T, actions []*ks.Action) []*ks.Action {
 	}
 	t.Fatal("no ContinueAsNew action found in chunk")
 	return nil
+}
+
+type loadTestResult struct {
+	main mainLoadResult
+	err  error
+}
+
+func loadTestInfo(iterations, concurrent int) loadgen.ScenarioInfo {
+	return loadgen.ScenarioInfo{
+		Logger:         zap.NewNop().Sugar(),
+		MetricsHandler: client.MetricsNopHandler,
+		Configuration: loadgen.RunConfiguration{
+			Iterations:                    iterations,
+			MaxConcurrent:                 concurrent,
+			DoNotRegisterSearchAttributes: true,
+		},
+	}
+}
+
+func TestRunLoads(t *testing.T) {
+	t.Run("MainProgressAndDrain", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			started := make(chan struct{}, 2)
+			release := make(chan struct{})
+			mainDone := make(chan struct{})
+			done := make(chan loadTestResult, 1)
+			var mainCompleted, independentStarted, independentCompleted atomic.Int64
+
+			mainInfo := loadTestInfo(3, 1)
+			mainInfo.Configuration.OnCompletion = func(context.Context, *loadgen.Run) { mainCompleted.Add(1) }
+			mainExecutor := &loadgen.GenericExecutor{Execute: func(_ context.Context, run *loadgen.Run) error {
+				if run.Iteration == 1 {
+					<-started
+					<-started
+				}
+				time.Sleep(time.Second)
+				return nil
+			}}
+			mainLoad := loadgen.ExecutorFunc(func(ctx context.Context, info loadgen.ScenarioInfo) error {
+				err := mainExecutor.Run(ctx, info)
+				close(mainDone)
+				return err
+			})
+			load := independentLoad{
+				Name: "independent", DrainTimeout: time.Minute,
+				Run: func(ctx context.Context, stop <-chan struct{}) error {
+					info := loadTestInfo(0, 2)
+					info.Configuration.OnCompletion = func(context.Context, *loadgen.Run) { independentCompleted.Add(1) }
+					executor := &loadgen.GenericExecutor{
+						StopNewIterations: stop,
+						Execute: func(ctx context.Context, run *loadgen.Run) error {
+							independentStarted.Add(1)
+							if run.Iteration > 2 {
+								return fmt.Errorf("started iteration %d after main load finished", run.Iteration)
+							}
+							started <- struct{}{}
+							select {
+							case <-release:
+								return nil
+							case <-ctx.Done():
+								return ctx.Err()
+							}
+						},
+					}
+					return executor.Run(ctx, info)
+				},
+			}
+
+			start := time.Now()
+			go func() {
+				finished, err := runLoads(context.Background(), mainInfo, mainLoad, []independentLoad{load})
+				done <- loadTestResult{finished, err}
+			}()
+			<-mainDone
+			synctest.Wait()
+
+			returnedEarly := len(done) != 0
+			completedBeforeDrain := mainCompleted.Load()
+			time.Sleep(5 * time.Second)
+			close(release)
+			result := <-done
+
+			require.False(t, returnedEarly, "must wait for independent work after main load finishes")
+			require.Equal(t, int64(3), completedBeforeDrain, "blocked independent work must not hold main scheduling slots")
+			require.NoError(t, result.err)
+			require.NoError(t, result.main.err)
+			require.Equal(t, int64(2), independentStarted.Load(), "must not start new tests during drain")
+			require.Equal(t, int64(2), independentCompleted.Load(), "running tests must finish without cancellation")
+			require.Equal(t, start.Add(3*time.Second), result.main.finishedAt, "main throughput must exclude drain time")
+		})
+	})
+
+	t.Run("FailureWaitsForCleanup", func(t *testing.T) {
+		for _, source := range []string{"main", "independent"} {
+			t.Run(source, func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					primaryErr := errors.New("test failed")
+					cleanupErr := errors.New("cleanup failed")
+					started := make(chan struct{}, 2)
+					fail := make(chan struct{})
+					cleanupStarted := make(chan struct{}, 2)
+					releaseCleanup := make(chan struct{})
+					done := make(chan loadTestResult, 1)
+					var cleaned atomic.Int64
+
+					mainLoad := loadgen.ExecutorFunc(func(ctx context.Context, _ loadgen.ScenarioInfo) error {
+						<-started
+						<-started
+						if source == "main" {
+							return primaryErr
+						}
+						close(fail)
+						<-ctx.Done()
+						return ctx.Err()
+					})
+					load := independentLoad{
+						Name: "independent", DrainTimeout: time.Minute,
+						Run: func(ctx context.Context, stop <-chan struct{}) error {
+							executor := &loadgen.GenericExecutor{
+								StopNewIterations: stop,
+								Execute: func(ctx context.Context, run *loadgen.Run) error {
+									started <- struct{}{}
+									if source == "independent" && run.Iteration == 1 {
+										<-fail
+										return primaryErr
+									}
+									<-ctx.Done()
+									cleanupStarted <- struct{}{}
+									<-releaseCleanup
+									cleaned.Add(1)
+									return errors.Join(ctx.Err(), cleanupErr)
+								},
+							}
+							return executor.Run(ctx, loadTestInfo(0, 2))
+						},
+					}
+
+					go func() {
+						main, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
+						done <- loadTestResult{main, err}
+					}()
+					<-cleanupStarted
+					synctest.Wait()
+					returnedEarly := len(done) != 0
+					close(releaseCleanup)
+					result := <-done
+
+					require.False(t, returnedEarly, "must wait for cleanup even after failure")
+					require.ErrorIs(t, result.err, primaryErr)
+					require.ErrorIs(t, result.err, cleanupErr)
+					require.ErrorIs(t, result.err, context.Canceled)
+					if source == "main" {
+						require.ErrorIs(t, result.main.err, primaryErr)
+					} else {
+						require.ErrorIs(t, result.main.err, context.Canceled)
+					}
+					wantCleaned := int64(2)
+					if source == "independent" {
+						wantCleaned = 1
+					}
+					require.Equal(t, wantCleaned, cleaned.Load())
+				})
+			})
+		}
+	})
+
+	t.Run("DrainTimeoutWaitsForCleanup", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			started := make(chan struct{})
+			cleanupStarted := make(chan struct{})
+			releaseCleanup := make(chan struct{})
+			done := make(chan loadTestResult, 1)
+			cleanupErr := errors.New("cleanup failed")
+			mainLoad := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
+				<-started
+				return nil
+			})
+			load := independentLoad{
+				Name: "independent", DrainTimeout: time.Second,
+				Run: func(ctx context.Context, stop <-chan struct{}) error {
+					executor := &loadgen.GenericExecutor{
+						StopNewIterations: stop,
+						Execute: func(ctx context.Context, _ *loadgen.Run) error {
+							close(started)
+							<-ctx.Done()
+							close(cleanupStarted)
+							<-releaseCleanup
+							return errors.Join(ctx.Err(), cleanupErr)
+						},
+					}
+					return executor.Run(ctx, loadTestInfo(0, 1))
+				},
+			}
+
+			start := time.Now()
+			go func() {
+				main, err := runLoads(context.Background(), loadgen.ScenarioInfo{}, mainLoad, []independentLoad{load})
+				done <- loadTestResult{main, err}
+			}()
+			<-cleanupStarted
+			synctest.Wait()
+			returnedEarly := len(done) != 0
+			canceledAfter := time.Since(start)
+			time.Sleep(2 * time.Second)
+			close(releaseCleanup)
+			result := <-done
+
+			require.Equal(t, time.Second, canceledAfter)
+			require.False(t, returnedEarly, "drain expiry must cancel work but still wait for cleanup")
+			require.NoError(t, result.main.err, "main load succeeded despite the independent drain failure")
+			require.False(t, result.main.finishedAt.IsZero())
+			require.ErrorContains(t, result.err, "independent drain exceeded 1s")
+			require.ErrorIs(t, result.err, cleanupErr)
+		})
+	})
 }
