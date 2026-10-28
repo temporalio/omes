@@ -2,6 +2,7 @@ package clioptions
 
 import (
 	"github.com/spf13/pflag"
+	"time"
 )
 
 // WorkerOptions for setting up worker parameters
@@ -17,6 +18,7 @@ type WorkerOptions struct {
 	MaxConcurrentActivities      int
 	MaxConcurrentWorkflowTasks   int
 	WorkerActivitiesPerSecond    float64
+	MaxHeartbeatThrottleInterval time.Duration
 	ErrOnUnimplemented           bool
 
 	fs         *pflag.FlagSet
@@ -51,6 +53,7 @@ func (m *WorkerOptions) FlagSetWithPrefix(prefix string) *pflag.FlagSet {
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
 	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"activities-per-second", 0, "Per-worker activity rate limit")
+	m.fs.DurationVar(&m.MaxHeartbeatThrottleInterval, prefix+"max-heartbeat-throttle-interval", 0, "Maximum heartbeat RPC batching interval (Go only; 0 uses the SDK default)")
 	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (e.g. concurrent client actions and standalone Nexus/activity operations) instead of skipping them")
 	return m.fs
 }
