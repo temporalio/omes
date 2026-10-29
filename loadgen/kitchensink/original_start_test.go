@@ -93,14 +93,14 @@ func originalStartWorkflow(ctx workflow.Context, input *WorkflowInput) error {
 }
 
 func TestOriginalStartProtocol(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
-	defer cancel()
 	ref, err := versions.Get("SERVER_VERSION")
 	require.NoError(t, err)
-	server, err := devserver.Start(ctx, devserver.Options{Ref: ref})
+	server, err := devserver.Start(t.Context(), devserver.Options{Ref: ref})
 	require.NoError(t, err)
-	defer func() { require.NoError(t, server.Stop()) }()
-	c, err := client.Dial(client.Options{HostPort: server.FrontendHostPort(), Namespace: "default"})
+	t.Cleanup(func() { require.NoError(t, server.Stop()) })
+	ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
+	defer cancel()
+	c, err := client.DialContext(ctx, client.Options{HostPort: server.FrontendHostPort(), Namespace: "default"})
 	require.NoError(t, err)
 	defer c.Close()
 	queue := "original-start-" + uuid.NewString()
