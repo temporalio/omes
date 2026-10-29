@@ -367,7 +367,7 @@ fn action(
                 wire::unsupported(!signal.headers.is_empty(), "headers")?;
                 let completion = target.signal(
                     temporalio_client::UntypedSignal::<UntypedWorkflow>::new(signal.signal_name),
-                    RawValue::new(signal.args),
+                    RawValue::new(signal.arg.into_iter().collect()),
                     temporalio_sdk::SignalWorkflowOptions::builder()
                         .cancellation_token(token.clone())
                         .build(),
