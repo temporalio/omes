@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install Go and go-junit-report
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go go-junit-report"
@@ -80,7 +80,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install SDK dependency tools
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "dotnet gem:bundler go java node npm python ruby rust uv"
@@ -140,7 +140,7 @@ jobs:
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go"
@@ -182,7 +182,7 @@ jobs:
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go"
@@ -299,7 +299,7 @@ jobs:
           submodules: recursive
           path: checked-out-sdk
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go"
@@ -393,7 +393,7 @@ jobs:
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install: false
@@ -488,7 +488,7 @@ jobs:
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go go-junit-report"
@@ -535,7 +535,7 @@ jobs:
         with:
           submodules: "true"
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go"
@@ -579,7 +579,7 @@ jobs:
         with:
           submodules: true
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install_args: "go"
@@ -621,7 +621,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
           version: ${{ env.MISE_VERSION }}
           install: false
