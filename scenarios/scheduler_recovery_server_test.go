@@ -85,9 +85,9 @@ func (p *scheduleResponseLossProxy) DeleteSchedule(ctx context.Context, r *workf
 }
 
 func TestSchedulerOperationRecoveryLocalServer(t *testing.T) {
+	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{"frontend.allowedExperiments": []string{"*"}}))
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 	defer cancel()
-	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{"frontend.allowedExperiments": []string{"*"}}))
 	backend, err := client.DialContext(ctx, client.Options{HostPort: server.FrontendHostPort(), Namespace: "default"})
 	require.NoError(t, err)
 	t.Cleanup(backend.Close)
