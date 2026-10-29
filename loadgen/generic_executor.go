@@ -217,6 +217,8 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 					g.failed.Add(1)
 					if g.config.OnIterationFailure != nil {
 						g.config.OnIterationFailure(ctx, run, iterErr)
+					} else if g.config.ContinueOnIterationFailure {
+						g.logger.Error(iterErr)
 					}
 				}
 
@@ -241,7 +243,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 					g.logger.Error(err)
 				} else {
 					err = fmt.Errorf("iteration %v failed: %w", run.Iteration, err)
-					g.logger.Error(err)
 					break retryLoop
 				}
 
