@@ -15,14 +15,20 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-var App = harness.App{
+var App, finishPrivateCapture = privateCaptureApp(harness.App{
 	Worker:        buildWorker,
 	ClientFactory: buildClient,
-}
+}, privateCaptureCase{
+	Namespace:        "loadtest",
+	TaskQueuePrefix:  "omes-cicd-go-vcr",
+	WorkflowIDPrefix: "w-cicd-go-vcr-",
+})
 
 // Main is the default Go worker entry point.
 func Main() {
-	if err := harness.Run(App); err != nil {
+	err := harness.Run(App)
+	finishPrivateCapture()
+	if err != nil {
 		clioptions.BackupLogger.Fatal(err)
 	}
 }
@@ -52,8 +58,15 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 }
 
 func buildClient(config harness.ClientConfig) (sdkclient.Client, error) {
+	return buildClientWithCapture(config, nil)
+}
+
+func buildClientWithCapture(config harness.ClientConfig, capture *privateCapture) (sdkclient.Client, error) {
 	options := harness.BuildSDKClientOptions(config)
 	options.DataConverter = clioptions.OmesDataConverter()
+	if capture != nil {
+		options = capture.clientOptions(options, config.Logger)
+	}
 	client, err := sdkclient.Dial(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial: %w", err)
