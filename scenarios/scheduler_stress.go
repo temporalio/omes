@@ -36,6 +36,7 @@ func init() {
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
 			o.Bool(RecoverScheduleOperationsFlag, false, "Recover transient schedule CRUD operations with bounded calls and observed effects.")
+			o.Bool(RetainSchedulesFlag, false, "Leave finite schedules for migration checks; the caller must delete the namespace afterward.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
@@ -66,6 +67,7 @@ type schedulerExecutorConfig struct {
 	ScheduledWorkflowType         string
 	EnableChasmScheduler          bool
 	RecoverScheduleOperations     bool
+	RetainSchedules               bool
 }
 
 var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
@@ -93,6 +95,7 @@ const (
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
 	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
 	RecoverScheduleOperationsFlag     = "recover-schedule-operations"
+	RetainSchedulesFlag               = "retain-schedules"
 )
 
 const (
@@ -128,6 +131,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
 		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
 		RecoverScheduleOperations:     info.OptionBool(RecoverScheduleOperationsFlag),
+		RetainSchedules:               info.OptionBool(RetainSchedulesFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {
@@ -241,6 +245,9 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
 			select {
 			case <-time.After(dur):
+				if s.config.RetainSchedules {
+					return
+				}
 				var err error
 				if sc.recovery != nil {
 					err = sc.recovery.delete(ctx)
