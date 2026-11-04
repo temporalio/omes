@@ -155,24 +155,15 @@ the command and is joined with any run error.
   "version": 1,
   "scenario": "workflow_with_single_noop_activity",
   "runId": "example",
-  "executionId": "0123456789abcdef",
-  "runFamily": "benchmark",
-  "configuration": {
-    "iterations": 2,
-    "maxConcurrent": 1,
-    "maxIterationsPerSecond": 0,
-    "maxIterationAttempts": 1,
-    "timeout": "30s"
-  },
-  "startedAt": "2026-01-02T03:04:05Z",
-  "endedAt": "2026-01-02T03:04:07Z",
-  "duration": "2s",
   "outcome": "failed",
   "error": "iteration 2 failed: workflow failed",
   "iterations": {"started": 2, "succeeded": 1, "failed": 1},
   "iterationFailures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}]
 }
 ```
+
+The document also carries `executionId`, `runFamily`, `configuration`, `startedAt`, `endedAt`,
+`duration` and, when the executor exposes one, `scenarioState`.
 
 `outcome` is `passed`, `failed`, `timedOut`, or `interrupted`. Times are RFC 3339; durations
 are Go duration strings. `configuration` records the generic executor's effective limits, including
