@@ -228,10 +228,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				var failed atomic.Int64
 				stats := &RunStatistics{}
 				if tc.cancelAfter > 0 {
-					go func() {
-						time.Sleep(tc.cancelAfter)
-						cancel()
-					}()
+					time.AfterFunc(tc.cancelAfter, cancel)
 				}
 				configuration := tc.configuration
 				configuration.Statistics = stats
