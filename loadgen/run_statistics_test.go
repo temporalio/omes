@@ -108,10 +108,10 @@ func TestGenericExecutorRunStatisticsCutShort(t *testing.T) {
 func TestRunStatisticsTruncatesErrors(t *testing.T) {
 	stats := &RunStatistics{}
 	stats.configure(RunConfiguration{})
-	long := strings.Repeat("é", maxIterationErrorBytes)
+	long := strings.Repeat("é", statisticsMaxErrorBytes)
 	stats.iterationFinished(1, 1, errors.New(long), false)
 	message := stats.Snapshot().Failures[0].Error
-	require.LessOrEqual(t, len(message), maxIterationErrorBytes+len("… (truncated)"))
+	require.LessOrEqual(t, len(message), statisticsMaxErrorBytes+len("… (truncated)"))
 	require.True(t, strings.HasSuffix(message, "… (truncated)"))
 	require.True(t, utf8.ValidString(message))
 }
