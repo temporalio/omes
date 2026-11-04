@@ -156,8 +156,9 @@ func TestRunCancellationWaitsForCallbacks(t *testing.T) {
 // retry is cut short, counts as failed.
 func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 	for _, tc := range []struct {
-		name               string
-		iterationError     error
+		name           string
+		iterationError error
+		// cancelWhileRunning cancels the run before the iteration returns.
 		cancelWhileRunning bool
 		// cancelInBackoff cancels the run this long after a failed attempt, during the retry backoff.
 		cancelInBackoff time.Duration
