@@ -156,27 +156,28 @@ func TestRunCancellationWaitsForCallbacks(t *testing.T) {
 // retry is cut short, counts as failed.
 func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 	for _, tc := range []struct {
-		name           string
-		iterationError error
-		stopRun        bool
-		cancelAfter    time.Duration
-		configuration  RunConfiguration
-		want           RunStatisticsSnapshot
+		name               string
+		iterationError     error
+		cancelWhileRunning bool
+		// cancelInBackoff cancels the run this long after a failed attempt, during the retry backoff.
+		cancelInBackoff time.Duration
+		configuration   RunConfiguration
+		want            RunStatisticsSnapshot
 	}{
 		{
-			name:           "context stop",
-			iterationError: context.Canceled,
-			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1},
+			name:               "context stop",
+			iterationError:     context.Canceled,
+			cancelWhileRunning: true,
+			configuration:      RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1},
 			},
 		},
 		{
-			name:           "service stop",
-			iterationError: fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
-			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1},
+			name:               "service stop",
+			iterationError:     fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
+			cancelWhileRunning: true,
+			configuration:      RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1},
 			},
@@ -191,10 +192,10 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			},
 		},
 		{
-			name:           "failure during stop",
-			iterationError: errors.New("workflow failed"),
-			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1},
+			name:               "failure during stop",
+			iterationError:     errors.New("workflow failed"),
+			cancelWhileRunning: true,
+			configuration:      RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
@@ -211,10 +212,10 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			},
 		},
 		{
-			name:           "interrupted retry",
-			iterationError: errors.New("transient failure"),
-			cancelAfter:    time.Millisecond,
-			configuration:  RunConfiguration{Iterations: 1, MaxIterationAttempts: 2},
+			name:            "interrupted retry",
+			iterationError:  errors.New("transient failure"),
+			cancelInBackoff: time.Millisecond,
+			configuration:   RunConfiguration{Iterations: 1, MaxIterationAttempts: 2},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
@@ -227,8 +228,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				defer cancel()
 				var failed atomic.Int64
 				stats := &RunStatistics{}
-				if tc.cancelAfter > 0 {
-					time.AfterFunc(tc.cancelAfter, cancel)
+				if tc.cancelInBackoff > 0 {
+					time.AfterFunc(tc.cancelInBackoff, cancel)
 				}
 				configuration := tc.configuration
 				configuration.Statistics = stats
@@ -238,7 +239,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 						if tc.configuration.Timeout > 0 {
 							<-ctx.Done()
 						}
-						if tc.stopRun {
+						if tc.cancelWhileRunning {
 							cancel()
 						}
 						return tc.iterationError
