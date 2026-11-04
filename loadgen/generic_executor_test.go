@@ -159,17 +159,73 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 		name           string
 		iterationError error
 		stopRun        bool
-		wantFailed     int
-		timeout        time.Duration
 		cancelAfter    time.Duration
-		maxAttempts    int
+		configuration  RunConfiguration
+		want           RunStatisticsSnapshot
 	}{
-		{"context stop", context.Canceled, true, 0, 0, 0, 0},
-		{"service stop", fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")), true, 0, 0, 0, 0},
-		{"service cancellation while running", serviceerror.NewCanceled("workflow canceled"), false, 1, 0, 0, 0},
-		{"failure during stop", errors.New("workflow failed"), true, 1, 0, 0, 0},
-		{"timeout", context.DeadlineExceeded, false, 1, time.Second, 0, 2},
-		{"interrupted retry", errors.New("transient failure"), false, 1, 0, time.Millisecond, 2},
+		{
+			name:           "context stop",
+			iterationError: context.Canceled,
+			stopRun:        true,
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+				Iterations:    &IterationCounts{Started: 1},
+			},
+		},
+		{
+			name:           "service stop",
+			iterationError: fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
+			stopRun:        true,
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+				Iterations:    &IterationCounts{Started: 1},
+			},
+		},
+		{
+			name:           "service cancellation while running",
+			iterationError: serviceerror.NewCanceled("workflow canceled"),
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+				Iterations:    &IterationCounts{Started: 1, Failed: 1},
+				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
+			},
+		},
+		{
+			name:           "failure during stop",
+			iterationError: errors.New("workflow failed"),
+			stopRun:        true,
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+				Iterations:    &IterationCounts{Started: 1, Failed: 1},
+				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
+			},
+		},
+		{
+			name:           "timeout",
+			iterationError: context.DeadlineExceeded,
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2, Timeout: time.Second},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2, Timeout: time.Second},
+				Iterations:    &IterationCounts{Started: 1, Failed: 1},
+				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
+				TimedOut:      true,
+			},
+		},
+		{
+			name:           "interrupted retry",
+			iterationError: errors.New("transient failure"),
+			cancelAfter:    time.Millisecond,
+			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2},
+			want: RunStatisticsSnapshot{
+				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2},
+				Iterations:    &IterationCounts{Started: 1, Failed: 1},
+				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
@@ -183,9 +239,12 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 						cancel()
 					}()
 				}
+				configuration := tc.configuration
+				configuration.Statistics = stats
+				configuration.OnIterationFailure = func(context.Context, *Run, error) { failed.Add(1) }
 				err := executeContext(ctx, &GenericExecutor{
 					Execute: func(ctx context.Context, _ *Run) error {
-						if tc.timeout > 0 {
+						if tc.configuration.Timeout > 0 {
 							<-ctx.Done()
 						}
 						if tc.stopRun {
@@ -193,27 +252,13 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 						}
 						return tc.iterationError
 					},
-				}, RunConfiguration{
-					Iterations:           1,
-					Timeout:              tc.timeout,
-					MaxIterationAttempts: tc.maxAttempts,
-					Statistics:           stats,
-					OnIterationFailure:   func(context.Context, *Run, error) { failed.Add(1) },
-				})
+				}, configuration)
 				require.Error(t, err)
-				require.EqualValues(t, tc.wantFailed, failed.Load())
+				require.Equal(t, tc.want.Iterations.Failed, failed.Load())
 				snapshot := stats.Snapshot()
-				require.Equal(t, &IterationCounts{Started: 1, Failed: int64(tc.wantFailed)}, snapshot.Iterations)
-				if tc.wantFailed == 0 {
-					require.Empty(t, snapshot.Failures)
-				} else {
-					outcome := "failed"
-					if tc.maxAttempts > 1 {
-						outcome = "encountered error"
-					}
-					require.Equal(t, []IterationFailure{{Iteration: 1, Attempt: 1,
-						Error: fmt.Sprintf("iteration 1 %s: %s", outcome, tc.iterationError)}}, snapshot.Failures)
-				}
+				snapshot.Configuration.Statistics = nil
+				snapshot.Configuration.OnIterationFailure = nil
+				require.Equal(t, tc.want, snapshot)
 			})
 		})
 	}
