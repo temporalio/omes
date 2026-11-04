@@ -155,42 +155,45 @@ func TestRunResultOutcomes(t *testing.T) {
 				defer cancel()
 				path := filepath.Join(t.TempDir(), "result.json")
 
-				err := withRunResult(ctx, clioptions.ScenarioID{
+				record := startRunResult(clioptions.ScenarioID{
 					Scenario: "test",
 					RunID:    "run",
 				}, scenarioRunConfig{
 					resultFile: path,
 					iterations: 1,
 					timeout:    tc.timeout,
-				}, func(result *runResult) error {
-					executor := &loadgen.GenericExecutor{Execute: func(ctx context.Context, _ *loadgen.Run) error {
-						if tc.cancel {
-							cancel()
-						}
-
-						if tc.timeout > 0 || tc.cancel {
-							<-ctx.Done()
-							return ctx.Err()
-						}
-
-						if tc.fail {
-							return errors.New("failed iteration")
-						}
-
-						return tc.iterationError
-					}}
-					result.executor = executor
-
-					return executor.Run(ctx, loadgen.ScenarioInfo{
-						Logger:         zap.NewNop().Sugar(),
-						MetricsHandler: client.MetricsNopHandler,
-						Configuration: loadgen.RunConfiguration{
-							Iterations: 1,
-							Timeout:    tc.timeout,
-							Statistics: result.statistics,
-						},
-					})
 				})
+				executionID, err := generateExecutionID()
+				require.NoError(t, err)
+				record.ExecutionID = executionID
+				executor := &loadgen.GenericExecutor{Execute: func(ctx context.Context, _ *loadgen.Run) error {
+					if tc.cancel {
+						cancel()
+					}
+
+					if tc.timeout > 0 || tc.cancel {
+						<-ctx.Done()
+						return ctx.Err()
+					}
+
+					if tc.fail {
+						return errors.New("failed iteration")
+					}
+
+					return tc.iterationError
+				}}
+				record.executor = executor
+
+				err = executor.Run(ctx, loadgen.ScenarioInfo{
+					Logger:         zap.NewNop().Sugar(),
+					MetricsHandler: client.MetricsNopHandler,
+					Configuration: loadgen.RunConfiguration{
+						Iterations: 1,
+						Timeout:    tc.timeout,
+						Statistics: record.statistics,
+					},
+				})
+				err = record.finish(ctx, err)
 
 				if tc.want == "passed" {
 					require.NoError(t, err)
@@ -241,10 +244,9 @@ func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 	for _, runErr := range []error{nil, errors.New("run failed")} {
 		path := filepath.Join(t.TempDir(), "missing", "result.json")
 
-		err := withRunResult(context.Background(), clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path}, func(result *runResult) error {
-			result.executor = &loadgen.GenericExecutor{}
-			return runErr
-		})
+		result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path})
+		result.executor = &loadgen.GenericExecutor{}
+		err := result.finish(context.Background(), runErr)
 
 		require.ErrorContains(t, err, "writing result file")
 
@@ -260,10 +262,9 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 
 	require.NoError(t, os.Mkdir(path, 0700))
 
-	err := withRunResult(context.Background(), clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path}, func(result *runResult) error {
-		result.executor = &loadgen.GenericExecutor{}
-		return nil
-	})
+	result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path})
+	result.executor = &loadgen.GenericExecutor{}
+	err := result.finish(context.Background(), nil)
 
 	require.ErrorContains(t, err, "writing result file")
 
@@ -285,14 +286,11 @@ func TestRunResultSnapshotAndOptions(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(path, []byte("old result"), 0600))
 
-	err := withRunResult(context.Background(), clioptions.ScenarioID{Scenario: "example"}, scenarioRunConfig{
-		resultFile: path,
-		duration:   3 * time.Second,
-	}, func(result *runResult) error {
-		result.executor = resultSnapshotExecutor{}
-		result.options = (&loadgen.Scenario{Options: func(o *loadgen.OptionSet) { o.Duration("sleep", 2*time.Second, "Sleep duration") }}).MustResolveOptions(nil)
-		return nil
-	})
+	record := startRunResult(clioptions.ScenarioID{Scenario: "example"}, scenarioRunConfig{resultFile: path})
+	record.Configuration = resultConfig(loadgen.RunConfiguration{Duration: 3 * time.Second})
+	record.executor = resultSnapshotExecutor{}
+	record.options = (&loadgen.Scenario{Options: func(o *loadgen.OptionSet) { o.Duration("sleep", 2*time.Second, "Sleep duration") }}).MustResolveOptions(nil)
+	err := record.finish(context.Background(), nil)
 
 	require.NoError(t, err)
 
@@ -345,18 +343,18 @@ func TestRunResultInvalidRate(t *testing.T) {
 	for _, rate := range []float64{math.NaN(), math.Inf(1)} {
 		path := filepath.Join(t.TempDir(), "result.json")
 
-		err := withRunResult(context.Background(), clioptions.ScenarioID{}, scenarioRunConfig{
+		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{
 			resultFile:             path,
 			maxIterationsPerSecond: rate,
-		}, func(result *runResult) error {
-			executor := &loadgen.GenericExecutor{}
-			result.executor = executor
-
-			return executor.Run(context.Background(), loadgen.ScenarioInfo{Configuration: loadgen.RunConfiguration{
-				MaxIterationsPerSecond: rate,
-				Statistics:             result.statistics,
-			}})
 		})
+		executor := &loadgen.GenericExecutor{}
+		record.executor = executor
+
+		err := executor.Run(context.Background(), loadgen.ScenarioInfo{Configuration: loadgen.RunConfiguration{
+			MaxIterationsPerSecond: rate,
+			Statistics:             record.statistics,
+		}})
+		err = record.finish(context.Background(), err)
 
 		require.ErrorContains(t, err, "invalid scenario")
 

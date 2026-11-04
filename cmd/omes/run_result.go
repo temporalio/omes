@@ -31,6 +31,7 @@ type runResult struct {
 	IterationFailures []loadgen.IterationFailure `json:"iterationFailures,omitempty"`
 	ScenarioState     json.RawMessage            `json:"scenarioState,omitempty"`
 
+	resultFile string
 	statistics *loadgen.RunStatistics
 	options    *loadgen.OptionSet
 	executor   loadgen.Executor
@@ -64,31 +65,25 @@ func resultConfig(configuration loadgen.RunConfiguration) resultConfiguration {
 	return result
 }
 
-func withRunResult(ctx context.Context, id clioptions.ScenarioID, config scenarioRunConfig, run func(*runResult) error) error {
+func startRunResult(id clioptions.ScenarioID, config scenarioRunConfig) *runResult {
 	result := &runResult{
-		Version:       1,
-		Scenario:      id.Scenario,
-		RunID:         id.RunID,
-		RunFamily:     id.RunFamily,
-		StartedAt:     time.Now().UTC(),
-		Configuration: resultConfig(config.configuration()),
+		Version:    1,
+		Scenario:   id.Scenario,
+		RunID:      id.RunID,
+		RunFamily:  id.RunFamily,
+		StartedAt:  time.Now().UTC(),
+		resultFile: config.resultFile,
 	}
 	if config.resultFile != "" {
 		result.statistics = &loadgen.RunStatistics{}
 	}
-	// Generate a random execution ID to ensure no two executions with the same RunID collide
-	executionID, err := generateExecutionID()
-	result.ExecutionID = executionID
-	if err == nil {
-		err = run(result)
-	}
-	if config.resultFile == "" || result.executor == nil {
-		return err
-	}
-	return errors.Join(err, result.finish(ctx, config.resultFile, err))
+	return result
 }
 
-func (r *runResult) finish(ctx context.Context, path string, runErr error) error {
+func (r *runResult) finish(ctx context.Context, runErr error) error {
+	if r.resultFile == "" || r.executor == nil {
+		return runErr
+	}
 	r.EndedAt = time.Now().UTC()
 	r.Duration = r.EndedAt.Sub(r.StartedAt).String()
 	snapshot := r.statistics.Snapshot()
@@ -125,7 +120,7 @@ func (r *runResult) finish(ctx context.Context, path string, runErr error) error
 			snapshotErr = fmt.Errorf("encoding scenario state: %w", snapshotErr)
 		}
 	}
-	return errors.Join(snapshotErr, r.write(path))
+	return errors.Join(runErr, snapshotErr, r.write(r.resultFile))
 }
 
 func (r *runResult) write(path string) error {

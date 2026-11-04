@@ -49,13 +49,10 @@ func (r *workerWithScenarioRunner) preRun() {
 	r.workerRunner.preRun()
 }
 
-func (r *workerWithScenarioRunner) run(ctx context.Context) error {
-	return withRunResult(ctx, r.ScenarioID, r.scenarioRunConfig, func(result *runResult) error {
-		return r.runWithWorker(ctx, result)
-	})
-}
+func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
+	result := startRunResult(r.ScenarioID, r.scenarioRunConfig)
+	defer func(ctx context.Context) { retErr = result.finish(ctx, retErr) }(ctx)
 
-func (r *workerWithScenarioRunner) runWithWorker(ctx context.Context, result *runResult) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -103,8 +100,9 @@ func (r *workerWithScenarioRunner) runWithWorker(ctx context.Context, result *ru
 		scenarioRunConfig: r.scenarioRunConfig,
 		clientOptions:     r.ClientOptions,
 		metricsOptions:    r.metricsOptions,
+		result:            result,
 	}
-	scenarioErr := scenarioRunner.runScenario(ctx, result)
+	scenarioErr := scenarioRunner.run(ctx)
 	cancel()
 
 	// Wait for worker complete
