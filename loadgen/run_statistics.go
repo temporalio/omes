@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	// maxIterationFailures bounds the failures kept for reporting; the failed count is not capped.
-	maxIterationFailures = 100
-	// maxIterationErrorBytes bounds each kept error message, so memory stays bounded however
+	// statisticsMaxFailures bounds the failures kept for reporting; the failed count is not capped.
+	statisticsMaxFailures = 100
+	// statisticsMaxErrorBytes bounds each kept error message, so memory stays bounded however
 	// long the errors are.
-	maxIterationErrorBytes = 1024
+	statisticsMaxErrorBytes = 1024
 )
 
 // IterationCounts counts each logical iteration once, regardless of retries.
@@ -89,7 +89,7 @@ func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, sto
 		s.state.Iterations.Succeeded++
 	} else {
 		s.state.Iterations.Failed++
-		if len(s.state.Failures) < maxIterationFailures {
+		if len(s.state.Failures) < statisticsMaxFailures {
 			s.state.Failures = append(s.state.Failures, IterationFailure{Iteration: iteration, Attempt: attempt, Error: truncate(err.Error())})
 		}
 	}
@@ -105,10 +105,10 @@ func (s *RunStatistics) runFinished(err error) {
 }
 
 func truncate(message string) string {
-	if len(message) <= maxIterationErrorBytes {
+	if len(message) <= statisticsMaxErrorBytes {
 		return message
 	}
-	cut := maxIterationErrorBytes
+	cut := statisticsMaxErrorBytes
 	for cut > 0 && !utf8.RuneStart(message[cut]) {
 		cut--
 	}
