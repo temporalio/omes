@@ -159,9 +159,9 @@ func TestRunResultOutcomes(t *testing.T) {
 					Scenario: "test",
 					RunID:    "run",
 				}, scenarioRunConfig{
-					resultFile: path,
-					iterations: 1,
-					timeout:    tc.timeout,
+					exportResultFile: path,
+					iterations:       1,
+					timeout:          tc.timeout,
 				})
 				executionID, err := generateExecutionID()
 				require.NoError(t, err)
@@ -221,7 +221,7 @@ func TestRunResultMissingOnInvalidInput(t *testing.T) {
 	for _, worker := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "result.json")
 		runner := newRunner("no_such_scenario")
-		runner.resultFile = path
+		runner.exportResultFile = path
 
 		var err error
 		if worker {
@@ -244,7 +244,7 @@ func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 	for _, runErr := range []error{nil, errors.New("run failed")} {
 		path := filepath.Join(t.TempDir(), "missing", "result.json")
 
-		result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path})
+		result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
 		result.executor = &loadgen.GenericExecutor{}
 		err := result.finish(context.Background(), runErr)
 
@@ -262,7 +262,7 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 
 	require.NoError(t, os.Mkdir(path, 0700))
 
-	result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{resultFile: path})
+	result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
 	result.executor = &loadgen.GenericExecutor{}
 	err := result.finish(context.Background(), nil)
 
@@ -286,7 +286,7 @@ func TestRunResultSnapshotAndOptions(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(path, []byte("old result"), 0600))
 
-	record := startRunResult(clioptions.ScenarioID{Scenario: "example"}, scenarioRunConfig{resultFile: path})
+	record := startRunResult(clioptions.ScenarioID{Scenario: "example"}, scenarioRunConfig{exportResultFile: path})
 	record.Configuration = resultConfig(loadgen.RunConfiguration{Duration: 3 * time.Second})
 	record.executor = resultSnapshotExecutor{}
 	record.options = (&loadgen.Scenario{Options: func(o *loadgen.OptionSet) { o.Duration("sleep", 2*time.Second, "Sleep duration") }}).MustResolveOptions(nil)
@@ -316,16 +316,16 @@ func TestRunResultSnapshotAndOptions(t *testing.T) {
 
 func TestResultFileFlags(t *testing.T) {
 	for _, cmd := range []*cobra.Command{runScenarioCmd(), runScenarioWithWorkerCmd()} {
-		require.NotNil(t, cmd.Flags().Lookup("result-file"))
+		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
 
-		require.NoError(t, cmd.ParseFlags([]string{"--result-file", "result.json"}))
+		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
 	}
 }
 
 func TestRunResultMissingOnConnectionFailure(t *testing.T) {
 	runner := newRunner("workflow_with_single_noop_activity")
 	runner.logger = zap.NewNop().Sugar()
-	runner.resultFile = filepath.Join(t.TempDir(), "result.json")
+	runner.exportResultFile = filepath.Join(t.TempDir(), "result.json")
 	runner.clientOptions.EnableTLS = true
 	runner.clientOptions.ClientCertPath = filepath.Join(t.TempDir(), "missing-cert")
 	runner.clientOptions.ClientKeyPath = filepath.Join(t.TempDir(), "missing-key")
@@ -334,7 +334,7 @@ func TestRunResultMissingOnConnectionFailure(t *testing.T) {
 
 	require.ErrorContains(t, err, "failed dialing")
 
-	_, statErr := os.Stat(runner.resultFile)
+	_, statErr := os.Stat(runner.exportResultFile)
 
 	require.ErrorIs(t, statErr, os.ErrNotExist)
 }
@@ -344,7 +344,7 @@ func TestRunResultInvalidRate(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "result.json")
 
 		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{
-			resultFile:             path,
+			exportResultFile:       path,
 			maxIterationsPerSecond: rate,
 		})
 		executor := &loadgen.GenericExecutor{}
@@ -371,7 +371,7 @@ func TestRunResultInvalidRate(t *testing.T) {
 }
 
 func TestRunResultMissingOnWorkerStartupFailure(t *testing.T) {
-	runner := workerWithScenarioRunner{scenarioRunConfig: scenarioRunConfig{resultFile: filepath.Join(t.TempDir(), "result.json")}}
+	runner := workerWithScenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: filepath.Join(t.TempDir(), "result.json")}}
 	runner.ScenarioID = clioptions.ScenarioID{
 		Scenario: "workflow_with_single_noop_activity",
 		RunID:    "test-run",
@@ -384,7 +384,7 @@ func TestRunResultMissingOnWorkerStartupFailure(t *testing.T) {
 
 	require.ErrorContains(t, err, "worker did not start")
 
-	_, statErr := os.Stat(runner.resultFile)
+	_, statErr := os.Stat(runner.exportResultFile)
 
 	require.ErrorIs(t, statErr, os.ErrNotExist)
 }

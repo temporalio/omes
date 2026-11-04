@@ -31,10 +31,10 @@ type runResult struct {
 	IterationFailures []loadgen.IterationFailure `json:"iterationFailures,omitempty"`
 	ScenarioState     json.RawMessage            `json:"scenarioState,omitempty"`
 
-	resultFile string
-	statistics *loadgen.RunStatistics
-	options    *loadgen.OptionSet
-	executor   loadgen.Executor
+	exportResultFile string
+	statistics       *loadgen.RunStatistics
+	options          *loadgen.OptionSet
+	executor         loadgen.Executor
 }
 
 type resultConfiguration struct {
@@ -67,21 +67,21 @@ func resultConfig(configuration loadgen.RunConfiguration) resultConfiguration {
 
 func startRunResult(id clioptions.ScenarioID, config scenarioRunConfig) *runResult {
 	result := &runResult{
-		Version:    1,
-		Scenario:   id.Scenario,
-		RunID:      id.RunID,
-		RunFamily:  id.RunFamily,
-		StartedAt:  time.Now().UTC(),
-		resultFile: config.resultFile,
+		Version:          1,
+		Scenario:         id.Scenario,
+		RunID:            id.RunID,
+		RunFamily:        id.RunFamily,
+		StartedAt:        time.Now().UTC(),
+		exportResultFile: config.exportResultFile,
 	}
-	if config.resultFile != "" {
+	if config.exportResultFile != "" {
 		result.statistics = &loadgen.RunStatistics{}
 	}
 	return result
 }
 
 func (r *runResult) finish(ctx context.Context, runErr error) error {
-	if r.resultFile == "" || r.executor == nil {
+	if r.exportResultFile == "" || r.executor == nil {
 		return runErr
 	}
 	r.EndedAt = time.Now().UTC()
@@ -120,7 +120,7 @@ func (r *runResult) finish(ctx context.Context, runErr error) error {
 			snapshotErr = fmt.Errorf("encoding scenario state: %w", snapshotErr)
 		}
 	}
-	return errors.Join(runErr, snapshotErr, r.write(r.resultFile))
+	return errors.Join(runErr, snapshotErr, r.write(r.exportResultFile))
 }
 
 func (r *runResult) write(path string) error {
