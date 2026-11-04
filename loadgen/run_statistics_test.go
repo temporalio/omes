@@ -31,21 +31,6 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 	})
 }
 
-func TestGenericExecutorRunStatisticsCancellation(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		stats := &RunStatistics{}
-		err := executeContext(ctx, &GenericExecutor{Execute: func(ctx context.Context, _ *Run) error {
-			cancel()
-			return ctx.Err()
-		}}, RunConfiguration{Iterations: 1, Statistics: stats})
-		require.ErrorIs(t, err, context.Canceled)
-		require.Equal(t, &IterationCounts{Started: 1}, stats.Snapshot().Iterations)
-		require.Empty(t, stats.Snapshot().Failures)
-	})
-}
-
 func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		stats := &RunStatistics{}
@@ -66,43 +51,6 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	require.Equal(t, DefaultMaxConcurrentIterations, snapshot.Configuration.MaxConcurrent)
 	require.Equal(t, DefaultMaxIterationAttempts, snapshot.Configuration.MaxIterationAttempts)
 	require.Equal(t, time.Duration(0), snapshot.Configuration.Duration)
-}
-
-// Statistics follow the executor's existing classification: an iteration that times out, or whose
-// retry is cut short, counts as failed.
-func TestGenericExecutorRunStatisticsCutShort(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		retry bool
-		error string
-	}{
-		{name: "timeout", error: "iteration 1 encountered error: context deadline exceeded"},
-		{name: "interrupted retry", retry: true, error: "iteration 1 encountered error: transient failure"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-				stats := &RunStatistics{}
-				if tc.retry {
-					go func() {
-						time.Sleep(time.Millisecond)
-						cancel()
-					}()
-				}
-				err := executeContext(ctx, &GenericExecutor{Execute: func(ctx context.Context, _ *Run) error {
-					if tc.retry {
-						return errors.New("transient failure")
-					}
-					<-ctx.Done()
-					return ctx.Err()
-				}}, RunConfiguration{Iterations: 1, Timeout: time.Second, MaxIterationAttempts: 2, Statistics: stats})
-				require.Error(t, err)
-				require.Equal(t, &IterationCounts{Started: 1, Failed: 1}, stats.Snapshot().Iterations)
-				require.Equal(t, []IterationFailure{{Iteration: 1, Attempt: stats.Snapshot().Failures[0].Attempt, Error: tc.error}}, stats.Snapshot().Failures)
-			})
-		})
-	}
 }
 
 func TestRunStatisticsTruncatesErrors(t *testing.T) {

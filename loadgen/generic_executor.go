@@ -190,7 +190,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 			// Mark it done only after callbacks and error reporting finish.
 			defer inFlight.Done()
 			var err error
-			var attempt int
 			iterStart := time.Now()
 
 			defer func() {
@@ -208,7 +207,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				stopping := ctx.Err() != nil && (errors.Is(iterErr, context.Canceled) ||
 					errors.As(iterErr, new(*serviceerror.Canceled)))
 
-				g.config.Statistics.iterationFinished(run.Iteration, attempt, iterErr, stopping)
+				g.config.Statistics.iterationFinished(run.Iteration, run.attemptCount, iterErr, stopping)
 
 				switch {
 				case stopping:
@@ -235,7 +234,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 
 		retryLoop:
 			for {
-				attempt++
 				err = g.executor.Execute(ctx, run)
 				if err != nil && g.config.HandleExecuteError != nil {
 					err = g.config.HandleExecuteError(ctx, run, err)

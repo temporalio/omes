@@ -152,36 +152,68 @@ func TestRunCancellationWaitsForCallbacks(t *testing.T) {
 	})
 }
 
+// Statistics follow the executor's existing classification: an iteration that times out, or whose
+// retry is cut short, counts as failed.
 func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		iterationError error
 		stopRun        bool
 		wantFailed     int
+		timeout        time.Duration
+		cancelAfter    time.Duration
+		maxAttempts    int
 	}{
-		{"context stop", context.Canceled, true, 0},
-		{"service stop", fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")), true, 0},
-		{"service cancellation while running", serviceerror.NewCanceled("workflow canceled"), false, 1},
-		{"failure during stop", errors.New("workflow failed"), true, 1},
+		{"context stop", context.Canceled, true, 0, 0, 0, 0},
+		{"service stop", fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")), true, 0, 0, 0, 0},
+		{"service cancellation while running", serviceerror.NewCanceled("workflow canceled"), false, 1, 0, 0, 0},
+		{"failure during stop", errors.New("workflow failed"), true, 1, 0, 0, 0},
+		{"timeout", context.DeadlineExceeded, false, 1, time.Second, 0, 2},
+		{"interrupted retry", errors.New("transient failure"), false, 1, 0, time.Millisecond, 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				var failed atomic.Int64
+				stats := &RunStatistics{}
+				if tc.cancelAfter > 0 {
+					go func() {
+						time.Sleep(tc.cancelAfter)
+						cancel()
+					}()
+				}
 				err := executeContext(ctx, &GenericExecutor{
-					Execute: func(context.Context, *Run) error {
+					Execute: func(ctx context.Context, _ *Run) error {
+						if tc.timeout > 0 {
+							<-ctx.Done()
+						}
 						if tc.stopRun {
 							cancel()
 						}
 						return tc.iterationError
 					},
 				}, RunConfiguration{
-					Iterations:         1,
-					OnIterationFailure: func(context.Context, *Run, error) { failed.Add(1) },
+					Iterations:           1,
+					Timeout:              tc.timeout,
+					MaxIterationAttempts: tc.maxAttempts,
+					Statistics:           stats,
+					OnIterationFailure:   func(context.Context, *Run, error) { failed.Add(1) },
 				})
 				require.Error(t, err)
 				require.EqualValues(t, tc.wantFailed, failed.Load())
+				snapshot := stats.Snapshot()
+				require.Equal(t, &IterationCounts{Started: 1, Failed: int64(tc.wantFailed)}, snapshot.Iterations)
+				if tc.wantFailed == 0 {
+					require.Empty(t, snapshot.Failures)
+				} else {
+					outcome := "failed"
+					if tc.maxAttempts > 1 {
+						outcome = "encountered error"
+					}
+					require.Equal(t, []IterationFailure{{Iteration: 1, Attempt: 1,
+						Error: fmt.Sprintf("iteration 1 %s: %s", outcome, tc.iterationError)}}, snapshot.Failures)
+				}
 			})
 		})
 	}
