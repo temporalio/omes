@@ -143,42 +143,47 @@ go run ./cmd/omes run-scenario-with-worker \
 
 ## Machine-readable run results
 
-Both `run-scenario` and `run-scenario-with-worker` accept `--result-file <path>`.
-Once scenario execution starts, omes atomically replaces that file with one JSON document on exit,
-including on failure, timeout, or SIGINT. Startup failures (such as bad flags, metrics setup, or
-connection setup) write no file. Consumers must treat a missing file as a failed run. Use a fresh path
-for each run or remove any previous file first. The parent directory must exist. A write error fails
-the command and is joined with any run error.
+Use `--result-file <path>` with `run-scenario` or `run-scenario-with-worker`:
 
 ```json
 {
   "version": 1,
   "scenario": "workflow_with_single_noop_activity",
   "runId": "example",
+  "executionId": "abc123",
+  "runFamily": "nightly",
+  "configuration": {
+    "iterations": 2,
+    "maxConcurrent": 1,
+    "maxIterationsPerSecond": 1,
+    "maxIterationAttempts": 1,
+    "timeout": "1m0s",
+    "continueOnIterationFailure": true,
+    "options": {"sleep": "1s"}
+  },
+  "startedAt": "2026-01-02T03:04:05Z",
+  "endedAt": "2026-01-02T03:04:14Z",
+  "duration": "9s",
   "outcome": "failed",
   "error": "iteration 2 failed: workflow failed",
   "iterations": {"started": 2, "succeeded": 1, "failed": 1},
-  "iterationFailures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}]
+  "iterationFailures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}],
+  "scenarioState": {"completed": 1}
 }
 ```
 
-The document also carries `executionId`, `runFamily`, `configuration`, `startedAt`, `endedAt`,
-`duration` and, when the executor exposes one, `scenarioState`.
-
-`outcome` is `passed`, `failed`, `timedOut`, or `interrupted`. Times are RFC 3339; durations
-are Go duration strings. `configuration` records the generic executor's effective limits, including
-defaults; duration-based runs use `duration` instead of `iterations`. Resolved scenario options,
-including their defaults, appear as string values in `configuration.options`.
-An invalid non-finite rate is recorded as `null`.
-
-`runFamily` and `error` are omitted when unset. `iterations` is omitted when no generic executor
-tracked the run. Counts cover the primary load, excluding independent operator load. They represent
-logical iterations rather than attempts, classified as in the run's own log: iterations cancelled
-because the run is stopping are excluded from succeeded/failed, while an iteration that times out
-counts as failed. `iterationFailures` contains up to 100 terminal failures after retries, with
-one-based iteration and attempt numbers and each message capped at 1 KiB, and is omitted when
-empty. The total failed count remains uncapped. Executors exposing `Snapshot() any` add their
-JSON snapshot under `scenarioState`; its shape is scenario-specific.
+- Written atomically on exit after execution starts; missing files mean failure. Use fresh paths
+  with existing parent directories. Write errors fail commands.
+- Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
+  `interrupted` was cancelled.
+- Configuration records effective limits/options. `"duration": "30s"` replaces mutually exclusive
+  `iterations`. Times: RFC 3339; durations: Go syntax.
+- Counts match run logs: primary-load logical iterations, excluding attempts/operator load;
+  cancelled-on-stop iterations are excluded from succeeded/failed counts.
+- Retain up to 100 terminal failures after retries; messages keep at most 1 KiB plus a truncation
+  marker. Failed counts stay uncapped.
+- Omit unset `runFamily`/`error`, empty `iterationFailures`/`options`, false `continueOnIterationFailure`,
+  unset configuration `iterations`/`duration`, untracked `iterations`, and unsupported `scenarioState`.
 
 ## Worker configuration
 

@@ -44,6 +44,7 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
+	result         *runResult
 }
 
 type scenarioRunConfig struct {
@@ -145,13 +146,13 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 	return scenario, resolvedOptions, nil
 }
 
-func (r *scenarioRunner) run(ctx context.Context) error {
-	return withRunResult(ctx, r.scenario, r.scenarioRunConfig, func(result *runResult) error {
-		return r.runScenario(ctx, result)
-	})
-}
+func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
+	result := r.result
+	if result == nil {
+		result = startRunResult(r.scenario, r.scenarioRunConfig)
+		defer func() { retErr = result.finish(ctx, retErr) }()
+	}
 
-func (r *scenarioRunner) runScenario(ctx context.Context, result *runResult) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
 		return err
@@ -191,24 +192,42 @@ func (r *scenarioRunner) runScenario(ctx context.Context, result *runResult) err
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	// Generate a random execution ID to ensure no two executions with the same RunID collide
+	executionID, err := generateExecutionID()
+	if err != nil {
+		return fmt.Errorf("failed to generate execution ID: %w", err)
+	}
+	result.ExecutionID = executionID
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
-		ExecutionID:    result.ExecutionID,
+		ExecutionID:    executionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
 		ClientOptions:  r.clientOptions,
-		Configuration:  r.configuration(),
-		Options:        resolvedOptions,
-		Namespace:      r.clientOptions.Namespace,
-		RootPath:       repoDir,
+		Configuration: loadgen.RunConfiguration{
+			Iterations:                    r.iterations,
+			Duration:                      r.duration,
+			MaxConcurrent:                 r.maxConcurrent,
+			MaxIterationsPerSecond:        r.maxIterationsPerSecond,
+			MaxIterationAttempts:          r.maxIterationAttempts,
+			Timeout:                       r.timeout,
+			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
+			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
+			ContinueOnIterationFailure:    r.continueOnIterationFailure,
+			Statistics:                    result.statistics,
+		},
+		Options:   resolvedOptions,
+		Namespace: r.clientOptions.Namespace,
+		RootPath:  repoDir,
 		ExportOptions: loadgen.ExportOptions{
 			ExportHistoriesDir:    r.exportHistoriesDir,
 			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
-	scenarioInfo.Configuration.Statistics = result.statistics
+	result.Configuration = resultConfig(scenarioInfo.Configuration)
 	executor := scenario.ExecutorFn()
 	result.executor = executor
 	err = executor.Run(ctx, scenarioInfo)
@@ -220,18 +239,4 @@ func (r *scenarioRunner) runScenario(ctx context.Context, result *runResult) err
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
-}
-
-func (r *scenarioRunConfig) configuration() loadgen.RunConfiguration {
-	return loadgen.RunConfiguration{
-		Iterations:                    r.iterations,
-		Duration:                      r.duration,
-		MaxConcurrent:                 r.maxConcurrent,
-		MaxIterationsPerSecond:        r.maxIterationsPerSecond,
-		MaxIterationAttempts:          r.maxIterationAttempts,
-		Timeout:                       r.timeout,
-		DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-		IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
-		ContinueOnIterationFailure:    r.continueOnIterationFailure,
-	}
 }
