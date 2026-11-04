@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -63,6 +64,7 @@ type scenarioRunConfig struct {
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
 	exportResultFile              string
+	exportResultInterval          time.Duration
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -95,6 +97,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
 	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
+	fs.DurationVar(&r.exportResultInterval, "export-result-interval", 0, "Rewrite the result file with running snapshots at this interval (0 writes only on exit; requires --export-result-file)")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -117,6 +120,10 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, loadgen.NewUsageError("--iterations and --duration cannot be combined; " +
 			"use --iterations to run a fixed number of times, or --duration to keep starting " +
 			"iterations for a period")
+	} else if r.exportResultInterval < 0 {
+		return nil, nil, loadgen.NewUsageError("--export-result-interval must not be negative")
+	} else if r.exportResultInterval > 0 && r.exportResultFile == "" {
+		return nil, nil, loadgen.NewUsageError("--export-result-interval requires --export-result-file")
 	}
 
 	// Parse options
@@ -254,9 +261,12 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	}
 	executor := scenario.ExecutorFn()
 	if r.exportResultFile != "" {
+		// Write scenario state to export
 		r.state = scenarioState(executor)
 	}
-	err = executor.Run(ctx, scenarioInfo)
+	stop := r.writeRunningSnapshots(r.currentState)
+	defer stop()
+	err = errors.Join(executor.Run(ctx, scenarioInfo), stop())
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
@@ -279,6 +289,36 @@ func scenarioState(executor loadgen.Executor) func() any {
 		return state.Snapshot
 	}
 	return func() any { return nil }
+}
+
+func (r *scenarioRunner) writeRunningSnapshots(state func() any) func() error {
+	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
+		return func() error { return nil }
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := time.NewTicker(r.exportResultInterval)
+	var wg sync.WaitGroup
+	var snapshotErr error
+	wg.Go(func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				result := newRunResult(runEnd{}, r.snapshotCounts(), state())
+				if snapshotErr = result.write(r.exportResultFile); snapshotErr != nil {
+					return
+				}
+			}
+		}
+	})
+	return func() error {
+		cancel()
+		// Wait for any in-flight snapshot before the final writer can run.
+		wg.Wait()
+		return snapshotErr
+	}
 }
 
 func (r *scenarioRunner) snapshotCounts() loadgen.RunCounts {
