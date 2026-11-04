@@ -182,9 +182,10 @@ An invalid non-finite rate is recorded as `null`.
 
 `runFamily` and `error` are omitted when unset. `iterations` is omitted when no generic executor
 tracked the run. Counts cover the primary load, excluding independent operator load. They represent
-logical iterations rather than attempts; iterations abandoned on cancellation or timeout are excluded
-from succeeded/failed counts. `iterationFailures` contains up to 100
-terminal failures after retries, with one-based iteration and attempt numbers, and is omitted when
+logical iterations rather than attempts, classified as in the run's own log: iterations cancelled
+because the run is stopping are excluded from succeeded/failed, while an iteration that times out
+counts as failed. `iterationFailures` contains up to 100 terminal failures after retries, with
+one-based iteration and attempt numbers and each message capped at 1 KiB, and is omitted when
 empty. The total failed count remains uncapped. Executors exposing `Snapshot() any` add their
 JSON snapshot under `scenarioState`; its shape is scenario-specific.
 
