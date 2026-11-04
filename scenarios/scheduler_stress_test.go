@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/api/serviceerror"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -101,6 +105,38 @@ func TestSchedulerStress(t *testing.T) {
 		require.Contains(t, err.Error(), "creating schedule")
 	})
 
+	t.Run("cleanup deletes schedules unless retained", func(t *testing.T) {
+		for _, retain := range []bool{false, true} {
+			t.Run(fmt.Sprintf("retain=%t", retain), func(t *testing.T) {
+				info := scenarioInfo(fmt.Sprintf("sched-retain-%d", time.Now().UnixNano()), map[string]string{
+					RetainSchedulesFlag:       strconv.FormatBool(retain),
+					WaitTimeBeforeCleanupFlag: "0s",
+				})
+				schedules := &createdSchedules{ScheduleClient: env.TemporalClient().ScheduleClient()}
+				info.Client = scheduleRecordingClient{Client: env.TemporalClient(), schedules: schedules}
+				info.Logger = zaptest.NewLogger(t).Sugar()
+				start := time.Now()
+
+				require.NoError(t, new(SchedulerExecutor).Execute(t.Context(), info.NewRun(1)))
+
+				require.Len(t, schedules.ids, 2)
+				for _, id := range schedules.ids {
+					handle := env.TemporalClient().ScheduleClient().GetHandle(t.Context(), id)
+					description, err := handle.Describe(t.Context())
+					if !retain {
+						var notFound *serviceerror.NotFound
+						require.ErrorAs(t, err, &notFound)
+						continue
+					}
+					require.NoError(t, err)
+					t.Cleanup(func() { _ = handle.Delete(context.Background()) })
+					end := description.Schedule.Spec.EndAt
+					require.True(t, end.After(start) && end.Before(start.Add(4*time.Second)), "retained schedule must stay finite, EndAt %v", end)
+				}
+			})
+		}
+	})
+
 	t.Run("a stopped iteration reads as canceled, not failed", func(t *testing.T) {
 		// GenericExecutor keys abandoned-vs-failed off errors.Is(err,
 		// context.Canceled), which the operations' own gRPC errors do not satisfy.
@@ -115,4 +151,25 @@ func TestSchedulerStress(t *testing.T) {
 		require.Error(t, err)
 		require.ErrorIs(t, err, context.Canceled)
 	})
+}
+
+// scheduleRecordingClient exposes the IDs the executor creates, which it generates randomly.
+type scheduleRecordingClient struct {
+	client.Client
+	schedules *createdSchedules
+}
+
+func (c scheduleRecordingClient) ScheduleClient() client.ScheduleClient { return c.schedules }
+
+type createdSchedules struct {
+	client.ScheduleClient
+	mu  sync.Mutex
+	ids []string
+}
+
+func (s *createdSchedules) Create(ctx context.Context, options client.ScheduleOptions) (client.ScheduleHandle, error) {
+	s.mu.Lock()
+	s.ids = append(s.ids, options.ID)
+	s.mu.Unlock()
+	return s.ScheduleClient.Create(ctx, options)
 }
