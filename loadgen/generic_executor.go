@@ -49,6 +49,7 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	// This lets the caller decide when to stop the load.
 	useDefaultIterationLimit := g.StopNewIterations == nil
 	info.Configuration.applyDefaults(useDefaultIterationLimit)
+	info.Configuration.Statistics.configure(info.Configuration)
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
@@ -72,6 +73,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	// On exit, cancel unfinished work and wait for cleanup and completion callbacks.
 	// Add errors from canceled tests to the returned error after waiting for cleanup.
 	defer func() {
+		g.config.Statistics.runFinished(ctx.Err())
 		cancelRun()
 		// Callers read final counters as soon as Run returns.
 		inFlight.Wait()
@@ -180,6 +182,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
+		g.config.Statistics.iterationStarted()
 		run := g.info.NewRun(i + 1)
 		// Count the test before launching it so shutdown waits for it.
 		inFlight.Add(1)
@@ -187,6 +190,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 			// Mark it done only after callbacks and error reporting finish.
 			defer inFlight.Done()
 			var err error
+			var attempt int
 			iterStart := time.Now()
 
 			defer func() {
@@ -201,8 +205,10 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				// Both conditions are needed: the run's context is also done once a
 				// run simply finishes, and an iteration can fail with its own
 				// cancellation while the run is healthy.
-				stopping := ctx.Err() != nil && (errors.Is(iterErr, context.Canceled) ||
+				stopping := ctx.Err() != nil && (errors.Is(iterErr, ctx.Err()) || errors.Is(iterErr, context.Canceled) ||
 					errors.As(iterErr, new(*serviceerror.Canceled)))
+
+				g.config.Statistics.iterationFinished(run.Iteration, attempt, iterErr, stopping)
 
 				switch {
 				case stopping:
@@ -229,6 +235,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 
 		retryLoop:
 			for {
+				attempt++
 				err = g.executor.Execute(ctx, run)
 				if err != nil && g.config.HandleExecuteError != nil {
 					err = g.config.HandleExecuteError(ctx, run, err)
@@ -250,6 +257,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				case <-time.After(backoff):
 					// wait for backoff, then try again
 				case <-ctx.Done():
+					err = ctx.Err()
 					break retryLoop
 				}
 			}
