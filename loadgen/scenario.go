@@ -396,6 +396,8 @@ type Run struct {
 
 	// tracks how many attempts have been made for this iteration
 	attemptCount int
+
+	kitchenSinkExecution *kitchenSinkExecution
 }
 
 // NewRun creates a new run.
@@ -529,17 +531,24 @@ type KitchenSinkWorkflowOptions struct {
 // completion ignoring its result. Concurrently it will perform any client actions specified in
 // kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	return r.executeKitchenSinkWorkflow(ctx, options, r.newClientActionsExecutor(options))
+}
 
-	executor := &kitchensink.ClientActionsExecutor{
+func (r *Run) newClientActionsExecutor(options *KitchenSinkWorkflowOptions) *kitchensink.ClientActionsExecutor {
+	return &kitchensink.ClientActionsExecutor{
 		Client:          r.Client,
 		Namespace:       r.Namespace,
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
 	}
+}
+
+func (r *Run) executeKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions, executor *kitchensink.ClientActionsExecutor) error {
+	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	startErr := executor.Start(ctx, options.Params.WithStartAction)
 	if startErr != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)
