@@ -211,6 +211,10 @@ func TestRunResultOutcomes(t *testing.T) {
 }
 
 func TestRunResultRunningSnapshots(t *testing.T) {
+	synctest.Test(t, testRunResultRunningSnapshots)
+}
+
+func testRunResultRunningSnapshots(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "result.json")
 	record := startRunResult(clioptions.ScenarioID{Scenario: "test", RunID: "run"}, scenarioRunConfig{exportResultFile: path})
 	started := make(chan int)
@@ -234,6 +238,7 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 		return nil
 	}}
 	record.executor = executor
+	record.startSnapshots(time.Second)
 	done := make(chan error, 1)
 	go func() {
 		done <- executor.Run(ctx, loadgen.ScenarioInfo{
@@ -255,7 +260,8 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 	} {
 		require.Equal(t, i+1, <-started)
 		for range 2 {
-			require.NoError(t, record.write("running", nil))
+			time.Sleep(time.Second)
+			synctest.Wait()
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
 			var fields map[string]json.RawMessage
@@ -280,6 +286,70 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 	require.NotZero(t, result.EndedAt)
 	require.NotEmpty(t, result.Duration)
 	require.Len(t, result.IterationFailures, 1)
+	final := append([]byte(nil), data...)
+	time.Sleep(10 * time.Second)
+	synctest.Wait()
+	data, err = os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, final, data)
+}
+
+type blockingResultSnapshotExecutor struct {
+	resultSnapshotExecutor
+	entered chan struct{}
+	release chan struct{}
+	blocked bool
+}
+
+func (e *blockingResultSnapshotExecutor) Snapshot() any {
+	if !e.blocked {
+		e.blocked = true
+		close(e.entered)
+		<-e.release
+	}
+	return nil
+}
+
+func TestRunResultFinalWriteWaitsForSnapshot(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "result.json")
+		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
+		executor := &blockingResultSnapshotExecutor{entered: make(chan struct{}), release: make(chan struct{})}
+		record.executor = executor
+		record.startSnapshots(time.Second)
+		time.Sleep(time.Second)
+		<-executor.entered
+		done := make(chan error, 1)
+		go func() { done <- record.finish(context.Background(), nil) }()
+		synctest.Wait()
+		select {
+		case <-done:
+			t.Fatal("final write did not wait for the running snapshot")
+		default:
+		}
+		close(executor.release)
+		require.NoError(t, <-done)
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		var result runResult
+		require.NoError(t, json.Unmarshal(data, &result))
+		require.Equal(t, "passed", result.Outcome)
+	})
+}
+
+func TestRunResultSnapshotIntervalDisabled(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "result.json")
+		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
+		record.executor = resultSnapshotExecutor{}
+		record.startSnapshots(0)
+		time.Sleep(time.Hour)
+		synctest.Wait()
+		_, err := os.Stat(path)
+		require.ErrorIs(t, err, os.ErrNotExist)
+		require.NoError(t, record.finish(context.Background(), nil))
+		require.FileExists(t, path)
+	})
 }
 
 func TestRunResultMissingOnInvalidInput(t *testing.T) {
@@ -317,6 +387,23 @@ func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 			require.ErrorIs(t, err, runErr)
 		}
 	}
+}
+
+func TestRunResultSnapshotErrorPreservesRunError(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "missing", "result.json")
+		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
+		record.executor = resultSnapshotExecutor{}
+		record.startSnapshots(time.Second)
+		time.Sleep(time.Second)
+		synctest.Wait()
+		require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
+		runErr := errors.New("run failed")
+		err := record.finish(context.Background(), runErr)
+		require.ErrorIs(t, err, runErr)
+		require.ErrorContains(t, err, "writing result file")
+		require.FileExists(t, path)
+	})
 }
 
 func TestRunResultRenameFailureCleansUp(t *testing.T) {
@@ -380,7 +467,7 @@ func TestResultFileFlags(t *testing.T) {
 	for _, cmd := range []*cobra.Command{runScenarioCmd(), runScenarioWithWorkerCmd()} {
 		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
 
-		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
+		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json", "--export-result-interval", "1s"}))
 	}
 }
 

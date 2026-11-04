@@ -242,6 +242,7 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 
 - Written atomically on exit after execution starts; missing files mean failure. Use fresh paths
   with existing parent directories. Write errors fail commands.
+- Add `--export-result-interval 5s` to write cumulative `running` snapshots every 5 seconds; the default `0` writes only on exit.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
   `interrupted` was cancelled.
 - The file may be rewritten during a run; only a non-`running` outcome is final. Counts are cumulative

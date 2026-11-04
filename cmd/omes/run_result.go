@@ -35,6 +35,7 @@ type runResult struct {
 	statistics       *loadgen.RunStatistics
 	options          *loadgen.OptionSet
 	executor         loadgen.Executor
+	stopSnapshots    func() error
 }
 
 type resultConfiguration struct {
@@ -80,7 +81,40 @@ func startRunResult(id clioptions.ScenarioID, config scenarioRunConfig) *runResu
 	return result
 }
 
+func (r *runResult) startSnapshots(interval time.Duration) {
+	if r.exportResultFile == "" || interval <= 0 {
+		return
+	}
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	var snapshotErr error
+	r.stopSnapshots = func() error {
+		close(stop)
+		<-done
+		return snapshotErr
+	}
+	ticker := time.NewTicker(interval)
+	go func() {
+		defer close(done)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-ticker.C:
+				if snapshotErr = r.write("running", nil); snapshotErr != nil {
+					return
+				}
+			}
+		}
+	}()
+}
+
 func (r *runResult) finish(ctx context.Context, runErr error) error {
+	if r.stopSnapshots != nil {
+		runErr = errors.Join(runErr, r.stopSnapshots())
+		r.stopSnapshots = nil
+	}
 	if r.exportResultFile == "" || r.executor == nil {
 		return runErr
 	}
