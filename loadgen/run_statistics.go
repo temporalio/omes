@@ -49,13 +49,17 @@ type RunStatisticsSnapshot struct {
 func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snapshot := s.state
-	snapshot.Failures = slices.Clone(s.state.Failures)
-	if s.state.Iterations != nil {
-		counts := *s.state.Iterations
-		snapshot.Iterations = &counts
+	return s.state.clone()
+}
+
+// clone copies the snapshot so callers can't alias the collector's counts or failures.
+func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
+	s.Failures = slices.Clone(s.Failures)
+	if s.Iterations != nil {
+		counts := *s.Iterations
+		s.Iterations = &counts
 	}
-	return snapshot
+	return s
 }
 
 func (s *RunStatistics) configure(configuration RunConfiguration) {
