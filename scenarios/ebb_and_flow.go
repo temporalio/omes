@@ -230,7 +230,11 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 			config.MinBacklog, config.MaxBacklog, config.Period, e.Configuration.Duration)
 	}
 
-	e.RegisterDefaultSearchAttributes(ctx)
+	if !e.Configuration.DoNotRegisterSearchAttributes {
+		if err := e.RegisterDefaultSearchAttributes(ctx); err != nil {
+			return err
+		}
+	}
 
 	var started, completed, backlog, target int64
 	lastIteration := time.Now()
@@ -374,10 +378,11 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	// Wait for workflow completion
 	var result ebbandflow.WorkflowOutput
 	err = wf.Get(ctx, &result)
-	if err != nil {
-		e.Logger.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %v", iteration, err)
-	}
+	// Failed batches must also leave the controller's backlog.
 	e.completedActivities.Add(activities)
+	if err != nil {
+		return fmt.Errorf("ebbAndFlowTrack workflow failed for iteration %d: %w", iteration, err)
+	}
 	e.incrementTotalCompletedWorkflow()
 
 	return nil

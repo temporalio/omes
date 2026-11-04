@@ -1,14 +1,22 @@
 package scenarios
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/internal/workertest"
 	"github.com/temporalio/omes/loadgen"
+	"go.temporal.io/api/operatorservicemock/v1"
+	"go.temporal.io/api/serviceerror"
+	sdkmocks "go.temporal.io/sdk/mocks"
+	"go.uber.org/zap"
 )
 
 func TestEbbAndFlowRateMode(t *testing.T) {
@@ -145,4 +153,57 @@ func TestEbbAndFlow(t *testing.T) {
 		_, err = env.RunExecutorTest(t, executor, resumeScenarioInfo, clioptions.LangGo)
 		require.NoError(t, err, "Executor should complete successfully")
 	})
+}
+
+func TestEbbAndFlowRegistration(t *testing.T) {
+	for _, skip := range []bool{false, true} {
+		t.Run(fmt.Sprintf("skip=%v", skip), func(t *testing.T) {
+			cause := serviceerror.NewPermissionDenied("registration forbidden", "")
+			temporalClient := &sdkmocks.Client{}
+			if !skip {
+				operatorClient := operatorservicemock.NewMockOperatorServiceClient(gomock.NewController(t))
+				operatorClient.EXPECT().AddSearchAttributes(gomock.Any(), gomock.Any()).Return(nil, cause)
+				temporalClient.On("OperatorService").Return(operatorClient)
+			}
+			info := loadgen.ScenarioInfo{
+				Client:        temporalClient,
+				Logger:        zap.NewNop().Sugar(),
+				Configuration: loadgen.RunConfiguration{DoNotRegisterSearchAttributes: skip},
+				Options:       loadgen.MustResolveScenarioOptions("ebb_and_flow", nil),
+			}
+			err := newEbbAndFlowExecutor().Run(t.Context(), info)
+			if skip {
+				require.ErrorContains(t, err, "No iterations completed")
+			} else {
+				require.ErrorIs(t, err, cause)
+			}
+		})
+	}
+}
+
+func TestEbbAndFlowWorkflowAccounting(t *testing.T) {
+	cause := errors.New("workflow failed")
+	for _, tc := range []struct {
+		name      string
+		err       error
+		completed int64
+	}{{name: "success", completed: 1}, {name: "failure", err: cause}} {
+		t.Run(tc.name, func(t *testing.T) {
+			workflowRun := &sdkmocks.WorkflowRun{}
+			workflowRun.On("Get", mock.Anything, mock.Anything).Return(tc.err)
+			temporalClient := &sdkmocks.Client{}
+			temporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, "ebbAndFlowTrack", mock.Anything).Return(workflowRun, nil)
+			executor := newEbbAndFlowExecutor()
+			executor.ScenarioInfo = loadgen.ScenarioInfo{Client: temporalClient, Logger: zap.NewNop().Sugar()}
+			err := executor.spawnWorkflowWithActivities(context.Background(), 1, 3, &loadgen.SleepActivityConfig{})
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tc.completed, executor.Snapshot().(ebbAndFlowState).TotalCompletedWorkflows)
+			require.Equal(t, int64(3), executor.scheduledActivities.Load())
+			require.Equal(t, int64(3), executor.completedActivities.Load())
+		})
+	}
 }

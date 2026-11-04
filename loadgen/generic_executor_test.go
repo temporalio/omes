@@ -14,6 +14,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type iterationTracker struct {
@@ -666,4 +667,36 @@ func TestExecutorRetriesLimit(t *testing.T) {
 		require.Contains(t, err.Error(), "persistent failure")
 		require.Equal(t, []int{1, 1, 1, 1, 1}, totalTracker.seen, "expected 5 attempts")
 	})
+}
+
+func TestRunTerminalFailureReporting(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		tolerate, callback bool
+		wantLogs           int
+	}{
+		{name: "propagated"},
+		{name: "tolerated without callback", tolerate: true, wantLogs: 1},
+		{name: "tolerated with callback", tolerate: true, callback: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			core, logs := observer.New(zap.DebugLevel)
+			cause := errors.New("terminal failure cause")
+			config := RunConfiguration{Iterations: 1, MaxConcurrent: 1, MaxIterationAttempts: 1, ContinueOnIterationFailure: tc.tolerate}
+			var callbackErr error
+			if tc.callback {
+				config.OnIterationFailure = func(_ context.Context, _ *Run, err error) { callbackErr = err }
+			}
+			executor := GenericExecutor{Execute: func(context.Context, *Run) error { return cause }}
+			err := executor.Run(t.Context(), ScenarioInfo{Configuration: config, MetricsHandler: client.MetricsNopHandler, Logger: zap.New(core).Sugar()})
+			require.Error(t, err)
+			if !tc.tolerate {
+				require.ErrorIs(t, err, cause)
+			}
+			if tc.callback {
+				require.ErrorIs(t, callbackErr, cause)
+			}
+			require.Equal(t, tc.wantLogs, logs.FilterMessageSnippet(cause.Error()).Len())
+		})
+	}
 }

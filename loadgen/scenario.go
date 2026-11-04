@@ -422,24 +422,11 @@ func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) erro
 		},
 		Namespace: s.Namespace,
 	})
-	// Throw an error if the attributes could not be registered, but ignore already exists errs
-	alreadyExistsStrings := []string{
-		"already exists",
-		"attributes mapping unavailble",
+	var alreadyExists *serviceerror.AlreadyExists
+	if err == nil || errors.As(err, &alreadyExists) || status.Code(err) == codes.AlreadyExists {
+		return nil
 	}
-	if err != nil {
-		isAlreadyExistsErr := false
-		for _, s := range alreadyExistsStrings {
-			if strings.Contains(err.Error(), s) {
-				isAlreadyExistsErr = true
-				break
-			}
-		}
-		if !isAlreadyExistsErr {
-			return fmt.Errorf("failed to register search attributes: %w", err)
-		}
-	}
-	return nil
+	return fmt.Errorf("failed to register search attributes: %w", err)
 }
 
 // TaskQueueForRun returns the task queue name for the given run ID.
@@ -565,25 +552,23 @@ func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSi
 			err := executor.ExecuteClientSequence(cancelCtx, clientSeq)
 			if err != nil {
 				clientActionsErrPtr.Store(&err)
-				r.Logger.Error("Client actions failed: ", clientActionsErrPtr)
 				cancel()
 
 				// TODO: Remove or change to "always terminate when exiting early" flag
-				err := r.Client.TerminateWorkflow(
-					ctx, options.StartOptions.ID, "", "client actions failed", nil)
-				if err != nil {
-					return
+				if terminateErr := r.Client.TerminateWorkflow(
+					ctx, options.StartOptions.ID, "", "client actions failed", nil); terminateErr != nil {
+					r.Logger.Errorf("Failed to terminate workflow after client actions failure: %v", terminateErr)
 				}
 			}
 		}()
 	}
 
 	executeErr := executor.Handle.Get(cancelCtx, nil)
-	if executeErr != nil {
-		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
-	}
 	if clientActionsErr := clientActionsErrPtr.Load(); clientActionsErr != nil {
 		return fmt.Errorf("kitchen sink client actions failed: %w", *clientActionsErr)
+	}
+	if executeErr != nil {
+		return fmt.Errorf("failed to execute kitchen sink workflow: %w", executeErr)
 	}
 	return nil
 }
