@@ -143,7 +143,7 @@ go run ./cmd/omes run-scenario-with-worker \
 
 ## Machine-readable run results
 
-Use `--result-file <path>` with `run-scenario` or `run-scenario-with-worker`:
+Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-worker`:
 
 ```json
 {

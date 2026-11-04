@@ -60,7 +60,7 @@ type scenarioRunConfig struct {
 	exportHistoriesDir            string
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
-	resultFile                    string
+	exportResultFile              string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -92,7 +92,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
-	fs.StringVar(&r.resultFile, "result-file", "", "Write the run result as JSON to this path on exit")
+	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
 }
 
 func (r *scenarioRunner) preRun() {
