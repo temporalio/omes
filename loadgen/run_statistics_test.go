@@ -54,6 +54,7 @@ func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	stats := &RunStatistics{}
 	require.Equal(t, RunStatisticsSnapshot{}, stats.Snapshot())
+
 	require.NoError(t, execute(&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }}, RunConfiguration{Statistics: stats}))
 
 	snapshot := stats.Snapshot()
