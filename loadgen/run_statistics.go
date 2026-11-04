@@ -8,6 +8,14 @@ import (
 	"unicode/utf8"
 )
 
+const (
+	// maxIterationFailures bounds the failures kept for reporting; the failed count is not capped.
+	maxIterationFailures = 100
+	// maxIterationErrorBytes bounds each kept error message, so memory stays bounded however
+	// long the errors are.
+	maxIterationErrorBytes = 1024
+)
+
 // IterationCounts counts each logical iteration once, regardless of retries.
 type IterationCounts struct {
 	Started   int64 `json:"started"`
@@ -95,14 +103,6 @@ func (s *RunStatistics) runFinished(err error) {
 	defer s.mu.Unlock()
 	s.state.TimedOut = true
 }
-
-const (
-	// maxIterationFailures bounds the failures kept for reporting; the failed count is not capped.
-	maxIterationFailures = 100
-	// maxIterationErrorBytes bounds each kept error message, so memory stays bounded however
-	// long the errors are.
-	maxIterationErrorBytes = 1024
-)
 
 func truncate(message string) string {
 	if len(message) <= maxIterationErrorBytes {
