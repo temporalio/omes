@@ -169,8 +169,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			stopRun:        true,
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
-				Iterations:    &IterationCounts{Started: 1},
+				Iterations: &IterationCounts{Started: 1},
 			},
 		},
 		{
@@ -179,8 +178,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			stopRun:        true,
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
-				Iterations:    &IterationCounts{Started: 1},
+				Iterations: &IterationCounts{Started: 1},
 			},
 		},
 		{
@@ -188,9 +186,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			iterationError: serviceerror.NewCanceled("workflow canceled"),
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
-				Iterations:    &IterationCounts{Started: 1, Failed: 1},
-				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
 			},
 		},
 		{
@@ -199,9 +196,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			stopRun:        true,
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
-				Iterations:    &IterationCounts{Started: 1, Failed: 1},
-				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
 			},
 		},
 		{
@@ -209,10 +205,9 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			iterationError: context.DeadlineExceeded,
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2, Timeout: time.Second},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2, Timeout: time.Second},
-				Iterations:    &IterationCounts{Started: 1, Failed: 1},
-				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
-				TimedOut:      true,
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
+				TimedOut:   true,
 			},
 		},
 		{
@@ -221,9 +216,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			cancelAfter:    time.Millisecond,
 			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2},
 			want: RunStatisticsSnapshot{
-				Configuration: RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2},
-				Iterations:    &IterationCounts{Started: 1, Failed: 1},
-				Failures:      []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
 			},
 		},
 	} {
@@ -258,7 +252,9 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				snapshot := stats.Snapshot()
 				snapshot.Configuration.Statistics = nil
 				snapshot.Configuration.OnIterationFailure = nil
-				require.Equal(t, tc.want, snapshot)
+				want := tc.want
+				want.Configuration = tc.configuration
+				require.Equal(t, want, snapshot)
 			})
 		})
 	}
