@@ -141,6 +141,53 @@ go run ./cmd/omes run-scenario-with-worker \
   --duration 30s --max-concurrent 3 --max-iterations-per-second 1 --timeout 1m
 ```
 
+## Machine-readable run results
+
+Both `run-scenario` and `run-scenario-with-worker` accept `--result-file <path>`.
+Once scenario execution starts, omes atomically replaces that file with one JSON document on exit,
+including on failure, timeout, or SIGINT. Startup failures (such as bad flags, metrics setup, or
+connection setup) write no file. Consumers must treat a missing file as a failed run. Use a fresh path
+for each run or remove any previous file first. The parent directory must exist. A write error fails
+the command and is joined with any run error.
+
+```json
+{
+  "version": 1,
+  "scenario": "workflow_with_single_noop_activity",
+  "runId": "example",
+  "executionId": "0123456789abcdef",
+  "runFamily": "benchmark",
+  "configuration": {
+    "iterations": 2,
+    "maxConcurrent": 1,
+    "maxIterationsPerSecond": 0,
+    "maxIterationAttempts": 1,
+    "timeout": "30s"
+  },
+  "startedAt": "2026-01-02T03:04:05Z",
+  "endedAt": "2026-01-02T03:04:07Z",
+  "duration": "2s",
+  "outcome": "failed",
+  "error": "iteration 2 failed: workflow failed",
+  "iterations": {"started": 2, "succeeded": 1, "failed": 1},
+  "iterationFailures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}]
+}
+```
+
+`outcome` is `passed`, `failed`, `timedOut`, or `interrupted`. Times are RFC 3339; durations
+are Go duration strings. `configuration` records the generic executor's effective limits, including
+defaults; duration-based runs use `duration` instead of `iterations`. Resolved scenario options,
+including their defaults, appear as string values in `configuration.options`.
+An invalid non-finite rate is recorded as `null`.
+
+`runFamily` and `error` are omitted when unset. `iterations` is omitted when no generic executor
+tracked the run. Counts cover the primary load, excluding independent operator load. They represent
+logical iterations rather than attempts; iterations abandoned on cancellation or timeout are excluded
+from succeeded/failed counts. `iterationFailures` contains up to 100
+terminal failures after retries, with one-based iteration and attempt numbers, and is omitted when
+empty. The total failed count remains uncapped. Executors exposing `Snapshot() any` add their
+JSON snapshot under `scenarioState`; its shape is scenario-specific.
+
 ## Worker configuration
 
 `run-worker` (and `run-scenario-with-worker`) accept worker-tuning options:

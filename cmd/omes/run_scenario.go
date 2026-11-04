@@ -59,6 +59,7 @@ type scenarioRunConfig struct {
 	exportHistoriesDir            string
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
+	resultFile                    string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -90,6 +91,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
+	fs.StringVar(&r.resultFile, "result-file", "", "Write the run result as JSON to this path on exit")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -144,10 +146,18 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
+	return withRunResult(ctx, r.scenario, r.scenarioRunConfig, func(result *runResult) error {
+		return r.runScenario(ctx, result)
+	})
+}
+
+func (r *scenarioRunner) runScenario(ctx context.Context, result *runResult) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
 		return err
 	}
+
+	result.options = resolvedOptions
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
@@ -181,40 +191,26 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
-	// Generate a random execution ID to ensure no two executions with the same RunID collide
-	executionID, err := generateExecutionID()
-	if err != nil {
-		return fmt.Errorf("failed to generate execution ID: %w", err)
-	}
-
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
-		ExecutionID:    executionID,
+		ExecutionID:    result.ExecutionID,
 		Logger:         r.logger,
 		MetricsHandler: metrics.NewHandler(),
 		Client:         client,
 		ClientOptions:  r.clientOptions,
-		Configuration: loadgen.RunConfiguration{
-			Iterations:                    r.iterations,
-			Duration:                      r.duration,
-			MaxConcurrent:                 r.maxConcurrent,
-			MaxIterationsPerSecond:        r.maxIterationsPerSecond,
-			MaxIterationAttempts:          r.maxIterationAttempts,
-			Timeout:                       r.timeout,
-			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
-			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
-			ContinueOnIterationFailure:    r.continueOnIterationFailure,
-		},
-		Options:   resolvedOptions,
-		Namespace: r.clientOptions.Namespace,
-		RootPath:  repoDir,
+		Configuration:  r.configuration(),
+		Options:        resolvedOptions,
+		Namespace:      r.clientOptions.Namespace,
+		RootPath:       repoDir,
 		ExportOptions: loadgen.ExportOptions{
 			ExportHistoriesDir:    r.exportHistoriesDir,
 			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
+	scenarioInfo.Configuration.Statistics = result.statistics
 	executor := scenario.ExecutorFn()
+	result.executor = executor
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
@@ -224,4 +220,18 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
+}
+
+func (r *scenarioRunConfig) configuration() loadgen.RunConfiguration {
+	return loadgen.RunConfiguration{
+		Iterations:                    r.iterations,
+		Duration:                      r.duration,
+		MaxConcurrent:                 r.maxConcurrent,
+		MaxIterationsPerSecond:        r.maxIterationsPerSecond,
+		MaxIterationAttempts:          r.maxIterationAttempts,
+		Timeout:                       r.timeout,
+		DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
+		IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
+		ContinueOnIterationFailure:    r.continueOnIterationFailure,
+	}
 }
