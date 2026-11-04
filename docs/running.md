@@ -244,6 +244,8 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
   with existing parent directories. Write errors fail commands.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
   `interrupted` was cancelled.
+- The file may be rewritten during a run; only a non-`running` outcome is final. Counts are cumulative
+  since the run started; `endedAt` and `duration` are omitted while running.
 - Configuration records effective limits/options. `"duration": "30s"` replaces mutually exclusive
   `iterations`. Times: RFC 3339; durations: Go syntax.
 - Counts match run logs: primary-load logical iterations, excluding attempts/operator load;
