@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -108,8 +109,8 @@ func TestThroughputStressHealthyHeartbeatDurationOverflow(t *testing.T) {
 		duration time.Duration
 		invalid  bool
 	}{
-		{name: "largest representable sum", duration: time.Duration(1<<63-1) - time.Second},
-		{name: "sum overflows", duration: time.Duration(1<<63 - 1), invalid: true},
+		{name: "largest representable sum", duration: time.Duration(math.MaxInt64) - time.Second},
+		{name: "sum overflows", duration: time.Duration(math.MaxInt64), invalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			info := loadgen.ScenarioInfo{Options: loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{
@@ -122,7 +123,7 @@ func TestThroughputStressHealthyHeartbeatDurationOverflow(t *testing.T) {
 				require.ErrorContains(t, err, HealthyHeartbeatDurationFlag)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, time.Duration(1<<63-1), healthyHeartbeatActivity(tc.duration, time.Second).GetExecActivity().GetStartToCloseTimeout().AsDuration())
+				require.Equal(t, time.Duration(math.MaxInt64), healthyHeartbeatActivity(tc.duration, time.Second).GetExecActivity().GetStartToCloseTimeout().AsDuration())
 			}
 		})
 	}
