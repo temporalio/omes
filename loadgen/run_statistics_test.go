@@ -3,9 +3,11 @@ package loadgen
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 )
@@ -66,13 +68,16 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	require.Equal(t, time.Duration(0), snapshot.Configuration.Duration)
 }
 
-func TestGenericExecutorRunStatisticsAbandonment(t *testing.T) {
+// Statistics follow the executor's existing classification: an iteration that times out, or whose
+// retry is cut short, counts as failed.
+func TestGenericExecutorRunStatisticsCutShort(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		retry bool
+		error string
 	}{
-		{name: "timeout"},
-		{name: "interrupted retry", retry: true},
+		{name: "timeout", error: "iteration 1 encountered error: context deadline exceeded"},
+		{name: "interrupted retry", retry: true, error: "iteration 1 encountered error: transient failure"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
@@ -93,9 +98,20 @@ func TestGenericExecutorRunStatisticsAbandonment(t *testing.T) {
 					return ctx.Err()
 				}}, RunConfiguration{Iterations: 1, Timeout: time.Second, MaxIterationAttempts: 2, Statistics: stats})
 				require.Error(t, err)
-				require.Equal(t, &IterationCounts{Started: 1}, stats.Snapshot().Iterations)
-				require.Empty(t, stats.Snapshot().Failures)
+				require.Equal(t, &IterationCounts{Started: 1, Failed: 1}, stats.Snapshot().Iterations)
+				require.Equal(t, []IterationFailure{{Iteration: 1, Attempt: stats.Snapshot().Failures[0].Attempt, Error: tc.error}}, stats.Snapshot().Failures)
 			})
 		})
 	}
+}
+
+func TestRunStatisticsTruncatesErrors(t *testing.T) {
+	stats := &RunStatistics{}
+	stats.configure(RunConfiguration{})
+	long := strings.Repeat("é", maxIterationErrorBytes)
+	stats.iterationFinished(1, 1, errors.New(long), false)
+	message := stats.Snapshot().Failures[0].Error
+	require.LessOrEqual(t, len(message), maxIterationErrorBytes+len("… (truncated)"))
+	require.True(t, strings.HasSuffix(message, "… (truncated)"))
+	require.True(t, utf8.ValidString(message))
 }

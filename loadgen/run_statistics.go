@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"sync"
+	"unicode/utf8"
 )
 
 // IterationCounts counts each logical iteration once, regardless of retries.
@@ -82,8 +83,8 @@ func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, sto
 		s.iterations.Succeeded++
 	} else {
 		s.iterations.Failed++
-		if len(s.failures) < 100 {
-			s.failures = append(s.failures, IterationFailure{Iteration: iteration, Attempt: attempt, Error: err.Error()})
+		if len(s.failures) < maxIterationFailures {
+			s.failures = append(s.failures, IterationFailure{Iteration: iteration, Attempt: attempt, Error: truncate(err.Error())})
 		}
 	}
 }
@@ -95,4 +96,23 @@ func (s *RunStatistics) runFinished(err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.timedOut = true
+}
+
+const (
+	// maxIterationFailures bounds the failures kept for reporting; the failed count is not capped.
+	maxIterationFailures = 100
+	// maxIterationErrorBytes bounds each kept error message, so memory stays bounded however
+	// long the errors are.
+	maxIterationErrorBytes = 1024
+)
+
+func truncate(message string) string {
+	if len(message) <= maxIterationErrorBytes {
+		return message
+	}
+	cut := maxIterationErrorBytes
+	for cut > 0 && !utf8.RuneStart(message[cut]) {
+		cut--
+	}
+	return message[:cut] + "… (truncated)"
 }

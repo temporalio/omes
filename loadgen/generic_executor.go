@@ -205,7 +205,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				// Both conditions are needed: the run's context is also done once a
 				// run simply finishes, and an iteration can fail with its own
 				// cancellation while the run is healthy.
-				stopping := ctx.Err() != nil && (errors.Is(iterErr, ctx.Err()) || errors.Is(iterErr, context.Canceled) ||
+				stopping := ctx.Err() != nil && (errors.Is(iterErr, context.Canceled) ||
 					errors.As(iterErr, new(*serviceerror.Canceled)))
 
 				g.config.Statistics.iterationFinished(run.Iteration, attempt, iterErr, stopping)
@@ -257,7 +257,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				case <-time.After(backoff):
 					// wait for backoff, then try again
 				case <-ctx.Done():
-					err = ctx.Err()
 					break retryLoop
 				}
 			}
