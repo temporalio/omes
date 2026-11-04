@@ -167,7 +167,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "context stop",
 			iterationError: context.Canceled,
 			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			configuration:  RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1},
 			},
@@ -176,7 +176,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "service stop",
 			iterationError: fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
 			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			configuration:  RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1},
 			},
@@ -184,7 +184,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 		{
 			name:           "service cancellation while running",
 			iterationError: serviceerror.NewCanceled("workflow canceled"),
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			configuration:  RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
@@ -194,7 +194,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "failure during stop",
 			iterationError: errors.New("workflow failed"),
 			stopRun:        true,
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: DefaultMaxIterationAttempts},
+			configuration:  RunConfiguration{Iterations: 1},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
@@ -203,7 +203,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 		{
 			name:           "timeout",
 			iterationError: context.DeadlineExceeded,
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2, Timeout: time.Second},
+			configuration:  RunConfiguration{Iterations: 1, MaxIterationAttempts: 2, Timeout: time.Second},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
@@ -214,7 +214,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "interrupted retry",
 			iterationError: errors.New("transient failure"),
 			cancelAfter:    time.Millisecond,
-			configuration:  RunConfiguration{Iterations: 1, MaxConcurrent: DefaultMaxConcurrentIterations, MaxIterationAttempts: 2},
+			configuration:  RunConfiguration{Iterations: 1, MaxIterationAttempts: 2},
 			want: RunStatisticsSnapshot{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
@@ -250,11 +250,9 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				require.Error(t, err)
 				require.Equal(t, tc.want.Iterations.Failed, failed.Load())
 				snapshot := stats.Snapshot()
-				snapshot.Configuration.Statistics = nil
-				snapshot.Configuration.OnIterationFailure = nil
-				want := tc.want
-				want.Configuration = tc.configuration
-				require.Equal(t, want, snapshot)
+				// Classification only; TestGenericExecutorRunStatisticsEffectiveDefaults covers the configuration.
+				snapshot.Configuration = RunConfiguration{}
+				require.Equal(t, tc.want, snapshot)
 			})
 		})
 	}
