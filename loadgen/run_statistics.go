@@ -26,11 +26,8 @@ type IterationFailure struct {
 // Its zero value is ready for use. Runs that do not use a generic executor leave
 // Iterations nil, distinguishing unavailable counts from zero iterations.
 type RunStatistics struct {
-	mu            sync.Mutex
-	configuration RunConfiguration
-	iterations    *IterationCounts
-	failures      []IterationFailure
-	timedOut      bool
+	mu    sync.Mutex
+	state RunStatisticsSnapshot
 }
 
 // RunStatisticsSnapshot contains a copy of the collected counts and failure details.
@@ -44,9 +41,10 @@ type RunStatisticsSnapshot struct {
 func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snapshot := RunStatisticsSnapshot{Configuration: s.configuration, Failures: slices.Clone(s.failures), TimedOut: s.timedOut}
-	if s.iterations != nil {
-		counts := *s.iterations
+	snapshot := s.state
+	snapshot.Failures = slices.Clone(s.state.Failures)
+	if s.state.Iterations != nil {
+		counts := *s.state.Iterations
 		snapshot.Iterations = &counts
 	}
 	return snapshot
@@ -58,9 +56,9 @@ func (s *RunStatistics) configure(configuration RunConfiguration) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.configuration = configuration
-	if s.iterations == nil {
-		s.iterations = &IterationCounts{}
+	s.state.Configuration = configuration
+	if s.state.Iterations == nil {
+		s.state.Iterations = &IterationCounts{}
 	}
 }
 
@@ -70,7 +68,7 @@ func (s *RunStatistics) iterationStarted() {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.iterations.Started++
+	s.state.Iterations.Started++
 }
 
 func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, stopping bool) {
@@ -80,11 +78,11 @@ func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, sto
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err == nil {
-		s.iterations.Succeeded++
+		s.state.Iterations.Succeeded++
 	} else {
-		s.iterations.Failed++
-		if len(s.failures) < maxIterationFailures {
-			s.failures = append(s.failures, IterationFailure{Iteration: iteration, Attempt: attempt, Error: truncate(err.Error())})
+		s.state.Iterations.Failed++
+		if len(s.state.Failures) < maxIterationFailures {
+			s.state.Failures = append(s.state.Failures, IterationFailure{Iteration: iteration, Attempt: attempt, Error: truncate(err.Error())})
 		}
 	}
 }
@@ -95,7 +93,7 @@ func (s *RunStatistics) runFinished(err error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.timedOut = true
+	s.state.TimedOut = true
 }
 
 const (
