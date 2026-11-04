@@ -23,8 +23,8 @@ type runResult struct {
 	RunFamily         string                     `json:"runFamily,omitempty"`
 	Configuration     resultConfiguration        `json:"configuration"`
 	StartedAt         time.Time                  `json:"startedAt"`
-	EndedAt           time.Time                  `json:"endedAt"`
-	Duration          string                     `json:"duration"`
+	EndedAt           *time.Time                 `json:"endedAt,omitempty"`
+	Duration          string                     `json:"duration,omitempty"`
 	Outcome           string                     `json:"outcome"`
 	Error             string                     `json:"error,omitempty"`
 	Iterations        *loadgen.IterationCounts   `json:"iterations,omitempty"`
@@ -84,54 +84,64 @@ func (r *runResult) finish(ctx context.Context, runErr error) error {
 	if r.exportResultFile == "" || r.executor == nil {
 		return runErr
 	}
-	r.EndedAt = time.Now().UTC()
-	r.Duration = r.EndedAt.Sub(r.StartedAt).String()
 	snapshot := r.statistics.Snapshot()
-	if snapshot.Iterations != nil {
-		r.Configuration = resultConfig(snapshot.Configuration)
-	}
-	r.Iterations = snapshot.Iterations
-	r.IterationFailures = snapshot.Failures
-	if r.options != nil {
-		r.Configuration.Options = make(map[string]string)
-		r.options.VisitAll(func(flag *pflag.Flag) { r.Configuration.Options[flag.Name] = flag.Value.String() })
-	}
 	timedOut := errors.Is(runErr, context.DeadlineExceeded)
 	if snapshot.Iterations != nil {
 		timedOut = snapshot.TimedOut
 	}
+	var outcome string
 	switch {
 	case errors.Is(ctx.Err(), context.Canceled):
-		r.Outcome = "interrupted"
+		outcome = "interrupted"
 	case errors.Is(ctx.Err(), context.DeadlineExceeded), timedOut:
-		r.Outcome = "timedOut"
-	case runErr != nil, r.Iterations != nil && r.Iterations.Failed > 0:
-		r.Outcome = "failed"
+		outcome = "timedOut"
+	case runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
+		outcome = "failed"
 	default:
-		r.Outcome = "passed"
+		outcome = "passed"
 	}
+	return errors.Join(runErr, r.write(outcome, runErr))
+}
+
+func (r *runResult) write(outcome string, runErr error) error {
+	result := *r
+	result.Outcome = outcome
+	result.EndedAt = nil
+	result.Duration = ""
+	if outcome != "running" {
+		endedAt := time.Now().UTC()
+		result.EndedAt = &endedAt
+		result.Duration = endedAt.Sub(result.StartedAt).String()
+	}
+	snapshot := r.statistics.Snapshot()
+	if snapshot.Iterations != nil {
+		result.Configuration = resultConfig(snapshot.Configuration)
+	}
+	result.Iterations = snapshot.Iterations
+	result.IterationFailures = snapshot.Failures
+	if r.options != nil {
+		result.Configuration.Options = make(map[string]string)
+		r.options.VisitAll(func(flag *pflag.Flag) { result.Configuration.Options[flag.Name] = flag.Value.String() })
+	}
+	result.Error = ""
 	if runErr != nil {
-		r.Error = runErr.Error()
+		result.Error = runErr.Error()
 	}
 	var snapshotErr error
 	if executor, ok := r.executor.(interface{ Snapshot() any }); ok {
-		r.ScenarioState, snapshotErr = json.Marshal(executor.Snapshot())
+		result.ScenarioState, snapshotErr = json.Marshal(executor.Snapshot())
 		if snapshotErr != nil {
 			snapshotErr = fmt.Errorf("encoding scenario state: %w", snapshotErr)
 		}
 	}
-	return errors.Join(runErr, snapshotErr, r.write(r.exportResultFile))
-}
-
-func (r *runResult) write(path string) error {
-	data, err := json.MarshalIndent(r, "", "  ")
+	data, err := json.MarshalIndent(&result, "", "  ")
 	if err != nil {
-		return fmt.Errorf("encoding run result: %w", err)
+		return errors.Join(snapshotErr, fmt.Errorf("encoding run result: %w", err))
 	}
-	if err := writeResultFile(path, append(data, '\n')); err != nil {
-		return fmt.Errorf("writing result file: %w", err)
+	if err := writeResultFile(r.exportResultFile, append(data, '\n')); err != nil {
+		return errors.Join(snapshotErr, fmt.Errorf("writing result file: %w", err))
 	}
-	return nil
+	return snapshotErr
 }
 
 func writeResultFile(path string, data []byte) (retErr error) {
