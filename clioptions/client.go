@@ -3,6 +3,7 @@ package clioptions
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -45,6 +46,8 @@ type ClientOptions struct {
 	ClientCombinedPath string
 	// TLS server name
 	TLSServerName string
+	// CA certificate(s) to verify the server with, in place of the system roots
+	ServerCACertPath string
 	// Authorization header value
 	AuthHeader string
 	// Disable Host Verification
@@ -63,12 +66,32 @@ func X509KeyPairFromCombinedPEM(pemBytes []byte) (tls.Certificate, error) {
 	return cert, nil
 }
 
-// loadTLSConfig inits a TLS config from the provided cert and key files.
+// LoadCertPool reads a PEM file of CA certificates into a pool.
+func LoadCertPool(path string) (*x509.CertPool, error) {
+	pemBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read server CA: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pemBytes) {
+		return nil, fmt.Errorf("no certificates in server CA file %s", path)
+	}
+	return pool, nil
+}
+
+// loadTLSConfig inits a TLS config from the provided cert, key and CA files.
 func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: c.DisableHostVerification,
 		ServerName:         c.TLSServerName,
 		MinVersion:         tls.VersionTLS13,
+	}
+	if c.ServerCACertPath != "" {
+		pool, err := LoadCertPool(c.ServerCACertPath)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.RootCAs = pool
 	}
 	if c.ClientCombinedPath != "" {
 		if c.ClientCertPath != "" || c.ClientKeyPath != "" {
@@ -98,7 +121,7 @@ func (c *ClientOptions) loadTLSConfig() (*tls.Config, error) {
 	} else if c.ClientKeyPath != "" {
 		return nil, errors.New("got TLS key with no cert")
 	}
-	if c.EnableTLS {
+	if c.EnableTLS || c.ServerCACertPath != "" {
 		return tlsConfig, nil
 	}
 	return nil, nil
@@ -175,6 +198,8 @@ func (c *ClientOptions) FlagSet() *pflag.FlagSet {
 		"Path to one PEM file holding both the client private key and certificate (cert-manager's tls-combined.pem). Mutually exclusive with --tls-cert-path and --tls-key-path")
 	c.fs.BoolVar(&c.DisableHostVerification, "disable-tls-host-verification", false, "Disable TLS host verification")
 	c.fs.StringVar(&c.TLSServerName, "tls-server-name", "", "TLS target server name")
+	c.fs.StringVar(&c.ServerCACertPath, "tls-ca-path", "",
+		"Path to a PEM file of CA certificate(s) to verify the server with, in place of the system roots. Implies --tls")
 	c.fs.StringVar(&c.AuthHeader, "auth-header", "",
 		fmt.Sprintf("Authorization header value (can also be set via %s env var)", AUTH_HEADER_ENV_VAR))
 	return c.fs
