@@ -47,6 +47,8 @@ type scenarioRunner struct {
 }
 
 type scenarioRunConfig struct {
+	startAt                       string
+	parsedStartAt                 time.Time
 	iterations                    int
 	duration                      time.Duration
 	maxConcurrent                 int
@@ -71,6 +73,7 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&r.startAt, "start-at", "", "Optional RFC3339 start time for synchronized scenarios")
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
@@ -113,6 +116,15 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 			"use --iterations to run a fixed number of times, or --duration to keep starting " +
 			"iterations for a period")
 	}
+	var startAt time.Time
+	if r.startAt != "" {
+		var err error
+		startAt, err = time.Parse(time.RFC3339Nano, r.startAt)
+		if err != nil {
+			return nil, nil, loadgen.NewUsageError("invalid --start-at %q: %v", r.startAt, err)
+		}
+	}
+	r.parsedStartAt = startAt
 
 	// Parse options
 	scenarioOptions := make(map[string]string, len(r.scenarioOptions))
@@ -196,6 +208,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Client:         client,
 		ClientOptions:  r.clientOptions,
 		Configuration: loadgen.RunConfiguration{
+			StartAt:                       r.parsedStartAt,
 			Iterations:                    r.iterations,
 			Duration:                      r.duration,
 			MaxConcurrent:                 r.maxConcurrent,
