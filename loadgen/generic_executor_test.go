@@ -152,36 +152,101 @@ func TestRunCancellationWaitsForCallbacks(t *testing.T) {
 	})
 }
 
+// Statistics follow the executor's existing classification: an iteration that times out, or whose
+// retry is cut short, counts as failed.
 func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		iterationError error
-		stopRun        bool
-		wantFailed     int
+		// cancelOnAttempt cancels the run during that attempt, just before it returns iterationError (0: never).
+		cancelOnAttempt int
+		configuration   RunConfiguration
+		want            RunStatisticsSnapshot
 	}{
-		{"context stop", context.Canceled, true, 0},
-		{"service stop", fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")), true, 0},
-		{"service cancellation while running", serviceerror.NewCanceled("workflow canceled"), false, 1},
-		{"failure during stop", errors.New("workflow failed"), true, 1},
+		{
+			name:            "context stop",
+			iterationError:  context.Canceled,
+			cancelOnAttempt: 1,
+			configuration:   RunConfiguration{Iterations: 1},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1},
+			},
+		},
+		{
+			name:            "service stop",
+			iterationError:  fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
+			cancelOnAttempt: 1,
+			configuration:   RunConfiguration{Iterations: 1},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1},
+			},
+		},
+		{
+			name:           "service cancellation while running",
+			iterationError: serviceerror.NewCanceled("workflow canceled"),
+			configuration:  RunConfiguration{Iterations: 1},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
+			},
+		},
+		{
+			name:            "failure during stop",
+			iterationError:  errors.New("workflow failed"),
+			cancelOnAttempt: 1,
+			configuration:   RunConfiguration{Iterations: 1},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
+			},
+		},
+		{
+			name:           "timeout",
+			iterationError: context.DeadlineExceeded,
+			configuration:  RunConfiguration{Iterations: 1, MaxIterationAttempts: 2, Timeout: time.Second},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
+				TimedOut:   true,
+			},
+		},
+		{
+			name:            "interrupted retry",
+			iterationError:  errors.New("transient failure"),
+			cancelOnAttempt: 1,
+			configuration:   RunConfiguration{Iterations: 1, MaxIterationAttempts: 2},
+			want: RunStatisticsSnapshot{
+				Iterations: &IterationCounts{Started: 1, Failed: 1},
+				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				var failed atomic.Int64
+				configuration := tc.configuration
+				stats := NewRunStatistics(configuration)
+				configuration.Statistics = stats
+				configuration.OnIterationFailure = func(context.Context, *Run, error) { failed.Add(1) }
 				err := executeContext(ctx, &GenericExecutor{
-					Execute: func(context.Context, *Run) error {
-						if tc.stopRun {
+					Execute: func(ctx context.Context, run *Run) error {
+						if tc.configuration.Timeout > 0 {
+							<-ctx.Done()
+						}
+						if run.attemptCount+1 == tc.cancelOnAttempt {
 							cancel()
 						}
 						return tc.iterationError
 					},
-				}, RunConfiguration{
-					Iterations:         1,
-					OnIterationFailure: func(context.Context, *Run, error) { failed.Add(1) },
-				})
+				}, configuration)
 				require.Error(t, err)
-				require.EqualValues(t, tc.wantFailed, failed.Load())
+				require.Equal(t, tc.want.Iterations.Failed, failed.Load())
+				snapshot := stats.Snapshot()
+				// Classification only; TestGenericExecutorRunStatisticsEffectiveDefaults covers the configuration.
+				snapshot.Configuration = RunConfiguration{}
+				require.Equal(t, tc.want, snapshot)
 			})
 		})
 	}
