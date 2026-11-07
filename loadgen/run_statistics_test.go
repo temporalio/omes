@@ -13,7 +13,16 @@ import (
 
 func TestGenericExecutorRunStatistics(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		stats := &RunStatistics{}
+		configuration := RunConfiguration{
+			Iterations: 3, MaxConcurrent: 1, MaxIterationAttempts: 2,
+			ContinueOnIterationFailure: true,
+		}
+		stats := NewRunStatistics(configuration)
+		require.Equal(t, RunStatisticsSnapshot{
+			Configuration: configuration,
+			Iterations:    &IterationCounts{},
+		}, stats.Snapshot())
+		configuration.Statistics = stats
 		attempts := make(map[int]int)
 
 		err := execute(&GenericExecutor{Execute: func(_ context.Context, run *Run) error {
@@ -22,27 +31,26 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 				return errors.New("iteration error")
 			}
 			return nil
-		}}, RunConfiguration{Iterations: 3, MaxConcurrent: 1, MaxIterationAttempts: 2, ContinueOnIterationFailure: true, Statistics: stats})
+		}}, configuration)
 		require.Error(t, err)
 
 		snapshot := stats.Snapshot()
 		require.Equal(t, RunStatisticsSnapshot{
-			Configuration: RunConfiguration{
-				Iterations: 3, MaxConcurrent: 1, MaxIterationAttempts: 2,
-				ContinueOnIterationFailure: true, Statistics: stats,
-			},
-			Iterations: &IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
-			Failures:   []IterationFailure{{Iteration: 2, Attempt: 2, Error: "iteration 2 failed: iteration error"}},
+			Configuration: configuration,
+			Iterations:    &IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
+			Failures:      []IterationFailure{{Iteration: 2, Attempt: 2, Error: "iteration 2 failed: iteration error"}},
 		}, snapshot)
 	})
 }
 
 func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		stats := &RunStatistics{}
+		configuration := RunConfiguration{Iterations: 101, ContinueOnIterationFailure: true}
+		stats := NewRunStatistics(configuration)
+		configuration.Statistics = stats
 
 		err := execute(&GenericExecutor{Execute: func(context.Context, *Run) error { return errors.New("failed") }},
-			RunConfiguration{Iterations: 101, ContinueOnIterationFailure: true, Statistics: stats})
+			configuration)
 		require.Error(t, err)
 
 		snapshot := stats.Snapshot()
@@ -52,10 +60,13 @@ func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 }
 
 func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
-	stats := &RunStatistics{}
-	require.Equal(t, RunStatisticsSnapshot{}, stats.Snapshot())
+	stats := NewRunStatistics(RunConfiguration{})
+	require.Equal(t, RunStatisticsSnapshot{Iterations: &IterationCounts{}}, stats.Snapshot())
 
-	require.NoError(t, execute(&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }}, RunConfiguration{Statistics: stats}))
+	require.NoError(t, execute(
+		&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }},
+		RunConfiguration{Statistics: stats},
+	))
 
 	snapshot := stats.Snapshot()
 	require.Equal(t, RunStatisticsSnapshot{
@@ -68,8 +79,7 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 }
 
 func TestRunStatisticsTruncatesErrors(t *testing.T) {
-	stats := &RunStatistics{}
-	stats.configure(RunConfiguration{})
+	stats := NewRunStatistics(RunConfiguration{})
 
 	long := strings.Repeat("é", statisticsMaxErrorBytes)
 	stats.iterationFinished(1, 1, errors.New(long), false)
