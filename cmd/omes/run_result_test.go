@@ -20,92 +20,25 @@ import (
 )
 
 func TestRunResultEncoding(t *testing.T) {
-	rate := 4.5
-	endedAt := time.Date(2026, 1, 2, 3, 4, 14, 0, time.UTC)
 	result := runResult{
-		Version:     1,
-		Scenario:    "example",
-		RunID:       "run",
-		ExecutionID: "execution",
-		RunFamily:   "family",
-		Configuration: resultConfiguration{
-			Iterations:             2,
-			MaxConcurrent:          3,
-			MaxIterationsPerSecond: &rate,
-			MaxIterationAttempts:   6,
-			Timeout:                "7s",
-			Options:                map[string]string{"sleep": "8s"},
-		},
-		StartedAt: time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
-		EndedAt:   &endedAt,
-		Duration:  "9s",
-		Outcome:   "failed",
-		Error:     "iteration failed",
+		Outcome: "failed",
+		Error:   "iteration failed",
 		Iterations: &loadgen.IterationCounts{
-			Started:   2,
-			Succeeded: 1,
-			Failed:    1,
+			Started: 2, Succeeded: 1, Failed: 1,
 		},
-		IterationFailures: []loadgen.IterationFailure{{
-			Iteration: 2,
-			Attempt:   6,
-			Error:     "failure",
-		}},
-		ScenarioState: json.RawMessage(`{"completed":1}`),
+		Failures:      []loadgen.IterationFailure{{Iteration: 2, Attempt: 6, Error: "failure"}},
+		ScenarioState: map[string]int{"completed": 1},
 	}
 
 	encoded, err := json.Marshal(result)
 	require.NoError(t, err)
 	require.JSONEq(t, `{
-  "version": 1,
-  "scenario": "example",
-  "runId": "run",
-  "executionId": "execution",
-  "runFamily": "family",
-  "configuration": {
-    "iterations": 2,
-    "maxConcurrent": 3,
-    "maxIterationsPerSecond": 4.5,
-    "maxIterationAttempts": 6,
-    "timeout": "7s",
-    "options": {
-      "sleep": "8s"
-    }
-  },
-  "startedAt": "2026-01-02T03:04:05Z",
-  "endedAt": "2026-01-02T03:04:14Z",
-  "duration": "9s",
   "outcome": "failed",
   "error": "iteration failed",
-  "iterations": {
-    "started": 2,
-    "succeeded": 1,
-    "failed": 1
-  },
-  "iterationFailures": [
-    {
-      "iteration": 2,
-      "attempt": 6,
-      "error": "failure"
-    }
-  ],
-  "scenarioState": {
-    "completed": 1
-  }
+  "iterations": {"started": 2, "succeeded": 1, "failed": 1},
+  "failures": [{"iteration": 2, "attempt": 6, "error": "failure"}],
+  "scenarioState": {"completed": 1}
 }`, string(encoded))
-
-	var decoded runResult
-	require.NoError(t, json.Unmarshal(encoded, &decoded))
-	require.Equal(t, result, decoded)
-
-	encoded, err = json.Marshal(runResult{Version: 1})
-	require.NoError(t, err)
-
-	var fields map[string]json.RawMessage
-	require.NoError(t, json.Unmarshal(encoded, &fields))
-	for _, field := range []string{"runFamily", "iterations", "iterationFailures", "scenarioState", "error"} {
-		require.NotContains(t, fields, field)
-	}
 }
 
 func TestRunResultOutcomes(t *testing.T) {
@@ -116,35 +49,47 @@ func TestRunResultOutcomes(t *testing.T) {
 		timeout        time.Duration
 		cancel         bool
 		want           string
+		wantIterations loadgen.IterationCounts
+		wantFailure    string
 	}{
 		{
-			name: "pass",
-			want: "passed",
+			name:           "pass",
+			want:           "passed",
+			wantIterations: loadgen.IterationCounts{Started: 1, Succeeded: 1},
 		},
 		{
-			name: "iteration failure",
-			fail: true,
-			want: "failed",
+			name:           "iteration failure",
+			fail:           true,
+			want:           "failed",
+			wantIterations: loadgen.IterationCounts{Started: 1, Failed: 1},
+			wantFailure:    "iteration 1 failed: failed iteration",
 		},
 		{
 			name:           "iteration deadline",
 			iterationError: context.DeadlineExceeded,
 			want:           "failed",
+			wantIterations: loadgen.IterationCounts{Started: 1, Failed: 1},
+			wantFailure:    "iteration 1 failed: context deadline exceeded",
 		},
 		{
 			name:           "iteration cancellation",
 			iterationError: context.Canceled,
 			want:           "failed",
+			wantIterations: loadgen.IterationCounts{Started: 1, Failed: 1},
+			wantFailure:    "iteration 1 failed: context canceled",
 		},
 		{
-			name:    "timeout",
-			timeout: time.Second,
-			want:    "timedOut",
+			name:           "timeout",
+			timeout:        time.Second,
+			want:           "timedOut",
+			wantIterations: loadgen.IterationCounts{Started: 1, Failed: 1},
+			wantFailure:    "iteration 1 failed: context deadline exceeded",
 		},
 		{
-			name:   "interruption",
-			cancel: true,
-			want:   "interrupted",
+			name:           "interruption",
+			cancel:         true,
+			want:           "interrupted",
+			wantIterations: loadgen.IterationCounts{Started: 1},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,17 +97,10 @@ func TestRunResultOutcomes(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				path := filepath.Join(t.TempDir(), "result.json")
-				record := startRunResult(clioptions.ScenarioID{
-					Scenario: "test",
-					RunID:    "run",
-				}, scenarioRunConfig{
-					exportResultFile: path,
-					iterations:       1,
-					timeout:          tc.timeout,
-				})
-				executionID, err := generateExecutionID()
-				require.NoError(t, err)
-				record.ExecutionID = executionID
+				runner := &scenarioRunner{
+					scenarioRunConfig: scenarioRunConfig{exportResultFile: path},
+					statistics:        &loadgen.RunStatistics{},
+				}
 				executor := &loadgen.GenericExecutor{Execute: func(ctx context.Context, _ *loadgen.Run) error {
 					if tc.cancel {
 						cancel()
@@ -179,18 +117,17 @@ func TestRunResultOutcomes(t *testing.T) {
 
 					return tc.iterationError
 				}}
-				record.executor = executor
 
-				err = executor.Run(ctx, loadgen.ScenarioInfo{
+				err := executor.Run(ctx, loadgen.ScenarioInfo{
 					Logger:         zap.NewNop().Sugar(),
 					MetricsHandler: client.MetricsNopHandler,
 					Configuration: loadgen.RunConfiguration{
 						Iterations: 1,
 						Timeout:    tc.timeout,
-						Statistics: record.statistics,
+						Statistics: runner.statistics,
 					},
 				})
-				err = record.finish(ctx, err)
+				runner.finish(ctx, &err)
 
 				if tc.want == "passed" {
 					require.NoError(t, err)
@@ -203,86 +140,18 @@ func TestRunResultOutcomes(t *testing.T) {
 				var result runResult
 				require.NoError(t, json.Unmarshal(data, &result))
 				require.Equal(t, tc.want, result.Outcome)
-				require.NotEmpty(t, result.ExecutionID)
-				require.NotNil(t, result.Iterations)
+				require.Equal(t, &tc.wantIterations, result.Iterations)
+				failures := []loadgen.IterationFailure{}
+				if tc.wantFailure != "" {
+					failures = append(failures, loadgen.IterationFailure{Iteration: 1, Attempt: 1, Error: tc.wantFailure})
+				}
+				require.Equal(t, failures, result.Failures)
 			})
 		})
 	}
 }
 
-func TestRunResultRunningSnapshots(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "result.json")
-	record := startRunResult(clioptions.ScenarioID{Scenario: "test", RunID: "run"}, scenarioRunConfig{exportResultFile: path})
-	started := make(chan int)
-	proceed := make(chan struct{})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	executor := &loadgen.GenericExecutor{Execute: func(ctx context.Context, run *loadgen.Run) error {
-		select {
-		case started <- run.Iteration:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-		select {
-		case <-proceed:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-		if run.Iteration == 2 {
-			return errors.New("iteration failed")
-		}
-		return nil
-	}}
-	record.executor = executor
-	done := make(chan error, 1)
-	go func() {
-		done <- executor.Run(ctx, loadgen.ScenarioInfo{
-			Logger:         zap.NewNop().Sugar(),
-			MetricsHandler: client.MetricsNopHandler,
-			Configuration: loadgen.RunConfiguration{
-				Iterations:                    3,
-				MaxConcurrent:                 1,
-				ContinueOnIterationFailure:    true,
-				DoNotRegisterSearchAttributes: true,
-				Statistics:                    record.statistics,
-			},
-		})
-	}()
-	for i, counts := range []loadgen.IterationCounts{
-		{Started: 1},
-		{Started: 2, Succeeded: 1},
-		{Started: 3, Succeeded: 1, Failed: 1},
-	} {
-		require.Equal(t, i+1, <-started)
-		for range 2 {
-			require.NoError(t, record.write("running", nil))
-			data, err := os.ReadFile(path)
-			require.NoError(t, err)
-			var fields map[string]json.RawMessage
-			require.NoError(t, json.Unmarshal(data, &fields))
-			require.NotContains(t, fields, "endedAt")
-			require.NotContains(t, fields, "duration")
-			var result runResult
-			require.NoError(t, json.Unmarshal(data, &result))
-			require.Equal(t, "running", result.Outcome)
-			require.Equal(t, &counts, result.Iterations)
-			require.Equal(t, 3, result.Configuration.Iterations)
-		}
-		proceed <- struct{}{}
-	}
-	require.Error(t, record.finish(ctx, <-done))
-	data, err := os.ReadFile(path)
-	require.NoError(t, err)
-	var result runResult
-	require.NoError(t, json.Unmarshal(data, &result))
-	require.Equal(t, "failed", result.Outcome)
-	require.Equal(t, &loadgen.IterationCounts{Started: 3, Succeeded: 2, Failed: 1}, result.Iterations)
-	require.NotZero(t, result.EndedAt)
-	require.NotEmpty(t, result.Duration)
-	require.Len(t, result.IterationFailures, 1)
-}
-
-func TestRunResultMissingOnInvalidInput(t *testing.T) {
+func TestRunResultOnInvalidInput(t *testing.T) {
 	for _, worker := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "result.json")
 		runner := newRunner("no_such_scenario")
@@ -299,18 +168,21 @@ func TestRunResultMissingOnInvalidInput(t *testing.T) {
 
 		require.Error(t, err)
 
-		_, readErr := os.Stat(path)
-		require.ErrorIs(t, readErr, os.ErrNotExist)
+		data, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		var result runResult
+		require.NoError(t, json.Unmarshal(data, &result))
+		require.Equal(t, "failed", result.Outcome)
+		require.Equal(t, err.Error(), result.Error)
 	}
 }
 
 func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 	for _, runErr := range []error{nil, errors.New("run failed")} {
 		path := filepath.Join(t.TempDir(), "missing", "result.json")
-		result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
-		result.executor = &loadgen.GenericExecutor{}
-
-		err := result.finish(context.Background(), runErr)
+		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+		err := runErr
+		runner.finish(context.Background(), &err)
 
 		require.ErrorContains(t, err, "writing result file")
 		if runErr != nil {
@@ -323,10 +195,9 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "result.json")
 	require.NoError(t, os.Mkdir(path, 0700))
-	result := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{exportResultFile: path})
-	result.executor = &loadgen.GenericExecutor{}
-
-	err := result.finish(context.Background(), nil)
+	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+	var err error
+	runner.finish(context.Background(), &err)
 
 	require.ErrorContains(t, err, "writing result file")
 
@@ -336,44 +207,29 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 	require.True(t, files[0].IsDir())
 }
 
-type resultSnapshotExecutor struct{}
-
-func (resultSnapshotExecutor) Run(context.Context, loadgen.ScenarioInfo) error { return nil }
-func (resultSnapshotExecutor) Snapshot() any                                   { return map[string]int{"completed": 12} }
-
-func TestRunResultSnapshotAndOptions(t *testing.T) {
+func TestRunResultScenarioState(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "result.json")
 	require.NoError(t, os.WriteFile(path, []byte("old result"), 0600))
-	record := startRunResult(clioptions.ScenarioID{Scenario: "example"}, scenarioRunConfig{exportResultFile: path})
-	record.Configuration = resultConfig(loadgen.RunConfiguration{Duration: 3 * time.Second})
-	record.executor = resultSnapshotExecutor{}
-	record.options = (&loadgen.Scenario{Options: func(o *loadgen.OptionSet) { o.Duration("sleep", 2*time.Second, "Sleep duration") }}).MustResolveOptions(nil)
-
-	for _, outcome := range []string{"running", "passed"} {
-		if outcome == "running" {
-			require.NoError(t, record.write(outcome, nil))
-		} else {
-			require.NoError(t, record.finish(context.Background(), nil))
-		}
-
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-		var result runResult
-		require.NoError(t, json.Unmarshal(data, &result))
-		require.Equal(t, outcome, result.Outcome)
-		require.JSONEq(t, `{"completed":12}`, string(result.ScenarioState))
-		require.Equal(t, resultConfiguration{
-			Duration:               "3s",
-			MaxIterationsPerSecond: new(float64),
-			Timeout:                "0s",
-			Options:                map[string]string{"sleep": "2s"},
-		}, result.Configuration)
-		require.Nil(t, result.Iterations)
-
-		files, err := os.ReadDir(filepath.Dir(path))
-		require.NoError(t, err)
-		require.Len(t, files, 1)
+	runner := &scenarioRunner{
+		scenarioRunConfig: scenarioRunConfig{exportResultFile: path},
+		scenarioState:     map[string]int{"completed": 12},
 	}
+	var runErr error
+	runner.finish(context.Background(), &runErr)
+	require.NoError(t, runErr)
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+  "outcome": "passed",
+  "iterations": null,
+  "failures": [],
+  "scenarioState": {"completed": 12}
+}`, string(data))
+
+	files, err := os.ReadDir(filepath.Dir(path))
+	require.NoError(t, err)
+	require.Len(t, files, 1)
 }
 
 func TestResultFileFlags(t *testing.T) {
@@ -384,7 +240,7 @@ func TestResultFileFlags(t *testing.T) {
 	}
 }
 
-func TestRunResultMissingOnConnectionFailure(t *testing.T) {
+func TestRunResultOnConnectionFailure(t *testing.T) {
 	runner := newRunner("workflow_with_single_noop_activity")
 	runner.logger = zap.NewNop().Sugar()
 	runner.exportResultFile = filepath.Join(t.TempDir(), "result.json")
@@ -396,25 +252,28 @@ func TestRunResultMissingOnConnectionFailure(t *testing.T) {
 
 	require.ErrorContains(t, err, "failed dialing")
 
-	_, statErr := os.Stat(runner.exportResultFile)
-	require.ErrorIs(t, statErr, os.ErrNotExist)
+	data, readErr := os.ReadFile(runner.exportResultFile)
+	require.NoError(t, readErr)
+	var result runResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	require.Equal(t, "failed", result.Outcome)
+	require.Equal(t, err.Error(), result.Error)
 }
 
 func TestRunResultInvalidRate(t *testing.T) {
 	for _, rate := range []float64{math.NaN(), math.Inf(1)} {
 		path := filepath.Join(t.TempDir(), "result.json")
-		record := startRunResult(clioptions.ScenarioID{}, scenarioRunConfig{
-			exportResultFile:       path,
-			maxIterationsPerSecond: rate,
-		})
+		runner := &scenarioRunner{
+			scenarioRunConfig: scenarioRunConfig{exportResultFile: path},
+			statistics:        &loadgen.RunStatistics{},
+		}
 		executor := &loadgen.GenericExecutor{}
-		record.executor = executor
 
 		err := executor.Run(context.Background(), loadgen.ScenarioInfo{Configuration: loadgen.RunConfiguration{
 			MaxIterationsPerSecond: rate,
-			Statistics:             record.statistics,
+			Statistics:             runner.statistics,
 		}})
-		err = record.finish(context.Background(), err)
+		runner.finish(context.Background(), &err)
 
 		require.ErrorContains(t, err, "invalid scenario")
 
@@ -427,7 +286,7 @@ func TestRunResultInvalidRate(t *testing.T) {
 	}
 }
 
-func TestRunResultMissingOnWorkerStartupFailure(t *testing.T) {
+func TestRunResultOnWorkerStartupFailure(t *testing.T) {
 	runner := workerWithScenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: filepath.Join(t.TempDir(), "result.json")}}
 	runner.ScenarioID = clioptions.ScenarioID{
 		Scenario: "workflow_with_single_noop_activity",
@@ -441,6 +300,53 @@ func TestRunResultMissingOnWorkerStartupFailure(t *testing.T) {
 
 	require.ErrorContains(t, err, "worker did not start")
 
-	_, statErr := os.Stat(runner.exportResultFile)
-	require.ErrorIs(t, statErr, os.ErrNotExist)
+	data, readErr := os.ReadFile(runner.exportResultFile)
+	require.NoError(t, readErr)
+	var result runResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	require.Equal(t, "failed", result.Outcome)
+	require.Equal(t, err.Error(), result.Error)
+}
+
+func TestRunResultOnPanic(t *testing.T) {
+	for _, interrupted := range []bool{false, true} {
+		path := filepath.Join(t.TempDir(), "result.json")
+		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+		scenario := loadgen.GetScenario("ebb_and_flow")
+		options, err := scenario.ResolveOptions(map[string]string{"control-interval": "0"})
+		require.NoError(t, err)
+		executor := scenario.ExecutorFn()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		if interrupted {
+			cancel()
+		}
+
+		require.PanicsWithValue(t, "non-positive interval for NewTicker", func() {
+			var runErr error
+			defer runner.finish(ctx, &runErr)
+			runErr = executor.Run(ctx, loadgen.ScenarioInfo{Options: options})
+		})
+
+		data, err := os.ReadFile(path)
+		require.NoError(t, err)
+		require.JSONEq(t, `{
+  "outcome": "failed",
+  "error": "panic: non-positive interval for NewTicker",
+  "iterations": null,
+  "failures": [],
+  "scenarioState": null
+}`, string(data))
+	}
+}
+
+func TestRunResultMinimalSchema(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "result.json")
+	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+	var runErr error
+	runner.finish(context.Background(), &runErr)
+	require.NoError(t, runErr)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"outcome":"passed","iterations":null,"failures":[],"scenarioState":null}`, string(data))
 }

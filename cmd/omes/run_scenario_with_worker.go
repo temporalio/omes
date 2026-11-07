@@ -50,8 +50,13 @@ func (r *workerWithScenarioRunner) preRun() {
 }
 
 func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
-	result := startRunResult(r.ScenarioID, r.scenarioRunConfig)
-	defer func(ctx context.Context) { retErr = result.finish(ctx, retErr) }(ctx)
+	runner := scenarioRunner{
+		logger:            r.Logger,
+		scenario:          r.ScenarioID,
+		scenarioRunConfig: r.scenarioRunConfig,
+		metricsOptions:    r.metricsOptions,
+	}
+	defer runner.finish(ctx, &retErr)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -94,15 +99,9 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 
 	// Run scenario. The client options are read only now that the worker has
 	// started, since starting an embedded server rewrites the server address.
-	scenarioRunner := scenarioRunner{
-		logger:            r.Logger,
-		scenario:          r.ScenarioID,
-		scenarioRunConfig: r.scenarioRunConfig,
-		clientOptions:     r.ClientOptions,
-		metricsOptions:    r.metricsOptions,
-		result:            result,
-	}
-	scenarioErr := scenarioRunner.run(ctx)
+	runner.scenarioRunConfig = r.scenarioRunConfig
+	runner.clientOptions = r.ClientOptions
+	scenarioErr := runner.runScenario(ctx)
 	cancel()
 
 	// Wait for worker complete
