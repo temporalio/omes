@@ -44,6 +44,8 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
+	statistics     *loadgen.RunStatistics
+	scenarioState  any
 }
 
 type scenarioRunConfig struct {
@@ -59,6 +61,7 @@ type scenarioRunConfig struct {
 	exportHistoriesDir            string
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
+	exportResultFile              string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -90,6 +93,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
+	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -143,7 +147,12 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 	return scenario, resolvedOptions, nil
 }
 
-func (r *scenarioRunner) run(ctx context.Context) error {
+func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
+	defer r.finish(ctx, &retErr)
+	return r.runScenario(ctx)
+}
+
+func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
 		return err
@@ -186,7 +195,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
-
+	if r.exportResultFile != "" {
+		r.statistics = &loadgen.RunStatistics{}
+	}
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
@@ -205,6 +216,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
+			Statistics:                    r.statistics,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
@@ -215,6 +227,11 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
+	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
+		defer func() {
+			r.scenarioState = state.Snapshot()
+		}()
+	}
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
