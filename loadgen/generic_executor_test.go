@@ -226,8 +226,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				var failed atomic.Int64
-				stats := &RunStatistics{}
 				configuration := tc.configuration
+				stats := NewRunStatistics(configuration)
 				configuration.Statistics = stats
 				configuration.OnIterationFailure = func(context.Context, *Run, error) { failed.Add(1) }
 				err := executeContext(ctx, &GenericExecutor{
