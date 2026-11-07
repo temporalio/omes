@@ -5,177 +5,120 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/pflag"
-	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
 )
 
 type runResult struct {
-	Version           int                        `json:"version"`
-	Scenario          string                     `json:"scenario"`
-	RunID             string                     `json:"runId"`
-	ExecutionID       string                     `json:"executionId"`
-	RunFamily         string                     `json:"runFamily,omitempty"`
-	Configuration     resultConfiguration        `json:"configuration"`
-	StartedAt         time.Time                  `json:"startedAt"`
-	EndedAt           *time.Time                 `json:"endedAt,omitempty"`
-	Duration          string                     `json:"duration,omitempty"`
-	Outcome           string                     `json:"outcome"`
-	Error             string                     `json:"error,omitempty"`
-	Iterations        *loadgen.IterationCounts   `json:"iterations,omitempty"`
-	IterationFailures []loadgen.IterationFailure `json:"iterationFailures,omitempty"`
-	ScenarioState     json.RawMessage            `json:"scenarioState,omitempty"`
-
-	exportResultFile string
-	statistics       *loadgen.RunStatistics
-	options          *loadgen.OptionSet
-	executor         loadgen.Executor
-	stopSnapshots    func() error
+	Outcome       string                     `json:"outcome"`
+	Error         string                     `json:"error,omitempty"`
+	Iterations    *loadgen.IterationCounts   `json:"iterations"`
+	Failures      []loadgen.IterationFailure `json:"failures"`
+	ScenarioState any                        `json:"scenarioState"`
 }
 
-type resultConfiguration struct {
-	Iterations                 int               `json:"iterations,omitempty"`
-	Duration                   string            `json:"duration,omitempty"`
-	MaxConcurrent              int               `json:"maxConcurrent"`
-	MaxIterationsPerSecond     *float64          `json:"maxIterationsPerSecond"`
-	MaxIterationAttempts       int               `json:"maxIterationAttempts"`
-	Timeout                    string            `json:"timeout"`
-	ContinueOnIterationFailure bool              `json:"continueOnIterationFailure,omitempty"`
-	Options                    map[string]string `json:"options,omitempty"`
-}
-
-func resultConfig(configuration loadgen.RunConfiguration) resultConfiguration {
-	result := resultConfiguration{
-		Iterations:                 configuration.Iterations,
-		MaxConcurrent:              configuration.MaxConcurrent,
-		MaxIterationAttempts:       configuration.MaxIterationAttempts,
-		Timeout:                    configuration.Timeout.String(),
-		ContinueOnIterationFailure: configuration.ContinueOnIterationFailure,
+func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) (retErr error) {
+	var snapshotState func() any
+	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
+		snapshotState = state.Snapshot
+		defer func() { r.scenarioState = state.Snapshot() }()
 	}
-	if !math.IsNaN(configuration.MaxIterationsPerSecond) && !math.IsInf(configuration.MaxIterationsPerSecond, 0) {
-		result.MaxIterationsPerSecond = &configuration.MaxIterationsPerSecond
-	}
-	if configuration.Duration != 0 {
-		result.Duration = configuration.Duration.String()
-	}
-	return result
-}
-
-func startRunResult(id clioptions.ScenarioID, config scenarioRunConfig) *runResult {
-	result := &runResult{
-		Version:          1,
-		Scenario:         id.Scenario,
-		RunID:            id.RunID,
-		RunFamily:        id.RunFamily,
-		StartedAt:        time.Now().UTC(),
-		exportResultFile: config.exportResultFile,
-	}
-	if config.exportResultFile != "" {
-		result.statistics = &loadgen.RunStatistics{}
-	}
-	return result
-}
-
-func (r *runResult) startSnapshots(interval time.Duration) {
-	if r.exportResultFile == "" || interval <= 0 {
-		return
-	}
-	stop := make(chan struct{})
-	done := make(chan struct{})
-	var snapshotErr error
-	r.stopSnapshots = func() error {
-		close(stop)
-		<-done
-		return snapshotErr
-	}
-	ticker := time.NewTicker(interval)
-	go func() {
-		defer close(done)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-ticker.C:
-				if snapshotErr = r.write("running", nil); snapshotErr != nil {
+	if r.exportResultFile != "" && r.exportResultInterval > 0 {
+		ticker := time.NewTicker(r.exportResultInterval)
+		stop := make(chan struct{})
+		done := make(chan struct{})
+		var snapshotErr error
+		defer func() {
+			ticker.Stop()
+			close(stop)
+			// Wait for any in-flight snapshot before the final writer can run.
+			<-done
+			retErr = errors.Join(retErr, snapshotErr)
+		}()
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case <-stop:
 					return
+				case <-ticker.C:
+					snapshot := r.snapshotStatistics()
+					result := runResult{Outcome: "running", Iterations: snapshot.Iterations, Failures: snapshot.Failures}
+					if snapshotState != nil {
+						result.ScenarioState = snapshotState()
+					}
+					if snapshotErr = r.writeResult(result); snapshotErr != nil {
+						return
+					}
 				}
 			}
-		}
-	}()
+		}()
+	}
+	return executor.Run(ctx, info)
 }
 
-func (r *runResult) finish(ctx context.Context, runErr error) error {
-	if r.stopSnapshots != nil {
-		runErr = errors.Join(runErr, r.stopSnapshots())
-		r.stopSnapshots = nil
+func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
+	// Panics on other goroutines bypass this writer.
+	panicValue := recover()
+	if panicValue != nil {
+		*runErr = fmt.Errorf("panic: %v", panicValue)
+		defer func() { panic(panicValue) }()
 	}
-	if r.exportResultFile == "" || r.executor == nil {
-		return runErr
+	if r.exportResultFile == "" {
+		return
 	}
-	snapshot := r.statistics.Snapshot()
-	timedOut := errors.Is(runErr, context.DeadlineExceeded)
+
+	snapshot := r.snapshotStatistics()
+	result := runResult{
+		Iterations:    snapshot.Iterations,
+		Failures:      snapshot.Failures,
+		ScenarioState: r.scenarioState,
+	}
+	timedOut := errors.Is(*runErr, context.DeadlineExceeded)
 	if snapshot.Iterations != nil {
 		timedOut = snapshot.TimedOut
 	}
-	var outcome string
 	switch {
+	case panicValue != nil:
+		result.Outcome = "failed"
 	case errors.Is(ctx.Err(), context.Canceled):
-		outcome = "interrupted"
+		result.Outcome = "interrupted"
 	case errors.Is(ctx.Err(), context.DeadlineExceeded), timedOut:
-		outcome = "timedOut"
-	case runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
-		outcome = "failed"
+		result.Outcome = "timedOut"
+	case *runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
+		result.Outcome = "failed"
 	default:
-		outcome = "passed"
+		result.Outcome = "passed"
 	}
-	return errors.Join(runErr, r.write(outcome, runErr))
+	if *runErr != nil {
+		result.Error = (*runErr).Error()
+	}
+	*runErr = errors.Join(*runErr, r.writeResult(result))
 }
 
-func (r *runResult) write(outcome string, runErr error) error {
-	result := *r
-	result.Outcome = outcome
-	result.EndedAt = nil
-	result.Duration = ""
-	if outcome != "running" {
-		endedAt := time.Now().UTC()
-		result.EndedAt = &endedAt
-		result.Duration = endedAt.Sub(result.StartedAt).String()
+func (r *scenarioRunner) snapshotStatistics() loadgen.RunStatisticsSnapshot {
+	var snapshot loadgen.RunStatisticsSnapshot
+	if r.statistics != nil {
+		snapshot = r.statistics.Snapshot()
 	}
-	snapshot := r.statistics.Snapshot()
-	if snapshot.Iterations != nil {
-		result.Configuration = resultConfig(snapshot.Configuration)
+	if snapshot.Failures == nil {
+		snapshot.Failures = []loadgen.IterationFailure{}
 	}
-	result.Iterations = snapshot.Iterations
-	result.IterationFailures = snapshot.Failures
-	if r.options != nil {
-		result.Configuration.Options = make(map[string]string)
-		r.options.VisitAll(func(flag *pflag.Flag) { result.Configuration.Options[flag.Name] = flag.Value.String() })
-	}
-	result.Error = ""
-	if runErr != nil {
-		result.Error = runErr.Error()
-	}
-	var snapshotErr error
-	if executor, ok := r.executor.(interface{ Snapshot() any }); ok {
-		result.ScenarioState, snapshotErr = json.Marshal(executor.Snapshot())
-		if snapshotErr != nil {
-			snapshotErr = fmt.Errorf("encoding scenario state: %w", snapshotErr)
-		}
-	}
-	data, err := json.MarshalIndent(&result, "", "  ")
+	return snapshot
+}
+
+func (r *scenarioRunner) writeResult(result runResult) error {
+	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		return errors.Join(snapshotErr, fmt.Errorf("encoding run result: %w", err))
+		return fmt.Errorf("encoding run result: %w", err)
 	}
 	if err := writeResultFile(r.exportResultFile, append(data, '\n')); err != nil {
-		return errors.Join(snapshotErr, fmt.Errorf("writing result file: %w", err))
+		return fmt.Errorf("writing result file: %w", err)
 	}
-	return snapshotErr
+	return nil
 }
 
 func writeResultFile(path string, data []byte) (retErr error) {

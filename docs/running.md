@@ -215,43 +215,27 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 
 ```json
 {
-  "version": 1,
-  "scenario": "workflow_with_single_noop_activity",
-  "runId": "example",
-  "executionId": "abc123",
-  "runFamily": "nightly",
-  "configuration": {
-    "iterations": 2,
-    "maxConcurrent": 1,
-    "maxIterationsPerSecond": 1,
-    "maxIterationAttempts": 1,
-    "timeout": "1m0s",
-    "continueOnIterationFailure": true,
-    "options": {"sleep": "1s"}
-  },
-  "startedAt": "2026-01-02T03:04:05Z",
-  "endedAt": "2026-01-02T03:04:14Z",
-  "duration": "9s",
   "outcome": "failed",
   "error": "iteration 2 failed: workflow failed",
   "iterations": {"started": 2, "succeeded": 1, "failed": 1},
-  "iterationFailures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}],
+  "failures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}],
   "scenarioState": {"completed": 1}
 }
 ```
 
-- Written atomically on exit after execution starts; missing files mean failure. Use fresh paths
-  with existing parent directories. Write errors fail commands.
-- Add `--export-result-interval 5s` to write cumulative `running` snapshots every 5 seconds; the default `0` writes only on exit.
+- Written atomically on exit, including validation, connection, and worker-startup failures. Use fresh
+  paths with existing parent directories. Write errors fail commands.
+- Add `--export-result-interval 5s` to atomically rewrite the same file with `outcome: "running"`
+  every 5 seconds during execution. It requires `--export-result-file`; the default `0` writes only
+  on exit. Snapshots use the same schema, with cumulative counts (including `iterations.succeeded`)
+  and current scenario state. The final result replaces the last running snapshot.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
-  `interrupted` was cancelled.
-- The file may be rewritten during a run; only a non-`running` outcome is final. Counts are cumulative
-  since the run started; `endedAt` and `duration` are omitted while running.
-- Configuration records effective limits/options. `"duration": "30s"` replaces mutually exclusive
-  `iterations`. Times: RFC 3339; durations: Go syntax.
-- Counts match run logs: primary-load logical iterations, excluding attempts/operator load;
-  cancelled-on-stop iterations are excluded from succeeded/failed counts.
-- Retain up to 100 terminal failures after retries; messages keep at most 1 KiB plus a truncation
-  marker. Failed counts stay uncapped.
-- Omit unset `runFamily`/`error`, empty `iterationFailures`/`options`, false `continueOnIterationFailure`,
-  unset configuration `iterations`/`duration`, untracked `iterations`, and unsupported `scenarioState`.
+  `interrupted` was cancelled. `error` is omitted when there is no error.
+- `iterations` comes from RunStatistics and matches run logs: primary-load logical iterations,
+  excluding attempts/operator load; cancelled-on-stop iterations are excluded from succeeded/failed
+  counts. It is null when no generic executor ran.
+- `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
+  truncation marker. Failed counts stay uncapped. An empty list means no failures were collected.
+- `scenarioState` contains the scenario's own state, or null if unsupported. Scenarios such as
+  `throughput_stress` report their own counts there, including when generic iteration counts are
+  unavailable.

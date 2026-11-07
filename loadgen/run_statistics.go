@@ -31,8 +31,8 @@ type IterationFailure struct {
 }
 
 // RunStatistics collects generic executor outcomes independently of scenario callbacks.
-// Its zero value is ready for use. Runs that do not use a generic executor leave
-// Iterations nil, distinguishing unavailable counts from zero iterations.
+// Use NewRunStatistics for generic executor runs. Runs that do not use a generic
+// executor leave Iterations nil, distinguishing unavailable counts from zero iterations.
 type RunStatistics struct {
 	mu    sync.Mutex
 	state RunStatisticsSnapshot
@@ -44,6 +44,14 @@ type RunStatisticsSnapshot struct {
 	Iterations    *IterationCounts
 	Failures      []IterationFailure
 	TimedOut      bool
+}
+
+// NewRunStatistics returns a collector for a generic executor run with zero iteration counts.
+func NewRunStatistics(configuration RunConfiguration) *RunStatistics {
+	return &RunStatistics{state: RunStatisticsSnapshot{
+		Configuration: configuration,
+		Iterations:    &IterationCounts{},
+	}}
 }
 
 func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
@@ -62,7 +70,7 @@ func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
 	return s
 }
 
-func (s *RunStatistics) configure(configuration RunConfiguration) {
+func (s *RunStatistics) setConfiguration(configuration RunConfiguration) {
 	if s == nil {
 		return
 	}

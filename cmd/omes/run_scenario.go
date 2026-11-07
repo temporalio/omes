@@ -44,7 +44,8 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
-	result         *runResult
+	statistics     *loadgen.RunStatistics
+	scenarioState  any
 }
 
 type scenarioRunConfig struct {
@@ -153,18 +154,15 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 }
 
 func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
-	result := r.result
-	if result == nil {
-		result = startRunResult(r.scenario, r.scenarioRunConfig)
-		defer func() { retErr = result.finish(ctx, retErr) }()
-	}
+	defer r.finish(ctx, &retErr)
+	return r.runScenario(ctx)
+}
 
+func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
 		return err
 	}
-
-	result.options = resolvedOptions
 
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
 	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
@@ -203,8 +201,9 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 	if err != nil {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
-	result.ExecutionID = executionID
-
+	if r.exportResultFile != "" {
+		r.statistics = &loadgen.RunStatistics{}
+	}
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
@@ -223,7 +222,7 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
-			Statistics:                    result.statistics,
+			Statistics:                    r.statistics,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
@@ -233,11 +232,7 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
-	result.Configuration = resultConfig(scenarioInfo.Configuration)
-	executor := scenario.ExecutorFn()
-	result.executor = executor
-	result.startSnapshots(r.exportResultInterval)
-	err = executor.Run(ctx, scenarioInfo)
+	err = r.runExecutor(ctx, scenario.ExecutorFn(), scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
