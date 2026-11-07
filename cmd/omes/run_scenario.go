@@ -62,6 +62,7 @@ type scenarioRunConfig struct {
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
 	exportResultFile              string
+	exportResultInterval          time.Duration
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -94,6 +95,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
 	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
+	fs.DurationVar(&r.exportResultInterval, "export-result-interval", 0, "Rewrite the result file with running snapshots at this interval (0 writes only on exit; requires --export-result-file)")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -116,6 +118,10 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, loadgen.NewUsageError("--iterations and --duration cannot be combined; " +
 			"use --iterations to run a fixed number of times, or --duration to keep starting " +
 			"iterations for a period")
+	} else if r.exportResultInterval < 0 {
+		return nil, nil, loadgen.NewUsageError("--export-result-interval must not be negative")
+	} else if r.exportResultInterval > 0 && r.exportResultFile == "" {
+		return nil, nil, loadgen.NewUsageError("--export-result-interval requires --export-result-file")
 	}
 
 	// Parse options
@@ -226,13 +232,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
-	executor := scenario.ExecutorFn()
-	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
-		defer func() {
-			r.scenarioState = state.Snapshot()
-		}()
-	}
-	err = executor.Run(ctx, scenarioInfo)
+	err = r.runExecutor(ctx, scenario.ExecutorFn(), scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}

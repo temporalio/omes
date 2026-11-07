@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/temporalio/omes/loadgen"
 )
@@ -17,6 +18,46 @@ type runResult struct {
 	Iterations    *loadgen.IterationCounts   `json:"iterations"`
 	Failures      []loadgen.IterationFailure `json:"failures"`
 	ScenarioState any                        `json:"scenarioState"`
+}
+
+func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) (retErr error) {
+	var snapshotState func() any
+	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
+		snapshotState = state.Snapshot
+		defer func() { r.scenarioState = state.Snapshot() }()
+	}
+	if r.exportResultFile != "" && r.exportResultInterval > 0 {
+		ticker := time.NewTicker(r.exportResultInterval)
+		stop := make(chan struct{})
+		done := make(chan struct{})
+		var snapshotErr error
+		defer func() {
+			ticker.Stop()
+			close(stop)
+			// Wait for any in-flight snapshot before the final writer can run.
+			<-done
+			retErr = errors.Join(retErr, snapshotErr)
+		}()
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					snapshot := r.snapshotStatistics()
+					result := runResult{Outcome: "running", Iterations: snapshot.Iterations, Failures: snapshot.Failures}
+					if snapshotState != nil {
+						result.ScenarioState = snapshotState()
+					}
+					if snapshotErr = r.writeResult(result); snapshotErr != nil {
+						return
+					}
+				}
+			}
+		}()
+	}
+	return executor.Run(ctx, info)
 }
 
 func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
@@ -30,13 +71,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
-	var snapshot loadgen.RunStatisticsSnapshot
-	if r.statistics != nil {
-		snapshot = r.statistics.Snapshot()
-	}
-	if snapshot.Failures == nil {
-		snapshot.Failures = []loadgen.IterationFailure{}
-	}
+	snapshot := r.snapshotStatistics()
 	result := runResult{
 		Iterations:    snapshot.Iterations,
 		Failures:      snapshot.Failures,
@@ -61,14 +96,29 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 	if *runErr != nil {
 		result.Error = (*runErr).Error()
 	}
+	*runErr = errors.Join(*runErr, r.writeResult(result))
+}
+
+func (r *scenarioRunner) snapshotStatistics() loadgen.RunStatisticsSnapshot {
+	var snapshot loadgen.RunStatisticsSnapshot
+	if r.statistics != nil {
+		snapshot = r.statistics.Snapshot()
+	}
+	if snapshot.Failures == nil {
+		snapshot.Failures = []loadgen.IterationFailure{}
+	}
+	return snapshot
+}
+
+func (r *scenarioRunner) writeResult(result runResult) error {
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		*runErr = errors.Join(*runErr, fmt.Errorf("encoding run result: %w", err))
-		return
+		return fmt.Errorf("encoding run result: %w", err)
 	}
 	if err := writeResultFile(r.exportResultFile, append(data, '\n')); err != nil {
-		*runErr = errors.Join(*runErr, fmt.Errorf("writing result file: %w", err))
+		return fmt.Errorf("writing result file: %w", err)
 	}
+	return nil
 }
 
 func writeResultFile(path string, data []byte) (retErr error) {

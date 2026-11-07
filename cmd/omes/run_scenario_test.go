@@ -46,6 +46,19 @@ func TestValidateInputClassifiesBadInputAsUsageErrors(t *testing.T) {
 			wantMsg: "cannot be combined",
 		},
 		{
+			name:    "result interval without file",
+			mutate:  func(r *scenarioRunner) { r.exportResultInterval = time.Second },
+			wantMsg: "--export-result-interval requires --export-result-file",
+		},
+		{
+			name: "negative result interval",
+			mutate: func(r *scenarioRunner) {
+				r.exportResultFile = "result.json"
+				r.exportResultInterval = -time.Second
+			},
+			wantMsg: "--export-result-interval must not be negative",
+		},
+		{
 			name:    "option without equals",
 			mutate:  func(r *scenarioRunner) { r.scenarioOptions = []string{"novalue"} },
 			wantMsg: `--option "novalue" is not in key=value format`,

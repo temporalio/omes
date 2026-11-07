@@ -225,6 +225,10 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 
 - Written atomically on exit, including validation, connection, and worker-startup failures. Use fresh
   paths with existing parent directories. Write errors fail commands.
+- Add `--export-result-interval 5s` to atomically rewrite the same file with `outcome: "running"`
+  every 5 seconds during execution. It requires `--export-result-file`; the default `0` writes only
+  on exit. Snapshots use the same schema, with cumulative counts (including `iterations.succeeded`)
+  and current scenario state. The final result replaces the last running snapshot.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
   `interrupted` was cancelled. `error` is omitted when there is no error.
 - `iterations` comes from RunStatistics and matches run logs: primary-load logical iterations,
