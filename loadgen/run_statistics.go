@@ -77,6 +77,9 @@ func (s *RunStatistics) setConfiguration(configuration RunConfiguration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.Configuration = configuration
+	if s.state.Iterations == nil {
+		s.state.Iterations = &IterationCounts{}
+	}
 }
 
 func (s *RunStatistics) iterationStarted() {

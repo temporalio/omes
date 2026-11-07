@@ -78,6 +78,18 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	}, snapshot)
 }
 
+func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
+	stats := &RunStatistics{}
+	require.Nil(t, stats.Snapshot().Iterations)
+
+	require.NoError(t, execute(
+		&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }},
+		RunConfiguration{Statistics: stats},
+	))
+
+	require.Equal(t, &IterationCounts{Started: DefaultIterations, Succeeded: DefaultIterations}, stats.Snapshot().Iterations)
+}
+
 func TestRunStatisticsTruncatesErrors(t *testing.T) {
 	stats := NewRunStatistics(RunConfiguration{})
 
