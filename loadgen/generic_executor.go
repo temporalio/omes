@@ -49,8 +49,10 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	// This lets the caller decide when to stop the load.
 	useDefaultIterationLimit := g.StopNewIterations == nil
 	info.Configuration.applyDefaults(useDefaultIterationLimit)
+	if info.Configuration.Counter == nil {
+		info.Configuration.Counter = info.Configuration.Statistics
+	}
 	info.Configuration.Counter.runStarted()
-	info.Configuration.Statistics.runStarted()
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
@@ -75,7 +77,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	// Add errors from canceled tests to the returned error after waiting for cleanup.
 	defer func() {
 		g.config.Counter.runFinished(ctx.Err())
-		g.config.Statistics.runFinished(ctx.Err())
 		cancelRun()
 		// Callers read final counters as soon as Run returns.
 		inFlight.Wait()
@@ -185,7 +186,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
 		g.config.Counter.iterationStarted()
-		g.config.Statistics.iterationStarted()
 		run := g.info.NewRun(i + 1)
 		// Count the test before launching it so shutdown waits for it.
 		inFlight.Add(1)
@@ -193,7 +193,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 			// Mark it done only after callbacks and error reporting finish.
 			defer inFlight.Done()
 			var err error
-			var stoppedDuringRetry bool
 			iterStart := time.Now()
 
 			defer func() {
@@ -212,8 +211,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 					errors.As(iterErr, new(*serviceerror.Canceled)))
 
 				g.config.Counter.iterationFinished(run.Iteration, run.attemptCount, iterErr, stopping)
-				g.config.Statistics.iterationFinished(run.Iteration, run.attemptCount, iterErr,
-					stopping || stoppedDuringRetry || (ctx.Err() != nil && errors.Is(iterErr, ctx.Err())))
 
 				switch {
 				case stopping:
@@ -261,7 +258,6 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				case <-time.After(backoff):
 					// wait for backoff, then try again
 				case <-ctx.Done():
-					stoppedDuringRetry = true
 					break retryLoop
 				}
 			}

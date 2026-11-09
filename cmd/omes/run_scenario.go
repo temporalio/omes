@@ -45,7 +45,7 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
-	statistics     *loadgen.RunStatistics
+	statistics     *loadgen.RunCounter
 	scenarioState  any
 }
 
@@ -218,7 +218,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
 	if r.exportResultFile != "" {
-		r.statistics = &loadgen.RunStatistics{}
+		r.statistics = &loadgen.RunCounter{}
 	}
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
