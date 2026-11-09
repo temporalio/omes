@@ -164,10 +164,10 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 	}
 
 	// Write result export file
-	var counts loadgen.RunCounts
-	if r.counter != nil {
-		counts = r.counter.Snapshot()
+	if r.counter == nil {
+		r.counter = &loadgen.RunCounter{}
 	}
+	counts := r.counter.Snapshot()
 	end := runEnd{
 		finished: true,
 		err:      *runErr,

@@ -50,13 +50,13 @@ func (r *workerWithScenarioRunner) preRun() {
 }
 
 func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
-	runner := scenarioRunner{
+	srunner := scenarioRunner{
 		logger:            r.Logger,
 		scenario:          r.ScenarioID,
 		scenarioRunConfig: r.scenarioRunConfig,
 		metricsOptions:    r.metricsOptions,
 	}
-	defer runner.finish(ctx, &retErr)
+	defer srunner.finish(ctx, &retErr)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -67,14 +67,14 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 				loadgen.NexusEnabledOption)
 			// Keep the runner's copied options in sync with the Rust defaults.
 			r.scenarioOptions = options
-			runner.scenarioOptions = options
+			srunner.scenarioOptions = options
 		}
 	}
 
 	// Reject bad input before building and starting a worker, which for some
 	// languages takes minutes. Judging that needs only the scenario name and run
 	// config, so this runner deliberately carries no client options yet.
-	if _, _, err := runner.validateInput(); err != nil {
+	if _, _, err := srunner.validateInput(); err != nil {
 		return err
 	}
 
@@ -98,8 +98,8 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 
 	// Run scenario. The client options are read only now that the worker has
 	// started, since starting an embedded server rewrites the server address.
-	runner.clientOptions = r.ClientOptions
-	scenarioErr := runner.runScenario(ctx)
+	srunner.clientOptions = r.ClientOptions
+	scenarioErr := srunner.runScenario(ctx)
 	cancel()
 
 	// Wait for worker complete

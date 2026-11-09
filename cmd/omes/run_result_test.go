@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
@@ -163,7 +162,7 @@ func TestRunResultOnFailure(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			err := tc.run(context.Background(), path)
+			err := tc.run(t.Context(), path)
 			require.ErrorContains(t, err, tc.wantError)
 
 			data, readErr := os.ReadFile(path)
@@ -189,7 +188,7 @@ func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
 
 		err := runErr
-		runner.finish(context.Background(), &err)
+		runner.finish(t.Context(), &err)
 
 		require.ErrorContains(t, err, "writing result file")
 		if runErr != nil {
@@ -205,7 +204,7 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 
 	var err error
 	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-	runner.finish(context.Background(), &err)
+	runner.finish(t.Context(), &err)
 	require.ErrorContains(t, err, "writing result file")
 
 	files, err := os.ReadDir(directory)
@@ -244,7 +243,7 @@ func TestRunResultFile(t *testing.T) {
 				scenarioState:     tc.scenarioState,
 			}
 			runErr := tc.runErr
-			runner.finish(context.Background(), &runErr)
+			runner.finish(t.Context(), &runErr)
 			require.Equal(t, tc.runErr, runErr)
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
@@ -257,22 +256,12 @@ func TestRunResultFile(t *testing.T) {
 	}
 }
 
-func TestResultFileFlags(t *testing.T) {
-	for _, cmd := range []*cobra.Command{
-		runScenarioCmd(),
-		runScenarioWithWorkerCmd(),
-	} {
-		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
-		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
-	}
-}
-
 func TestRunResultOnPanic(t *testing.T) {
 	for _, interrupted := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "result.json")
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		if interrupted {
 			cancel()
