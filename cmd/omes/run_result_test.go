@@ -16,7 +16,7 @@ import (
 )
 
 func TestRunResultEncoding(t *testing.T) {
-	result := newRunResult(nil, errors.New("iteration failed"), false, loadgen.RunCounts{
+	result := newRunResult(runEnd{err: errors.New("iteration failed")}, loadgen.RunCounts{
 		Iterations: &loadgen.IterationCounts{
 			Started: 2, Succeeded: 1, Failed: 1,
 		},
@@ -36,67 +36,65 @@ func TestRunResultEncoding(t *testing.T) {
 
 func TestRunResultOutcomes(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		ctxErr   error
-		runErr   error
-		snapshot loadgen.RunCounts
-		want     string
+		name   string
+		end    runEnd
+		counts loadgen.RunCounts
+		want   string
 	}{
 		{
 			name: "pass",
 			want: "passed",
 		},
 		{
-			name:   "run failure",
-			runErr: errors.New("run failed"),
+			name: "run failure",
+			end:  runEnd{err: errors.New("run failed")},
+			want: "failed",
+		},
+		{
+			name:   "iteration failure",
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:   "failed",
 		},
 		{
-			name:     "iteration failure",
-			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
-			want:     "failed",
+			name:   "iteration deadline",
+			end:    runEnd{err: context.DeadlineExceeded},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
+			want:   "failed",
 		},
 		{
-			name:     "iteration deadline",
-			runErr:   context.DeadlineExceeded,
-			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
-			want:     "failed",
+			name:   "iteration cancellation",
+			end:    runEnd{err: context.Canceled},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
+			want:   "failed",
 		},
 		{
-			name:     "iteration cancellation",
-			runErr:   context.Canceled,
-			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
-			want:     "failed",
-		},
-		{
-			name:     "timeout",
-			runErr:   context.DeadlineExceeded,
-			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
-			want:     "timedOut",
-		},
-		{
-			name:     "interruption",
-			ctxErr:   context.Canceled,
-			runErr:   context.Canceled,
-			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1}},
-			want:     "interrupted",
-		},
-		{
-			name:   "context deadline",
-			ctxErr: context.DeadlineExceeded,
+			name:   "timeout",
+			end:    runEnd{err: context.DeadlineExceeded},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
 			want:   "timedOut",
 		},
 		{
-			name:   "deadline before execution",
-			runErr: context.DeadlineExceeded,
-			want:   "timedOut",
+			name:   "interruption",
+			end:    runEnd{ctxErr: context.Canceled, err: context.Canceled},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1}},
+			want:   "interrupted",
+		},
+		{
+			name: "context deadline",
+			end:  runEnd{ctxErr: context.DeadlineExceeded},
+			want: "timedOut",
+		},
+		{
+			name: "deadline before execution",
+			end:  runEnd{err: context.DeadlineExceeded},
+			want: "timedOut",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := newRunResult(tc.ctxErr, tc.runErr, false, tc.snapshot, nil)
+			result := newRunResult(tc.end, tc.counts, nil)
 			require.Equal(t, tc.want, result.Outcome)
-			if tc.runErr != nil {
-				require.Equal(t, tc.runErr.Error(), result.Error)
+			if tc.end.err != nil {
+				require.Equal(t, tc.end.err.Error(), result.Error)
 			} else {
 				require.Empty(t, result.Error)
 			}

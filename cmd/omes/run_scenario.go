@@ -45,7 +45,7 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
-	statistics     *loadgen.RunCounter
+	counter        *loadgen.RunCounter
 	scenarioState  any
 }
 
@@ -164,11 +164,16 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
-	var snapshot loadgen.RunCounts
-	if r.statistics != nil {
-		snapshot = r.statistics.Snapshot()
+	var counts loadgen.RunCounts
+	if r.counter != nil {
+		counts = r.counter.Snapshot()
 	}
-	result := newRunResult(ctx.Err(), *runErr, panicValue != nil, snapshot, r.scenarioState)
+	end := runEnd{
+		err:      *runErr,
+		ctxErr:   ctx.Err(),
+		panicked: panicValue != nil,
+	}
+	result := newRunResult(end, counts, r.scenarioState)
 	if err := result.write(r.exportResultFile); err != nil {
 		*runErr = errors.Join(*runErr, err)
 	}
@@ -218,7 +223,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
 	if r.exportResultFile != "" {
-		r.statistics = &loadgen.RunCounter{}
+		r.counter = &loadgen.RunCounter{}
 	}
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
@@ -238,7 +243,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
-			Counter:                       r.statistics,
+			Counter:                       r.counter,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
