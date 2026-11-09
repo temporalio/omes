@@ -161,7 +161,6 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 }
 
 func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
-	// Panics on other goroutines bypass this writer.
 	panicValue := recover()
 	if panicValue != nil {
 		*runErr = fmt.Errorf("panic: %v", panicValue)
@@ -171,6 +170,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
+	// Write result export file
 	end := runEnd{
 		finished: true,
 		err:      *runErr,
@@ -221,14 +221,16 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	if r.exportResultFile != "" {
+		r.counter = &loadgen.RunCounter{}
+	}
+
 	// Generate a random execution ID to ensure no two executions with the same RunID collide
 	executionID, err := generateExecutionID()
 	if err != nil {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
-	if r.exportResultFile != "" {
-		r.counter = &loadgen.RunCounter{}
-	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
@@ -261,6 +263,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
+
 	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
 	if err != nil {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
@@ -269,6 +272,10 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 }
 
 func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) error {
+	// Write scenario state to export
+	if r.exportResultFile == "" {
+		return executor.Run(ctx, info)
+	}
 	state := scenarioState(executor)
 	defer func() { r.scenarioState = state() }()
 	stop := r.writeRunningSnapshots(state)

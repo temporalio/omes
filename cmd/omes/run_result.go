@@ -72,6 +72,7 @@ func (r runResult) write(path string) error {
 }
 
 func writeResultFile(path string, data []byte) (retErr error) {
+	// Write to a temp file in the same directory, then rename so readers never see a partial result.
 	file, err := os.CreateTemp(filepath.Dir(path), ".omes-result-*")
 	if err != nil {
 		return err
