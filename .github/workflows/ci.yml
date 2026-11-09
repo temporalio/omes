@@ -159,6 +159,13 @@ jobs:
       - name: Add Go bin to PATH
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      # ./gradlew runs outside `mise exec`; point it at mise's JDK, not the runner's.
+      - name: Use mise Java
+        if: matrix.target == 'java'
+        run: |
+          java_home="$(mise where java)"
+          echo "JAVA_HOME=$java_home" >> "$GITHUB_ENV"
+          echo "$java_home/bin" >> "$GITHUB_PATH"
       - name: Lint and format ${{ matrix.target }} worker
         run: |
           go run ./cmd/dev lint-and-format ${{ matrix.target }}
@@ -504,6 +511,13 @@ jobs:
       - name: Install Tools
         run: |
           go run ./cmd/dev install ${{ matrix.tools }}
+      # The worker builder runs ./gradlew outside `mise exec`; point it at mise's JDK, not the runner's.
+      - name: Use mise Java
+        if: matrix.sdk == 'java'
+        run: |
+          java_home="$(mise where java)"
+          echo "JAVA_HOME=$java_home" >> "$GITHUB_ENV"
+          echo "$java_home/bin" >> "$GITHUB_PATH"
       - name: Test Kitchensink ${{ matrix.sdk }}
         run: |
           SDK=${{ matrix.sdk }} go test -v -race ./loadgen -run TestKitchenSink 2>&1 | \
