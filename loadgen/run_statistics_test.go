@@ -18,7 +18,7 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 			ContinueOnIterationFailure: true,
 		}
 		stats := &RunStatistics{}
-		require.Equal(t, RunStatisticsSnapshot{}, stats.Snapshot())
+		require.Equal(t, RunCounts{}, stats.Snapshot())
 		configuration.Statistics = stats
 		attempts := make(map[int]int)
 
@@ -32,7 +32,7 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 		require.Error(t, err)
 
 		snapshot := stats.Snapshot()
-		require.Equal(t, RunStatisticsSnapshot{
+		require.Equal(t, RunCounts{
 			Iterations: &IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
 			Failures:   []IterationFailure{{Iteration: 2, Attempt: 2, Error: "iteration 2 failed: iteration error"}},
 		}, snapshot)
@@ -57,7 +57,7 @@ func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 
 func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	stats := &RunStatistics{}
-	require.Equal(t, RunStatisticsSnapshot{}, stats.Snapshot())
+	require.Equal(t, RunCounts{}, stats.Snapshot())
 
 	require.NoError(t, execute(
 		&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }},
@@ -65,7 +65,7 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	))
 
 	snapshot := stats.Snapshot()
-	require.Equal(t, RunStatisticsSnapshot{
+	require.Equal(t, RunCounts{
 		Iterations: &IterationCounts{Started: DefaultIterations, Succeeded: DefaultIterations},
 	}, snapshot)
 }
