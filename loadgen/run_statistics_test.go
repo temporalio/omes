@@ -84,7 +84,7 @@ func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
 
 func TestRunStatisticsTruncatesErrors(t *testing.T) {
 	stats := &RunStatistics{}
-	stats.markAvailable()
+	stats.runStarted()
 
 	long := strings.Repeat("é", statisticsMaxErrorBytes)
 	stats.iterationFinished(1, 1, errors.New(long), false)
