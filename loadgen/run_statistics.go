@@ -61,7 +61,8 @@ func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
 	return s
 }
 
-func (s *RunStatistics) markAvailable() {
+// runStarted records that a generic executor counts this run's iterations; until then counts are unavailable.
+func (s *RunStatistics) runStarted() {
 	if s == nil {
 		return
 	}
