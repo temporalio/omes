@@ -154,7 +154,6 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 }
 
 func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
-	// Panics on other goroutines bypass this writer.
 	panicValue := recover()
 	if panicValue != nil {
 		*runErr = fmt.Errorf("panic: %v", panicValue)
@@ -164,6 +163,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
+	// Write result export file
 	var counts loadgen.RunCounts
 	if r.counter != nil {
 		counts = r.counter.Snapshot()
@@ -218,14 +218,16 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	if r.exportResultFile != "" {
+		r.counter = &loadgen.RunCounter{}
+	}
+
 	// Generate a random execution ID to ensure no two executions with the same RunID collide
 	executionID, err := generateExecutionID()
 	if err != nil {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
-	if r.exportResultFile != "" {
-		r.counter = &loadgen.RunCounter{}
-	}
+
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
 		RunID:          r.scenario.RunID,
