@@ -257,15 +257,19 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
+
+	// Write scenario state to export
 	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
 		defer func() {
 			r.scenarioState = state.Snapshot()
 		}()
 	}
+
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
+
 	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
 	if err != nil {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
