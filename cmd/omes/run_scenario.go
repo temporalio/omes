@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -45,7 +46,7 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
-	statistics     *loadgen.RunStatistics
+	counter        *loadgen.RunCounter
 	scenarioState  any
 }
 
@@ -170,7 +171,13 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
-	result := newRunResult(ctx.Err(), *runErr, panicValue != nil, r.snapshotStatistics(), r.scenarioState)
+	end := runEnd{
+		finished: true,
+		err:      *runErr,
+		ctxErr:   ctx.Err(),
+		panicked: panicValue != nil,
+	}
+	result := newRunResult(end, r.snapshotCounts(), r.scenarioState)
 	if err := result.write(r.exportResultFile); err != nil {
 		*runErr = errors.Join(*runErr, err)
 	}
@@ -220,7 +227,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return fmt.Errorf("failed to generate execution ID: %w", err)
 	}
 	if r.exportResultFile != "" {
-		r.statistics = &loadgen.RunStatistics{}
+		r.counter = &loadgen.RunCounter{}
 	}
 	scenarioInfo := loadgen.ScenarioInfo{
 		ScenarioName:   r.scenario.Scenario,
@@ -240,7 +247,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
-			Statistics:                    r.statistics,
+			Counter:                       r.counter,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
@@ -261,51 +268,55 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	return nil
 }
 
-func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) (retErr error) {
-	var snapshotState func() any
-	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
-		snapshotState = state.Snapshot
-		defer func() { r.scenarioState = state.Snapshot() }()
-	}
-	if r.exportResultFile != "" && r.exportResultInterval > 0 {
-		ticker := time.NewTicker(r.exportResultInterval)
-		stop := make(chan struct{})
-		done := make(chan struct{})
-		var snapshotErr error
-		defer func() {
-			ticker.Stop()
-			close(stop)
-			// Wait for any in-flight snapshot before the final writer can run.
-			<-done
-			retErr = errors.Join(retErr, snapshotErr)
-		}()
-		go func() {
-			defer close(done)
-			for {
-				select {
-				case <-stop:
-					return
-				case <-ticker.C:
-					snapshot := r.snapshotStatistics()
-					var scenarioState any
-					if snapshotState != nil {
-						scenarioState = snapshotState()
-					}
-					result := newRunResult(nil, nil, false, snapshot, scenarioState)
-					result.Outcome = "running"
-					if snapshotErr = result.write(r.exportResultFile); snapshotErr != nil {
-						return
-					}
-				}
-			}
-		}()
-	}
-	return executor.Run(ctx, info)
+func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) error {
+	state := scenarioState(executor)
+	defer func() { r.scenarioState = state() }()
+	stop := r.writeRunningSnapshots(state)
+	defer stop()
+	err := executor.Run(ctx, info)
+	return errors.Join(err, stop())
 }
 
-func (r *scenarioRunner) snapshotStatistics() loadgen.RunStatisticsSnapshot {
-	if r.statistics != nil {
-		return r.statistics.Snapshot()
+func scenarioState(executor loadgen.Executor) func() any {
+	if state, ok := executor.(interface{ Snapshot() any }); ok {
+		return state.Snapshot
 	}
-	return loadgen.RunStatisticsSnapshot{}
+	return func() any { return nil }
+}
+
+func (r *scenarioRunner) writeRunningSnapshots(state func() any) func() error {
+	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
+		return func() error { return nil }
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := time.NewTicker(r.exportResultInterval)
+	var wg sync.WaitGroup
+	var snapshotErr error
+	wg.Go(func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				result := newRunResult(runEnd{}, r.snapshotCounts(), state())
+				if snapshotErr = result.write(r.exportResultFile); snapshotErr != nil {
+					return
+				}
+			}
+		}
+	})
+	return func() error {
+		cancel()
+		// Wait for any in-flight snapshot before the final writer can run.
+		wg.Wait()
+		return snapshotErr
+	}
+}
+
+func (r *scenarioRunner) snapshotCounts() loadgen.RunCounts {
+	if r.counter != nil {
+		return r.counter.Snapshot()
+	}
+	return loadgen.RunCounts{}
 }

@@ -19,33 +19,43 @@ type runResult struct {
 	ScenarioState any                        `json:"scenarioState"`
 }
 
-func newRunResult(ctxErr, runErr error, panicked bool, snapshot loadgen.RunStatisticsSnapshot, scenarioState any) runResult {
-	if snapshot.Failures == nil {
-		snapshot.Failures = []loadgen.IterationFailure{}
+// runEnd describes how scenario execution ended.
+type runEnd struct {
+	finished bool
+	err      error // the scenario's own error
+	ctxErr   error // cancellation or deadline, if any
+	panicked bool
+}
+
+func newRunResult(end runEnd, counts loadgen.RunCounts, scenarioState any) runResult {
+	if counts.Failures == nil {
+		counts.Failures = []loadgen.IterationFailure{}
 	}
 	result := runResult{
-		Iterations:    snapshot.Iterations,
-		Failures:      snapshot.Failures,
+		Iterations:    counts.Iterations,
+		Failures:      counts.Failures,
 		ScenarioState: scenarioState,
 	}
-	timedOut := errors.Is(runErr, context.DeadlineExceeded)
-	if snapshot.Iterations != nil {
-		timedOut = snapshot.TimedOut
+	timedOut := errors.Is(end.err, context.DeadlineExceeded)
+	if counts.Iterations != nil {
+		timedOut = counts.TimedOut
 	}
 	switch {
-	case panicked:
+	case !end.finished:
+		result.Outcome = "running"
+	case end.panicked:
 		result.Outcome = "failed"
-	case errors.Is(ctxErr, context.Canceled):
+	case errors.Is(end.ctxErr, context.Canceled):
 		result.Outcome = "interrupted"
-	case errors.Is(ctxErr, context.DeadlineExceeded), timedOut:
+	case errors.Is(end.ctxErr, context.DeadlineExceeded), timedOut:
 		result.Outcome = "timedOut"
-	case runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
+	case end.err != nil, counts.Iterations != nil && counts.Iterations.Failed > 0:
 		result.Outcome = "failed"
 	default:
 		result.Outcome = "passed"
 	}
-	if runErr != nil {
-		result.Error = runErr.Error()
+	if end.err != nil {
+		result.Error = end.err.Error()
 	}
 	return result
 }

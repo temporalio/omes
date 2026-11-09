@@ -30,29 +30,29 @@ type IterationFailure struct {
 	Error     string `json:"error"`
 }
 
-// RunStatistics collects generic executor outcomes independently of scenario callbacks.
+// RunCounter counts generic executor outcomes independently of scenario callbacks.
 // The zero value is ready to use. Counts stay unavailable (Iterations is nil) until
 // a generic executor runs, distinguishing unavailable counts from zero iterations.
-type RunStatistics struct {
+type RunCounter struct {
 	mu    sync.Mutex
-	state RunStatisticsSnapshot
+	state RunCounts
 }
 
-// RunStatisticsSnapshot contains a copy of the collected counts and failure details.
-type RunStatisticsSnapshot struct {
+// RunCounts is a point-in-time copy of what a run counted: iterations, failures and timeout.
+type RunCounts struct {
 	Iterations *IterationCounts
 	Failures   []IterationFailure
 	TimedOut   bool
 }
 
-func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
+func (s *RunCounter) Snapshot() RunCounts {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.state.clone()
 }
 
 // clone copies the snapshot so callers can't alias the collector's counts or failures.
-func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
+func (s RunCounts) clone() RunCounts {
 	s.Failures = slices.Clone(s.Failures)
 	if s.Iterations != nil {
 		counts := *s.Iterations
@@ -62,7 +62,7 @@ func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
 }
 
 // runStarted records that a generic executor counts this run's iterations; until then counts are unavailable.
-func (s *RunStatistics) runStarted() {
+func (s *RunCounter) runStarted() {
 	if s == nil {
 		return
 	}
@@ -73,7 +73,7 @@ func (s *RunStatistics) runStarted() {
 	}
 }
 
-func (s *RunStatistics) iterationStarted() {
+func (s *RunCounter) iterationStarted() {
 	if s == nil {
 		return
 	}
@@ -82,7 +82,7 @@ func (s *RunStatistics) iterationStarted() {
 	s.state.Iterations.Started++
 }
 
-func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, stopping bool) {
+func (s *RunCounter) iterationFinished(iteration, attempt int, err error, stopping bool) {
 	if s == nil || stopping {
 		return
 	}
@@ -98,7 +98,7 @@ func (s *RunStatistics) iterationFinished(iteration, attempt int, err error, sto
 	}
 }
 
-func (s *RunStatistics) runFinished(err error) {
+func (s *RunCounter) runFinished(err error) {
 	if s == nil || !errors.Is(err, context.DeadlineExceeded) {
 		return
 	}
