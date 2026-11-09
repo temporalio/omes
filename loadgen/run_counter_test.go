@@ -17,7 +17,7 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 			Iterations: 3, MaxConcurrent: 1, MaxIterationAttempts: 2,
 			ContinueOnIterationFailure: true,
 		}
-		stats := &RunStatistics{}
+		stats := &RunCounter{}
 		require.Equal(t, RunCounts{}, stats.Snapshot())
 		configuration.Statistics = stats
 		attempts := make(map[int]int)
@@ -42,7 +42,7 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		configuration := RunConfiguration{Iterations: 101, ContinueOnIterationFailure: true}
-		stats := &RunStatistics{}
+		stats := &RunCounter{}
 		configuration.Statistics = stats
 
 		err := execute(&GenericExecutor{Execute: func(context.Context, *Run) error { return errors.New("failed") }},
@@ -56,7 +56,7 @@ func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 }
 
 func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
-	stats := &RunStatistics{}
+	stats := &RunCounter{}
 	require.Equal(t, RunCounts{}, stats.Snapshot())
 
 	require.NoError(t, execute(
@@ -71,7 +71,7 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 }
 
 func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
-	stats := &RunStatistics{}
+	stats := &RunCounter{}
 	require.Nil(t, stats.Snapshot().Iterations)
 
 	require.NoError(t, execute(
@@ -83,7 +83,7 @@ func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
 }
 
 func TestRunStatisticsTruncatesErrors(t *testing.T) {
-	stats := &RunStatistics{}
+	stats := &RunCounter{}
 	stats.runStarted()
 
 	long := strings.Repeat("é", statisticsMaxErrorBytes)
