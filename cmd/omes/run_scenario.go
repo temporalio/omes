@@ -164,7 +164,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		return
 	}
 
-	var snapshot loadgen.RunStatisticsSnapshot
+	var snapshot loadgen.RunCounts
 	if r.statistics != nil {
 		snapshot = r.statistics.Snapshot()
 	}

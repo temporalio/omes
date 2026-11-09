@@ -16,7 +16,7 @@ import (
 )
 
 func TestRunResultEncoding(t *testing.T) {
-	result := newRunResult(nil, errors.New("iteration failed"), false, loadgen.RunStatisticsSnapshot{
+	result := newRunResult(nil, errors.New("iteration failed"), false, loadgen.RunCounts{
 		Iterations: &loadgen.IterationCounts{
 			Started: 2, Succeeded: 1, Failed: 1,
 		},
@@ -39,7 +39,7 @@ func TestRunResultOutcomes(t *testing.T) {
 		name     string
 		ctxErr   error
 		runErr   error
-		snapshot loadgen.RunStatisticsSnapshot
+		snapshot loadgen.RunCounts
 		want     string
 	}{
 		{
@@ -53,32 +53,32 @@ func TestRunResultOutcomes(t *testing.T) {
 		},
 		{
 			name:     "iteration failure",
-			snapshot: loadgen.RunStatisticsSnapshot{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
+			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:     "failed",
 		},
 		{
 			name:     "iteration deadline",
 			runErr:   context.DeadlineExceeded,
-			snapshot: loadgen.RunStatisticsSnapshot{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
+			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:     "failed",
 		},
 		{
 			name:     "iteration cancellation",
 			runErr:   context.Canceled,
-			snapshot: loadgen.RunStatisticsSnapshot{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
+			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:     "failed",
 		},
 		{
 			name:     "timeout",
 			runErr:   context.DeadlineExceeded,
-			snapshot: loadgen.RunStatisticsSnapshot{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
+			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
 			want:     "timedOut",
 		},
 		{
 			name:     "interruption",
 			ctxErr:   context.Canceled,
 			runErr:   context.Canceled,
-			snapshot: loadgen.RunStatisticsSnapshot{Iterations: &loadgen.IterationCounts{Started: 1}},
+			snapshot: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1}},
 			want:     "interrupted",
 		},
 		{
