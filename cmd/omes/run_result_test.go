@@ -184,7 +184,6 @@ func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
 		err := runErr
 		runner.finish(context.Background(), &err)
-
 		require.ErrorContains(t, err, "writing result file")
 		if runErr != nil {
 			require.ErrorIs(t, err, runErr)
