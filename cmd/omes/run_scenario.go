@@ -297,8 +297,10 @@ func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func()
 	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
 		return func() error { return nil }
 	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	ticker := time.NewTicker(r.exportResultInterval)
+
 	var wg sync.WaitGroup
 	var snapshotErr error
 	wg.Go(func() {
@@ -315,6 +317,7 @@ func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func()
 			}
 		}
 	})
+
 	return func() error {
 		cancel()
 		// Wait for any in-flight snapshot before the final writer can run.
