@@ -408,19 +408,36 @@ func (s *ScenarioInfo) NewRun(iteration int) *Run {
 }
 
 func (s *ScenarioInfo) RegisterDefaultSearchAttributes(ctx context.Context) error {
+	// Ensure custom search attributes are registered that many scenarios rely on
+	return s.addSearchAttributes(ctx, map[string]enums.IndexedValueType{
+		"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
+		"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
+		OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
+	})
+}
+
+// RegisterSearchAttributes registers each definition's name with its type. Attributes that already exist count as
+// registered.
+func (s *ScenarioInfo) RegisterSearchAttributes(ctx context.Context, defs []*kitchensink.SearchAttributeDefinition) error {
+	if len(defs) == 0 {
+		return nil
+	}
+	attrs := make(map[string]enums.IndexedValueType, len(defs))
+	for _, def := range defs {
+		attrs[def.GetName()] = def.GetType()
+	}
+	return s.addSearchAttributes(ctx, attrs)
+}
+
+func (s *ScenarioInfo) addSearchAttributes(ctx context.Context, attrs map[string]enums.IndexedValueType) error {
 	if s.Client == nil {
 		// No client in some unit tests. Ideally this would be mocked but no mock operator service
 		// client is readily available.
 		return nil
 	}
-	// Ensure custom search attributes are registered that many scenarios rely on
 	_, err := s.Client.OperatorService().AddSearchAttributes(ctx, &operatorservice.AddSearchAttributesRequest{
-		SearchAttributes: map[string]enums.IndexedValueType{
-			"KS_Keyword":                   enums.INDEXED_VALUE_TYPE_KEYWORD,
-			"KS_Int":                       enums.INDEXED_VALUE_TYPE_INT,
-			OmesExecutionIDSearchAttribute: enums.INDEXED_VALUE_TYPE_KEYWORD,
-		},
-		Namespace: s.Namespace,
+		SearchAttributes: attrs,
+		Namespace:        s.Namespace,
 	})
 	var alreadyExists *serviceerror.AlreadyExists
 	if err == nil || errors.As(err, &alreadyExists) || status.Code(err) == codes.AlreadyExists {

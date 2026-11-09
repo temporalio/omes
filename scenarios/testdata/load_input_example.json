@@ -1,0 +1,158 @@
+{
+  "inputs": [
+    {
+      "input": {
+        "workflowInput": {
+          "initialActions": [
+            {
+              "actions": [
+                {
+                  "upsertSearchAttributes": {
+                    "generated": ["VisPriority"]
+                  }
+                },
+                {
+                  "timer": {
+                    "milliseconds": "100"
+                  }
+                },
+                {
+                  "continueAsNew": {
+                    "arguments": [
+                      {
+                        "metadata": {
+                          "encoding": "anNvbi9wcm90b2J1Zg==",
+                          "messageType": "dGVtcG9yYWwub21lcy5raXRjaGVuX3NpbmsuV29ya2Zsb3dJbnB1dA=="
+                        },
+                        "data": "eyJpbml0aWFsQWN0aW9ucyI6W3siYWN0aW9ucyI6W3sidXBzZXJ0U2VhcmNoQXR0cmlidXRlcyI6eyJnZW5lcmF0ZWQiOlsiVmlzRXNjYWxhdGVkIiwgIlZpc0RlYWRsaW5lIl19fSwgeyJyZXR1cm5SZXN1bHQiOnsicmV0dXJuVGhpcyI6eyJtZXRhZGF0YSI6eyJlbmNvZGluZyI6IlltbHVZWEo1TDI1MWJHdz0ifX19fV19XX0="
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "weight": 3
+    },
+    {
+      "input": {
+        "workflowInput": {
+          "initialActions": [
+            {
+              "actions": [
+                {
+                  "upsertSearchAttributes": {
+                    "generated": ["VisPriority", "VisEscalated"]
+                  }
+                },
+                {
+                  "returnResult": {
+                    "returnThis": {
+                      "metadata": {
+                        "encoding": "YmluYXJ5L251bGw="
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "withStartAction": {
+          "doUpdate": {
+            "doActions": {
+              "doActions": {}
+            },
+            "withStart": true
+          }
+        }
+      },
+      "weight": 1
+    }
+  ],
+  "searchAttributes": [
+    {
+      "name": "VisTenant",
+      "type": "INDEXED_VALUE_TYPE_KEYWORD",
+      "generator": {
+        "pool": {
+          "cardinality": 50,
+          "distribution": "POOL_DISTRIBUTION_ZIPF"
+        }
+      }
+    },
+    {
+      "name": "VisTags",
+      "type": "INDEXED_VALUE_TYPE_KEYWORD_LIST",
+      "generator": {
+        "pool": {
+          "cardinality": 200,
+          "distribution": "POOL_DISTRIBUTION_ZIPF",
+          "maxItems": 3
+        }
+      }
+    },
+    {
+      "name": "VisPriority",
+      "type": "INDEXED_VALUE_TYPE_INT",
+      "generator": {
+        "intRange": {
+          "min": "1",
+          "max": "10"
+        }
+      }
+    },
+    {
+      "name": "VisEscalated",
+      "type": "INDEXED_VALUE_TYPE_BOOL",
+      "generator": {
+        "bool": {
+          "trueFraction": 0.1
+        }
+      }
+    },
+    {
+      "name": "VisDeadline",
+      "type": "INDEXED_VALUE_TYPE_DATETIME",
+      "generator": {
+        "timeOffset": {
+          "minOffset": "3600s",
+          "maxOffset": "604800s"
+        }
+      }
+    }
+  ],
+  "startSearchAttributes": ["VisTenant", "VisTags"],
+  "visibilityReads": {
+    "ratePerSecond": 2,
+    "templates": [
+      {
+        "name": "recent-by-tenant",
+        "kind": "VISIBILITY_READ_KIND_LIST",
+        "query": "VisTenant = {VisTenant} AND StartTime > {ago:15m}",
+        "weight": 4,
+        "pageSize": 50
+      },
+      {
+        "name": "count-due-by-tag",
+        "kind": "VISIBILITY_READ_KIND_COUNT",
+        "query": "VisTags IN ({VisTags:in:3}) AND VisDeadline < {VisDeadline}",
+        "weight": 2
+      },
+      {
+        "name": "count-by-status",
+        "kind": "VISIBILITY_READ_KIND_COUNT",
+        "query": "VisTenant = {VisTenant} GROUP BY ExecutionStatus",
+        "weight": 2
+      },
+      {
+        "name": "run-prefix",
+        "kind": "VISIBILITY_READ_KIND_LIST",
+        "query": "WorkflowId STARTS_WITH {wfid:prefix:narrow}",
+        "weight": 1
+      }
+    ]
+  }
+}
