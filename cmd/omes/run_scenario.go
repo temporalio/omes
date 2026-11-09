@@ -261,7 +261,6 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	}
 	executor := scenario.ExecutorFn()
 	if r.exportResultFile != "" {
-		// Write scenario state to export
 		r.state = scenarioState(executor)
 	}
 	stop := r.writeRunningSnapshots(r.currentState)
