@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -46,7 +48,9 @@ type scenarioRunner struct {
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
 	counter        *loadgen.RunCounter
+	stateMu        sync.Mutex
 	state          func() any
+	finalResult    atomic.Pointer[runResult]
 }
 
 type scenarioRunConfig struct {
@@ -159,11 +163,6 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		*runErr = fmt.Errorf("panic: %v", panicValue)
 		defer func() { panic(panicValue) }()
 	}
-	if r.exportResultFile == "" {
-		return
-	}
-
-	// Write result export file
 	end := runEnd{
 		finished: true,
 		err:      *runErr,
@@ -171,6 +170,11 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		panicked: panicValue != nil,
 	}
 	result := newRunResult(end, r.snapshotCounts(), r.currentState())
+	r.finalResult.Store(&result)
+	if r.exportResultFile == "" {
+		return
+	}
+	// Write result export file
 	if err := result.write(r.exportResultFile); err != nil {
 		*runErr = errors.Join(*runErr, err)
 	}
@@ -182,8 +186,15 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return err
 	}
 
+	if r.exportResultFile != "" || r.metricsOptions.PrometheusListenAddress != "" {
+		r.counter = &loadgen.RunCounter{}
+	}
+	r.metricsOptions.AdditionalHandler = r.statusHandler()
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	// Keep the HTTP listener alive until process exit so it can serve the final result.
+	if metrics.PromInstance != nil {
+		defer metrics.PromInstance.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
+	}
 	start := time.Now()
 	var client client.Client
 	for {
@@ -212,10 +223,6 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	repoDir, err := getRepoDir()
 	if err != nil {
 		return fmt.Errorf("failed to get root directory: %w", err)
-	}
-
-	if r.exportResultFile != "" {
-		r.counter = &loadgen.RunCounter{}
 	}
 
 	// Generate a random execution ID to ensure no two executions with the same RunID collide
@@ -253,8 +260,10 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
-	if r.exportResultFile != "" {
+	if r.exportResultFile != "" || r.metricsOptions.PrometheusListenAddress != "" {
+		r.stateMu.Lock()
 		r.state = scenarioState(executor)
+		r.stateMu.Unlock()
 	}
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
@@ -268,10 +277,13 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 }
 
 func (r *scenarioRunner) currentState() any {
-	if r.state == nil {
+	r.stateMu.Lock()
+	state := r.state
+	r.stateMu.Unlock()
+	if state == nil {
 		return nil
 	}
-	return r.state()
+	return state()
 }
 
 func scenarioState(executor loadgen.Executor) func() any {

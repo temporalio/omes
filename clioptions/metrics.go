@@ -72,6 +72,8 @@ type MetricsOptions struct {
 	// Address for the Prometheus HTTP listener.
 	// If empty, the listener will not be started.
 	PrometheusListenAddress string
+	// AdditionalHandler serves every path other than /metrics on the Prometheus listener.
+	AdditionalHandler http.Handler
 	// Address for separate process metrics server (CPU/memory only).
 	// If empty, process metrics will not be served separately.
 	WorkerProcessMetricsAddress string
@@ -128,6 +130,9 @@ func (m *MetricsOptions) mustInitPrometheusServer(logger *zap.SugaredLogger, reg
 	address := m.PrometheusListenAddress
 	handler := http.NewServeMux()
 	handler.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	if m.AdditionalHandler != nil {
+		handler.Handle("/", m.AdditionalHandler)
+	}
 
 	server := &http.Server{Addr: address, Handler: handler}
 	listener, err := net.Listen("tcp", address)

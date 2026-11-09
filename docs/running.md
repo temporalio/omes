@@ -230,3 +230,8 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 - `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
   truncation marker.
 - `scenarioState` contains the scenario's own state, or null if unsupported.
+
+Set `--prom-listen-address` to also serve `GET /status` on the metrics HTTP server. It returns the
+same JSON with `outcome: "running"`, current counts, and scenario state during the run, then the final
+result while the process remains alive. This works without `--export-result-file`; the file remains
+the durable final result.
