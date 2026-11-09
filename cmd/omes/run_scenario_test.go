@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -326,47 +325,13 @@ func TestFinishScenarioState(t *testing.T) {
 	}
 }
 
-func TestRunResultRunningSnapshots(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "result.json")
-		runner := &scenarioRunner{
-			scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second},
-			counter:           &loadgen.RunCounter{},
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		started := make(chan int)
-		proceed := make(chan struct{})
-		var completed atomic.Int64
-		executor := resultSnapshotExecutor{
-			Executor: &loadgen.GenericExecutor{Execute: func(ctx context.Context, run *loadgen.Run) error {
-				select {
-				case started <- run.Iteration:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-				select {
-				case <-proceed:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-				completed.Add(1)
-				if run.Iteration == 2 {
-					return errors.New("iteration failed")
-				}
-				return nil
-			}},
-			snapshot: func() any { return map[string]int64{"completed": completed.Load()} },
-		}
+func TestRunningSnapshots(t *testing.T) {
+	run := func(t *testing.T, runner *scenarioRunner, executor *steppedExecutor) <-chan error {
 		done := make(chan error, 1)
 		go func() {
-			var err error
-			func() {
-				defer runner.finish(context.Background(), &err)
-				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
-				defer stop()
-				err = errors.Join(executor.Run(ctx, loadgen.ScenarioInfo{
+			done <- func() (err error) {
+				defer runner.finish(t.Context(), &err)
+				return runner.runWithSnapshots(t.Context(), executor, loadgen.ScenarioInfo{
 					Logger:         zap.NewNop().Sugar(),
 					MetricsHandler: client.MetricsNopHandler,
 					Configuration: loadgen.RunConfiguration{
@@ -375,152 +340,171 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 						DoNotRegisterSearchAttributes: true,
 						Counter:                       runner.counter,
 					},
-				}), stop())
+				})
 			}()
-			done <- err
 		}()
-		for i, counts := range []loadgen.IterationCounts{
-			{Started: 1},
-			{Started: 2, Succeeded: 1},
-			{Started: 3, Succeeded: 1, Failed: 1},
-		} {
-			require.Equal(t, i+1, <-started)
-			for range 2 {
-				<-time.After(time.Second)
+		return done
+	}
+
+	t.Run("rewrites the file on every tick with current counts and state", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := &scenarioRunner{
+				scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second},
+				counter:           &loadgen.RunCounter{},
+			}
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, runner, executor)
+
+			failures := []loadgen.IterationFailure{}
+			for i, counts := range []loadgen.IterationCounts{
+				{Started: 1},
+				{Started: 2, Succeeded: 1},
+				{Started: 3, Succeeded: 1, Failed: 1},
+			} {
 				synctest.Wait()
-				data, err := os.ReadFile(path)
-				require.NoError(t, err)
-				var result runResult
-				require.NoError(t, json.Unmarshal(data, &result))
-				failures := []loadgen.IterationFailure{}
-				if i == 2 {
+				for range 2 {
+					time.Sleep(time.Second)
+					synctest.Wait()
+					require.Equal(t, runResult{
+						Outcome: "running", Iterations: &counts, Failures: failures,
+						ScenarioState: map[string]any{"completed": float64(i)},
+					}, readResult(t, path))
+				}
+
+				var iterationErr error
+				if i == 1 {
+					iterationErr = errors.New("iteration failed")
 					failures = append(failures, loadgen.IterationFailure{Iteration: 2, Attempt: 1, Error: "iteration 2 failed: iteration failed"})
 				}
-				require.Equal(t, runResult{
-					Outcome: "running", Iterations: &counts, Failures: failures,
-					ScenarioState: map[string]any{"completed": float64(i)},
-				}, result)
-				var fields map[string]any
-				require.NoError(t, json.Unmarshal(data, &fields))
-				require.Len(t, fields, 4)
+				executor.step <- iterationErr
 			}
-			proceed <- struct{}{}
-		}
-		require.Error(t, <-done)
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-		var result runResult
-		require.NoError(t, json.Unmarshal(data, &result))
-		require.Equal(t, "failed", result.Outcome)
-		require.Equal(t, &loadgen.IterationCounts{Started: 3, Succeeded: 2, Failed: 1}, result.Iterations)
-		require.Equal(t, map[string]any{"completed": float64(3)}, result.ScenarioState)
-		<-time.After(10 * time.Second)
-		synctest.Wait()
-		final, err := os.ReadFile(path)
-		require.NoError(t, err)
-		require.Equal(t, data, final)
+
+			err := <-done
+			require.Error(t, err)
+			final := readResult(t, path)
+			require.Equal(t, runResult{
+				Outcome: "failed", Error: err.Error(),
+				Iterations:    &loadgen.IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
+				Failures:      failures,
+				ScenarioState: map[string]any{"completed": float64(3)},
+			}, final)
+
+			time.Sleep(10 * time.Second)
+			synctest.Wait()
+			require.Equal(t, final, readResult(t, path))
+		})
 	})
-}
 
-type resultSnapshotExecutor struct {
-	loadgen.Executor
-	snapshot func() any
-}
+	t.Run("final write waits for an in-flight snapshot", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			blocked := false
+			executor := &steppedExecutor{
+				step: make(chan error),
+				snapshot: func() any {
+					if !blocked {
+						blocked = true
+						close(entered)
+						<-release
+					}
+					return map[string]int{"completed": 3}
+				},
+			}
+			done := run(t, runner, executor)
 
-func (e resultSnapshotExecutor) Snapshot() any { return e.snapshot() }
-
-func TestRunResultFinalWriteWaitsForSnapshot(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "result.json")
-		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
-		entered := make(chan struct{})
-		release := make(chan struct{})
-		defer close(release)
-		finishRun := make(chan struct{})
-		blocked := false
-		executor := resultSnapshotExecutor{
-			Executor: loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
-				<-finishRun
-				return nil
-			}),
-			snapshot: func() any {
-				if !blocked {
-					blocked = true
-					close(entered)
-					<-release
-				}
-				return map[string]int{"completed": 1}
-			},
-		}
-		done := make(chan error, 1)
-		go func() {
-			var err error
-			func() {
-				defer runner.finish(context.Background(), &err)
-				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
-				defer stop()
-				err = errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
-			}()
-			done <- err
-		}()
-		<-entered
-		close(finishRun)
-		synctest.Wait()
-		select {
-		case <-done:
-			t.Fatal("final write did not wait for the running snapshot")
-		default:
-		}
-		_, err := os.Stat(path)
-		require.ErrorIs(t, err, os.ErrNotExist)
-		release <- struct{}{}
-		require.NoError(t, <-done)
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-		require.JSONEq(t, `{"outcome":"passed","iterations":null,"failures":[],"scenarioState":{"completed":1}}`, string(data))
-	})
-}
-
-func TestRunResultSnapshotIntervalDisabled(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "result.json")
-		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-		executor := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
-			<-time.After(time.Hour)
+			<-entered
+			close(executor.step)
+			synctest.Wait()
+			select {
+			case <-done:
+				t.Fatal("final write did not wait for the running snapshot")
+			default:
+			}
 			_, err := os.Stat(path)
 			require.ErrorIs(t, err, os.ErrNotExist)
-			return nil
+
+			close(release)
+			require.NoError(t, <-done)
+			require.Equal(t, runResult{
+				Outcome: "passed", Failures: []loadgen.IterationFailure{},
+				ScenarioState: map[string]any{"completed": float64(3)},
+			}, readResult(t, path))
 		})
-		runner.state = scenarioState(executor)
-		stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
-		defer stop()
-		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
-		runner.finish(context.Background(), &err)
-		require.NoError(t, err)
-		require.FileExists(t, path)
+	})
+
+	t.Run("no snapshots without an interval", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, runner, executor)
+
+			synctest.Wait()
+			time.Sleep(time.Hour)
+			synctest.Wait()
+			_, err := os.Stat(path)
+			require.ErrorIs(t, err, os.ErrNotExist)
+
+			close(executor.step)
+			require.NoError(t, <-done)
+			require.FileExists(t, path)
+		})
+	})
+
+	t.Run("snapshot write error keeps the run error", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "missing", "result.json")
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, runner, executor)
+
+			synctest.Wait()
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
+
+			runErr := errors.New("run failed")
+			executor.step <- runErr
+			close(executor.step)
+			err := <-done
+			require.ErrorIs(t, err, runErr)
+			require.ErrorContains(t, err, "writing result file")
+			require.FileExists(t, path)
+		})
 	})
 }
 
-func TestRunResultSnapshotErrorPreservesRunError(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "missing", "result.json")
-		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
-		runErr := errors.New("run failed")
-		executor := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
-			<-time.After(time.Second)
-			synctest.Wait()
-			require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
-			return runErr
-		})
-		runner.state = scenarioState(executor)
-		stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
-		defer stop()
-		synctest.Wait()
-		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
-		runner.finish(context.Background(), &err)
-		require.ErrorIs(t, err, runErr)
-		require.ErrorContains(t, err, "writing result file")
-		require.FileExists(t, path)
-	})
+type steppedExecutor struct {
+	step      chan error
+	completed int
+	snapshot  func() any
+}
+
+func (e *steppedExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	executor := &loadgen.GenericExecutor{Execute: func(context.Context, *loadgen.Run) error {
+		err := <-e.step
+		e.completed++
+		return err
+	}}
+	return executor.Run(ctx, info)
+}
+
+func (e *steppedExecutor) Snapshot() any {
+	if e.snapshot != nil {
+		return e.snapshot()
+	}
+	return map[string]int{"completed": e.completed}
+}
+
+func readResult(t *testing.T, path string) runResult {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var result runResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	return result
 }
