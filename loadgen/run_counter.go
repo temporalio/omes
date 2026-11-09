@@ -3,7 +3,6 @@ package loadgen
 import (
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"unicode/utf8"
 )
@@ -53,7 +52,7 @@ func (s *RunCounter) Snapshot() RunCounts {
 
 // clone copies the snapshot so callers can't alias the collector's counts or failures.
 func (s RunCounts) clone() RunCounts {
-	s.Failures = slices.Clone(s.Failures)
+	s.Failures = append([]IterationFailure{}, s.Failures...)
 	if s.Iterations != nil {
 		counts := *s.Iterations
 		s.Iterations = &counts
