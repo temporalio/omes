@@ -18,7 +18,7 @@ func TestGenericExecutorRunCounter(t *testing.T) {
 			ContinueOnIterationFailure: true,
 		}
 		counter := &RunCounter{}
-		require.Equal(t, RunCounts{}, counter.Snapshot())
+		require.Equal(t, RunCounts{Failures: []IterationFailure{}}, counter.Snapshot())
 		configuration.Counter = counter
 		attempts := make(map[int]int)
 
@@ -57,7 +57,7 @@ func TestGenericExecutorRunCounterFailureLimit(t *testing.T) {
 
 func TestGenericExecutorRunCounterEffectiveDefaults(t *testing.T) {
 	counter := &RunCounter{}
-	require.Equal(t, RunCounts{}, counter.Snapshot())
+	require.Equal(t, RunCounts{Failures: []IterationFailure{}}, counter.Snapshot())
 
 	require.NoError(t, execute(
 		&GenericExecutor{Execute: func(context.Context, *Run) error { return nil }},
@@ -67,6 +67,7 @@ func TestGenericExecutorRunCounterEffectiveDefaults(t *testing.T) {
 	counts := counter.Snapshot()
 	require.Equal(t, RunCounts{
 		Iterations: &IterationCounts{Started: DefaultIterations, Succeeded: DefaultIterations},
+		Failures:   []IterationFailure{},
 	}, counts)
 }
 

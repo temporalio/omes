@@ -170,6 +170,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			configuration:   RunConfiguration{Iterations: 1},
 			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1},
+				Failures:   []IterationFailure{},
 			},
 		},
 		{
@@ -179,6 +180,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			configuration:   RunConfiguration{Iterations: 1},
 			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1},
+				Failures:   []IterationFailure{},
 			},
 		},
 		{
