@@ -227,8 +227,8 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				defer cancel()
 				var failed atomic.Int64
 				configuration := tc.configuration
-				stats := &RunCounter{}
-				configuration.Counter = stats
+				counter := &RunCounter{}
+				configuration.Counter = counter
 				configuration.OnIterationFailure = func(context.Context, *Run, error) { failed.Add(1) }
 				err := executeContext(ctx, &GenericExecutor{
 					Execute: func(ctx context.Context, run *Run) error {
@@ -243,7 +243,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				}, configuration)
 				require.Error(t, err)
 				require.Equal(t, tc.want.Iterations.Failed, failed.Load())
-				snapshot := stats.Snapshot()
+				snapshot := counter.Snapshot()
 				// Classification only; TestGenericExecutorRunStatisticsEffectiveDefaults covers default iteration counts.
 				require.Equal(t, tc.want, snapshot)
 			})
