@@ -35,24 +35,24 @@ type IterationFailure struct {
 // a generic executor runs, distinguishing unavailable counts from zero iterations.
 type RunStatistics struct {
 	mu    sync.Mutex
-	state RunStatisticsSnapshot
+	state RunCounts
 }
 
-// RunStatisticsSnapshot contains a copy of the collected counts and failure details.
-type RunStatisticsSnapshot struct {
+// RunCounts is a point-in-time copy of what a run counted: iterations, failures and timeout.
+type RunCounts struct {
 	Iterations *IterationCounts
 	Failures   []IterationFailure
 	TimedOut   bool
 }
 
-func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
+func (s *RunStatistics) Snapshot() RunCounts {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.state.clone()
 }
 
 // clone copies the snapshot so callers can't alias the collector's counts or failures.
-func (s RunStatisticsSnapshot) clone() RunStatisticsSnapshot {
+func (s RunCounts) clone() RunCounts {
 	s.Failures = slices.Clone(s.Failures)
 	if s.Iterations != nil {
 		counts := *s.Iterations

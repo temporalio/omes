@@ -161,14 +161,14 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 		// cancelOnAttempt cancels the run during that attempt, just before it returns iterationError (0: never).
 		cancelOnAttempt int
 		configuration   RunConfiguration
-		want            RunStatisticsSnapshot
+		want            RunCounts
 	}{
 		{
 			name:            "context stop",
 			iterationError:  context.Canceled,
 			cancelOnAttempt: 1,
 			configuration:   RunConfiguration{Iterations: 1},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1},
 			},
 		},
@@ -177,7 +177,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			iterationError:  fmt.Errorf("waiting for workflow: %w", serviceerror.NewCanceled("stopped")),
 			cancelOnAttempt: 1,
 			configuration:   RunConfiguration{Iterations: 1},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1},
 			},
 		},
@@ -185,7 +185,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "service cancellation while running",
 			iterationError: serviceerror.NewCanceled("workflow canceled"),
 			configuration:  RunConfiguration{Iterations: 1},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow canceled"}},
 			},
@@ -195,7 +195,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			iterationError:  errors.New("workflow failed"),
 			cancelOnAttempt: 1,
 			configuration:   RunConfiguration{Iterations: 1},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 failed: workflow failed"}},
 			},
@@ -204,7 +204,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			name:           "timeout",
 			iterationError: context.DeadlineExceeded,
 			configuration:  RunConfiguration{Iterations: 1, MaxIterationAttempts: 2, Timeout: time.Second},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: context deadline exceeded"}},
 				TimedOut:   true,
@@ -215,7 +215,7 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 			iterationError:  errors.New("transient failure"),
 			cancelOnAttempt: 1,
 			configuration:   RunConfiguration{Iterations: 1, MaxIterationAttempts: 2},
-			want: RunStatisticsSnapshot{
+			want: RunCounts{
 				Iterations: &IterationCounts{Started: 1, Failed: 1},
 				Failures:   []IterationFailure{{Iteration: 1, Attempt: 1, Error: "iteration 1 encountered error: transient failure"}},
 			},
