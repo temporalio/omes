@@ -12,24 +12,15 @@ import (
 // Iterations nil, distinguishing unavailable counts from zero iterations.
 type RunStatistics struct {
 	mu            sync.Mutex
-	configuration RunConfiguration
 	iterations    *IterationCounts
 	failures      []IterationFailure
 	timedOut      bool
 }
 
-// RunStatisticsSnapshot contains a copy of the collected counts and failure details.
-type RunStatisticsSnapshot struct {
-	Configuration RunConfiguration
-	Iterations    *IterationCounts
-	Failures      []IterationFailure
-	TimedOut      bool
-}
-
-func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
+func (s *RunStatistics) Snapshot() RunCounts {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snapshot := RunStatisticsSnapshot{Configuration: s.configuration, Failures: slices.Clone(s.failures), TimedOut: s.timedOut}
+	snapshot := RunCounts{Failures: slices.Clone(s.failures), TimedOut: s.timedOut}
 	if s.iterations != nil {
 		counts := *s.iterations
 		snapshot.Iterations = &counts
@@ -37,13 +28,12 @@ func (s *RunStatistics) Snapshot() RunStatisticsSnapshot {
 	return snapshot
 }
 
-func (s *RunStatistics) configure(configuration RunConfiguration) {
+func (s *RunStatistics) runStarted() {
 	if s == nil {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.configuration = configuration
 	if s.iterations == nil {
 		s.iterations = &IterationCounts{}
 	}

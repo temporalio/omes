@@ -50,7 +50,7 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	useDefaultIterationLimit := g.StopNewIterations == nil
 	info.Configuration.applyDefaults(useDefaultIterationLimit)
 	info.Configuration.Counter.runStarted()
-	info.Configuration.Statistics.configure(info.Configuration)
+	info.Configuration.Statistics.runStarted()
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}

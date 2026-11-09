@@ -19,7 +19,7 @@ type runResult struct {
 	ScenarioState any                        `json:"scenarioState"`
 }
 
-func newRunResult(ctxErr, runErr error, panicked bool, snapshot loadgen.RunStatisticsSnapshot, scenarioState any) runResult {
+func newRunResult(ctxErr, runErr error, panicked bool, snapshot loadgen.RunCounts, scenarioState any) runResult {
 	if snapshot.Failures == nil {
 		snapshot.Failures = []loadgen.IterationFailure{}
 	}
