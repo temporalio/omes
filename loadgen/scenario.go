@@ -26,6 +26,7 @@ import (
 
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen/kitchensink"
+	"github.com/temporalio/omes/loadgen/load"
 )
 
 var sanitizeRunID = regexp.MustCompile(`[^a-zA-Z0-9-]`)
@@ -74,6 +75,12 @@ func (s *Scenario) GetDefaultConfiguration() (RunConfiguration, bool) {
 type Executor interface {
 	// Run the scenario
 	Run(context.Context, ScenarioInfo) error
+}
+
+// LoadPatternExecutor opts an executor into --load. Implementations must pass
+// Configuration.LoadPattern through to GenericExecutor without adding rate control.
+type LoadPatternExecutor interface {
+	SupportsLoadPattern() bool
 }
 
 // Optional interface that can be implemented by an [Executor] to allow it to be resumable.
@@ -313,6 +320,7 @@ type RunConfiguration struct {
 	// MaxIterationsPerSecond is the maximum number of iterations to run per second.
 	// Default is zero, meaning unlimited.
 	MaxIterationsPerSecond float64
+	LoadPattern            *load.Pattern
 	// Timeout is the maximum amount of time we'll wait for the scenario to finish running.
 	// If the timeout is hit any pending executions will be cancelled and the scenario will exit
 	// with an error. The default is unlimited.
@@ -348,7 +356,7 @@ func (r *RunConfiguration) ApplyDefaults() {
 
 // applyDefaults optionally supplies an iteration limit; explicit limits are preserved.
 func (r *RunConfiguration) applyDefaults(useDefaultIterationLimit bool) {
-	if useDefaultIterationLimit && r.Iterations == 0 && r.Duration == 0 {
+	if useDefaultIterationLimit && r.LoadPattern == nil && r.Iterations == 0 && r.Duration == 0 {
 		r.Iterations = DefaultIterations
 	}
 	if r.MaxConcurrent == 0 {
@@ -360,6 +368,14 @@ func (r *RunConfiguration) applyDefaults(useDefaultIterationLimit bool) {
 }
 
 func (r RunConfiguration) Validate() error {
+	if r.LoadPattern != nil {
+		if r.Duration <= 0 || r.Duration != r.LoadPattern.Duration || r.Iterations != 0 || r.MaxIterationsPerSecond != 0 {
+			return fmt.Errorf("load pattern requires its compiled duration and cannot be combined with iterations or MaxIterationsPerSecond")
+		}
+		if _, err := load.NewPacer(r.LoadPattern.Phases); err != nil {
+			return err
+		}
+	}
 	if r.Duration < 0 {
 		return fmt.Errorf("Duration cannot be negative")
 	}

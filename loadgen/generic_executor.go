@@ -36,6 +36,8 @@ type genericRun struct {
 	failed    atomic.Int64
 }
 
+func (*GenericExecutor) SupportsLoadPattern() bool { return true }
+
 func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	r, err := g.newRun(info)
 	if err != nil {
@@ -140,16 +142,30 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	}
 
 	var rateLimiter <-chan time.Time
-	if g.config.MaxIterationsPerSecond > 0 {
+	if g.config.LoadPattern == nil && g.config.MaxIterationsPerSecond > 0 {
 		g.logger.Debugf("Will run at rate of %v iteration(s) per second", g.config.MaxIterationsPerSecond)
+		// Preserve the ticker's truncation to whole nanoseconds for the legacy flag.
 		ticker := time.NewTicker(time.Duration(float64(time.Second) / g.config.MaxIterationsPerSecond))
 		defer ticker.Stop()
 		rateLimiter = ticker.C
 	}
 
+	schedule, err := newLoadSchedule(g.config, g.logger)
+	if err != nil {
+		return err
+	}
+	var timer *time.Timer
+	if schedule != nil {
+		timer = time.NewTimer(0)
+		timer.Stop()
+		defer timer.Stop()
+		defer schedule.reportDrops()
+	}
+
 	// Run all until we've gotten an error or reached iteration limit or timeout
+scheduleLoop:
 	for i := g.info.Configuration.StartFromIteration; runErr == nil && durationCtx.Err() == nil &&
-		(g.config.Iterations == 0 || i < g.config.Iterations); i++ {
+		(g.config.Iterations == 0 || i < g.config.Iterations); {
 
 		// If there is a rate limit, enforce it
 		if rateLimiter != nil {
@@ -166,10 +182,49 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 			if runErr != nil || durationCtx.Err() != nil {
 				break
 			}
+		} else if schedule != nil {
+			for {
+				wait, boundary, done := schedule.next(time.Since(startTime))
+				if done {
+					break scheduleLoop
+				}
+				timer.Reset(wait)
+				nextStartAllowed := false
+				for !nextStartAllowed && runErr == nil && durationCtx.Err() == nil {
+					select {
+					case <-timer.C:
+						nextStartAllowed = true
+					case err := <-doneCh:
+						finishIteration(err)
+					case <-durationCtx.Done():
+					}
+				}
+				if runErr != nil || durationCtx.Err() != nil {
+					break scheduleLoop
+				}
+				if boundary {
+					continue
+				}
+				if !schedule.take(time.Since(startTime)) {
+					continue
+				}
+				break
+			}
+			// Consume completions before checking the in-flight cap at this start slot.
+			for len(doneCh) > 0 {
+				finishIteration(<-doneCh)
+			}
+			if runErr != nil {
+				break
+			}
 		}
 
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
+			if schedule != nil {
+				schedule.dropped++
+				continue
+			}
 			waitOne(durationCtx)
 			// Exit loop on first error, or if scenario duration has elapsed
 			if runErr != nil || durationCtx.Err() != nil {
@@ -181,6 +236,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
 		run := g.info.NewRun(i + 1)
+		i++
 		// Count the test before launching it so shutdown waits for it.
 		inFlight.Add(1)
 		go func() {
@@ -254,6 +310,11 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				}
 			}
 		}()
+	}
+
+	if schedule != nil {
+		schedule.next(time.Since(startTime))
+		schedule.reportDrops()
 	}
 
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for

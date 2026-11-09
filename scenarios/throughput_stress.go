@@ -154,6 +154,8 @@ type tpsExecutor struct {
 var _ loadgen.Resumable = (*tpsExecutor)(nil)
 var _ loadgen.Configurable = (*tpsExecutor)(nil)
 
+func (*tpsExecutor) SupportsLoadPattern() bool { return true }
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Throughput stress scenario.",

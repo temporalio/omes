@@ -11,11 +11,295 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/omes/loadgen/load"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 )
+
+func TestRunLoadPatterns(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		peak     float64
+		duration time.Duration
+		params   map[string]string
+		want     []int
+	}{
+		{"ramp-hold-ramp", 8, 4 * time.Second, map[string]string{"up": "100%", "down": "0s"}, []int{0, 3, 5, 7}},
+		{"sweep", 4, 3 * time.Second, map[string]string{"from": "50%", "steps": "3"}, []int{1, 3, 4}},
+		{"spike-train", 4, 8 * time.Second, map[string]string{"base": "0", "every": "3s", "for": "1s"}, []int{0, 0, 0, 3, 0, 0, 3, 0}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				pattern, err := load.Compile(tc.name, tc.peak, tc.duration, tc.params)
+				require.NoError(t, err)
+				start := time.Now()
+				var mu sync.Mutex
+				windows := make([]int, len(tc.want))
+				executor := &GenericExecutor{Execute: func(context.Context, *Run) error {
+					mu.Lock()
+					defer mu.Unlock()
+					windows[int(time.Since(start)/time.Second)]++
+					return nil
+				}}
+
+				err = execute(executor, RunConfiguration{Duration: tc.duration, LoadPattern: pattern})
+				require.NoError(t, err)
+				require.Equal(t, tc.want, windows)
+				require.Equal(t, tc.duration, time.Since(start))
+			})
+		})
+	}
+}
+
+func TestRunLegacyRateWaitsUnderSaturation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		core, logs := observer.New(zap.DebugLevel)
+		start := time.Now()
+		var mu sync.Mutex
+		var starts []time.Duration
+		executor := &GenericExecutor{Execute: func(_ context.Context, run *Run) error {
+			mu.Lock()
+			starts = append(starts, time.Since(start))
+			mu.Unlock()
+			if run.Iteration == 1 {
+				time.Sleep(2250 * time.Millisecond)
+			}
+			return nil
+		}}
+		config := RunConfiguration{Iterations: 5, MaxConcurrent: 1, MaxIterationsPerSecond: 2, DoNotRegisterSearchAttributes: true}
+
+		err := executor.Run(context.Background(), ScenarioInfo{Configuration: config, Logger: zap.New(core).Sugar(), MetricsHandler: client.MetricsNopHandler})
+
+		require.NoError(t, err)
+		require.Equal(t, []time.Duration{500 * time.Millisecond, 2750 * time.Millisecond, 2750 * time.Millisecond, 3 * time.Second, 3500 * time.Millisecond}, starts)
+		require.Empty(t, logs.FilterLevelExact(zap.WarnLevel).All())
+	})
+}
+
+func TestRunLoadDropsWithoutCatchUp(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		core, logs := observer.New(zap.InfoLevel)
+		start := time.Now()
+		var mu sync.Mutex
+		var starts []time.Duration
+		executor := &GenericExecutor{Execute: func(_ context.Context, run *Run) error {
+			mu.Lock()
+			starts = append(starts, time.Since(start))
+			mu.Unlock()
+			if run.Iteration == 1 {
+				time.Sleep(2250 * time.Millisecond)
+			}
+			return nil
+		}}
+		pattern, err := load.Compile("steady", 2, 5*time.Second, nil)
+		require.NoError(t, err)
+		config := RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true}
+
+		err = executor.Run(context.Background(), ScenarioInfo{Configuration: config, Logger: zap.New(core).Sugar(), MetricsHandler: client.MetricsNopHandler})
+
+		require.NoError(t, err)
+		require.Equal(t, []time.Duration{500 * time.Millisecond, 3 * time.Second, 3500 * time.Millisecond, 4 * time.Second, 4500 * time.Millisecond}, starts)
+		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All()
+		require.Len(t, warnings, 1)
+		require.Equal(t, map[string]interface{}{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(4)}, warnings[0].ContextMap())
+	})
+}
+
+func TestRunLoadSkipsSlotsWhileLoopBlocked(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		pattern  string
+		duration time.Duration
+		message  string
+		blocked  time.Duration
+		want     []time.Duration
+		drops    []map[string]interface{}
+	}{
+		{
+			name: "busy loop", pattern: "steady", duration: 5 * time.Second,
+			message: "Running iteration 0", blocked: 2250 * time.Millisecond,
+			want:  []time.Duration{2750 * time.Millisecond, 3 * time.Second, 3500 * time.Millisecond, 4 * time.Second, 4500 * time.Millisecond},
+			drops: []map[string]interface{}{{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(4)}},
+		},
+		{
+			name: "late timer", pattern: "steady", duration: 5 * time.Second,
+			message: "Load phase", blocked: 2250 * time.Millisecond,
+			want:  []time.Duration{2750 * time.Millisecond, 3 * time.Second, 3500 * time.Millisecond, 4 * time.Second, 4500 * time.Millisecond},
+			drops: []map[string]interface{}{{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(4)}},
+		},
+		{
+			name: "crossed phases", pattern: "sweep", duration: 3 * time.Second,
+			message: "Running iteration 0", blocked: 2250 * time.Millisecond,
+			want: []time.Duration{2750 * time.Millisecond},
+			drops: []map[string]interface{}{
+				{"phase": "step-2", "phaseIndex": int64(2), "dropped": int64(3)},
+				{"phase": "step-3", "phaseIndex": int64(3), "dropped": int64(4)},
+			},
+		},
+		{
+			name: "duration elapsed", pattern: "steady", duration: 5 * time.Second,
+			message: "Load phase", blocked: 6 * time.Second,
+			drops: []map[string]interface{}{{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(9)}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				core, logs := observer.New(zap.DebugLevel)
+				logger := zap.New(core, zap.Hooks(func(entry zapcore.Entry) error {
+					if entry.Message == tc.message {
+						time.Sleep(tc.blocked)
+					}
+					return nil
+				})).Sugar()
+				start := time.Now()
+				var mu sync.Mutex
+				var starts []time.Duration
+				executor := &GenericExecutor{Execute: func(context.Context, *Run) error {
+					mu.Lock()
+					defer mu.Unlock()
+					starts = append(starts, time.Since(start))
+					return nil
+				}}
+				params := map[string]string(nil)
+				peak := float64(2)
+				if tc.pattern == "sweep" {
+					params = map[string]string{"from": "50%", "steps": "3"}
+					peak = 4
+				}
+				pattern, err := load.Compile(tc.pattern, peak, tc.duration, params)
+				require.NoError(t, err)
+				config := RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true}
+
+				err = executor.Run(context.Background(), ScenarioInfo{Configuration: config, Logger: logger, MetricsHandler: client.MetricsNopHandler})
+
+				require.NoError(t, err)
+				require.Equal(t, tc.want, starts)
+				var drops []map[string]interface{}
+				for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All() {
+					drops = append(drops, entry.ContextMap())
+				}
+				require.Equal(t, tc.drops, drops)
+			})
+		})
+	}
+}
+
+func TestRunLogsPhaseChangesAndDrops(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		pattern, err := load.Compile("sweep", 4, 3*time.Second, map[string]string{"from": "50%", "steps": "3"})
+		require.NoError(t, err)
+		core, logs := observer.New(zap.InfoLevel)
+		executor := &GenericExecutor{Execute: func(_ context.Context, run *Run) error {
+			if run.Iteration == 1 {
+				<-time.After(1600 * time.Millisecond)
+			}
+			return nil
+		}}
+
+		err = executor.Run(context.Background(), ScenarioInfo{
+			Configuration: RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true},
+			Logger:        zap.New(core).Sugar(), MetricsHandler: client.MetricsNopHandler,
+		})
+		require.NoError(t, err)
+		var transitions []map[string]interface{}
+		for _, entry := range logs.FilterMessage("Load phase").All() {
+			transitions = append(transitions, entry.ContextMap())
+		}
+		require.Equal(t, []map[string]interface{}{
+			{"phase": "step-1", "phaseIndex": int64(1), "requestedIterationsPerSecond": float64(2)},
+			{"phase": "step-2", "phaseIndex": int64(2), "requestedIterationsPerSecond": float64(3)},
+			{"phase": "step-3", "phaseIndex": int64(3), "requestedIterationsPerSecond": float64(4)},
+		}, transitions)
+		var drops []map[string]interface{}
+		for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All() {
+			drops = append(drops, entry.ContextMap())
+		}
+		require.Equal(t, []map[string]interface{}{
+			{"phase": "step-2", "phaseIndex": int64(2), "dropped": int64(3)},
+			{"phase": "step-3", "phaseIndex": int64(3), "dropped": int64(1)},
+		}, drops)
+		require.Equal(t, map[string]interface{}{
+			"pattern": "sweep", "peak": float64(4), "duration": 3 * time.Second,
+			"phases": []interface{}{"step-1 [0s,1s) 2→2 iterations/s", "step-2 [1s,2s) 3→3 iterations/s", "step-3 [2s,3s) 4→4 iterations/s"},
+		}, logs.FilterMessage("Load pattern").All()[0].ContextMap())
+	})
+}
+
+func TestRunZeroLoadWaitsForDuration(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		pattern, err := load.Compile("spike-train", 2, 2*time.Second, map[string]string{"base": "0", "every": "3s", "for": "1s"})
+		require.NoError(t, err)
+		var started atomic.Int64
+		start := time.Now()
+		executor := &GenericExecutor{Execute: func(context.Context, *Run) error { started.Add(1); return nil }}
+
+		err = execute(executor, RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern})
+		require.NoError(t, err)
+		require.Equal(t, int64(0), started.Load())
+		require.Equal(t, 2*time.Second, time.Since(start))
+	})
+}
+
+func TestRunReportsDropsBeforeCooldownCompletes(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		pattern, err := load.Compile("steady", 2, 2*time.Second, nil)
+		require.NoError(t, err)
+		core, logs := observer.New(zap.InfoLevel)
+		release := make(chan struct{})
+		done := make(chan error, 1)
+		executor := &GenericExecutor{Execute: func(context.Context, *Run) error { <-release; return nil }}
+		go func() {
+			done <- executor.Run(context.Background(), ScenarioInfo{
+				Configuration: RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true},
+				Logger:        zap.New(core).Sugar(), MetricsHandler: client.MetricsNopHandler,
+			})
+		}()
+
+		<-time.After(2 * time.Second)
+		synctest.Wait()
+		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All()
+		close(release)
+		require.Len(t, warnings, 1)
+		require.Equal(t, map[string]interface{}{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(2)}, warnings[0].ContextMap())
+		require.NoError(t, <-done)
+	})
+}
+
+func TestRunLegacyRateKeepsTickerInterval(t *testing.T) {
+	for _, tc := range []struct {
+		rate       float64
+		duration   time.Duration
+		iterations int
+		want       []time.Duration
+	}{
+		{3, time.Second, 0, []time.Duration{333333333, 666666666, 999999999}},
+		{7, 0, 3, []time.Duration{142857142, 285714284, 428571426}},
+		{120, 0, 3, []time.Duration{8333333, 16666666, 24999999}},
+		{0.3, 0, 3, []time.Duration{3333333333, 6666666666, 9999999999}},
+		{1e9, 0, 3, []time.Duration{1, 2, 3}},
+	} {
+		t.Run(fmt.Sprint(tc.rate), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				start := time.Now()
+				var mu sync.Mutex
+				var starts []time.Duration
+				executor := &GenericExecutor{Execute: func(context.Context, *Run) error {
+					mu.Lock()
+					defer mu.Unlock()
+					starts = append(starts, time.Since(start))
+					return nil
+				}}
+
+				err := execute(executor, RunConfiguration{Duration: tc.duration, Iterations: tc.iterations, MaxIterationsPerSecond: tc.rate})
+				require.NoError(t, err)
+				require.Equal(t, tc.want, starts)
+			})
+		})
+	}
+}
 
 type iterationTracker struct {
 	sync.Mutex

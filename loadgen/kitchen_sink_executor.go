@@ -18,6 +18,8 @@ type KitchenSinkExecutor struct {
 	UpdateWorkflowOptions func(context.Context, *Run, *KitchenSinkWorkflowOptions) error
 }
 
+func (KitchenSinkExecutor) SupportsLoadPattern() bool { return true }
+
 func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if k.PrepareTestInput != nil {
 		if err := k.PrepareTestInput(ctx, info, k.TestInput); err != nil {
