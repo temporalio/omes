@@ -28,6 +28,9 @@ type runEnd struct {
 }
 
 func newRunResult(end runEnd, counts loadgen.RunCounts, scenarioState any) runResult {
+	if counts.Failures == nil {
+		counts.Failures = []loadgen.IterationFailure{}
+	}
 	result := runResult{
 		Iterations:    counts.Iterations,
 		Failures:      counts.Failures,

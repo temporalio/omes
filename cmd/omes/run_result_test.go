@@ -9,9 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
-	"go.uber.org/zap"
 )
 
 func TestRunResultEncoding(t *testing.T) {
@@ -43,6 +41,18 @@ func TestRunResultOutcomes(t *testing.T) {
 		{
 			name: "zero value",
 			want: "running",
+		},
+		{
+			name:   "unfinished takes precedence",
+			end:    runEnd{err: errors.New("run failed"), ctxErr: context.Canceled, panicked: true},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
+			want:   "running",
+		},
+		{
+			name:   "panic takes precedence over interruption and timeout",
+			end:    runEnd{finished: true, err: errors.New("panic"), ctxErr: context.Canceled, panicked: true},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
+			want:   "failed",
 		},
 		{
 			name: "pass",
@@ -81,12 +91,12 @@ func TestRunResultOutcomes(t *testing.T) {
 		{
 			name:   "interruption",
 			end:    runEnd{finished: true, ctxErr: context.Canceled, err: context.Canceled},
-			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1}},
+			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
 			want:   "interrupted",
 		},
 		{
 			name: "context deadline",
-			end:  runEnd{finished: true, ctxErr: context.DeadlineExceeded},
+			end:  runEnd{finished: true, ctxErr: context.DeadlineExceeded, err: errors.New("run failed")},
 			want: "timedOut",
 		},
 		{
@@ -107,105 +117,15 @@ func TestRunResultOutcomes(t *testing.T) {
 	}
 }
 
-func TestRunResultOnFailure(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		run       func(context.Context, string) error
-		wantError string
-	}{
-		{
-			name: "invalid input",
-			run: func(ctx context.Context, path string) error {
-				runner := newRunner("no_such_scenario")
-				runner.exportResultFile = path
-				return runner.run(ctx)
-			},
-			wantError: "no_such_scenario",
-		},
-		{
-			name: "invalid input with worker",
-			run: func(ctx context.Context, path string) error {
-				runner := workerWithScenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-				runner.ScenarioID = newRunner("no_such_scenario").scenario
-				return runner.run(ctx)
-			},
-			wantError: "no_such_scenario",
-		},
-		{
-			name: "connection failure",
-			run: func(ctx context.Context, path string) error {
-				runner := newRunner("workflow_with_single_noop_activity")
-				runner.logger = zap.NewNop().Sugar()
-				runner.exportResultFile = path
-				runner.clientOptions.EnableTLS = true
-				runner.clientOptions.ClientCertPath = filepath.Join(filepath.Dir(path), "missing-cert")
-				runner.clientOptions.ClientKeyPath = filepath.Join(filepath.Dir(path), "missing-key")
-				return runner.run(ctx)
-			},
-			wantError: "failed dialing",
-		},
-		{
-			name: "worker startup failure",
-			run: func(ctx context.Context, path string) error {
-				runner := workerWithScenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-				runner.ScenarioID = clioptions.ScenarioID{
-					Scenario: "workflow_with_single_noop_activity",
-					RunID:    "test-run",
-				}
-				runner.Logger = zap.NewNop().Sugar()
-				runner.TaskQueueIndexSuffixStart = 2
-				runner.TaskQueueIndexSuffixEnd = 1
-				return runner.run(ctx)
-			},
-			wantError: "worker did not start",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "result.json")
-			err := tc.run(t.Context(), path)
-			require.ErrorContains(t, err, tc.wantError)
-
-			data, readErr := os.ReadFile(path)
-			require.NoError(t, readErr)
-
-			var result runResult
-			require.NoError(t, json.Unmarshal(data, &result))
-			require.Equal(t, runResult{
-				Outcome:  "failed",
-				Error:    err.Error(),
-				Failures: []loadgen.IterationFailure{},
-			}, result)
-		})
-	}
-}
-
-func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
-	for _, runErr := range []error{
-		nil,
-		errors.New("run failed"),
-	} {
-		path := filepath.Join(t.TempDir(), "missing", "result.json")
-		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-
-		err := runErr
-		runner.finish(t.Context(), &err)
-
-		require.ErrorContains(t, err, "writing result file")
-		if runErr != nil {
-			require.ErrorIs(t, err, runErr)
-		}
-	}
-}
-
-func TestRunResultRenameFailureCleansUp(t *testing.T) {
+func TestWriteResultFileRenameFailureCleansUp(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "result.json")
 	require.NoError(t, os.Mkdir(path, 0700))
 
-	var err error
-	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-	runner.finish(t.Context(), &err)
-	require.ErrorContains(t, err, "writing result file")
+	err := writeResultFile(path, []byte("result"))
+	var pathErr *os.LinkError
+	require.ErrorAs(t, err, &pathErr)
+	require.Equal(t, "rename", pathErr.Op)
 
 	files, err := os.ReadDir(directory)
 	require.NoError(t, err)
@@ -237,14 +157,8 @@ func TestRunResultFile(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			require.NoError(t, os.WriteFile(path, []byte("old result"), 0600))
-			runner := &scenarioRunner{
-				scenarioRunConfig: scenarioRunConfig{exportResultFile: path},
-				scenarioState:     tc.scenarioState,
-			}
-			runErr := tc.runErr
-			runner.finish(t.Context(), &runErr)
-			require.Equal(t, tc.runErr, runErr)
+			result := newRunResult(runEnd{finished: true, err: tc.runErr}, loadgen.RunCounts{}, tc.scenarioState)
+			require.NoError(t, result.write(path))
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
 			require.JSONEq(t, tc.want, string(data))
@@ -256,31 +170,37 @@ func TestRunResultFile(t *testing.T) {
 	}
 }
 
-func TestRunResultOnPanic(t *testing.T) {
-	for _, interrupted := range []bool{false, true} {
-		path := filepath.Join(t.TempDir(), "result.json")
-		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+func TestWriteResultFile(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		existing bool
+	}{
+		{name: "create"},
+		{name: "replace", existing: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			directory := t.TempDir()
+			path := filepath.Join(directory, "result.json")
+			var previous os.FileInfo
+			if tc.existing {
+				require.NoError(t, os.WriteFile(path, []byte("old result"), 0600))
+				var err error
+				previous, err = os.Stat(path)
+				require.NoError(t, err)
+			}
 
-		ctx, cancel := context.WithCancel(t.Context())
-		defer cancel()
-		if interrupted {
-			cancel()
-		}
-
-		require.PanicsWithValue(t, "scenario panic", func() {
-			var runErr error
-			defer runner.finish(ctx, &runErr)
-			panic("scenario panic")
+			require.NoError(t, writeResultFile(path, []byte("new result")))
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.Equal(t, "new result", string(data))
+			if tc.existing {
+				current, err := os.Stat(path)
+				require.NoError(t, err)
+				require.False(t, os.SameFile(previous, current))
+			}
+			files, err := os.ReadDir(directory)
+			require.NoError(t, err)
+			require.Len(t, files, 1)
 		})
-
-		data, err := os.ReadFile(path)
-		require.NoError(t, err)
-		require.JSONEq(t, `{
-  "outcome": "failed",
-  "error": "panic: scenario panic",
-  "iterations": null,
-  "failures": [],
-  "scenarioState": null
-}`, string(data))
 	}
 }
