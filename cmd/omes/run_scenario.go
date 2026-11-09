@@ -260,12 +260,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
-	if r.exportResultFile != "" {
-		r.state = scenarioState(executor)
-	}
-	stop := r.writeRunningSnapshots(ctx, r.currentState)
-	defer stop()
-	err = errors.Join(executor.Run(ctx, scenarioInfo), stop())
+	err = r.runWithSnapshots(ctx, executor, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
@@ -274,6 +269,15 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
+}
+
+func (r *scenarioRunner) runWithSnapshots(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) error {
+	if r.exportResultFile != "" {
+		r.state = scenarioState(executor)
+	}
+	stop := r.writeRunningSnapshots(ctx, r.currentState)
+	defer stop()
+	return errors.Join(executor.Run(ctx, info), stop())
 }
 
 func (r *scenarioRunner) currentState() any {
@@ -291,7 +295,7 @@ func scenarioState(executor loadgen.Executor) func() any {
 }
 
 // writeRunningSnapshots periodically rewrites the result file while the scenario runs; stop ends it
-// before the final write. state is called concurrently with Run, so an executor's Snapshot must
+// before the final write. `state` is called concurrently with Run, so an executor's Snapshot must
 // be safe for concurrent use and return a copy.
 func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func() any) func() error {
 	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
