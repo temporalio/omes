@@ -169,6 +169,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		counts = r.counter.Snapshot()
 	}
 	end := runEnd{
+		finished: true,
 		err:      *runErr,
 		ctxErr:   ctx.Err(),
 		panicked: panicValue != nil,
