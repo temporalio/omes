@@ -256,10 +256,7 @@ func TestRunResultOnPanic(t *testing.T) {
 					executor.state = 1
 					panic("scenario panic")
 				}
-				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
-				defer stop()
-				_ = executor.Run(ctx, loadgen.ScenarioInfo{})
+				_ = runner.runWithSnapshots(ctx, executor, loadgen.ScenarioInfo{})
 			})
 
 			data, err := os.ReadFile(path)
