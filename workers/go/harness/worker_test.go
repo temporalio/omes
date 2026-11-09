@@ -130,6 +130,32 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			}),
 		},
 		{
+			name: "activity autoscale min, initial and max",
+			argv: []string{
+				"--activity-poller-autoscale-min=2",
+				"--activity-poller-autoscale-initial=4",
+				"--activity-poller-autoscale-max=20",
+			},
+			activityBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
+				MinimumNumberOfPollers: 2,
+				InitialNumberOfPollers: 4,
+				MaximumNumberOfPollers: 20,
+			}),
+			workflowBehavior: defaultFixed,
+		},
+		{
+			// Any autoscale bound enables autoscaling, even over a fixed poller count.
+			name: "workflow autoscale min alone enables autoscaling",
+			argv: []string{
+				"--workflow-poller-autoscale-min=3",
+				"--max-concurrent-workflow-pollers=7",
+			},
+			activityBehavior: defaultFixed,
+			workflowBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
+				MinimumNumberOfPollers: 3,
+			}),
+		},
+		{
 			name: "max concurrent pollers still pins a simple maximum",
 			argv: []string{"--max-concurrent-activity-pollers=3"},
 			activityBehavior: sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
@@ -157,6 +183,24 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 					options.WorkflowTaskPollerBehavior, tc.workflowBehavior)
 			}
 		})
+	}
+}
+
+func TestBuildWorkerOptionsRejectsInvalidAutoscaleBounds(t *testing.T) {
+	for _, argv := range [][]string{
+		{"--activity-poller-autoscale-min=10", "--activity-poller-autoscale-max=5"},
+		{"--workflow-poller-autoscale-initial=10", "--workflow-poller-autoscale-max=5"},
+		{"--workflow-poller-autoscale-min=4", "--workflow-poller-autoscale-initial=2"},
+		{"--activity-poller-autoscale-min=-1"},
+	} {
+		var args clioptions.WorkerOptions
+		flags := args.FlagSetWithPrefix("")
+		if err := flags.Parse(argv); err != nil {
+			t.Fatalf("failed to parse %v: %v", argv, err)
+		}
+		if _, err := buildWorkerOptions(flags, args, ""); err == nil {
+			t.Errorf("buildWorkerOptions(%v) succeeded, want error", argv)
+		}
 	}
 }
 
