@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -150,6 +151,27 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 	defer r.finish(ctx, &retErr)
 	return r.runScenario(ctx)
+}
+
+func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
+	// Panics on other goroutines bypass this writer.
+	panicValue := recover()
+	if panicValue != nil {
+		*runErr = fmt.Errorf("panic: %v", panicValue)
+		defer func() { panic(panicValue) }()
+	}
+	if r.exportResultFile == "" {
+		return
+	}
+
+	var snapshot loadgen.RunStatisticsSnapshot
+	if r.statistics != nil {
+		snapshot = r.statistics.Snapshot()
+	}
+	result := newRunResult(ctx.Err(), *runErr, panicValue != nil, snapshot, r.scenarioState)
+	if err := result.write(r.exportResultFile); err != nil {
+		*runErr = errors.Join(*runErr, err)
+	}
 }
 
 func (r *scenarioRunner) runScenario(ctx context.Context) error {
