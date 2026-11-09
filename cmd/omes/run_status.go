@@ -6,8 +6,7 @@ import (
 )
 
 func (r *scenarioRunner) statusHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /status", func(w http.ResponseWriter, request *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		result := r.finalResult.Load()
 		if result == nil {
 			running := newRunResult(runEnd{}, r.snapshotCounts(), r.currentState())
@@ -23,5 +22,4 @@ func (r *scenarioRunner) statusHandler() http.Handler {
 			r.logger.Errorf("Writing run status: %v", err)
 		}
 	})
-	return mux
 }

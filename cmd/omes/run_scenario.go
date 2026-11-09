@@ -51,6 +51,7 @@ type scenarioRunner struct {
 	stateMu        sync.Mutex
 	state          func() any
 	finalResult    atomic.Pointer[runResult]
+	status         *statusServer
 }
 
 type scenarioRunConfig struct {
@@ -67,6 +68,7 @@ type scenarioRunConfig struct {
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
 	exportResultFile              string
+	statusListenAddress           string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -99,6 +101,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
 	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
+	fs.StringVar(&r.statusListenAddress, "status-listen-address", "", "Status server listen address (empty disables; use 127.0.0.1:port for local access)")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -153,7 +156,11 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 }
 
 func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
+	defer r.shutdownStatusServer()
 	defer r.finish(ctx, &retErr)
+	if err := r.startStatusServer(); err != nil {
+		return err
+	}
 	return r.runScenario(ctx)
 }
 
@@ -186,15 +193,8 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		return err
 	}
 
-	if r.exportResultFile != "" || r.metricsOptions.PrometheusListenAddress != "" {
-		r.counter = &loadgen.RunCounter{}
-	}
-	r.metricsOptions.AdditionalHandler = r.statusHandler()
 	metrics := r.metricsOptions.MustCreateMetrics(ctx, r.logger)
-	// Keep the HTTP listener alive until process exit so it can serve the final result.
-	if metrics.PromInstance != nil {
-		defer metrics.PromInstance.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
-	}
+	defer metrics.Shutdown(ctx, r.logger, r.scenario.Scenario, r.scenario.RunID, r.scenario.RunFamily)
 	start := time.Now()
 	var client client.Client
 	for {
@@ -260,7 +260,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
-	if r.exportResultFile != "" || r.metricsOptions.PrometheusListenAddress != "" {
+	if r.exportResultFile != "" || r.statusListenAddress != "" {
 		r.stateMu.Lock()
 		r.state = scenarioState(executor)
 		r.stateMu.Unlock()

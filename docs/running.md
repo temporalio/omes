@@ -231,7 +231,8 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
   truncation marker.
 - `scenarioState` contains the scenario's own state, or null if unsupported.
 
-Set `--prom-listen-address` to also serve `GET /status` on the metrics HTTP server. It returns the
-same JSON with `outcome: "running"`, current counts, and scenario state during the run, then the final
-result while the process remains alive. This works without `--export-result-file`; the file remains
-the durable final result.
+Set `--status-listen-address 127.0.0.1:8080` on `run-scenario` or `run-scenario-with-worker` to serve
+`GET /status` on a separate status server. An empty address (the default) disables it; bind to
+`127.0.0.1` for local access. It returns the same JSON with `outcome: "running"`, current counts,
+and scenario state during the run. The runner records the final result before shutting down the
+status server. This works without `--export-result-file`; use the file for a durable final result.

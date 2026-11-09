@@ -56,6 +56,7 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 		scenarioRunConfig: r.scenarioRunConfig,
 		metricsOptions:    r.metricsOptions,
 	}
+	defer srunner.shutdownStatusServer()
 	defer srunner.finish(ctx, &retErr)
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -75,6 +76,9 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 	// languages takes minutes. Judging that needs only the scenario name and run
 	// config, so this runner deliberately carries no client options yet.
 	if _, _, err := srunner.validateInput(); err != nil {
+		return err
+	}
+	if err := srunner.startStatusServer(); err != nil {
 		return err
 	}
 
