@@ -238,7 +238,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
-			Statistics:                    r.statistics,
+			Counter:                       r.statistics,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
