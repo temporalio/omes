@@ -21,6 +21,7 @@ type runResult struct {
 
 // runEnd describes how scenario execution ended.
 type runEnd struct {
+	finished bool
 	err      error // the scenario's own error
 	ctxErr   error // cancellation or deadline, if any
 	panicked bool
@@ -40,6 +41,8 @@ func newRunResult(end runEnd, counts loadgen.RunCounts, scenarioState any) runRe
 		timedOut = counts.TimedOut
 	}
 	switch {
+	case !end.finished:
+		result.Outcome = "running"
 	case end.panicked:
 		result.Outcome = "failed"
 	case errors.Is(end.ctxErr, context.Canceled):

@@ -16,7 +16,7 @@ import (
 )
 
 func TestRunResultEncoding(t *testing.T) {
-	result := newRunResult(runEnd{err: errors.New("iteration failed")}, loadgen.RunCounts{
+	result := newRunResult(runEnd{finished: true, err: errors.New("iteration failed")}, loadgen.RunCounts{
 		Iterations: &loadgen.IterationCounts{
 			Started: 2, Succeeded: 1, Failed: 1,
 		},
@@ -42,51 +42,57 @@ func TestRunResultOutcomes(t *testing.T) {
 		want   string
 	}{
 		{
+			name: "zero value",
+			want: "running",
+		},
+		{
 			name: "pass",
+			end:  runEnd{finished: true},
 			want: "passed",
 		},
 		{
 			name: "run failure",
-			end:  runEnd{err: errors.New("run failed")},
+			end:  runEnd{finished: true, err: errors.New("run failed")},
 			want: "failed",
 		},
 		{
 			name:   "iteration failure",
+			end:    runEnd{finished: true},
 			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:   "failed",
 		},
 		{
 			name:   "iteration deadline",
-			end:    runEnd{err: context.DeadlineExceeded},
+			end:    runEnd{finished: true, err: context.DeadlineExceeded},
 			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:   "failed",
 		},
 		{
 			name:   "iteration cancellation",
-			end:    runEnd{err: context.Canceled},
+			end:    runEnd{finished: true, err: context.Canceled},
 			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}},
 			want:   "failed",
 		},
 		{
 			name:   "timeout",
-			end:    runEnd{err: context.DeadlineExceeded},
+			end:    runEnd{finished: true, err: context.DeadlineExceeded},
 			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1, Failed: 1}, TimedOut: true},
 			want:   "timedOut",
 		},
 		{
 			name:   "interruption",
-			end:    runEnd{ctxErr: context.Canceled, err: context.Canceled},
+			end:    runEnd{finished: true, ctxErr: context.Canceled, err: context.Canceled},
 			counts: loadgen.RunCounts{Iterations: &loadgen.IterationCounts{Started: 1}},
 			want:   "interrupted",
 		},
 		{
 			name: "context deadline",
-			end:  runEnd{ctxErr: context.DeadlineExceeded},
+			end:  runEnd{finished: true, ctxErr: context.DeadlineExceeded},
 			want: "timedOut",
 		},
 		{
 			name: "deadline before execution",
-			end:  runEnd{err: context.DeadlineExceeded},
+			end:  runEnd{finished: true, err: context.DeadlineExceeded},
 			want: "timedOut",
 		},
 	} {
