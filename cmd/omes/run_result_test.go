@@ -271,6 +271,7 @@ func TestRunResultOnPanic(t *testing.T) {
 	for _, interrupted := range []bool{false, true} {
 		path := filepath.Join(t.TempDir(), "result.json")
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		if interrupted {
