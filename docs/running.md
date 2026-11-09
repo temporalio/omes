@@ -223,19 +223,12 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 }
 ```
 
-- Written atomically on exit, including validation, connection, and worker-startup failures. Use fresh
-  paths with existing parent directories. Write errors fail commands.
-- Add `--export-result-interval 5s` to atomically rewrite the same file with `outcome: "running"`
-  every 5 seconds during execution. It requires `--export-result-file`; the default `0` writes only
-  on exit. Snapshots use the same schema, with cumulative counts (including `iterations.succeeded`)
-  and current scenario state. The final result replaces the last running snapshot.
+- Written on exit, including validation, connection, and worker-startup failures.
+- `--export-result-interval <duration>` also rewrites the file with `outcome: "running"` while the
+  scenario executes; it requires `--export-result-file`, and the final result replaces the last snapshot.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
   `interrupted` was cancelled; `running` is a snapshot taken while the scenario executes.
-- `iterations` matches run logs and counts each scenario iteration once, however many attempts it
-  took. Operator load is excluded, and iterations cancelled when the run stops are excluded from
-  succeeded/failed counts. It is null when no generic executor ran.
+- `iterations` matches run logs and counts each scenario iteration once, however many attempts it took.
 - `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
-  truncation marker. Failed counts stay uncapped.
-- `scenarioState` contains the scenario's own state, or null if unsupported. Scenarios such as
-  `throughput_stress` report their own counts there, including when generic iteration counts are
-  unavailable.
+  truncation marker.
+- `scenarioState` contains the scenario's own state, or null if unsupported.
