@@ -263,7 +263,7 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	if r.exportResultFile != "" {
 		r.state = scenarioState(executor)
 	}
-	stop := r.writeRunningSnapshots(r.currentState)
+	stop := r.writeRunningSnapshots(ctx, r.currentState)
 	defer stop()
 	err = errors.Join(executor.Run(ctx, scenarioInfo), stop())
 	if err != nil {
@@ -293,11 +293,11 @@ func scenarioState(executor loadgen.Executor) func() any {
 // writeRunningSnapshots periodically rewrites the result file while the scenario runs; stop ends it
 // before the final write. state is called concurrently with Run, so an executor's Snapshot must
 // be safe for concurrent use and return a copy.
-func (r *scenarioRunner) writeRunningSnapshots(state func() any) func() error {
+func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func() any) func() error {
 	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
 		return func() error { return nil }
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	ticker := time.NewTicker(r.exportResultInterval)
 	var wg sync.WaitGroup
 	var snapshotErr error
