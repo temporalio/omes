@@ -257,7 +257,10 @@ func TestRunResultOnPanic(t *testing.T) {
 					executor.state = 1
 					panic("scenario panic")
 				}
-				_ = runner.runExecutor(ctx, executor, loadgen.ScenarioInfo{})
+				runner.state = scenarioState(executor)
+				stop := runner.writeRunningSnapshots(runner.currentState)
+				defer stop()
+				_ = executor.Run(ctx, loadgen.ScenarioInfo{})
 			})
 
 			data, err := os.ReadFile(path)
@@ -280,37 +283,45 @@ type scenarioStateExecutor struct {
 
 func (e *scenarioStateExecutor) Snapshot() any { return e.state }
 
-func TestRunExecutorScenarioState(t *testing.T) {
+func TestFinishScenarioState(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		export   bool
-		snapshot bool
+		name       string
+		snapshot   bool
+		noExecutor bool
+		wantState  string
 	}{
-		{name: "snapshot with export", export: true, snapshot: true},
-		{name: "snapshot without export", snapshot: true},
-		{name: "no snapshot with export", export: true},
-		{name: "no snapshot without export"},
+		{name: "snapshot", snapshot: true, wantState: "1"},
+		{name: "no snapshot", wantState: "null"},
+		{name: "before executor exists", noExecutor: true, wantState: "null"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := &scenarioRunner{}
-			if tc.export {
-				runner.exportResultFile = filepath.Join(t.TempDir(), "result.json")
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+			if !tc.noExecutor {
+				var executor scenarioStateExecutor
+				executor.ExecutorFunc = func(context.Context, loadgen.ScenarioInfo) error {
+					executor.state = 1
+					return nil
+				}
+				var run loadgen.Executor = executor.ExecutorFunc
+				if tc.snapshot {
+					run = &executor
+				}
+				runner.state = scenarioState(run)
+				require.NoError(t, run.Run(t.Context(), loadgen.ScenarioInfo{}))
 			}
-			var executor scenarioStateExecutor
-			executor.ExecutorFunc = func(context.Context, loadgen.ScenarioInfo) error {
-				executor.state = 1
-				return nil
-			}
-			var run loadgen.Executor = executor.ExecutorFunc
-			if tc.snapshot {
-				run = &executor
-			}
-			require.NoError(t, runner.runExecutor(t.Context(), run, loadgen.ScenarioInfo{}))
-			if tc.export && tc.snapshot {
-				require.Equal(t, 1, runner.scenarioState)
-			} else {
-				require.Nil(t, runner.scenarioState)
-			}
+			var runErr error
+			runner.finish(t.Context(), &runErr)
+			require.NoError(t, runErr)
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.JSONEq(t, `{
+  "outcome": "passed",
+  "iterations": null,
+  "failures": [],
+  "scenarioState": `+tc.wantState+`
+}`, string(data))
 		})
 	}
 }
@@ -352,7 +363,10 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 			var err error
 			func() {
 				defer runner.finish(context.Background(), &err)
-				err = runner.runExecutor(ctx, executor, loadgen.ScenarioInfo{
+				runner.state = scenarioState(executor)
+				stop := runner.writeRunningSnapshots(runner.currentState)
+				defer stop()
+				err = errors.Join(executor.Run(ctx, loadgen.ScenarioInfo{
 					Logger:         zap.NewNop().Sugar(),
 					MetricsHandler: client.MetricsNopHandler,
 					Configuration: loadgen.RunConfiguration{
@@ -361,7 +375,7 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 						DoNotRegisterSearchAttributes: true,
 						Counter:                       runner.counter,
 					},
-				})
+				}), stop())
 			}()
 			done <- err
 		}()
@@ -443,7 +457,10 @@ func TestRunResultFinalWriteWaitsForSnapshot(t *testing.T) {
 			var err error
 			func() {
 				defer runner.finish(context.Background(), &err)
-				err = runner.runExecutor(context.Background(), executor, loadgen.ScenarioInfo{})
+				runner.state = scenarioState(executor)
+				stop := runner.writeRunningSnapshots(runner.currentState)
+				defer stop()
+				err = errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
 			}()
 			done <- err
 		}()
@@ -469,12 +486,16 @@ func TestRunResultSnapshotIntervalDisabled(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "result.json")
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-		err := runner.runExecutor(context.Background(), loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
+		executor := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
 			<-time.After(time.Hour)
 			_, err := os.Stat(path)
 			require.ErrorIs(t, err, os.ErrNotExist)
 			return nil
-		}), loadgen.ScenarioInfo{})
+		})
+		runner.state = scenarioState(executor)
+		stop := runner.writeRunningSnapshots(runner.currentState)
+		defer stop()
+		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
 		runner.finish(context.Background(), &err)
 		require.NoError(t, err)
 		require.FileExists(t, path)
@@ -486,12 +507,17 @@ func TestRunResultSnapshotErrorPreservesRunError(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "missing", "result.json")
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
 		runErr := errors.New("run failed")
-		err := runner.runExecutor(context.Background(), loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
+		executor := loadgen.ExecutorFunc(func(context.Context, loadgen.ScenarioInfo) error {
 			<-time.After(time.Second)
 			synctest.Wait()
 			require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
 			return runErr
-		}), loadgen.ScenarioInfo{})
+		})
+		runner.state = scenarioState(executor)
+		stop := runner.writeRunningSnapshots(runner.currentState)
+		defer stop()
+		synctest.Wait()
+		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
 		runner.finish(context.Background(), &err)
 		require.ErrorIs(t, err, runErr)
 		require.ErrorContains(t, err, "writing result file")
