@@ -326,6 +326,7 @@ func TestRunningSnapshots(t *testing.T) {
 	run := func(t *testing.T, path string, interval time.Duration, executor *steppedExecutor) <-chan error {
 		runner := &scenarioRunner{
 			scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: interval},
+			logger:            zap.NewNop().Sugar(),
 			counter:           &loadgen.RunCounter{},
 		}
 		done := make(chan error, 1)
@@ -432,7 +433,7 @@ func TestRunningSnapshots(t *testing.T) {
 		})
 	})
 
-	t.Run("snapshot write error keeps the run error", func(t *testing.T) {
+	t.Run("snapshot write error does not fail the run", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "missing", "result.json")
 			executor := &steppedExecutor{step: make(chan error)}
@@ -442,13 +443,13 @@ func TestRunningSnapshots(t *testing.T) {
 			synctest.Wait()
 			require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
 
-			runErr := errors.New("run failed")
-			executor.step <- runErr
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.Equal(t, "running", readResult(t, path).Outcome)
+
 			close(executor.step)
-			err := <-done
-			require.ErrorIs(t, err, runErr)
-			require.ErrorContains(t, err, "writing result file")
-			require.FileExists(t, path)
+			require.NoError(t, <-done)
+			require.Equal(t, "passed", readResult(t, path).Outcome)
 		})
 	})
 }

@@ -275,9 +275,8 @@ func (r *scenarioRunner) runWithSnapshots(ctx context.Context, executor loadgen.
 	if r.exportResultFile != "" {
 		r.state = scenarioState(executor)
 	}
-	stop := r.writeRunningSnapshots(ctx, r.currentState)
-	defer stop()
-	return errors.Join(executor.Run(ctx, info), stop())
+	defer r.writeRunningSnapshots(ctx, r.currentState)()
+	return executor.Run(ctx, info)
 }
 
 func (r *scenarioRunner) currentState() any {
@@ -295,18 +294,18 @@ func scenarioState(executor loadgen.Executor) func() any {
 }
 
 // writeRunningSnapshots periodically rewrites the result file while the scenario runs; stop ends it
-// before the final write. `state` is called concurrently with Run, so an executor's Snapshot must
-// be safe for concurrent use and return a copy.
-func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func() any) func() error {
+// before the final write. Snapshots are best effort: a failed write is logged and the next tick
+// retries. `state` is called concurrently with Run, so an executor's Snapshot must be safe for
+// concurrent use and return a copy.
+func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func() any) (stop func()) {
 	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
-		return func() error { return nil }
+		return func() {}
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	ticker := time.NewTicker(r.exportResultInterval)
 
 	var wg sync.WaitGroup
-	var snapshotErr error
 	wg.Go(func() {
 		defer ticker.Stop()
 		for {
@@ -315,18 +314,17 @@ func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func()
 				return
 			case <-ticker.C:
 				result := newRunResult(runEnd{}, r.snapshotCounts(), state())
-				if snapshotErr = result.write(r.exportResultFile); snapshotErr != nil {
-					return
+				if err := result.write(r.exportResultFile); err != nil {
+					r.logger.Warnf("Failed to write running result snapshot: %v", err)
 				}
 			}
 		}
 	})
 
-	return func() error {
+	return func() {
 		cancel()
 		// Wait for any in-flight snapshot before the final writer can run.
 		wg.Wait()
-		return snapshotErr
 	}
 }
 
