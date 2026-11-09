@@ -165,8 +165,10 @@ func TestRunResultOnFailure(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
 			err := tc.run(context.Background(), path)
 			require.ErrorContains(t, err, tc.wantError)
+
 			data, readErr := os.ReadFile(path)
 			require.NoError(t, readErr)
+
 			var result runResult
 			require.NoError(t, json.Unmarshal(data, &result))
 			require.Equal(t, runResult{
@@ -179,11 +181,16 @@ func TestRunResultOnFailure(t *testing.T) {
 }
 
 func TestRunResultWriteErrorPreservesRunError(t *testing.T) {
-	for _, runErr := range []error{nil, errors.New("run failed")} {
+	for _, runErr := range []error{
+		nil,
+		errors.New("run failed"),
+	} {
 		path := filepath.Join(t.TempDir(), "missing", "result.json")
 		runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+
 		err := runErr
 		runner.finish(context.Background(), &err)
+
 		require.ErrorContains(t, err, "writing result file")
 		if runErr != nil {
 			require.ErrorIs(t, err, runErr)
@@ -195,11 +202,12 @@ func TestRunResultRenameFailureCleansUp(t *testing.T) {
 	directory := t.TempDir()
 	path := filepath.Join(directory, "result.json")
 	require.NoError(t, os.Mkdir(path, 0700))
-	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
-	var err error
-	runner.finish(context.Background(), &err)
 
+	var err error
+	runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+	runner.finish(context.Background(), &err)
 	require.ErrorContains(t, err, "writing result file")
+
 	files, err := os.ReadDir(directory)
 	require.NoError(t, err)
 	require.Len(t, files, 1)
@@ -250,7 +258,10 @@ func TestRunResultFile(t *testing.T) {
 }
 
 func TestResultFileFlags(t *testing.T) {
-	for _, cmd := range []*cobra.Command{runScenarioCmd(), runScenarioWithWorkerCmd()} {
+	for _, cmd := range []*cobra.Command{
+		runScenarioCmd(),
+		runScenarioWithWorkerCmd(),
+	} {
 		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
 		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
 	}
