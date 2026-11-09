@@ -46,7 +46,7 @@ type scenarioRunner struct {
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
 	counter        *loadgen.RunCounter
-	scenarioState  any
+	state          func() any
 }
 
 type scenarioRunConfig struct {
@@ -170,7 +170,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		ctxErr:   ctx.Err(),
 		panicked: panicValue != nil,
 	}
-	result := newRunResult(end, r.snapshotCounts(), r.scenarioState)
+	result := newRunResult(end, r.snapshotCounts(), r.currentState())
 	if err := result.write(r.exportResultFile); err != nil {
 		*runErr = errors.Join(*runErr, err)
 	}
@@ -252,11 +252,14 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 			ExportHistoriesFilter: r.exportHistoriesFilter,
 		},
 	}
-	err = r.runExecutor(ctx, scenario.ExecutorFn(), scenarioInfo)
+	executor := scenario.ExecutorFn()
+	if r.exportResultFile != "" {
+		r.state = scenarioState(executor)
+	}
+	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
 	}
-
 	err = loadgen.ExportWorkflowHistories(ctx, scenarioInfo)
 	if err != nil {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
@@ -264,13 +267,11 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	return nil
 }
 
-func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) error {
-	// Write scenario state to export
-	if r.exportResultFile != "" {
-		state := scenarioState(executor)
-		defer func() { r.scenarioState = state() }()
+func (r *scenarioRunner) currentState() any {
+	if r.state == nil {
+		return nil
 	}
-	return executor.Run(ctx, info)
+	return r.state()
 }
 
 func scenarioState(executor loadgen.Executor) func() any {
