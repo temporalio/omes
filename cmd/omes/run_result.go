@@ -28,9 +28,6 @@ type runEnd struct {
 }
 
 func newRunResult(end runEnd, counts loadgen.RunCounts, scenarioState any) runResult {
-	if counts.Failures == nil {
-		counts.Failures = []loadgen.IterationFailure{}
-	}
 	result := runResult{
 		Iterations:    counts.Iterations,
 		Failures:      counts.Failures,
@@ -72,6 +69,7 @@ func (r runResult) write(path string) error {
 }
 
 func writeResultFile(path string, data []byte) (retErr error) {
+	// Write to a temp file in the same directory, then rename so readers never see a partial result.
 	file, err := os.CreateTemp(filepath.Dir(path), ".omes-result-*")
 	if err != nil {
 		return err

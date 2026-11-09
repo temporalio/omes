@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/require"
+
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
 )
@@ -99,5 +102,15 @@ func TestValidateInputAcceptsGoodInput(t *testing.T) {
 	info := &loadgen.ScenarioInfo{ScenarioName: "throughput_stress", Options: options}
 	if got := info.OptionDuration("sleep-time"); got != 3*time.Second {
 		t.Errorf("sleep-time: want 3s, got %v", got)
+	}
+}
+
+func TestResultFileFlags(t *testing.T) {
+	for _, cmd := range []*cobra.Command{
+		runScenarioCmd(),
+		runScenarioWithWorkerCmd(),
+	} {
+		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
+		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
 	}
 }
