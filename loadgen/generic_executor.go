@@ -49,7 +49,7 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	// This lets the caller decide when to stop the load.
 	useDefaultIterationLimit := g.StopNewIterations == nil
 	info.Configuration.applyDefaults(useDefaultIterationLimit)
-	info.Configuration.Statistics.markAvailable()
+	info.Configuration.Statistics.runStarted()
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
