@@ -243,9 +243,9 @@ func TestRunCancellationClassifiesIterationErrors(t *testing.T) {
 				}, configuration)
 				require.Error(t, err)
 				require.Equal(t, tc.want.Iterations.Failed, failed.Load())
-				snapshot := counter.Snapshot()
-				// Classification only; TestGenericExecutorRunStatisticsEffectiveDefaults covers default iteration counts.
-				require.Equal(t, tc.want, snapshot)
+				counts := counter.Snapshot()
+				// Classification only; TestGenericExecutorRunCounterEffectiveDefaults covers default iteration counts.
+				require.Equal(t, tc.want, counts)
 			})
 		})
 	}
