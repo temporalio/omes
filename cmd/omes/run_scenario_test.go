@@ -240,7 +240,8 @@ func TestRunResultOnPanic(t *testing.T) {
 					executor.state = 1
 					panic("scenario panic")
 				}
-				_ = runner.runExecutor(ctx, executor, loadgen.ScenarioInfo{})
+				runner.state = scenarioState(executor)
+				_ = executor.Run(ctx, loadgen.ScenarioInfo{})
 			})
 
 			data, err := os.ReadFile(path)
@@ -263,37 +264,45 @@ type scenarioStateExecutor struct {
 
 func (e *scenarioStateExecutor) Snapshot() any { return e.state }
 
-func TestRunExecutorScenarioState(t *testing.T) {
+func TestFinishScenarioState(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		export   bool
-		snapshot bool
+		name       string
+		snapshot   bool
+		noExecutor bool
+		wantState  string
 	}{
-		{name: "snapshot with export", export: true, snapshot: true},
-		{name: "snapshot without export", snapshot: true},
-		{name: "no snapshot with export", export: true},
-		{name: "no snapshot without export"},
+		{name: "snapshot", snapshot: true, wantState: "1"},
+		{name: "no snapshot", wantState: "null"},
+		{name: "before executor exists", noExecutor: true, wantState: "null"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := &scenarioRunner{}
-			if tc.export {
-				runner.exportResultFile = filepath.Join(t.TempDir(), "result.json")
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+			if !tc.noExecutor {
+				var executor scenarioStateExecutor
+				executor.ExecutorFunc = func(context.Context, loadgen.ScenarioInfo) error {
+					executor.state = 1
+					return nil
+				}
+				var run loadgen.Executor = executor.ExecutorFunc
+				if tc.snapshot {
+					run = &executor
+				}
+				runner.state = scenarioState(run)
+				require.NoError(t, run.Run(t.Context(), loadgen.ScenarioInfo{}))
 			}
-			var executor scenarioStateExecutor
-			executor.ExecutorFunc = func(context.Context, loadgen.ScenarioInfo) error {
-				executor.state = 1
-				return nil
-			}
-			var run loadgen.Executor = executor.ExecutorFunc
-			if tc.snapshot {
-				run = &executor
-			}
-			require.NoError(t, runner.runExecutor(t.Context(), run, loadgen.ScenarioInfo{}))
-			if tc.export && tc.snapshot {
-				require.Equal(t, 1, runner.scenarioState)
-			} else {
-				require.Nil(t, runner.scenarioState)
-			}
+			var runErr error
+			runner.finish(t.Context(), &runErr)
+			require.NoError(t, runErr)
+
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.JSONEq(t, `{
+  "outcome": "passed",
+  "iterations": null,
+  "failures": [],
+  "scenarioState": `+tc.wantState+`
+}`, string(data))
 		})
 	}
 }
