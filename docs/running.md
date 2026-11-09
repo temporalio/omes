@@ -223,15 +223,10 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 }
 ```
 
-- Written once, atomically, on exit, including validation, connection, and worker-startup failures.
-  Use fresh paths with existing parent directories. Write errors fail commands.
+- Written once on exit, including validation, connection, and worker-startup failures.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
   `interrupted` was cancelled.
-- `iterations` matches run logs and counts each scenario iteration once, however many attempts it
-  took. Operator load is excluded, and iterations cancelled when the run stops are excluded from
-  succeeded/failed counts. It is null when no generic executor ran.
+- `iterations` matches run logs and counts each scenario iteration once, however many attempts it took.
 - `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
-  truncation marker. Failed counts stay uncapped.
-- `scenarioState` contains the scenario's own state, or null if unsupported. Scenarios such as
-  `throughput_stress` report their own counts there, including when generic iteration counts are
-  unavailable.
+  truncation marker.
+- `scenarioState` contains the scenario's own state, or null if unsupported.
