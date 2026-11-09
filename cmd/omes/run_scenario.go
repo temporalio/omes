@@ -290,6 +290,9 @@ func scenarioState(executor loadgen.Executor) func() any {
 	return func() any { return nil }
 }
 
+// writeRunningSnapshots periodically rewrites the result file while the scenario runs; stop ends it
+// before the final write. state is called concurrently with Run, so an executor's Snapshot must
+// be safe for concurrent use and return a copy.
 func (r *scenarioRunner) writeRunningSnapshots(state func() any) func() error {
 	if r.exportResultFile == "" || r.exportResultInterval <= 0 {
 		return func() error { return nil }
