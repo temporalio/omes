@@ -65,17 +65,16 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 		if options, changed := disableSelfTargetedNexus(r.ScenarioID.Scenario, r.scenarioOptions); changed {
 			r.Logger.Infof("Rust workers cannot handle Nexus operations; defaulting --option %s=false",
 				loadgen.NexusEnabledOption)
+			// Keep the runner's copied options in sync with the Rust defaults.
 			r.scenarioOptions = options
+			runner.scenarioOptions = options
 		}
 	}
 
 	// Reject bad input before building and starting a worker, which for some
 	// languages takes minutes. Judging that needs only the scenario name and run
-	// config, so this throwaway runner deliberately carries no client options.
-	if _, _, err := (&scenarioRunner{
-		scenario:          r.ScenarioID,
-		scenarioRunConfig: r.scenarioRunConfig,
-	}).validateInput(); err != nil {
+	// config, so this runner deliberately carries no client options yet.
+	if _, _, err := runner.validateInput(); err != nil {
 		return err
 	}
 
@@ -99,7 +98,6 @@ func (r *workerWithScenarioRunner) run(ctx context.Context) (retErr error) {
 
 	// Run scenario. The client options are read only now that the worker has
 	// started, since starting an embedded server rewrites the server address.
-	runner.scenarioRunConfig = r.scenarioRunConfig
 	runner.clientOptions = r.ClientOptions
 	scenarioErr := runner.runScenario(ctx)
 	cancel()

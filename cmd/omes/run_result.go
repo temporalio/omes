@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/temporalio/omes/loadgen"
 )
@@ -20,102 +19,43 @@ type runResult struct {
 	ScenarioState any                        `json:"scenarioState"`
 }
 
-func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) (retErr error) {
-	var snapshotState func() any
-	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
-		snapshotState = state.Snapshot
-		defer func() { r.scenarioState = state.Snapshot() }()
+func newRunResult(ctxErr, runErr error, panicked bool, snapshot loadgen.RunStatisticsSnapshot, scenarioState any) runResult {
+	if snapshot.Failures == nil {
+		snapshot.Failures = []loadgen.IterationFailure{}
 	}
-	if r.exportResultFile != "" && r.exportResultInterval > 0 {
-		ticker := time.NewTicker(r.exportResultInterval)
-		stop := make(chan struct{})
-		done := make(chan struct{})
-		var snapshotErr error
-		defer func() {
-			ticker.Stop()
-			close(stop)
-			// Wait for any in-flight snapshot before the final writer can run.
-			<-done
-			retErr = errors.Join(retErr, snapshotErr)
-		}()
-		go func() {
-			defer close(done)
-			for {
-				select {
-				case <-stop:
-					return
-				case <-ticker.C:
-					snapshot := r.snapshotStatistics()
-					result := runResult{Outcome: "running", Iterations: snapshot.Iterations, Failures: snapshot.Failures}
-					if snapshotState != nil {
-						result.ScenarioState = snapshotState()
-					}
-					if snapshotErr = r.writeResult(result); snapshotErr != nil {
-						return
-					}
-				}
-			}
-		}()
-	}
-	return executor.Run(ctx, info)
-}
-
-func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
-	// Panics on other goroutines bypass this writer.
-	panicValue := recover()
-	if panicValue != nil {
-		*runErr = fmt.Errorf("panic: %v", panicValue)
-		defer func() { panic(panicValue) }()
-	}
-	if r.exportResultFile == "" {
-		return
-	}
-
-	snapshot := r.snapshotStatistics()
 	result := runResult{
 		Iterations:    snapshot.Iterations,
 		Failures:      snapshot.Failures,
-		ScenarioState: r.scenarioState,
+		ScenarioState: scenarioState,
 	}
-	timedOut := errors.Is(*runErr, context.DeadlineExceeded)
+	timedOut := errors.Is(runErr, context.DeadlineExceeded)
 	if snapshot.Iterations != nil {
 		timedOut = snapshot.TimedOut
 	}
 	switch {
-	case panicValue != nil:
+	case panicked:
 		result.Outcome = "failed"
-	case errors.Is(ctx.Err(), context.Canceled):
+	case errors.Is(ctxErr, context.Canceled):
 		result.Outcome = "interrupted"
-	case errors.Is(ctx.Err(), context.DeadlineExceeded), timedOut:
+	case errors.Is(ctxErr, context.DeadlineExceeded), timedOut:
 		result.Outcome = "timedOut"
-	case *runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
+	case runErr != nil, snapshot.Iterations != nil && snapshot.Iterations.Failed > 0:
 		result.Outcome = "failed"
 	default:
 		result.Outcome = "passed"
 	}
-	if *runErr != nil {
-		result.Error = (*runErr).Error()
+	if runErr != nil {
+		result.Error = runErr.Error()
 	}
-	*runErr = errors.Join(*runErr, r.writeResult(result))
+	return result
 }
 
-func (r *scenarioRunner) snapshotStatistics() loadgen.RunStatisticsSnapshot {
-	var snapshot loadgen.RunStatisticsSnapshot
-	if r.statistics != nil {
-		snapshot = r.statistics.Snapshot()
-	}
-	if snapshot.Failures == nil {
-		snapshot.Failures = []loadgen.IterationFailure{}
-	}
-	return snapshot
-}
-
-func (r *scenarioRunner) writeResult(result runResult) error {
-	data, err := json.MarshalIndent(result, "", "  ")
+func (r runResult) write(path string) error {
+	data, err := json.MarshalIndent(r, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encoding run result: %w", err)
 	}
-	if err := writeResultFile(r.exportResultFile, append(data, '\n')); err != nil {
+	if err := writeResultFile(path, append(data, '\n')); err != nil {
 		return fmt.Errorf("writing result file: %w", err)
 	}
 	return nil

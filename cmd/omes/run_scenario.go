@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -158,6 +159,23 @@ func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
 	return r.runScenario(ctx)
 }
 
+func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
+	// Panics on other goroutines bypass this writer.
+	panicValue := recover()
+	if panicValue != nil {
+		*runErr = fmt.Errorf("panic: %v", panicValue)
+		defer func() { panic(panicValue) }()
+	}
+	if r.exportResultFile == "" {
+		return
+	}
+
+	result := newRunResult(ctx.Err(), *runErr, panicValue != nil, r.snapshotStatistics(), r.scenarioState)
+	if err := result.write(r.exportResultFile); err != nil {
+		*runErr = errors.Join(*runErr, err)
+	}
+}
+
 func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
@@ -241,4 +259,53 @@ func (r *scenarioRunner) runScenario(ctx context.Context) error {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
+}
+
+func (r *scenarioRunner) runExecutor(ctx context.Context, executor loadgen.Executor, info loadgen.ScenarioInfo) (retErr error) {
+	var snapshotState func() any
+	if state, ok := executor.(interface{ Snapshot() any }); ok && r.exportResultFile != "" {
+		snapshotState = state.Snapshot
+		defer func() { r.scenarioState = state.Snapshot() }()
+	}
+	if r.exportResultFile != "" && r.exportResultInterval > 0 {
+		ticker := time.NewTicker(r.exportResultInterval)
+		stop := make(chan struct{})
+		done := make(chan struct{})
+		var snapshotErr error
+		defer func() {
+			ticker.Stop()
+			close(stop)
+			// Wait for any in-flight snapshot before the final writer can run.
+			<-done
+			retErr = errors.Join(retErr, snapshotErr)
+		}()
+		go func() {
+			defer close(done)
+			for {
+				select {
+				case <-stop:
+					return
+				case <-ticker.C:
+					snapshot := r.snapshotStatistics()
+					var scenarioState any
+					if snapshotState != nil {
+						scenarioState = snapshotState()
+					}
+					result := newRunResult(nil, nil, false, snapshot, scenarioState)
+					result.Outcome = "running"
+					if snapshotErr = result.write(r.exportResultFile); snapshotErr != nil {
+						return
+					}
+				}
+			}
+		}()
+	}
+	return executor.Run(ctx, info)
+}
+
+func (r *scenarioRunner) snapshotStatistics() loadgen.RunStatisticsSnapshot {
+	if r.statistics != nil {
+		return r.statistics.Snapshot()
+	}
+	return loadgen.RunStatisticsSnapshot{}
 }
