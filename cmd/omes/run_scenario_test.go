@@ -258,7 +258,7 @@ func TestRunResultOnPanic(t *testing.T) {
 					panic("scenario panic")
 				}
 				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(runner.currentState)
+				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
 				defer stop()
 				_ = executor.Run(ctx, loadgen.ScenarioInfo{})
 			})
@@ -364,7 +364,7 @@ func TestRunResultRunningSnapshots(t *testing.T) {
 			func() {
 				defer runner.finish(context.Background(), &err)
 				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(runner.currentState)
+				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
 				defer stop()
 				err = errors.Join(executor.Run(ctx, loadgen.ScenarioInfo{
 					Logger:         zap.NewNop().Sugar(),
@@ -458,7 +458,7 @@ func TestRunResultFinalWriteWaitsForSnapshot(t *testing.T) {
 			func() {
 				defer runner.finish(context.Background(), &err)
 				runner.state = scenarioState(executor)
-				stop := runner.writeRunningSnapshots(runner.currentState)
+				stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
 				defer stop()
 				err = errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
 			}()
@@ -493,7 +493,7 @@ func TestRunResultSnapshotIntervalDisabled(t *testing.T) {
 			return nil
 		})
 		runner.state = scenarioState(executor)
-		stop := runner.writeRunningSnapshots(runner.currentState)
+		stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
 		defer stop()
 		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
 		runner.finish(context.Background(), &err)
@@ -514,7 +514,7 @@ func TestRunResultSnapshotErrorPreservesRunError(t *testing.T) {
 			return runErr
 		})
 		runner.state = scenarioState(executor)
-		stop := runner.writeRunningSnapshots(runner.currentState)
+		stop := runner.writeRunningSnapshots(t.Context(), runner.currentState)
 		defer stop()
 		synctest.Wait()
 		err := errors.Join(executor.Run(context.Background(), loadgen.ScenarioInfo{}), stop())
