@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenericExecutorRunStatistics(t *testing.T) {
+func TestGenericExecutorRunCounter(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		configuration := RunConfiguration{
 			Iterations: 3, MaxConcurrent: 1, MaxIterationAttempts: 2,
@@ -39,7 +39,7 @@ func TestGenericExecutorRunStatistics(t *testing.T) {
 	})
 }
 
-func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
+func TestGenericExecutorRunCounterFailureLimit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		configuration := RunConfiguration{Iterations: 101, ContinueOnIterationFailure: true}
 		stats := &RunCounter{}
@@ -55,7 +55,7 @@ func TestGenericExecutorRunStatisticsFailureLimit(t *testing.T) {
 	})
 }
 
-func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
+func TestGenericExecutorRunCounterEffectiveDefaults(t *testing.T) {
 	stats := &RunCounter{}
 	require.Equal(t, RunCounts{}, stats.Snapshot())
 
@@ -70,7 +70,7 @@ func TestGenericExecutorRunStatisticsEffectiveDefaults(t *testing.T) {
 	}, snapshot)
 }
 
-func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
+func TestGenericExecutorRunCounterInitiallyUnavailable(t *testing.T) {
 	stats := &RunCounter{}
 	require.Nil(t, stats.Snapshot().Iterations)
 
@@ -82,7 +82,7 @@ func TestGenericExecutorRunStatisticsInitiallyUnavailable(t *testing.T) {
 	require.Equal(t, &IterationCounts{Started: DefaultIterations, Succeeded: DefaultIterations}, stats.Snapshot().Iterations)
 }
 
-func TestRunStatisticsTruncatesErrors(t *testing.T) {
+func TestRunCounterTruncatesErrors(t *testing.T) {
 	stats := &RunCounter{}
 	stats.runStarted()
 
