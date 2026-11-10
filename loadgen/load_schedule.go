@@ -2,11 +2,14 @@ package loadgen
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/temporalio/omes/loadgen/load"
 	"go.uber.org/zap"
 )
+
+const assumedIterationLatency = time.Second
 
 type loadSchedule struct {
 	pacer      *load.Pacer
@@ -16,6 +19,7 @@ type loadSchedule struct {
 	phaseEnd   time.Duration
 	consumed   int64
 	dropped    int64
+	capped     int64
 }
 
 func newLoadSchedule(config RunConfiguration, logger *zap.SugaredLogger) (*loadSchedule, error) {
@@ -33,7 +37,13 @@ func newLoadSchedule(config RunConfiguration, logger *zap.SugaredLogger) (*loadS
 		phases = append(phases, fmt.Sprintf("%s [%s,%s) %g→%g iterations/s", phase.Name, start, start+phase.Duration, phase.From, phase.To))
 		start += phase.Duration
 	}
-	logger.Infow("Load pattern", "pattern", pattern.Name, "peak", pattern.Peak, "duration", config.Duration, "phases", phases)
+	suggestedConcurrency := math.Ceil(pattern.Peak * assumedIterationLatency.Seconds())
+	if float64(config.MaxConcurrent) < suggestedConcurrency {
+		logger.Warnw("--max-concurrent may limit peak load; size it for peak × iteration latency",
+			"maxConcurrent", config.MaxConcurrent, "peak", pattern.Peak,
+			"assumedIterationLatency", assumedIterationLatency, "suggestedMaxConcurrent", suggestedConcurrency)
+	}
+	logger.Infow("Load pattern", "pattern", pattern.Canonical, "peak", pattern.Peak, "duration", config.Duration, "phases", phases)
 	return &loadSchedule{pacer: pacer, phases: pattern.Phases, logger: logger, phaseIndex: -1}, nil
 }
 
@@ -92,9 +102,21 @@ func (s *loadSchedule) drop(count int64) {
 	}
 }
 
+func (s *loadSchedule) finish(elapsed time.Duration) {
+	if !s.advance(elapsed) {
+		s.drop(s.pacer.Count(elapsed))
+		s.reportDrops()
+	}
+}
+
 func (s *loadSchedule) reportDrops() {
-	if s.dropped > 0 {
+	if s.capped > 0 {
 		s.logger.Warnw("Load phase dropped starts; raise --max-concurrent or lower peak= in --load",
+			"phase", s.phases[s.phaseIndex].Name, "phaseIndex", s.phaseIndex+1, "dropped", s.capped)
+		s.capped = 0
+	}
+	if s.dropped > 0 {
+		s.logger.Warnw("Load phase dropped starts; scheduling loop was late; lower peak= in --load",
 			"phase", s.phases[s.phaseIndex].Name, "phaseIndex", s.phaseIndex+1, "dropped", s.dropped)
 		s.dropped = 0
 	}

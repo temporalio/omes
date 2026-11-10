@@ -78,14 +78,41 @@ each scenario.
 
 ### Load patterns
 
-`run-scenario` and `run-scenario-with-worker` accept `--load <pattern>,peak=<iterations/s>,<key>=<value>,...`.
-Every pattern requires `peak` (`120/s` or `120`); `--duration` sets the run duration separately.
-For example:
+Start a Go worker and send a repeating spike of iterations to a local embedded server:
 
 ```sh
-go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --run-id ramp \
-  --load ramp-hold-ramp,peak=120/s,up=0.2 --duration 20m --max-concurrent 100
+go run ./cmd/omes run-scenario-with-worker \
+  --scenario workflow_with_single_noop_activity --language go --embedded-server --run-id load-demo \
+  --load spike-train peak=120/s every=5m --duration 12m --max-concurrent 240
 ```
+
+This starts iterations at 48/s (the default base is `0.4` of peak), then at 120/s
+for one minute starting at minutes five and ten. After twelve minutes it stops
+starting iterations and waits for those already running to finish. Rates count
+scenario iterations, which can each start multiple workflows or operations.
+`run-scenario` accepts the same load flags when you already have a worker running.
+
+At startup, the `Load pattern` log prints the canonical specification with every
+default filled in, followed by the compiled phases. For this command, its fields
+read as follows (formatting abbreviated):
+
+```text
+pattern: spike-train,peak=120/s,base=0.4,every=5m,for=1m
+peak: 120
+duration: 12m
+phases:
+  base [0s,5m0s) 48→48 iterations/s
+  spike [5m0s,6m0s) 120→120 iterations/s
+  base [6m0s,10m0s) 48→48 iterations/s
+  spike [10m0s,11m0s) 120→120 iterations/s
+  base [11m0s,12m0s) 48→48 iterations/s
+```
+
+Each interval includes its start and excludes its end. A `Load phase` log marks
+each transition and its requested rate. Check these fields before interpreting
+results: they show exactly which shape and timings the run uses.
+
+To change the shape, replace `spike-train` and its parameters in the command above:
 
 | Pattern | Shape | Parameters and defaults | Phases |
 | --- | --- | --- | --- |
@@ -94,31 +121,66 @@ go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --r
 | `sweep` | `▂▂▄▄▆▆██` | `peak` required, `from=0.25`, `to=1`, `steps=4` | Equal-duration `step-1` through `step-n`, including both endpoint levels. Ascending and descending sweeps are supported. |
 | `spike-train` | `▃▃▃█▃▃█▃` | `peak` required, `base=0.4`, `every=10m`, `for=1m` | `base` until the first spike at `every`, then `spike` at peak for `for`; subsequent spike starts are `every` apart. The final phase is truncated to the run duration. |
 
-Levels (`from`, `to`, `base`) are fractions of peak from zero to one, such as `0.25`.
-Durations (`up`, `down`, `every`, `for`) accept a fraction of the total run from zero
-to one (`0.1`) or a Go duration (`10m`). Percentages are rejected; use `0.1` for one tenth.
-`up + down` must fit the run; zero-duration ramp or hold phases are omitted.
-`every` and `for` must be positive, with `for <= every`.
-`steps` must be an integer from 2 to 1024, with at least 1ns per step. All patterns
-are limited to 1024 phases; unknown, duplicate, missing, and malformed parameters
-and empty comma-separated segments are rejected.
+Tune levels with fractions of peak. For example, `--load sweep peak=120/s
+from=0.25 to=1 steps=4` requests 30, 60, 90, then 120 iterations/s. To descend,
+swap `from` and `to`. `base=0` pauses starts between spikes while the run continues.
 
-With `--load`, a positive `--duration` is required and scenario default iterations do
-not apply. `--iterations` is rejected (use `--duration`), and
-`--max-iterations-per-second` is rejected (set `peak=` in `--load`), including explicit
-zero values. `peak` must be positive, finite, and at most 1 billion iterations/s.
-Executors must explicitly support patterns through `GenericExecutor`; scenarios with
-their own scheduling, such as `ebb_and_flow` and `state_transitions_steady`, reject `--load`.
+Tune timings with fractions of the **total run duration** or explicit Go durations.
+For a twenty-minute run, `--load ramp-hold-ramp peak=120/s up=0.2 down=2m`
+ramps up over four minutes, holds for fourteen, then ramps down for two.
+`--load spike-train peak=120/s every=0.25 for=1m` starts a one-minute spike
+every five minutes in that same run. Use `0.1` for one tenth; percentages such as
+`10%` are rejected. `peak=120` and `peak=120/s` both mean 120 iterations/s.
 
-Phase boundaries follow elapsed time, even while iterations are in flight. A zero
-level pauses starts and continues the run. Starts are spaced using the integral of
-the requested rate, with the first steady start after one rate interval. No starts
-occur at or after the run duration. `--max-concurrent` remains the in-flight cap:
-starts blocked by it or missed while the scheduling loop is late are dropped and
-never caught up. Logs show the compiled phases, each phase transition and requested
-rate, and a per-phase warning with the drop count and a suggested fix.
-Without `--load`, `--max-iterations-per-second` keeps its ticker
-behavior: it waits for a free concurrency slot and buffers at most one tick.
+Keep parameters immediately after the pattern: `--load spike-train peak=120/s
+every=5m --duration 20m`. A flag, `--`, or a plain word ends the parameter group;
+a later positional `key=value` is rejected with a corrected example.
+A quoted value (`--load 'spike-train peak=120/s every=5m'`) works too.
+The comma form, `--load=spike-train,peak=120/s,every=5m`, is useful for
+CI, YAML, or Kubernetes args where the entire flag value can occupy one argument.
+
+Under backpressure, the shape keeps following elapsed time. `--max-concurrent`
+caps iterations in flight; a start blocked by that cap is dropped. Starts missed
+because the scheduling loop is late are also dropped. **Dropped starts are never
+caught up**, so achieved throughput can be lower than requested. Starts are spaced
+using the integral of the requested rate; the first steady start is after one
+rate interval, and no start occurs at or after the run duration.
+
+A per-phase warning reports the number dropped for each cause. A warning saying
+`raise --max-concurrent or lower peak= in --load` means the concurrency cap blocked
+starts. A warning saying `scheduling loop was late; lower peak= in --load` means
+the generator missed scheduled slots; check generator capacity and lower the rate.
+If scheduling stops early because of failure, cancellation, or an explicit stop,
+drop counts cover only the time scheduling actually ran.
+
+Size `--max-concurrent` from peak rate × iteration latency, with headroom. At
+120 iterations/s and a two-second iteration latency, 240 slots cover the expected
+in-flight work; a cap of 300 gives room for variation. Measure latency for your
+scenario and account for retries and slower iterations. At startup, omes warns
+once if the cap is below peak × **an assumed one-second iteration latency**.
+This is a simple sizing hint, not a measurement or an error; short iterations may
+need fewer slots, and slow iterations may need many more.
+
+Load pattern reference:
+
+- `--load` requires a positive `--duration`; scenario default iteration limits do
+  not apply. `--iterations` and `--max-iterations-per-second` are rejected even
+  when explicitly zero. Set `peak=` to control the rate.
+- `peak` is required, positive, finite, and at most 10,000 iterations/s. This
+  ceiling bounds scheduling overhead from accidental rates.
+- Levels (`from`, `to`, `base`) are fractions from zero to one. Timings (`up`,
+  `down`, `every`, `for`) accept a fraction from zero to one or a Go duration.
+  `up + down` must fit the run; zero-duration ramp or hold phases are omitted.
+  `every` and `for` must be positive, with `for <= every`.
+- `steps` must be an integer from 2 to 1024, with at least 1ns per step. Every
+  pattern is limited to 1024 phases. Unknown, duplicate, missing, or malformed
+  parameters and empty comma-separated segments are rejected.
+- Executors must support patterns through `GenericExecutor`. Scenarios with
+  their own scheduling, such as `ebb_and_flow` and `state_transitions_steady`,
+  reject `--load`.
+
+Without `--load`, `--max-iterations-per-second` keeps its ticker behavior: it waits
+for a free concurrency slot and buffers at most one tick.
 
 ### 2. Per-scenario options (`--option key=value`)
 

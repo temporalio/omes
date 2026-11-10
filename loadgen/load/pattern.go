@@ -3,22 +3,38 @@ package load
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
+var parameterEquals = regexp.MustCompile(`\s*=\s*`)
+
 type Pattern struct {
-	Name     string
-	Peak     float64
-	Duration time.Duration
-	Phases   []Phase
+	Name      string
+	Peak      float64
+	Duration  time.Duration
+	Phases    []Phase
+	Canonical string
 }
 
-func Parse(value string, duration time.Duration) (*Pattern, error) {
-	parts := strings.Split(value, ",")
+func Parse(value string, duration time.Duration) (pattern *Pattern, err error) {
+	var parts []string
+	for _, segment := range strings.Split(value, ",") {
+		fields := strings.Fields(parameterEquals.ReplaceAllString(segment, "="))
+		if len(fields) == 0 {
+			fields = []string{""}
+		}
+		parts = append(parts, fields...)
+	}
 	name := strings.TrimSpace(parts[0])
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("%w; e.g. %s", err, Example(name))
+		}
+	}()
 	valid, err := patternParameters(name)
 	if err != nil {
 		return nil, err
@@ -32,7 +48,14 @@ func Parse(value string, duration time.Duration) (*Pattern, error) {
 			return nil, fmt.Errorf("--load parameter %q must use key=value; valid parameters: %s", part, choices)
 		}
 		if key != "peak" && !slices.Contains(valid, key) {
-			return nil, fmt.Errorf("unknown parameter %q for %s; valid parameters: %s", key, name, choices)
+			suggestion := ""
+			for _, candidate := range append([]string{"peak"}, valid...) {
+				if len(candidate) > 2 && parameterDistance(candidate, key) <= 1 {
+					suggestion = fmt.Sprintf(" (did you mean %q?)", candidate)
+					break
+				}
+			}
+			return nil, fmt.Errorf("unknown parameter %q for %s%s; valid parameters: %s", key, name, suggestion, choices)
 		}
 		if _, ok := params[key]; ok {
 			return nil, fmt.Errorf("duplicate --load parameter %q; valid parameters: %s", key, choices)
@@ -48,7 +71,7 @@ func Parse(value string, duration time.Duration) (*Pattern, error) {
 		return nil, fmt.Errorf("%w; valid parameters: %s", err, choices)
 	}
 	delete(params, "peak")
-	pattern, err := Compile(name, peak, duration, params)
+	pattern, err = Compile(name, peak, duration, params)
 	if err != nil {
 		return nil, fmt.Errorf("%w; valid parameters: %s", err, choices)
 	}
@@ -61,7 +84,7 @@ func ParsePeak(value string) (float64, error) {
 	}
 	peak, err := strconv.ParseFloat(strings.TrimSuffix(value, "/s"), 64)
 	if err != nil || !validLevel(peak) || peak == 0 {
-		return 0, fmt.Errorf("peak in --load must be a positive finite iterations/s rate <= 1e9, for example peak=120/s or peak=120")
+		return 0, fmt.Errorf("peak in --load must be a positive finite iterations/s rate <= %d, for example peak=120/s or peak=120", MaxPeak)
 	}
 	return peak, nil
 }
@@ -99,13 +122,28 @@ func Compile(name string, peak float64, duration time.Duration, params map[strin
 		return nil, fmt.Errorf("--load requires a positive --duration")
 	}
 	if !validLevel(peak) || peak == 0 {
-		return nil, fmt.Errorf("--load requires a positive finite peak= <= 1e9 iterations/s")
+		return nil, fmt.Errorf("--load requires a positive finite peak= <= %d iterations/s", MaxPeak)
 	}
+	canonical := []string{name, "peak=" + strconv.FormatFloat(peak, 'f', -1, 64) + "/s"}
 	value := func(key, fallback string) string {
-		if v, ok := params[key]; ok {
-			return v
+		v, ok := params[key]
+		if !ok {
+			v = fallback
 		}
-		return fallback
+		normalized := v
+		if number, err := strconv.ParseFloat(v, 64); err == nil {
+			normalized = strconv.FormatFloat(number, 'f', -1, 64)
+		} else if duration, err := time.ParseDuration(v); err == nil {
+			normalized = duration.String()
+			if strings.HasSuffix(normalized, "m0s") {
+				normalized = strings.TrimSuffix(normalized, "0s")
+			}
+			if strings.HasSuffix(normalized, "h0m") {
+				normalized = strings.TrimSuffix(normalized, "0m")
+			}
+		}
+		canonical = append(canonical, key+"="+normalized)
+		return v
 	}
 	p := &Pattern{Name: name, Peak: peak, Duration: duration}
 	add := func(name string, duration time.Duration, from, to float64) {
@@ -187,6 +225,7 @@ func Compile(name string, peak float64, duration time.Duration, params map[strin
 	if _, err := NewPacer(p.Phases); err != nil {
 		return nil, err
 	}
+	p.Canonical = strings.Join(canonical, ",")
 	return p, nil
 }
 
@@ -217,4 +256,36 @@ func parseDuration(key, value string, total time.Duration) (time.Duration, error
 		return 0, fmt.Errorf("%s must be a nonnegative Go duration (10m) or fraction of --duration (0.1)", key)
 	}
 	return duration, nil
+}
+
+func Example(name string) string {
+	switch name {
+	case "steady":
+		return "--load steady peak=120/s"
+	case "ramp-hold-ramp":
+		return "--load ramp-hold-ramp peak=120/s up=0.2"
+	case "sweep":
+		return "--load sweep peak=120/s from=0.25 to=1 steps=4"
+	default:
+		return "--load spike-train peak=120/s every=5m"
+	}
+}
+
+func parameterDistance(a, b string) int {
+	row := make([]int, len(b)+1)
+	for i := range row {
+		row[i] = i
+	}
+	for i := range len(a) {
+		previous := row[0]
+		row[0] = i + 1
+		for j := range len(b) {
+			cost := 0
+			if a[i] != b[j] {
+				cost = 1
+			}
+			previous, row[j+1] = row[j+1], min(row[j+1]+1, row[j]+1, previous+cost)
+		}
+	}
+	return row[len(b)]
 }

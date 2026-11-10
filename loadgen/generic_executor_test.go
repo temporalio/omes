@@ -178,7 +178,7 @@ func TestRunLoadSkipsSlotsWhileLoopBlocked(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.want, starts)
 				var drops []map[string]interface{}
-				for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower peak= in --load").All() {
+				for _, entry := range logs.FilterMessage("Load phase dropped starts; scheduling loop was late; lower peak= in --load").All() {
 					drops = append(drops, entry.ContextMap())
 				}
 				require.Equal(t, tc.drops, drops)
@@ -222,7 +222,7 @@ func TestRunLogsPhaseChangesAndDrops(t *testing.T) {
 			{"phase": "step-3", "phaseIndex": int64(3), "dropped": int64(1)},
 		}, drops)
 		require.Equal(t, map[string]interface{}{
-			"pattern": "sweep", "peak": float64(4), "duration": 3 * time.Second,
+			"pattern": "sweep,peak=4/s,from=0.5,to=1,steps=3", "peak": float64(4), "duration": 3 * time.Second,
 			"phases": []interface{}{"step-1 [0s,1s) 2→2 iterations/s", "step-2 [1s,2s) 3→3 iterations/s", "step-3 [2s,3s) 4→4 iterations/s"},
 		}, logs.FilterMessage("Load pattern").All()[0].ContextMap())
 	})
@@ -981,6 +981,52 @@ func TestRunTerminalFailureReporting(t *testing.T) {
 				require.ErrorIs(t, callbackErr, cause)
 			}
 			require.Equal(t, tc.wantLogs, logs.FilterMessageSnippet(cause.Error()).Len())
+		})
+	}
+}
+
+func TestRunLoadEarlyStopAccounting(t *testing.T) {
+	for _, reason := range []string{"failure", "cancellation", "stop channel"} {
+		t.Run(reason, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				core, logs := observer.New(zap.InfoLevel)
+				pattern, err := load.Compile("steady", 2, time.Minute, nil)
+				require.NoError(t, err)
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				stop := make(chan struct{})
+				failure := errors.New("iteration failed")
+				executor := &GenericExecutor{StopNewIterations: stop, Execute: func(context.Context, *Run) error {
+					time.Sleep(1250 * time.Millisecond)
+					switch reason {
+					case "cancellation":
+						cancel()
+					case "stop channel":
+						close(stop)
+					default:
+						return failure
+					}
+					return nil
+				}}
+
+				err = executor.Run(ctx, ScenarioInfo{
+					Configuration: RunConfiguration{Duration: pattern.Duration, LoadPattern: pattern, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true},
+					Logger:        zap.New(core).Sugar(), MetricsHandler: client.MetricsNopHandler,
+				})
+				switch reason {
+				case "failure":
+					require.ErrorIs(t, err, failure)
+				case "cancellation":
+					require.ErrorIs(t, err, context.Canceled)
+				default:
+					require.NoError(t, err)
+				}
+				var drops []map[string]interface{}
+				for _, entry := range logs.FilterMessageSnippet("Load phase dropped starts").All() {
+					drops = append(drops, entry.ContextMap())
+				}
+				require.Equal(t, []map[string]interface{}{{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(2)}}, drops)
+			})
 		})
 	}
 }

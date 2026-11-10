@@ -21,6 +21,8 @@ func main() {
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
+	rootCmd.SetArgs(foldLoadArgs(os.Args[1:]))
+
 	// Execute prints the error itself. Printing it again here would land a second
 	// copy below the usage text, reading as a second, separate failure.
 	if err := rootCmd.Execute(); err != nil {

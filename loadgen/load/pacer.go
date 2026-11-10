@@ -9,6 +9,9 @@ import (
 
 const MaxPhases = 1024
 
+// MaxPeak leaves at least 100µs per start to bound scheduler overhead from rate typos.
+const MaxPeak = 10_000
+
 // Phase holds a constant rate when From == To, otherwise it ramps linearly.
 // Rates are iterations/s. Phases occupy half-open elapsed-time intervals.
 type Phase struct {
@@ -30,7 +33,7 @@ func NewPacer(phases []Phase) (*Pacer, error) {
 	for _, phase := range phases {
 		if phase.Duration <= 0 || phase.Duration > time.Duration(math.MaxInt64)-total ||
 			!validLevel(phase.From) || !validLevel(phase.To) {
-			return nil, fmt.Errorf("invalid load phase %q: require positive duration and finite nonnegative rates <= 1e9/s", phase.Name)
+			return nil, fmt.Errorf("invalid load phase %q: require positive duration and finite nonnegative rates <= %d/s", phase.Name, MaxPeak)
 		}
 		total += phase.Duration
 	}
@@ -38,7 +41,7 @@ func NewPacer(phases []Phase) (*Pacer, error) {
 }
 
 func validLevel(level float64) bool {
-	return level >= 0 && level <= 1e9 && !math.IsNaN(level)
+	return level >= 0 && level <= MaxPeak && !math.IsNaN(level)
 }
 
 func (p *Pacer) Rate(elapsed time.Duration) float64 {

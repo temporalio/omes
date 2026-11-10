@@ -36,7 +36,9 @@ type genericRun struct {
 	failed    atomic.Int64
 }
 
-func (*GenericExecutor) SupportsLoadPattern() bool { return true }
+func (*GenericExecutor) SupportsLoadPattern() bool {
+	return true
+}
 
 func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	r, err := g.newRun(info)
@@ -222,7 +224,7 @@ scheduleLoop:
 		// If there are already MaxConcurrent running, wait for one
 		if currentlyRunning >= g.config.MaxConcurrent {
 			if schedule != nil {
-				schedule.dropped++
+				schedule.capped++
 				continue
 			}
 			waitOne(durationCtx)
@@ -313,8 +315,7 @@ scheduleLoop:
 	}
 
 	if schedule != nil {
-		schedule.next(time.Since(startTime))
-		schedule.reportDrops()
+		schedule.finish(time.Since(startTime))
 	}
 
 	// Wait for all to be done or an error to occur. We will wait past the overall duration for

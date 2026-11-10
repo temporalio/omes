@@ -19,14 +19,14 @@ func TestLoadValues(t *testing.T) {
 		value string
 		want  load.Pattern
 	}{
-		{"steady,peak=120/s", load.Pattern{Name: "steady", Peak: 120, Duration: time.Minute, Phases: []load.Phase{{Name: "hold", Duration: time.Minute, From: 120, To: 120}}}},
-		{"ramp-hold-ramp,peak=2,up=0.2,down=10s", load.Pattern{Name: "ramp-hold-ramp", Peak: 2, Duration: time.Minute, Phases: []load.Phase{
+		{"steady,peak=120/s", load.Pattern{Canonical: "steady,peak=120/s", Name: "steady", Peak: 120, Duration: time.Minute, Phases: []load.Phase{{Name: "hold", Duration: time.Minute, From: 120, To: 120}}}},
+		{"ramp-hold-ramp,peak=2,up=0.2,down=10s", load.Pattern{Canonical: "ramp-hold-ramp,peak=2/s,up=0.2,down=10s", Name: "ramp-hold-ramp", Peak: 2, Duration: time.Minute, Phases: []load.Phase{
 			{Name: "up", Duration: 12 * time.Second, From: 0, To: 2}, {Name: "hold", Duration: 38 * time.Second, From: 2, To: 2}, {Name: "down", Duration: 10 * time.Second, From: 2, To: 0},
 		}}},
-		{"sweep,peak=10,from=0,to=1,steps=2", load.Pattern{Name: "sweep", Peak: 10, Duration: time.Minute, Phases: []load.Phase{
+		{"sweep,peak=10,from=0,to=1,steps=2", load.Pattern{Canonical: "sweep,peak=10/s,from=0,to=1,steps=2", Name: "sweep", Peak: 10, Duration: time.Minute, Phases: []load.Phase{
 			{Name: "step-1", Duration: 30 * time.Second, From: 0, To: 0}, {Name: "step-2", Duration: 30 * time.Second, From: 10, To: 10},
 		}}},
-		{"spike-train,peak=10,base=0.5,every=0.5,for=0.1", load.Pattern{Name: "spike-train", Peak: 10, Duration: time.Minute, Phases: []load.Phase{
+		{"spike-train,peak=10,base=0.5,every=0.5,for=0.1", load.Pattern{Canonical: "spike-train,peak=10/s,base=0.5,every=0.5,for=0.1", Name: "spike-train", Peak: 10, Duration: time.Minute, Phases: []load.Phase{
 			{Name: "base", Duration: 30 * time.Second, From: 5, To: 5}, {Name: "spike", Duration: 6 * time.Second, From: 10, To: 10}, {Name: "base", Duration: 24 * time.Second, From: 5, To: 5},
 		}}},
 	} {

@@ -29,7 +29,9 @@ type FuzzExecutor struct {
 	DefaultConfiguration RunConfiguration
 }
 
-func (FuzzExecutor) SupportsLoadPattern() bool { return true }
+func (FuzzExecutor) SupportsLoadPattern() bool {
+	return true
+}
 
 // DeclareFuzzExecutorOptions declares the options [FuzzExecutor] itself reads.
 // Scenarios using it should call this from their own Options declaration so the
