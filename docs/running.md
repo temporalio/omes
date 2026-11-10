@@ -78,36 +78,37 @@ each scenario.
 
 ### Load patterns
 
-`run-scenario` and `run-scenario-with-worker` accept `--load <pattern>`, a required
-`--peak <iterations/s>` (`120/s` or `120`), and repeatable `--load-param key=value` flags.
+`run-scenario` and `run-scenario-with-worker` accept `--load <pattern>,peak=<iterations/s>,<key>=<value>,...`.
+Every pattern requires `peak` (`120/s` or `120`); `--duration` sets the run duration separately.
 For example:
 
 ```sh
 go run ./cmd/omes run-scenario --scenario workflow_with_single_noop_activity --run-id ramp \
-  --load ramp-hold-ramp --peak 120/s --duration 20m --load-param up=20% --max-concurrent 100
+  --load ramp-hold-ramp,peak=120/s,up=0.2 --duration 20m --max-concurrent 100
 ```
 
-| Pattern | Parameters and defaults | Phases |
-| --- | --- | --- |
-| `steady` | None | `hold` at peak for the entire run. |
-| `ramp-hold-ramp` | `up=10%`, `down=10%` | `up` from zero to peak, `hold` at peak, `down` to zero. |
-| `sweep` | `from=25%`, `to=100%`, `steps=4` | Equal-duration `step-1` through `step-n`, including both endpoint levels. Ascending and descending sweeps are supported. |
-| `spike-train` | `base=40%`, `every=10m`, `for=1m` | `base` until the first spike at `every`, then `spike` at peak for `for`; subsequent spike starts are `every` apart. The final phase is truncated to the run duration. |
+| Pattern | Shape | Parameters and defaults | Phases |
+| --- | --- | --- | --- |
+| `steady` | `████████` | `peak` required | `hold` at peak for the entire run. |
+| `ramp-hold-ramp` | `▁▃▆████▆▃▁` | `peak` required, `up=0.1`, `down=0.1` | `up` from zero to peak, `hold` at peak, `down` to zero. |
+| `sweep` | `▂▂▄▄▆▆██` | `peak` required, `from=0.25`, `to=1`, `steps=4` | Equal-duration `step-1` through `step-n`, including both endpoint levels. Ascending and descending sweeps are supported. |
+| `spike-train` | `▃▃▃█▃▃█▃` | `peak` required, `base=0.4`, `every=10m`, `for=1m` | `base` until the first spike at `every`, then `spike` at peak for `for`; subsequent spike starts are `every` apart. The final phase is truncated to the run duration. |
 
-Levels (`from`, `to`, `base`) are fractions of peak, written as `0.25` or `25%`, from zero
-to one. Durations (`up`, `down`, `every`, `for`) accept a percentage of the total run
-(`10%`) or a Go duration (`10m`). `up + down` must fit the run; zero-duration ramp or
-hold phases are omitted. `every` and `for` must be positive, with `for <= every`.
+Levels (`from`, `to`, `base`) are fractions of peak from zero to one, such as `0.25`.
+Durations (`up`, `down`, `every`, `for`) accept a fraction of the total run from zero
+to one (`0.1`) or a Go duration (`10m`). Percentages are rejected; use `0.1` for one tenth.
+`up + down` must fit the run; zero-duration ramp or hold phases are omitted.
+`every` and `for` must be positive, with `for <= every`.
 `steps` must be an integer from 2 to 1024, with at least 1ns per step. All patterns
-are limited to 1024 phases; unknown or duplicate parameters are rejected.
+are limited to 1024 phases; unknown, duplicate, missing, and malformed parameters
+and empty comma-separated segments are rejected.
 
 With `--load`, a positive `--duration` is required and scenario default iterations do
 not apply. `--iterations` is rejected (use `--duration`), and
-`--max-iterations-per-second` is rejected (use `--peak`), including explicit zero values.
-`--peak` must be positive, finite, and at most 1 billion iterations/s. `--peak` and
-`--load-param` require `--load`. Executors must explicitly support patterns through
-`GenericExecutor`; scenarios with their own scheduling, such as `ebb_and_flow` and
-`state_transitions_steady`, reject `--load`.
+`--max-iterations-per-second` is rejected (set `peak=` in `--load`), including explicit
+zero values. `peak` must be positive, finite, and at most 1 billion iterations/s.
+Executors must explicitly support patterns through `GenericExecutor`; scenarios with
+their own scheduling, such as `ebb_and_flow` and `state_transitions_steady`, reject `--load`.
 
 Phase boundaries follow elapsed time, even while iterations are in flight. A zero
 level pauses starts and continues the run. Starts are spaced using the integral of

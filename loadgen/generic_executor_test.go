@@ -27,8 +27,8 @@ func TestRunLoadPatterns(t *testing.T) {
 		params   map[string]string
 		want     []int
 	}{
-		{"ramp-hold-ramp", 8, 4 * time.Second, map[string]string{"up": "100%", "down": "0s"}, []int{0, 3, 5, 7}},
-		{"sweep", 4, 3 * time.Second, map[string]string{"from": "50%", "steps": "3"}, []int{1, 3, 4}},
+		{"ramp-hold-ramp", 8, 4 * time.Second, map[string]string{"up": "1", "down": "0s"}, []int{0, 3, 5, 7}},
+		{"sweep", 4, 3 * time.Second, map[string]string{"from": "0.5", "steps": "3"}, []int{1, 3, 4}},
 		{"spike-train", 4, 8 * time.Second, map[string]string{"base": "0", "every": "3s", "for": "1s"}, []int{0, 0, 0, 3, 0, 0, 3, 0}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -102,7 +102,7 @@ func TestRunLoadDropsWithoutCatchUp(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, []time.Duration{500 * time.Millisecond, 3 * time.Second, 3500 * time.Millisecond, 4 * time.Second, 4500 * time.Millisecond}, starts)
-		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All()
+		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower peak= in --load").All()
 		require.Len(t, warnings, 1)
 		require.Equal(t, map[string]interface{}{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(4)}, warnings[0].ContextMap())
 	})
@@ -166,7 +166,7 @@ func TestRunLoadSkipsSlotsWhileLoopBlocked(t *testing.T) {
 				params := map[string]string(nil)
 				peak := float64(2)
 				if tc.pattern == "sweep" {
-					params = map[string]string{"from": "50%", "steps": "3"}
+					params = map[string]string{"from": "0.5", "steps": "3"}
 					peak = 4
 				}
 				pattern, err := load.Compile(tc.pattern, peak, tc.duration, params)
@@ -178,7 +178,7 @@ func TestRunLoadSkipsSlotsWhileLoopBlocked(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.want, starts)
 				var drops []map[string]interface{}
-				for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All() {
+				for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower peak= in --load").All() {
 					drops = append(drops, entry.ContextMap())
 				}
 				require.Equal(t, tc.drops, drops)
@@ -189,7 +189,7 @@ func TestRunLoadSkipsSlotsWhileLoopBlocked(t *testing.T) {
 
 func TestRunLogsPhaseChangesAndDrops(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		pattern, err := load.Compile("sweep", 4, 3*time.Second, map[string]string{"from": "50%", "steps": "3"})
+		pattern, err := load.Compile("sweep", 4, 3*time.Second, map[string]string{"from": "0.5", "steps": "3"})
 		require.NoError(t, err)
 		core, logs := observer.New(zap.InfoLevel)
 		executor := &GenericExecutor{Execute: func(_ context.Context, run *Run) error {
@@ -214,7 +214,7 @@ func TestRunLogsPhaseChangesAndDrops(t *testing.T) {
 			{"phase": "step-3", "phaseIndex": int64(3), "requestedIterationsPerSecond": float64(4)},
 		}, transitions)
 		var drops []map[string]interface{}
-		for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All() {
+		for _, entry := range logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower peak= in --load").All() {
 			drops = append(drops, entry.ContextMap())
 		}
 		require.Equal(t, []map[string]interface{}{
@@ -260,7 +260,7 @@ func TestRunReportsDropsBeforeCooldownCompletes(t *testing.T) {
 
 		<-time.After(2 * time.Second)
 		synctest.Wait()
-		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower --peak").All()
+		warnings := logs.FilterMessage("Load phase dropped starts; raise --max-concurrent or lower peak= in --load").All()
 		close(release)
 		require.Len(t, warnings, 1)
 		require.Equal(t, map[string]interface{}{"phase": "hold", "phaseIndex": int64(1), "dropped": int64(2)}, warnings[0].ContextMap())

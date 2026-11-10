@@ -51,8 +51,6 @@ type scenarioRunConfig struct {
 	iterations                    int
 	duration                      time.Duration
 	load                          string
-	loadParams                    []string
-	peak                          string
 	loadPattern                   *load.Pattern
 	flags                         *pflag.FlagSet
 	maxConcurrent                 int
@@ -78,9 +76,7 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	r.flags = fs
-	fs.StringVar(&r.load, "load", "", "Load pattern: steady, ramp-hold-ramp, sweep, spike-train (requires --duration and --peak)")
-	fs.StringArrayVar(&r.loadParams, "load-param", nil, "Load pattern parameter in key=value format; repeatable")
-	fs.StringVar(&r.peak, "peak", "", "Peak iterations/s for --load, for example 120/s or 120")
+	fs.StringVar(&r.load, "load", "", "Load pattern and parameters: steady, ramp-hold-ramp, sweep, spike-train (requires peak= and --duration), for example ramp-hold-ramp,peak=120/s,up=0.2")
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
@@ -161,16 +157,13 @@ func (r *scenarioRunConfig) validateLoad(scenario *loadgen.Scenario) error {
 	r.loadPattern = nil
 	changed := func(name string) bool { return r.flags != nil && r.flags.Changed(name) }
 	if r.load == "" && !changed("load") {
-		if r.peak != "" || len(r.loadParams) > 0 || changed("peak") || changed("load-param") {
-			return loadgen.NewUsageError("--peak or --load-param requires --load")
-		}
 		return nil
 	}
 	if r.iterations != 0 || changed("iterations") {
 		return loadgen.NewUsageError("--iterations cannot be combined with --load; use --duration")
 	}
 	if r.maxIterationsPerSecond != 0 || changed("max-iterations-per-second") {
-		return loadgen.NewUsageError("--max-iterations-per-second cannot be combined with --load; use --peak")
+		return loadgen.NewUsageError("--max-iterations-per-second cannot be combined with --load; set peak= in --load")
 	}
 	if r.duration <= 0 {
 		return loadgen.NewUsageError("--load requires a positive --duration")
@@ -178,22 +171,7 @@ func (r *scenarioRunConfig) validateLoad(scenario *loadgen.Scenario) error {
 	if r.maxConcurrent < 0 {
 		return loadgen.NewUsageError("--max-concurrent must be positive (or 0 for the default)")
 	}
-	peak, err := load.ParsePeak(r.peak)
-	if err != nil {
-		return loadgen.NewUsageError("%v", err)
-	}
-	params := make(map[string]string, len(r.loadParams))
-	for _, param := range r.loadParams {
-		key, value, ok := strings.Cut(param, "=")
-		if !ok || key == "" {
-			return loadgen.NewUsageError("--load-param %q is not in key=value format", param)
-		}
-		if _, ok := params[key]; ok {
-			return loadgen.NewUsageError("duplicate --load-param %q", key)
-		}
-		params[key] = value
-	}
-	pattern, err := load.Compile(r.load, peak, r.duration, params)
+	pattern, err := load.Parse(r.load, r.duration)
 	if err != nil {
 		return loadgen.NewUsageError("%v", err)
 	}

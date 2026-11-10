@@ -94,7 +94,7 @@ func (s *loadSchedule) drop(count int64) {
 
 func (s *loadSchedule) reportDrops() {
 	if s.dropped > 0 {
-		s.logger.Warnw("Load phase dropped starts; raise --max-concurrent or lower --peak",
+		s.logger.Warnw("Load phase dropped starts; raise --max-concurrent or lower peak= in --load",
 			"phase", s.phases[s.phaseIndex].Name, "phaseIndex", s.phaseIndex+1, "dropped", s.dropped)
 		s.dropped = 0
 	}
