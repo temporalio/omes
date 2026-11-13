@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -44,6 +45,8 @@ type scenarioRunner struct {
 	clientOptions  clioptions.ClientOptions
 	metricsOptions clioptions.MetricsOptions
 	loggingOptions clioptions.LoggingOptions
+	counter        *loadgen.RunCounter
+	state          func() any
 }
 
 type scenarioRunConfig struct {
@@ -59,6 +62,7 @@ type scenarioRunConfig struct {
 	exportHistoriesDir            string
 	exportHistoriesFilter         string
 	continueOnIterationFailure    bool
+	exportResultFile              string
 }
 
 func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
@@ -90,6 +94,7 @@ func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&r.exportHistoriesDir, "export-histories-dir", "", "Export workflow histories to this directory")
 	fs.StringVar(&r.exportHistoriesFilter, "export-histories-filter", "all", "Filter which workflows are exported by execution status (options: 'failed', 'terminated', 'failed,terminated', 'all'). Default is 'all'")
 	fs.BoolVar(&r.continueOnIterationFailure, "continue-on-iteration-failure", false, "Continue running iterations even if an iteration fails")
+	fs.StringVar(&r.exportResultFile, "export-result-file", "", "Write the run result as JSON to this path on exit")
 }
 
 func (r *scenarioRunner) preRun() {
@@ -143,7 +148,35 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 	return scenario, resolvedOptions, nil
 }
 
-func (r *scenarioRunner) run(ctx context.Context) error {
+func (r *scenarioRunner) run(ctx context.Context) (retErr error) {
+	defer r.finish(ctx, &retErr)
+	return r.runScenario(ctx)
+}
+
+func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
+	panicValue := recover()
+	if panicValue != nil {
+		*runErr = fmt.Errorf("panic: %v", panicValue)
+		defer func() { panic(panicValue) }()
+	}
+	if r.exportResultFile == "" {
+		return
+	}
+
+	// Write result export file
+	end := runEnd{
+		finished: true,
+		err:      *runErr,
+		ctxErr:   ctx.Err(),
+		panicked: panicValue != nil,
+	}
+	result := newRunResult(end, r.snapshotCounts(), r.currentState())
+	if err := result.write(r.exportResultFile); err != nil {
+		*runErr = errors.Join(*runErr, err)
+	}
+}
+
+func (r *scenarioRunner) runScenario(ctx context.Context) error {
 	scenario, resolvedOptions, err := r.validateInput()
 	if err != nil {
 		return err
@@ -181,6 +214,10 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		return fmt.Errorf("failed to get root directory: %w", err)
 	}
 
+	if r.exportResultFile != "" {
+		r.counter = &loadgen.RunCounter{}
+	}
+
 	// Generate a random execution ID to ensure no two executions with the same RunID collide
 	executionID, err := generateExecutionID()
 	if err != nil {
@@ -205,6 +242,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 			DoNotRegisterSearchAttributes: r.doNotRegisterSearchAttributes,
 			IgnoreAlreadyStarted:          r.ignoreAlreadyStarted,
 			ContinueOnIterationFailure:    r.continueOnIterationFailure,
+			Counter:                       r.counter,
 		},
 		Options:   resolvedOptions,
 		Namespace: r.clientOptions.Namespace,
@@ -215,6 +253,9 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		},
 	}
 	executor := scenario.ExecutorFn()
+	if r.exportResultFile != "" {
+		r.state = scenarioState(executor)
+	}
 	err = executor.Run(ctx, scenarioInfo)
 	if err != nil {
 		return fmt.Errorf("failed scenario: %w", err)
@@ -224,4 +265,25 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		scenarioInfo.Logger.Errorf("Error exporting workflow histories:\n %v", err)
 	}
 	return nil
+}
+
+func (r *scenarioRunner) currentState() any {
+	if r.state == nil {
+		return nil
+	}
+	return r.state()
+}
+
+func scenarioState(executor loadgen.Executor) func() any {
+	if state, ok := executor.(interface{ Snapshot() any }); ok {
+		return state.Snapshot
+	}
+	return func() any { return nil }
+}
+
+func (r *scenarioRunner) snapshotCounts() loadgen.RunCounts {
+	if r.counter != nil {
+		return r.counter.Snapshot()
+	}
+	return loadgen.RunCounts{}
 }
