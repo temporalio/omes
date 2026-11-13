@@ -7,19 +7,24 @@ import (
 
 // WorkerOptions for setting up worker parameters
 type WorkerOptions struct {
-	BuildID                      string
-	DeploymentName               string
-	DeploymentBuildID            string
-	DefaultVersioningBehavior    string
-	MaxConcurrentActivityPollers int
-	MaxConcurrentWorkflowPollers int
-	ActivityPollerAutoscaleMax   int // overrides MaxConcurrentActivityPollers
-	WorkflowPollerAutoscaleMax   int // overrides MaxConcurrentWorkflowPollers
-	MaxConcurrentActivities      int
-	MaxConcurrentWorkflowTasks   int
-	WorkerActivitiesPerSecond    float64
-	MaxHeartbeatThrottleInterval time.Duration
-	ErrOnUnimplemented           bool
+	BuildID                        string
+	DeploymentName                 string
+	DeploymentBuildID              string
+	DefaultVersioningBehavior      string
+	MaxConcurrentActivityPollers   int
+	MaxConcurrentWorkflowPollers   int
+	MaxConcurrentNexusPollers      int
+	ActivityPollerAutoscaleMax     int // overrides MaxConcurrentActivityPollers
+	ActivityPollerAutoscaleMin     int
+	ActivityPollerAutoscaleInitial int
+	WorkflowPollerAutoscaleMax     int // overrides MaxConcurrentWorkflowPollers
+	WorkflowPollerAutoscaleMin     int
+	WorkflowPollerAutoscaleInitial int
+	MaxConcurrentActivities        int
+	MaxConcurrentWorkflowTasks     int
+	WorkerActivitiesPerSecond      float64
+	MaxHeartbeatThrottleInterval   time.Duration
+	ErrOnUnimplemented             bool
 
 	fs         *pflag.FlagSet
 	usedPrefix string
@@ -48,10 +53,15 @@ func (m *WorkerOptions) FlagSetWithPrefix(prefix string) *pflag.FlagSet {
 	m.fs.StringVar(&m.DefaultVersioningBehavior, "default-versioning-behavior", "", "Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set")
 	m.fs.IntVar(&m.MaxConcurrentActivityPollers, prefix+"max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
+	m.fs.IntVar(&m.MaxConcurrentNexusPollers, prefix+"max-concurrent-nexus-pollers", 0, "Max concurrent Nexus pollers (Go worker only; must be positive; unset uses the SDK default)")
 	m.fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
 	m.fs.IntVar(&m.WorkflowPollerAutoscaleMax, prefix+"workflow-poller-autoscale-max", 0, "Max for workflow poller autoscaling (overrides max-concurrent-workflow-pollers")
+	m.fs.IntVar(&m.ActivityPollerAutoscaleMin, prefix+"activity-poller-autoscale-min", 0, "Min for activity poller autoscaling (Go worker only)")
+	m.fs.IntVar(&m.ActivityPollerAutoscaleInitial, prefix+"activity-poller-autoscale-initial", 0, "Initial count for activity poller autoscaling (Go worker only)")
+	m.fs.IntVar(&m.WorkflowPollerAutoscaleMin, prefix+"workflow-poller-autoscale-min", 0, "Min for workflow poller autoscaling (Go worker only)")
+	m.fs.IntVar(&m.WorkflowPollerAutoscaleInitial, prefix+"workflow-poller-autoscale-initial", 0, "Initial count for workflow poller autoscaling (Go worker only)")
 	m.fs.Float64Var(&m.WorkerActivitiesPerSecond, prefix+"activities-per-second", 0, "Per-worker activity rate limit")
 	m.fs.DurationVar(&m.MaxHeartbeatThrottleInterval, prefix+"max-heartbeat-throttle-interval", 0, "Maximum heartbeat RPC batching interval (Go only; 0 uses the SDK default)")
 	m.fs.BoolVar(&m.ErrOnUnimplemented, prefix+"err-on-unimplemented", false, "Fail on unimplemented actions (e.g. concurrent client actions and standalone Nexus/activity operations) instead of skipping them")
