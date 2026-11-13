@@ -293,6 +293,8 @@ const BaseIterationRetryBackoff = 1 * time.Second
 const MaxIterationRetryBackoff = 60 * time.Second
 
 type RunConfiguration struct {
+	// Counter, if set, counts generic executor iterations and terminal failures.
+	Counter *RunCounter
 	// Number of iterations to run of this scenario (mutually exclusive with Duration).
 	Iterations int
 	// StartFromIteration is the iteration to start from when resuming a run.

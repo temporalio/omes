@@ -49,6 +49,7 @@ func (g *GenericExecutor) newRun(info ScenarioInfo) (*genericRun, error) {
 	// This lets the caller decide when to stop the load.
 	useDefaultIterationLimit := g.StopNewIterations == nil
 	info.Configuration.applyDefaults(useDefaultIterationLimit)
+	info.Configuration.Counter.runStarted()
 	if err := info.Configuration.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid scenario: %w", err)
 	}
@@ -72,6 +73,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 	// On exit, cancel unfinished work and wait for cleanup and completion callbacks.
 	// Add errors from canceled tests to the returned error after waiting for cleanup.
 	defer func() {
+		g.config.Counter.runFinished(ctx.Err())
 		cancelRun()
 		// Callers read final counters as soon as Run returns.
 		inFlight.Wait()
@@ -180,6 +182,7 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 		// Run concurrently
 		g.logger.Debugf("Running iteration %v", i)
 		currentlyRunning++
+		g.config.Counter.iterationStarted()
 		run := g.info.NewRun(i + 1)
 		// Count the test before launching it so shutdown waits for it.
 		inFlight.Add(1)
@@ -203,6 +206,8 @@ func (g *genericRun) Run(ctx context.Context) (retErr error) {
 				// cancellation while the run is healthy.
 				stopping := ctx.Err() != nil && (errors.Is(iterErr, context.Canceled) ||
 					errors.As(iterErr, new(*serviceerror.Canceled)))
+
+				g.config.Counter.iterationFinished(run.Iteration, run.attemptCount, iterErr, stopping)
 
 				switch {
 				case stopping:
