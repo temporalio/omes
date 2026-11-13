@@ -28,7 +28,7 @@ import (
 const (
 	defaultTestNamespace  = "default"
 	defaultTestRunTimeout = 30 * time.Second
-	workerBuildTimeout    = 1 * time.Minute
+	workerBuildTimeout    = 5 * time.Minute
 	workerShutdownTimeout = 5 * time.Second
 )
 
