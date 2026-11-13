@@ -186,6 +186,38 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 	}
 }
 
+func TestBuildWorkerOptionsNexusPollers(t *testing.T) {
+	parse := func(argv ...string) (sdkworker.Options, error) {
+		var args clioptions.WorkerOptions
+		flags := args.FlagSetWithPrefix("")
+		if err := flags.Parse(argv); err != nil {
+			t.Fatalf("failed to parse %v: %v", argv, err)
+		}
+		return buildWorkerOptions(flags, args, "")
+	}
+
+	options, err := parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if options.NexusTaskPollerBehavior != nil {
+		t.Errorf("Nexus poller behavior = %#v without the flag, want nil (SDK default)", options.NexusTaskPollerBehavior)
+	}
+
+	options, err = parse("--max-concurrent-nexus-pollers=16")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{MaximumNumberOfPollers: 16})
+	if !reflect.DeepEqual(options.NexusTaskPollerBehavior, want) {
+		t.Errorf("Nexus poller behavior = %#v, want %#v", options.NexusTaskPollerBehavior, want)
+	}
+
+	if _, err := parse("--max-concurrent-nexus-pollers=0"); err == nil {
+		t.Error("--max-concurrent-nexus-pollers=0 succeeded, want error")
+	}
+}
+
 func TestBuildWorkerOptionsRejectsInvalidAutoscaleBounds(t *testing.T) {
 	for _, argv := range [][]string{
 		{"--activity-poller-autoscale-min=10", "--activity-poller-autoscale-max=5"},

@@ -238,6 +238,14 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 	} else {
 		options.WorkflowTaskPollerBehavior = defaultPollerBehavior()
 	}
+	if flags.Changed("max-concurrent-nexus-pollers") {
+		if args.MaxConcurrentNexusPollers < 1 {
+			return sdkworker.Options{}, fmt.Errorf("--max-concurrent-nexus-pollers must be positive, got %d", args.MaxConcurrentNexusPollers)
+		}
+		options.NexusTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
+			MaximumNumberOfPollers: args.MaxConcurrentNexusPollers,
+		})
+	}
 	if flags.Changed("max-concurrent-activities") {
 		options.MaxConcurrentActivityExecutionSize = args.MaxConcurrentActivities
 	}

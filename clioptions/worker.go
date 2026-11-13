@@ -13,6 +13,7 @@ type WorkerOptions struct {
 	DefaultVersioningBehavior      string
 	MaxConcurrentActivityPollers   int
 	MaxConcurrentWorkflowPollers   int
+	MaxConcurrentNexusPollers      int
 	ActivityPollerAutoscaleMax     int // overrides MaxConcurrentActivityPollers
 	ActivityPollerAutoscaleMin     int
 	ActivityPollerAutoscaleInitial int
@@ -52,6 +53,7 @@ func (m *WorkerOptions) FlagSetWithPrefix(prefix string) *pflag.FlagSet {
 	m.fs.StringVar(&m.DefaultVersioningBehavior, "default-versioning-behavior", "", "Default versioning behavior for workflows that don't set one at registration. One of: pinned, auto-upgrade. Defaults to auto-upgrade when --deployment-name is set")
 	m.fs.IntVar(&m.MaxConcurrentActivityPollers, prefix+"max-concurrent-activity-pollers", 0, "Max concurrent activity pollers")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowPollers, prefix+"max-concurrent-workflow-pollers", 0, "Max concurrent workflow pollers")
+	m.fs.IntVar(&m.MaxConcurrentNexusPollers, prefix+"max-concurrent-nexus-pollers", 0, "Max concurrent Nexus pollers (Go worker only; must be positive; unset uses the SDK default)")
 	m.fs.IntVar(&m.MaxConcurrentActivities, prefix+"max-concurrent-activities", 0, "Max concurrent activities")
 	m.fs.IntVar(&m.MaxConcurrentWorkflowTasks, prefix+"max-concurrent-workflow-tasks", 0, "Max concurrent workflow tasks")
 	m.fs.IntVar(&m.ActivityPollerAutoscaleMax, prefix+"activity-poller-autoscale-max", 0, "Max for activity poller autoscaling (overrides max-concurrent-activity-pollers")
