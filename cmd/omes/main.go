@@ -19,6 +19,7 @@ func main() {
 	rootCmd.AddCommand(prepareWorkerCmd())
 	rootCmd.AddCommand(runScenarioCmd())
 	rootCmd.AddCommand(runScenarioWithWorkerCmd())
+	rootCmd.AddCommand(runPhasedWorkerCmd())
 	rootCmd.AddCommand(runWorkerCmd())
 
 	// Execute prints the error itself. Printing it again here would land a second
