@@ -37,6 +37,7 @@ func TestInstallAllUsesBareMiseInstall(t *testing.T) {
 				"exec -- dotnet restore|false",
 				"exec -- go mod tidy|false",
 				"exec -- ./gradlew build --dry-run|false",
+				"where java|",
 				"exec -- npm ci|false",
 				"exec -- uv sync --python 3.10 --all-packages --all-groups|false",
 				"exec -- bundle install|false",
@@ -73,10 +74,22 @@ func TestRunInstallToolsRunsProjectSetupThroughMiseExec(t *testing.T) {
 		"exec -- dotnet restore|false",
 		"exec -- go mod tidy|false",
 		"exec -- ./gradlew build --dry-run|false",
+		"where java|",
 		"exec -- uv sync --python 3.10 --all-packages --all-groups|false",
 		"exec -- npm ci|false",
 		"exec -- bundle install|false",
 	}, lines)
+}
+
+func TestInstallJavaExportsMiseJavaHome(t *testing.T) {
+	_, err := withFakeMise(t, "", func() error {
+		return runInstallTools(context.Background(), []string{"java"})
+	})
+	require.NoError(t, err)
+
+	env, err := os.ReadFile(os.Getenv("GITHUB_ENV"))
+	require.NoError(t, err)
+	require.Equal(t, "JAVA_HOME=/fake/mise/installs/java\n", string(env))
 }
 
 func withFakeMise(t *testing.T, failOn string, run func() error) ([]string, error) {
@@ -89,9 +102,14 @@ printf '%s|%s\n' "$*" "${MISE_AUTO_INSTALL-}" >> "$MISE_LOG"
 if [ "$1" = "$MISE_FAIL_ON" ]; then
   exit 1
 fi
+if [ "$1" = "where" ]; then
+  echo "/fake/mise/installs/$2"
+fi
 `), 0o755))
 	t.Setenv("MISE_LOG", logPath)
 	t.Setenv("MISE_FAIL_ON", failOn)
+	// Keep tests running in Actions from writing into the real job environment.
+	t.Setenv("GITHUB_ENV", filepath.Join(dir, "github_env"))
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	runErr := run()
 

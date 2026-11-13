@@ -35,6 +35,7 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+			o.Bool(RetainSchedulesFlag, false, "Leave finite schedules for migration checks; the caller must delete the namespace afterward.")
 		},
 		ExecutorFn: func() loadgen.Executor {
 			return &loadgen.GenericExecutor{
@@ -64,6 +65,7 @@ type schedulerExecutorConfig struct {
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
 	EnableChasmScheduler          bool
+	RetainSchedules               bool
 }
 
 var _ loadgen.Configurable = (*SchedulerExecutor)(nil)
@@ -90,6 +92,7 @@ const (
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
 	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
+	RetainSchedulesFlag               = "retain-schedules"
 )
 
 const (
@@ -124,6 +127,7 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
 		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
 		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
+		RetainSchedules:               info.OptionBool(RetainSchedulesFlag),
 	}
 
 	if config.ScheduleCreationPerIteration <= 0 {
@@ -190,8 +194,7 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 				return
 			}
 			<-ticker.C
-			// Read and update failures fall through to the delete below; an
-			// abandoned schedule would outlive the iteration until its EndAt.
+			// Read and update failures still fall through to deletion.
 			for range s.config.ScheduleReadsPerCreation {
 				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
@@ -208,11 +211,14 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
 			select {
 			case <-time.After(dur):
+				if s.config.RetainSchedules {
+					return
+				}
 				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
 					record(fmt.Errorf("deleting schedule %s: %w", sc.ScheduleID, err))
 				}
 			case <-ctx.Done():
-				// Left undeleted; EndAt bounds how long it survives.
+				// Cancellation can leave the schedule object behind after EndAt.
 			}
 		})
 	}
@@ -256,8 +262,7 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		ID: scheduleID,
 		Spec: client.ScheduleSpec{
 			CronExpressions: []string{s.config.CronExpression},
-			// defining an end at ensures all schedules will be removed
-			// regardless of errors from this executor
+			// EndAt stops scheduled actions; it does not delete the schedule.
 			EndAt: endTime,
 		},
 		Action:  action,

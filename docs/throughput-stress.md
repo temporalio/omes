@@ -9,6 +9,24 @@ For the commands that run it, the built-in run flags, and how `--option` works i
 
 Run `omes list-scenarios` for the authoritative list of options with their types and defaults.
 
+## Retry and heartbeat timing
+
+`include-retry-scenarios=true` adds probes that deliberately fail their first
+activity attempt and must succeed on their second. `retry-scenario-timeout`
+(default `1s`) sets the retryable-error and timeout probes' start-to-close
+timeouts, and the heartbeat probe's heartbeat timeout. The deliberate
+start-to-close failure runs for twice that duration;
+the heartbeat probe's start-to-close timeout stays longer than its heartbeat
+timeout. Changing the option preserves both attempts and the expected first
+failure. It does not affect the separately configured healthy heartbeat actions.
+
+Healthy heartbeat activities retain a single attempt. Their local heartbeat
+interval does not determine RPC cadence: the Go SDK batches calls. The Go
+worker's `--worker-max-heartbeat-throttle-interval` can cap that batching window
+without changing the activity's heartbeat timeout or retry policy. Zero keeps
+the SDK default. Worker profiles take precedence over this individual tuning
+flag, as they do for poller and slot settings.
+
 ## Sleep activities
 
 The scenario can run "sleep" activities with different configurations, described by a JSON document
