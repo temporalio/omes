@@ -223,9 +223,11 @@ Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-work
 }
 ```
 
-- Written once on exit, including validation, connection, and worker-startup failures.
+- Written on exit, including validation, connection, and worker-startup failures.
+- `--export-result-interval <duration>` also rewrites the file with `outcome: "running"` while the
+  scenario executes; it requires `--export-result-file`, and the final result replaces the last snapshot.
 - Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
-  `interrupted` was cancelled.
+  `interrupted` was cancelled; `running` is a snapshot taken while the scenario executes.
 - `iterations` matches run logs and counts each scenario iteration once, however many attempts it took.
 - `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
   truncation marker.
