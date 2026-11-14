@@ -10,6 +10,9 @@ import (
 type KitchenSinkExecutor struct {
 	TestInput *kitchensink.TestInput
 
+	// RecoverOriginalStart retains the iteration request and acknowledged execution across retries.
+	RecoverOriginalStart bool
+
 	// Called once on start
 	PrepareTestInput func(context.Context, ScenarioInfo, *kitchensink.TestInput) error
 
@@ -27,20 +30,51 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	// Create generic executor and run it
 	ge := &GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
-			options := run.DefaultKitchenSinkWorkflowOptions()
-			testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
-			if !ok {
-				panic("failed to clone test input")
-			}
-			options.Params = testInputClone
-			if k.UpdateWorkflowOptions != nil {
-				err := k.UpdateWorkflowOptions(ctx, run, &options)
+			if !k.RecoverOriginalStart {
+				options, err := k.iterationOptions(ctx, run)
 				if err != nil {
 					return err
 				}
+				return run.ExecuteKitchenSinkWorkflow(ctx, &options)
 			}
-			return run.ExecuteKitchenSinkWorkflow(ctx, &options)
+			// Retries reuse the first attempt's request instead of constructing a new one.
+			if run.kitchenSinkExecution == nil {
+				options, err := k.iterationOptions(ctx, run)
+				if err != nil {
+					return err
+				}
+				run.kitchenSinkExecution = freezeKitchenSinkExecution(run, options)
+			}
+			frozen := run.kitchenSinkExecution
+			return run.executeKitchenSinkWorkflow(ctx, &frozen.options, frozen.executor)
 		},
 	}
 	return ge.Run(ctx, info)
+}
+
+func (k KitchenSinkExecutor) iterationOptions(ctx context.Context, run *Run) (KitchenSinkWorkflowOptions, error) {
+	options := run.DefaultKitchenSinkWorkflowOptions()
+	testInputClone, ok := proto.Clone(k.TestInput).(*kitchensink.TestInput)
+	if !ok {
+		panic("failed to clone test input")
+	}
+	options.Params = testInputClone
+	if k.UpdateWorkflowOptions != nil {
+		if err := k.UpdateWorkflowOptions(ctx, run, &options); err != nil {
+			return options, err
+		}
+	}
+	return options, nil
+}
+
+type kitchenSinkExecution struct {
+	options  KitchenSinkWorkflowOptions
+	executor *kitchensink.ClientActionsExecutor
+}
+
+func freezeKitchenSinkExecution(run *Run, options KitchenSinkWorkflowOptions) *kitchenSinkExecution {
+	options.Params = proto.Clone(options.Params).(*kitchensink.TestInput)
+	executor := run.newClientActionsExecutor(&options)
+	executor.RecoverOriginalStart = true
+	return &kitchenSinkExecution{options: options, executor: executor}
 }
