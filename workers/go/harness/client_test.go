@@ -117,3 +117,24 @@ func TestBuildTLSConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildTLSConfigServerCA(t *testing.T) {
+	_, certPath, keyPath := writeTestPEMs(t)
+
+	t.Run("CA path sets the roots and implies TLS", func(t *testing.T) {
+		cfg, err := buildTLSConfig(clientConfigOptions{TLSCAPath: certPath})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg == nil || cfg.RootCAs == nil {
+			t.Fatal("expected a TLS config with RootCAs")
+		}
+	})
+
+	t.Run("CA file without certificates", func(t *testing.T) {
+		_, err := buildTLSConfig(clientConfigOptions{TLSCAPath: keyPath})
+		if err == nil || !strings.Contains(err.Error(), "no certificates in server CA file") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}

@@ -148,3 +148,46 @@ func TestLoadTLSConfigCombinedPEM(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadTLSConfigServerCA(t *testing.T) {
+	_, certOnly, keyOnly := combinedPEM(t)
+	dir := t.TempDir()
+	caPath := filepath.Join(dir, "ca.pem")
+	if err := os.WriteFile(caPath, certOnly, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	keyPath := filepath.Join(dir, "tls.key")
+	if err := os.WriteFile(keyPath, keyOnly, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("CA path sets the roots and implies TLS", func(t *testing.T) {
+		c := &ClientOptions{ServerCACertPath: caPath}
+		cfg, err := c.loadTLSConfig()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg == nil || cfg.RootCAs == nil {
+			t.Fatal("expected a TLS config with RootCAs")
+		}
+	})
+
+	for name, tc := range map[string]struct {
+		path string
+		want string
+	}{
+		"CA file without certificates": {keyPath, "no certificates in server CA file"},
+		"CA file missing":              {filepath.Join(dir, "absent.pem"), "failed to read server CA"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := &ClientOptions{ServerCACertPath: tc.path}
+			_, err := c.loadTLSConfig()
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
