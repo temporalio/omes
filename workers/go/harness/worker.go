@@ -140,6 +140,35 @@ func defaultPollerBehavior() sdkworker.PollerBehavior {
 	})
 }
 
+// autoscaleFlagChanged reports whether any autoscale flag is set for kind ("activity" or "workflow").
+func autoscaleFlagChanged(flags *pflag.FlagSet, kind string) bool {
+	for _, bound := range []string{"min", "initial", "max"} {
+		if flags.Changed(kind + "-poller-autoscale-" + bound) {
+			return true
+		}
+	}
+	return false
+}
+
+// autoscalingPollerBehavior builds an autoscaling behavior; unset (zero) bounds take the SDK
+// defaults. The SDK does not check bound ordering, so set bounds are checked here.
+func autoscalingPollerBehavior(kind string, minimum, initial, maximum int) (sdkworker.PollerBehavior, error) {
+	if minimum < 0 || initial < 0 || maximum < 0 {
+		return nil, fmt.Errorf("--%s-poller-autoscale-{min,initial,max} cannot be negative", kind)
+	}
+	if (minimum > 0 && initial > 0 && minimum > initial) ||
+		(initial > 0 && maximum > 0 && initial > maximum) ||
+		(minimum > 0 && maximum > 0 && minimum > maximum) {
+		return nil, fmt.Errorf("--%s-poller-autoscale bounds must satisfy min <= initial <= max, got min=%d initial=%d max=%d",
+			kind, minimum, initial, maximum)
+	}
+	return sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
+		MinimumNumberOfPollers: minimum,
+		InitialNumberOfPollers: initial,
+		MaximumNumberOfPollers: maximum,
+	}), nil
+}
+
 func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, profileName string) (sdkworker.Options, error) {
 	if profileName != "" {
 		profile, err := lookupWorkerProfile(profileName)
@@ -181,10 +210,13 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 		options.BuildID = args.BuildID
 		options.UseBuildIDForVersioning = true
 	}
-	if flags.Changed("activity-poller-autoscale-max") {
-		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
-			MaximumNumberOfPollers: args.ActivityPollerAutoscaleMax,
-		})
+	if autoscaleFlagChanged(flags, "activity") {
+		behavior, err := autoscalingPollerBehavior("activity",
+			args.ActivityPollerAutoscaleMin, args.ActivityPollerAutoscaleInitial, args.ActivityPollerAutoscaleMax)
+		if err != nil {
+			return sdkworker.Options{}, err
+		}
+		options.ActivityTaskPollerBehavior = behavior
 	} else if flags.Changed("max-concurrent-activity-pollers") {
 		options.ActivityTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 			MaximumNumberOfPollers: args.MaxConcurrentActivityPollers,
@@ -192,16 +224,27 @@ func buildWorkerOptions(flags *pflag.FlagSet, args clioptions.WorkerOptions, pro
 	} else {
 		options.ActivityTaskPollerBehavior = defaultPollerBehavior()
 	}
-	if flags.Changed("workflow-poller-autoscale-max") {
-		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
-			MaximumNumberOfPollers: args.WorkflowPollerAutoscaleMax,
-		})
+	if autoscaleFlagChanged(flags, "workflow") {
+		behavior, err := autoscalingPollerBehavior("workflow",
+			args.WorkflowPollerAutoscaleMin, args.WorkflowPollerAutoscaleInitial, args.WorkflowPollerAutoscaleMax)
+		if err != nil {
+			return sdkworker.Options{}, err
+		}
+		options.WorkflowTaskPollerBehavior = behavior
 	} else if flags.Changed("max-concurrent-workflow-pollers") {
 		options.WorkflowTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
 			MaximumNumberOfPollers: args.MaxConcurrentWorkflowPollers,
 		})
 	} else {
 		options.WorkflowTaskPollerBehavior = defaultPollerBehavior()
+	}
+	if flags.Changed("max-concurrent-nexus-pollers") {
+		if args.MaxConcurrentNexusPollers < 1 {
+			return sdkworker.Options{}, fmt.Errorf("--max-concurrent-nexus-pollers must be positive, got %d", args.MaxConcurrentNexusPollers)
+		}
+		options.NexusTaskPollerBehavior = sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
+			MaximumNumberOfPollers: args.MaxConcurrentNexusPollers,
+		})
 	}
 	if flags.Changed("max-concurrent-activities") {
 		options.MaxConcurrentActivityExecutionSize = args.MaxConcurrentActivities

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"slices"
 	"strings"
 
@@ -123,7 +124,15 @@ func setupInstalledTool(ctx context.Context, tool string) error {
 		if err != nil {
 			return err
 		}
-		return runMiseExecInDir(ctx, workerDir, "./gradlew", "build", "--dry-run")
+		if err := runMiseExecInDir(ctx, workerDir, "./gradlew", "build", "--dry-run"); err != nil {
+			return err
+		}
+		// Later CI steps run ./gradlew outside mise exec and would get the runner's default JDK.
+		javaHome, err := exec.CommandContext(ctx, "mise", "where", "java").Output()
+		if err != nil {
+			return fmt.Errorf("failed locating mise java: %w", err)
+		}
+		return writeGitHubEnv("JAVA_HOME", strings.TrimSpace(string(javaHome)))
 	case "python":
 		workerDir, err := getTargetDir("python")
 		if err != nil {

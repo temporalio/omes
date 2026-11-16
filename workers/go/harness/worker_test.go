@@ -130,6 +130,32 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 			}),
 		},
 		{
+			name: "activity autoscale min, initial and max",
+			argv: []string{
+				"--activity-poller-autoscale-min=2",
+				"--activity-poller-autoscale-initial=4",
+				"--activity-poller-autoscale-max=20",
+			},
+			activityBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
+				MinimumNumberOfPollers: 2,
+				InitialNumberOfPollers: 4,
+				MaximumNumberOfPollers: 20,
+			}),
+			workflowBehavior: defaultFixed,
+		},
+		{
+			// Any autoscale bound enables autoscaling, even over a fixed poller count.
+			name: "workflow autoscale min alone enables autoscaling",
+			argv: []string{
+				"--workflow-poller-autoscale-min=3",
+				"--max-concurrent-workflow-pollers=7",
+			},
+			activityBehavior: defaultFixed,
+			workflowBehavior: sdkworker.NewPollerBehaviorAutoscaling(sdkworker.PollerBehaviorAutoscalingOptions{
+				MinimumNumberOfPollers: 3,
+			}),
+		},
+		{
 			name: "max concurrent pollers still pins a simple maximum",
 			argv: []string{"--max-concurrent-activity-pollers=3"},
 			activityBehavior: sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{
@@ -157,6 +183,56 @@ func TestBuildWorkerOptionsPollerBehavior(t *testing.T) {
 					options.WorkflowTaskPollerBehavior, tc.workflowBehavior)
 			}
 		})
+	}
+}
+
+func TestBuildWorkerOptionsNexusPollers(t *testing.T) {
+	parse := func(argv ...string) (sdkworker.Options, error) {
+		var args clioptions.WorkerOptions
+		flags := args.FlagSetWithPrefix("")
+		if err := flags.Parse(argv); err != nil {
+			t.Fatalf("failed to parse %v: %v", argv, err)
+		}
+		return buildWorkerOptions(flags, args, "")
+	}
+
+	options, err := parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if options.NexusTaskPollerBehavior != nil {
+		t.Errorf("Nexus poller behavior = %#v without the flag, want nil (SDK default)", options.NexusTaskPollerBehavior)
+	}
+
+	options, err = parse("--max-concurrent-nexus-pollers=16")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := sdkworker.NewPollerBehaviorSimpleMaximum(sdkworker.PollerBehaviorSimpleMaximumOptions{MaximumNumberOfPollers: 16})
+	if !reflect.DeepEqual(options.NexusTaskPollerBehavior, want) {
+		t.Errorf("Nexus poller behavior = %#v, want %#v", options.NexusTaskPollerBehavior, want)
+	}
+
+	if _, err := parse("--max-concurrent-nexus-pollers=0"); err == nil {
+		t.Error("--max-concurrent-nexus-pollers=0 succeeded, want error")
+	}
+}
+
+func TestBuildWorkerOptionsRejectsInvalidAutoscaleBounds(t *testing.T) {
+	for _, argv := range [][]string{
+		{"--activity-poller-autoscale-min=10", "--activity-poller-autoscale-max=5"},
+		{"--workflow-poller-autoscale-initial=10", "--workflow-poller-autoscale-max=5"},
+		{"--workflow-poller-autoscale-min=4", "--workflow-poller-autoscale-initial=2"},
+		{"--activity-poller-autoscale-min=-1"},
+	} {
+		var args clioptions.WorkerOptions
+		flags := args.FlagSetWithPrefix("")
+		if err := flags.Parse(argv); err != nil {
+			t.Fatalf("failed to parse %v: %v", argv, err)
+		}
+		if _, err := buildWorkerOptions(flags, args, ""); err == nil {
+			t.Errorf("buildWorkerOptions(%v) succeeded, want error", argv)
+		}
 	}
 }
 

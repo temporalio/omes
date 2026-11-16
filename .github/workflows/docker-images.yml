@@ -116,6 +116,19 @@ jobs:
           $IMAGE_TAG_ARGS \
           $TAG_LATEST_ARGS
 
+      # Mirror the per-commit tag into the internal registries now, instead of on the next
+      # scheduled scan, so it can run in a cell. See
+      # https://github.com/temporalio/docker-image-sync#syncing-on-demand
+      - name: Request internal mirror sync
+        if: inputs.lang == 'go' || inputs.push-command == 'build-push-cli-image'
+        # The image is already published; a failed request only delays the mirror.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.DOCKER_IMAGE_SYNC_DISPATCH_TOKEN }}
+        run: |
+          tag=$(tr ';' '\n' <<< "$BUILT_IMAGE_TAGS" | grep -E ':(go|cli)-[0-9a-f]{7,40}$')
+          gh workflow run sync.yaml -R temporalio/docker-image-sync -f image="docker.io/$tag"
+
       - name: 🐳 Docker Hub image tag
         env:
           LANG: ${{ inputs.lang || 'CLI' }}
