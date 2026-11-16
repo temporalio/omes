@@ -104,7 +104,7 @@ func (b *scheduleOperation) persistResult(err error) error {
 	if b.cancelDeadline != nil {
 		defer b.cancelDeadline()
 	}
-	if b.journal == nil || b.recorded != nil || b.beginErr != nil {
+	if b.journal == nil || b.recorded != nil || b.beginErr != nil || (b.parentCtx != nil && b.parentCtx.Err() != nil) {
 		return err
 	}
 	result := recordedScheduleResult{Outcome: b.outcome}

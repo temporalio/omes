@@ -3,8 +3,9 @@ package journal
 import (
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func apply(t *testing.T, s State, c Command) State {

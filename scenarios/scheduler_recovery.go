@@ -71,6 +71,7 @@ type scheduleOperation struct {
 	recorded       *recordedScheduleResult
 	restored       bool
 	cancelDeadline context.CancelFunc
+	parentCtx      context.Context
 
 	ctx      context.Context
 	calls    int
@@ -83,6 +84,7 @@ type scheduleOperation struct {
 }
 
 func (r *scheduleRecovery) operation(ctx context.Context, name string) (*scheduleOperation, context.CancelFunc) {
+	parentCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, r.recoveryPolicy().Timeout)
 	// Deletion may clean up after EndAt, but cannot outlive the caller.
 	if name != "delete" {
@@ -92,8 +94,8 @@ func (r *scheduleRecovery) operation(ctx context.Context, name string) (*schedul
 		cancel = func() { endCancel(); parentCancel() }
 	}
 	policy := r.recoveryPolicy()
-	b := &scheduleOperation{policy: &policy, ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}
-	b.restoreJournal(ctx, r)
+	b := &scheduleOperation{parentCtx: parentCtx, policy: &policy, ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}
+	b.restoreJournal(parentCtx, r)
 	return b, cancel
 }
 

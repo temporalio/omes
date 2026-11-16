@@ -3,10 +3,11 @@ package journal
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	"go.temporal.io/sdk/workflow"
 )
 
 const Version = 1
@@ -90,11 +91,7 @@ func (s State) Apply(c Command) (State, error) {
 	if err = next.apply(c); err != nil {
 		return s, err
 	}
-	raw, err := json.Marshal(next)
-	if err != nil {
-		return s, err
-	}
-	if len(raw) > MaxStateBytes {
+	if next.encodedSizeBound() > MaxStateBytes {
 		return s, errors.New("journal state exceeds payload budget")
 	}
 	return next, nil
@@ -180,7 +177,8 @@ func (s *State) apply(c Command) error {
 	if c.Kind == "commit" {
 		switch c.Outcome {
 		case Succeeded:
-			for _, v := range s.Pending.Items {
+			for _, key := range workflow.DeterministicKeys(s.Pending.Items) {
+				v := s.Pending.Items[key]
 				if !v.Done || v.Unresolved {
 					return ErrUnresolved
 				}
@@ -189,7 +187,8 @@ func (s *State) apply(c Command) error {
 		case Failed:
 			s.Counts.Failed++
 		case Excluded:
-			for _, v := range s.Pending.Items {
+			for _, key := range workflow.DeterministicKeys(s.Pending.Items) {
+				v := s.Pending.Items[key]
 				if v.Calls > 0 {
 					return ErrUnresolved
 				}
@@ -201,7 +200,8 @@ func (s *State) apply(c Command) error {
 			return errors.New("invalid journal outcome")
 		}
 		if c.Outcome != Unresolved && c.Outcome != Excluded {
-			for _, v := range s.Pending.Items {
+			for _, key := range workflow.DeterministicKeys(s.Pending.Items) {
+				v := s.Pending.Items[key]
 				if !v.Done || v.Unresolved {
 					return ErrUnresolved
 				}
@@ -265,7 +265,8 @@ func (s State) Clone() State {
 	if s.Pending != nil {
 		p := *s.Pending
 		p.Items = make(map[string]Item, len(s.Pending.Items))
-		for k, v := range s.Pending.Items {
+		for _, k := range workflow.DeterministicKeys(s.Pending.Items) {
+			v := s.Pending.Items[k]
 			v.Plan = append([]byte(nil), v.Plan...)
 			v.Observation = append([]byte(nil), v.Observation...)
 			p.Items[k] = v

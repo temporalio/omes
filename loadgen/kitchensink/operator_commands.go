@@ -73,10 +73,9 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 	if e.Journal != nil {
 		service = &journalOperatorService{WorkflowServiceClient: service, session: e.Journal}
 	}
-	// Clean up even if starting the activity returns an error: the server may
-	// have created it. Use the activity ID if no run ID was returned.
+	// Interrupted journaled sequences remain available to their next driver.
 	defer func() {
-		if retErr == nil || errors.Is(retErr, journal.ErrPersistence) {
+		if retErr == nil || errors.Is(retErr, journal.ErrPersistence) || (e.Journal != nil && (ctx.Err() != nil || target.runID == "")) {
 			return
 		}
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorCommandCleanupTimeout)
@@ -308,12 +307,15 @@ func waitForStandaloneActivityState(
 	matches func(*activitypb.ActivityExecutionInfo) bool,
 ) (*activitypb.ActivityExecutionInfo, error) {
 	phase, journaled := ctx.Value(operatorPhaseKey{}).(operatorPhase)
+	deadline := time.Now().Add(operatorCommandStateWaitTimeout)
 	if journaled {
-		if value, found, err := recordedOperatorState(ctx, phase); err != nil || found {
+		value, found, recordedDeadline, err := recordedOperatorState(ctx, phase)
+		if err != nil || found {
 			return value, err
 		}
+		deadline = recordedDeadline
 	}
-	ctx, cancel := context.WithTimeout(ctx, operatorCommandStateWaitTimeout)
+	ctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 
 	var longPollToken []byte

@@ -62,3 +62,23 @@ func TestScheduleRecoveryRestoresBudgetAndWitness(t *testing.T) {
 	deadline, _ := restored.ctx.Deadline()
 	require.True(t, originalDeadline.Equal(deadline))
 }
+
+func TestInterruptedScheduleOperationRemainsPending(t *testing.T) {
+	backend := &scenarioJournal{}
+	session, err := journal.Claim(t.Context(), backend, "lane", 1)
+	require.NoError(t, err)
+	require.NoError(t, session.Begin(t.Context(), 1))
+	parent, cancelParent := context.WithCancel(t.Context())
+	defer cancelParent()
+	recovery := &scheduleRecovery{journal: session, journalPrefix: "resource", logger: zap.NewNop().Sugar(), options: client.ScheduleOptions{Spec: client.ScheduleSpec{EndAt: time.Now().Add(time.Minute)}}}
+	operation, cancel := recovery.operation(parent, "update")
+	defer cancel()
+	require.NoError(t, operation.beginErr)
+	err = operation.call(func(context.Context) error { cancelParent(); return context.Canceled })
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, operation.persistResult(err), context.Canceled)
+	item := backend.states["lane"].Pending.Items["resource/update/0"]
+	require.Equal(t, uint32(1), item.Calls)
+	require.False(t, item.Done)
+	require.False(t, item.Unresolved)
+}
