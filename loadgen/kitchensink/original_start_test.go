@@ -16,6 +16,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -29,6 +30,8 @@ type responseLossClient struct {
 	starts      int
 	multis      int
 	original    client.WorkflowRun
+	failMulti   bool
+	failUpdate  bool
 	loseMulti   bool
 	loseOutcome bool
 	updateID    string
@@ -46,17 +49,28 @@ func (c *responseLossClient) ExecuteWorkflow(ctx context.Context, opts client.St
 func (c *responseLossClient) UpdateWithStartWorkflow(ctx context.Context, opts client.UpdateWithStartWorkflowOptions) (client.WorkflowUpdateHandle, error) {
 	c.multis++
 	c.updateID = opts.UpdateOptions.UpdateID
+	if c.failMulti && c.multis == 1 {
+		return nil, serviceerror.NewUnavailable("start request not sent")
+	}
 	h, err := c.Client.UpdateWithStartWorkflow(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	if c.loseMulti {
+	if c.loseMulti && c.multis == 1 {
 		return nil, serviceerror.NewDeadlineExceeded("lost multi-operation reply")
 	}
 	if c.loseOutcome {
 		return &outcomeLossHandle{WorkflowUpdateHandle: h}, nil
 	}
 	return h, nil
+}
+
+func (c *responseLossClient) UpdateWorkflow(ctx context.Context, opts client.UpdateWorkflowOptions) (client.WorkflowUpdateHandle, error) {
+	if c.failUpdate {
+		c.failUpdate = false
+		return nil, serviceerror.NewUnavailable("update request not sent")
+	}
+	return c.Client.UpdateWorkflow(ctx, opts)
 }
 
 type outcomeLossHandle struct {
@@ -159,7 +173,27 @@ func TestOriginalStartProtocol(t *testing.T) {
 			}
 		})
 	}
-	t.Run("foreign_reuse_and_mismatched_input", func(t *testing.T) {
+	t.Run("different_input_converter", func(t *testing.T) {
+		binaryClient, err := client.DialContext(ctx, client.Options{
+			HostPort:  server.FrontendHostPort(),
+			Namespace: "default",
+			DataConverter: converter.NewCompositeDataConverter(
+				converter.NewProtoPayloadConverter(),
+				converter.NewJSONPayloadConverter(),
+			),
+		})
+		require.NoError(t, err)
+		defer binaryClient.Close()
+		lost := &responseLossClient{Client: binaryClient}
+		e := newExecutor(lost)
+		require.Error(t, e.Start(ctx, nil))
+		require.NoError(t, e.Start(ctx, nil))
+		require.Equal(t, lost.original.GetRunID(), e.Handle.GetRunID())
+		require.NoError(t, c.SignalWorkflow(ctx, e.Handle.GetID(), e.Handle.GetRunID(), "finish", nil))
+		require.NoError(t, e.Handle.Get(ctx, nil))
+	})
+
+	t.Run("foreign_reuse", func(t *testing.T) {
 		lost := &responseLossClient{Client: c}
 		e := newExecutor(lost)
 		require.Error(t, e.Start(ctx, nil))
@@ -167,6 +201,7 @@ func TestOriginalStartProtocol(t *testing.T) {
 		require.NoError(t, c.SignalWorkflow(ctx, original.GetID(), original.GetRunID(), "finish", nil))
 		require.NoError(t, original.Get(ctx, nil))
 		opts := e.WorkflowOptions
+		opts.Memo = map[string]interface{}{startIntentMemo: uuid.NewString()}
 		opts.WorkflowIDReusePolicy = enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE
 		foreign, err := c.ExecuteWorkflow(ctx, opts, "kitchenSink", &WorkflowInput{ExpectedSignalCount: 99})
 		require.NoError(t, err)
@@ -205,6 +240,30 @@ func TestOriginalStartProtocol(t *testing.T) {
 			},
 		}
 	}
+	for _, failure := range []string{"none", "update_unavailable"} {
+		t.Run("uws_already_started_"+failure, func(t *testing.T) {
+			observed := &responseLossClient{Client: c, failUpdate: failure == "update_unavailable"}
+			e := newExecutor(observed)
+			a := action()
+			e.freezeStart(a)
+			original, err := c.ExecuteWorkflow(ctx, e.WorkflowOptions, "kitchenSink", e.WorkflowInput)
+			require.NoError(t, err)
+			if failure == "update_unavailable" {
+				require.Error(t, e.Start(ctx, a))
+			}
+			require.NoError(t, e.Start(ctx, a))
+			require.Equal(t, original.GetRunID(), e.Handle.GetRunID())
+			require.NoError(t, e.Start(ctx, a))
+			value, err := c.QueryWorkflow(ctx, original.GetID(), original.GetRunID(), "updates")
+			require.NoError(t, err)
+			var updates int
+			require.NoError(t, value.Get(&updates))
+			require.Equal(t, 1, updates)
+			require.NoError(t, c.SignalWorkflow(ctx, original.GetID(), original.GetRunID(), "finish", nil))
+			require.NoError(t, original.Get(ctx, nil))
+		})
+	}
+
 	t.Run("uws_confirmed_update_outcome", func(t *testing.T) {
 		lost := &responseLossClient{Client: c, loseOutcome: true}
 		e := newExecutor(lost)
@@ -217,20 +276,33 @@ func TestOriginalStartProtocol(t *testing.T) {
 		require.NoError(t, c.SignalWorkflow(ctx, e.Handle.GetID(), e.Handle.GetRunID(), "finish", nil))
 		require.NoError(t, e.Handle.Get(ctx, nil))
 	})
-	t.Run("uws_unknown_acceptance_is_not_replayed", func(t *testing.T) {
-		lost := &responseLossClient{Client: c, loseMulti: true}
-		e := newExecutor(lost)
-		a := action()
-		require.Error(t, e.Start(ctx, a))
-		require.Error(t, e.Start(ctx, a))
-		require.Equal(t, 1, lost.multis)
-		require.NotEmpty(t, a.GetDoUpdate().GetUpdateId())
-		canceled, stop := context.WithCancel(ctx)
-		stop()
-		require.ErrorIs(t, e.Start(canceled, a), context.Canceled)
-		require.NoError(t, c.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", "finish", nil))
-		require.NoError(t, c.GetWorkflow(ctx, e.WorkflowOptions.ID, "").Get(ctx, nil))
-	})
+	for _, failure := range []string{"before_send", "lost_reply"} {
+		t.Run("uws_retry_"+failure, func(t *testing.T) {
+			lost := &responseLossClient{
+				Client:    c,
+				failMulti: failure == "before_send",
+				loseMulti: failure == "lost_reply",
+			}
+			e := newExecutor(lost)
+			a := action()
+			require.Error(t, e.Start(ctx, a))
+			updateID := lost.updateID
+			require.NotEmpty(t, updateID)
+			require.NoError(t, e.Start(ctx, a))
+			require.Equal(t, 2, lost.multis)
+			require.Equal(t, updateID, lost.updateID)
+			value, err := c.QueryWorkflow(ctx, e.Handle.GetID(), e.Handle.GetRunID(), "updates")
+			require.NoError(t, err)
+			var updates int
+			require.NoError(t, value.Get(&updates))
+			require.Equal(t, 1, updates, "retry must not execute the update twice")
+			canceled, stop := context.WithCancel(ctx)
+			stop()
+			require.ErrorIs(t, e.Start(canceled, a), context.Canceled)
+			require.NoError(t, c.SignalWorkflow(ctx, e.Handle.GetID(), e.Handle.GetRunID(), "finish", nil))
+			require.NoError(t, e.Handle.Get(ctx, nil))
+		})
+	}
 
 	t.Run("uws_closed_target_failure_is_not_replaced", func(t *testing.T) {
 		observed := &responseLossClient{Client: c}
@@ -331,7 +403,7 @@ func TestOriginalStartProtocol(t *testing.T) {
 		mu.Lock()
 		requestCount := len(requests)
 		mu.Unlock()
-		require.Equal(t, 1, requestCount, "outer recovery must not reconstruct a new multi-operation request")
+		require.Equal(t, 2, requestCount, "each outer attempt sends one multi-operation request")
 		require.Error(t, firstErr)
 		require.Error(t, secondErr)
 		require.NoError(t, c.SignalWorkflow(ctx, foreign.GetID(), foreign.GetRunID(), "finish", nil))

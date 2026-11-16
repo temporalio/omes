@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -70,4 +71,39 @@ func TestKitchenSinkOriginalStartFreezesRetryConstruction(t *testing.T) {
 	require.Len(t, cl.ids, 2)
 	require.Equal(t, cl.ids[0], cl.ids[1])
 	require.Equal(t, []int32{1, 1}, cl.inputs)
+}
+
+func TestKitchenSinkOriginalStartRejectsClientSequence(t *testing.T) {
+	for _, configuredByCallback := range []bool{false, true} {
+		t.Run(fmt.Sprintf("configured_by_callback=%t", configuredByCallback), func(t *testing.T) {
+			cl := &startInputsClient{}
+			seq := &kitchensink.ClientSequence{ActionSets: []*kitchensink.ClientActionSet{{}}}
+			executor := KitchenSinkExecutor{
+				RecoverOriginalStart: true,
+				TestInput:            &kitchensink.TestInput{WorkflowInput: &kitchensink.WorkflowInput{}},
+			}
+			if configuredByCallback {
+				executor.UpdateWorkflowOptions = func(_ context.Context, _ *Run, o *KitchenSinkWorkflowOptions) error {
+					o.Params.ClientSequence = seq
+					return nil
+				}
+			} else {
+				executor.TestInput.ClientSequence = seq
+			}
+			info := ScenarioInfo{
+				Client:         cl,
+				Namespace:      "default",
+				Logger:         zap.NewNop().Sugar(),
+				MetricsHandler: client.MetricsNopHandler,
+				Configuration: RunConfiguration{
+					Iterations:                    1,
+					MaxConcurrent:                 1,
+					DoNotRegisterSearchAttributes: true,
+				},
+			}
+			err := executor.Run(t.Context(), info)
+			require.ErrorContains(t, err, "original start recovery does not support client sequences")
+			require.Empty(t, cl.ids, "invalid recovery must be rejected before starting a workflow")
+		})
+	}
 }

@@ -53,9 +53,6 @@ func (e *ClientActionsExecutor) Start(
 			e.runID = e.Handle.GetRunID()
 			return nil
 		}
-		if e.originalStart.withStartErr != nil {
-			return e.originalStart.withStartErr
-		}
 	}
 	if withStartAction == nil {
 		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
@@ -66,14 +63,10 @@ func (e *ClientActionsExecutor) Start(
 	} else {
 		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
 	}
-	if err != nil && e.RecoverOriginalStart {
-		if withStartAction == nil {
-			var already *serviceerror.WorkflowExecutionAlreadyStarted
-			if errors.As(err, &already) && already.RunId != "" {
-				err = e.attachOriginalStart(ctx, already.RunId)
-			}
-		} else {
-			e.originalStart.withStartErr = err
+	if err != nil && e.RecoverOriginalStart && withStartAction == nil {
+		var already *serviceerror.WorkflowExecutionAlreadyStarted
+		if errors.As(err, &already) && already.RunId != "" {
+			err = e.attachOriginalStart(ctx, already.RunId)
 		}
 	}
 	if err != nil {
@@ -218,6 +211,17 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 			StartWorkflowOperation: op,
 			UpdateOptions:          updateOpts,
 		})
+		if err != nil && e.RecoverOriginalStart {
+			var already *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(err, &already) && already.RunId != "" {
+				if err := e.attachOriginalStart(ctx, already.RunId); err != nil {
+					return nil, err
+				}
+				// Retry the same update only on the history-verified original run.
+				updateOpts.RunID = already.RunId
+				handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
+			}
+		}
 	} else {
 		handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
 	}

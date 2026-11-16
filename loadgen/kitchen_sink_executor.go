@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"errors"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/temporalio/omes/loadgen/kitchensink"
@@ -42,6 +43,9 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 				options, err := k.iterationOptions(ctx, run)
 				if err != nil {
 					return err
+				}
+				if seq := options.Params.GetClientSequence(); len(seq.GetActionSets()) > 0 {
+					return errors.New("original start recovery does not support client sequences")
 				}
 				run.kitchenSinkExecution = freezeKitchenSinkExecution(run, options)
 			}

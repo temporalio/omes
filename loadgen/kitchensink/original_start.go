@@ -15,10 +15,9 @@ import (
 const startIntentMemo = "omes.original-start"
 
 type originalStart struct {
-	intent       string
-	action       *WithStartClientAction
-	update       client.WorkflowUpdateHandle
-	withStartErr error
+	intent string
+	action *WithStartClientAction
+	update client.WorkflowUpdateHandle
 }
 
 func (e *ClientActionsExecutor) freezeStart(action *WithStartClientAction) {
@@ -60,11 +59,9 @@ func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID s
 	if err := converter.GetDefaultDataConverter().FromPayload(attrs.GetMemo().GetFields()[startIntentMemo], &intent); err != nil {
 		return fmt.Errorf("reading original start identity: %w", err)
 	}
-	input, err := converter.GetDefaultDataConverter().ToPayloads(e.WorkflowInput)
-	if err != nil {
-		return err
-	}
-	if intent != e.originalStart.intent || attrs.GetWorkflowType().GetName() != e.WorkflowType || attrs.GetTaskQueue().GetName() != e.WorkflowOptions.TaskQueue || !proto.Equal(attrs.GetInput(), input) {
+	if intent != e.originalStart.intent ||
+		attrs.GetWorkflowType().GetName() != e.WorkflowType ||
+		attrs.GetTaskQueue().GetName() != e.WorkflowOptions.TaskQueue {
 		return errors.New("existing workflow does not match the original start intent")
 	}
 	// Bind the history-verified run, never a later execution selected by workflow ID.
