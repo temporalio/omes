@@ -42,9 +42,14 @@ func (s *SchedulerExecutor) createJournaledSchedule(ctx context.Context, run *lo
 	}
 	plan.Action.Args = []any{plan.Payload}
 	plan.Options.Action = &plan.Action
-	recovery := &scheduleRecovery{api: run.Client.ScheduleClient(), options: plan.Options, owner: plan.Owner, logger: run.Logger, journal: run.Journal, journalPrefix: prefix, ordinals: map[string]int{}}
+	recovery := &scheduleRecovery{policy: &s.config.RecoveryPolicy, api: run.Client.ScheduleClient(), options: plan.Options, owner: plan.Owner, logger: run.Logger, journal: run.Journal, journalPrefix: prefix, ordinals: map[string]int{}}
 	state := ScheduleState{ScheduleID: plan.Options.ID, DeleteAfter: s.config.SchedulerDurationPerIteration, CleanupAt: plan.CleanupAt, operations: recovery}
 	return state, recovery.create(ctx)
+}
+
+type scheduleOperationPlan struct {
+	Witness string
+	Policy  scheduleRecoveryPolicy
 }
 
 type recordedScheduleResult struct {
@@ -71,12 +76,20 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 	r.ordinals[b.name]++
 	b.key = fmt.Sprintf("%s/%s/%d", r.journalPrefix, b.name, ordinal)
 	deadline, _ := b.ctx.Deadline()
-	item, err := b.journal.Plan(ctx, b.key, deadline, func() ([]byte, error) { return []byte("omes-update-" + uuid.NewString()), nil })
+	item, err := b.journal.Plan(ctx, b.key, deadline, func() ([]byte, error) {
+		return json.Marshal(scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy()})
+	})
 	if err != nil {
 		b.beginErr = errors.Join(journal.ErrPersistence, err)
 		return
 	}
-	b.witness = string(item.Plan)
+	var plan scheduleOperationPlan
+	if err := json.Unmarshal(item.Plan, &plan); err != nil {
+		b.beginErr = err
+		return
+	}
+	b.witness = plan.Witness
+	b.policy = &plan.Policy
 	b.restored = item.Calls > 0
 	b.calls = int(item.Calls)
 	if item.Done {

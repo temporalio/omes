@@ -42,7 +42,17 @@ var (
 	errScheduleUpdateUnknown  = errors.New("schedule update outcome unknown")
 )
 
+type scheduleRecoveryPolicy struct {
+	Calls            int
+	Timeout, Backoff time.Duration
+}
+
+func defaultScheduleRecoveryPolicy() scheduleRecoveryPolicy {
+	return scheduleRecoveryPolicy{Calls: scheduleOperationCalls, Timeout: scheduleOperationTimeout, Backoff: scheduleOperationBackoff}
+}
+
 type scheduleRecovery struct {
+	policy        *scheduleRecoveryPolicy
 	journal       *journal.Session
 	journalPrefix string
 	ordinals      map[string]int
@@ -54,6 +64,7 @@ type scheduleRecovery struct {
 }
 
 type scheduleOperation struct {
+	policy         *scheduleRecoveryPolicy
 	journal        *journal.Session
 	key, witness   string
 	beginErr       error
@@ -72,7 +83,7 @@ type scheduleOperation struct {
 }
 
 func (r *scheduleRecovery) operation(ctx context.Context, name string) (*scheduleOperation, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(ctx, scheduleOperationTimeout)
+	ctx, cancel := context.WithTimeout(ctx, r.recoveryPolicy().Timeout)
 	// Deletion may clean up after EndAt, but cannot outlive the caller.
 	if name != "delete" {
 		var endCancel context.CancelFunc
@@ -80,7 +91,8 @@ func (r *scheduleRecovery) operation(ctx context.Context, name string) (*schedul
 		parentCancel := cancel
 		cancel = func() { endCancel(); parentCancel() }
 	}
-	b := &scheduleOperation{ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}
+	policy := r.recoveryPolicy()
+	b := &scheduleOperation{policy: &policy, ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}
 	b.restoreJournal(ctx, r)
 	return b, cancel
 }
@@ -92,11 +104,11 @@ func (b *scheduleOperation) call(fn func(context.Context) error) error {
 	if err := b.ctx.Err(); err != nil {
 		return errors.Join(b.lastErr, err)
 	}
-	if b.calls == scheduleOperationCalls {
+	if b.calls >= b.recoveryPolicy().Calls {
 		return errors.Join(b.lastErr, errScheduleRecoveryBudget)
 	}
 	if b.calls > 0 {
-		timer := time.NewTimer(scheduleOperationBackoff)
+		timer := time.NewTimer(b.recoveryPolicy().Backoff)
 		defer timer.Stop()
 		select {
 		case <-b.ctx.Done():
@@ -248,7 +260,7 @@ func (r *scheduleRecovery) create(ctx context.Context) (err error) {
 		if !scheduleMissing(err) || scheduleExists(writeErr) {
 			return errors.Join(writeErr, err)
 		}
-		if b.calls == scheduleOperationCalls {
+		if b.calls >= b.recoveryPolicy().Calls {
 			return errors.Join(writeErr, errScheduleRecoveryBudget, err)
 		}
 		// A late first create and its retry contend for the same unique ID and frozen intent.
@@ -388,4 +400,17 @@ func (r *scheduleRecovery) delete(ctx context.Context) (err error) {
 			return err
 		}
 	}
+}
+
+func (r *scheduleRecovery) recoveryPolicy() scheduleRecoveryPolicy {
+	if r.policy != nil && r.policy.Calls != 0 {
+		return *r.policy
+	}
+	return defaultScheduleRecoveryPolicy()
+}
+func (b *scheduleOperation) recoveryPolicy() scheduleRecoveryPolicy {
+	if b.policy != nil && b.policy.Calls != 0 {
+		return *b.policy
+	}
+	return defaultScheduleRecoveryPolicy()
 }

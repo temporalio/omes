@@ -20,6 +20,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const SchedulerRecoveryCallsFlag = "recovery-logical-calls"
+const SchedulerRecoveryTimeoutFlag = "recovery-timeout"
+const SchedulerRecoveryBackoffFlag = "recovery-backoff"
+
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
 		Description: "Stress test Temporal's scheduler functionality by creating, reading, updating, and deleting multiple schedules concurrently.",
@@ -36,6 +40,9 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+			o.Int(SchedulerRecoveryCallsFlag, scheduleOperationCalls, "Logical calls permitted for one schedule operation.")
+			o.Duration(SchedulerRecoveryTimeoutFlag, scheduleOperationTimeout, "Wall-clock budget for one schedule operation.")
+			o.Duration(SchedulerRecoveryBackoffFlag, scheduleOperationBackoff, "Wait between logical schedule calls.")
 			o.Bool(RecoverScheduleOperationsFlag, false, "Recover transient schedule CRUD operations with bounded calls and observed effects.")
 			o.Bool(RetainSchedulesFlag, false, "Leave finite schedules for migration checks; the caller must delete the namespace afterward.")
 		},
@@ -56,6 +63,8 @@ type CleanUpScheduleInput struct {
 }
 
 type schedulerExecutorConfig struct {
+	RecoveryPolicy scheduleRecoveryPolicy
+
 	ScheduleCreationPerIteration  int
 	ScheduleReadsPerCreation      int
 	ScheduleUpdatesPerCreation    int
@@ -120,6 +129,7 @@ var (
 // Configure implements the loadgen.Configurable interface
 func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
+		RecoveryPolicy:                scheduleRecoveryPolicy{Calls: info.OptionInt(SchedulerRecoveryCallsFlag), Timeout: info.OptionDuration(SchedulerRecoveryTimeoutFlag), Backoff: info.OptionDuration(SchedulerRecoveryBackoffFlag)},
 		ScheduleCreationPerIteration:  info.OptionInt(ScheduleCreationPerIterationFlag),
 		ScheduleReadsPerCreation:      info.OptionInt(ScheduleReadsPerCreationFlag),
 		ScheduleUpdatesPerCreation:    info.OptionInt(ScheduleUpdatesPerCreationFlag),
@@ -135,6 +145,9 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		RetainSchedules:               info.OptionBool(RetainSchedulesFlag),
 	}
 
+	if config.RecoveryPolicy.Calls < 1 || config.RecoveryPolicy.Calls > 1000 || config.RecoveryPolicy.Timeout <= 0 || config.RecoveryPolicy.Backoff < 0 || config.RecoveryPolicy.Backoff >= config.RecoveryPolicy.Timeout {
+		return fmt.Errorf("invalid schedule recovery call/time/backoff budget")
+	}
 	if config.ScheduleCreationPerIteration <= 0 {
 		return fmt.Errorf("schedule-creation-per-iteration must be positive, got %d", config.ScheduleCreationPerIteration)
 	}
@@ -342,7 +355,7 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 	if s.config.RecoverScheduleOperations {
 		owner := uuid.NewString()
 		options.Memo = map[string]any{scheduleOwnerMemo: owner}
-		recovery := &scheduleRecovery{api: c.ScheduleClient(), options: options, owner: owner, logger: logger}
+		recovery := &scheduleRecovery{policy: &s.config.RecoveryPolicy, api: c.ScheduleClient(), options: options, owner: owner, logger: logger}
 		sc.operations = recovery
 		return sc, recovery.create(ctx)
 	}

@@ -49,7 +49,9 @@ const (
 	// Default is false.
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
 	// RetryScenarioTimeoutFlag scales the timeout probes without removing their intentional first failure.
-	RetryScenarioTimeoutFlag = "retry-scenario-timeout"
+	RetryScenarioTimeoutFlag      = "retry-scenario-timeout"
+	RetryScenarioMaxAttemptsFlag  = "retry-scenario-max-attempts"
+	RetryScenarioFailAttemptsFlag = "retry-scenario-fail-attempts"
 	// OwningExecutionSelfActionsFlag requires execution-bound Go client activities.
 	OwningExecutionSelfActionsFlag = "owning-execution-self-actions"
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
@@ -115,32 +117,33 @@ type independentLoadConfig struct {
 }
 
 type tpsConfig struct {
-	InternalIterations                        int
-	InternalIterTimeout                       time.Duration
-	ContinueAsNewAfterIter                    int
-	NexusEnabled                              bool
-	NexusEndpoint                             string
-	SleepTime                                 time.Duration
-	SleepActivities                           *loadgen.SleepActivityConfig
-	VisibilityVerificationTimeout             time.Duration
-	MinThroughputPerHour                      float64
-	ScenarioRunID                             string
-	ExecutionID                               string
-	RngSeed                                   int64
-	IncludeRetryScenarios                     bool
-	RetryScenarioTimeout                      time.Duration
-	OwningExecution                           bool
-	IncludeDescribe                           bool
-	IncludeStandaloneNexus                    bool
-	IncludeStandaloneActivity                 bool
-	IncludeStandaloneActivityOperatorCommands bool
-	StandaloneActivityOperator                independentLoadConfig
-	IncludeNexusStandaloneActivity            bool
-	IncludeNexusWorkflowActions               bool
-	Payload                                   *loadgen.PayloadConfig
-	HealthyHeartbeatActivities                int
-	HealthyHeartbeatDuration                  time.Duration
-	HealthyHeartbeatTimeout                   time.Duration
+	InternalIterations                                  int
+	InternalIterTimeout                                 time.Duration
+	ContinueAsNewAfterIter                              int
+	NexusEnabled                                        bool
+	NexusEndpoint                                       string
+	SleepTime                                           time.Duration
+	SleepActivities                                     *loadgen.SleepActivityConfig
+	VisibilityVerificationTimeout                       time.Duration
+	MinThroughputPerHour                                float64
+	ScenarioRunID                                       string
+	ExecutionID                                         string
+	RngSeed                                             int64
+	IncludeRetryScenarios                               bool
+	RetryScenarioTimeout                                time.Duration
+	RetryScenarioMaxAttempts, RetryScenarioFailAttempts int32
+	OwningExecution                                     bool
+	IncludeDescribe                                     bool
+	IncludeStandaloneNexus                              bool
+	IncludeStandaloneActivity                           bool
+	IncludeStandaloneActivityOperatorCommands           bool
+	StandaloneActivityOperator                          independentLoadConfig
+	IncludeNexusStandaloneActivity                      bool
+	IncludeNexusWorkflowActions                         bool
+	Payload                                             *loadgen.PayloadConfig
+	HealthyHeartbeatActivities                          int
+	HealthyHeartbeatDuration                            time.Duration
+	HealthyHeartbeatTimeout                             time.Duration
 }
 
 type tpsExecutor struct {
@@ -171,6 +174,8 @@ func init() {
 			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
 			o.Bool(IncludeRetryScenariosFlag, false, "Include activities that exercise retries.")
 			o.Duration(RetryScenarioTimeoutFlag, time.Second, "Timeout for retry probes; deliberate timeout durations scale with it.")
+			o.Int(RetryScenarioMaxAttemptsFlag, 2, "Total attempts permitted for each retry probe.")
+			o.Int(RetryScenarioFailAttemptsFlag, 1, "Attempts that deliberately fail before a retry probe can succeed.")
 			o.Bool(OwningExecutionSelfActionsFlag, false, "Bind self-actions to the owning run; requires verified Go worker protocol support.")
 			o.Bool(IncludeDescribeFlag, false, "Include DescribeWorkflowExecution calls.")
 			o.Feature(IncludeStandaloneNexusFlag, "Include standalone Nexus operations.",
@@ -275,6 +280,12 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 	config.IncludeRetryScenarios = info.OptionBool(IncludeRetryScenariosFlag)
 	config.RetryScenarioTimeout = info.OptionDuration(RetryScenarioTimeoutFlag)
+	maxAttempts, failAttempts := info.OptionInt(RetryScenarioMaxAttemptsFlag), info.OptionInt(RetryScenarioFailAttemptsFlag)
+	if failAttempts < 1 || maxAttempts <= failAttempts || maxAttempts > 1000 {
+		return fmt.Errorf("retry probes require 1 <= fail attempts < max attempts <= 1000")
+	}
+	config.RetryScenarioMaxAttempts = int32(maxAttempts)
+	config.RetryScenarioFailAttempts = int32(failAttempts)
 	if config.RetryScenarioTimeout <= 0 || config.RetryScenarioTimeout > math.MaxInt64/2 {
 		return fmt.Errorf("%s must be positive and permit a doubled failure duration, got %v", RetryScenarioTimeoutFlag, config.RetryScenarioTimeout)
 	}
@@ -765,7 +776,7 @@ func (t *tpsExecutor) createActionsChunk(
 
 		// Add retry/timeout/heartbeat activities if flag is enabled.
 		if t.config.IncludeRetryScenarios {
-			asyncActions = append(asyncActions, retryScenarioActions(t.config.RetryScenarioTimeout)...)
+			asyncActions = append(asyncActions, retryScenarioActionsWithPolicy(t.config.RetryScenarioTimeout, t.config.RetryScenarioFailAttempts, t.config.RetryScenarioMaxAttempts)...)
 		}
 
 		for range t.config.HealthyHeartbeatActivities {
@@ -884,11 +895,15 @@ func (t *tpsExecutor) createActionsChunk(
 }
 
 func retryScenarioActions(timeout time.Duration) []*Action {
+	return retryScenarioActionsWithPolicy(timeout, 1, 2)
+}
+
+func retryScenarioActionsWithPolicy(timeout time.Duration, failAttempts, maxAttempts int32) []*Action {
 	return []*Action{
 		DelayActivityWithCancellation(time.Second, 10*time.Second),
-		RetryableErrorActivity(1, RemoteActivityWithRetry(timeout, 2, 500*time.Millisecond, 1)),
-		TimeoutActivity(1, 0, 2*timeout, timeout, 2, 500*time.Millisecond, 1),
-		HeartbeatActivity(1, 0, 2*timeout, max(10*time.Second, 2*timeout), timeout, 2, 500*time.Millisecond, 1),
+		RetryableErrorActivity(failAttempts, RemoteActivityWithRetry(timeout, maxAttempts, 500*time.Millisecond, 1)),
+		TimeoutActivity(failAttempts, 0, 2*timeout, timeout, maxAttempts, 500*time.Millisecond, 1),
+		HeartbeatActivity(failAttempts, 0, 2*timeout, max(10*time.Second, 2*timeout), timeout, maxAttempts, 500*time.Millisecond, 1),
 	}
 }
 
