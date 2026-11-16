@@ -50,6 +50,8 @@ const (
 	IncludeRetryScenariosFlag = "include-retry-scenarios"
 	// RetryScenarioTimeoutFlag scales the timeout probes without removing their intentional first failure.
 	RetryScenarioTimeoutFlag = "retry-scenario-timeout"
+	// OwningExecutionSelfActionsFlag requires execution-bound Go client activities.
+	OwningExecutionSelfActionsFlag = "owning-execution-self-actions"
 	// IncludeDescribeFlag enables DescribeWorkflowExecution calls in throughput_stress.
 	// Default is false.
 	IncludeDescribeFlag = "include-describe"
@@ -127,6 +129,7 @@ type tpsConfig struct {
 	RngSeed                                   int64
 	IncludeRetryScenarios                     bool
 	RetryScenarioTimeout                      time.Duration
+	OwningExecution                           bool
 	IncludeDescribe                           bool
 	IncludeStandaloneNexus                    bool
 	IncludeStandaloneActivity                 bool
@@ -168,6 +171,7 @@ func init() {
 			o.Float64(MinThroughputPerHourFlag, 0, "Fail the run below this workflows-per-hour rate (0 disables).")
 			o.Bool(IncludeRetryScenariosFlag, false, "Include activities that exercise retries.")
 			o.Duration(RetryScenarioTimeoutFlag, time.Second, "Timeout for retry probes; deliberate timeout durations scale with it.")
+			o.Bool(OwningExecutionSelfActionsFlag, false, "Bind self-actions to the owning run; requires verified Go worker protocol support.")
 			o.Bool(IncludeDescribeFlag, false, "Include DescribeWorkflowExecution calls.")
 			o.Feature(IncludeStandaloneNexusFlag, "Include standalone Nexus operations.",
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneNexusOperation() })
@@ -218,7 +222,11 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
+	if info.OptionBool(OwningExecutionSelfActionsFlag) && !info.OwningExecutionWorkers {
+		return errors.New("owning-execution self-actions require verified Go worker protocol support")
+	}
 	config := &tpsConfig{
+		OwningExecution:      info.OptionBool(OwningExecutionSelfActionsFlag),
 		InternalIterTimeout:  info.OptionDuration(IterTimeoutFlag),
 		NexusEnabled:         info.OptionBool(NexusEnabledFlag),
 		NexusEndpoint:        info.OptionString(NexusEndpointFlag),
@@ -717,12 +725,12 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			// TODO: use local activity: server error log "failed to set query completion state to succeeded
-			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			t.selfClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
 		}
 
 		if t.config.IncludeDescribe {
 			syncActions = append(syncActions,
-				ClientActivity(ClientActions(t.createSelfDescribe()), DefaultRemoteActivity),
+				t.selfClientActivity(ClientActions(t.createSelfDescribe()), DefaultRemoteActivity),
 			)
 		}
 
@@ -734,12 +742,12 @@ func (t *tpsExecutor) createActionsChunk(
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			PayloadActivity(0, t.samplePayloadSize(rng), DefaultLocalActivity),
 			GenericActivity("noop", DefaultLocalActivity),
-			ClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
-			ClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
-			ClientActivity(ClientActions(t.createSelfUpdateWithTimer()), DefaultRemoteActivity),
-			ClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
+			t.selfClientActivity(ClientActions(t.createSelfQuery()), DefaultRemoteActivity),
+			t.selfClientActivity(ClientActions(t.createSelfSignal()), DefaultLocalActivity),
+			t.selfClientActivity(ClientActions(t.createSelfUpdateWithTimer()), DefaultRemoteActivity),
+			t.selfClientActivity(ClientActions(t.createSelfUpdateWithPayload()), DefaultRemoteActivity),
 			// TODO: use local activity: there is an 8s gap in the event history
-			ClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
+			t.selfClientActivity(ClientActions(t.createSelfUpdateWithPayloadAsLocal()), DefaultRemoteActivity),
 		}
 
 		// Add retry/timeout/heartbeat activities if flag is enabled.
@@ -953,7 +961,7 @@ func (t *tpsExecutor) createSelfUpdateWithTimer() *ClientAction {
 						},
 					},
 				},
-				WithStart: t.maybeWithStart(0.5),
+				WithStart: !t.config.OwningExecution && t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -972,7 +980,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayload() *ClientAction {
 						},
 					},
 				},
-				WithStart: t.maybeWithStart(0.5),
+				WithStart: !t.config.OwningExecution && t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -991,7 +999,7 @@ func (t *tpsExecutor) createSelfUpdateWithPayloadAsLocal() *ClientAction {
 						},
 					},
 				},
-				WithStart: t.maybeWithStart(0.5),
+				WithStart: !t.config.OwningExecution && t.maybeWithStart(0.5),
 			},
 		},
 	}
@@ -1278,4 +1286,12 @@ func (t *tpsExecutor) maybeWithStart(likelihood float64) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	return t.rng.Float64() <= likelihood
+}
+
+func (t *tpsExecutor) selfClientActivity(seq *ClientSequence, factory ActionFactory[ExecuteActivityAction]) *Action {
+	action := ClientActivity(seq, factory)
+	if t.config.OwningExecution {
+		action.GetExecActivity().GetClient().TargetPolicy = ExecuteActivityAction_ClientActivity_OWNING_EXECUTION
+	}
+	return action
 }

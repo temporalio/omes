@@ -22,7 +22,9 @@ type ClientActionsExecutor struct {
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
 	Handle          client.WorkflowRun
-	runID           string
+	// Execution binds self-actions to one run. Nil retains workflow-ID routing.
+	Execution *ClientExecution
+	runID     string
 	// RecoverOriginalStart rejects duplicate starts and retains acknowledged run/update handles.
 	RecoverOriginalStart bool
 	originalStart        *originalStart
@@ -32,6 +34,9 @@ func (e *ClientActionsExecutor) Start(
 	ctx context.Context,
 	withStartAction *WithStartClientAction,
 ) error {
+	if e.Execution != nil {
+		return errors.New("owning-execution actions cannot start workflows")
+	}
 	var err error
 	if e.RecoverOriginalStart {
 		if err := ctx.Err(); err != nil {
@@ -79,6 +84,13 @@ func (e *ClientActionsExecutor) Start(
 }
 
 func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clientSeq *ClientSequence) error {
+	if e.Execution != nil {
+		var err error
+		clientSeq, err = e.Execution.prepare(clientSeq)
+		if err != nil {
+			return err
+		}
+	}
 	for _, actionSet := range clientSeq.ActionSets {
 		if err := e.executeClientActionSet(ctx, actionSet); err != nil {
 			return err
@@ -145,9 +157,9 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", "report_state", nil)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", handler.Name, handler.Args)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
 		}
@@ -156,7 +168,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		}
 		return err
 	} else if action.GetDoDescribe() != nil {
-		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, e.targetRunID())
 		return err
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
@@ -182,7 +194,7 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 		return e.Client.SignalWithStartWorkflow(
 			ctx, e.WorkflowOptions.ID, signalName, signalArg, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArg)
+	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), signalName, signalArg)
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
@@ -192,6 +204,7 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	}
 	updateOpts := client.UpdateWorkflowOptions{
 		WorkflowID:   e.WorkflowOptions.ID,
+		RunID:        e.targetRunID(),
 		UpdateID:     upd.GetUpdateId(),
 		UpdateName:   updateName,
 		WaitForStage: client.WorkflowUpdateStageCompleted,

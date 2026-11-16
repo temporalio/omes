@@ -321,10 +321,18 @@ class ExecuteActivityAction(_message.Message):
         bytes_to_return: int
         def __init__(self, bytes_to_receive: _Optional[int] = ..., bytes_to_return: _Optional[int] = ...) -> None: ...
     class ClientActivity(_message.Message):
-        __slots__ = ("client_sequence",)
+        __slots__ = ("client_sequence", "target_policy")
+        class TargetPolicy(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+            __slots__ = ()
+            LEGACY: _ClassVar[ExecuteActivityAction.ClientActivity.TargetPolicy]
+            OWNING_EXECUTION: _ClassVar[ExecuteActivityAction.ClientActivity.TargetPolicy]
+        LEGACY: ExecuteActivityAction.ClientActivity.TargetPolicy
+        OWNING_EXECUTION: ExecuteActivityAction.ClientActivity.TargetPolicy
         CLIENT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+        TARGET_POLICY_FIELD_NUMBER: _ClassVar[int]
         client_sequence: ClientSequence
-        def __init__(self, client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ...) -> None: ...
+        target_policy: ExecuteActivityAction.ClientActivity.TargetPolicy
+        def __init__(self, client_sequence: _Optional[_Union[ClientSequence, _Mapping]] = ..., target_policy: _Optional[_Union[ExecuteActivityAction.ClientActivity.TargetPolicy, str]] = ...) -> None: ...
     class RetryableErrorActivity(_message.Message):
         __slots__ = ("fail_attempts",)
         FAIL_ATTEMPTS_FIELD_NUMBER: _ClassVar[int]

@@ -262,6 +262,11 @@ message ExecuteActivityAction {
   }
   message ClientActivity {
       ClientSequence client_sequence = 1;
+      enum TargetPolicy {
+        LEGACY = 0;
+        OWNING_EXECUTION = 1;
+      }
+      TargetPolicy target_policy = 2;
   }
 
   // Activity that throws retryable errors for N attempts, then succeeds.

@@ -137,6 +137,32 @@ func TestOriginalStartProtocol(t *testing.T) {
 		e.RecoverOriginalStart = true
 		return e
 	}
+	t.Run("late_self_update_cannot_replace_or_update_foreign_run", func(t *testing.T) {
+		id := uuid.NewString()
+		original, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: queue}, "kitchenSink", &WorkflowInput{})
+		require.NoError(t, err)
+		require.NoError(t, c.SignalWorkflow(ctx, id, original.GetRunID(), "finish", nil))
+		require.NoError(t, original.Get(ctx, nil))
+		e := &ClientActionsExecutor{
+			Client:          c,
+			WorkflowOptions: client.StartWorkflowOptions{ID: id},
+			Execution:       &ClientExecution{RunID: original.GetRunID(), UpdateIDScope: "original/activity-1"},
+		}
+		seq := ClientActions(selfUpdate())
+		require.Error(t, e.ExecuteClientSequence(ctx, seq))
+		foreign, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+			ID: id, TaskQueue: queue, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
+		}, "kitchenSink", &WorkflowInput{})
+		require.NoError(t, err)
+		require.Error(t, e.ExecuteClientSequence(ctx, seq))
+		value, err := c.QueryWorkflow(ctx, id, foreign.GetRunID(), "updates")
+		require.NoError(t, err)
+		var updates int
+		require.NoError(t, value.Get(&updates))
+		require.Zero(t, updates)
+		require.NoError(t, c.SignalWorkflow(ctx, id, foreign.GetRunID(), "finish", nil))
+		require.NoError(t, foreign.Get(ctx, nil))
+	})
 	for _, state := range []string{"running", "completed", "failed"} {
 		t.Run("lost_response_"+state, func(t *testing.T) {
 			lost := &responseLossClient{Client: c}

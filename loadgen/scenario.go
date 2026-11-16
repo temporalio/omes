@@ -143,6 +143,9 @@ func GetScenario(name string) *Scenario {
 
 // ScenarioInfo contains information about the scenario under execution.
 type ScenarioInfo struct {
+	// OwningExecutionWorkers is set only after the caller verifies that every
+	// worker serving this run implements the Go owning-execution protocol.
+	OwningExecutionWorkers bool
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue

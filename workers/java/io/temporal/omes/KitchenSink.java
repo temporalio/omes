@@ -29208,6 +29208,17 @@ io.temporal.api.common.v1.Payload defaultValue);
        * <code>.temporal.omes.kitchen_sink.ClientSequence client_sequence = 1;</code>
        */
       io.temporal.omes.KitchenSink.ClientSequenceOrBuilder getClientSequenceOrBuilder();
+
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+       * @return The enum numeric value on the wire for targetPolicy.
+       */
+      int getTargetPolicyValue();
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+       * @return The targetPolicy.
+       */
+      io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy getTargetPolicy();
     }
     /**
      * Protobuf type {@code temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity}
@@ -29222,6 +29233,7 @@ io.temporal.api.common.v1.Payload defaultValue);
         super(builder);
       }
       private ClientActivity() {
+        targetPolicy_ = 0;
       }
 
       @java.lang.Override
@@ -29242,6 +29254,114 @@ io.temporal.api.common.v1.Payload defaultValue);
         return io.temporal.omes.KitchenSink.internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ClientActivity_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.class, io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.Builder.class);
+      }
+
+      /**
+       * Protobuf enum {@code temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy}
+       */
+      public enum TargetPolicy
+          implements com.google.protobuf.ProtocolMessageEnum {
+        /**
+         * <code>LEGACY = 0;</code>
+         */
+        LEGACY(0),
+        /**
+         * <code>OWNING_EXECUTION = 1;</code>
+         */
+        OWNING_EXECUTION(1),
+        UNRECOGNIZED(-1),
+        ;
+
+        /**
+         * <code>LEGACY = 0;</code>
+         */
+        public static final int LEGACY_VALUE = 0;
+        /**
+         * <code>OWNING_EXECUTION = 1;</code>
+         */
+        public static final int OWNING_EXECUTION_VALUE = 1;
+
+
+        public final int getNumber() {
+          if (this == UNRECOGNIZED) {
+            throw new java.lang.IllegalArgumentException(
+                "Can't get the number of an unknown enum value.");
+          }
+          return value;
+        }
+
+        /**
+         * @param value The numeric wire value of the corresponding enum entry.
+         * @return The enum associated with the given numeric wire value.
+         * @deprecated Use {@link #forNumber(int)} instead.
+         */
+        @java.lang.Deprecated
+        public static TargetPolicy valueOf(int value) {
+          return forNumber(value);
+        }
+
+        /**
+         * @param value The numeric wire value of the corresponding enum entry.
+         * @return The enum associated with the given numeric wire value.
+         */
+        public static TargetPolicy forNumber(int value) {
+          switch (value) {
+            case 0: return LEGACY;
+            case 1: return OWNING_EXECUTION;
+            default: return null;
+          }
+        }
+
+        public static com.google.protobuf.Internal.EnumLiteMap<TargetPolicy>
+            internalGetValueMap() {
+          return internalValueMap;
+        }
+        private static final com.google.protobuf.Internal.EnumLiteMap<
+            TargetPolicy> internalValueMap =
+              new com.google.protobuf.Internal.EnumLiteMap<TargetPolicy>() {
+                public TargetPolicy findValueByNumber(int number) {
+                  return TargetPolicy.forNumber(number);
+                }
+              };
+
+        public final com.google.protobuf.Descriptors.EnumValueDescriptor
+            getValueDescriptor() {
+          if (this == UNRECOGNIZED) {
+            throw new java.lang.IllegalStateException(
+                "Can't get the descriptor of an unrecognized enum value.");
+          }
+          return getDescriptor().getValues().get(ordinal());
+        }
+        public final com.google.protobuf.Descriptors.EnumDescriptor
+            getDescriptorForType() {
+          return getDescriptor();
+        }
+        public static final com.google.protobuf.Descriptors.EnumDescriptor
+            getDescriptor() {
+          return io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.getDescriptor().getEnumTypes().get(0);
+        }
+
+        private static final TargetPolicy[] VALUES = values();
+
+        public static TargetPolicy valueOf(
+            com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+          if (desc.getType() != getDescriptor()) {
+            throw new java.lang.IllegalArgumentException(
+              "EnumValueDescriptor is not for this type.");
+          }
+          if (desc.getIndex() == -1) {
+            return UNRECOGNIZED;
+          }
+          return VALUES[desc.getIndex()];
+        }
+
+        private final int value;
+
+        private TargetPolicy(int value) {
+          this.value = value;
+        }
+
+        // @@protoc_insertion_point(enum_scope:temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy)
       }
 
       private int bitField0_;
@@ -29271,6 +29391,24 @@ io.temporal.api.common.v1.Payload defaultValue);
         return clientSequence_ == null ? io.temporal.omes.KitchenSink.ClientSequence.getDefaultInstance() : clientSequence_;
       }
 
+      public static final int TARGET_POLICY_FIELD_NUMBER = 2;
+      private int targetPolicy_ = 0;
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+       * @return The enum numeric value on the wire for targetPolicy.
+       */
+      @java.lang.Override public int getTargetPolicyValue() {
+        return targetPolicy_;
+      }
+      /**
+       * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+       * @return The targetPolicy.
+       */
+      @java.lang.Override public io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy getTargetPolicy() {
+        io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy result = io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.forNumber(targetPolicy_);
+        return result == null ? io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.UNRECOGNIZED : result;
+      }
+
       private byte memoizedIsInitialized = -1;
       @java.lang.Override
       public final boolean isInitialized() {
@@ -29288,6 +29426,9 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (((bitField0_ & 0x00000001) != 0)) {
           output.writeMessage(1, getClientSequence());
         }
+        if (targetPolicy_ != io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.LEGACY.getNumber()) {
+          output.writeEnum(2, targetPolicy_);
+        }
         getUnknownFields().writeTo(output);
       }
 
@@ -29300,6 +29441,10 @@ io.temporal.api.common.v1.Payload defaultValue);
         if (((bitField0_ & 0x00000001) != 0)) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(1, getClientSequence());
+        }
+        if (targetPolicy_ != io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.LEGACY.getNumber()) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeEnumSize(2, targetPolicy_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSize = size;
@@ -29321,6 +29466,7 @@ io.temporal.api.common.v1.Payload defaultValue);
           if (!getClientSequence()
               .equals(other.getClientSequence())) return false;
         }
+        if (targetPolicy_ != other.targetPolicy_) return false;
         if (!getUnknownFields().equals(other.getUnknownFields())) return false;
         return true;
       }
@@ -29336,6 +29482,8 @@ io.temporal.api.common.v1.Payload defaultValue);
           hash = (37 * hash) + CLIENT_SEQUENCE_FIELD_NUMBER;
           hash = (53 * hash) + getClientSequence().hashCode();
         }
+        hash = (37 * hash) + TARGET_POLICY_FIELD_NUMBER;
+        hash = (53 * hash) + targetPolicy_;
         hash = (29 * hash) + getUnknownFields().hashCode();
         memoizedHashCode = hash;
         return hash;
@@ -29478,6 +29626,7 @@ io.temporal.api.common.v1.Payload defaultValue);
             clientSequenceBuilder_.dispose();
             clientSequenceBuilder_ = null;
           }
+          targetPolicy_ = 0;
           return this;
         }
 
@@ -29517,6 +29666,9 @@ io.temporal.api.common.v1.Payload defaultValue);
                 ? clientSequence_
                 : clientSequenceBuilder_.build();
             to_bitField0_ |= 0x00000001;
+          }
+          if (((from_bitField0_ & 0x00000002) != 0)) {
+            result.targetPolicy_ = targetPolicy_;
           }
           result.bitField0_ |= to_bitField0_;
         }
@@ -29568,6 +29720,9 @@ io.temporal.api.common.v1.Payload defaultValue);
           if (other.hasClientSequence()) {
             mergeClientSequence(other.getClientSequence());
           }
+          if (other.targetPolicy_ != 0) {
+            setTargetPolicyValue(other.getTargetPolicyValue());
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           onChanged();
           return this;
@@ -29601,6 +29756,11 @@ io.temporal.api.common.v1.Payload defaultValue);
                   bitField0_ |= 0x00000001;
                   break;
                 } // case 10
+                case 16: {
+                  targetPolicy_ = input.readEnum();
+                  bitField0_ |= 0x00000002;
+                  break;
+                } // case 16
                 default: {
                   if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                     done = true; // was an endgroup tag
@@ -29737,6 +29897,59 @@ io.temporal.api.common.v1.Payload defaultValue);
             clientSequence_ = null;
           }
           return clientSequenceBuilder_;
+        }
+
+        private int targetPolicy_ = 0;
+        /**
+         * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+         * @return The enum numeric value on the wire for targetPolicy.
+         */
+        @java.lang.Override public int getTargetPolicyValue() {
+          return targetPolicy_;
+        }
+        /**
+         * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+         * @param value The enum numeric value on the wire for targetPolicy to set.
+         * @return This builder for chaining.
+         */
+        public Builder setTargetPolicyValue(int value) {
+          targetPolicy_ = value;
+          bitField0_ |= 0x00000002;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+         * @return The targetPolicy.
+         */
+        @java.lang.Override
+        public io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy getTargetPolicy() {
+          io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy result = io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.forNumber(targetPolicy_);
+          return result == null ? io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy.UNRECOGNIZED : result;
+        }
+        /**
+         * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+         * @param value The targetPolicy to set.
+         * @return This builder for chaining.
+         */
+        public Builder setTargetPolicy(io.temporal.omes.KitchenSink.ExecuteActivityAction.ClientActivity.TargetPolicy value) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          bitField0_ |= 0x00000002;
+          targetPolicy_ = value.getNumber();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>.temporal.omes.kitchen_sink.ExecuteActivityAction.ClientActivity.TargetPolicy target_policy = 2;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearTargetPolicy() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          targetPolicy_ = 0;
+          onChanged();
+          return this;
         }
         @java.lang.Override
         public final Builder setUnknownFields(
@@ -60519,7 +60732,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "google.protobuf.EmptyH\000B\013\n\tcondition\"j\n\013" +
       "TimerAction\022\024\n\014milliseconds\030\001 \001(\004\022E\n\020awa" +
       "itable_choice\030\002 \001(\0132+.temporal.omes.kitc" +
-      "hen_sink.AwaitableChoice\"\241\022\n\025ExecuteActi" +
+      "hen_sink.AwaitableChoice\"\272\023\n\025ExecuteActi" +
       "vityAction\022T\n\007generic\030\001 \001(\0132A.temporal.o" +
       "mes.kitchen_sink.ExecuteActivityAction.G" +
       "enericActivityH\000\022*\n\005delay\030\002 \001(\0132\031.google" +
@@ -60562,149 +60775,153 @@ io.temporal.api.common.v1.Payload defaultValue) {
       "ytes_to_allocate\030\002 \001(\004\022$\n\034cpu_yield_ever" +
       "y_n_iterations\030\003 \001(\r\022\030\n\020cpu_yield_for_ms" +
       "\030\004 \001(\r\032D\n\017PayloadActivity\022\030\n\020bytes_to_re" +
-      "ceive\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032U\n\016" +
-      "ClientActivity\022C\n\017client_sequence\030\001 \001(\0132" +
-      "*.temporal.omes.kitchen_sink.ClientSeque" +
-      "nce\032/\n\026RetryableErrorActivity\022\025\n\rfail_at" +
-      "tempts\030\001 \001(\005\032\222\001\n\017TimeoutActivity\022\025\n\rfail" +
-      "_attempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(" +
-      "\0132\031.google.protobuf.Duration\0223\n\020failure_" +
-      "duration\030\003 \001(\0132\031.google.protobuf.Duratio" +
-      "n\032\322\001\n\030HeartbeatTimeoutActivity\022\025\n\rfail_a" +
-      "ttempts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\0132" +
-      "\031.google.protobuf.Duration\0223\n\020failure_du" +
-      "ration\030\003 \001(\0132\031.google.protobuf.Duration\022" +
-      "5\n\022heartbeat_interval\030\004 \001(\0132\031.google.pro" +
-      "tobuf.Duration\032O\n\014HeadersEntry\022\013\n\003key\030\001 " +
+      "ceive\030\001 \001(\005\022\027\n\017bytes_to_return\030\002 \001(\005\032\355\001\n" +
+      "\016ClientActivity\022C\n\017client_sequence\030\001 \001(\013" +
+      "2*.temporal.omes.kitchen_sink.ClientSequ" +
+      "ence\022d\n\rtarget_policy\030\002 \001(\0162M.temporal.o" +
+      "mes.kitchen_sink.ExecuteActivityAction.C" +
+      "lientActivity.TargetPolicy\"0\n\014TargetPoli" +
+      "cy\022\n\n\006LEGACY\020\000\022\024\n\020OWNING_EXECUTION\020\001\032/\n\026" +
+      "RetryableErrorActivity\022\025\n\rfail_attempts\030" +
+      "\001 \001(\005\032\222\001\n\017TimeoutActivity\022\025\n\rfail_attemp" +
+      "ts\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\0132\031.goo" +
+      "gle.protobuf.Duration\0223\n\020failure_duratio" +
+      "n\030\003 \001(\0132\031.google.protobuf.Duration\032\322\001\n\030H" +
+      "eartbeatTimeoutActivity\022\025\n\rfail_attempts" +
+      "\030\001 \001(\005\0223\n\020success_duration\030\002 \001(\0132\031.googl" +
+      "e.protobuf.Duration\0223\n\020failure_duration\030" +
+      "\003 \001(\0132\031.google.protobuf.Duration\0225\n\022hear" +
+      "tbeat_interval\030\004 \001(\0132\031.google.protobuf.D" +
+      "uration\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005" +
+      "value\030\002 \001(\0132\037.temporal.api.common.v1.Pay" +
+      "load:\0028\001B\017\n\ractivity_typeB\n\n\010locality\"\255\n" +
+      "\n\032ExecuteChildWorkflowAction\022\021\n\tnamespac" +
+      "e\030\002 \001(\t\022\023\n\013workflow_id\030\003 \001(\t\022\025\n\rworkflow" +
+      "_type\030\004 \001(\t\022\022\n\ntask_queue\030\005 \001(\t\022.\n\005input" +
+      "\030\006 \003(\0132\037.temporal.api.common.v1.Payload\022" +
+      "=\n\032workflow_execution_timeout\030\007 \001(\0132\031.go" +
+      "ogle.protobuf.Duration\0227\n\024workflow_run_t" +
+      "imeout\030\010 \001(\0132\031.google.protobuf.Duration\022" +
+      "8\n\025workflow_task_timeout\030\t \001(\0132\031.google." +
+      "protobuf.Duration\022J\n\023parent_close_policy" +
+      "\030\n \001(\0162-.temporal.omes.kitchen_sink.Pare" +
+      "ntClosePolicy\022N\n\030workflow_id_reuse_polic" +
+      "y\030\014 \001(\0162,.temporal.api.enums.v1.Workflow" +
+      "IdReusePolicy\0229\n\014retry_policy\030\r \001(\0132#.te" +
+      "mporal.api.common.v1.RetryPolicy\022\025\n\rcron" +
+      "_schedule\030\016 \001(\t\022T\n\007headers\030\017 \003(\0132C.tempo" +
+      "ral.omes.kitchen_sink.ExecuteChildWorkfl" +
+      "owAction.HeadersEntry\022N\n\004memo\030\020 \003(\0132@.te" +
+      "mporal.omes.kitchen_sink.ExecuteChildWor" +
+      "kflowAction.MemoEntry\022g\n\021search_attribut" +
+      "es\030\021 \003(\0132L.temporal.omes.kitchen_sink.Ex" +
+      "ecuteChildWorkflowAction.SearchAttribute" +
+      "sEntry\022T\n\021cancellation_type\030\022 \001(\01629.temp" +
+      "oral.omes.kitchen_sink.ChildWorkflowCanc" +
+      "ellationType\022G\n\021versioning_intent\030\023 \001(\0162" +
+      ",.temporal.omes.kitchen_sink.VersioningI" +
+      "ntent\022E\n\020awaitable_choice\030\024 \001(\0132+.tempor" +
+      "al.omes.kitchen_sink.AwaitableChoice\032O\n\014" +
+      "HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\013" +
+      "2\037.temporal.api.common.v1.Payload:\0028\001\032L\n" +
+      "\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037" +
+      ".temporal.api.common.v1.Payload:\0028\001\032X\n\025S" +
+      "earchAttributesEntry\022\013\n\003key\030\001 \001(\t\022.\n\005val" +
+      "ue\030\002 \001(\0132\037.temporal.api.common.v1.Payloa" +
+      "d:\0028\001\"0\n\022AwaitWorkflowState\022\013\n\003key\030\001 \001(\t" +
+      "\022\r\n\005value\030\002 \001(\t\"\336\002\n\020SendSignalAction\022\023\n\013" +
+      "workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\022\023\n\013sig" +
+      "nal_name\030\003 \001(\t\022,\n\003arg\030\004 \001(\0132\037.temporal.a" +
+      "pi.common.v1.Payload\022J\n\007headers\030\005 \003(\01329." +
+      "temporal.omes.kitchen_sink.SendSignalAct" +
+      "ion.HeadersEntry\022E\n\020awaitable_choice\030\006 \001" +
+      "(\0132+.temporal.omes.kitchen_sink.Awaitabl" +
+      "eChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005" +
+      "value\030\002 \001(\0132\037.temporal.api.common.v1.Pay" +
+      "load:\0028\001\";\n\024CancelWorkflowAction\022\023\n\013work" +
+      "flow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024SetPatc" +
+      "hMarkerAction\022\020\n\010patch_id\030\001 \001(\t\022\022\n\ndepre" +
+      "cated\030\002 \001(\010\0228\n\014inner_action\030\003 \001(\0132\".temp" +
+      "oral.omes.kitchen_sink.Action\"\343\001\n\034Upsert" +
+      "SearchAttributesAction\022i\n\021search_attribu" +
+      "tes\030\001 \003(\0132N.temporal.omes.kitchen_sink.U" +
+      "psertSearchAttributesAction.SearchAttrib" +
+      "utesEntry\032X\n\025SearchAttributesEntry\022\013\n\003ke" +
+      "y\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.co" +
+      "mmon.v1.Payload:\0028\001\"G\n\020UpsertMemoAction\022" +
+      "3\n\rupserted_memo\030\001 \001(\0132\034.temporal.api.co" +
+      "mmon.v1.Memo\"J\n\022ReturnResultAction\0224\n\013re" +
+      "turn_this\030\001 \001(\0132\037.temporal.api.common.v1" +
+      ".Payload\"F\n\021ReturnErrorAction\0221\n\007failure" +
+      "\030\001 \001(\0132 .temporal.api.failure.v1.Failure" +
+      "\"\336\006\n\023ContinueAsNewAction\022\025\n\rworkflow_typ" +
+      "e\030\001 \001(\t\022\022\n\ntask_queue\030\002 \001(\t\0222\n\targuments" +
+      "\030\003 \003(\0132\037.temporal.api.common.v1.Payload\022" +
+      "7\n\024workflow_run_timeout\030\004 \001(\0132\031.google.p" +
+      "rotobuf.Duration\0228\n\025workflow_task_timeou" +
+      "t\030\005 \001(\0132\031.google.protobuf.Duration\022G\n\004me" +
+      "mo\030\006 \003(\01329.temporal.omes.kitchen_sink.Co" +
+      "ntinueAsNewAction.MemoEntry\022M\n\007headers\030\007" +
+      " \003(\0132<.temporal.omes.kitchen_sink.Contin" +
+      "ueAsNewAction.HeadersEntry\022`\n\021search_att" +
+      "ributes\030\010 \003(\0132E.temporal.omes.kitchen_si" +
+      "nk.ContinueAsNewAction.SearchAttributesE" +
+      "ntry\0229\n\014retry_policy\030\t \001(\0132#.temporal.ap" +
+      "i.common.v1.RetryPolicy\022G\n\021versioning_in" +
+      "tent\030\n \001(\0162,.temporal.omes.kitchen_sink." +
+      "VersioningIntent\032L\n\tMemoEntry\022\013\n\003key\030\001 \001" +
+      "(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common." +
+      "v1.Payload:\0028\001\032O\n\014HeadersEntry\022\013\n\003key\030\001 " +
       "\001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common" +
-      ".v1.Payload:\0028\001B\017\n\ractivity_typeB\n\n\010loca" +
-      "lity\"\255\n\n\032ExecuteChildWorkflowAction\022\021\n\tn" +
-      "amespace\030\002 \001(\t\022\023\n\013workflow_id\030\003 \001(\t\022\025\n\rw" +
-      "orkflow_type\030\004 \001(\t\022\022\n\ntask_queue\030\005 \001(\t\022." +
-      "\n\005input\030\006 \003(\0132\037.temporal.api.common.v1.P" +
-      "ayload\022=\n\032workflow_execution_timeout\030\007 \001" +
-      "(\0132\031.google.protobuf.Duration\0227\n\024workflo" +
-      "w_run_timeout\030\010 \001(\0132\031.google.protobuf.Du" +
-      "ration\0228\n\025workflow_task_timeout\030\t \001(\0132\031." +
-      "google.protobuf.Duration\022J\n\023parent_close" +
-      "_policy\030\n \001(\0162-.temporal.omes.kitchen_si" +
-      "nk.ParentClosePolicy\022N\n\030workflow_id_reus" +
-      "e_policy\030\014 \001(\0162,.temporal.api.enums.v1.W" +
-      "orkflowIdReusePolicy\0229\n\014retry_policy\030\r \001" +
-      "(\0132#.temporal.api.common.v1.RetryPolicy\022" +
-      "\025\n\rcron_schedule\030\016 \001(\t\022T\n\007headers\030\017 \003(\0132" +
-      "C.temporal.omes.kitchen_sink.ExecuteChil" +
-      "dWorkflowAction.HeadersEntry\022N\n\004memo\030\020 \003" +
-      "(\0132@.temporal.omes.kitchen_sink.ExecuteC" +
-      "hildWorkflowAction.MemoEntry\022g\n\021search_a" +
-      "ttributes\030\021 \003(\0132L.temporal.omes.kitchen_" +
-      "sink.ExecuteChildWorkflowAction.SearchAt" +
-      "tributesEntry\022T\n\021cancellation_type\030\022 \001(\016" +
-      "29.temporal.omes.kitchen_sink.ChildWorkf" +
-      "lowCancellationType\022G\n\021versioning_intent" +
-      "\030\023 \001(\0162,.temporal.omes.kitchen_sink.Vers" +
-      "ioningIntent\022E\n\020awaitable_choice\030\024 \001(\0132+" +
-      ".temporal.omes.kitchen_sink.AwaitableCho" +
-      "ice\032O\n\014HeadersEntry\022\013\n\003key\030\001 \001(\t\022.\n\005valu" +
-      "e\030\002 \001(\0132\037.temporal.api.common.v1.Payload" +
-      ":\0028\001\032L\n\tMemoEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030" +
-      "\002 \001(\0132\037.temporal.api.common.v1.Payload:\002" +
-      "8\001\032X\n\025SearchAttributesEntry\022\013\n\003key\030\001 \001(\t" +
-      "\022.\n\005value\030\002 \001(\0132\037.temporal.api.common.v1" +
-      ".Payload:\0028\001\"0\n\022AwaitWorkflowState\022\013\n\003ke" +
-      "y\030\001 \001(\t\022\r\n\005value\030\002 \001(\t\"\336\002\n\020SendSignalAct" +
-      "ion\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t" +
-      "\022\023\n\013signal_name\030\003 \001(\t\022,\n\003arg\030\004 \001(\0132\037.tem" +
-      "poral.api.common.v1.Payload\022J\n\007headers\030\005" +
-      " \003(\01329.temporal.omes.kitchen_sink.SendSi" +
-      "gnalAction.HeadersEntry\022E\n\020awaitable_cho" +
-      "ice\030\006 \001(\0132+.temporal.omes.kitchen_sink.A" +
-      "waitableChoice\032O\n\014HeadersEntry\022\013\n\003key\030\001 " +
-      "\001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api.common" +
-      ".v1.Payload:\0028\001\";\n\024CancelWorkflowAction\022" +
-      "\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(\t\"v\n\024" +
-      "SetPatchMarkerAction\022\020\n\010patch_id\030\001 \001(\t\022\022" +
-      "\n\ndeprecated\030\002 \001(\010\0228\n\014inner_action\030\003 \001(\013" +
-      "2\".temporal.omes.kitchen_sink.Action\"\343\001\n" +
-      "\034UpsertSearchAttributesAction\022i\n\021search_" +
-      "attributes\030\001 \003(\0132N.temporal.omes.kitchen" +
-      "_sink.UpsertSearchAttributesAction.Searc" +
-      "hAttributesEntry\032X\n\025SearchAttributesEntr" +
-      "y\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal" +
-      ".api.common.v1.Payload:\0028\001\"G\n\020UpsertMemo" +
-      "Action\0223\n\rupserted_memo\030\001 \001(\0132\034.temporal" +
-      ".api.common.v1.Memo\"J\n\022ReturnResultActio" +
-      "n\0224\n\013return_this\030\001 \001(\0132\037.temporal.api.co" +
-      "mmon.v1.Payload\"F\n\021ReturnErrorAction\0221\n\007" +
-      "failure\030\001 \001(\0132 .temporal.api.failure.v1." +
-      "Failure\"\336\006\n\023ContinueAsNewAction\022\025\n\rworkf" +
-      "low_type\030\001 \001(\t\022\022\n\ntask_queue\030\002 \001(\t\0222\n\tar" +
-      "guments\030\003 \003(\0132\037.temporal.api.common.v1.P" +
-      "ayload\0227\n\024workflow_run_timeout\030\004 \001(\0132\031.g" +
-      "oogle.protobuf.Duration\0228\n\025workflow_task" +
-      "_timeout\030\005 \001(\0132\031.google.protobuf.Duratio" +
-      "n\022G\n\004memo\030\006 \003(\01329.temporal.omes.kitchen_" +
-      "sink.ContinueAsNewAction.MemoEntry\022M\n\007he" +
-      "aders\030\007 \003(\0132<.temporal.omes.kitchen_sink" +
-      ".ContinueAsNewAction.HeadersEntry\022`\n\021sea" +
-      "rch_attributes\030\010 \003(\0132E.temporal.omes.kit" +
-      "chen_sink.ContinueAsNewAction.SearchAttr" +
-      "ibutesEntry\0229\n\014retry_policy\030\t \001(\0132#.temp" +
-      "oral.api.common.v1.RetryPolicy\022G\n\021versio" +
-      "ning_intent\030\n \001(\0162,.temporal.omes.kitche" +
-      "n_sink.VersioningIntent\032L\n\tMemoEntry\022\013\n\003" +
-      "key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api." +
-      "common.v1.Payload:\0028\001\032O\n\014HeadersEntry\022\013\n" +
-      "\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal.api" +
-      ".common.v1.Payload:\0028\001\032X\n\025SearchAttribut" +
-      "esEntry\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.te" +
-      "mporal.api.common.v1.Payload:\0028\001\"\321\001\n\025Rem" +
-      "oteActivityOptions\022O\n\021cancellation_type\030" +
-      "\001 \001(\01624.temporal.omes.kitchen_sink.Activ" +
-      "ityCancellationType\022\036\n\026do_not_eagerly_ex" +
-      "ecute\030\002 \001(\010\022G\n\021versioning_intent\030\003 \001(\0162," +
-      ".temporal.omes.kitchen_sink.VersioningIn" +
-      "tent\"\377\001\n\025ExecuteNexusOperation\022\020\n\010endpoi" +
-      "nt\030\001 \001(\t\022\021\n\toperation\030\002 \001(\t\022@\n\005input\030\003 \001" +
-      "(\01321.temporal.omes.kitchen_sink.NexusOpe" +
-      "rationRequest\022E\n\020awaitable_choice\030\005 \001(\0132" +
-      "+.temporal.omes.kitchen_sink.AwaitableCh" +
-      "oice\0228\n\017expected_output\030\006 \001(\0132\037.temporal" +
-      ".api.common.v1.Payload\"\312\001\n\025NexusOperatio" +
-      "nRequest\022\016\n\004echo\030\001 \001(\tH\000\022J\n\017workflow_act" +
-      "ion\030\002 \001(\0132/.temporal.omes.kitchen_sink.N" +
-      "exusWorkflowActionH\000\022K\n\016start_activity\030\003" +
-      " \001(\01321.temporal.omes.kitchen_sink.Execut" +
-      "eActivityActionH\000B\010\n\006action\"\341\002\n\023NexusWor" +
-      "kflowAction\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_" +
-      "id\030\002 \001(\t\022L\n\rstart_options\030\003 \001(\01325.tempor" +
-      "al.omes.kitchen_sink.NexusWorkflowStartO" +
-      "ptions\022\'\n\005start\030\004 \001(\0132\026.google.protobuf." +
-      "EmptyH\000\0226\n\006signal\030\005 \001(\0132$.temporal.omes." +
-      "kitchen_sink.DoSignalH\000\0226\n\006update\030\006 \001(\0132" +
-      "$.temporal.omes.kitchen_sink.DoUpdateH\000\022" +
-      "4\n\005query\030\007 \001(\0132#.temporal.omes.kitchen_s" +
-      "ink.DoQueryH\000B\010\n\006action\"\310\001\n\031NexusWorkflo" +
-      "wStartOptions\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033wor" +
-      "kflow_id_conflict_policy\030\002 \001(\0162/.tempora" +
-      "l.api.enums.v1.WorkflowIdConflictPolicy\022" +
-      "A\n\016workflow_input\030\003 \001(\0132).temporal.omes." +
-      "kitchen_sink.WorkflowInput\"\025\n\023AwaitPendi" +
-      "ngActions*\244\001\n\021ParentClosePolicy\022#\n\037PAREN" +
-      "T_CLOSE_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_C" +
-      "LOSE_POLICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_" +
-      "POLICY_ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_" +
-      "REQUEST_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013" +
-      "UNSPECIFIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT" +
-      "\020\002*\242\001\n\035ChildWorkflowCancellationType\022\024\n\020" +
-      "CHILD_WF_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCE" +
-      "L\020\001\022(\n$CHILD_WF_WAIT_CANCELLATION_COMPLE" +
-      "TED\020\002\022(\n$CHILD_WF_WAIT_CANCELLATION_REQU" +
-      "ESTED\020\003*X\n\030ActivityCancellationType\022\016\n\nT" +
-      "RY_CANCEL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLET" +
-      "ED\020\001\022\013\n\007ABANDON\020\002BB\n\020io.temporal.omesZ.g" +
-      "ithub.com/temporalio/omes/loadgen/kitche" +
-      "nsinkb\006proto3"
+      ".v1.Payload:\0028\001\032X\n\025SearchAttributesEntry" +
+      "\022\013\n\003key\030\001 \001(\t\022.\n\005value\030\002 \001(\0132\037.temporal." +
+      "api.common.v1.Payload:\0028\001\"\321\001\n\025RemoteActi" +
+      "vityOptions\022O\n\021cancellation_type\030\001 \001(\01624" +
+      ".temporal.omes.kitchen_sink.ActivityCanc" +
+      "ellationType\022\036\n\026do_not_eagerly_execute\030\002" +
+      " \001(\010\022G\n\021versioning_intent\030\003 \001(\0162,.tempor" +
+      "al.omes.kitchen_sink.VersioningIntent\"\377\001" +
+      "\n\025ExecuteNexusOperation\022\020\n\010endpoint\030\001 \001(" +
+      "\t\022\021\n\toperation\030\002 \001(\t\022@\n\005input\030\003 \001(\01321.te" +
+      "mporal.omes.kitchen_sink.NexusOperationR" +
+      "equest\022E\n\020awaitable_choice\030\005 \001(\0132+.tempo" +
+      "ral.omes.kitchen_sink.AwaitableChoice\0228\n" +
+      "\017expected_output\030\006 \001(\0132\037.temporal.api.co" +
+      "mmon.v1.Payload\"\312\001\n\025NexusOperationReques" +
+      "t\022\016\n\004echo\030\001 \001(\tH\000\022J\n\017workflow_action\030\002 \001" +
+      "(\0132/.temporal.omes.kitchen_sink.NexusWor" +
+      "kflowActionH\000\022K\n\016start_activity\030\003 \001(\01321." +
+      "temporal.omes.kitchen_sink.ExecuteActivi" +
+      "tyActionH\000B\010\n\006action\"\341\002\n\023NexusWorkflowAc" +
+      "tion\022\023\n\013workflow_id\030\001 \001(\t\022\016\n\006run_id\030\002 \001(" +
+      "\t\022L\n\rstart_options\030\003 \001(\01325.temporal.omes" +
+      ".kitchen_sink.NexusWorkflowStartOptions\022" +
+      "\'\n\005start\030\004 \001(\0132\026.google.protobuf.EmptyH\000" +
+      "\0226\n\006signal\030\005 \001(\0132$.temporal.omes.kitchen" +
+      "_sink.DoSignalH\000\0226\n\006update\030\006 \001(\0132$.tempo" +
+      "ral.omes.kitchen_sink.DoUpdateH\000\0224\n\005quer" +
+      "y\030\007 \001(\0132#.temporal.omes.kitchen_sink.DoQ" +
+      "ueryH\000B\010\n\006action\"\310\001\n\031NexusWorkflowStartO" +
+      "ptions\022\022\n\ntask_queue\030\001 \001(\t\022T\n\033workflow_i" +
+      "d_conflict_policy\030\002 \001(\0162/.temporal.api.e" +
+      "nums.v1.WorkflowIdConflictPolicy\022A\n\016work" +
+      "flow_input\030\003 \001(\0132).temporal.omes.kitchen" +
+      "_sink.WorkflowInput\"\025\n\023AwaitPendingActio" +
+      "ns*\244\001\n\021ParentClosePolicy\022#\n\037PARENT_CLOSE" +
+      "_POLICY_UNSPECIFIED\020\000\022!\n\035PARENT_CLOSE_PO" +
+      "LICY_TERMINATE\020\001\022\037\n\033PARENT_CLOSE_POLICY_" +
+      "ABANDON\020\002\022&\n\"PARENT_CLOSE_POLICY_REQUEST" +
+      "_CANCEL\020\003*@\n\020VersioningIntent\022\017\n\013UNSPECI" +
+      "FIED\020\000\022\016\n\nCOMPATIBLE\020\001\022\013\n\007DEFAULT\020\002*\242\001\n\035" +
+      "ChildWorkflowCancellationType\022\024\n\020CHILD_W" +
+      "F_ABANDON\020\000\022\027\n\023CHILD_WF_TRY_CANCEL\020\001\022(\n$" +
+      "CHILD_WF_WAIT_CANCELLATION_COMPLETED\020\002\022(" +
+      "\n$CHILD_WF_WAIT_CANCELLATION_REQUESTED\020\003" +
+      "*X\n\030ActivityCancellationType\022\016\n\nTRY_CANC" +
+      "EL\020\000\022\037\n\033WAIT_CANCELLATION_COMPLETED\020\001\022\013\n" +
+      "\007ABANDON\020\002BB\n\020io.temporal.omesZ.github.c" +
+      "om/temporalio/omes/loadgen/kitchensinkb\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -60876,7 +61093,7 @@ io.temporal.api.common.v1.Payload defaultValue) {
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ClientActivity_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_ClientActivity_descriptor,
-        new java.lang.String[] { "ClientSequence", });
+        new java.lang.String[] { "ClientSequence", "TargetPolicy", });
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_RetryableErrorActivity_descriptor =
       internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_descriptor.getNestedTypes().get(4);
     internal_static_temporal_omes_kitchen_sink_ExecuteActivityAction_RetryableErrorActivity_fieldAccessorTable = new
