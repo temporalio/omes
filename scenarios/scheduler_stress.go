@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/journal"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
@@ -164,6 +165,9 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		return err
 	}
 
+	if run.Journal != nil {
+		s.config.RecoverScheduleOperations = true
+	}
 	logger := run.Logger
 	client := run.Client
 
@@ -204,7 +208,13 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			start := time.Now()
 
 			scheduleID := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
-			sc, err := s.createSchedule(ctx, client, scheduleID, run.TaskQueue(), logger)
+			var sc ScheduleState
+			var err error
+			if run.Journal != nil {
+				sc, err = s.createJournaledSchedule(ctx, run, i)
+			} else {
+				sc, err = s.createSchedule(ctx, client, scheduleID, run.TaskQueue(), logger)
+			}
 			if err != nil {
 				record(fmt.Errorf("creating schedule %s: %w", scheduleID, err))
 				return
@@ -216,6 +226,9 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			for range s.config.ScheduleReadsPerCreation {
 				if err := sc.operations.describe(ctx); err != nil {
 					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
+					if errors.Is(err, journal.ErrPersistence) {
+						return
+					}
 				}
 				if !wait() {
 					return
@@ -225,12 +238,18 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 			for range s.config.ScheduleUpdatesPerCreation {
 				if err := sc.operations.update(ctx); err != nil {
 					record(fmt.Errorf("updating schedule %s: %w", sc.ScheduleID, err))
+					if errors.Is(err, journal.ErrPersistence) {
+						return
+					}
 				}
 				if !wait() {
 					return
 				}
 			}
 			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
+			if run.Journal != nil {
+				dur = time.Until(sc.CleanupAt)
+			}
 			select {
 			case <-time.After(dur):
 				if s.config.RetainSchedules {
@@ -256,6 +275,8 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 }
 
 type ScheduleState struct {
+	CleanupAt time.Time
+
 	ScheduleID  string
 	DeleteAfter time.Duration
 	operations  scheduleOperations

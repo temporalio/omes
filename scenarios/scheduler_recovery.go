@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/temporalio/omes/loadgen/journal"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +43,10 @@ var (
 )
 
 type scheduleRecovery struct {
+	journal       *journal.Session
+	journalPrefix string
+	ordinals      map[string]int
+
 	api     client.ScheduleClient
 	options client.ScheduleOptions
 	owner   string
@@ -49,6 +54,13 @@ type scheduleRecovery struct {
 }
 
 type scheduleOperation struct {
+	journal        *journal.Session
+	key, witness   string
+	beginErr       error
+	recorded       *recordedScheduleResult
+	restored       bool
+	cancelDeadline context.CancelFunc
+
 	ctx      context.Context
 	calls    int
 	lastErr  error
@@ -68,10 +80,15 @@ func (r *scheduleRecovery) operation(ctx context.Context, name string) (*schedul
 		parentCancel := cancel
 		cancel = func() { endCancel(); parentCancel() }
 	}
-	return &scheduleOperation{ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}, cancel
+	b := &scheduleOperation{ctx: ctx, name: name, logger: r.logger.With("schedule_id", r.options.ID), outcome: outcomeUnresolved, started: time.Now()}
+	b.restoreJournal(ctx, r)
+	return b, cancel
 }
 
 func (b *scheduleOperation) call(fn func(context.Context) error) error {
+	if b.beginErr != nil {
+		return b.beginErr
+	}
 	if err := b.ctx.Err(); err != nil {
 		return errors.Join(b.lastErr, err)
 	}
@@ -89,6 +106,11 @@ func (b *scheduleOperation) call(fn func(context.Context) error) error {
 	}
 	if err := b.ctx.Err(); err != nil {
 		return errors.Join(b.lastErr, err)
+	}
+	if b.journal != nil {
+		if err := b.journal.Issue(b.ctx, b.key); err != nil {
+			return errors.Join(journal.ErrPersistence, err)
+		}
 	}
 	b.calls++
 	err := fn(b.ctx)
@@ -200,7 +222,14 @@ func schedulePayloadMatches(actual, expected []any) bool {
 func (r *scheduleRecovery) create(ctx context.Context) (err error) {
 	b, cancel := r.operation(ctx, "create")
 	defer cancel()
-	defer func() { b.finish(err) }()
+	defer func() { b.finish(err); err = b.persistResult(err) }()
+	if b.beginErr != nil {
+		return b.beginErr
+	}
+	if b.recorded != nil {
+		b.outcome = b.recorded.Outcome
+		return b.recorded.err()
+	}
 	for {
 		err = b.call(func(ctx context.Context) error { _, err := r.api.Create(ctx, r.options); return err })
 		if err == nil {
@@ -229,7 +258,14 @@ func (r *scheduleRecovery) create(ctx context.Context) (err error) {
 func (r *scheduleRecovery) describe(ctx context.Context) (err error) {
 	b, cancel := r.operation(ctx, "describe")
 	defer cancel()
-	defer func() { b.finish(err) }()
+	defer func() { b.finish(err); err = b.persistResult(err) }()
+	if b.beginErr != nil {
+		return b.beginErr
+	}
+	if b.recorded != nil {
+		b.outcome = b.recorded.Outcome
+		return b.recorded.err()
+	}
 	_, err = r.lookup(b)
 	if scheduleMissing(err) {
 		b.outcome = outcomeNotFoundCompatible
@@ -244,8 +280,21 @@ func (r *scheduleRecovery) describe(ctx context.Context) (err error) {
 func (r *scheduleRecovery) update(ctx context.Context) (err error) {
 	b, cancel := r.operation(ctx, "update")
 	defer cancel()
-	defer func() { b.finish(err) }()
+	defer func() { b.finish(err); err = b.persistResult(err) }()
+	if b.beginErr != nil {
+		return b.beginErr
+	}
+	if b.recorded != nil {
+		b.outcome = b.recorded.Outcome
+		return b.recorded.err()
+	}
 	witness := "omes-update-" + uuid.NewString()
+	if b.journal != nil {
+		witness = b.witness
+		if b.restored {
+			return r.recoverUpdate(b)
+		}
+	}
 	b.logger = b.logger.With("mutation_id", witness)
 	for {
 		prepared := false
@@ -309,7 +358,14 @@ func (r *scheduleRecovery) witnessedUpdate(current client.ScheduleDescription, w
 func (r *scheduleRecovery) delete(ctx context.Context) (err error) {
 	b, cancel := r.operation(ctx, "delete")
 	defer cancel()
-	defer func() { b.finish(err) }()
+	defer func() { b.finish(err); err = b.persistResult(err) }()
+	if b.beginErr != nil {
+		return b.beginErr
+	}
+	if b.recorded != nil {
+		b.outcome = b.recorded.Outcome
+		return b.recorded.err()
+	}
 	for {
 		_, err = r.lookup(b)
 		if scheduleMissing(err) {

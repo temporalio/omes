@@ -31,6 +31,9 @@ func (k KitchenSinkExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	// Create generic executor and run it
 	ge := &GenericExecutor{
 		Execute: func(ctx context.Context, run *Run) error {
+			if run.Journal != nil {
+				return k.executeJournaled(ctx, run)
+			}
 			if !k.RecoverOriginalStart {
 				options, err := k.iterationOptions(ctx, run)
 				if err != nil {

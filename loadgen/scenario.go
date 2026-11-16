@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/loadgen/journal"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -143,6 +144,8 @@ func GetScenario(name string) *Scenario {
 
 // ScenarioInfo contains information about the scenario under execution.
 type ScenarioInfo struct {
+	Recovery *RecoveryOptions
+
 	// OwningExecutionWorkers is set only after the caller verifies that every
 	// worker serving this run implements the Go owning-execution protocol.
 	OwningExecutionWorkers bool
@@ -388,6 +391,8 @@ func (r RunConfiguration) Validate() error {
 
 // Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
+	Journal *journal.Session
+
 	// Do not mutate this, this is shared across the entire scenario
 	*ScenarioInfo
 

@@ -222,11 +222,11 @@ func (t *tpsExecutor) LoadState(loader func(any) error) error {
 
 // Configure initializes tpsConfig. Largely, it reads and validates throughput_stress scenario options
 func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
-	if info.OptionBool(OwningExecutionSelfActionsFlag) && !info.OwningExecutionWorkers {
+	if (info.OptionBool(OwningExecutionSelfActionsFlag) || info.Recovery != nil) && !info.OwningExecutionWorkers {
 		return errors.New("owning-execution self-actions require verified Go worker protocol support")
 	}
 	config := &tpsConfig{
-		OwningExecution:      info.OptionBool(OwningExecutionSelfActionsFlag),
+		OwningExecution:      info.OptionBool(OwningExecutionSelfActionsFlag) || info.Recovery != nil,
 		InternalIterTimeout:  info.OptionDuration(IterTimeoutFlag),
 		NexusEnabled:         info.OptionBool(NexusEnabledFlag),
 		NexusEndpoint:        info.OptionString(NexusEndpointFlag),
@@ -345,6 +345,9 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	// Settling Nexus needs a dialed client, so it happens here rather than in
 	// Configure: whether the server supports Nexus at all decides the default, and
 	// an endpoint may have to be created.
+	if info.Recovery != nil && t.config.NexusEnabled && t.config.NexusEndpoint == "" {
+		return errors.New("journaled load requires a pre-provisioned Nexus endpoint")
+	}
 	nexus, err := info.ResolveNexusConfig(ctx)
 	if err != nil {
 		return err
@@ -400,7 +403,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		mainResult.finishedAt = time.Now()
 	} else {
 		ksExec := &loadgen.KitchenSinkExecutor{
-			RecoverOriginalStart: !isResuming && !info.Configuration.IgnoreAlreadyStarted,
+			RecoverOriginalStart: info.Recovery != nil || (!isResuming && !info.Configuration.IgnoreAlreadyStarted),
 			TestInput: &TestInput{
 				WorkflowInput: &WorkflowInput{
 					InitialActions: []*ActionSet{},
@@ -456,6 +459,16 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		}
 	}
 
+	if info.Recovery != nil {
+		totals, err := info.Recovery.Totals(ctx, info.ScenarioName)
+		if err != nil {
+			return err
+		}
+		t.lock.Lock()
+		t.state.CompletedIterations = int(totals.Succeeded)
+		t.state.FailedIterations = int(totals.Failed)
+		t.lock.Unlock()
+	}
 	t.lock.Lock()
 	completedIterations := t.state.CompletedIterations
 	t.state.AccumulatedDuration += mainResult.finishedAt.Sub(currentRunStartTime)
@@ -610,7 +623,7 @@ func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.E
 	mainResult := mainLoadResult{finishedAt: time.Now(), err: mainErr}
 	// Stop new tests while allowing running tests to finish.
 	close(stopNewIterations)
-	if mainErr != nil {
+	if mainErr != nil && !(info.Recovery != nil && loadgen.OnlyIterationFailures(mainErr, info.ScenarioName)) {
 		cancel(mainErr)
 	}
 

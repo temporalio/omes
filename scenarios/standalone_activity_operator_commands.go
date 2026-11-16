@@ -145,6 +145,7 @@ func runStandaloneActivityOperatorSequences(ctx context.Context, info loadgen.Sc
 				ActionSets: []*ClientActionSet{{Actions: []*ClientAction{action}}},
 			}
 			clientExecutor := ClientActionsExecutor{
+				Journal:   run.Journal,
 				Client:    info.Client,
 				Namespace: info.Namespace,
 			}

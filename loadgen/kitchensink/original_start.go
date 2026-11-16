@@ -22,6 +22,16 @@ type originalStart struct {
 
 func (e *ClientActionsExecutor) freezeStart(action *WithStartClientAction) {
 	e.originalStart = &originalStart{intent: uuid.NewString()}
+	e.setOriginalStartOptions()
+	if upd := action.GetDoUpdate(); upd != nil && upd.UpdateId == "" {
+		upd.UpdateId = uuid.NewString()
+	}
+	if action != nil {
+		e.originalStart.action = proto.Clone(action).(*WithStartClientAction)
+	}
+}
+
+func (e *ClientActionsExecutor) setOriginalStartOptions() {
 	memo := make(map[string]interface{}, len(e.WorkflowOptions.Memo)+1)
 	for k, v := range e.WorkflowOptions.Memo {
 		memo[k] = v
@@ -31,12 +41,6 @@ func (e *ClientActionsExecutor) freezeStart(action *WithStartClientAction) {
 	e.WorkflowOptions.WorkflowExecutionErrorWhenAlreadyStarted = true
 	e.WorkflowOptions.WorkflowIDReusePolicy = enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
 	e.WorkflowOptions.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL
-	if upd := action.GetDoUpdate(); upd != nil && upd.UpdateId == "" {
-		upd.UpdateId = uuid.NewString()
-	}
-	if action != nil {
-		e.originalStart.action = proto.Clone(action).(*WithStartClientAction)
-	}
 }
 
 func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID string) error {

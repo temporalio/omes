@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen/journal"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
@@ -16,6 +17,8 @@ import (
 )
 
 type ClientActionsExecutor struct {
+	Journal *journal.Session
+
 	Client          client.Client
 	Namespace       string
 	WorkflowOptions client.StartWorkflowOptions
