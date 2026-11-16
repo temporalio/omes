@@ -109,7 +109,17 @@ func TestOriginalStartProtocol(t *testing.T) {
 	require.NoError(t, w.Start())
 	defer w.Stop()
 	newExecutor := func(cl client.Client) *ClientActionsExecutor {
-		e := &ClientActionsExecutor{Client: cl, Namespace: "default", WorkflowType: "kitchenSink", WorkflowInput: &WorkflowInput{}, WorkflowOptions: client.StartWorkflowOptions{ID: uuid.NewString(), TaskQueue: queue, WorkflowExecutionErrorWhenAlreadyStarted: true}}
+		e := &ClientActionsExecutor{
+			Client:        cl,
+			Namespace:     "default",
+			WorkflowType:  "kitchenSink",
+			WorkflowInput: &WorkflowInput{},
+			WorkflowOptions: client.StartWorkflowOptions{
+				ID:                                       uuid.NewString(),
+				TaskQueue:                                queue,
+				WorkflowExecutionErrorWhenAlreadyStarted: true,
+			},
+		}
 		e.RecoverOriginalStart = true
 		return e
 	}
@@ -182,7 +192,18 @@ func TestOriginalStartProtocol(t *testing.T) {
 		require.Nil(t, e.Handle)
 	})
 	action := func() *WithStartClientAction {
-		return &WithStartClientAction{Variant: &WithStartClientAction_DoUpdate{DoUpdate: &DoUpdate{WithStart: true, Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{Variant: &DoActionsUpdate_DoActions{}}}}}}
+		return &WithStartClientAction{
+			Variant: &WithStartClientAction_DoUpdate{
+				DoUpdate: &DoUpdate{
+					WithStart: true,
+					Variant: &DoUpdate_DoActions{
+						DoActions: &DoActionsUpdate{
+							Variant: &DoActionsUpdate_DoActions{},
+						},
+					},
+				},
+			},
+		}
 	}
 	t.Run("uws_confirmed_update_outcome", func(t *testing.T) {
 		lost := &responseLossClient{Client: c, loseOutcome: true}
@@ -269,7 +290,11 @@ func TestOriginalStartProtocol(t *testing.T) {
 				if err := c.GetWorkflow(ctx, start.GetWorkflowId(), originalRun).Get(ctx, nil); err != nil {
 					return err
 				}
-				foreign, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: start.GetWorkflowId(), TaskQueue: queue, WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE}, "kitchenSink", &WorkflowInput{ExpectedSignalCount: 99})
+				foreign, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
+					ID:                    start.GetWorkflowId(),
+					TaskQueue:             queue,
+					WorkflowIDReusePolicy: enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE,
+				}, "kitchenSink", &WorkflowInput{ExpectedSignalCount: 99})
 				if err != nil {
 					return err
 				}
@@ -278,7 +303,13 @@ func TestOriginalStartProtocol(t *testing.T) {
 			}
 			return err
 		}
-		wire, err := client.Dial(client.Options{HostPort: server.FrontendHostPort(), Namespace: "default", ConnectionOptions: client.ConnectionOptions{DialOptions: []grpc.DialOption{grpc.WithChainUnaryInterceptor(intercept)}}})
+		wire, err := client.Dial(client.Options{
+			HostPort:  server.FrontendHostPort(),
+			Namespace: "default",
+			ConnectionOptions: client.ConnectionOptions{
+				DialOptions: []grpc.DialOption{grpc.WithChainUnaryInterceptor(intercept)},
+			},
+		})
 		require.NoError(t, err)
 		defer wire.Close()
 		e := newExecutor(wire)
