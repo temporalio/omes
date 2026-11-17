@@ -35,11 +35,21 @@ func (e *IterationFailuresError) Error() string {
 
 // OnlyIterationFailures excludes joined infrastructure, observation and component errors.
 func OnlyIterationFailures(err error, stream string) bool {
+	return OnlyIterationFailuresFor(err, stream)
+}
+
+// OnlyIterationFailuresFor excludes operational errors from completed stream failures.
+func OnlyIterationFailuresFor(err error, streams ...string) bool {
 	if err == nil {
 		return false
 	}
 	if failure, ok := err.(*IterationFailuresError); ok {
-		return failure.Stream == stream
+		for _, stream := range streams {
+			if failure.Stream == stream {
+				return true
+			}
+		}
+		return false
 	}
 	if joined, ok := err.(interface{ Unwrap() []error }); ok {
 		found := false
@@ -48,14 +58,14 @@ func OnlyIterationFailures(err error, stream string) bool {
 				continue
 			}
 			found = true
-			if !OnlyIterationFailures(child, stream) {
+			if !OnlyIterationFailuresFor(child, streams...) {
 				return false
 			}
 		}
 		return found
 	}
 	if wrapped, ok := err.(interface{ Unwrap() error }); ok {
-		return OnlyIterationFailures(wrapped.Unwrap(), stream)
+		return OnlyIterationFailuresFor(wrapped.Unwrap(), streams...)
 	}
 	return false
 }
@@ -96,6 +106,9 @@ func (g *genericRun) runJournaled(ctx context.Context) error {
 		}
 		if err := s.Configure(ctx, recovery.Contract); err != nil {
 			return err
+		}
+		if s.State().Counts.Unresolved > 0 {
+			return journal.ErrUnresolved
 		}
 		sessions[i] = s
 	}
@@ -231,7 +244,7 @@ func (g *genericRun) executeJournalIteration(ctx context.Context, s *journal.Ses
 		if errors.Is(executeErr, journal.ErrPersistence) {
 			return executeErr
 		}
-		if errors.Is(executeErr, journal.ErrUnresolved) || errors.Is(executeErr, journal.ErrConflict) {
+		if errors.Is(executeErr, journal.ErrUnresolved) || errors.Is(executeErr, journal.ErrConflict) || errors.Is(executeErr, journal.ErrTerminal) {
 			break
 		}
 		if executeErr != nil && g.config.HandleExecuteError != nil {

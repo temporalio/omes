@@ -19,7 +19,8 @@ type frozenKitchenSink struct {
 type recordedWorkflowResult struct{ Failure string }
 type terminalWorkflowFailure struct{ message string }
 
-func (e *terminalWorkflowFailure) Error() string { return e.message }
+func (e *terminalWorkflowFailure) Error() string        { return e.message }
+func (e *terminalWorkflowFailure) Is(target error) bool { return target == journal.ErrTerminal }
 
 func (k KitchenSinkExecutor) executeJournaled(ctx context.Context, run *Run) error {
 	item, err := run.Journal.Plan(ctx, "workflow", time.Time{}, func() ([]byte, error) {

@@ -80,6 +80,8 @@ func TestJournalDriverKeepsFatalErrorsSeparate(t *testing.T) {
 	require.False(t, OnlyIterationFailures(err, "main"))
 	require.False(t, OnlyIterationFailures(errors.Join(&IterationFailuresError{Stream: "main", Failed: 1}, fatal), "main"))
 	require.False(t, OnlyIterationFailures(&IterationFailuresError{Stream: "operators", Failed: 1}, "main"))
+	require.True(t, OnlyIterationFailuresFor(errors.Join(&IterationFailuresError{Stream: "main", Failed: 1}, &IterationFailuresError{Stream: "operators", Failed: 1}), "main", "operators"))
+	require.False(t, OnlyIterationFailuresFor(errors.Join(&IterationFailuresError{Stream: "operators", Failed: 1}, fatal), "main", "operators"))
 }
 
 func TestJournalDriverStopUnblocksRateWait(t *testing.T) {
@@ -141,6 +143,42 @@ func TestJournalDriverStopDrainsAndPreservesFailures(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, uint64(1), backend.states["lane"].Counts.Succeeded)
+			}
+		})
+	}
+}
+
+func TestJournalDriverDoesNotRetrySettledFailureOrFinalUnknown(t *testing.T) {
+	for _, unknown := range []bool{false, true} {
+		t.Run(fmt.Sprint(unknown), func(t *testing.T) {
+			backend := &testJournal{}
+			info := recoveryInfo(backend)
+			info.Configuration.MaxIterationAttempts = 3
+			calls := 0
+			executor := &GenericExecutor{Execute: func(ctx context.Context, run *Run) error {
+				calls++
+				if _, err := run.Journal.Plan(ctx, "effect", time.Time{}, func() ([]byte, error) { return []byte("intent"), nil }); err != nil {
+					return err
+				}
+				if unknown {
+					return journal.ErrUnresolved
+				}
+				if err := run.Journal.Observe(ctx, "effect", []byte("known target failure")); err != nil {
+					return err
+				}
+				return errors.Join(journal.ErrTerminal, errors.New("target failed"))
+			}}
+			err := executor.Run(t.Context(), info)
+			require.Equal(t, 1, calls)
+			if unknown {
+				require.ErrorIs(t, err, journal.ErrUnresolved)
+				info.Recovery.Epoch = 2
+				require.ErrorIs(t, executor.Run(t.Context(), info), journal.ErrUnresolved)
+				require.Equal(t, 1, calls)
+				require.Equal(t, uint64(1), backend.states["lane"].Counts.Unresolved)
+			} else {
+				require.True(t, OnlyIterationFailures(err, "main"))
+				require.Equal(t, journal.Counts{Allocated: 1, Failed: 1}, backend.states["lane"].Counts)
 			}
 		})
 	}

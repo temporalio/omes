@@ -11,6 +11,7 @@ import (
 	enumspb "go.temporal.io/api/enums/v1"
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/grpc"
 )
 
@@ -37,6 +38,7 @@ type interruptedOperatorService struct {
 	cancel                                         context.CancelFunc
 	paused                                         bool
 	starts, pauses, unpauses, terminations, resets int
+	resetIDs                                       []string
 }
 
 func (s *interruptedOperatorService) StartActivityExecution(context.Context, *workflowservicepb.StartActivityExecutionRequest, ...grpc.CallOption) (*workflowservicepb.StartActivityExecutionResponse, error) {
@@ -66,14 +68,49 @@ func (s *interruptedOperatorService) UnpauseActivityExecution(context.Context, *
 	s.paused = false
 	return &workflowservicepb.UnpauseActivityExecutionResponse{}, nil
 }
-func (s *interruptedOperatorService) ResetActivityExecution(context.Context, *workflowservicepb.ResetActivityExecutionRequest, ...grpc.CallOption) (*workflowservicepb.ResetActivityExecutionResponse, error) {
+func (s *interruptedOperatorService) ResetActivityExecution(_ context.Context, request *workflowservicepb.ResetActivityExecutionRequest, _ ...grpc.CallOption) (*workflowservicepb.ResetActivityExecutionResponse, error) {
 	s.resets++
+	s.resetIDs = append(s.resetIDs, request.RequestId)
 	if s.cancel != nil {
 		s.cancel()
 		s.cancel = nil
 		return nil, context.Canceled
 	}
 	return &workflowservicepb.ResetActivityExecutionResponse{}, nil
+}
+
+func TestJournaledResetRestoresTheFrozenDeduplicationID(t *testing.T) {
+	backend := &operatorJournal{state: journal.New("lane")}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	service := &interruptedOperatorService{cancel: cancel}
+	wrapper := &journalOperatorService{WorkflowServiceClient: service, session: operatorSession(t, backend, 1)}
+	request := &workflowservicepb.ResetActivityExecutionRequest{Namespace: "namespace", ActivityId: "activity", RunId: "original-run", RequestId: "frozen-reset"}
+	_, err := wrapper.ResetActivityExecution(ctx, request)
+	require.ErrorIs(t, err, context.Canceled)
+	wrapper.session = operatorSession(t, backend, 2)
+	request.RequestId = "regenerated-id"
+	_, err = wrapper.ResetActivityExecution(t.Context(), request)
+	require.NoError(t, err)
+	require.Equal(t, []string{"frozen-reset", "frozen-reset"}, service.resetIDs)
+	require.True(t, backend.state.Pending.Items["operator/reset"].Done)
+}
+
+func TestJournaledOperatorPersistsKnownTerminalFailure(t *testing.T) {
+	backend := &operatorJournal{state: journal.New("lane")}
+	service := &interruptedOperatorService{}
+	transport := journaledOperatorClient{service: service, resultErr: temporal.NewTimeoutError(enumspb.TIMEOUT_TYPE_HEARTBEAT, nil)}
+	action := &DoStandaloneActivityOperatorCommands{CommandType: DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE, Activity: &ExecuteActivityAction{TaskQueue: "queue", ActivityType: &ExecuteActivityAction_Noop{}}}
+	e := &ClientActionsExecutor{Client: transport, Namespace: "namespace", Journal: operatorSession(t, backend, 1)}
+	err := e.executeStandaloneActivityOperatorCommands(t.Context(), action)
+	require.ErrorIs(t, err, journal.ErrTerminal)
+	require.True(t, backend.state.Pending.Items["operator/result"].Done)
+	e.Journal = operatorSession(t, backend, 2)
+	require.ErrorIs(t, e.executeStandaloneActivityOperatorCommands(t.Context(), action), journal.ErrTerminal)
+	require.Equal(t, 1, service.starts)
+	require.Equal(t, 1, service.pauses)
+	require.NoError(t, e.Journal.Commit(t.Context(), journal.Failed, "terminal heartbeat"))
+	require.Equal(t, journal.Counts{Allocated: 1, Failed: 1}, backend.state.Counts)
 }
 func (s *interruptedOperatorService) TerminateActivityExecution(context.Context, *workflowservicepb.TerminateActivityExecutionRequest, ...grpc.CallOption) (*workflowservicepb.TerminateActivityExecutionResponse, error) {
 	s.terminations++
@@ -82,23 +119,25 @@ func (s *interruptedOperatorService) TerminateActivityExecution(context.Context,
 
 type journaledOperatorClient struct {
 	client.Client
-	service *interruptedOperatorService
+	service   *interruptedOperatorService
+	resultErr error
 }
 
 func (c journaledOperatorClient) WorkflowService() workflowservicepb.WorkflowServiceClient {
 	return c.service
 }
 func (c journaledOperatorClient) GetActivityHandle(options client.GetActivityHandleOptions) client.ActivityHandle {
-	return operatorHandle{runID: options.RunID}
+	return operatorHandle{runID: options.RunID, err: c.resultErr}
 }
 
 type operatorHandle struct {
 	client.ActivityHandle
 	runID string
+	err   error
 }
 
 func (h operatorHandle) GetRunID() string               { return h.runID }
-func (h operatorHandle) Get(context.Context, any) error { return nil }
+func (h operatorHandle) Get(context.Context, any) error { return h.err }
 func operatorSession(t *testing.T, backend *operatorJournal, epoch uint64) *journal.Session {
 	t.Helper()
 	s, err := journal.Claim(t.Context(), backend, "lane", epoch)
@@ -140,7 +179,7 @@ func TestJournaledOperatorNeverReplaysUnprovenReset(t *testing.T) {
 	defer cancel()
 	service := &interruptedOperatorService{cancel: cancel}
 	wrapper := &journalOperatorService{WorkflowServiceClient: service, session: first}
-	request := &workflowservicepb.ResetActivityExecutionRequest{Namespace: "namespace", ActivityId: "activity", RunId: "original-run", RequestId: "frozen-reset"}
+	request := &workflowservicepb.ResetActivityExecutionRequest{Namespace: "namespace", ActivityId: "activity", RunId: "original-run"}
 	_, err := wrapper.ResetActivityExecution(ctx, request)
 	require.ErrorIs(t, err, context.Canceled)
 	wrapper.session = operatorSession(t, backend, 2)

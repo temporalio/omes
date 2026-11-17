@@ -20,6 +20,7 @@ var (
 	ErrStopped     = errors.New("journal admission stopped")
 	ErrPersistence = errors.New("journal persistence failed")
 	ErrUnresolved  = errors.New("target effect remains unresolved")
+	ErrTerminal    = errors.New("known terminal iteration failure")
 )
 
 type Outcome string

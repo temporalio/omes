@@ -2,8 +2,11 @@ package kitchensink
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +16,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -55,8 +59,23 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 			return err
 		}
 		if result.Done {
+			if string(result.Observation) == "completed" {
+				return nil
+			}
+			var recorded operatorResult
+			if err := json.Unmarshal(result.Observation, &recorded); err != nil {
+				return err
+			}
+			if recorded.Failure != "" {
+				return &terminalOperatorFailure{recorded.Failure}
+			}
 			return nil
 		}
+		defer func() {
+			if ctx.Err() == nil && !errors.Is(retErr, journal.ErrPersistence) && !errors.Is(retErr, journal.ErrUnresolved) && knownOperatorFailure(retErr) {
+				retErr = e.recordOperatorFailure(ctx, retErr)
+			}
+		}()
 	}
 	activityType, args := ActivityNameAndArgs(act)
 	activityID := fmt.Sprintf("standalone-activity-operator-%s", uuid.NewString())
@@ -131,6 +150,46 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 		return e.Journal.Observe(ctx, "operator/result", []byte("completed"))
 	}
 	return nil
+}
+
+type operatorResult struct{ Failure string }
+type terminalOperatorFailure struct{ message string }
+
+func (e *terminalOperatorFailure) Error() string        { return e.message }
+func (e *terminalOperatorFailure) Is(target error) bool { return target == journal.ErrTerminal }
+
+func knownOperatorFailure(err error) bool {
+	var timeout *temporal.TimeoutError
+	var application *temporal.ApplicationError
+	var canceled *temporal.CanceledError
+	var terminated *temporal.TerminatedError
+	var terminal *terminalOperatorFailure
+	return errors.As(err, &timeout) || errors.As(err, &application) || errors.As(err, &canceled) || errors.As(err, &terminated) || errors.As(err, &terminal)
+}
+
+func (e *ClientActionsExecutor) recordOperatorFailure(ctx context.Context, failure error) error {
+	message := failure.Error()
+	if len(message) > 1024 {
+		message = message[:1024]
+	}
+	data, err := json.Marshal(operatorResult{Failure: message})
+	if err != nil {
+		return errors.Join(failure, err)
+	}
+	pending := e.Journal.State().Pending
+	for _, item := range pending.Items {
+		if item.Unresolved {
+			return errors.Join(journal.ErrUnresolved, failure)
+		}
+	}
+	for _, key := range slices.Sorted(maps.Keys(pending.Items)) {
+		if !pending.Items[key].Done {
+			if err := e.Journal.Observe(ctx, key, data); err != nil {
+				return errors.Join(failure, err)
+			}
+		}
+	}
+	return &terminalOperatorFailure{message}
 }
 
 func cleanupStandaloneOperatorActivity(
@@ -371,11 +430,17 @@ func waitForStandaloneActivityState(
 		}
 		longPollToken = response.GetLongPollToken()
 		if len(longPollToken) == 0 {
-			return nil, fmt.Errorf(
+			err := fmt.Errorf(
 				"standalone activity namespace=%q activity_id=%q run_id=%q reached terminal state before expected state: status=%s run_state=%s transition_count=%d heartbeat_timeout=%s",
 				target.namespace, target.activityID, target.runID,
 				info.GetStatus(), info.GetRunState(), info.GetStateTransitionCount(),
 				info.GetHeartbeatTimeout().AsDuration())
+			switch info.GetStatus() {
+			case enumspb.ACTIVITY_EXECUTION_STATUS_COMPLETED, enumspb.ACTIVITY_EXECUTION_STATUS_FAILED, enumspb.ACTIVITY_EXECUTION_STATUS_CANCELED, enumspb.ACTIVITY_EXECUTION_STATUS_TIMED_OUT, enumspb.ACTIVITY_EXECUTION_STATUS_TERMINATED:
+				return nil, &terminalOperatorFailure{message: err.Error()}
+			default:
+				return nil, err
+			}
 		}
 	}
 }

@@ -15,7 +15,9 @@ import (
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -72,27 +74,89 @@ func (r *journalOperatorService) mutate(parent context.Context, key string, req,
 		}
 		return r.session.Observe(parent, "operator/"+key, raw)
 	}
+	identity, identified := req.(interface {
+		GetRunId() string
+		GetRequestId() string
+	})
 	if item.Calls > 0 && !safe {
 		found, err := r.recoverMutation(ctx, key, req, resp)
+		if found && err == nil {
+			return persist()
+		}
+	}
+	safe = safe || (identified && identity.GetRunId() != "" && identity.GetRequestId() != "")
+	if item.Calls > 0 && !safe {
+		found, err := r.waitForMutation(ctx, key, req, resp)
 		if err != nil || !found {
 			return unresolved(err)
 		}
 		return persist()
 	}
-	if err := r.session.Issue(ctx, "operator/"+key); err != nil {
-		return err
-	}
-	if err := call(ctx); err != nil {
-		if safe || parent.Err() != nil {
+	var lastErr error
+	for calls := item.Calls; calls < 4; calls++ {
+		if err := ctx.Err(); err != nil {
+			return unresolved(errors.Join(lastErr, err))
+		}
+		if err := r.session.Issue(ctx, "operator/"+key); err != nil {
 			return err
 		}
-		found, probeErr := r.recoverMutation(ctx, key, req, resp)
-		if found && probeErr == nil {
+		callCtx, stop := context.WithTimeout(ctx, 5*time.Second)
+		err := call(callCtx)
+		stop()
+		if err == nil {
 			return persist()
 		}
-		return unresolved(errors.Join(err, probeErr))
+		if parent.Err() != nil {
+			return err
+		}
+		lastErr = err
+		if !safe {
+			found, probeErr := r.waitForMutation(ctx, key, req, resp)
+			if found && probeErr == nil {
+				return persist()
+			}
+			return unresolved(errors.Join(err, probeErr))
+		}
+		if !retryableOperatorCall(err) {
+			return err
+		}
+		timer := time.NewTimer(100 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return unresolved(errors.Join(lastErr, ctx.Err()))
+		case <-timer.C:
+		}
 	}
-	return persist()
+	return unresolved(lastErr)
+}
+
+func retryableOperatorCall(err error) bool {
+	code := serviceerror.ToStatus(err).Code()
+	return errors.Is(err, context.DeadlineExceeded) || temporal.IsTimeoutError(err) || code == codes.Unavailable || code == codes.ResourceExhausted || code == codes.DeadlineExceeded
+}
+
+func (r *journalOperatorService) waitForMutation(ctx context.Context, key string, req, resp proto.Message) (bool, error) {
+	switch req.(type) {
+	case *workflowservicepb.PauseActivityExecutionRequest, *workflowservicepb.UnpauseActivityExecutionRequest, *workflowservicepb.UpdateActivityExecutionOptionsRequest:
+	default:
+		return false, nil
+	}
+	for {
+		callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		found, err := r.recoverMutation(callCtx, key, req, resp)
+		cancel()
+		if found || (err != nil && !retryableOperatorCall(err)) {
+			return found, err
+		}
+		timer := time.NewTimer(100 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return false, errors.Join(err, ctx.Err())
+		case <-timer.C:
+		}
+	}
 }
 func (r *journalOperatorService) recoverMutation(ctx context.Context, key string, req, resp proto.Message) (bool, error) {
 	target := &workflowservicepb.DescribeActivityExecutionRequest{}
