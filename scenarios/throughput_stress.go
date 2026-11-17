@@ -132,6 +132,8 @@ type tpsConfig struct {
 	IncludeStandaloneActivity                 bool
 	IncludeStandaloneActivityOperatorCommands bool
 	StandaloneActivityOperator                independentLoadConfig
+	IncludeNexusWorkerCallbacks               bool
+	NexusWorkerCallbacks                      independentLoadConfig
 	IncludeNexusStandaloneActivity            bool
 	IncludeNexusWorkflowActions               bool
 	Payload                                   *loadgen.PayloadConfig
@@ -174,6 +176,7 @@ func init() {
 			o.Feature(IncludeStandaloneActivityFlag, "Include standalone activities.",
 				func(c loadgen.Capabilities) bool { return c.Namespace.GetStandaloneActivities() })
 			declareStandaloneActivityOperatorOptions(o)
+			declareNexusWorkerCallbacksOptions(o)
 			o.Bool(IncludeNexusStandaloneActivityFlag, false, "Include a Nexus operation that starts a standalone activity (Go worker only).")
 			o.Bool(IncludeNexusWorkflowActionsFlag, false, "Include Nexus operations that signal, update, and query a workflow (Go worker only).")
 			o.String(PayloadDistributionJsonFlag, "", "JSON payload-size distribution; use @<file> to read from a file.")
@@ -279,6 +282,9 @@ func (t *tpsExecutor) Configure(info loadgen.ScenarioInfo) error {
 	if config.NexusEndpoint != "" && !config.NexusEnabled {
 		return fmt.Errorf("%s was set but %s is false", NexusEndpointFlag, NexusEnabledFlag)
 	}
+	if err := config.configureNexusWorkerCallbacks(info); err != nil {
+		return err
+	}
 	config.IncludeStandaloneActivity = info.OptionBool(IncludeStandaloneActivityFlag)
 	if err := config.configureStandaloneActivityOperator(info); err != nil {
 		return err
@@ -346,6 +352,7 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 	if !nexus.Enabled {
 		// Standalone operations are part of Nexus load, so they go with it.
 		t.config.IncludeStandaloneNexus = false
+		t.config.IncludeNexusWorkerCallbacks = false
 		t.config.IncludeNexusStandaloneActivity = false
 		t.config.IncludeNexusWorkflowActions = false
 	} else {
@@ -440,8 +447,11 @@ func (t *tpsExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error 
 		if t.config.IncludeStandaloneActivityOperatorCommands {
 			independentLoads = append(independentLoads, t.standaloneActivityOperatorLoad(info))
 		}
+		if t.config.IncludeNexusWorkerCallbacks {
+			independentLoads = append(independentLoads, t.nexusWorkerCallbacksLoad(info))
+		}
 		mainResult, loadErr = runLoads(ctx, info, ksExec, independentLoads)
-		// If only operator tests failed, still record and verify the completed main load.
+		// If only independent loads failed, still record and verify the completed main load.
 		if loadErr != nil && (mainResult.finishedAt.IsZero() || mainResult.err != nil) {
 			return loadErr
 		}
