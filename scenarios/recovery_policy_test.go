@@ -82,3 +82,40 @@ func TestInterruptedScheduleOperationRemainsPending(t *testing.T) {
 	require.False(t, item.Done)
 	require.False(t, item.Unresolved)
 }
+
+type slowJournalIssue struct {
+	inner journal.Client
+	delay time.Duration
+}
+
+func (b slowJournalIssue) Apply(ctx context.Context, lane string, command journal.Command) (journal.State, error) {
+	if command.Kind == "issue" {
+		select {
+		case <-time.After(b.delay):
+		case <-ctx.Done():
+			return journal.State{}, ctx.Err()
+		}
+	}
+	return b.inner.Apply(ctx, lane, command)
+}
+func TestScheduleJournalAcknowledgementDoesNotUseTargetDeadline(t *testing.T) {
+	backend := &scenarioJournal{}
+	session, err := journal.Claim(t.Context(), slowJournalIssue{inner: backend, delay: 20 * time.Millisecond}, "lane", 1)
+	require.NoError(t, err)
+	require.NoError(t, session.Begin(t.Context(), 1))
+	policy := scheduleRecoveryPolicy{Calls: 1, Timeout: 5 * time.Millisecond}
+	recovery := &scheduleRecovery{journal: session, journalPrefix: "resource", logger: zap.NewNop().Sugar(), policy: &policy}
+	operation, cancel := recovery.operation(t.Context(), "delete")
+	defer cancel()
+	require.NoError(t, operation.beginErr)
+	called := false
+	err = operation.call(func(context.Context) error { called = true; return nil })
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.NotErrorIs(t, err, journal.ErrPersistence)
+	require.False(t, called)
+	require.ErrorIs(t, operation.persistResult(err), context.DeadlineExceeded)
+	item := session.State().Pending.Items[operation.key]
+	require.True(t, item.Done)
+	require.False(t, item.Unresolved)
+	require.Equal(t, outcomeNotIssued, operation.outcome)
+}

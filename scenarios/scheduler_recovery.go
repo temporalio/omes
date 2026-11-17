@@ -34,6 +34,7 @@ const (
 	outcomeObservedWitness    scheduleOutcome = "observed_update_witness"
 	outcomeObservedAbsence    scheduleOutcome = "observed_absence"
 	outcomeNotFoundCompatible scheduleOutcome = "not_found_compatible"
+	outcomeNotIssued          scheduleOutcome = "not_issued"
 )
 
 var (
@@ -122,9 +123,15 @@ func (b *scheduleOperation) call(fn func(context.Context) error) error {
 		return errors.Join(b.lastErr, err)
 	}
 	if b.journal != nil {
-		if err := b.journal.Issue(b.ctx, b.key); err != nil {
+		if err := b.journal.Issue(b.parentCtx, b.key); err != nil {
 			return errors.Join(journal.ErrPersistence, err)
 		}
+	}
+	if err := b.ctx.Err(); err != nil {
+		if b.calls == 0 {
+			b.outcome = outcomeNotIssued
+		}
+		return errors.Join(b.lastErr, err)
 	}
 	b.calls++
 	err := fn(b.ctx)

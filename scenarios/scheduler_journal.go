@@ -119,7 +119,7 @@ func (b *scheduleOperation) persistResult(err error) error {
 		return errors.Join(err, encodeErr)
 	}
 	unknown := b.name != "describe" && b.outcome == outcomeUnresolved && b.calls > 0
-	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(b.ctx), 10*time.Second)
+	recordCtx, cancel := context.WithTimeout(context.WithoutCancel(b.parentCtx), 30*time.Second)
 	defer cancel()
 	if persistErr := b.journal.ObserveStatus(recordCtx, b.key, raw, unknown); persistErr != nil {
 		return errors.Join(journal.ErrPersistence, err, persistErr)
