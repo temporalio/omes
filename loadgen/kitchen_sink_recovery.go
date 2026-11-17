@@ -69,6 +69,11 @@ func (k KitchenSinkExecutor) executeJournaled(ctx context.Context, run *Run) err
 		if err := execution.executor.RestoreOriginalStart(frozen.Spec); err != nil {
 			return err
 		}
+		if binding, ok := run.Journal.State().Pending.Items["original-run"]; ok {
+			if err := execution.executor.RestoreOriginalRun(ctx, string(binding.Plan)); err != nil {
+				return err
+			}
+		}
 		run.kitchenSinkExecution = execution
 	}
 	if err := run.Journal.Issue(ctx, "workflow"); err != nil {

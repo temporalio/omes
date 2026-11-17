@@ -100,6 +100,9 @@ func originalStartWorkflow(ctx workflow.Context, input *WorkflowInput) error {
 		return err
 	}
 	workflow.GetSignalChannel(ctx, "finish").Receive(ctx, nil)
+	if input.ExpectedSignalCount == 73 {
+		return workflow.NewContinueAsNewError(ctx, "kitchenSink", &WorkflowInput{ExpectedSignalCount: 74})
+	}
 	if input.ExpectedSignalCount < 0 {
 		return temporal.NewNonRetryableApplicationError("original target failure", "TargetFailure", nil)
 	}
@@ -137,6 +140,51 @@ func TestOriginalStartProtocol(t *testing.T) {
 		e.RecoverOriginalStart = true
 		return e
 	}
+	t.Run("restore_saved_or_unacknowledged_binding_after_continue_as_new", func(t *testing.T) {
+		original := newExecutor(c)
+		original.WorkflowInput.ExpectedSignalCount = 73
+		spec, err := original.PrepareOriginalStart(nil)
+		require.NoError(t, err)
+		require.NoError(t, original.Start(ctx, nil))
+		firstRun := original.Handle.GetRunID()
+		require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, firstRun, "finish", nil))
+		require.Eventually(t, func() bool {
+			description, err := c.DescribeWorkflowExecution(ctx, spec.WorkflowID, "")
+			return err == nil && description.WorkflowExecutionInfo.Execution.RunId != firstRun
+		}, 5*time.Second, 10*time.Millisecond)
+		for _, saved := range []bool{true, false} {
+			restored := newExecutor(c)
+			restored.WorkflowOptions = original.WorkflowOptions
+			require.NoError(t, restored.RestoreOriginalStart(spec))
+			if saved {
+				require.NoError(t, restored.RestoreOriginalRun(ctx, firstRun))
+			}
+			require.NoError(t, restored.Start(ctx, nil))
+			require.Equal(t, firstRun, restored.Handle.GetRunID())
+		}
+		require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, "", "finish", nil))
+		require.NoError(t, original.Handle.Get(ctx, nil))
+	})
+	t.Run("restore_completed_update_with_start_without_resending", func(t *testing.T) {
+		original := newExecutor(c)
+		action := &WithStartClientAction{Variant: &WithStartClientAction_DoUpdate{DoUpdate: &DoUpdate{WithStart: true, Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{}}}}}
+		spec, err := original.PrepareOriginalStart(action)
+		require.NoError(t, err)
+		require.NoError(t, original.Start(ctx, nil))
+		firstRun := original.Handle.GetRunID()
+		require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, firstRun, "finish", nil))
+		require.NoError(t, original.Handle.Get(ctx, nil))
+		transport := &responseLossClient{Client: c, failUpdate: true}
+		restored := newExecutor(transport)
+		restored.WorkflowOptions = original.WorkflowOptions
+		require.NoError(t, restored.RestoreOriginalStart(spec))
+		require.NoError(t, restored.RestoreOriginalRun(ctx, firstRun))
+		require.NoError(t, restored.Start(ctx, nil))
+		require.NoError(t, restored.Handle.Get(ctx, nil))
+		require.Zero(t, transport.starts)
+		require.Zero(t, transport.multis)
+		require.True(t, transport.failUpdate)
+	})
 	t.Run("late_self_update_cannot_replace_or_update_foreign_run", func(t *testing.T) {
 		id := uuid.NewString()
 		original, err := c.ExecuteWorkflow(ctx, client.StartWorkflowOptions{ID: id, TaskQueue: queue}, "kitchenSink", &WorkflowInput{})

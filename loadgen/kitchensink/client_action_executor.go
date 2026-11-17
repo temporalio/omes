@@ -234,7 +234,7 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 					return nil, err
 				}
 				// Retry the same update only on the history-verified original run.
-				updateOpts.RunID = already.RunId
+				updateOpts.RunID = e.Handle.GetRunID()
 				handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
 			}
 		}

@@ -47,10 +47,10 @@ func (b *scenarioJournal) Apply(_ context.Context, lane string, c journal.Comman
 	return n.Clone(), nil
 }
 func TestJournaledThroughputRestoresFrozenOutcome(t *testing.T) {
-	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
+	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(3*time.Minute))
 	setup := loadgen.ScenarioInfo{Client: env.TemporalClient(), Namespace: "default"}
 	require.NoError(t, setup.RegisterDefaultSearchAttributes(t.Context()))
-	for _, cut := range []string{"observe/workflow", "commit"} {
+	for _, cut := range []string{"observe/original-run", "observe/workflow", "commit"} {
 		t.Run(cut, func(t *testing.T) {
 			backend := &scenarioJournal{lose: cut}
 			info := loadgen.ScenarioInfo{
@@ -58,6 +58,9 @@ func TestJournaledThroughputRestoresFrozenOutcome(t *testing.T) {
 				Configuration: loadgen.RunConfiguration{Iterations: 1, MaxConcurrent: 1, DoNotRegisterSearchAttributes: true, ContinueOnIterationFailure: true},
 				Options:       loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{IterFlag: "1", ContinueAsNewAfterIterFlag: "0", NexusEnabledFlag: "false", IncludeStandaloneActivityFlag: "false", SleepTimeFlag: "1ms", VisibilityVerificationTimeoutFlag: "10s"}),
 				Recovery:      &loadgen.RecoveryOptions{Client: backend, Epoch: 1, Contract: []byte("fixed run contract"), Streams: map[string][]string{"throughput_stress": {"main/0"}}, GenerationEnd: time.Now().Add(time.Minute), DrainEnd: time.Now().Add(2 * time.Minute)},
+			}
+			if cut == "observe/original-run" {
+				info.Options = loadgen.MustResolveScenarioOptions("throughput_stress", map[string]string{IterFlag: "2", ContinueAsNewAfterIterFlag: "1", NexusEnabledFlag: "false", IncludeStandaloneActivityFlag: "false", OwningExecutionSelfActionsFlag: "true", SleepTimeFlag: "1ms", VisibilityVerificationTimeoutFlag: "10s"})
 			}
 			generations := 0
 			first := newThroughputStressExecutor()

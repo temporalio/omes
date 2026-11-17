@@ -56,6 +56,9 @@ func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID s
 	if attrs == nil {
 		return errors.New("original start history is missing its start event")
 	}
+	if first := attrs.GetFirstExecutionRunId(); first != "" && first != runID {
+		return e.attachOriginalStart(ctx, first)
+	}
 	if attrs.GetMemo().GetFields()[startIntentMemo] == nil {
 		return errors.New("existing workflow has no original start identity")
 	}
@@ -70,5 +73,25 @@ func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID s
 	}
 	// Bind the history-verified run, never a later execution selected by workflow ID.
 	e.Handle = e.Client.GetWorkflow(ctx, e.WorkflowOptions.ID, runID)
+	return nil
+}
+
+// RestoreOriginalRun verifies the saved execution and retrieves its existing update outcome.
+func (e *ClientActionsExecutor) RestoreOriginalRun(ctx context.Context, runID string) error {
+	if e.originalStart == nil || runID == "" || e.Handle != nil {
+		return errors.New("invalid original run binding")
+	}
+	if err := e.attachOriginalStart(ctx, runID); err != nil {
+		return err
+	}
+	if update := e.originalStart.action.GetDoUpdate(); update != nil {
+		e.originalStart.update = e.Client.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
+			WorkflowID: e.WorkflowOptions.ID, RunID: e.Handle.GetRunID(), UpdateID: update.UpdateId,
+		})
+		if err := e.originalStart.update.Get(ctx, nil); err != nil {
+			return err
+		}
+	}
+	e.runID = e.Handle.GetRunID()
 	return nil
 }
