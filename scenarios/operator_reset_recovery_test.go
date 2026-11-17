@@ -19,9 +19,11 @@ import (
 
 type resetReplyLoss struct {
 	workflowservice.WorkflowServiceClient
-	mu           sync.Mutex
-	ids          []string
-	resetStarted time.Time
+	mu              sync.Mutex
+	ids             []string
+	resetStarted    time.Time
+	originalStarted time.Time
+	target          *workflowservice.DescribeActivityExecutionRequest
 }
 
 func (s *resetReplyLoss) ResetActivityExecution(ctx context.Context, request *workflowservice.ResetActivityExecutionRequest, options ...grpc.CallOption) (*workflowservice.ResetActivityExecutionResponse, error) {
@@ -37,21 +39,8 @@ func (s *resetReplyLoss) ResetActivityExecution(ctx context.Context, request *wo
 	}
 	s.ids = append(s.ids, request.RequestId)
 	if len(s.ids) == 1 {
-		for {
-			after, err := s.WorkflowServiceClient.DescribeActivityExecution(ctx, &workflowservice.DescribeActivityExecutionRequest{Namespace: request.Namespace, ActivityId: request.ActivityId, RunId: request.RunId})
-			if err != nil {
-				return nil, err
-			}
-			if after.GetInfo().GetLastStartedTime().AsTime().After(before.GetInfo().GetLastStartedTime().AsTime()) {
-				s.resetStarted = after.GetInfo().GetLastStartedTime().AsTime()
-				break
-			}
-			select {
-			case <-time.After(10 * time.Millisecond):
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			}
-		}
+		s.originalStarted = before.GetInfo().GetLastStartedTime().AsTime()
+		s.target = &workflowservice.DescribeActivityExecutionRequest{Namespace: request.Namespace, ActivityId: request.ActivityId, RunId: request.RunId}
 		return nil, serviceerror.NewDeadlineExceeded("reset applied; reply lost")
 	}
 	until := time.NewTimer(1500 * time.Millisecond)
@@ -74,6 +63,39 @@ func (s *resetReplyLoss) ResetActivityExecution(ctx context.Context, request *wo
 	}
 }
 
+type resetRecoveryJournal struct {
+	journal.Client
+	service *resetReplyLoss
+}
+
+func (b *resetRecoveryJournal) Apply(ctx context.Context, lane string, command journal.Command) (journal.State, error) {
+	if command.Kind == "issue" && command.Key == "operator/reset" && command.Call == 2 {
+		if err := b.service.awaitResetStart(ctx); err != nil {
+			return journal.State{}, err
+		}
+	}
+	return b.Client.Apply(ctx, lane, command)
+}
+func (s *resetReplyLoss) awaitResetStart(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for {
+		after, err := s.WorkflowServiceClient.DescribeActivityExecution(ctx, s.target)
+		if err != nil {
+			return err
+		}
+		if after.GetInfo().GetLastStartedTime().AsTime().After(s.originalStarted) {
+			s.resetStarted = after.GetInfo().GetLastStartedTime().AsTime()
+			return nil
+		}
+		select {
+		case <-time.After(10 * time.Millisecond):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
 type resetLossClient struct {
 	client.Client
 	service *resetReplyLoss
@@ -85,11 +107,13 @@ func TestJournaledOperatorsRecoverRealResetReplyLoss(t *testing.T) {
 	server := workertest.StartDevServer(t, workertest.WithDynamicConfig(map[string]any{"activity.enableStandalone": true, "history.enableStandaloneActivityOperatorCommands": true}))
 	env := workertest.SetupTestEnvironment(t, workertest.WithDevServer(server), workertest.WithExecutorTimeout(time.Minute))
 	backend := &scenarioJournal{}
+	recovery := &resetRecoveryJournal{Client: backend}
 	name := "standalone_activity_operator_commands"
-	info := loadgen.ScenarioInfo{ScenarioName: name, RunID: "reset-reply-loss", ExecutionID: "reset-reply-loss", Configuration: loadgen.RunConfiguration{Iterations: 3, MaxConcurrent: 3, MaxIterationAttempts: 1, DoNotRegisterSearchAttributes: true}, Options: loadgen.MustResolveScenarioOptions(name, nil), Recovery: &loadgen.RecoveryOptions{Client: backend, Epoch: 1, Contract: []byte("operator reset contract"), Streams: map[string][]string{name: {"operator/0", "operator/1", "operator/2"}}, GenerationEnd: time.Now().Add(time.Minute), DrainEnd: time.Now().Add(2 * time.Minute)}}
+	info := loadgen.ScenarioInfo{ScenarioName: name, RunID: "reset-reply-loss", ExecutionID: "reset-reply-loss", Configuration: loadgen.RunConfiguration{Iterations: 3, MaxConcurrent: 3, MaxIterationAttempts: 1, DoNotRegisterSearchAttributes: true}, Options: loadgen.MustResolveScenarioOptions(name, map[string]string{StandaloneActivityOperatorSuccessDurationFlag: "20s", StandaloneActivityOperatorHeartbeatTimeoutFlag: "10s", StandaloneActivityOperatorStartToCloseTimeoutFlag: "30s", StandaloneActivityOperatorMaxAttemptsFlag: "5"}), Recovery: &loadgen.RecoveryOptions{Client: recovery, Epoch: 1, Contract: []byte("operator reset contract"), Streams: map[string][]string{name: {"operator/0", "operator/1", "operator/2"}}, GenerationEnd: time.Now().Add(time.Minute), DrainEnd: time.Now().Add(2 * time.Minute)}}
 	var service *resetReplyLoss
 	executor := loadgen.ExecutorFunc(func(ctx context.Context, info loadgen.ScenarioInfo) error {
 		service = &resetReplyLoss{WorkflowServiceClient: info.Client.WorkflowService()}
+		recovery.service = service
 		info.Client = resetLossClient{Client: info.Client, service: service}
 		return runStandaloneActivityOperatorCommands(ctx, info)
 	})
