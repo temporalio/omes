@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"testing"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/internal/workertest"
+	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/journal"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
@@ -83,8 +86,15 @@ func TestSchedulerOperationRecoveryLocalServer(t *testing.T) {
 	backend, err := client.DialContext(ctx, client.Options{HostPort: server.FrontendHostPort(), Namespace: "default"})
 	require.NoError(t, err)
 	t.Cleanup(backend.Close)
-	for _, experiment := range []string{"false", "true"} {
-		t.Run("chasm_requested_"+experiment, func(t *testing.T) {
+	for _, tc := range []struct {
+		name, chasm string
+		journaled   bool
+	}{
+		{name: "classic", chasm: "false"},
+		{name: "chasm", chasm: "true"},
+		{name: "journaled_chasm", chasm: "true", journaled: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			p := &scheduleResponseLossProxy{backend: backend.WorkflowService(), calls: map[string]int{}}
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
@@ -97,13 +107,46 @@ func TestSchedulerOperationRecoveryLocalServer(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(c.Close)
 			core, logs := observer.New(zap.InfoLevel)
-			info := scheduleRecoveryInfo(c, zap.New(core).Sugar(), true, map[string]string{
-				EnableChasmSchedulerFlag: experiment, SchedulerDurationPerIterationFlag: "30s",
-			})
-			require.NoError(t, new(SchedulerExecutor).Execute(ctx, info.NewRun(1)))
+			options := map[string]string{EnableChasmSchedulerFlag: tc.chasm, SchedulerDurationPerIterationFlag: "30s"}
+			scheduleCount, updatesPerSchedule := 1, 1
+			if tc.journaled {
+				const lanes, schedulesPerLane = 15, 10
+				scheduleCount, updatesPerSchedule = lanes*schedulesPerLane, 3
+				options[ScheduleCreationPerIterationFlag] = "10"
+				options[ScheduleReadsPerCreationFlag] = "3"
+				options[ScheduleUpdatesPerCreationFlag] = "3"
+				options[SchedulerRecoveryTimeoutFlag] = "30s"
+				options[SchedulerRecoveryBackoffFlag] = "100ms"
+				options[OperationIntervalFlag] = "50ms"
+				options[WaitTimeBeforeCleanupFlag] = "25s"
+				info := scheduleRecoveryInfo(c, zap.New(core).Sugar(), true, options)
+				info.ScenarioName = "scheduler_stress"
+				info.Namespace = "default"
+				info.MetricsHandler = client.MetricsNopHandler
+				info.Configuration = loadgen.RunConfiguration{Iterations: lanes, MaxConcurrent: lanes, DoNotRegisterSearchAttributes: true}
+				ids := make([]string, lanes)
+				for i := range ids {
+					ids[i] = fmt.Sprintf("scheduler/%d", i)
+				}
+				info.Recovery = &loadgen.RecoveryOptions{
+					Client: &scenarioJournal{}, Epoch: 1, Contract: []byte("scheduler production shape"),
+					Streams:       map[string][]string{info.ScenarioName: ids},
+					GenerationEnd: time.Now().Add(time.Minute), DrainEnd: time.Now().Add(90 * time.Second),
+				}
+				executor := loadgen.GenericExecutor{Execute: func(ctx context.Context, run *loadgen.Run) error {
+					return new(SchedulerExecutor).Execute(ctx, run)
+				}}
+				require.NoError(t, executor.Run(ctx, info))
+				counts, err := info.Recovery.Totals(ctx, info.ScenarioName)
+				require.NoError(t, err)
+				require.Equal(t, journal.Counts{Allocated: lanes, Succeeded: lanes}, counts)
+			} else {
+				info := scheduleRecoveryInfo(c, zap.New(core).Sugar(), true, options)
+				require.NoError(t, new(SchedulerExecutor).Execute(ctx, info.NewRun(1)))
+			}
 			p.mu.Lock()
 			defer p.mu.Unlock()
-			require.Equal(t, map[string]int{"create": 1, "update": 1, "delete": 1}, p.calls)
+			require.Equal(t, map[string]int{"create": scheduleCount, "update": scheduleCount * updatesPerSchedule, "delete": scheduleCount}, p.calls)
 			outcomes := map[string]bool{}
 			for _, row := range logs.All() {
 				if s, ok := row.ContextMap()["outcome"].(string); ok {

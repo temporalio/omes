@@ -48,8 +48,9 @@ func (s *SchedulerExecutor) createJournaledSchedule(ctx context.Context, run *lo
 }
 
 type scheduleOperationPlan struct {
-	Witness string
-	Policy  scheduleRecoveryPolicy
+	Witness      string
+	Policy       scheduleRecoveryPolicy
+	PhasedUpdate bool `json:",omitempty"`
 }
 
 type recordedScheduleResult struct {
@@ -77,7 +78,7 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 	b.key = fmt.Sprintf("%s/%s/%d", r.journalPrefix, b.name, ordinal)
 	deadline, _ := b.ctx.Deadline()
 	item, err := b.journal.Plan(ctx, b.key, deadline, func() ([]byte, error) {
-		return json.Marshal(scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy()})
+		return json.Marshal(scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy(), PhasedUpdate: b.name == "update"})
 	})
 	if err != nil {
 		b.beginErr = errors.Join(journal.ErrPersistence, err)
@@ -91,6 +92,7 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 	b.witness = plan.Witness
 	b.policy = &plan.Policy
 	b.restored = item.Calls > 0
+	b.phasedUpdate = plan.PhasedUpdate
 	b.calls = int(item.Calls)
 	if item.Done {
 		b.recorded = &recordedScheduleResult{}
@@ -104,7 +106,8 @@ func (b *scheduleOperation) persistResult(err error) error {
 	if b.cancelDeadline != nil {
 		defer b.cancelDeadline()
 	}
-	if b.journal == nil || b.recorded != nil || b.beginErr != nil || (b.parentCtx != nil && b.parentCtx.Err() != nil) {
+	if b.journal == nil || b.recorded != nil || b.beginErr != nil || (b.parentCtx != nil && b.parentCtx.Err() != nil) ||
+		(b.phasedUpdate && errors.Is(err, journal.ErrPersistence)) {
 		return err
 	}
 	result := recordedScheduleResult{Outcome: b.outcome}

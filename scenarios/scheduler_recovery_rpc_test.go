@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/journal"
 	commonpb "go.temporal.io/api/common/v1"
 	schedulepb "go.temporal.io/api/schedule/v1"
 	"go.temporal.io/api/serviceerror"
@@ -92,10 +93,18 @@ func (s *scheduleRecoveryService) CreateSchedule(ctx context.Context, r *workflo
 	}
 	return &workflowservice.CreateScheduleResponse{}, nil
 }
-func (s *scheduleRecoveryService) DescribeSchedule(_ context.Context, r *workflowservice.DescribeScheduleRequest) (*workflowservice.DescribeScheduleResponse, error) {
+func (s *scheduleRecoveryService) DescribeSchedule(ctx context.Context, r *workflowservice.DescribeScheduleRequest) (*workflowservice.DescribeScheduleResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	f := s.fault("describe")
+	if f.block {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	if f.cancel != nil {
+		f.cancel()
+		return nil, status.Error(codes.Canceled, "parent canceled during Describe")
+	}
 	if s.mutateDescribe != nil && s.calls["describe"] == s.mutationAt {
 		record := s.records[r.ScheduleId]
 		s.mutateDescribe(record.schedule)
@@ -126,7 +135,7 @@ func (s *scheduleRecoveryService) DescribeSchedule(_ context.Context, r *workflo
 	}
 	return &workflowservice.DescribeScheduleResponse{Schedule: proto.Clone(record.schedule).(*schedulepb.Schedule), Memo: memo, Info: &schedulepb.ScheduleInfo{}}, nil
 }
-func (s *scheduleRecoveryService) UpdateSchedule(_ context.Context, r *workflowservice.UpdateScheduleRequest) (*workflowservice.UpdateScheduleResponse, error) {
+func (s *scheduleRecoveryService) UpdateSchedule(ctx context.Context, r *workflowservice.UpdateScheduleRequest) (*workflowservice.UpdateScheduleResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.updates = append(s.updates, proto.Clone(r).(*workflowservice.UpdateScheduleRequest))
@@ -151,6 +160,10 @@ func (s *scheduleRecoveryService) UpdateSchedule(_ context.Context, r *workflows
 	if f.cancel != nil {
 		f.cancel()
 		return nil, status.Error(codes.Canceled, "parent canceled after update")
+	}
+	if f.block {
+		<-ctx.Done()
+		return nil, ctx.Err()
 	}
 	if f.code != codes.OK {
 		return nil, status.Error(f.code, "scripted update response loss or rejection")
@@ -402,6 +415,70 @@ func TestSchedulerOperationRecoveryCancellation(t *testing.T) {
 			require.Equal(t, tc.describes, s.calls["describe"])
 			require.Empty(t, s.deletes)
 			require.Len(t, s.records, tc.remaining)
+		})
+	}
+}
+
+func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
+	for _, mode := range []string{"unissued after read deadline", "resume before issue", "lost write acknowledgement"} {
+		t.Run(mode, func(t *testing.T) {
+			c, service, _, logger := scheduleRecoveryRPCFixture(t)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			switch mode {
+			case "unissued after read deadline":
+				service.faults["describe"] = map[int]scheduleFault{1: {block: true}, 2: {block: true}, 3: {block: true}}
+			case "resume before issue":
+				service.faults["describe"] = map[int]scheduleFault{1: {cancel: cancel}}
+			case "lost write acknowledgement":
+				service.faults["update"] = map[int]scheduleFault{1: {block: true, apply: true}}
+			}
+			executor := new(SchedulerExecutor)
+			info := scheduleRecoveryInfo(c, logger, true, map[string]string{SchedulerRecoveryTimeoutFlag: "900ms", SchedulerRecoveryBackoffFlag: "1ms"})
+			require.NoError(t, executor.Configure(info))
+			backend := &scenarioJournal{}
+			session, err := journal.Claim(t.Context(), backend, "lane", 1)
+			require.NoError(t, err)
+			require.NoError(t, session.Begin(t.Context(), 1))
+			run := info.NewRun(1)
+			run.Journal = session
+			created, err := executor.createJournaledSchedule(t.Context(), run, 0)
+			require.NoError(t, err)
+			key := "schedule/0/update/0"
+
+			err = created.operations.update(ctx)
+			item := session.State().Pending.Items[key]
+			switch mode {
+			case "unissued after read deadline":
+				require.ErrorIs(t, err, errScheduleRecoveryBudget)
+				require.True(t, item.Done)
+				require.False(t, item.Unresolved)
+				require.Zero(t, item.Calls)
+				require.NoError(t, session.Commit(t.Context(), journal.Failed, "preparation failed"))
+			case "resume before issue":
+				require.ErrorIs(t, err, context.Canceled)
+				require.False(t, item.Done)
+				require.Zero(t, item.Calls)
+				run.Journal, err = journal.Claim(t.Context(), backend, "lane", 2)
+				require.NoError(t, err)
+				restored, err := executor.createJournaledSchedule(t.Context(), run, 0)
+				require.NoError(t, err)
+				require.NoError(t, restored.operations.update(t.Context()))
+				require.NoError(t, run.Journal.Commit(t.Context(), journal.Succeeded, ""))
+			case "lost write acknowledgement":
+				require.NoError(t, err)
+				require.True(t, item.Done)
+				require.False(t, item.Unresolved)
+				require.Contains(t, string(item.Observation), string(outcomeObservedWitness))
+				require.NoError(t, session.Commit(t.Context(), journal.Succeeded, ""))
+			}
+			service.mu.Lock()
+			defer service.mu.Unlock()
+			if mode == "unissued after read deadline" {
+				require.Empty(t, service.updates)
+			} else {
+				require.Len(t, service.updates, 1)
+			}
 		})
 	}
 }

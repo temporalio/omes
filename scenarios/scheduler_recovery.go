@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/temporalio/omes/loadgen/journal"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen/journal"
 	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
@@ -71,6 +72,7 @@ type scheduleOperation struct {
 	beginErr       error
 	recorded       *recordedScheduleResult
 	restored       bool
+	phasedUpdate   bool
 	cancelDeadline context.CancelFunc
 	parentCtx      context.Context
 
@@ -88,7 +90,7 @@ func (r *scheduleRecovery) operation(ctx context.Context, name string) (*schedul
 	parentCtx := ctx
 	ctx, cancel := context.WithTimeout(ctx, r.recoveryPolicy().Timeout)
 	// Deletion may clean up after EndAt, but cannot outlive the caller.
-	if name != "delete" {
+	if name != "delete" && !(r.journal != nil && name == "update") {
 		var endCancel context.CancelFunc
 		ctx, endCancel = context.WithDeadline(ctx, r.options.Spec.EndAt)
 		parentCancel := cancel
@@ -101,6 +103,10 @@ func (r *scheduleRecovery) operation(ctx context.Context, name string) (*schedul
 }
 
 func (b *scheduleOperation) call(fn func(context.Context) error) error {
+	return b.callTarget(true, fn)
+}
+
+func (b *scheduleOperation) callTarget(recordIssue bool, fn func(context.Context) error) error {
 	if b.beginErr != nil {
 		return b.beginErr
 	}
@@ -122,7 +128,7 @@ func (b *scheduleOperation) call(fn func(context.Context) error) error {
 	if err := b.ctx.Err(); err != nil {
 		return errors.Join(b.lastErr, err)
 	}
-	if b.journal != nil {
+	if recordIssue && b.journal != nil {
 		if err := b.journal.Issue(b.parentCtx, b.key); err != nil {
 			return errors.Join(journal.ErrPersistence, err)
 		}
@@ -135,7 +141,7 @@ func (b *scheduleOperation) call(fn func(context.Context) error) error {
 	}
 	b.calls++
 	err := fn(b.ctx)
-	if contextErr := b.ctx.Err(); contextErr != nil {
+	if contextErr := b.ctx.Err(); contextErr != nil && !(b.phasedUpdate && err == nil) {
 		err = errors.Join(err, contextErr)
 	}
 	if err != nil {
@@ -309,6 +315,9 @@ func (r *scheduleRecovery) update(ctx context.Context) (err error) {
 		b.outcome = b.recorded.Outcome
 		return b.recorded.err()
 	}
+	if b.phasedUpdate {
+		return r.updateJournaled(b)
+	}
 	witness := "omes-update-" + uuid.NewString()
 	if b.journal != nil {
 		witness = b.witness
@@ -353,6 +362,78 @@ func (r *scheduleRecovery) update(ctx context.Context) (err error) {
 				b.outcome = outcomeObservedWitness
 				return nil
 			}
+		}
+	}
+}
+
+func (r *scheduleRecovery) updateJournaled(b *scheduleOperation) error {
+	if b.restored {
+		return r.recoverUpdate(b)
+	}
+	b.outcome = outcomeNotIssued
+	b.logger = b.logger.With("mutation_id", b.witness)
+	policy := b.recoveryPolicy()
+	deadline, _ := b.ctx.Deadline()
+	attemptBudget := policy.Timeout / 3
+	writeDeadline := deadline.Add(-attemptBudget)
+	if r.options.Spec.EndAt.Before(writeDeadline) {
+		writeDeadline = r.options.Spec.EndAt
+	}
+	for {
+		if err := b.ctx.Err(); err != nil {
+			return errors.Join(b.lastErr, err)
+		}
+		if b.calls >= max(1, policy.Calls-1) || !time.Now().Before(writeDeadline) {
+			return errors.Join(b.lastErr, errScheduleRecoveryBudget)
+		}
+		err := b.callTarget(false, func(ctx context.Context) error {
+			ctx, cancel := context.WithDeadline(ctx, writeDeadline)
+			defer cancel()
+			ctx, stop := context.WithTimeout(ctx, attemptBudget)
+			defer stop()
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			return r.api.GetHandle(ctx, r.options.ID).Update(ctx, client.ScheduleUpdateOptions{DoUpdate: func(in client.ScheduleUpdateInput) (*client.ScheduleUpdate, error) {
+				update, err := r.witnessedUpdate(in.Description, b.witness)
+				if err != nil {
+					return nil, err
+				}
+				if err = ctx.Err(); err != nil {
+					return nil, err
+				}
+				// The SDK sends the mutation only after this callback returns.
+				if err = b.journal.Issue(b.parentCtx, b.key); err != nil {
+					return nil, err
+				}
+				if err = ctx.Err(); err != nil {
+					return nil, err
+				}
+				b.outcome = outcomeUnresolved
+				return update, nil
+			}})
+		})
+		if err == nil {
+			b.outcome = outcomeAcknowledged
+			return nil
+		}
+		retryable := b.ctx.Err() == nil && (transientScheduleError(err) || errors.Is(err, context.DeadlineExceeded))
+		if b.outcome == outcomeUnresolved {
+			writeErr := fmt.Errorf("schedule update mutation: %w", err)
+			if !retryable {
+				return writeErr
+			}
+			if err := r.recoverUpdate(b); err != nil {
+				return errors.Join(writeErr, err)
+			}
+			return nil
+		}
+		if scheduleMissing(err) {
+			b.outcome = outcomeNotFoundCompatible
+			return nil
+		}
+		if !retryable {
+			return fmt.Errorf("schedule update preparation: %w", err)
 		}
 	}
 }
