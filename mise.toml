@@ -26,7 +26,7 @@ rust = "1.1.0"
 typescript = "1.24.0"
 
 [_.server]
-ref = "042505361519608454d4a016b3d0971c81c724c8"
+ref = "de3cfe9d19c05030674e27f95026287911e43d8b"
 
 [tasks."sync-sdk:go"]
 description = "Sync Go SDK dependencies to the version in mise.toml"

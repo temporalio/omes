@@ -1469,10 +1469,13 @@ func TestKitchenSink(t *testing.T) {
 				}),
 				&Action{Variant: &Action_AwaitPendingActions{AwaitPendingActions: &AwaitPendingActions{}}},
 			)}},
+			// The repeated Update is never written to the target's history, so its operation links
+			// to the original Update's accepted event by event ID (temporalio/temporal#11925) rather
+			// than by its own request ID.
 			historyMatcher: PartialHistoryMatcher(`
 				NexusOperationStarted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}
 				NexusOperationCompleted
-				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","requestIdRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
+				NexusOperationCompleted {"links":[{"workflowEvent":{"workflowId":"nexus-sync-update-target","eventRef":{"eventType":"EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED"}}}]}`),
 			expectedUnsupportedErrs: nexusWorkflowActionUnsupportedSDKs,
 		},
 		{
