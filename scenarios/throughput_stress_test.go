@@ -743,6 +743,32 @@ func loadTestInfo(iterations, concurrent int) loadgen.ScenarioInfo {
 }
 
 func TestRunLoads(t *testing.T) {
+	t.Run("JournaledMainDrainsAfterOperatorFailure", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			started := make(chan struct{})
+			sideFailure := errors.New("operator effect unresolved")
+			info := loadTestInfo(1, 1)
+			info.Recovery = &loadgen.RecoveryOptions{DrainEnd: time.Now().Add(time.Minute)}
+			main := loadgen.ExecutorFunc(func(ctx context.Context, info loadgen.ScenarioInfo) error {
+				close(started)
+				select {
+				case <-info.Recovery.Stop:
+					return ctx.Err()
+				case <-ctx.Done():
+					return context.Cause(ctx)
+				}
+			})
+			side := independentLoad{Name: "operator", DrainTimeout: time.Minute, Run: func(context.Context, <-chan struct{}) error {
+				<-started
+				return sideFailure
+			}}
+
+			result, err := runLoads(t.Context(), info, main, []independentLoad{side})
+			require.NoError(t, result.err)
+			require.ErrorIs(t, err, sideFailure)
+		})
+	})
+
 	t.Run("MainProgressAndDrain", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			started := make(chan struct{}, 2)

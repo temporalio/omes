@@ -92,9 +92,12 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 	if e.Journal != nil {
 		service = &journalOperatorService{WorkflowServiceClient: service, session: e.Journal}
 	}
-	// Interrupted journaled sequences remain available to their next driver.
 	defer func() {
-		if retErr == nil || errors.Is(retErr, journal.ErrPersistence) || (e.Journal != nil && (ctx.Err() != nil || target.runID == "")) {
+		if retErr == nil || errors.Is(retErr, journal.ErrPersistence) {
+			return
+		}
+		if e.Journal != nil && (ctx.Err() != nil || target.runID == "" ||
+			(!knownOperatorFailure(retErr) && !errors.Is(retErr, journal.ErrUnresolved))) {
 			return
 		}
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorCommandCleanupTimeout)
@@ -374,18 +377,45 @@ func waitForStandaloneActivityState(
 		}
 		deadline = recordedDeadline
 	}
-	ctx, cancel := context.WithDeadline(ctx, deadline)
+	parent := ctx
+	ctx, cancel := context.WithDeadline(parent, deadline)
 	defer cancel()
 
 	var longPollToken []byte
 	var lastObserved *activitypb.ActivityExecutionInfo
+	var firstReadError error
+	phaseError := func(err error) error {
+		if journaled && parent.Err() == nil && ctx.Err() != nil {
+			return errors.Join(journal.ErrUnresolved, firstReadError, err)
+		}
+		return errors.Join(firstReadError, err)
+	}
 	for {
-		response, err := service.DescribeActivityExecution(ctx,
+		callCtx := ctx
+		cancelCall := func() {}
+		if journaled {
+			callCtx, cancelCall = context.WithTimeout(ctx, 5*time.Second)
+		}
+		response, err := service.DescribeActivityExecution(callCtx,
 			&workflowservicepb.DescribeActivityExecutionRequest{
 				Namespace: target.namespace, ActivityId: target.activityID, RunId: target.runID,
 				LongPollToken: longPollToken,
 			})
+		cancelCall()
 		if err != nil {
+			if journaled && ctx.Err() == nil && retryableOperatorCall(err) {
+				if firstReadError == nil {
+					firstReadError = err
+				}
+				longPollToken = nil
+				select {
+				case <-time.After(100 * time.Millisecond):
+					continue
+				case <-ctx.Done():
+					err = ctx.Err()
+				}
+			}
+			err = phaseError(err)
 			if lastObserved == nil {
 				return nil, fmt.Errorf(
 					"describe standalone activity namespace=%q activity_id=%q run_id=%q: %w",
@@ -408,12 +438,15 @@ func waitForStandaloneActivityState(
 				case <-time.After(100 * time.Millisecond):
 					continue
 				case <-ctx.Done():
-					return nil, fmt.Errorf("wait for standalone activity state: %w", ctx.Err())
+					return nil, fmt.Errorf("wait for standalone activity state: %w", phaseError(ctx.Err()))
 				}
 			}
 			return nil, fmt.Errorf(
 				"DescribeActivityExecution returned no activity info for namespace=%q activity_id=%q run_id=%q",
 				target.namespace, target.activityID, target.runID)
+		}
+		if journaled && info.GetRunId() != target.runID {
+			return nil, fmt.Errorf("operator phase %s returned a different activity run: %w", phase.name, journal.ErrConflict)
 		}
 		lastObserved = info
 		if matches(info) {
@@ -422,7 +455,7 @@ func waitForStandaloneActivityState(
 				if err != nil {
 					return nil, err
 				}
-				if err = phase.session.Observe(ctx, "operator/state/"+phase.name, data); err != nil {
+				if err = phase.session.Observe(parent, "operator/state/"+phase.name, data); err != nil {
 					return nil, err
 				}
 			}

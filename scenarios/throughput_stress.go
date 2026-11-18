@@ -628,7 +628,25 @@ func runLoads(ctx context.Context, info loadgen.ScenarioInfo, mainLoad loadgen.E
 	loopCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	stopNewIterations := make(chan struct{})
-	running, results := startIndependentLoads(loopCtx, loads, stopNewIterations, cancel)
+	onSideFailure := cancel
+	if info.Recovery != nil {
+		recovery := *info.Recovery
+		mainStop := make(chan struct{})
+		stopMain := sync.OnceFunc(func() { close(mainStop) })
+		onSideFailure = func(error) { stopMain() }
+		if recovery.Stop != nil {
+			go func(stop <-chan struct{}) {
+				select {
+				case <-stop:
+					stopMain()
+				case <-loopCtx.Done():
+				}
+			}(recovery.Stop)
+		}
+		recovery.Stop = mainStop
+		info.Recovery = &recovery
+	}
+	running, results := startIndependentLoads(loopCtx, loads, stopNewIterations, onSideFailure)
 
 	mainErr := mainLoad.Run(loopCtx, info)
 	mainResult := mainLoadResult{finishedAt: time.Now(), err: mainErr}

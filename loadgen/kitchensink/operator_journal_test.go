@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/loadgen/journal"
@@ -37,6 +38,7 @@ type interruptedOperatorService struct {
 	workflowservicepb.WorkflowServiceClient
 	cancel                                         context.CancelFunc
 	paused                                         bool
+	pausedReadFailures                             int
 	starts, pauses, unpauses, terminations, resets int
 	resetIDs                                       []string
 }
@@ -45,7 +47,14 @@ func (s *interruptedOperatorService) StartActivityExecution(context.Context, *wo
 	s.starts++
 	return &workflowservicepb.StartActivityExecutionResponse{RunId: "original-run"}, nil
 }
-func (s *interruptedOperatorService) DescribeActivityExecution(context.Context, *workflowservicepb.DescribeActivityExecutionRequest, ...grpc.CallOption) (*workflowservicepb.DescribeActivityExecutionResponse, error) {
+func (s *interruptedOperatorService) DescribeActivityExecution(ctx context.Context, _ *workflowservicepb.DescribeActivityExecutionRequest, _ ...grpc.CallOption) (*workflowservicepb.DescribeActivityExecutionResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s.paused && s.pausedReadFailures > 0 {
+		s.pausedReadFailures--
+		return nil, context.DeadlineExceeded
+	}
 	info := &activitypb.ActivityExecutionInfo{RunId: "original-run", Status: enumspb.ACTIVITY_EXECUTION_STATUS_RUNNING, RunState: enumspb.PENDING_ACTIVITY_STATE_STARTED}
 	if s.paused {
 		info.Status = enumspb.ACTIVITY_EXECUTION_STATUS_PAUSED
@@ -187,4 +196,41 @@ func TestJournaledOperatorNeverReplaysUnprovenReset(t *testing.T) {
 	require.ErrorIs(t, err, journal.ErrUnresolved)
 	require.Equal(t, 1, service.resets)
 	require.True(t, backend.state.Pending.Items["operator/reset"].Unresolved)
+}
+
+func TestJournaledOperatorRecoversPauseVerification(t *testing.T) {
+	for _, expired := range []bool{false, true} {
+		name := "transient read"
+		if expired {
+			name = "expired phase"
+		}
+		t.Run(name, func(t *testing.T) {
+			backend := &operatorJournal{state: journal.New("lane")}
+			session := operatorSession(t, backend, 1)
+			service := &interruptedOperatorService{}
+			if expired {
+				_, err := session.Plan(t.Context(), "operator/state/paused", time.Now().Add(-time.Second), func() ([]byte, error) { return []byte("paused"), nil })
+				require.NoError(t, err)
+			} else {
+				service.pausedReadFailures = 1
+			}
+			action := &DoStandaloneActivityOperatorCommands{CommandType: DoStandaloneActivityOperatorCommands_COMMAND_TYPE_PAUSE, Activity: &ExecuteActivityAction{TaskQueue: "queue", ActivityType: &ExecuteActivityAction_Noop{}}}
+			executor := &ClientActionsExecutor{Client: journaledOperatorClient{service: service}, Namespace: "namespace", Journal: session}
+
+			err := executor.executeStandaloneActivityOperatorCommands(t.Context(), action)
+			require.Equal(t, 1, service.starts)
+			require.Equal(t, 1, service.pauses)
+			if expired {
+				require.ErrorIs(t, err, journal.ErrUnresolved)
+				require.Equal(t, 1, service.terminations)
+				require.Zero(t, service.unpauses)
+				require.False(t, backend.state.Pending.Items["operator/result"].Done)
+			} else {
+				require.NoError(t, err)
+				require.Zero(t, service.terminations)
+				require.Equal(t, 1, service.unpauses)
+				require.True(t, backend.state.Pending.Items["operator/result"].Done)
+			}
+		})
+	}
 }
