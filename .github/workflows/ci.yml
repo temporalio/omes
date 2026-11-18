@@ -299,10 +299,25 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: true
+      # The Rust worker pins an exact temporalio-sdk version and the Rust SDK makes
+      # breaking API changes on main between releases, so build against the tag
+      # matching the pinned version. Other SDKs use their default branch.
+      - name: Determine ${{ matrix.sdk }} SDK ref
+        id: sdk-ref
+        run: |
+          if [ "${{ matrix.sdk }}" = "rust" ]; then
+            version=$(sed -nE 's/^temporalio-sdk = .*version = "=([^"]+)".*/\1/p' workers/rust/Cargo.toml)
+            if [ -z "$version" ]; then
+              echo "Could not find pinned temporalio-sdk version in workers/rust/Cargo.toml" >&2
+              exit 1
+            fi
+            echo "ref=v${version}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout ${{ matrix.sdk }} SDK
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: temporalio/${{ matrix.sdk_repo }}
+          ref: ${{ steps.sdk-ref.outputs.ref }}
           submodules: recursive
           path: checked-out-sdk
       - name: Install mise
