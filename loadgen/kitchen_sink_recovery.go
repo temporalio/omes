@@ -77,10 +77,12 @@ func (k KitchenSinkExecutor) executeJournaled(ctx context.Context, run *Run) err
 		}
 		run.kitchenSinkExecution = execution
 	}
-	if err := run.Journal.Issue(ctx, "workflow"); err != nil {
-		return err
-	}
 	executor := run.kitchenSinkExecution.executor
+	if executor.Handle == nil {
+		if err := run.Journal.Issue(ctx, "workflow"); err != nil {
+			return err
+		}
+	}
 	if err := executor.Start(ctx, nil); err != nil {
 		return err
 	}
@@ -96,7 +98,9 @@ func (k KitchenSinkExecutor) executeJournaled(ctx context.Context, run *Run) err
 			return err
 		}
 	}
-	resultErr := executor.Handle.Get(ctx, nil)
+	// Get follows the execution chain and advances the handle's RunID.
+	resultHandle := executor.Client.GetWorkflow(ctx, executor.WorkflowOptions.ID, string(binding.Plan))
+	resultErr := resultHandle.Get(ctx, nil)
 	var closedFailure *temporal.WorkflowExecutionError
 	if resultErr != nil && !errors.As(resultErr, &closedFailure) {
 		return resultErr

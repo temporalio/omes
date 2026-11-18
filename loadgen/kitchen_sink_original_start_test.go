@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/temporalio/omes/loadgen/journal"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
@@ -106,4 +107,52 @@ func TestKitchenSinkOriginalStartRejectsClientSequence(t *testing.T) {
 			require.Empty(t, cl.ids, "invalid recovery must be rejected before starting a workflow")
 		})
 	}
+}
+
+type followingResultClient struct {
+	client.Client
+	starts int
+	reads  []string
+}
+
+func (c *followingResultClient) ExecuteWorkflow(_ context.Context, opts client.StartWorkflowOptions, _ any, _ ...any) (client.WorkflowRun, error) {
+	c.starts++
+	return &followingResultHandle{id: opts.ID, runID: "original", client: c}, nil
+}
+
+func (c *followingResultClient) GetWorkflow(_ context.Context, workflowID, runID string) client.WorkflowRun {
+	return &followingResultHandle{id: workflowID, runID: runID, client: c}
+}
+
+type followingResultHandle struct {
+	client.WorkflowRun
+	id, runID string
+	client    *followingResultClient
+}
+
+func (h *followingResultHandle) GetID() string    { return h.id }
+func (h *followingResultHandle) GetRunID() string { return h.runID }
+
+func (h *followingResultHandle) Get(context.Context, any) error {
+	h.client.reads = append(h.client.reads, h.runID)
+	h.runID = "continuation"
+	if len(h.client.reads) == 1 {
+		return serviceerror.NewDeadlineExceeded("continuation result read interrupted")
+	}
+	return nil
+}
+
+func TestJournaledKitchenSinkRetryKeepsOriginalRunBinding(t *testing.T) {
+	backend := &testJournal{}
+	cl := &followingResultClient{}
+	info := recoveryInfo(backend)
+	info.Client = cl
+	info.Namespace = "default"
+	info.Configuration.MaxIterationAttempts = 2
+	executor := KitchenSinkExecutor{TestInput: &kitchensink.TestInput{WorkflowInput: &kitchensink.WorkflowInput{}}}
+
+	require.NoError(t, executor.Run(t.Context(), info))
+	require.Equal(t, 1, cl.starts)
+	require.Equal(t, []string{"original", "original"}, cl.reads)
+	require.Equal(t, journal.Counts{Allocated: 1, Succeeded: 1}, backend.states["lane"].Counts)
 }
