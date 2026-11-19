@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/clioptions"
@@ -51,6 +53,19 @@ func TestValidateInputClassifiesBadInputAsUsageErrors(t *testing.T) {
 				r.duration = time.Minute
 			},
 			wantMsg: "cannot be combined",
+		},
+		{
+			name:    "result interval without file",
+			mutate:  func(r *scenarioRunner) { r.exportResultInterval = time.Second },
+			wantMsg: "--export-result-interval requires --export-result-file",
+		},
+		{
+			name: "negative result interval",
+			mutate: func(r *scenarioRunner) {
+				r.exportResultFile = "result.json"
+				r.exportResultInterval = -time.Second
+			},
+			wantMsg: "--export-result-interval must not be negative",
 		},
 		{
 			name:    "option without equals",
@@ -115,7 +130,8 @@ func TestResultFileFlags(t *testing.T) {
 		runScenarioWithWorkerCmd(),
 	} {
 		require.NotNil(t, cmd.Flags().Lookup("export-result-file"))
-		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json"}))
+		require.NotNil(t, cmd.Flags().Lookup("export-result-interval"))
+		require.NoError(t, cmd.ParseFlags([]string{"--export-result-file", "result.json", "--export-result-interval", "1s"}))
 	}
 }
 
@@ -224,7 +240,7 @@ func TestRunResultOnPanic(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
 
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -240,8 +256,7 @@ func TestRunResultOnPanic(t *testing.T) {
 					executor.state = 1
 					panic("scenario panic")
 				}
-				runner.state = scenarioState(executor)
-				_ = executor.Run(ctx, loadgen.ScenarioInfo{})
+				_ = runner.runWithSnapshots(ctx, executor, loadgen.ScenarioInfo{})
 			})
 
 			data, err := os.ReadFile(path)
@@ -305,4 +320,175 @@ func TestFinishScenarioState(t *testing.T) {
 }`, string(data))
 		})
 	}
+}
+
+func TestRunningSnapshots(t *testing.T) {
+	run := func(t *testing.T, path string, interval time.Duration, executor *steppedExecutor) <-chan error {
+		runner := &scenarioRunner{
+			scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: interval},
+			logger:            zap.NewNop().Sugar(),
+			counter:           &loadgen.RunCounter{},
+		}
+		done := make(chan error, 1)
+		go func() {
+			var err error
+			defer func() { done <- err }()
+			defer runner.finish(t.Context(), &err)
+			info := loadgen.ScenarioInfo{Configuration: loadgen.RunConfiguration{Counter: runner.counter}}
+			err = runner.runWithSnapshots(t.Context(), executor, info)
+		}()
+		return done
+	}
+
+	t.Run("rewrites the file on every tick with current counts and state", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, path, time.Second, executor)
+
+			failures := []loadgen.IterationFailure{}
+			for i, counts := range []loadgen.IterationCounts{
+				{Started: 1},
+				{Started: 2, Succeeded: 1},
+				{Started: 3, Succeeded: 1, Failed: 1},
+			} {
+				time.Sleep(time.Second)
+				synctest.Wait()
+				require.Equal(t, runResult{
+					Outcome: "running", Iterations: &counts, Failures: failures,
+					ScenarioState: map[string]any{"completed": float64(i)},
+				}, readResult(t, path))
+
+				var iterationErr error
+				if i == 1 {
+					iterationErr = errors.New("iteration failed")
+					failures = append(failures, loadgen.IterationFailure{Iteration: 2, Attempt: 1, Error: "iteration 2 failed: iteration failed"})
+				}
+				executor.step <- iterationErr
+			}
+
+			err := <-done
+			require.Error(t, err)
+			final := readResult(t, path)
+			require.Equal(t, runResult{
+				Outcome: "failed", Error: err.Error(),
+				Iterations:    &loadgen.IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
+				Failures:      failures,
+				ScenarioState: map[string]any{"completed": float64(3)},
+			}, final)
+
+			time.Sleep(10 * time.Second)
+			synctest.Wait()
+			require.Equal(t, final, readResult(t, path))
+		})
+	})
+
+	t.Run("final write waits for an in-flight snapshot", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			release := make(chan struct{})
+			first := true
+			executor := &steppedExecutor{
+				step: make(chan error),
+				snapshot: func() any {
+					if first {
+						first = false
+						<-release
+					}
+					return "final"
+				},
+			}
+			done := run(t, path, time.Second, executor)
+
+			time.Sleep(time.Second)
+			synctest.Wait()
+			close(executor.step)
+			synctest.Wait()
+
+			close(release)
+			require.NoError(t, <-done)
+			synctest.Wait()
+			require.Equal(t, runResult{
+				Outcome:       "passed",
+				Iterations:    &loadgen.IterationCounts{Started: 3, Succeeded: 3},
+				Failures:      []loadgen.IterationFailure{},
+				ScenarioState: "final",
+			}, readResult(t, path))
+		})
+	})
+
+	t.Run("no snapshots without an interval", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "result.json")
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, path, 0, executor)
+
+			time.Sleep(time.Hour)
+			synctest.Wait()
+			require.NoFileExists(t, path)
+
+			close(executor.step)
+			require.NoError(t, <-done)
+			require.FileExists(t, path)
+		})
+	})
+
+	t.Run("snapshot write error does not fail the run", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "missing", "result.json")
+			executor := &steppedExecutor{step: make(chan error)}
+			done := run(t, path, time.Second, executor)
+
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.NoError(t, os.Mkdir(filepath.Dir(path), 0700))
+
+			time.Sleep(time.Second)
+			synctest.Wait()
+			require.Equal(t, "running", readResult(t, path).Outcome)
+
+			close(executor.step)
+			require.NoError(t, <-done)
+			require.Equal(t, "passed", readResult(t, path).Outcome)
+		})
+	})
+}
+
+type steppedExecutor struct {
+	step      chan error
+	completed int
+	snapshot  func() any
+}
+
+func (e *steppedExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	info.Logger = zap.NewNop().Sugar()
+	info.MetricsHandler = client.MetricsNopHandler
+	info.Configuration = loadgen.RunConfiguration{
+		Iterations: 3, MaxConcurrent: 1,
+		ContinueOnIterationFailure:    true,
+		DoNotRegisterSearchAttributes: true,
+		Counter:                       info.Configuration.Counter,
+	}
+	executor := &loadgen.GenericExecutor{Execute: func(context.Context, *loadgen.Run) error {
+		err := <-e.step
+		e.completed++
+		return err
+	}}
+	return executor.Run(ctx, info)
+}
+
+func (e *steppedExecutor) Snapshot() any {
+	if e.snapshot != nil {
+		return e.snapshot()
+	}
+	return map[string]int{"completed": e.completed}
+}
+
+func readResult(t *testing.T, path string) runResult {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var result runResult
+	require.NoError(t, json.Unmarshal(data, &result))
+	return result
 }
