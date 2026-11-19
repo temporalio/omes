@@ -208,3 +208,25 @@ go run ./cmd/omes run-scenario-with-worker \
   `--option internal-iterations`, which sets how much work happens *inside* one iteration; `--iterations`
   sets how many iterations run. Setting the wrong one produces a valid run at the wrong load rather than
   an error, so check `list-scenarios` when a name looks familiar.
+
+## Machine-readable run results
+
+Use `--export-result-file <path>` with `run-scenario` or `run-scenario-with-worker`:
+
+```json
+{
+  "outcome": "failed",
+  "error": "iteration 2 failed: workflow failed",
+  "iterations": {"started": 2, "succeeded": 1, "failed": 1},
+  "failures": [{"iteration": 2, "attempt": 1, "error": "workflow failed"}],
+  "scenarioState": {"completed": 1}
+}
+```
+
+- Written once on exit, including validation, connection, and worker-startup failures.
+- Outcomes: `passed` succeeded; `failed` has run/iteration errors; `timedOut` exceeded the run timeout;
+  `interrupted` was cancelled.
+- `iterations` matches run logs and counts each scenario iteration once, however many attempts it took.
+- `failures` retains up to 100 terminal failures after retries; messages keep at most 1 KiB plus a
+  truncation marker.
+- `scenarioState` contains the scenario's own state, or null if unsupported.
