@@ -51,6 +51,7 @@ type scheduleOperationPlan struct {
 	Witness      string
 	Policy       scheduleRecoveryPolicy
 	PhasedUpdate bool `json:",omitempty"`
+	WitnessCalls int  `json:",omitempty"`
 }
 
 type recordedScheduleResult struct {
@@ -78,7 +79,11 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 	b.key = fmt.Sprintf("%s/%s/%d", r.journalPrefix, b.name, ordinal)
 	deadline, _ := b.ctx.Deadline()
 	item, err := b.journal.Plan(ctx, b.key, deadline, func() ([]byte, error) {
-		return json.Marshal(scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy(), PhasedUpdate: b.name == "update"})
+		plan := scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy(), PhasedUpdate: b.name == "update"}
+		if plan.PhasedUpdate {
+			plan.WitnessCalls = max(6, plan.Policy.Calls)
+		}
+		return json.Marshal(plan)
 	})
 	if err != nil {
 		b.beginErr = errors.Join(journal.ErrPersistence, err)
@@ -93,7 +98,12 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 	b.policy = &plan.Policy
 	b.restored = item.Calls > 0
 	b.phasedUpdate = plan.PhasedUpdate
+	b.witnessCalls = plan.WitnessCalls
 	b.calls = int(item.Calls)
+	if b.witnessCalls > 0 {
+		// The first persisted issue belongs to the mutation. Later issues count witness reads.
+		b.witnessReads = max(0, b.calls-1)
+	}
 	if item.Done {
 		b.recorded = &recordedScheduleResult{}
 		if err := json.Unmarshal(item.Observation, b.recorded); err != nil {
@@ -130,6 +140,9 @@ func (b *scheduleOperation) persistResult(err error) error {
 	return err
 }
 func (r *scheduleRecovery) recoverUpdate(b *scheduleOperation) error {
+	if b.witnessCalls > 0 {
+		return r.reconcileUpdate(b)
+	}
 	for {
 		d, err := r.lookup(b)
 		if err != nil {
@@ -140,4 +153,49 @@ func (r *scheduleRecovery) recoverUpdate(b *scheduleOperation) error {
 			return nil
 		}
 	}
+}
+
+func (r *scheduleRecovery) reconcileUpdate(b *scheduleOperation) error {
+	deadline, _ := b.ctx.Deadline()
+	var lastErr error
+	for b.witnessReads < b.witnessCalls {
+		if err := b.ctx.Err(); err != nil {
+			return errors.Join(errScheduleUpdateUnknown, lastErr, err)
+		}
+		remaining := b.witnessCalls - b.witnessReads
+		if b.witnessReads > 0 {
+			timer := time.NewTimer(max(b.recoveryPolicy().Backoff, time.Until(deadline)/time.Duration(remaining+1)))
+			select {
+			case <-timer.C:
+			case <-b.ctx.Done():
+				timer.Stop()
+				return errors.Join(errScheduleUpdateUnknown, lastErr, b.ctx.Err())
+			}
+		}
+		if err := b.journal.Issue(b.ctx, b.key); err != nil {
+			return errors.Join(journal.ErrPersistence, err)
+		}
+		b.witnessReads++
+		readCtx, cancel := context.WithTimeout(b.ctx, time.Until(deadline)/time.Duration(remaining+1))
+		d, err := r.api.GetHandle(readCtx, r.options.ID).Describe(readCtx)
+		cancel()
+		if err != nil {
+			if ctxErr := b.ctx.Err(); ctxErr != nil {
+				return errors.Join(errScheduleUpdateUnknown, err, ctxErr)
+			}
+			lastErr = err
+			if transientScheduleError(err) || errors.Is(err, context.DeadlineExceeded) {
+				continue
+			}
+			return errors.Join(errScheduleUpdateUnknown, err)
+		}
+		if err := r.check(d); err != nil {
+			return errors.Join(errScheduleUpdateUnknown, err)
+		}
+		if d.Schedule.State != nil && d.Schedule.State.Note == b.witness {
+			b.outcome = outcomeObservedWitness
+			return nil
+		}
+	}
+	return errors.Join(errScheduleUpdateUnknown, lastErr, errScheduleRecoveryBudget)
 }

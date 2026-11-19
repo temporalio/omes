@@ -73,6 +73,8 @@ type scheduleOperation struct {
 	recorded       *recordedScheduleResult
 	restored       bool
 	phasedUpdate   bool
+	witnessCalls   int
+	witnessReads   int
 	cancelDeadline context.CancelFunc
 	parentCtx      context.Context
 

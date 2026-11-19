@@ -29,6 +29,7 @@ type scheduleFault struct {
 	code          codes.Code
 	apply         bool
 	delayedEffect bool
+	staleReads    int
 	foreign       bool
 	cancel        context.CancelFunc
 	block         bool
@@ -146,9 +147,9 @@ func (s *scheduleRecoveryService) UpdateSchedule(ctx context.Context, r *workflo
 	}
 	if f.code == codes.OK || f.apply {
 		updated := proto.Clone(r.Schedule).(*schedulepb.Schedule)
-		if f.delayedEffect {
+		if f.delayedEffect || f.staleReads > 0 {
 			record.pending = updated
-			record.probesUntilApplied = 1
+			record.probesUntilApplied = max(1, f.staleReads)
 		} else {
 			record.schedule = updated
 		}
@@ -420,7 +421,7 @@ func TestSchedulerOperationRecoveryCancellation(t *testing.T) {
 }
 
 func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
-	for _, mode := range []string{"unissued after read deadline", "resume before issue", "lost write acknowledgement"} {
+	for _, mode := range []string{"unissued after read deadline", "resume before issue", "lost write acknowledgement", "late witness after resume", "missing witness"} {
 		t.Run(mode, func(t *testing.T) {
 			c, service, _, logger := scheduleRecoveryRPCFixture(t)
 			ctx, cancel := context.WithCancel(t.Context())
@@ -432,6 +433,11 @@ func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
 				service.faults["describe"] = map[int]scheduleFault{1: {cancel: cancel}}
 			case "lost write acknowledgement":
 				service.faults["update"] = map[int]scheduleFault{1: {block: true, apply: true}}
+			case "late witness after resume":
+				service.faults["update"] = map[int]scheduleFault{1: {block: true, apply: true, staleReads: 4}}
+				service.faults["describe"] = map[int]scheduleFault{3: {cancel: cancel}}
+			case "missing witness":
+				service.faults["update"] = map[int]scheduleFault{1: {block: true, code: codes.DeadlineExceeded}}
 			}
 			executor := new(SchedulerExecutor)
 			info := scheduleRecoveryInfo(c, logger, true, map[string]string{SchedulerRecoveryTimeoutFlag: "900ms", SchedulerRecoveryBackoffFlag: "1ms"})
@@ -465,6 +471,23 @@ func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.NoError(t, restored.operations.update(t.Context()))
 				require.NoError(t, run.Journal.Commit(t.Context(), journal.Succeeded, ""))
+			case "late witness after resume":
+				require.ErrorIs(t, err, context.Canceled)
+				require.False(t, item.Done)
+				require.EqualValues(t, 3, item.Calls)
+				run.Journal, err = journal.Claim(t.Context(), backend, "lane", 2)
+				require.NoError(t, err)
+				restored, err := executor.createJournaledSchedule(t.Context(), run, 0)
+				require.NoError(t, err)
+				require.NoError(t, restored.operations.update(t.Context()))
+				item = run.Journal.State().Pending.Items[key]
+				require.EqualValues(t, 7, item.Calls)
+				require.Contains(t, string(item.Observation), string(outcomeObservedWitness))
+				require.NoError(t, run.Journal.Commit(t.Context(), journal.Succeeded, ""))
+			case "missing witness":
+				require.ErrorIs(t, err, errScheduleRecoveryBudget)
+				require.True(t, item.Unresolved)
+				require.EqualValues(t, 7, item.Calls)
 			case "lost write acknowledgement":
 				require.NoError(t, err)
 				require.True(t, item.Done)
