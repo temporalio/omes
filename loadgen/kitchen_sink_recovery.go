@@ -78,31 +78,34 @@ func (k KitchenSinkExecutor) executeJournaled(ctx context.Context, run *Run) err
 		run.kitchenSinkExecution = execution
 	}
 	executor := run.kitchenSinkExecution.executor
-	if executor.Handle == nil {
-		if err := run.Journal.Issue(ctx, "workflow"); err != nil {
+	bind := func(runID string) error {
+		if runID == "" {
+			return journal.ErrConflict
+		}
+		binding, err := run.Journal.Plan(ctx, "original-run", time.Time{}, func() ([]byte, error) { return []byte(runID), nil })
+		if err != nil {
 			return err
 		}
-	}
-	if err := executor.Start(ctx, nil); err != nil {
-		return err
-	}
-	binding, err := run.Journal.Plan(ctx, "original-run", time.Time{}, func() ([]byte, error) { return []byte(executor.Handle.GetRunID()), nil })
-	if err != nil {
-		return err
-	}
-	if string(binding.Plan) != executor.Handle.GetRunID() {
-		return journal.ErrConflict
-	}
-	if !binding.Done {
-		if err := run.Journal.Observe(ctx, "original-run", []byte("verified")); err != nil {
-			return err
+		if string(binding.Plan) != runID {
+			return journal.ErrConflict
 		}
+		if !binding.Done {
+			return run.Journal.Observe(ctx, "original-run", []byte("verified"))
+		}
+		return nil
 	}
-	// Get follows the execution chain and advances the handle's RunID.
-	resultHandle := executor.Client.GetWorkflow(ctx, executor.WorkflowOptions.ID, string(binding.Plan))
-	resultErr := resultHandle.Get(ctx, nil)
-	var closedFailure *temporal.WorkflowExecutionError
-	if resultErr != nil && !errors.As(resultErr, &closedFailure) {
+	resultErr := executor.StartJournaled(ctx, item.Calls > 0, func() error {
+		return run.Journal.Issue(ctx, "workflow")
+	}, bind)
+	if resultErr == nil {
+		// Get follows the execution chain and advances the handle's RunID.
+		resultHandle := executor.Client.GetWorkflow(ctx, executor.WorkflowOptions.ID, executor.Handle.GetRunID())
+		resultErr = resultHandle.Get(ctx, nil)
+		var closedFailure *temporal.WorkflowExecutionError
+		if resultErr != nil && !errors.As(resultErr, &closedFailure) {
+			return resultErr
+		}
+	} else if !errors.Is(resultErr, journal.ErrTerminal) {
 		return resultErr
 	}
 	result := recordedWorkflowResult{}

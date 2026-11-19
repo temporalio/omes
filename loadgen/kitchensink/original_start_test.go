@@ -32,6 +32,7 @@ type responseLossClient struct {
 	original    client.WorkflowRun
 	failMulti   bool
 	failUpdate  bool
+	updateError error
 	loseMulti   bool
 	loseOutcome bool
 	updateID    string
@@ -68,6 +69,9 @@ func (c *responseLossClient) UpdateWithStartWorkflow(ctx context.Context, opts c
 func (c *responseLossClient) UpdateWorkflow(ctx context.Context, opts client.UpdateWorkflowOptions) (client.WorkflowUpdateHandle, error) {
 	if c.failUpdate {
 		c.failUpdate = false
+		if c.updateError != nil {
+			return nil, c.updateError
+		}
 		return nil, serviceerror.NewUnavailable("update request not sent")
 	}
 	return c.Client.UpdateWorkflow(ctx, opts)
@@ -184,6 +188,114 @@ func TestOriginalStartProtocol(t *testing.T) {
 		require.Zero(t, transport.starts)
 		require.Zero(t, transport.multis)
 		require.True(t, transport.failUpdate)
+	})
+	t.Run("journal binds before polling and restores a closed accepted update", func(t *testing.T) {
+		transport := &responseLossClient{Client: c, loseOutcome: true}
+		original := newExecutor(transport)
+		action := &WithStartClientAction{Variant: &WithStartClientAction_DoUpdate{DoUpdate: &DoUpdate{WithStart: true, Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{}}}}}
+		spec, err := original.PrepareOriginalStart(action)
+		require.NoError(t, err)
+		var bound string
+		issues := 0
+		issue := func() error { issues++; return nil }
+		err = original.StartJournaled(ctx, false, issue, func(id string) error {
+			bound = id
+			require.Zero(t, original.originalStart.update.(*outcomeLossHandle).calls.Load())
+			return nil
+		})
+		require.ErrorContains(t, err, "lost update outcome reply")
+		require.NotEmpty(t, bound)
+		require.NoError(t, c.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
+			WorkflowID: spec.WorkflowID, RunID: bound, UpdateID: transport.updateID,
+		}).Get(ctx, nil))
+		require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, bound, "finish", nil))
+		require.NoError(t, c.GetWorkflow(ctx, spec.WorkflowID, bound).Get(ctx, nil))
+
+		restored := newExecutor(transport)
+		restored.WorkflowOptions = original.WorkflowOptions
+		require.NoError(t, restored.RestoreOriginalStart(spec))
+		require.NoError(t, restored.RestoreOriginalRun(ctx, bound))
+		require.NoError(t, restored.StartJournaled(ctx, true, issue, func(id string) error {
+			require.Equal(t, bound, id)
+			return nil
+		}))
+		require.Equal(t, 1, issues)
+		require.Equal(t, 1, transport.multis)
+	})
+	t.Run("journal recovers the start receipt when the combined reply is lost", func(t *testing.T) {
+		transport := &responseLossClient{Client: c, loseMulti: true}
+		e := newExecutor(transport)
+		action := &WithStartClientAction{Variant: &WithStartClientAction_DoUpdate{DoUpdate: &DoUpdate{WithStart: true, Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{}}}}}
+		spec, err := e.PrepareOriginalStart(action)
+		require.NoError(t, err)
+		issues := 0
+		var bound string
+		require.NoError(t, e.StartJournaled(ctx, false, func() error {
+			issues++
+			return nil
+		}, func(id string) error {
+			bound = id
+			return nil
+		}))
+		require.NotEmpty(t, bound)
+		require.Equal(t, 1, issues)
+		require.Equal(t, 1, transport.multis)
+		q, err := c.QueryWorkflow(ctx, spec.WorkflowID, bound, "updates")
+		require.NoError(t, err)
+		var applied int
+		require.NoError(t, q.Get(&applied))
+		require.Equal(t, 1, applied)
+		require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, bound, "finish", nil))
+		require.NoError(t, c.GetWorkflow(ctx, spec.WorkflowID, bound).Get(ctx, nil))
+	})
+	t.Run("journal discovers the original when the update was never accepted", func(t *testing.T) {
+		for _, closed := range []bool{false, true} {
+			name := "open"
+			if closed {
+				name = "closed"
+			}
+			t.Run(name, func(t *testing.T) {
+				transport := &responseLossClient{Client: c, failUpdate: true, updateError: serviceerror.NewWorkflowNotReady("Workflow Task failed")}
+				original := newExecutor(transport)
+				action := &WithStartClientAction{Variant: &WithStartClientAction_DoUpdate{DoUpdate: &DoUpdate{WithStart: true, Variant: &DoUpdate_DoActions{DoActions: &DoActionsUpdate{}}}}}
+				spec, err := original.PrepareOriginalStart(action)
+				require.NoError(t, err)
+				// The start ran but the update never arrived and the journal has no start receipt.
+				target, err := c.ExecuteWorkflow(ctx, original.WorkflowOptions, original.WorkflowType, original.WorkflowInput)
+				require.NoError(t, err)
+				finish := func() {
+					require.NoError(t, c.SignalWorkflow(ctx, spec.WorkflowID, target.GetRunID(), "finish", nil))
+					require.NoError(t, target.Get(ctx, nil))
+				}
+				if closed {
+					finish()
+				}
+				issues := 0
+				issue := func() error { issues++; return nil }
+				bind := func(id string) error {
+					require.Equal(t, target.GetRunID(), id)
+					return nil
+				}
+				err = original.StartJournaled(ctx, true, issue, bind)
+				if closed {
+					var notFound *serviceerror.NotFound
+					require.ErrorAs(t, err, &notFound)
+					require.Zero(t, issues)
+				} else {
+					var notReady *serviceerror.WorkflowNotReady
+					require.ErrorAs(t, err, &notReady)
+					require.NoError(t, original.StartJournaled(ctx, true, issue, bind))
+					require.Equal(t, 2, issues)
+					q, err := c.QueryWorkflow(ctx, spec.WorkflowID, target.GetRunID(), "updates")
+					require.NoError(t, err)
+					var applied int
+					require.NoError(t, q.Get(&applied))
+					require.Equal(t, 1, applied)
+					finish()
+				}
+				require.Zero(t, transport.multis)
+			})
+		}
 	})
 	t.Run("late_self_update_cannot_replace_or_update_foreign_run", func(t *testing.T) {
 		id := uuid.NewString()

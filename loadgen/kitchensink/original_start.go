@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen/journal"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -56,6 +60,12 @@ func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID s
 	if attrs == nil {
 		return errors.New("original start history is missing its start event")
 	}
+	if runID == "" {
+		runID = attrs.GetOriginalExecutionRunId()
+		if runID == "" {
+			return errors.New("discovered workflow history has no run ID")
+		}
+	}
 	if first := attrs.GetFirstExecutionRunId(); first != "" && first != runID {
 		return e.attachOriginalStart(ctx, first)
 	}
@@ -76,7 +86,7 @@ func (e *ClientActionsExecutor) attachOriginalStart(ctx context.Context, runID s
 	return nil
 }
 
-// RestoreOriginalRun verifies the saved execution and retrieves its existing update outcome.
+// RestoreOriginalRun verifies the saved execution and prepares its exact update handle.
 func (e *ClientActionsExecutor) RestoreOriginalRun(ctx context.Context, runID string) error {
 	if e.originalStart == nil || runID == "" || e.Handle != nil {
 		return errors.New("invalid original run binding")
@@ -88,10 +98,138 @@ func (e *ClientActionsExecutor) RestoreOriginalRun(ctx context.Context, runID st
 		e.originalStart.update = e.Client.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
 			WorkflowID: e.WorkflowOptions.ID, RunID: e.Handle.GetRunID(), UpdateID: update.UpdateId,
 		})
-		if err := e.originalStart.update.Get(ctx, nil); err != nil {
-			return err
-		}
 	}
 	e.runID = e.Handle.GetRunID()
 	return nil
+}
+
+// StartJournaled calls issue before each start or update RPC and bind before waiting for an update outcome.
+func (e *ClientActionsExecutor) StartJournaled(ctx context.Context, previouslyIssued bool, issue func() error, bind func(string) error) error {
+	if e.originalStart == nil {
+		return errors.New("journaled start requires frozen original intent")
+	}
+	update := e.originalStart.action.GetDoUpdate()
+	if update == nil {
+		if e.Handle == nil {
+			if err := issue(); err != nil {
+				return err
+			}
+		}
+		if err := e.Start(ctx, nil); err != nil {
+			return err
+		}
+		return bind(e.Handle.GetRunID())
+	}
+	if err := e.bindJournaledUpdate(ctx, update, previouslyIssued, issue); err != nil {
+		return err
+	}
+	e.runID = e.Handle.GetRunID()
+	if err := bind(e.runID); err != nil {
+		return err
+	}
+	err := e.awaitJournaledUpdate(ctx, update, issue)
+	var application *temporal.ApplicationError
+	var canceled *temporal.CanceledError
+	var timeout *temporal.TimeoutError
+	if errors.As(err, &application) || errors.As(err, &canceled) || errors.As(err, &timeout) {
+		if update.FailureExpected {
+			return nil
+		}
+		return errors.Join(journal.ErrTerminal, err)
+	}
+	return err
+}
+
+func (e *ClientActionsExecutor) bindJournaledUpdate(ctx context.Context, update *DoUpdate, previouslyIssued bool, issue func() error) error {
+	if e.Handle != nil {
+		return nil
+	}
+	if previouslyIssued {
+		err := e.attachOriginalStart(ctx, "")
+		if err == nil {
+			return nil
+		}
+		var missing *serviceerror.NotFound
+		if !errors.As(err, &missing) {
+			return err
+		}
+	}
+
+	opts, err := e.originalUpdateOptions(update)
+	if err != nil {
+		return err
+	}
+	if err := issue(); err != nil {
+		return err
+	}
+	op := e.Client.NewWithStartWorkflowOperation(e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
+	handle, err := e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
+		StartWorkflowOperation: op, UpdateOptions: opts,
+	})
+	if err == nil {
+		if handle == nil || handle.RunID() == "" || handle.WorkflowID() != e.WorkflowOptions.ID || handle.UpdateID() != update.UpdateId {
+			return errors.New("update with start returned an unexpected execution or update identity")
+		}
+		e.Handle = e.Client.GetWorkflow(ctx, handle.WorkflowID(), handle.RunID())
+		e.originalStart.update = handle
+		return nil
+	}
+	var already *serviceerror.WorkflowExecutionAlreadyStarted
+	if errors.As(err, &already) && already.RunId != "" {
+		return e.attachOriginalStart(ctx, already.RunId)
+	}
+	// The SDK can receive the start response before the update response is lost.
+	receiptCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	if receipt, receiptErr := op.Get(receiptCtx); receiptErr == nil && receipt != nil {
+		return e.attachOriginalStart(ctx, receipt.GetRunID())
+	}
+	return fmt.Errorf("update with start: %w", err)
+}
+
+func (e *ClientActionsExecutor) awaitJournaledUpdate(ctx context.Context, update *DoUpdate, issue func() error) error {
+	handle := e.originalStart.update
+	if handle == nil {
+		handle = e.Client.GetWorkflowUpdateHandle(client.GetWorkflowUpdateHandleOptions{
+			WorkflowID: e.WorkflowOptions.ID, RunID: e.runID, UpdateID: update.UpdateId,
+		})
+	}
+	err := handle.Get(ctx, nil)
+	var missing *serviceerror.NotFound
+	if !errors.As(err, &missing) {
+		return err
+	}
+	// A missing update can only be submitted while the verified original is open.
+	description, describeErr := e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, e.runID)
+	if describeErr != nil {
+		return errors.Join(err, describeErr)
+	}
+	if description.GetWorkflowExecutionInfo().GetStatus() != enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING {
+		return err
+	}
+	opts, err := e.originalUpdateOptions(update)
+	if err != nil {
+		return err
+	}
+	opts.RunID = e.runID
+	if err := issue(); err != nil {
+		return err
+	}
+	handle, err = e.Client.UpdateWorkflow(ctx, opts)
+	if err != nil {
+		return err
+	}
+	e.originalStart.update = handle
+	return handle.Get(ctx, nil)
+}
+
+func (e *ClientActionsExecutor) originalUpdateOptions(update *DoUpdate) (client.UpdateWorkflowOptions, error) {
+	name, args, err := UpdateNameAndArgs(update)
+	if err != nil {
+		return client.UpdateWorkflowOptions{}, err
+	}
+	return client.UpdateWorkflowOptions{
+		WorkflowID: e.WorkflowOptions.ID, UpdateID: update.UpdateId,
+		UpdateName: name, Args: args, WaitForStage: client.WorkflowUpdateStageAccepted,
+	}, nil
 }
