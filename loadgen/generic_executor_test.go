@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
+	"go.uber.org/goleak"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -68,6 +69,23 @@ func TestRunHappyPathIterations(t *testing.T) {
 		require.NoError(t, err)
 		tracker.assertSeen(t, 5)
 	})
+}
+
+func TestRunDoesNotLeakGoroutines(t *testing.T) {
+	t.Cleanup(func() { goleak.VerifyNone(t) })
+
+	counter := &RunCounter{}
+	err := execute(&GenericExecutor{
+		StopNewIterations: make(chan struct{}),
+		Execute:           func(context.Context, *Run) error { return nil },
+	}, RunConfiguration{
+		Iterations:                    4,
+		MaxConcurrent:                 2,
+		DoNotRegisterSearchAttributes: true,
+		Counter:                       counter,
+	})
+	require.NoError(t, err)
+	require.Equal(t, &IterationCounts{Started: 4, Succeeded: 4}, counter.Snapshot().Iterations)
 }
 
 func TestRunWaitsForOnCompletion(t *testing.T) {
