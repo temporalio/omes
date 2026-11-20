@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/temporalio/omes/loadgen/journal"
 	activitypb "go.temporal.io/api/activity/v1"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
+	sdkpb "go.temporal.io/api/sdk/v1"
+	"go.temporal.io/api/serviceerror"
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
@@ -231,6 +234,79 @@ func TestJournaledOperatorRecoversPauseVerification(t *testing.T) {
 				require.Equal(t, 1, service.unpauses)
 				require.True(t, backend.state.Pending.Items["operator/result"].Done)
 			}
+		})
+	}
+}
+
+type throttledOperatorStart struct {
+	workflowservicepb.WorkflowServiceClient
+	requests  []*workflowservicepb.StartActivityExecutionRequest
+	describes int
+	mismatch  bool
+	missing   bool
+	lostReply bool
+}
+
+func (s *throttledOperatorStart) StartActivityExecution(_ context.Context, req *workflowservicepb.StartActivityExecutionRequest, _ ...grpc.CallOption) (*workflowservicepb.StartActivityExecutionResponse, error) {
+	s.requests = append(s.requests, req)
+	if s.lostReply && len(s.requests) == 1 {
+		return nil, context.DeadlineExceeded
+	}
+	if len(s.requests) == 1 || s.missing || s.lostReply {
+		return nil, serviceerror.NewResourceExhausted(enumspb.RESOURCE_EXHAUSTED_CAUSE_RPS_LIMIT, "start throttled")
+	}
+	return &workflowservicepb.StartActivityExecutionResponse{RunId: "unexpected-start"}, nil
+}
+
+func (s *throttledOperatorStart) DescribeActivityExecution(_ context.Context, _ *workflowservicepb.DescribeActivityExecutionRequest, _ ...grpc.CallOption) (*workflowservicepb.DescribeActivityExecutionResponse, error) {
+	s.describes++
+	if s.missing {
+		return nil, serviceerror.NewNotFound("missing activity")
+	}
+	req := s.requests[0]
+	metadata := req.UserMetadata
+	if s.mismatch {
+		metadata = &sdkpb.UserMetadata{Details: &commonpb.Payload{}}
+	}
+	return &workflowservicepb.DescribeActivityExecutionResponse{Info: &activitypb.ActivityExecutionInfo{
+		RunId: "observed-run", ActivityType: req.ActivityType, TaskQueue: req.TaskQueue.GetName(), UserMetadata: metadata,
+	}}, nil
+}
+
+func TestJournaledOperatorReconcilesThrottledStart(t *testing.T) {
+	for _, mode := range []string{"lost reply", "foreign execution", "no execution"} {
+		t.Run(mode, func(t *testing.T) {
+			service := &throttledOperatorStart{mismatch: mode == "foreign execution", missing: mode == "no execution", lostReply: mode == "lost reply"}
+			session := operatorSession(t, &operatorJournal{state: journal.New("lane")}, 1)
+			e := &ClientActionsExecutor{Client: journaledOperatorClient{}, Namespace: "namespace", Journal: session}
+			wrapper := &journalOperatorService{WorkflowServiceClient: service, session: session}
+			act := &ExecuteActivityAction{TaskQueue: "queue"}
+			handle, err := e.startJournaledOperator(t.Context(), wrapper, act, "frozen-activity", "activity-type", nil)
+			item := session.State().Pending.Items["operator/start"]
+			switch mode {
+			case "lost reply":
+				require.NoError(t, err)
+				require.Equal(t, "observed-run", handle.GetRunID())
+				require.True(t, item.Done)
+				require.Len(t, service.requests, 2)
+			case "foreign execution":
+				require.ErrorIs(t, err, journal.ErrConflict)
+				require.Len(t, service.requests, 1)
+				require.False(t, item.Done)
+			case "no execution":
+				require.ErrorIs(t, err, journal.ErrUnresolved)
+				require.True(t, item.Unresolved)
+				require.Len(t, service.requests, 4)
+				for _, req := range service.requests {
+					require.Equal(t, "frozen-activity", req.GetActivityId())
+					require.Equal(t, "frozen-activity", req.GetRequestId())
+				}
+			}
+			expectedDescribes := len(service.requests)
+			if mode == "lost reply" {
+				expectedDescribes--
+			}
+			require.Equal(t, expectedDescribes, service.describes)
 		})
 	}
 }

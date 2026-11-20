@@ -92,8 +92,9 @@ func (r *journalOperatorService) mutate(parent context.Context, key string, req,
 		}
 		return persist()
 	}
+	const maxCalls = 4
 	var lastErr error
-	for calls := item.Calls; calls < 4; calls++ {
+	for calls := item.Calls; calls < maxCalls; calls++ {
 		if err := ctx.Err(); err != nil {
 			return unresolved(errors.Join(lastErr, err))
 		}
@@ -120,7 +121,14 @@ func (r *journalOperatorService) mutate(parent context.Context, key string, req,
 		if !retryableOperatorCall(err) {
 			return err
 		}
-		timer := time.NewTimer(100 * time.Millisecond)
+		if calls+1 == maxCalls {
+			break
+		}
+		delay := 100 * time.Millisecond
+		if key == "start" && operatorStartThrottled(err) {
+			delay = time.Second
+		}
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
@@ -227,20 +235,33 @@ func (e *ClientActionsExecutor) startJournaledOperator(ctx context.Context, serv
 			proto.Merge(response, result)
 			return nil
 		}
-		var exists *serviceerror.ActivityExecutionAlreadyStarted
-		if !errors.As(err, &exists) || exists.RunId == "" {
+		var alreadyStarted *serviceerror.ActivityExecutionAlreadyStarted
+		runID := ""
+		if errors.As(err, &alreadyStarted) && alreadyStarted.RunId != "" {
+			runID = alreadyStarted.RunId
+		} else if !operatorStartThrottled(err) {
 			return err
 		}
-		observed, err := wrapper.WorkflowServiceClient.DescribeActivityExecution(ctx, &workflowservicepb.DescribeActivityExecutionRequest{Namespace: request.Namespace, ActivityId: request.ActivityId, RunId: exists.RunId})
-		if err != nil {
+
+		info, probeErr := wrapper.WorkflowServiceClient.DescribeActivityExecution(ctx, &workflowservicepb.DescribeActivityExecutionRequest{
+			Namespace: request.Namespace, ActivityId: request.ActivityId, RunId: runID,
+		})
+		if probeErr != nil {
+			if runID != "" {
+				return probeErr
+			}
+			// An inconclusive read leaves the original throttle eligible for bounded retry.
 			return err
 		}
-		info := observed.GetInfo()
+		activity := info.GetInfo()
 		var intent string
-		if info == nil || info.GetActivityType().GetName() != request.ActivityType.Name || info.GetTaskQueue() != request.TaskQueue.GetName() || converter.GetDefaultDataConverter().FromPayload(info.GetUserMetadata().GetDetails(), &intent) != nil || intent != "omes.operator/"+request.ActivityId {
+		if activity.GetRunId() == "" || (runID != "" && activity.GetRunId() != runID) ||
+			activity.GetActivityType().GetName() != request.ActivityType.Name || activity.GetTaskQueue() != request.TaskQueue.GetName() ||
+			converter.GetDefaultDataConverter().FromPayload(activity.GetUserMetadata().GetDetails(), &intent) != nil ||
+			intent != "omes.operator/"+request.ActivityId {
 			return journal.ErrConflict
 		}
-		response.RunId = exists.RunId
+		response.RunId = activity.GetRunId()
 		return nil
 	})
 	if err != nil {
@@ -250,6 +271,11 @@ func (e *ClientActionsExecutor) startJournaledOperator(ctx context.Context, serv
 		return nil, errors.New("journaled activity start returned no run ID")
 	}
 	return e.Client.GetActivityHandle(client.GetActivityHandleOptions{ActivityID: request.ActivityId, RunID: response.RunId}), nil
+}
+
+func operatorStartThrottled(err error) bool {
+	var throttle *serviceerror.ResourceExhausted
+	return errors.As(err, &throttle) && throttle.Cause == enumspb.RESOURCE_EXHAUSTED_CAUSE_RPS_LIMIT
 }
 
 func recordedOperatorState(ctx context.Context, phase operatorPhase) (*activitypb.ActivityExecutionInfo, bool, time.Time, error) {
