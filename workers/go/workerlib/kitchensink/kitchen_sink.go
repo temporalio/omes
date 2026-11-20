@@ -40,6 +40,16 @@ func (ca *ClientActivities) ExecuteClientActivity(ctx context.Context, clientAct
 		WorkflowType:  "kitchenSink",
 		WorkflowInput: &kitchensink.WorkflowInput{},
 	}
+	switch clientActivity.GetTargetPolicy() {
+	case kitchensink.ExecuteActivityAction_ClientActivity_LEGACY:
+	case kitchensink.ExecuteActivityAction_ClientActivity_OWNING_EXECUTION:
+		executor.Execution = &kitchensink.ClientExecution{
+			RunID:         info.WorkflowExecution.RunID,
+			UpdateIDScope: info.WorkflowExecution.RunID + "/" + info.ActivityID,
+		}
+	default:
+		return fmt.Errorf("unsupported client activity target policy: %v", clientActivity.GetTargetPolicy())
+	}
 	return executor.ExecuteClientSequence(ctx, clientActivity.ClientSequence)
 }
 

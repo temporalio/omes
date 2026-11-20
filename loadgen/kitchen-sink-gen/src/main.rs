@@ -832,6 +832,7 @@ impl<'a> Arbitrary<'a> for ClientActivity {
 
         Ok(Self {
             client_sequence: Some(client_sequence),
+            target_policy: 0,
         })
     }
 }

@@ -3,6 +3,7 @@ package scenarios
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -24,7 +25,11 @@ const (
 	StandaloneActivityOperatorMaxIterationsPerSecondFlag = "standalone-activity-operator-max-iterations-per-second"
 	// StandaloneActivityOperatorDrainTimeoutFlag sets how long running operator tests
 	// may finish after the main load ends before they are canceled. Default is 30s.
-	StandaloneActivityOperatorDrainTimeoutFlag = "standalone-activity-operator-drain-timeout"
+	StandaloneActivityOperatorDrainTimeoutFlag        = "standalone-activity-operator-drain-timeout"
+	StandaloneActivityOperatorSuccessDurationFlag     = "standalone-activity-operator-success-duration"
+	StandaloneActivityOperatorHeartbeatTimeoutFlag    = "standalone-activity-operator-heartbeat-timeout"
+	StandaloneActivityOperatorStartToCloseTimeoutFlag = "standalone-activity-operator-start-to-close-timeout"
+	StandaloneActivityOperatorMaxAttemptsFlag         = "standalone-activity-operator-max-attempts"
 )
 
 func init() {
@@ -35,6 +40,7 @@ func init() {
 		ExecutorFn: func() loadgen.Executor {
 			return loadgen.ExecutorFunc(runStandaloneActivityOperatorCommands)
 		},
+		Options: declareStandaloneActivityOperatorTargetOptions,
 	})
 }
 
@@ -53,6 +59,7 @@ func runStandaloneActivityOperatorCommands(ctx context.Context, info loadgen.Sce
 }
 
 func declareStandaloneActivityOperatorOptions(o *loadgen.OptionSet) {
+	declareStandaloneActivityOperatorTargetOptions(o)
 	o.Feature(IncludeStandaloneActivityOperatorCommandsFlag,
 		"Run standalone activity operator commands in an independent driver loop.",
 		func(c loadgen.Capabilities) bool {
@@ -63,7 +70,40 @@ func declareStandaloneActivityOperatorOptions(o *loadgen.OptionSet) {
 	o.Duration(StandaloneActivityOperatorDrainTimeoutFlag, 30*time.Second, "Time for running operator tests to finish after the main load ends before cancellation.")
 }
 
+func declareStandaloneActivityOperatorTargetOptions(o *loadgen.OptionSet) {
+	o.Duration(StandaloneActivityOperatorSuccessDurationFlag, 5*time.Second, "Successful execution duration of operator target activities.")
+	o.Duration(StandaloneActivityOperatorHeartbeatTimeoutFlag, 3*time.Second, "Heartbeat timeout of operator target activities.")
+	o.Duration(StandaloneActivityOperatorStartToCloseTimeoutFlag, 15*time.Second, "Per-attempt timeout of operator target activities.")
+	o.Int(StandaloneActivityOperatorMaxAttemptsFlag, 2, "Maximum target activity attempts for each operator sequence.")
+}
+
+type operatorTargetPolicy struct {
+	heartbeat, startToClose, success time.Duration
+	attempts                         int32
+}
+
+func operatorTargetOptions(info loadgen.ScenarioInfo) (operatorTargetPolicy, error) {
+	policy := operatorTargetPolicy{heartbeat: 3 * time.Second, startToClose: 15 * time.Second, attempts: 2, success: 5 * time.Second}
+	if info.Options != nil && info.Options.Lookup(StandaloneActivityOperatorHeartbeatTimeoutFlag) != nil {
+		policy.success = info.OptionDuration(StandaloneActivityOperatorSuccessDurationFlag)
+		policy.heartbeat = info.OptionDuration(StandaloneActivityOperatorHeartbeatTimeoutFlag)
+		policy.startToClose = info.OptionDuration(StandaloneActivityOperatorStartToCloseTimeoutFlag)
+		attempts := info.OptionInt(StandaloneActivityOperatorMaxAttemptsFlag)
+		if attempts < 1 || attempts > math.MaxInt32 {
+			return policy, fmt.Errorf("%s must be in [1,2147483647]", StandaloneActivityOperatorMaxAttemptsFlag)
+		}
+		policy.attempts = int32(attempts)
+	}
+	if policy.heartbeat <= time.Second || policy.startToClose <= policy.heartbeat || policy.startToClose <= policy.success || policy.success <= policy.heartbeat {
+		return policy, fmt.Errorf("operator target timeouts must cover heartbeat cadence and successful activity duration")
+	}
+	return policy, nil
+}
+
 func (config *tpsConfig) configureStandaloneActivityOperator(info loadgen.ScenarioInfo) error {
+	if _, err := operatorTargetOptions(info); err != nil {
+		return err
+	}
 	config.IncludeStandaloneActivityOperatorCommands = info.OptionBool(
 		IncludeStandaloneActivityOperatorCommandsFlag)
 	config.StandaloneActivityOperator = independentLoadConfig{
@@ -115,6 +155,10 @@ func (t *tpsExecutor) standaloneActivityOperatorLoad(info loadgen.ScenarioInfo) 
 }
 
 func runStandaloneActivityOperatorSequences(ctx context.Context, info loadgen.ScenarioInfo, stopNewIterations <-chan struct{}) error {
+	policy, err := operatorTargetOptions(info)
+	if err != nil {
+		return err
+	}
 	var started, completed atomic.Int64
 	defer func() {
 		info.Logger.Infof("Operator load summary: started=%d completed=%d", started.Load(), completed.Load())
@@ -139,12 +183,18 @@ func runStandaloneActivityOperatorSequences(ctx context.Context, info loadgen.Sc
 		Execute: func(ctx context.Context, run *loadgen.Run) error {
 			started.Add(1)
 			action := standaloneActivityOperatorClientAction(run.TaskQueue(), run.Iteration-1)
+			target := action.GetDoStandaloneActivityOperatorCommands().Activity
+			target.GetHeartbeat().SuccessDuration = durationpb.New(policy.success)
+			target.HeartbeatTimeout = durationpb.New(policy.heartbeat)
+			target.StartToCloseTimeout = durationpb.New(policy.startToClose)
+			target.RetryPolicy.MaximumAttempts = policy.attempts
 			info.Logger.Infof("Operator sequence starting: iteration=%d command=%s task_queue=%s",
 				run.Iteration, action.GetDoStandaloneActivityOperatorCommands().GetCommandType(), run.TaskQueue())
 			sequence := &ClientSequence{
 				ActionSets: []*ClientActionSet{{Actions: []*ClientAction{action}}},
 			}
 			clientExecutor := ClientActionsExecutor{
+				Journal:   run.Journal,
 				Client:    info.Client,
 				Namespace: info.Namespace,
 			}

@@ -2,17 +2,23 @@ package kitchensink
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen/journal"
 	activitypb "go.temporal.io/api/activity/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/temporal"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
@@ -47,14 +53,51 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 		return fmt.Errorf("start standalone activity for operator commands: %w", err)
 	}
 
+	if e.Journal != nil {
+		result, err := e.Journal.Plan(ctx, "operator/result", time.Time{}, func() ([]byte, error) { return []byte("operator sequence"), nil })
+		if err != nil {
+			return err
+		}
+		if result.Done {
+			if string(result.Observation) == "completed" {
+				return nil
+			}
+			var recorded operatorResult
+			if err := json.Unmarshal(result.Observation, &recorded); err != nil {
+				return err
+			}
+			if recorded.Failure != "" {
+				return &terminalOperatorFailure{recorded.Failure}
+			}
+			return nil
+		}
+		defer func() {
+			if ctx.Err() == nil && !errors.Is(retErr, journal.ErrPersistence) && !errors.Is(retErr, journal.ErrUnresolved) && knownOperatorFailure(retErr) {
+				retErr = e.recordOperatorFailure(ctx, retErr)
+			}
+		}()
+	}
 	activityType, args := ActivityNameAndArgs(act)
 	activityID := fmt.Sprintf("standalone-activity-operator-%s", uuid.NewString())
+	if e.Journal != nil {
+		id, err := e.Journal.Value(ctx, "operator/id", func() ([]byte, error) { return []byte(activityID), nil })
+		if err != nil {
+			return err
+		}
+		activityID = string(id)
+		ctx = context.WithValue(ctx, operatorPhaseKey{}, operatorPhase{session: e.Journal})
+	}
 	target := standaloneActivityOperatorTarget{namespace: e.Namespace, activityID: activityID}
 	service := e.Client.WorkflowService()
-	// Clean up even if starting the activity returns an error: the server may
-	// have created it. Use the activity ID if no run ID was returned.
+	if e.Journal != nil {
+		service = &journalOperatorService{WorkflowServiceClient: service, session: e.Journal}
+	}
 	defer func() {
-		if retErr == nil {
+		if retErr == nil || errors.Is(retErr, journal.ErrPersistence) {
+			return
+		}
+		if e.Journal != nil && (ctx.Err() != nil || target.runID == "" ||
+			(!knownOperatorFailure(retErr) && !errors.Is(retErr, journal.ErrUnresolved))) {
 			return
 		}
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), operatorCommandCleanupTimeout)
@@ -64,20 +107,26 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 		}
 	}()
 
-	handle, err := e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
-		ID:                     activityID,
-		TaskQueue:              act.TaskQueue,
-		ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
-		StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
-		HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
-		RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
-	}, activityType, args...)
+	var handle client.ActivityHandle
+	var err error
+	if e.Journal != nil {
+		handle, err = e.startJournaledOperator(ctx, service, act, activityID, activityType, args)
+	} else {
+		handle, err = e.Client.ExecuteActivity(ctx, client.StartActivityOptions{
+			ID:                     activityID,
+			TaskQueue:              act.TaskQueue,
+			ScheduleToCloseTimeout: act.ScheduleToCloseTimeout.AsDuration(),
+			StartToCloseTimeout:    act.StartToCloseTimeout.AsDuration(),
+			HeartbeatTimeout:       act.HeartbeatTimeout.AsDuration(),
+			RetryPolicy:            ConvertFromPBRetryPolicy(act.RetryPolicy),
+		}, activityType, args...)
+	}
 	if err != nil {
 		return fmt.Errorf("start standalone activity for operator commands: %w", err)
 	}
 
 	target.runID = handle.GetRunID()
-	started, err := waitForStandaloneActivityState(ctx, service, target,
+	started, err := waitForStandaloneActivityState(withOperatorPhase(ctx, "started"), service, target,
 		func(info *activitypb.ActivityExecutionInfo) bool {
 			return info.GetStatus() == enumspb.ACTIVITY_EXECUTION_STATUS_RUNNING &&
 				info.GetRunState() == enumspb.PENDING_ACTIVITY_STATE_STARTED
@@ -100,7 +149,50 @@ func (e *ClientActionsExecutor) executeStandaloneActivityOperatorCommands(
 	if err := handle.Get(ctx, nil); err != nil {
 		return fmt.Errorf("get standalone activity after operator commands: %w", err)
 	}
+	if e.Journal != nil {
+		return e.Journal.Observe(ctx, "operator/result", []byte("completed"))
+	}
 	return nil
+}
+
+type operatorResult struct{ Failure string }
+type terminalOperatorFailure struct{ message string }
+
+func (e *terminalOperatorFailure) Error() string        { return e.message }
+func (e *terminalOperatorFailure) Is(target error) bool { return target == journal.ErrTerminal }
+
+func knownOperatorFailure(err error) bool {
+	var timeout *temporal.TimeoutError
+	var application *temporal.ApplicationError
+	var canceled *temporal.CanceledError
+	var terminated *temporal.TerminatedError
+	var terminal *terminalOperatorFailure
+	return errors.As(err, &timeout) || errors.As(err, &application) || errors.As(err, &canceled) || errors.As(err, &terminated) || errors.As(err, &terminal)
+}
+
+func (e *ClientActionsExecutor) recordOperatorFailure(ctx context.Context, failure error) error {
+	message := failure.Error()
+	if len(message) > 1024 {
+		message = message[:1024]
+	}
+	data, err := json.Marshal(operatorResult{Failure: message})
+	if err != nil {
+		return errors.Join(failure, err)
+	}
+	pending := e.Journal.State().Pending
+	for _, item := range pending.Items {
+		if item.Unresolved {
+			return errors.Join(journal.ErrUnresolved, failure)
+		}
+	}
+	for _, key := range slices.Sorted(maps.Keys(pending.Items)) {
+		if !pending.Items[key].Done {
+			if err := e.Journal.Observe(ctx, key, data); err != nil {
+				return errors.Join(failure, err)
+			}
+		}
+	}
+	return &terminalOperatorFailure{message}
 }
 
 func cleanupStandaloneOperatorActivity(
@@ -177,7 +269,7 @@ func exercisePauseUnpause(
 	}); err != nil {
 		return fmt.Errorf("pause standalone activity: %w", err)
 	}
-	if _, err := waitForStandaloneActivityState(ctx, service, target,
+	if _, err := waitForStandaloneActivityState(withOperatorPhase(ctx, "paused"), service, target,
 		func(info *activitypb.ActivityExecutionInfo) bool {
 			return info.GetStatus() == enumspb.ACTIVITY_EXECUTION_STATUS_PAUSED &&
 				info.GetRunState() == enumspb.PENDING_ACTIVITY_STATE_PAUSED
@@ -192,7 +284,7 @@ func exercisePauseUnpause(
 	}); err != nil {
 		return fmt.Errorf("unpause standalone activity: %w", err)
 	}
-	if _, err := waitForStandaloneActivityState(ctx, service, target,
+	if _, err := waitForStandaloneActivityState(withOperatorPhase(ctx, "unpaused"), service, target,
 		func(info *activitypb.ActivityExecutionInfo) bool {
 			return info.GetStatus() == enumspb.ACTIVITY_EXECUTION_STATUS_RUNNING &&
 				info.GetRunState() == enumspb.PENDING_ACTIVITY_STATE_STARTED
@@ -219,7 +311,7 @@ func exerciseReset(
 	}); err != nil {
 		return fmt.Errorf("reset standalone activity: %w", err)
 	}
-	if _, err := waitForStandaloneActivityState(ctx, service, target,
+	if _, err := waitForStandaloneActivityState(withOperatorPhase(ctx, "reset"), service, target,
 		func(info *activitypb.ActivityExecutionInfo) bool {
 			lastStartedTime := info.GetLastStartedTime()
 			resetAttemptStarted := info.GetAttempt() == 1 &&
@@ -276,18 +368,54 @@ func waitForStandaloneActivityState(
 	target standaloneActivityOperatorTarget,
 	matches func(*activitypb.ActivityExecutionInfo) bool,
 ) (*activitypb.ActivityExecutionInfo, error) {
-	ctx, cancel := context.WithTimeout(ctx, operatorCommandStateWaitTimeout)
+	phase, journaled := ctx.Value(operatorPhaseKey{}).(operatorPhase)
+	deadline := time.Now().Add(operatorCommandStateWaitTimeout)
+	if journaled {
+		value, found, recordedDeadline, err := recordedOperatorState(ctx, phase)
+		if err != nil || found {
+			return value, err
+		}
+		deadline = recordedDeadline
+	}
+	parent := ctx
+	ctx, cancel := context.WithDeadline(parent, deadline)
 	defer cancel()
 
 	var longPollToken []byte
 	var lastObserved *activitypb.ActivityExecutionInfo
+	var firstReadError error
+	phaseError := func(err error) error {
+		if journaled && parent.Err() == nil && ctx.Err() != nil {
+			return errors.Join(journal.ErrUnresolved, firstReadError, err)
+		}
+		return errors.Join(firstReadError, err)
+	}
 	for {
-		response, err := service.DescribeActivityExecution(ctx,
+		callCtx := ctx
+		cancelCall := func() {}
+		if journaled {
+			callCtx, cancelCall = context.WithTimeout(ctx, 5*time.Second)
+		}
+		response, err := service.DescribeActivityExecution(callCtx,
 			&workflowservicepb.DescribeActivityExecutionRequest{
 				Namespace: target.namespace, ActivityId: target.activityID, RunId: target.runID,
 				LongPollToken: longPollToken,
 			})
+		cancelCall()
 		if err != nil {
+			if journaled && ctx.Err() == nil && retryableOperatorCall(err) {
+				if firstReadError == nil {
+					firstReadError = err
+				}
+				longPollToken = nil
+				select {
+				case <-time.After(100 * time.Millisecond):
+					continue
+				case <-ctx.Done():
+					err = ctx.Err()
+				}
+			}
+			err = phaseError(err)
 			if lastObserved == nil {
 				return nil, fmt.Errorf(
 					"describe standalone activity namespace=%q activity_id=%q run_id=%q: %w",
@@ -310,24 +438,42 @@ func waitForStandaloneActivityState(
 				case <-time.After(100 * time.Millisecond):
 					continue
 				case <-ctx.Done():
-					return nil, fmt.Errorf("wait for standalone activity state: %w", ctx.Err())
+					return nil, fmt.Errorf("wait for standalone activity state: %w", phaseError(ctx.Err()))
 				}
 			}
 			return nil, fmt.Errorf(
 				"DescribeActivityExecution returned no activity info for namespace=%q activity_id=%q run_id=%q",
 				target.namespace, target.activityID, target.runID)
 		}
+		if journaled && info.GetRunId() != target.runID {
+			return nil, fmt.Errorf("operator phase %s returned a different activity run: %w", phase.name, journal.ErrConflict)
+		}
 		lastObserved = info
 		if matches(info) {
+			if journaled {
+				data, err := proto.Marshal(info)
+				if err != nil {
+					return nil, err
+				}
+				if err = phase.session.Observe(parent, "operator/state/"+phase.name, data); err != nil {
+					return nil, err
+				}
+			}
 			return info, nil
 		}
 		longPollToken = response.GetLongPollToken()
 		if len(longPollToken) == 0 {
-			return nil, fmt.Errorf(
+			err := fmt.Errorf(
 				"standalone activity namespace=%q activity_id=%q run_id=%q reached terminal state before expected state: status=%s run_state=%s transition_count=%d heartbeat_timeout=%s",
 				target.namespace, target.activityID, target.runID,
 				info.GetStatus(), info.GetRunState(), info.GetStateTransitionCount(),
 				info.GetHeartbeatTimeout().AsDuration())
+			switch info.GetStatus() {
+			case enumspb.ACTIVITY_EXECUTION_STATUS_COMPLETED, enumspb.ACTIVITY_EXECUTION_STATUS_FAILED, enumspb.ACTIVITY_EXECUTION_STATUS_CANCELED, enumspb.ACTIVITY_EXECUTION_STATUS_TIMED_OUT, enumspb.ACTIVITY_EXECUTION_STATUS_TERMINATED:
+				return nil, &terminalOperatorFailure{message: err.Error()}
+			default:
+				return nil, err
+			}
 		}
 	}
 }

@@ -41,6 +41,9 @@ func (g *GenericExecutor) Run(ctx context.Context, info ScenarioInfo) error {
 	if err != nil {
 		return err
 	}
+	if info.Recovery != nil {
+		return r.runJournaled(ctx)
+	}
 	return r.Run(ctx)
 }
 

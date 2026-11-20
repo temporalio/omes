@@ -12,12 +12,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/journal"
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
+
+const SchedulerRecoveryCallsFlag = "recovery-logical-calls"
+const SchedulerRecoveryTimeoutFlag = "recovery-timeout"
+const SchedulerRecoveryBackoffFlag = "recovery-backoff"
 
 func init() {
 	loadgen.MustRegisterScenario(loadgen.Scenario{
@@ -35,6 +40,10 @@ func init() {
 			o.String(ScheduledWorkflowTypeFlag, DefaultScheduledWorkflowType,
 				"Workflow type to schedule: "+NoopScheduledWorkflowType+" or "+SleepScheduleWorkflowType+".")
 			o.Bool(EnableChasmSchedulerFlag, DefaultEnableChasmScheduler, "Route schedule creation to the CHASM scheduler.")
+			o.Int(SchedulerRecoveryCallsFlag, scheduleOperationCalls, "Logical calls permitted for one schedule operation.")
+			o.Duration(SchedulerRecoveryTimeoutFlag, scheduleOperationTimeout, "Wall-clock budget for one schedule operation.")
+			o.Duration(SchedulerRecoveryBackoffFlag, scheduleOperationBackoff, "Wait between logical schedule calls.")
+			o.Bool(RecoverScheduleOperationsFlag, false, "Recover transient schedule CRUD operations with bounded calls and observed effects.")
 			o.Bool(RetainSchedulesFlag, false, "Leave finite schedules for migration checks; the caller must delete the namespace afterward.")
 		},
 		ExecutorFn: func() loadgen.Executor {
@@ -54,6 +63,8 @@ type CleanUpScheduleInput struct {
 }
 
 type schedulerExecutorConfig struct {
+	RecoveryPolicy scheduleRecoveryPolicy
+
 	ScheduleCreationPerIteration  int
 	ScheduleReadsPerCreation      int
 	ScheduleUpdatesPerCreation    int
@@ -65,6 +76,7 @@ type schedulerExecutorConfig struct {
 	OverlapPolicy                 []enums.ScheduleOverlapPolicy
 	ScheduledWorkflowType         string
 	EnableChasmScheduler          bool
+	RecoverScheduleOperations     bool
 	RetainSchedules               bool
 }
 
@@ -92,6 +104,7 @@ const (
 	OverlapPolicyFlag                 = "overlap-policy"
 	ScheduledWorkflowTypeFlag         = "scheduled-workflow-type"
 	EnableChasmSchedulerFlag          = "enable-chasm-scheduler"
+	RecoverScheduleOperationsFlag     = "recover-schedule-operations"
 	RetainSchedulesFlag               = "retain-schedules"
 )
 
@@ -116,6 +129,7 @@ var (
 // Configure implements the loadgen.Configurable interface
 func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 	config := &schedulerExecutorConfig{
+		RecoveryPolicy:                scheduleRecoveryPolicy{Calls: info.OptionInt(SchedulerRecoveryCallsFlag), Timeout: info.OptionDuration(SchedulerRecoveryTimeoutFlag), Backoff: info.OptionDuration(SchedulerRecoveryBackoffFlag)},
 		ScheduleCreationPerIteration:  info.OptionInt(ScheduleCreationPerIterationFlag),
 		ScheduleReadsPerCreation:      info.OptionInt(ScheduleReadsPerCreationFlag),
 		ScheduleUpdatesPerCreation:    info.OptionInt(ScheduleUpdatesPerCreationFlag),
@@ -127,9 +141,13 @@ func (s *SchedulerExecutor) Configure(info loadgen.ScenarioInfo) error {
 		OverlapPolicy:                 parseOverlapPolicy(info.OptionString(OverlapPolicyFlag)),
 		ScheduledWorkflowType:         info.OptionString(ScheduledWorkflowTypeFlag),
 		EnableChasmScheduler:          info.OptionBool(EnableChasmSchedulerFlag),
+		RecoverScheduleOperations:     info.OptionBool(RecoverScheduleOperationsFlag),
 		RetainSchedules:               info.OptionBool(RetainSchedulesFlag),
 	}
 
+	if config.RecoveryPolicy.Calls < 1 || config.RecoveryPolicy.Calls > 1000 || config.RecoveryPolicy.Timeout <= 0 || config.RecoveryPolicy.Backoff < 0 || config.RecoveryPolicy.Backoff >= config.RecoveryPolicy.Timeout {
+		return fmt.Errorf("invalid schedule recovery call/time/backoff budget")
+	}
 	if config.ScheduleCreationPerIteration <= 0 {
 		return fmt.Errorf("schedule-creation-per-iteration must be positive, got %d", config.ScheduleCreationPerIteration)
 	}
@@ -160,6 +178,9 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		return err
 	}
 
+	if run.Journal != nil {
+		s.config.RecoverScheduleOperations = true
+	}
 	logger := run.Logger
 	client := run.Client
 
@@ -185,36 +206,69 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 		wg.Go(func() {
 			ticker := time.NewTicker(s.config.OperationInterval)
 			defer ticker.Stop()
+			wait := func() bool {
+				if !s.config.RecoverScheduleOperations {
+					<-ticker.C
+					return true
+				}
+				select {
+				case <-ticker.C:
+					return true
+				case <-ctx.Done():
+					return false
+				}
+			}
 			start := time.Now()
 
 			scheduleID := fmt.Sprintf("sched-%s-%d-%d-%s", run.RunID, run.Iteration, i, uuid.New())
-			sc, err := s.createSchedule(ctx, client, scheduleID, run.TaskQueue(), logger)
+			var sc ScheduleState
+			var err error
+			if run.Journal != nil {
+				sc, err = s.createJournaledSchedule(ctx, run, i)
+			} else {
+				sc, err = s.createSchedule(ctx, client, scheduleID, run.TaskQueue(), logger)
+			}
 			if err != nil {
 				record(fmt.Errorf("creating schedule %s: %w", scheduleID, err))
 				return
 			}
-			<-ticker.C
+			if !wait() {
+				return
+			}
 			// Read and update failures still fall through to deletion.
 			for range s.config.ScheduleReadsPerCreation {
-				if err := s.describeSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				if err := sc.operations.describe(ctx); err != nil {
 					record(fmt.Errorf("describing schedule %s: %w", sc.ScheduleID, err))
+					if errors.Is(err, journal.ErrPersistence) {
+						return
+					}
 				}
-				<-ticker.C // Wait between read operations
+				if !wait() {
+					return
+				}
 			}
 
 			for range s.config.ScheduleUpdatesPerCreation {
-				if err := s.updateSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				if err := sc.operations.update(ctx); err != nil {
 					record(fmt.Errorf("updating schedule %s: %w", sc.ScheduleID, err))
+					if errors.Is(err, journal.ErrPersistence) {
+						return
+					}
 				}
-				<-ticker.C // Wait between update operations
+				if !wait() {
+					return
+				}
 			}
 			dur := time.Until(start.Add(s.config.WaitTimeBeforeCleanup))
+			if run.Journal != nil {
+				dur = time.Until(sc.CleanupAt)
+			}
 			select {
 			case <-time.After(dur):
 				if s.config.RetainSchedules {
 					return
 				}
-				if err := s.deleteSchedule(ctx, client, sc.ScheduleID, logger); err != nil {
+				if err := sc.operations.delete(ctx); err != nil {
 					record(fmt.Errorf("deleting schedule %s: %w", sc.ScheduleID, err))
 				}
 			case <-ctx.Done():
@@ -234,8 +288,38 @@ func (s *SchedulerExecutor) Execute(ctx context.Context, run *loadgen.Run) error
 }
 
 type ScheduleState struct {
+	CleanupAt time.Time
+
 	ScheduleID  string
 	DeleteAfter time.Duration
+	operations  scheduleOperations
+}
+
+// scheduleOperations performs the reads, updates and cleanup of one created schedule.
+type scheduleOperations interface {
+	describe(context.Context) error
+	update(context.Context) error
+	delete(context.Context) error
+}
+
+// directScheduleOperations issues each operation once, without recovery.
+type directScheduleOperations struct {
+	executor *SchedulerExecutor
+	client   client.Client
+	id       string
+	logger   *zap.SugaredLogger
+}
+
+func (o directScheduleOperations) describe(ctx context.Context) error {
+	return o.executor.describeSchedule(ctx, o.client, o.id, o.logger)
+}
+
+func (o directScheduleOperations) update(ctx context.Context) error {
+	return o.executor.updateSchedule(ctx, o.client, o.id, o.logger)
+}
+
+func (o directScheduleOperations) delete(ctx context.Context) error {
+	return o.executor.deleteSchedule(ctx, o.client, o.id, o.logger)
 }
 
 func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client, scheduleID string, taskQueue string, logger *zap.SugaredLogger) (ScheduleState, error) {
@@ -268,6 +352,14 @@ func (s *SchedulerExecutor) createSchedule(ctx context.Context, c client.Client,
 		Action:  action,
 		Overlap: pickOverlap(s.config.OverlapPolicy, logger),
 	}
+	if s.config.RecoverScheduleOperations {
+		owner := uuid.NewString()
+		options.Memo = map[string]any{scheduleOwnerMemo: owner}
+		recovery := &scheduleRecovery{policy: &s.config.RecoveryPolicy, api: c.ScheduleClient(), options: options, owner: owner, logger: logger}
+		sc.operations = recovery
+		return sc, recovery.create(ctx)
+	}
+	sc.operations = directScheduleOperations{executor: s, client: c, id: scheduleID, logger: logger}
 	_, err := c.ScheduleClient().Create(ctx, options)
 	return sc, err
 }

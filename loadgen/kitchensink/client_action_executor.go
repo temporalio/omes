@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/temporalio/omes/loadgen/journal"
 	enumspb "go.temporal.io/api/enums/v1"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/workflow"
@@ -15,20 +17,51 @@ import (
 )
 
 type ClientActionsExecutor struct {
+	Journal *journal.Session
+
 	Client          client.Client
 	Namespace       string
 	WorkflowOptions client.StartWorkflowOptions
 	WorkflowType    string
 	WorkflowInput   *WorkflowInput
 	Handle          client.WorkflowRun
-	runID           string
+	// Execution binds self-actions to one run. Nil retains workflow-ID routing.
+	Execution *ClientExecution
+	runID     string
+	// RecoverOriginalStart rejects duplicate starts and retains acknowledged run/update handles.
+	RecoverOriginalStart bool
+	originalStart        *originalStart
 }
 
 func (e *ClientActionsExecutor) Start(
 	ctx context.Context,
 	withStartAction *WithStartClientAction,
 ) error {
+	if e.Execution != nil {
+		return errors.New("owning-execution actions cannot start workflows")
+	}
 	var err error
+	if e.RecoverOriginalStart {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if e.originalStart == nil {
+			if withStartAction.GetDoSignal() != nil {
+				return errors.New("original start recovery does not support Signal-with-Start")
+			}
+			e.freezeStart(withStartAction)
+		}
+		withStartAction = e.originalStart.action
+		if e.originalStart.update != nil {
+			if err := e.originalStart.update.Get(ctx, nil); err != nil {
+				return err
+			}
+		}
+		if e.Handle != nil {
+			e.runID = e.Handle.GetRunID()
+			return nil
+		}
+	}
 	if withStartAction == nil {
 		e.Handle, err = e.Client.ExecuteWorkflow(ctx, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	} else if sig := withStartAction.GetDoSignal(); sig != nil {
@@ -37,6 +70,12 @@ func (e *ClientActionsExecutor) Start(
 		e.Handle, err = e.executeUpdateAction(ctx, upd)
 	} else {
 		return fmt.Errorf("unsupported with_start_action: %v", withStartAction.String())
+	}
+	if err != nil && e.RecoverOriginalStart && withStartAction == nil {
+		var already *serviceerror.WorkflowExecutionAlreadyStarted
+		if errors.As(err, &already) && already.RunId != "" {
+			err = e.attachOriginalStart(ctx, already.RunId)
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", err)
@@ -48,6 +87,13 @@ func (e *ClientActionsExecutor) Start(
 }
 
 func (e *ClientActionsExecutor) ExecuteClientSequence(ctx context.Context, clientSeq *ClientSequence) error {
+	if e.Execution != nil {
+		var err error
+		clientSeq, err = e.Execution.prepare(clientSeq)
+		if err != nil {
+			return err
+		}
+	}
 	for _, actionSet := range clientSeq.ActionSets {
 		if err := e.executeClientActionSet(ctx, actionSet); err != nil {
 			return err
@@ -114,9 +160,9 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 	} else if query := action.GetDoQuery(); query != nil {
 		if query.GetReportState() != nil {
 			// TODO: Use args
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", "report_state", nil)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), "report_state", nil)
 		} else if handler := query.GetCustom(); handler != nil {
-			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, "", handler.Name, handler.Args)
+			_, err = e.Client.QueryWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), handler.Name, handler.Args)
 		} else {
 			return fmt.Errorf("do_query must recognizable variant")
 		}
@@ -125,7 +171,7 @@ func (e *ClientActionsExecutor) executeClientAction(ctx context.Context, action 
 		}
 		return err
 	} else if action.GetDoDescribe() != nil {
-		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, "")
+		_, err = e.Client.DescribeWorkflowExecution(ctx, e.WorkflowOptions.ID, e.targetRunID())
 		return err
 	} else if action.GetNestedActions() != nil {
 		err = e.executeClientActionSet(ctx, action.GetNestedActions())
@@ -151,7 +197,7 @@ func (e *ClientActionsExecutor) executeSignalAction(ctx context.Context, sig *Do
 		return e.Client.SignalWithStartWorkflow(
 			ctx, e.WorkflowOptions.ID, signalName, signalArg, e.WorkflowOptions, e.WorkflowType, e.WorkflowInput)
 	}
-	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, "", signalName, signalArg)
+	return nil, e.Client.SignalWorkflow(ctx, e.WorkflowOptions.ID, e.targetRunID(), signalName, signalArg)
 }
 
 func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *DoUpdate) (run client.WorkflowRun, err error) {
@@ -161,6 +207,7 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	}
 	updateOpts := client.UpdateWorkflowOptions{
 		WorkflowID:   e.WorkflowOptions.ID,
+		RunID:        e.targetRunID(),
 		UpdateID:     upd.GetUpdateId(),
 		UpdateName:   updateName,
 		WaitForStage: client.WorkflowUpdateStageCompleted,
@@ -170,17 +217,35 @@ func (e *ClientActionsExecutor) executeUpdateAction(ctx context.Context, upd *Do
 	var handle client.WorkflowUpdateHandle
 	if upd.WithStart {
 		workflowOpts := e.WorkflowOptions
-		workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		if !e.RecoverOriginalStart {
+			workflowOpts.WorkflowIDConflictPolicy = enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING
+		} else {
+			updateOpts.WaitForStage = client.WorkflowUpdateStageAccepted
+		}
 		op := e.Client.NewWithStartWorkflowOperation(workflowOpts, e.WorkflowType, e.WorkflowInput)
 		handle, err = e.Client.UpdateWithStartWorkflow(ctx, client.UpdateWithStartWorkflowOptions{
 			StartWorkflowOperation: op,
 			UpdateOptions:          updateOpts,
 		})
+		if err != nil && e.RecoverOriginalStart {
+			var already *serviceerror.WorkflowExecutionAlreadyStarted
+			if errors.As(err, &already) && already.RunId != "" {
+				if err := e.attachOriginalStart(ctx, already.RunId); err != nil {
+					return nil, err
+				}
+				// Retry the same update only on the history-verified original run.
+				updateOpts.RunID = e.Handle.GetRunID()
+				handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
+			}
+		}
 	} else {
 		handle, err = e.Client.UpdateWorkflow(ctx, updateOpts)
 	}
 
 	if err == nil {
+		if upd.WithStart && e.RecoverOriginalStart {
+			e.originalStart.update = handle
+		}
 		err = handle.Get(ctx, nil)
 		if upd.WithStart {
 			run = e.Client.GetWorkflow(ctx, handle.WorkflowID(), handle.RunID())

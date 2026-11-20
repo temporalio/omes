@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/clioptions"
+	"github.com/temporalio/omes/loadgen/journal"
 	"github.com/temporalio/omes/loadgen/kitchensink"
 )
 
@@ -143,6 +144,11 @@ func GetScenario(name string) *Scenario {
 
 // ScenarioInfo contains information about the scenario under execution.
 type ScenarioInfo struct {
+	Recovery *RecoveryOptions
+
+	// OwningExecutionWorkers is set only after the caller verifies that every
+	// worker serving this run implements the Go owning-execution protocol.
+	OwningExecutionWorkers bool
 	// Name of the scenario (inferred from the file name)
 	ScenarioName string
 	// Run ID of the current scenario run, used to generate a unique task queue
@@ -385,6 +391,8 @@ func (r RunConfiguration) Validate() error {
 
 // Run represents an individual scenario run (many may be in a single instance (of possibly many) of a scenario).
 type Run struct {
+	Journal *journal.Session
+
 	// Do not mutate this, this is shared across the entire scenario
 	*ScenarioInfo
 
@@ -398,6 +406,8 @@ type Run struct {
 
 	// tracks how many attempts have been made for this iteration
 	attemptCount int
+
+	kitchenSinkExecution *kitchenSinkExecution
 }
 
 // NewRun creates a new run.
@@ -531,17 +541,24 @@ type KitchenSinkWorkflowOptions struct {
 // completion ignoring its result. Concurrently it will perform any client actions specified in
 // kitchensink.TestInput.ClientSequence
 func (r *Run) ExecuteKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions) error {
-	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	return r.executeKitchenSinkWorkflow(ctx, options, r.newClientActionsExecutor(options))
+}
 
-	executor := &kitchensink.ClientActionsExecutor{
+func (r *Run) newClientActionsExecutor(options *KitchenSinkWorkflowOptions) *kitchensink.ClientActionsExecutor {
+	return &kitchensink.ClientActionsExecutor{
 		Client:          r.Client,
 		Namespace:       r.Namespace,
 		WorkflowOptions: options.StartOptions,
 		WorkflowType:    "kitchenSink",
 		WorkflowInput:   options.Params.GetWorkflowInput(),
 	}
+}
+
+func (r *Run) executeKitchenSinkWorkflow(ctx context.Context, options *KitchenSinkWorkflowOptions, executor *kitchensink.ClientActionsExecutor) error {
+	r.Logger.Debugf("Executing kitchen sink workflow with options: %v", options)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	startErr := executor.Start(ctx, options.Params.WithStartAction)
 	if startErr != nil {
 		return fmt.Errorf("failed to start kitchen sink workflow: %w", startErr)

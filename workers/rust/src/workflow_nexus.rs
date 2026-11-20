@@ -44,7 +44,15 @@ pub async fn execute(
     }
     let started = match start.await {
         Ok(started) => started,
-        Err(failure) => return finish_failure(failure, cancelling).map(|()| None),
+        Err(error) => {
+            let failure = error.operation_failure().ok_or_else(|| {
+                wire::invalid(format!("cannot decode Nexus start failure: {error:?}"))
+            })?;
+            if cancelling && failure.as_cancelled().is_some() {
+                return Ok(None);
+            }
+            return finish_failure(failure.failure().clone(), cancelling).map(|()| None);
+        }
     };
     if matches!(choice, Some(Condition::CancelAfterStarted(_))) {
         started.cancel();
@@ -83,6 +91,28 @@ pub async fn execute(
     }
 }
 
+// SDK 1.1 returns a raw proto. Source SDKs expose these methods on typed errors.
+#[allow(dead_code)]
+trait LegacyNexusStartFailure {
+    fn operation_failure(&self) -> Option<&Self>;
+    fn failure(&self) -> &Failure;
+    fn as_cancelled(&self) -> Option<()>;
+}
+
+impl LegacyNexusStartFailure for Failure {
+    fn operation_failure(&self) -> Option<&Self> {
+        Some(self)
+    }
+
+    fn failure(&self) -> &Failure {
+        self
+    }
+
+    fn as_cancelled(&self) -> Option<()> {
+        is_cancelled(self).then_some(())
+    }
+}
+
 fn is_cancelled(failure: &Failure) -> bool {
     matches!(
         failure.failure_info,
@@ -94,8 +124,6 @@ fn finish_failure(failure: Failure, intentional_cancel: bool) -> WorkflowResult<
     if intentional_cancel && is_cancelled(&failure) {
         return Ok(());
     }
-    // The SDK exposes raw Nexus failure protos but has no workflow Nexus error
-    // type, so keep the entire remote failure as the cause.
     let message = failure.message.clone();
     let cause = DefaultFailureConverter::default()
         .to_error(
