@@ -48,10 +48,11 @@ func (s *SchedulerExecutor) createJournaledSchedule(ctx context.Context, run *lo
 }
 
 type scheduleOperationPlan struct {
-	Witness      string
-	Policy       scheduleRecoveryPolicy
-	PhasedUpdate bool `json:",omitempty"`
-	WitnessCalls int  `json:",omitempty"`
+	Witness         string
+	Policy          scheduleRecoveryPolicy
+	PhasedUpdate    bool `json:",omitempty"`
+	WitnessCalls    int  `json:",omitempty"`
+	SeparateWindows bool `json:",omitempty"`
 }
 
 type recordedScheduleResult struct {
@@ -82,6 +83,7 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 		plan := scheduleOperationPlan{Witness: "omes-update-" + uuid.NewString(), Policy: b.recoveryPolicy(), PhasedUpdate: b.name == "update"}
 		if plan.PhasedUpdate {
 			plan.WitnessCalls = max(6, plan.Policy.Calls)
+			plan.SeparateWindows = true
 		}
 		return json.Marshal(plan)
 	})
@@ -109,6 +111,36 @@ func (b *scheduleOperation) restoreJournal(ctx context.Context, r *scheduleRecov
 		if err := json.Unmarshal(item.Observation, b.recorded); err != nil {
 			b.beginErr = err
 		}
+	}
+	if plan.SeparateWindows && b.recorded == nil {
+		now := time.Now()
+		writeUntil := now.Add(plan.Policy.Timeout)
+		if end := r.options.Spec.EndAt; end.Before(writeUntil) {
+			writeUntil = end
+		}
+		witnessUntil := writeUntil.Add(plan.Policy.Timeout)
+		if end, ok := ctx.Deadline(); ok && end.Before(witnessUntil) {
+			witnessUntil = end
+			if end.Before(writeUntil) {
+				writeUntil = end
+			}
+		}
+		window, err := b.journal.Plan(ctx, b.key+"/windows", witnessUntil, writeUntil.MarshalText)
+		if err != nil {
+			b.beginErr = errors.Join(journal.ErrPersistence, err)
+			return
+		}
+		if !window.Done {
+			if err := b.journal.Observe(ctx, b.key+"/windows", []byte("frozen")); err != nil {
+				b.beginErr = err
+				return
+			}
+		}
+		if err := b.writeDeadline.UnmarshalText(window.Plan); err != nil {
+			b.beginErr = err
+			return
+		}
+		item.Deadline = window.Deadline
 	}
 	b.ctx, b.cancelDeadline = context.WithDeadline(ctx, item.Deadline)
 }

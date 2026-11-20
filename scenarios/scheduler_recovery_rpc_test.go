@@ -420,6 +420,37 @@ func TestSchedulerOperationRecoveryCancellation(t *testing.T) {
 	}
 }
 
+type delayedSchedulePlanJournal struct {
+	scenarioJournal
+}
+
+func (j *delayedSchedulePlanJournal) Apply(ctx context.Context, lane string, command journal.Command) (journal.State, error) {
+	if command.Kind == "plan" && command.Key == "schedule/0/update/0" {
+		time.Sleep(350 * time.Millisecond)
+	}
+	return j.scenarioJournal.Apply(ctx, lane, command)
+}
+
+func TestJournaledScheduleUpdateCanWriteAfterSlowPlanning(t *testing.T) {
+	c, service, _, logger := scheduleRecoveryRPCFixture(t)
+	executor := new(SchedulerExecutor)
+	info := scheduleRecoveryInfo(c, logger, true, map[string]string{SchedulerRecoveryTimeoutFlag: "250ms"})
+	require.NoError(t, executor.Configure(info))
+	run := info.NewRun(1)
+	session, err := journal.Claim(t.Context(), &delayedSchedulePlanJournal{}, "lane", 1)
+	require.NoError(t, err)
+	require.NoError(t, session.Begin(t.Context(), 1))
+	run.Journal = session
+	created, err := executor.createJournaledSchedule(t.Context(), run, 0)
+	require.NoError(t, err)
+
+	require.NoError(t, created.operations.update(t.Context()))
+	require.NoError(t, session.Commit(t.Context(), journal.Succeeded, ""))
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	require.Len(t, service.updates, 1)
+}
+
 func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
 	for _, mode := range []string{"unissued after read deadline", "resume before issue", "lost write acknowledgement", "late witness after resume", "missing witness"} {
 		t.Run(mode, func(t *testing.T) {
@@ -475,12 +506,14 @@ func TestJournaledScheduleUpdateSeparatesPreparationFromWrite(t *testing.T) {
 				require.ErrorIs(t, err, context.Canceled)
 				require.False(t, item.Done)
 				require.EqualValues(t, 3, item.Calls)
+				window := session.State().Pending.Items[key+"/windows"]
 				run.Journal, err = journal.Claim(t.Context(), backend, "lane", 2)
 				require.NoError(t, err)
 				restored, err := executor.createJournaledSchedule(t.Context(), run, 0)
 				require.NoError(t, err)
 				require.NoError(t, restored.operations.update(t.Context()))
 				item = run.Journal.State().Pending.Items[key]
+				require.Equal(t, window, run.Journal.State().Pending.Items[key+"/windows"])
 				require.EqualValues(t, 7, item.Calls)
 				require.Contains(t, string(item.Observation), string(outcomeObservedWitness))
 				require.NoError(t, run.Journal.Commit(t.Context(), journal.Succeeded, ""))

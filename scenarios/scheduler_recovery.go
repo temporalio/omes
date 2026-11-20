@@ -75,6 +75,7 @@ type scheduleOperation struct {
 	phasedUpdate   bool
 	witnessCalls   int
 	witnessReads   int
+	writeDeadline  time.Time
 	cancelDeadline context.CancelFunc
 	parentCtx      context.Context
 
@@ -377,7 +378,10 @@ func (r *scheduleRecovery) updateJournaled(b *scheduleOperation) error {
 	policy := b.recoveryPolicy()
 	deadline, _ := b.ctx.Deadline()
 	attemptBudget := policy.Timeout / 3
-	writeDeadline := deadline.Add(-attemptBudget)
+	writeDeadline := b.writeDeadline
+	if writeDeadline.IsZero() {
+		writeDeadline = deadline.Add(-attemptBudget)
+	}
 	if r.options.Spec.EndAt.Before(writeDeadline) {
 		writeDeadline = r.options.Spec.EndAt
 	}
@@ -405,13 +409,13 @@ func (r *scheduleRecovery) updateJournaled(b *scheduleOperation) error {
 					return nil, err
 				}
 				// The SDK sends the mutation only after this callback returns.
-				if err = b.journal.Issue(b.parentCtx, b.key); err != nil {
-					return nil, err
-				}
-				if err = ctx.Err(); err != nil {
+				if err = b.journal.Issue(ctx, b.key); err != nil {
 					return nil, err
 				}
 				b.outcome = outcomeUnresolved
+				if err = ctx.Err(); err != nil {
+					return nil, err
+				}
 				return update, nil
 			}})
 		})
@@ -434,7 +438,7 @@ func (r *scheduleRecovery) updateJournaled(b *scheduleOperation) error {
 			b.outcome = outcomeNotFoundCompatible
 			return nil
 		}
-		if !retryable {
+		if errors.Is(err, journal.ErrPersistence) || !retryable {
 			return fmt.Errorf("schedule update preparation: %w", err)
 		}
 	}
