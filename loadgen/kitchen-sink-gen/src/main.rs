@@ -815,6 +815,7 @@ impl<'a> Arbitrary<'a> for UpsertSearchAttributesAction {
                 );
                 hm
             },
+            generated: vec![],
         })
     }
 }

@@ -12,6 +12,8 @@ benchmark features and situations. Backwards compatibility may not be maintained
   executor, exposing options, and authoring conventions.
 - **[The throughput_stress scenario](./docs/throughput-stress.md)** — sleep activities, Nexus,
   standalone activities, and standalone Nexus operations.
+- **[Replaying a LoadInput](./docs/load-input.md)** — running the fuzzer from a workload file with
+  generated search attributes and visibility reads.
 
 ## Why the weird name?
 
@@ -295,6 +297,10 @@ binary files rather than seeds.
 
 Please do collect interesting fuzz cases in the `scenarios/fuzz_cases.yaml` file. This file
 currently has seeds, but could also easily reference stored binary files instead.
+
+To replay a described workload, with weighted inputs, search attribute values generated per iteration, and
+visibility reads, pass a `LoadInput` with `--option load-input-file`. See
+**[Replaying a LoadInput](./docs/load-input.md)**.
 
 ## Design decisions
 

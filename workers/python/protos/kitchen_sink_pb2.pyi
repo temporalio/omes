@@ -2,6 +2,7 @@ from google.protobuf import duration_pb2 as _duration_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from temporalio.api.common.v1 import message_pb2 as _message_pb2
 from temporalio.api.failure.v1 import message_pb2 as _message_pb2_1
+from temporalio.api.enums.v1 import common_pb2 as _common_pb2
 from temporalio.api.enums.v1 import workflow_pb2 as _workflow_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -36,6 +37,16 @@ class ActivityCancellationType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper
     TRY_CANCEL: _ClassVar[ActivityCancellationType]
     WAIT_CANCELLATION_COMPLETED: _ClassVar[ActivityCancellationType]
     ABANDON: _ClassVar[ActivityCancellationType]
+
+class PoolDistribution(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    POOL_DISTRIBUTION_UNIFORM: _ClassVar[PoolDistribution]
+    POOL_DISTRIBUTION_ZIPF: _ClassVar[PoolDistribution]
+
+class VisibilityReadKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    VISIBILITY_READ_KIND_LIST: _ClassVar[VisibilityReadKind]
+    VISIBILITY_READ_KIND_COUNT: _ClassVar[VisibilityReadKind]
 PARENT_CLOSE_POLICY_UNSPECIFIED: ParentClosePolicy
 PARENT_CLOSE_POLICY_TERMINATE: ParentClosePolicy
 PARENT_CLOSE_POLICY_ABANDON: ParentClosePolicy
@@ -50,6 +61,10 @@ CHILD_WF_WAIT_CANCELLATION_REQUESTED: ChildWorkflowCancellationType
 TRY_CANCEL: ActivityCancellationType
 WAIT_CANCELLATION_COMPLETED: ActivityCancellationType
 ABANDON: ActivityCancellationType
+POOL_DISTRIBUTION_UNIFORM: PoolDistribution
+POOL_DISTRIBUTION_ZIPF: PoolDistribution
+VISIBILITY_READ_KIND_LIST: VisibilityReadKind
+VISIBILITY_READ_KIND_COUNT: VisibilityReadKind
 
 class TestInput(_message.Message):
     __slots__ = ("workflow_input", "client_sequence", "with_start_action")
@@ -514,7 +529,7 @@ class SetPatchMarkerAction(_message.Message):
     def __init__(self, patch_id: _Optional[str] = ..., deprecated: bool = ..., inner_action: _Optional[_Union[Action, _Mapping]] = ...) -> None: ...
 
 class UpsertSearchAttributesAction(_message.Message):
-    __slots__ = ("search_attributes",)
+    __slots__ = ("search_attributes", "generated")
     class SearchAttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -523,8 +538,10 @@ class UpsertSearchAttributesAction(_message.Message):
         value: _message_pb2.Payload
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[_message_pb2.Payload, _Mapping]] = ...) -> None: ...
     SEARCH_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
+    GENERATED_FIELD_NUMBER: _ClassVar[int]
     search_attributes: _containers.MessageMap[str, _message_pb2.Payload]
-    def __init__(self, search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ...) -> None: ...
+    generated: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, search_attributes: _Optional[_Mapping[str, _message_pb2.Payload]] = ..., generated: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UpsertMemoAction(_message.Message):
     __slots__ = ("upserted_memo",)
@@ -654,3 +671,111 @@ class NexusWorkflowStartOptions(_message.Message):
 class AwaitPendingActions(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class LoadInput(_message.Message):
+    __slots__ = ("inputs", "search_attributes", "start_search_attributes", "visibility_reads")
+    INPUTS_FIELD_NUMBER: _ClassVar[int]
+    SEARCH_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
+    START_SEARCH_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
+    VISIBILITY_READS_FIELD_NUMBER: _ClassVar[int]
+    inputs: _containers.RepeatedCompositeFieldContainer[WeightedTestInput]
+    search_attributes: _containers.RepeatedCompositeFieldContainer[SearchAttributeDefinition]
+    start_search_attributes: _containers.RepeatedScalarFieldContainer[str]
+    visibility_reads: VisibilityReads
+    def __init__(self, inputs: _Optional[_Iterable[_Union[WeightedTestInput, _Mapping]]] = ..., search_attributes: _Optional[_Iterable[_Union[SearchAttributeDefinition, _Mapping]]] = ..., start_search_attributes: _Optional[_Iterable[str]] = ..., visibility_reads: _Optional[_Union[VisibilityReads, _Mapping]] = ...) -> None: ...
+
+class WeightedTestInput(_message.Message):
+    __slots__ = ("input", "weight")
+    INPUT_FIELD_NUMBER: _ClassVar[int]
+    WEIGHT_FIELD_NUMBER: _ClassVar[int]
+    input: TestInput
+    weight: int
+    def __init__(self, input: _Optional[_Union[TestInput, _Mapping]] = ..., weight: _Optional[int] = ...) -> None: ...
+
+class SearchAttributeDefinition(_message.Message):
+    __slots__ = ("name", "type", "generator")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    GENERATOR_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    type: _common_pb2.IndexedValueType
+    generator: ValueGenerator
+    def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[_common_pb2.IndexedValueType, str]] = ..., generator: _Optional[_Union[ValueGenerator, _Mapping]] = ...) -> None: ...
+
+class ValueGenerator(_message.Message):
+    __slots__ = ("pool", "int_range", "double_range", "bool", "time_offset")
+    POOL_FIELD_NUMBER: _ClassVar[int]
+    INT_RANGE_FIELD_NUMBER: _ClassVar[int]
+    DOUBLE_RANGE_FIELD_NUMBER: _ClassVar[int]
+    BOOL_FIELD_NUMBER: _ClassVar[int]
+    TIME_OFFSET_FIELD_NUMBER: _ClassVar[int]
+    pool: PoolGenerator
+    int_range: IntRangeGenerator
+    double_range: DoubleRangeGenerator
+    bool: BoolGenerator
+    time_offset: TimeOffsetGenerator
+    def __init__(self, pool: _Optional[_Union[PoolGenerator, _Mapping]] = ..., int_range: _Optional[_Union[IntRangeGenerator, _Mapping]] = ..., double_range: _Optional[_Union[DoubleRangeGenerator, _Mapping]] = ..., bool: _Optional[_Union[BoolGenerator, _Mapping]] = ..., time_offset: _Optional[_Union[TimeOffsetGenerator, _Mapping]] = ...) -> None: ...
+
+class PoolGenerator(_message.Message):
+    __slots__ = ("cardinality", "distribution", "max_items")
+    CARDINALITY_FIELD_NUMBER: _ClassVar[int]
+    DISTRIBUTION_FIELD_NUMBER: _ClassVar[int]
+    MAX_ITEMS_FIELD_NUMBER: _ClassVar[int]
+    cardinality: int
+    distribution: PoolDistribution
+    max_items: int
+    def __init__(self, cardinality: _Optional[int] = ..., distribution: _Optional[_Union[PoolDistribution, str]] = ..., max_items: _Optional[int] = ...) -> None: ...
+
+class IntRangeGenerator(_message.Message):
+    __slots__ = ("min", "max")
+    MIN_FIELD_NUMBER: _ClassVar[int]
+    MAX_FIELD_NUMBER: _ClassVar[int]
+    min: int
+    max: int
+    def __init__(self, min: _Optional[int] = ..., max: _Optional[int] = ...) -> None: ...
+
+class DoubleRangeGenerator(_message.Message):
+    __slots__ = ("min", "max")
+    MIN_FIELD_NUMBER: _ClassVar[int]
+    MAX_FIELD_NUMBER: _ClassVar[int]
+    min: float
+    max: float
+    def __init__(self, min: _Optional[float] = ..., max: _Optional[float] = ...) -> None: ...
+
+class BoolGenerator(_message.Message):
+    __slots__ = ("true_fraction",)
+    TRUE_FRACTION_FIELD_NUMBER: _ClassVar[int]
+    true_fraction: float
+    def __init__(self, true_fraction: _Optional[float] = ...) -> None: ...
+
+class TimeOffsetGenerator(_message.Message):
+    __slots__ = ("min_offset", "max_offset")
+    MIN_OFFSET_FIELD_NUMBER: _ClassVar[int]
+    MAX_OFFSET_FIELD_NUMBER: _ClassVar[int]
+    min_offset: _duration_pb2.Duration
+    max_offset: _duration_pb2.Duration
+    def __init__(self, min_offset: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., max_offset: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+
+class VisibilityReads(_message.Message):
+    __slots__ = ("rate_per_second", "max_in_flight", "templates")
+    RATE_PER_SECOND_FIELD_NUMBER: _ClassVar[int]
+    MAX_IN_FLIGHT_FIELD_NUMBER: _ClassVar[int]
+    TEMPLATES_FIELD_NUMBER: _ClassVar[int]
+    rate_per_second: float
+    max_in_flight: int
+    templates: _containers.RepeatedCompositeFieldContainer[VisibilityReadTemplate]
+    def __init__(self, rate_per_second: _Optional[float] = ..., max_in_flight: _Optional[int] = ..., templates: _Optional[_Iterable[_Union[VisibilityReadTemplate, _Mapping]]] = ...) -> None: ...
+
+class VisibilityReadTemplate(_message.Message):
+    __slots__ = ("name", "kind", "query", "weight", "page_size")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    WEIGHT_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    kind: VisibilityReadKind
+    query: str
+    weight: int
+    page_size: int
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[_Union[VisibilityReadKind, str]] = ..., query: _Optional[str] = ..., weight: _Optional[int] = ..., page_size: _Optional[int] = ...) -> None: ...
