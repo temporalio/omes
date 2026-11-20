@@ -284,6 +284,9 @@ func TestOriginalStartProtocol(t *testing.T) {
 				} else {
 					var notReady *serviceerror.WorkflowNotReady
 					require.ErrorAs(t, err, &notReady)
+					require.ErrorContains(t, err, target.GetRunID())
+					require.ErrorContains(t, err, spec.WorkflowID)
+					require.ErrorContains(t, err, action.GetDoUpdate().GetUpdateId())
 					require.NoError(t, original.StartJournaled(ctx, true, issue, bind))
 					require.Equal(t, 2, issues)
 					q, err := c.QueryWorkflow(ctx, spec.WorkflowID, target.GetRunID(), "updates")

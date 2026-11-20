@@ -8,8 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/temporalio/omes/loadgen/journal"
+	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
+	workflowservicepb "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/temporal"
@@ -128,6 +130,10 @@ func (e *ClientActionsExecutor) StartJournaled(ctx context.Context, previouslyIs
 		return err
 	}
 	err := e.awaitJournaledUpdate(ctx, update, issue)
+	var notReady *serviceerror.WorkflowNotReady
+	if errors.As(err, &notReady) {
+		return e.describeRejectedJournaledUpdate(ctx, update.UpdateId, err)
+	}
 	var application *temporal.ApplicationError
 	var canceled *temporal.CanceledError
 	var timeout *temporal.TimeoutError
@@ -138,6 +144,24 @@ func (e *ClientActionsExecutor) StartJournaled(ctx context.Context, previouslyIs
 		return errors.Join(journal.ErrTerminal, err)
 	}
 	return err
+}
+
+func (e *ClientActionsExecutor) describeRejectedJournaledUpdate(ctx context.Context, updateID string, err error) error {
+	probeCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	execution := &commonpb.WorkflowExecution{WorkflowId: e.WorkflowOptions.ID, RunId: e.runID}
+	resp, probeErr := e.Client.WorkflowService().GetWorkflowExecutionHistoryReverse(probeCtx, &workflowservicepb.GetWorkflowExecutionHistoryReverseRequest{
+		Namespace: e.Namespace, Execution: execution, MaximumPageSize: 32,
+	})
+	if probeErr == nil {
+		for _, event := range resp.GetHistory().GetEvents() {
+			if failed := event.GetWorkflowTaskFailedEventAttributes(); failed != nil {
+				return fmt.Errorf("update %s on workflow %s run %s (workflow task failure event %d, cause %s): %w",
+					updateID, execution.WorkflowId, execution.RunId, event.GetEventId(), failed.GetCause(), err)
+			}
+		}
+	}
+	return fmt.Errorf("update %s on workflow %s run %s: %w", updateID, execution.WorkflowId, execution.RunId, err)
 }
 
 func (e *ClientActionsExecutor) bindJournaledUpdate(ctx context.Context, update *DoUpdate, previouslyIssued bool, issue func() error) error {

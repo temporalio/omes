@@ -3,6 +3,7 @@ package journal
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -37,7 +38,10 @@ func (s *Session) apply(ctx context.Context, c Command) error {
 		s.state = next
 	}
 	if err != nil {
-		return errors.Join(ErrPersistence, err)
+		if c.Key != "" {
+			return errors.Join(ErrPersistence, fmt.Errorf("journal %s %q: %w", c.Kind, c.Key, err))
+		}
+		return errors.Join(ErrPersistence, fmt.Errorf("journal %s: %w", c.Kind, err))
 	}
 	return nil
 }
