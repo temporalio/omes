@@ -5,6 +5,7 @@ import (
 
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/temporalio/omes/clioptions"
+	loadgenks "github.com/temporalio/omes/loadgen/kitchensink"
 	"github.com/temporalio/omes/workers/go/harness"
 	"github.com/temporalio/omes/workers/go/workerlib/ebbandflow"
 	"github.com/temporalio/omes/workers/go/workerlib/kitchensink"
@@ -34,6 +35,10 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	if err := service.Register(kitchensink.KitchenSinkNexusOperation); err != nil {
 		panic(err)
 	}
+	workerCallbackService := nexus.NewService(loadgenks.WorkerCallbackServiceName)
+	if err := workerCallbackService.Register(loadgenks.WorkerCallbackOperation); err != nil {
+		panic(err)
+	}
 	w := sdkworker.New(client, context.TaskQueue, context.WorkerOptions)
 	w.RegisterWorkflowWithOptions(kitchensink.KitchenSinkWorkflow, workflow.RegisterOptions{Name: "kitchenSink"})
 	w.RegisterActivityWithOptions(kitchensink.Noop, activity.RegisterOptions{Name: "noop"})
@@ -48,6 +53,7 @@ func buildWorker(client sdkclient.Client, context harness.WorkerContext) sdkwork
 	w.RegisterWorkflowWithOptions(schedulerstress.NoopScheduledWorkflow, workflow.RegisterOptions{Name: "NoopScheduledWorkflow"})
 	w.RegisterWorkflowWithOptions(schedulerstress.SleepScheduledWorkflow, workflow.RegisterOptions{Name: "SleepScheduledWorkflow"})
 	w.RegisterNexusService(service)
+	w.RegisterNexusService(workerCallbackService)
 	return w
 }
 

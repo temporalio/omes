@@ -108,6 +108,28 @@ is any.
 
 Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction, and fails the run.
 
+## Worker callbacks on standalone Nexus operations
+
+`include-nexus-worker-callbacks` enables an independent driver loop that starts standalone Nexus
+operations with a worker callback attached. A worker callback is a `NexusHandler` completion callback:
+when the operation completes, the server delivers its outcome to a Nexus handler on the run's task
+queue. Iterations alternate between an operation that succeeds and one that times out. Each iteration
+passes once the server reports the callback as succeeded. The handler only accepts an outcome that
+matches what the iteration expected, so a succeeded callback also confirms that the right outcome was
+delivered.
+
+The flag is off by default, because the server reports no capability for this feature. Turn it on only
+when all of the following hold:
+
+- the worker is the Go worker (the only one implementing the handler),
+- the `nexusHandler` callback kind is enabled (dynamic config
+  `nexusoperation.enabledCallbackKinds: ["nexusHandler"]`), and
+- `include-standalone-nexus` is on. Requesting worker callbacks without it fails the run.
+
+Rate, concurrency, and drain timeout are set with the `nexus-worker-callbacks-*` options; see
+[running an independent load](./running.md#running-an-independent-load). To run this load on its own,
+use the `nexus_worker_callbacks` scenario.
+
 ## Nexus operation actions
 
 ### `include-nexus-workflow-actions`
