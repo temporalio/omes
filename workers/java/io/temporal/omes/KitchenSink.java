@@ -56640,7 +56640,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -56650,7 +56651,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -56660,7 +56662,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -56980,7 +56983,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -56993,7 +56997,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -57009,7 +57014,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
     /**
      * <pre>
      * Update the target workflow selected by workflow_id and run_id.
-     * DoUpdate.with_start is not supported.
+     * With DoUpdate.with_start, start_options supplies the workflow input and
+     * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
      * </pre>
      *
      * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58273,7 +58279,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58286,7 +58293,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58309,7 +58317,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58330,7 +58339,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58349,7 +58359,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58377,7 +58388,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58401,7 +58413,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58412,7 +58425,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>
@@ -58431,7 +58445,8 @@ io.temporal.api.common.v1.Payload defaultValue) {
       /**
        * <pre>
        * Update the target workflow selected by workflow_id and run_id.
-       * DoUpdate.with_start is not supported.
+       * With DoUpdate.with_start, start_options supplies the workflow input and
+       * conflict policy; run_id must be empty. Supported by the Go Nexus handler.
        * </pre>
        *
        * <code>.temporal.omes.kitchen_sink.DoUpdate update = 6;</code>

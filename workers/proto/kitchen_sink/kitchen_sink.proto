@@ -565,7 +565,8 @@ message NexusWorkflowAction {
     // run_id selects the run for a signal without start.
     DoSignal signal = 5;
     // Update the target workflow selected by workflow_id and run_id.
-    // DoUpdate.with_start is not supported.
+    // With DoUpdate.with_start, start_options supplies the workflow input and
+    // conflict policy; run_id must be empty. Supported by the Go Nexus handler.
     DoUpdate update = 6;
     // Query the target workflow selected by workflow_id and run_id.
     DoQuery query = 7;

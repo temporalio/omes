@@ -395,7 +395,7 @@ func TestThroughputStressNexusWorkflowActions(t *testing.T) {
 			}
 		})
 	}
-	require.Len(t, workflowActions, 4)
+	require.Len(t, workflowActions, 8)
 
 	signalWithStartAction := workflowActions[0]
 	require.True(t, signalWithStartAction.GetSignal().GetWithStart())
@@ -938,4 +938,85 @@ func TestRunLoads(t *testing.T) {
 			require.ErrorIs(t, result.err, cleanupErr)
 		})
 	})
+}
+
+func TestThroughputStressNexusWorkflowActionsOptIn(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		options     map[string]string
+		wantUpdates int
+	}{
+		{name: "omitted"},
+		{name: "explicitly disabled", options: map[string]string{IncludeNexusWorkflowActionsFlag: "false"}},
+		{name: "enabled", options: map[string]string{IncludeNexusWorkflowActionsFlag: "true"}, wantUpdates: 3},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			options := map[string]string{
+				NexusEnabledFlag: "true", IterFlag: "1",
+				IncludeStandaloneNexusFlag: "false", IncludeStandaloneActivityFlag: "false",
+				IncludeStandaloneActivityOperatorCommandsFlag: "false",
+			}
+			for key, value := range test.options {
+				options[key] = value
+			}
+			info := loadgen.ScenarioInfo{RunID: "workflow-actions-opt-in", Logger: zap.NewNop().Sugar(), Options: loadgen.MustResolveScenarioOptions("throughput_stress", options)}
+			executor := newThroughputStressExecutor()
+			require.NoError(t, executor.Configure(info))
+			updates := 0
+			for _, set := range executor.createActions(info.NewRun(1)) {
+				walkActions(set.Actions, func(action *ks.Action) {
+					if action.GetNexusOperation().GetInput().GetWorkflowAction().GetUpdate().GetWithStart() {
+						updates++
+					}
+				})
+			}
+			require.Equal(t, test.wantUpdates, updates)
+		})
+	}
+}
+
+func TestThroughputStressNexusWorkflowActionsDisabledPython(t *testing.T) {
+	t.Parallel()
+
+	env := workertest.SetupTestEnvironment(t, workertest.WithExecutorTimeout(time.Minute))
+	for _, test := range []struct {
+		name    string
+		options map[string]string
+	}{
+		{name: "omitted"},
+		{name: "explicitly disabled", options: map[string]string{IncludeNexusWorkflowActionsFlag: "false"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			options := map[string]string{
+				IterFlag: "1", NexusEnabledFlag: "false", SleepTimeFlag: "1ms",
+				VisibilityVerificationTimeoutFlag: "10s",
+			}
+			for key, value := range test.options {
+				options[key] = value
+			}
+			info := loadgen.ScenarioInfo{
+				RunID:         "workflow-actions-disabled-python-" + strings.ReplaceAll(test.name, " ", "-"),
+				Configuration: loadgen.RunConfiguration{Iterations: 1},
+				Options:       loadgen.MustResolveScenarioOptions("throughput_stress", options),
+			}
+			_, err := env.RunExecutorTest(t, newThroughputStressExecutor(), info, clioptions.LangPython)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestThroughputStressUpdateWithStartActions(t *testing.T) {
+	executor := &tpsExecutor{config: &tpsConfig{}}
+	actions := executor.createNexusWorkflowActionSequence("target").GetNestedActionSet().Actions
+	require.Len(t, actions, 8)
+	require.True(t, actions[0].GetNexusOperation().GetInput().GetWorkflowAction().GetSignal().GetWithStart())
+	require.False(t, actions[1].GetNexusOperation().GetInput().GetWorkflowAction().GetUpdate().GetWithStart())
+	for index, id := range []string{"new", "existing", "existing"} {
+		target := actions[4+index].GetNexusOperation().GetInput().GetWorkflowAction()
+		require.Equal(t, "target-update-with-start", target.WorkflowId)
+		require.True(t, target.GetUpdate().WithStart)
+		require.Equal(t, id, target.GetUpdate().UpdateId)
+		require.Equal(t, enumspb.WORKFLOW_ID_CONFLICT_POLICY_USE_EXISTING, target.StartOptions.WorkflowIdConflictPolicy)
+	}
+	require.NotNil(t, actions[7].GetNexusOperation().GetInput().GetWorkflowAction().GetSignal())
 }

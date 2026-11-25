@@ -112,8 +112,8 @@ Asking for `include-standalone-nexus=true` while Nexus is off is a contradiction
 
 ### `include-nexus-workflow-actions`
 
-The workflow actions start their target workflow with signal-with-start, update it, then send an
-ordinary signal that completes it. This requires Nexus update callback support.
+Exercises Nexus operations backed by Signal-with-Start, Update, Signal, Query, and
+Update-with-Start. This requires Nexus Update callback support.
 
 ### `include-nexus-standalone-activity`
 
