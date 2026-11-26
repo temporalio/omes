@@ -158,28 +158,39 @@ func ExportWorkflowHistories(ctx context.Context, info ScenarioInfo) error {
 	query := fmt.Sprintf("%s='%s'", OmesExecutionIDSearchAttribute, info.ExecutionID)
 	query += buildStatusFilter(info.ExportOptions.ExportHistoriesFilter, info.Logger)
 
-	resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
-		Namespace: info.Namespace,
-		Query:     query,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list workflows: %w", err)
+	var nextPageToken []byte
+	var exportErrors []string
+	exported := 0
+	for {
+		resp, err := info.Client.ListWorkflow(ctx, &workflowservice.ListWorkflowExecutionsRequest{
+			Namespace:     info.Namespace,
+			Query:         query,
+			NextPageToken: nextPageToken,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list workflows: %w", err)
+		}
+
+		for _, execution := range resp.Executions {
+			if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
+				exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
+			} else {
+				exported++
+			}
+		}
+
+		nextPageToken = resp.NextPageToken
+		if len(nextPageToken) == 0 {
+			break
+		}
 	}
 
-	if len(resp.Executions) == 0 {
+	if exported == 0 && len(exportErrors) == 0 {
 		info.Logger.Info("No workflows found matching export filter")
 		return nil
 	}
 
-	var exportErrors []string
-	for _, execution := range resp.Executions {
-		if err := exportSingleWorkflowHistory(ctx, info.Client, execution, outputDir); err != nil {
-			exportErrors = append(exportErrors, fmt.Sprintf("%s: %v", execution.Execution.WorkflowId, err))
-		}
-	}
-
-	info.Logger.Infof("Exported %d workflow histories to %s",
-		len(resp.Executions)-len(exportErrors), outputDir)
+	info.Logger.Infof("Exported %d workflow histories to %s", exported, outputDir)
 
 	if len(exportErrors) > 0 {
 		return fmt.Errorf("%d workflow history exports failed: %s", len(exportErrors), strings.Join(exportErrors, "\n "))
