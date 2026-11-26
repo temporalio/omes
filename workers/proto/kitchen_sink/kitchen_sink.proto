@@ -8,6 +8,7 @@ import "google/protobuf/empty.proto";
 
 import "temporal/api/common/v1/message.proto";
 import "temporal/api/failure/v1/message.proto";
+import "temporal/api/enums/v1/common.proto";
 import "temporal/api/enums/v1/workflow.proto";
 
 // The input to the test overall. A copy of this constitutes everything that is needed to reproduce
@@ -421,6 +422,9 @@ message UpsertSearchAttributesAction {
   // SearchAttributes fields - equivalent to indexed_fields on api. Key = search index, Value =
   // value
   map<string, temporal.api.common.v1.Payload> search_attributes = 1;
+  // Names from LoadInput.search_attributes. Loadgen replaces each with a fresh value in search_attributes before the
+  // workflow starts, so workers never read this field.
+  repeated string generated = 2;
 }
 
 message UpsertMemoAction {
@@ -585,4 +589,95 @@ message NexusWorkflowStartOptions {
 // Await completion of all actions that were started in the same workflow with
 // AwaitableChoice.wait_started and not yet awaited.
 message AwaitPendingActions {
+}
+
+// Describes a whole run of the fuzzer scenario: a weighted mix of inputs, the search attributes they write, and
+// visibility reads issued beside the workflows.
+message LoadInput {
+  // Each iteration picks one input, with probability weight / total weight.
+  repeated WeightedTestInput inputs = 1;
+  repeated SearchAttributeDefinition search_attributes = 2;
+  // Names from search_attributes that every iteration sets, with fresh values, when it starts its workflow.
+  repeated string start_search_attributes = 3;
+  // Unset issues no reads.
+  VisibilityReads visibility_reads = 4;
+}
+
+message WeightedTestInput {
+  TestInput input = 1;
+  uint32 weight = 2;
+}
+
+message SearchAttributeDefinition {
+  string name = 1;
+  temporal.api.enums.v1.IndexedValueType type = 2;
+  ValueGenerator generator = 3;
+}
+
+message ValueGenerator {
+  oneof variant {
+    // Keyword, Text, KeywordList
+    PoolGenerator pool = 1;
+    // Int
+    IntRangeGenerator int_range = 2;
+    // Double
+    DoubleRangeGenerator double_range = 3;
+    // Bool
+    BoolGenerator bool = 4;
+    // Datetime
+    TimeOffsetGenerator time_offset = 5;
+  }
+}
+
+message PoolGenerator {
+  uint32 cardinality = 1;
+  PoolDistribution distribution = 2;
+  // KeywordList only: each value holds 1 to max_items distinct pool values. 0 means 3.
+  uint32 max_items = 3;
+}
+
+enum PoolDistribution {
+  POOL_DISTRIBUTION_UNIFORM = 0;
+  POOL_DISTRIBUTION_ZIPF = 1;
+}
+
+message IntRangeGenerator {
+  int64 min = 1;
+  int64 max = 2;
+}
+
+message DoubleRangeGenerator {
+  double min = 1;
+  double max = 2;
+}
+
+message BoolGenerator {
+  double true_fraction = 1;
+}
+
+message TimeOffsetGenerator {
+  google.protobuf.Duration min_offset = 1;
+  google.protobuf.Duration max_offset = 2;
+}
+
+message VisibilityReads {
+  // Reads per second issued by each omes process.
+  double rate_per_second = 1;
+  // Reads in flight before a due read is skipped. 0 means max(64, rate_per_second).
+  uint32 max_in_flight = 2;
+  repeated VisibilityReadTemplate templates = 3;
+}
+
+message VisibilityReadTemplate {
+  string name = 1;
+  VisibilityReadKind kind = 2;
+  string query = 3;
+  uint32 weight = 4;
+  // LIST only. 0 means 100.
+  uint32 page_size = 5;
+}
+
+enum VisibilityReadKind {
+  VISIBILITY_READ_KIND_LIST = 0;
+  VISIBILITY_READ_KIND_COUNT = 1;
 }
