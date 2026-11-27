@@ -13,6 +13,7 @@ import (
 
 	"github.com/temporalio/omes/loadgen"
 	"github.com/temporalio/omes/loadgen/ebbandflow"
+	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/temporal"
 )
@@ -192,6 +193,9 @@ func (e *ebbAndFlowExecutor) Configure(info loadgen.ScenarioInfo) error {
 
 // Run executes the ebb and flow scenario.
 func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo) error {
+	info.Configuration.Counter.RunStarted()
+	defer func() { info.Configuration.Counter.RunFinished(ctx.Err()) }()
+
 	if err := e.Configure(info); err != nil {
 		return fmt.Errorf("failed to parse scenario configuration: %w", err)
 	}
@@ -200,7 +204,6 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	e.id = fmt.Sprintf("ebb_and_flow_%s", e.ExecutionID)
 	e.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	e.startTime = time.Now()
-
 	// Get parsed configuration
 	config := e.config
 	if config == nil {
@@ -216,7 +219,13 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 	backlogTicker := time.NewTicker(config.BacklogLogInterval)
 	defer backlogTicker.Stop()
 
+	// Batches are joined on every exit so final counts are complete when Run returns.
+	batchCtx, cancelBatches := context.WithCancel(ctx)
 	var startWG sync.WaitGroup
+	defer func() {
+		cancelBatches()
+		startWG.Wait()
+	}()
 	var iter int64 = 1
 
 	if config.RateMode {
@@ -277,7 +286,12 @@ func (e *ebbAndFlowExecutor) Run(ctx context.Context, info loadgen.ScenarioInfo)
 				// increment below, which races with the spawned goroutine.
 				iteration := iter
 				startWG.Go(func() {
-					errCh <- e.spawnWorkflowWithActivities(ctx, iteration, batch, config.SleepActivityConfig)
+					err := e.spawnWorkflowWithActivities(batchCtx, iteration, batch, config.SleepActivityConfig)
+					// Don't block shutdown once the control loop has stopped reading.
+					select {
+					case errCh <- err:
+					case <-batchCtx.Done():
+					}
 				})
 				iter++
 			}
@@ -347,7 +361,14 @@ func (e *ebbAndFlowExecutor) spawnWorkflowWithActivities(
 	ctx context.Context,
 	iteration, activities int64,
 	template *loadgen.SleepActivityConfig,
-) error {
+) (retErr error) {
+	e.Configuration.Counter.IterationStarted()
+	defer func() {
+		_, canceled := errors.AsType[*serviceerror.Canceled](retErr)
+		stopping := ctx.Err() != nil && (errors.Is(retErr, context.Canceled) || canceled)
+		e.Configuration.Counter.IterationFinished(int(iteration), 1, retErr, stopping)
+	}()
+
 	// Override activity count to fixed rate.
 	fixedDist := loadgen.NewFixedDistribution(activities)
 	config := loadgen.SleepActivityConfig{

@@ -13,7 +13,7 @@ import (
 )
 
 func TestRunResultEncoding(t *testing.T) {
-	result := newRunResult(runEnd{finished: true, err: errors.New("iteration failed")}, loadgen.RunCounts{
+	result := newRunResult("throughput_stress", runEnd{finished: true, err: errors.New("iteration failed")}, loadgen.RunCounts{
 		Iterations: &loadgen.IterationCounts{
 			Started: 2, Succeeded: 1, Failed: 1,
 		},
@@ -23,6 +23,7 @@ func TestRunResultEncoding(t *testing.T) {
 	encoded, err := json.Marshal(result)
 	require.NoError(t, err)
 	require.JSONEq(t, `{
+  "scenario": "throughput_stress",
   "outcome": "failed",
   "error": "iteration failed",
   "iterations": {"started": 2, "succeeded": 1, "failed": 1},
@@ -106,7 +107,7 @@ func TestRunResultOutcomes(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := newRunResult(tc.end, tc.counts, nil)
+			result := newRunResult("test", tc.end, tc.counts, nil)
 			require.Equal(t, tc.want, result.Outcome)
 			if tc.end.err != nil {
 				require.Equal(t, tc.end.err.Error(), result.Error)
@@ -142,22 +143,22 @@ func TestRunResultFile(t *testing.T) {
 	}{
 		{
 			name: "minimal schema",
-			want: `{"outcome":"passed","iterations":null,"failures":[],"scenarioState":null}`,
+			want: `{"scenario":"test","outcome":"passed","iterations":null,"failures":[],"scenarioState":null}`,
 		},
 		{
 			name:          "scenario state",
 			scenarioState: map[string]int{"completed": 12},
-			want:          `{"outcome":"passed","iterations":null,"failures":[],"scenarioState":{"completed":12}}`,
+			want:          `{"scenario":"test","outcome":"passed","iterations":null,"failures":[],"scenarioState":{"completed":12}}`,
 		},
 		{
 			name:   "run error",
 			runErr: errors.New("run failed"),
-			want:   `{"outcome":"failed","error":"run failed","iterations":null,"failures":[],"scenarioState":null}`,
+			want:   `{"scenario":"test","outcome":"failed","error":"run failed","iterations":null,"failures":[],"scenarioState":null}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			result := newRunResult(runEnd{finished: true, err: tc.runErr}, loadgen.RunCounts{}, tc.scenarioState)
+			result := newRunResult("test", runEnd{finished: true, err: tc.runErr}, loadgen.RunCounts{}, tc.scenarioState)
 			require.NoError(t, result.write(path))
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)

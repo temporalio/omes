@@ -85,10 +85,10 @@ func TestGenericExecutorRunCounterInitiallyUnavailable(t *testing.T) {
 
 func TestRunCounterTruncatesErrors(t *testing.T) {
 	counter := &RunCounter{}
-	counter.runStarted()
+	counter.RunStarted()
 
 	long := strings.Repeat("é", statisticsMaxErrorBytes)
-	counter.iterationFinished(1, 1, errors.New(long), false)
+	counter.IterationFinished(1, 1, errors.New(long), false)
 
 	message := counter.Snapshot().Failures[0].Error
 	require.LessOrEqual(t, len(message), statisticsMaxErrorBytes+len("… (truncated)"))

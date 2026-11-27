@@ -29,7 +29,8 @@ type IterationFailure struct {
 	Error     string `json:"error"`
 }
 
-// RunCounter counts generic executor outcomes independently of scenario callbacks.
+// RunCounter counts executor outcomes independently of scenario callbacks.
+// Counts cover the current process only; state loaded by a resumed executor is not included.
 // The zero value is ready to use. Counts stay unavailable (Iterations is nil) until
 // a generic executor runs, distinguishing unavailable counts from zero iterations.
 type RunCounter struct {
@@ -60,8 +61,8 @@ func (s RunCounts) clone() RunCounts {
 	return s
 }
 
-// runStarted records that a generic executor counts this run's iterations; until then counts are unavailable.
-func (s *RunCounter) runStarted() {
+// RunStarted records that an executor counts this run's iterations; until then counts are unavailable.
+func (s *RunCounter) RunStarted() {
 	if s == nil {
 		return
 	}
@@ -72,7 +73,8 @@ func (s *RunCounter) runStarted() {
 	}
 }
 
-func (s *RunCounter) iterationStarted() {
+// IterationStarted counts a new logical iteration.
+func (s *RunCounter) IterationStarted() {
 	if s == nil {
 		return
 	}
@@ -81,7 +83,9 @@ func (s *RunCounter) iterationStarted() {
 	s.state.Iterations.Started++
 }
 
-func (s *RunCounter) iterationFinished(iteration, attempt int, err error, stopping bool) {
+// IterationFinished records an iteration outcome after retries; stopping marks an iteration cut
+// short by the run ending, which is left out of both tallies.
+func (s *RunCounter) IterationFinished(iteration, attempt int, err error, stopping bool) {
 	if s == nil || stopping {
 		return
 	}
@@ -97,7 +101,8 @@ func (s *RunCounter) iterationFinished(iteration, attempt int, err error, stoppi
 	}
 }
 
-func (s *RunCounter) runFinished(err error) {
+// RunFinished records a run-level timeout.
+func (s *RunCounter) RunFinished(err error) {
 	if s == nil || !errors.Is(err, context.DeadlineExceeded) {
 		return
 	}
