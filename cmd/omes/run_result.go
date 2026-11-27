@@ -12,6 +12,7 @@ import (
 )
 
 type runResult struct {
+	Scenario      string                     `json:"scenario"`
 	Outcome       string                     `json:"outcome"`
 	Error         string                     `json:"error,omitempty"`
 	Iterations    *loadgen.IterationCounts   `json:"iterations"`
@@ -27,11 +28,12 @@ type runEnd struct {
 	panicked bool
 }
 
-func newRunResult(end runEnd, counts loadgen.RunCounts, scenarioState any) runResult {
+func newRunResult(scenario string, end runEnd, counts loadgen.RunCounts, scenarioState any) runResult {
 	if counts.Failures == nil {
 		counts.Failures = []loadgen.IterationFailure{}
 	}
 	result := runResult{
+		Scenario:      scenario,
 		Iterations:    counts.Iterations,
 		Failures:      counts.Failures,
 		ScenarioState: scenarioState,

@@ -2,6 +2,7 @@ package scenarios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -38,6 +39,9 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 
 	// TODO(cretz): Note, this is a known naive approach because if workflows are
 	// backed up and/or slow down this won't match.
+
+	s.Configuration.Counter.RunStarted()
+	defer func() { s.Configuration.Counter.RunFinished(ctx.Err()) }()
 
 	if s.Configuration.Duration == 0 {
 		return fmt.Errorf("duration required for this scenario")
@@ -93,7 +97,13 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 	defer ticker.Stop()
 	var consecutiveErrCount int
 	iter := 1
+	// Starts are joined on every exit so final counts are complete when run returns.
+	startCtx, cancelStarts := context.WithCancel(ctx)
 	var startWG sync.WaitGroup
+	defer func() {
+		cancelStarts()
+		startWG.Wait()
+	}()
 	for begin := time.Now(); time.Since(begin) < s.Configuration.Duration; iter++ {
 		select {
 		case <-ctx.Done():
@@ -109,15 +119,18 @@ func (s *stateTransitionsSteady) run(ctx context.Context) error {
 			}
 		case <-ticker.C:
 			s.Logger.Debugf("Running iteration %v", iter)
+			s.Configuration.Counter.IterationStarted()
 			startWG.Add(1)
 			go func(iter int) {
 				defer startWG.Done()
 				_, err := s.Client.ExecuteWorkflow(
-					ctx,
+					startCtx,
 					s.NewRun(iter).DefaultStartWorkflowOptions(),
 					"kitchenSink",
 					workflowParams,
 				)
+				stopping := startCtx.Err() != nil && errors.Is(err, context.Canceled)
+				s.Configuration.Counter.IterationFinished(iter, 1, err, stopping)
 				// Only send to err ch if there is room just in case
 				select {
 				case errCh <- err:

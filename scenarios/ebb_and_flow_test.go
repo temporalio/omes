@@ -15,6 +15,7 @@ import (
 	"github.com/temporalio/omes/loadgen"
 	"go.temporal.io/api/operatorservicemock/v1"
 	"go.temporal.io/api/serviceerror"
+	sdkclient "go.temporal.io/sdk/client"
 	sdkmocks "go.temporal.io/sdk/mocks"
 	"go.uber.org/zap"
 )
@@ -206,4 +207,45 @@ func TestEbbAndFlowWorkflowAccounting(t *testing.T) {
 			require.Equal(t, int64(3), executor.completedActivities.Load())
 		})
 	}
+}
+
+// The run counter holds the same iteration counts for ebb_and_flow as for a standard
+// executor, so consumers read progress from one place.
+func TestEbbAndFlowReportsIterationCounts(t *testing.T) {
+	standard := &loadgen.RunCounter{}
+	info := loadgen.ScenarioInfo{
+		MetricsHandler: sdkclient.MetricsNopHandler,
+		Logger:         zap.NewNop().Sugar(),
+		Configuration: loadgen.RunConfiguration{
+			Iterations:                    2,
+			DoNotRegisterSearchAttributes: true,
+			Counter:                       standard,
+		},
+	}
+	generic := &loadgen.GenericExecutor{Execute: func(context.Context, *loadgen.Run) error { return nil }}
+	require.NoError(t, generic.Run(t.Context(), info))
+
+	custom := &loadgen.RunCounter{}
+	for _, workflowErr := range []error{nil, errors.New("workflow failed")} {
+		workflowRun := &sdkmocks.WorkflowRun{}
+		workflowRun.On("Get", mock.Anything, mock.Anything).Return(workflowErr)
+		temporalClient := &sdkmocks.Client{}
+		temporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, "ebbAndFlowTrack", mock.Anything).
+			Return(workflowRun, nil)
+		executor := newEbbAndFlowExecutor()
+		executor.ScenarioInfo = loadgen.ScenarioInfo{
+			Client:        temporalClient,
+			Logger:        zap.NewNop().Sugar(),
+			Configuration: loadgen.RunConfiguration{Counter: custom},
+		}
+		custom.RunStarted()
+		_ = executor.spawnWorkflowWithActivities(t.Context(), 1, 3, &loadgen.SleepActivityConfig{})
+	}
+
+	require.Equal(t, &loadgen.IterationCounts{Started: 2, Succeeded: 2}, standard.Snapshot().Iterations)
+	require.Equal(t, &loadgen.IterationCounts{Started: 2, Succeeded: 1, Failed: 1}, custom.Snapshot().Iterations)
+	require.Equal(t, []loadgen.IterationFailure{{
+		Iteration: 1, Attempt: 1,
+		Error: "ebbAndFlowTrack workflow failed for iteration 1: workflow failed",
+	}}, custom.Snapshot().Failures)
 }

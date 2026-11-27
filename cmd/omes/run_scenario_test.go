@@ -12,8 +12,12 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	workflowpb "go.temporal.io/api/workflow/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
+	sdkmocks "go.temporal.io/sdk/mocks"
 	"go.uber.org/zap"
 
 	"github.com/temporalio/omes/clioptions"
@@ -137,9 +141,10 @@ func TestResultFileFlags(t *testing.T) {
 
 func TestRunResultOnFailure(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		run       func(context.Context, string) error
-		wantError string
+		name         string
+		run          func(context.Context, string) error
+		wantScenario string
+		wantError    string
 	}{
 		{
 			name: "invalid input",
@@ -148,7 +153,8 @@ func TestRunResultOnFailure(t *testing.T) {
 				runner.exportResultFile = path
 				return runner.run(ctx)
 			},
-			wantError: "no_such_scenario",
+			wantScenario: "no_such_scenario",
+			wantError:    "no_such_scenario",
 		},
 		{
 			name: "invalid input with worker",
@@ -157,7 +163,8 @@ func TestRunResultOnFailure(t *testing.T) {
 				runner.ScenarioID = newRunner("no_such_scenario").scenario
 				return runner.run(ctx)
 			},
-			wantError: "no_such_scenario",
+			wantScenario: "no_such_scenario",
+			wantError:    "no_such_scenario",
 		},
 		{
 			name: "connection failure",
@@ -170,7 +177,8 @@ func TestRunResultOnFailure(t *testing.T) {
 				runner.clientOptions.ClientKeyPath = filepath.Join(filepath.Dir(path), "missing-key")
 				return runner.run(ctx)
 			},
-			wantError: "failed dialing",
+			wantScenario: "workflow_with_single_noop_activity",
+			wantError:    "failed dialing",
 		},
 		{
 			name: "worker startup failure",
@@ -185,7 +193,8 @@ func TestRunResultOnFailure(t *testing.T) {
 				runner.TaskQueueIndexSuffixEnd = 1
 				return runner.run(ctx)
 			},
-			wantError: "worker did not start",
+			wantScenario: "workflow_with_single_noop_activity",
+			wantError:    "worker did not start",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -199,6 +208,7 @@ func TestRunResultOnFailure(t *testing.T) {
 			var result runResult
 			require.NoError(t, json.Unmarshal(data, &result))
 			require.Equal(t, runResult{
+				Scenario: tc.wantScenario,
 				Outcome:  "failed",
 				Error:    err.Error(),
 				Failures: []loadgen.IterationFailure{},
@@ -240,7 +250,9 @@ func TestRunResultOnPanic(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: time.Second}}
+			runner := newRunner("test_scenario")
+			runner.exportResultFile = path
+			runner.exportResultInterval = time.Second
 
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -262,6 +274,7 @@ func TestRunResultOnPanic(t *testing.T) {
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
 			require.JSONEq(t, `{
+  "scenario": "test_scenario",
   "outcome": "failed",
   "error": "panic: scenario panic",
   "iterations": null,
@@ -292,7 +305,8 @@ func TestFinishScenarioState(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "result.json")
-			runner := &scenarioRunner{scenarioRunConfig: scenarioRunConfig{exportResultFile: path}}
+			runner := newRunner("test_scenario")
+			runner.exportResultFile = path
 			if !tc.noExecutor {
 				var executor scenarioStateExecutor
 				executor.ExecutorFunc = func(context.Context, loadgen.ScenarioInfo) error {
@@ -313,6 +327,7 @@ func TestFinishScenarioState(t *testing.T) {
 			data, err := os.ReadFile(path)
 			require.NoError(t, err)
 			require.JSONEq(t, `{
+  "scenario": "test_scenario",
   "outcome": "passed",
   "iterations": null,
   "failures": [],
@@ -324,11 +339,11 @@ func TestFinishScenarioState(t *testing.T) {
 
 func TestRunningSnapshots(t *testing.T) {
 	run := func(t *testing.T, path string, interval time.Duration, executor *steppedExecutor) <-chan error {
-		runner := &scenarioRunner{
-			scenarioRunConfig: scenarioRunConfig{exportResultFile: path, exportResultInterval: interval},
-			logger:            zap.NewNop().Sugar(),
-			counter:           &loadgen.RunCounter{},
-		}
+		runner := newRunner("test_scenario")
+		runner.exportResultFile = path
+		runner.exportResultInterval = interval
+		runner.logger = zap.NewNop().Sugar()
+		runner.counter = &loadgen.RunCounter{}
 		done := make(chan error, 1)
 		go func() {
 			var err error
@@ -355,7 +370,8 @@ func TestRunningSnapshots(t *testing.T) {
 				time.Sleep(time.Second)
 				synctest.Wait()
 				require.Equal(t, runResult{
-					Outcome: "running", Iterations: &counts, Failures: failures,
+					Scenario: "test_scenario",
+					Outcome:  "running", Iterations: &counts, Failures: failures,
 					ScenarioState: map[string]any{"completed": float64(i)},
 				}, readResult(t, path))
 
@@ -371,7 +387,8 @@ func TestRunningSnapshots(t *testing.T) {
 			require.Error(t, err)
 			final := readResult(t, path)
 			require.Equal(t, runResult{
-				Outcome: "failed", Error: err.Error(),
+				Scenario: "test_scenario",
+				Outcome:  "failed", Error: err.Error(),
 				Iterations:    &loadgen.IterationCounts{Started: 3, Succeeded: 2, Failed: 1},
 				Failures:      failures,
 				ScenarioState: map[string]any{"completed": float64(3)},
@@ -409,6 +426,7 @@ func TestRunningSnapshots(t *testing.T) {
 			require.NoError(t, <-done)
 			synctest.Wait()
 			require.Equal(t, runResult{
+				Scenario:      "test_scenario",
 				Outcome:       "passed",
 				Iterations:    &loadgen.IterationCounts{Started: 3, Succeeded: 3},
 				Failures:      []loadgen.IterationFailure{},
@@ -491,4 +509,74 @@ func readResult(t *testing.T, path string) runResult {
 	var result runResult
 	require.NoError(t, json.Unmarshal(data, &result))
 	return result
+}
+
+// Custom and standard executors report completed work through the same result fields.
+func TestCustomAndStandardExecutorsShareProgressFields(t *testing.T) {
+	for _, tc := range []struct {
+		scenario string
+		options  map[string]string
+		config   loadgen.RunConfiguration
+	}{
+		{
+			scenario: "ebb_and_flow",
+			options: map[string]string{
+				"min-backlog": "1", "max-backlog": "5", "control-interval": "10ms",
+				"visibility-count-timeout": "10ms",
+			},
+			config: loadgen.RunConfiguration{Duration: 200 * time.Millisecond},
+		},
+		{
+			scenario: "state_transitions_steady",
+			options:  map[string]string{"state-transitions-per-second": "1000"},
+			config:   loadgen.RunConfiguration{Duration: 200 * time.Millisecond},
+		},
+		{
+			scenario: "workflow_with_single_noop_activity",
+			config:   loadgen.RunConfiguration{Iterations: 3},
+		},
+	} {
+		t.Run(tc.scenario, func(t *testing.T) {
+			workflowRun := &sdkmocks.WorkflowRun{}
+			workflowRun.On("Get", mock.Anything, mock.Anything).Return(nil)
+			workflowRun.On("GetID").Return("id")
+			workflowRun.On("GetRunID").Return("run")
+			temporalClient := &sdkmocks.Client{}
+			temporalClient.On("ExecuteWorkflow", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				Return(workflowRun, nil)
+			temporalClient.On("DescribeWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).
+				Return(&workflowservice.DescribeWorkflowExecutionResponse{
+					WorkflowExecutionInfo: &workflowpb.WorkflowExecutionInfo{StateTransitionCount: 10},
+				}, nil)
+			temporalClient.On("CountWorkflow", mock.Anything, mock.Anything).
+				Return(&workflowservice.CountWorkflowExecutionsResponse{}, nil)
+
+			path := filepath.Join(t.TempDir(), "result.json")
+			runner := newRunner(tc.scenario)
+			runner.exportResultFile = path
+			runner.counter = &loadgen.RunCounter{}
+			scenario := loadgen.GetScenario(tc.scenario)
+			info := loadgen.ScenarioInfo{
+				Client:         temporalClient,
+				Logger:         zap.NewNop().Sugar(),
+				MetricsHandler: client.MetricsNopHandler,
+				Options:        scenario.MustResolveOptions(tc.options),
+				Configuration:  tc.config,
+			}
+			info.Configuration.DoNotRegisterSearchAttributes = true
+			info.Configuration.Counter = runner.counter
+
+			err := runner.runWithSnapshots(t.Context(), scenario.ExecutorFn(), info)
+			runner.finish(t.Context(), &err)
+
+			result := readResult(t, path)
+			require.Equal(t, tc.scenario, result.Scenario)
+			require.NotNil(t, result.Iterations)
+			require.Positive(t, result.Iterations.Succeeded)
+			require.Equal(t, loadgen.IterationCounts{
+				Started: result.Iterations.Succeeded, Succeeded: result.Iterations.Succeeded,
+			}, *result.Iterations)
+			require.Equal(t, []loadgen.IterationFailure{}, result.Failures)
+		})
+	}
 }

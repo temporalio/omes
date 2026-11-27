@@ -177,7 +177,7 @@ func (r *scenarioRunner) finish(ctx context.Context, runErr *error) {
 		ctxErr:   ctx.Err(),
 		panicked: panicValue != nil,
 	}
-	result := newRunResult(end, r.snapshotCounts(), r.currentState())
+	result := newRunResult(r.scenario.Scenario, end, r.snapshotCounts(), r.currentState())
 	if err := result.write(r.exportResultFile); err != nil {
 		*runErr = errors.Join(*runErr, err)
 	}
@@ -313,7 +313,7 @@ func (r *scenarioRunner) writeRunningSnapshots(ctx context.Context, state func()
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				result := newRunResult(runEnd{}, r.snapshotCounts(), state())
+				result := newRunResult(r.scenario.Scenario, runEnd{}, r.snapshotCounts(), state())
 				if err := result.write(r.exportResultFile); err != nil {
 					r.logger.Warnf("Failed to write running result snapshot: %v", err)
 				}
