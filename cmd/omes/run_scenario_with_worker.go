@@ -18,6 +18,7 @@ func runScenarioWithWorkerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-scenario-with-worker",
 		Short: "Run a worker and a scenario",
+		Args:  validateLoadArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			r.preRun()
 		},

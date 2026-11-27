@@ -2,9 +2,9 @@ package loadgen
 
 import (
 	"context"
-	"math"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 	"testing/synctest"
 	"time"

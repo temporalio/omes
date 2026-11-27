@@ -14,6 +14,7 @@ import (
 
 	"github.com/temporalio/omes/clioptions"
 	"github.com/temporalio/omes/loadgen"
+	"github.com/temporalio/omes/loadgen/load"
 )
 
 func runScenarioCmd() *cobra.Command {
@@ -21,6 +22,7 @@ func runScenarioCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-scenario",
 		Short: "Run scenario",
+		Args:  validateLoadArgs,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			r.preRun()
 		},
@@ -49,6 +51,9 @@ type scenarioRunner struct {
 type scenarioRunConfig struct {
 	iterations                    int
 	duration                      time.Duration
+	load                          string
+	loadPattern                   *load.Pattern
+	flags                         *pflag.FlagSet
 	maxConcurrent                 int
 	maxIterationsPerSecond        float64
 	maxIterationAttempts          int
@@ -71,6 +76,13 @@ func (r *scenarioRunner) addCLIFlags(fs *pflag.FlagSet) {
 }
 
 func (r *scenarioRunConfig) addCLIFlags(fs *pflag.FlagSet) {
+	r.flags = fs
+	fs.StringVar(&r.load, "load", "", `Load pattern (requires --duration); parameters must directly follow --load <pattern>:
+  steady: peak required
+  ramp-hold-ramp: peak required, up=0.1, down=0.1
+  sweep: peak required, from=0.25, to=1, steps=4
+  spike-train: peak required, base=0.4, every=10m, for=1m
+Example: --load spike-train peak=120/s every=5m`)
 	fs.IntVar(&r.iterations, "iterations", 0, "Override default iterations for the scenario (cannot be provided with duration)")
 	fs.DurationVar(&r.duration, "duration", 0, "Override duration for the scenario (cannot be provided with iteration)."+
 		" This is the amount of time for which we will start new iterations of the scenario.")
@@ -108,7 +120,11 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, loadgen.NewScenarioNotFoundError(r.scenario.Scenario)
 	} else if r.scenario.RunID == "" {
 		return nil, nil, loadgen.NewUsageError("--run-id must not be empty")
-	} else if r.iterations > 0 && r.duration > 0 {
+	}
+	if err := r.validateLoad(scenario); err != nil {
+		return nil, nil, err
+	}
+	if r.iterations > 0 && r.duration > 0 {
 		return nil, nil, loadgen.NewUsageError("--iterations and --duration cannot be combined; " +
 			"use --iterations to run a fixed number of times, or --duration to keep starting " +
 			"iterations for a period")
@@ -141,6 +157,38 @@ func (r *scenarioRunner) validateInput() (*loadgen.Scenario, *loadgen.OptionSet,
 		return nil, nil, &loadgen.InvalidOptionsError{ScenarioName: r.scenario.Scenario, Err: resolveErr}
 	}
 	return scenario, resolvedOptions, nil
+}
+
+func (r *scenarioRunConfig) validateLoad(scenario *loadgen.Scenario) error {
+	usageError := func(message string) error {
+		return loadgen.NewUsageError("%s; e.g. %s --duration 20m", message, load.Example("spike-train"))
+	}
+	r.loadPattern = nil
+	changed := func(name string) bool { return r.flags != nil && r.flags.Changed(name) }
+	if r.load == "" && !changed("load") {
+		return nil
+	}
+	if r.iterations != 0 || changed("iterations") {
+		return usageError("--iterations cannot be combined with --load; use --duration")
+	}
+	if r.maxIterationsPerSecond != 0 || changed("max-iterations-per-second") {
+		return usageError("--max-iterations-per-second cannot be combined with --load; set peak= in --load")
+	}
+	if r.duration <= 0 {
+		return usageError("--load requires a positive --duration")
+	}
+	if r.maxConcurrent < 0 {
+		return usageError("--max-concurrent must be positive (or 0 for the default)")
+	}
+	pattern, err := load.Parse(r.load, r.duration)
+	if err != nil {
+		return loadgen.NewUsageError("%v", err)
+	}
+	if executor, ok := scenario.ExecutorFn().(loadgen.LoadPatternExecutor); !ok || !executor.SupportsLoadPattern() {
+		return usageError("this scenario does not support --load; its executor must use the GenericExecutor pacer")
+	}
+	r.loadPattern = pattern
+	return nil
 }
 
 func (r *scenarioRunner) run(ctx context.Context) error {
@@ -198,6 +246,7 @@ func (r *scenarioRunner) run(ctx context.Context) error {
 		Configuration: loadgen.RunConfiguration{
 			Iterations:                    r.iterations,
 			Duration:                      r.duration,
+			LoadPattern:                   r.loadPattern,
 			MaxConcurrent:                 r.maxConcurrent,
 			MaxIterationsPerSecond:        r.maxIterationsPerSecond,
 			MaxIterationAttempts:          r.maxIterationAttempts,
